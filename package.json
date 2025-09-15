@@ -1,5 +1,5 @@
 {
-  "name": "specktor-electron",
+  "name": "principal-ai",
   "version": "0.0.21",
   "description": "Specktor - The Specktor engineer for your codebase",
   "type": "module",
@@ -19,7 +19,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/principle-md/monorepo.git"
+    "url": "git+https://github.com/a24z-ai/electron-app.git"
   },
   "license": "GPL-3.0",
   "author": {
@@ -68,10 +68,9 @@
     "rebuild": "node scripts/rebuild-native.js",
     "rebuild:direct": "electron-rebuild --version 38.1.0 --parallel --types prod,dev,optional --module-dir release/app",
     "prestart": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.dev.ts",
-    "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run prepare:core:dev && npm run prestart && npm run start:renderer",
-    "prepare:core:dev": "node ./.erb/scripts/dev-prepare-core.js",
-    "dev": "npm run prepare:core:dev && node scripts/dev-with-prod-constraints.js",
-    "dev:unsafe": "npm run prepare:core:dev && npm run build:dll && npm run start",
+    "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run prestart && npm run start:renderer",
+    "dev": "node scripts/dev-with-prod-constraints.js",
+    "dev:unsafe": "npm run build:dll && npm run start",
     "clean-install": "node scripts/clean-install.js",
     "clear-extensions": "node scripts/clear-extension-cache.js",
     "dev:static": "npm run prestart && npm run dev:renderer",
@@ -94,8 +93,8 @@
     "test:e2e:all-slides": "playwright test tests/e2e/all-slide-tests.spec.ts",
     "test:e2e:baseline": "playwright test tests/e2e/app-baseline.spec.ts",
     "playwright:install": "npm install -D playwright @playwright/test && playwright install",
-    "dev:old": "npm run prepare:core:dev && npm run build:dll && npm run start",
-    "dev:watch": "npm run prepare:core:dev && npm run start",
+    "dev:old": "npm run build:dll && npm run start",
+    "dev:watch": "npm run start",
     "typecheck": "tsc --build",
     "typecheck:main": "tsc --project tsconfig.main.json --noEmit",
     "typecheck:renderer": "tsc --project tsconfig.renderer.json --noEmit",
@@ -166,6 +165,7 @@
     ]
   },
   "dependencies": {
+    "@a24z/agent-manager": "^1.0.1",
     "@a24z/observability-sdk": "^0.4.1",
     "@a24z/panels": "^1.0.3",
     "@electron/notarize": "^3.0.0",
@@ -328,7 +328,7 @@
     "webpack-merge": "^6.0.1"
   },
   "build": {
-    "productName": "Specktor",
+    "productName": "Principal AI",
     "appId": "com.a24z.specktor",
     "copyright": "Copyright © 2025 Specktor",
     "asar": true,
@@ -403,8 +403,8 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "principle-md",
-      "repo": "monorepo"
+      "owner": "a24z-ai",
+      "repo": "electron-app"
     }
   },
   "devEngines": {
