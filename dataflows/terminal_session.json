@@ -1,0 +1,472 @@
+{
+    "dataFlowLayer": {
+      "id": "dataflow-20250716-terminal",
+      "name": "TerminalSession Data Flow",
+      "description": "Tracks how TerminalSession flows through the application",
+      "dataType": "TerminalSession",
+      "dataTypeDefinition": {
+        "location": {
+          "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/main/terminal.ts",
+          "line": 9,
+          "column": 1
+        },
+        "shape": {
+          "id": "string",
+          "pty": "pty.IPty",
+          "directory": "string",
+          "agentSessionId": "string | undefined",
+          "createdAt": "number",
+          "lastActivity": "number"
+        }
+      },
+      "entryPoints": [
+        {
+          "id": "entry-1",
+          "type": "ipc",
+          "name": "Create Terminal Session",
+          "location": {
+            "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/main/terminal.ts",
+            "line": 35,
+            "function": "terminal:create"
+          },
+          "dataShape": {
+            "directory": "string"
+          },
+          "validation": {
+            "required": true,
+            "rules": ["directory-exists", "session-limit-check"]
+          }
+        },
+        {
+          "id": "entry-2",
+          "type": "ipc",
+          "name": "Create Terminal with Command",
+          "location": {
+            "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/main/terminal.ts",
+            "line": 225,
+            "function": "terminal:create-with-command"
+          },
+          "dataShape": {
+            "directory": "string",
+            "command": "string"
+          },
+          "validation": {
+            "required": true,
+            "rules": ["directory-exists", "session-limit-check"]
+          }
+        },
+        {
+          "id": "entry-3",
+          "type": "api",
+          "name": "Internal Terminal Creation",
+          "location": {
+            "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/main/terminal.ts",
+            "line": 479,
+            "function": "createTerminalWithCommand"
+          },
+          "dataShape": {
+            "directory": "string",
+            "command": "string"
+          },
+          "validation": {
+            "required": true,
+            "rules": ["directory-exists", "session-limit-check"]
+          }
+        }
+      ],
+      "flowNodes": [
+        {
+          "id": "node-1",
+          "type": "service",
+          "name": "TerminalManager",
+          "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/main/terminal.ts",
+          "accessPatterns": [
+            {
+              "type": "write",
+              "fields": ["id", "pty", "directory", "agentSessionId", "createdAt", "lastActivity"],
+              "description": "Creates and stores terminal sessions in Map",
+              "frequency": "medium",
+              "async": true
+            },
+            {
+              "type": "cache",
+              "fields": ["*"],
+              "description": "Maintains active terminal sessions in memory",
+              "frequency": "high",
+              "async": false
+            },
+            {
+              "type": "forward",
+              "fields": ["sessionId", "data"],
+              "description": "Forwards PTY data to renderer via IPC",
+              "frequency": "high",
+              "async": true
+            }
+          ],
+          "dependencies": ["node-2", "node-3"]
+        },
+        {
+          "id": "node-2",
+          "type": "service",
+          "name": "AgentSessionService",
+          "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/main/services/agentSessionService.ts",
+          "accessPatterns": [
+            {
+              "type": "read",
+              "fields": ["activeSessionId"],
+              "description": "Retrieves active AI session for directory",
+              "frequency": "medium",
+              "async": true
+            },
+            {
+              "type": "write",
+              "fields": ["terminalSessions"],
+              "description": "Updates agent session with terminal metadata",
+              "frequency": "medium",
+              "async": true
+            }
+          ],
+          "dependencies": []
+        },
+        {
+          "id": "node-3",
+          "type": "utility",
+          "name": "PTY Process",
+          "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/main/terminal.ts",
+          "accessPatterns": [
+            {
+              "type": "transform",
+              "fields": ["data", "exitCode"],
+              "description": "Manages pseudo-terminal process lifecycle",
+              "frequency": "high",
+              "async": true
+            }
+          ],
+          "dependencies": []
+        },
+        {
+          "id": "node-4",
+          "type": "component",
+          "name": "TerminalPanel",
+          "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/renderer/components/Terminal/TerminalPanel.tsx",
+          "accessPatterns": [
+            {
+              "type": "read",
+              "fields": ["sessionId", "directory", "agentSessionId"],
+              "description": "Displays terminal session with xterm.js",
+              "frequency": "high",
+              "async": false
+            },
+            {
+              "type": "forward",
+              "fields": ["data"],
+              "description": "Sends user input to terminal",
+              "frequency": "high",
+              "async": true
+            }
+          ],
+          "dependencies": ["node-5", "node-6"]
+        },
+        {
+          "id": "node-5",
+          "type": "component",
+          "name": "TerminalTabs",
+          "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/renderer/components/TerminalTabs.tsx",
+          "accessPatterns": [
+            {
+              "type": "read",
+              "fields": ["id", "directory", "agentSessionId", "createdAt", "lastActivity"],
+              "description": "Lists and manages terminal tabs",
+              "frequency": "medium",
+              "async": true
+            }
+          ],
+          "dependencies": []
+        },
+        {
+          "id": "node-6",
+          "type": "component",
+          "name": "LocalSessionWorkspace",
+          "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/renderer/components/LocalSessionWorkspace.tsx",
+          "accessPatterns": [
+            {
+              "type": "read",
+              "fields": ["terminalId"],
+              "description": "Integrates terminal view into workspace",
+              "frequency": "low",
+              "async": false
+            },
+            {
+              "type": "write",
+              "fields": ["activeTerminalId"],
+              "description": "Manages active terminal selection state",
+              "frequency": "low",
+              "async": false
+            }
+          ],
+          "dependencies": ["node-4", "node-5"]
+        },
+        {
+          "id": "node-7",
+          "type": "component",
+          "name": "InitialLayerDiscovery",
+          "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/renderer/components/validation/InitialLayerDiscovery.tsx",
+          "accessPatterns": [
+            {
+              "type": "transform",
+              "fields": ["claudeOutput"],
+              "description": "Parses Claude CLI output from terminal",
+              "frequency": "low",
+              "async": true
+            }
+          ],
+          "dependencies": ["node-4"]
+        },
+        {
+          "id": "node-8",
+          "type": "handler",
+          "name": "Terminal IPC Interface",
+          "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/main/services/ipc/terminal/terminalApiInterface.ts",
+          "accessPatterns": [
+            {
+              "type": "forward",
+              "fields": ["*"],
+              "description": "Bridges terminal API between main and renderer",
+              "frequency": "high",
+              "async": true
+            }
+          ],
+          "dependencies": []
+        }
+      ],
+      "flowEdges": [
+        {
+          "id": "edge-1",
+          "from": "entry-1",
+          "to": "node-1",
+          "type": "direct",
+          "description": "IPC handler creates terminal session",
+          "dataTransform": {
+            "type": "enrich",
+            "description": "Adds session ID, PTY instance, timestamps"
+          }
+        },
+        {
+          "id": "edge-2",
+          "from": "node-1",
+          "to": "node-2",
+          "type": "direct",
+          "description": "Queries active agent session for association",
+          "dataTransform": {
+            "type": "none",
+            "description": "No transformation"
+          }
+        },
+        {
+          "id": "edge-3",
+          "from": "node-2",
+          "to": "node-1",
+          "type": "direct",
+          "description": "Returns active session ID for terminal association",
+          "dataTransform": {
+            "type": "none",
+            "description": "No transformation"
+          }
+        },
+        {
+          "id": "edge-4",
+          "from": "node-3",
+          "to": "node-1",
+          "type": "event",
+          "description": "PTY emits data and exit events",
+          "dataTransform": {
+            "type": "none",
+            "description": "Raw terminal output"
+          }
+        },
+        {
+          "id": "edge-5",
+          "from": "node-1",
+          "to": "node-8",
+          "type": "ipc",
+          "description": "Terminal data sent via IPC events",
+          "dataTransform": {
+            "type": "map",
+            "description": "Wraps data with session ID"
+          }
+        },
+        {
+          "id": "edge-6",
+          "from": "node-8",
+          "to": "node-4",
+          "type": "event",
+          "description": "Terminal events delivered to UI components",
+          "dataTransform": {
+            "type": "none",
+            "description": "No transformation"
+          }
+        },
+        {
+          "id": "edge-7",
+          "from": "node-4",
+          "to": "node-8",
+          "type": "ipc",
+          "description": "User input sent to terminal",
+          "dataTransform": {
+            "type": "none",
+            "description": "Raw keyboard input"
+          }
+        },
+        {
+          "id": "edge-8",
+          "from": "node-8",
+          "to": "node-1",
+          "type": "ipc",
+          "description": "Input forwarded to PTY process",
+          "dataTransform": {
+            "type": "none",
+            "description": "No transformation"
+          }
+        },
+        {
+          "id": "edge-9",
+          "from": "node-1",
+          "to": "node-5",
+          "type": "ipc",
+          "description": "Terminal list provided for tabs",
+          "dataTransform": {
+            "type": "filter",
+            "description": "Excludes PTY instance, returns metadata only"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "id": "transform-1",
+          "nodeId": "node-1",
+          "type": "enrich",
+          "description": "Terminal creation enrichment",
+          "inputShape": {
+            "directory": "string",
+            "command?": "string"
+          },
+          "outputShape": {
+            "id": "string",
+            "pty": "IPty",
+            "directory": "string",
+            "agentSessionId": "string | undefined",
+            "createdAt": "number",
+            "lastActivity": "number"
+          },
+          "sideEffects": ["Spawns PTY process", "Sets environment variables", "Updates agent session"]
+        },
+        {
+          "id": "transform-2",
+          "nodeId": "node-1",
+          "type": "filter",
+          "description": "Terminal list filtering",
+          "inputShape": {
+            "sessions": "Map<string, TerminalSession>"
+          },
+          "outputShape": {
+            "terminals": "Array<{id, directory, agentSessionId, createdAt, lastActivity}>"
+          },
+          "sideEffects": []
+        },
+        {
+          "id": "transform-3",
+          "nodeId": "node-7",
+          "type": "validate",
+          "description": "Claude CLI output parsing",
+          "inputShape": {
+            "terminalOutput": "string"
+          },
+          "outputShape": {
+            "validationLayers": "ValidationLayer[]"
+          },
+          "sideEffects": ["Creates validation layer files"]
+        }
+      ],
+      "detectionRules": [
+        {
+          "type": "file-pattern",
+          "pattern": "**/terminal*.{ts,tsx}",
+          "description": "Files likely to contain terminal functionality"
+        },
+        {
+          "type": "content-pattern",
+          "pattern": "TerminalSession|terminal:create|pty|xterm",
+          "description": "Content that references terminal data types"
+        }
+      ],
+      "explicitInclusions": [
+        {
+          "type": "file",
+          "path": "/Users/griever/Developer/PrincipleMD/electron-react/src/main/terminal.ts",
+          "reason": "Core terminal management service"
+        },
+        {
+          "type": "file",
+          "path": "/Users/griever/Developer/PrincipleMD/electron-react/src/renderer/components/Terminal/TerminalPanel.tsx",
+          "reason": "Main terminal UI component"
+        }
+      ],
+      "visualization": {
+        "layout": "hierarchical",
+        "entryPointsPosition": "top",
+        "criticalPath": ["entry-1", "node-1", "node-3", "node-4"],
+        "nodeStyles": {
+          "component": { "shape": "rectangle", "color": "#4F46E5" },
+          "service": { "shape": "hexagon", "color": "#059669" },
+          "handler": { "shape": "diamond", "color": "#F59E0B" },
+          "utility": { "shape": "circle", "color": "#EF4444" }
+        }
+      }
+    },
+    "analysis": {
+      "summary": "TerminalSession data flows from IPC entry points through the TerminalManager service, which manages PTY processes and coordinates with AgentSessionService. Terminal data streams bidirectionally between main and renderer processes via IPC events, with UI components using xterm.js for display.",
+      "complexity": "medium",
+      "bottlenecks": [
+        "Session limit of 10 concurrent terminals may restrict heavy users",
+        "Polling mechanism in TerminalTabs (2s interval) may cause UI lag",
+        "Large terminal output streams could overwhelm IPC channel"
+      ],
+      "issues": [
+        {
+          "type": "performance",
+          "severity": "medium",
+          "description": "TerminalTabs polls every 2 seconds instead of using event-driven updates",
+          "location": { "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/renderer/components/TerminalTabs.tsx", "line": 59 }
+        },
+        {
+          "type": "data-leak",
+          "severity": "low",
+          "description": "Environment variables including paths are exposed to terminal processes",
+          "location": { "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/main/terminal.ts", "line": 93 }
+        },
+        {
+          "type": "missing-validation",
+          "severity": "low",
+          "description": "No validation on terminal resize dimensions",
+          "location": { "file": "/Users/griever/Developer/PrincipleMD/electron-react/src/main/terminal.ts", "line": 435 }
+        }
+      ],
+      "suggestions": [
+        {
+          "type": "optimization",
+          "description": "Replace polling in TerminalTabs with event-driven updates using IPC events for terminal creation/destruction",
+          "impact": "medium"
+        },
+        {
+          "type": "security",
+          "description": "Sanitize environment variables before passing to PTY processes to prevent information leakage",
+          "impact": "medium"
+        },
+        {
+          "type": "maintainability",
+          "description": "Extract terminal session metadata interface to shared types for better type safety across IPC boundary",
+          "impact": "low"
+        }
+      ]
+    }
+  }

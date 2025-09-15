@@ -1,0 +1,37 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.main.json"
+    },
+    {
+      "path": "./tsconfig.renderer.json"
+    },
+    {
+      "path": "./tsconfig.shared.json"
+    }
+  ],
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": [
+      "dom",
+      "es2022"
+    ],
+    "jsx": "react-jsx",
+    "paths": {}
+  },
+  "include": [
+    "src/**/*",
+    "assets/**/*",
+    "tests/**/*"
+  ],
+  "exclude": [
+    "test",
+    "release/build",
+    "release/app/dist",
+    ".erb/dll",
+    "**/*.d.ts",
+    "**/*.d.cts",
+    "dist/**/*"
+  ]
+}

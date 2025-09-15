@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Specktor</title>
+    <style>
+      /* Prevent white flash while loading */
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #1f2937; /* Dark gray matching the window backgroundColor */
+        color: white;
+        height: 100vh;
+        overflow: hidden;
+      }
+      #root {
+        height: 100vh;
+        width: 100vw;
+      }
+    </style>
+    <script>
+      // Define global before any other scripts load
+      window.global = window.global || window;
+      // Also define process if it doesn't exist
+      if (typeof process === "undefined") {
+        window.process = {
+          env: {},
+          version: 'v16.0.0',
+          platform: 'browser',
+          arch: 'browser'
+        };
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

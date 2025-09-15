@@ -1,0 +1,1 @@
+{"version":3,"file":"typeExtraction.d.ts","sourceRoot":"","sources":["../../../../../../src/renderer/utils/ipcServices/typeExtraction.ts"],"names":[],"mappings":"AAEA,eAAO,MAAM,cAAc;2BACI,GAAG,KAAG,OAAO,CAAC,GAAG,CAAC;uCASN,MAAM,KAAG,OAAO,CAAC,GAAG,CAAC;0CAUlB,MAAM,KAAG,OAAO,CAAC,GAAG,CAAC;0CAWxD,GAAG,oBACQ,MAAM,KACvB,OAAO,CAAC,GAAG,CAAC;CAShB,CAAC"}

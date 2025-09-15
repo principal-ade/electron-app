@@ -1,0 +1,350 @@
+import { jsxs as _jsxs, jsx as _jsx } from "react/jsx-runtime";
+import { useState, useEffect, useCallback } from 'react';
+import { Check, AlertCircle, Server, Settings, } from 'lucide-react';
+import { getAgentInfo, SupportedAgent } from "@principal-ai/agent-monitoring";
+import { APP_BRANDING } from '../../../../shared/config/appBranding';
+import { useTheme } from 'themed-markdown';
+import { AgentConnectionVisualizer } from './AgentConnectionVisualizer';
+import { WizardStep } from './WizardStep';
+import { InstallStep } from './InstallStep';
+import { AgentInstallationService } from '../../../main-process-api/AgentInstallationService';
+import { AgentConfigurationService } from '../../../main-process-api/AgentConfigurationService';
+export const AgentSetupWizard = ({ agentType, agentStatus, checkAgentStatus, onShowDetails, handleClaudeTourNext, handleClaudeTourAction, handleClaudeTourButtonClick, isClaudeTourActive, claudeTourStepIndex, }) => {
+    const { theme } = useTheme();
+    const [isInstallingAgent, setIsInstallingAgent] = useState(false);
+    const [isConfiguringHooks, setIsConfiguringHooks] = useState(false);
+    const [isTogglingMCP, setIsTogglingMCP] = useState(false);
+    const [error, setError] = useState(null);
+    const [installProgress, setInstallProgress] = useState(null);
+    const [localInstallStatus, setLocalInstallStatus] = useState(null);
+    const [mcpStatus, setMcpStatus] = useState({ enabled: false, serverCount: 0 });
+    // Sync local status with prop changes
+    useEffect(() => {
+        if (agentStatus.isInstalled && localInstallStatus === null) {
+            setLocalInstallStatus(agentStatus.isInstalled);
+        }
+    }, [agentStatus.isInstalled, localInstallStatus]);
+    // Check MCP status using the new unified API
+    useEffect(() => {
+        const checkMCPStatus = async () => {
+            try {
+                const result = await AgentConfigurationService.getAgentMCPStatus(agentType);
+                if (result.success && result.status) {
+                    setMcpStatus({
+                        enabled: result.status.hasMCP,
+                        serverCount: result.status.mcpCount,
+                    });
+                }
+                else {
+                    setMcpStatus({ enabled: false, serverCount: 0 });
+                }
+            }
+            catch (error) {
+                console.error('Error checking MCP status:', error);
+                setMcpStatus({ enabled: false, serverCount: 0 });
+            }
+        };
+        if (agentStatus.isInstalled && agentStatus.hasHooks) {
+            checkMCPStatus();
+        }
+    }, [agentType, agentStatus]);
+    // Get agent configuration from core library
+    const agentConfig = getAgentInfo(agentType);
+    const handleInstallAgent = useCallback(async () => {
+        setError(null);
+        if (agentType === 'claude') {
+            window.open(agentConfig.ui.downloadUrl, '_blank');
+            handleClaudeTourNext?.();
+        }
+        else {
+            setIsInstallingAgent(true);
+            setInstallProgress({ message: 'Starting installation...' });
+            // Set up progress listener
+            const unsubscribeProgress = AgentInstallationService.onInstallProgress(agentType, (progress) => {
+                console.log('Install progress:', progress);
+                if (typeof progress === 'string') {
+                    setInstallProgress({ message: progress });
+                }
+                else {
+                    setInstallProgress(progress);
+                }
+            });
+            // Set up listeners before installing
+            const unsubscribeComplete = AgentInstallationService.onInstallComplete(agentType, async () => {
+                console.log(`${agentType} install complete event received`);
+                setInstallProgress({ message: 'Installation complete!' });
+                setIsInstallingAgent(false);
+                // First check Gemini installation directly
+                try {
+                    const installationStatus = await AgentInstallationService.checkInstallation(agentType);
+                    console.log(`Direct ${agentType} check result:`, installationStatus);
+                    // If installed, update local status immediately
+                    if (installationStatus.installed) {
+                        setLocalInstallStatus(true);
+                        setTimeout(() => {
+                            console.log('Calling checkAgentStatus after install complete');
+                            checkAgentStatus();
+                            setInstallProgress(null);
+                        }, 1000); // Increased delay to 1 second
+                    }
+                    else {
+                        // If still not detected, retry once more after a longer delay
+                        setTimeout(async () => {
+                            const retryStatus = await AgentInstallationService.checkInstallation(agentType);
+                            console.log(`Retry ${agentType} check result:`, retryStatus);
+                            if (retryStatus.installed) {
+                                setLocalInstallStatus(true);
+                            }
+                            checkAgentStatus();
+                            setInstallProgress(null);
+                        }, 2000);
+                    }
+                }
+                catch (error) {
+                    console.error(`Error checking ${agentType} status:`, error);
+                    // Fallback to regular check
+                    setTimeout(() => {
+                        checkAgentStatus();
+                        setInstallProgress(null);
+                    }, 1000);
+                }
+                // Clean up listener
+                unsubscribeComplete();
+                unsubscribeError();
+                unsubscribeProgress?.();
+            });
+            const unsubscribeError = AgentInstallationService.onInstallError(agentType, (error) => {
+                console.error(`${agentType} install error:`, error);
+                setError(error);
+                setIsInstallingAgent(false);
+                setInstallProgress(null);
+                // Clean up listener
+                unsubscribeComplete();
+                unsubscribeError();
+                unsubscribeProgress?.();
+            });
+            try {
+                await AgentInstallationService.install(agentType);
+            }
+            catch (error) {
+                setError(`Failed to install ${agentType}`);
+                setIsInstallingAgent(false);
+                setInstallProgress(null);
+                // Clean up listeners in case of immediate error
+                unsubscribeComplete();
+                unsubscribeError();
+                unsubscribeProgress?.();
+            }
+        }
+    }, [agentType, agentConfig.ui.downloadUrl, handleClaudeTourNext, checkAgentStatus]);
+    const handleConfigureHooks = useCallback(async () => {
+        setError(null);
+        setIsConfiguringHooks(true);
+        try {
+            const result = await AgentConfigurationService.addHooksToAgent(agentType);
+            if (result) {
+                await checkAgentStatus();
+                handleClaudeTourNext?.();
+            }
+            else {
+                setError('Failed to configure hooks');
+            }
+        }
+        catch (error) {
+            setError('Error configuring hooks');
+        }
+        finally {
+            setIsConfiguringHooks(false);
+        }
+    }, [agentType, checkAgentStatus, handleClaudeTourNext]);
+    const handleRemoveHooks = useCallback(async () => {
+        setError(null);
+        setIsConfiguringHooks(true);
+        try {
+            const result = await AgentConfigurationService.removeHooksFromAgent(agentType);
+            if (result) {
+                checkAgentStatus();
+            }
+            else {
+                setError('Failed to remove hooks');
+            }
+        }
+        catch (error) {
+            setError('Error removing hooks');
+        }
+        finally {
+            setIsConfiguringHooks(false);
+        }
+    }, [agentType, checkAgentStatus]);
+    const handleUninstallAgent = useCallback(async () => {
+        setError(null);
+        if (agentType === SupportedAgent.GEMINI || agentType === SupportedAgent.OPENCODE) {
+            const confirmed = window.confirm(`Are you sure you want to uninstall ${agentConfig.displayName}?`);
+            if (confirmed) {
+                setIsInstallingAgent(true);
+                // Set up uninstall complete listener
+                const unsubscribeUninstall = AgentInstallationService.onUninstallComplete(agentType, () => {
+                    console.log('Gemini uninstall complete event received');
+                    setLocalInstallStatus(false);
+                    setIsInstallingAgent(false);
+                    checkAgentStatus();
+                    unsubscribeUninstall();
+                });
+                try {
+                    await AgentInstallationService.uninstall(agentType);
+                }
+                catch (error) {
+                    setError('Failed to uninstall Gemini');
+                    setIsInstallingAgent(false);
+                    unsubscribeUninstall();
+                }
+            }
+        }
+        else {
+            alert('Please uninstall Claude manually through your system settings');
+        }
+    }, [agentType, agentConfig.displayName, checkAgentStatus]);
+    const handleMCPToggle = useCallback(async () => {
+        setIsTogglingMCP(true);
+        setError(null);
+        try {
+            if (mcpStatus.enabled) {
+                // Disable MCP server using new unified API
+                const result = await AgentConfigurationService.removeMCPFromAgent(agentType, APP_BRANDING.MCP_SERVER_CONFIG_KEY);
+                if (result.success && result.status) {
+                    setMcpStatus({
+                        enabled: result.status.hasMCP,
+                        serverCount: result.status.mcpCount
+                    });
+                    await checkAgentStatus();
+                }
+                else {
+                    setError(result.error || 'Failed to disable MCP server');
+                }
+            }
+            else {
+                // Enable MCP server using new unified API
+                const result = await AgentConfigurationService.addMCPToAgent(agentType, APP_BRANDING.MCP_SERVER_CONFIG_KEY);
+                if (result.success && result.status) {
+                    setMcpStatus({
+                        enabled: result.status.hasMCP,
+                        serverCount: result.status.mcpCount
+                    });
+                    await checkAgentStatus();
+                    handleClaudeTourNext?.();
+                }
+                else {
+                    setError(result.error || 'Failed to enable MCP server');
+                }
+            }
+        }
+        catch (error) {
+            console.error('Error toggling MCP:', error);
+            setError('Error configuring MCP server');
+        }
+        finally {
+            setIsTogglingMCP(false);
+        }
+    }, [agentType, mcpStatus.enabled, checkAgentStatus, handleClaudeTourNext]);
+    const getCurrentStep = () => {
+        // Use local status if available (immediately after install)
+        const isInstalled = localInstallStatus !== null ? localInstallStatus : agentStatus.isInstalled;
+        if (!isInstalled)
+            return 'install';
+        if (!agentStatus.hasHooks)
+            return 'configure';
+        if (agentStatus.hasHooks && !mcpStatus.enabled)
+            return 'mcp';
+        return 'complete';
+    };
+    const currentStep = getCurrentStep();
+    const handleTriggerStepAction = useCallback(async (step) => {
+        if (step === 0) {
+            await handleInstallAgent();
+        }
+        else if (step === 1) {
+            await handleConfigureHooks();
+        }
+        else if (step === 2) {
+            await handleMCPToggle();
+        }
+    }, [handleInstallAgent, handleConfigureHooks, handleMCPToggle]);
+    useEffect(() => {
+        if (handleClaudeTourAction && isClaudeTourActive) {
+            handleClaudeTourAction({ fn: handleTriggerStepAction });
+        }
+    }, [handleClaudeTourAction, isClaudeTourActive, handleTriggerStepAction]);
+    return (_jsx("div", { className: "flex flex-col items-center justify-center h-full p-4", children: _jsxs("div", { className: "w-full h-full flex flex-col rounded-lg p-6", style: {
+                backgroundColor: theme.colors.backgroundSecondary,
+                border: `1px solid ${theme.colors.border}`,
+            }, children: [_jsxs("div", { className: "mb-4 flex-shrink-0 relative", children: [_jsxs("h2", { className: "text-2xl font-bold mb-1 text-center", style: { color: theme.colors.text }, children: [agentConfig.displayName, " Setup"] }), _jsxs("button", { onClick: onShowDetails, className: "absolute top-0 right-0 p-2 rounded-lg transition-colors flex items-center gap-2", style: {
+                                backgroundColor: theme.colors.backgroundTertiary,
+                                color: theme.colors.textSecondary,
+                                border: `1px solid ${theme.colors.border}`,
+                            }, onMouseEnter: (e) => {
+                                e.currentTarget.style.backgroundColor = theme.colors.surface;
+                                e.currentTarget.style.color = theme.colors.text;
+                            }, onMouseLeave: (e) => {
+                                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                                e.currentTarget.style.color = theme.colors.textSecondary;
+                            }, children: [_jsx(Settings, { size: 16 }), _jsx("span", { className: "text-sm", children: "Detailed View" })] })] }), error && (_jsx("div", { className: "mb-4 p-4 rounded-lg flex-shrink-0", style: {
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                    }, children: _jsxs("div", { className: "flex items-center gap-2", style: { color: '#f87171' }, children: [_jsx(AlertCircle, { size: 20 }), _jsx("span", { children: error })] }) })), _jsxs("div", { className: "flex-1 flex flex-col", style: { minHeight: 0 }, children: [_jsx("div", { className: "flex-1 mb-4 overflow-x-auto", style: {
+                                minHeight: 0,
+                            }, children: _jsxs("div", { className: "flex gap-4 h-full", children: [_jsx("div", { className: "flex-1 p-4 rounded-lg", style: {
+                                            backgroundColor: theme.colors.backgroundTertiary,
+                                            //opacity: !agentStatus.isInstalled ? 1 : 0.5,
+                                        }, children: _jsx(InstallStep, { agentType: agentType, agentDisplayName: agentConfig.displayName, isProcessing: isInstallingAgent, installProgress: installProgress, onInstall: handleInstallAgent, onCheckStatus: checkAgentStatus, onInstallComplete: () => setLocalInstallStatus(true), onUninstall: handleUninstallAgent, hasHooks: agentStatus.hasHooks, handleClaudeTourButtonClick: handleClaudeTourButtonClick, isClaudeTourActive: isClaudeTourActive, claudeTourStepIndex: claudeTourStepIndex, isCurrentStep: currentStep === 'install', isInstalled: agentStatus.isInstalled }) }), _jsx("div", { className: "flex-1 p-4 rounded-lg", style: {
+                                            backgroundColor: currentStep !== 'install' ? theme.colors.backgroundTertiary : 'transparent',
+                                        }, children: _jsx(WizardStep, { icon: _jsx(Check, { size: 32, style: { color: agentStatus.hasHooks ? agentConfig.ui.color : theme.colors.textSecondary } }), title: agentStatus.hasHooks ? "Configured" : "Configure Hooks", titleColor: agentStatus.hasHooks ? agentConfig.ui.color : undefined, description: agentStatus.hasHooks ? "Activity tracking enabled" : "Enable activity tracking", iconBackgroundColor: agentStatus.hasHooks ? `${agentConfig.ui.color}20` : theme.colors.backgroundLight, dataTour: "configure-step", children: _jsx("div", { className: "flex justify-center", children: !agentStatus.hasHooks ? (_jsx("button", { onClick: () => {
+                                                        if (handleClaudeTourButtonClick && isClaudeTourActive && claudeTourStepIndex === 1) {
+                                                            handleClaudeTourButtonClick(1, handleConfigureHooks);
+                                                        }
+                                                        else {
+                                                            handleConfigureHooks();
+                                                        }
+                                                    }, disabled: isConfiguringHooks || currentStep !== 'configure', "data-tour": "configure-hooks", className: "px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm", style: {
+                                                        backgroundColor: theme.colors.primary,
+                                                        color: theme.colors.background,
+                                                    }, onMouseEnter: (e) => !e.currentTarget.disabled &&
+                                                        (e.currentTarget.style.backgroundColor =
+                                                            theme.colors.primary), onMouseLeave: (e) => !e.currentTarget.disabled &&
+                                                        (e.currentTarget.style.backgroundColor =
+                                                            theme.colors.primary), children: isConfiguringHooks
+                                                        ? 'Configuring...'
+                                                        : 'Enable →' })) : (_jsx("button", { onClick: handleRemoveHooks, disabled: isConfiguringHooks || mcpStatus.enabled, className: "px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm", style: {
+                                                        backgroundColor: theme.colors.backgroundTertiary,
+                                                        color: theme.colors.text,
+                                                        border: `1px solid ${theme.colors.border}`,
+                                                    }, onMouseEnter: (e) => !e.currentTarget.disabled &&
+                                                        (e.currentTarget.style.backgroundColor =
+                                                            theme.colors.backgroundSecondary), onMouseLeave: (e) => !e.currentTarget.disabled &&
+                                                        (e.currentTarget.style.backgroundColor =
+                                                            theme.colors.backgroundTertiary), title: mcpStatus.enabled ? "Disable MCP before removing hooks" : "", children: isConfiguringHooks ? 'Removing...' : 'Remove Hooks' })) }) }) }), _jsx("div", { className: "flex-1 p-4 rounded-lg", style: {
+                                            backgroundColor: (currentStep === 'mcp' || currentStep === 'complete') ? theme.colors.backgroundTertiary : 'transparent',
+                                            opacity: agentStatus.hasHooks ? 1 : 0.5,
+                                        }, children: _jsx(WizardStep, { icon: _jsx(Server, { size: 32, style: { color: mcpStatus.enabled ? agentConfig.ui.color : theme.colors.textSecondary } }), title: mcpStatus.enabled ? "Enabled" : "Enable MCP", titleColor: mcpStatus.enabled ? agentConfig.ui.color : undefined, description: mcpStatus.enabled ? "Code analysis active" : "Enhanced code analysis", iconBackgroundColor: mcpStatus.enabled ? `${agentConfig.ui.color}20` : theme.colors.backgroundTertiary, dataTour: "mcp-step", children: _jsx("div", { className: "flex justify-center", children: !mcpStatus.enabled ? (_jsx("button", { onClick: () => {
+                                                        if (handleClaudeTourButtonClick && isClaudeTourActive && claudeTourStepIndex === 2) {
+                                                            handleClaudeTourButtonClick(2, handleMCPToggle);
+                                                        }
+                                                        else {
+                                                            handleMCPToggle();
+                                                        }
+                                                    }, disabled: isTogglingMCP || (currentStep !== 'mcp' && !mcpStatus.enabled), "data-tour": "enable-mcp", className: "px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm", style: {
+                                                        backgroundColor: theme.colors.primary,
+                                                        color: theme.colors.background,
+                                                    }, onMouseEnter: (e) => !e.currentTarget.disabled &&
+                                                        (e.currentTarget.style.backgroundColor =
+                                                            theme.colors.primary), onMouseLeave: (e) => !e.currentTarget.disabled &&
+                                                        (e.currentTarget.style.backgroundColor =
+                                                            theme.colors.primary), children: isTogglingMCP ? 'Configuring...' : 'Enable' })) : (_jsx("button", { onClick: handleMCPToggle, disabled: isTogglingMCP || currentStep !== 'complete', className: "px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm", style: {
+                                                        backgroundColor: theme.colors.backgroundTertiary,
+                                                        color: theme.colors.text,
+                                                        border: `1px solid ${theme.colors.border}`,
+                                                    }, onMouseEnter: (e) => !e.currentTarget.disabled &&
+                                                        (e.currentTarget.style.backgroundColor =
+                                                            theme.colors.backgroundSecondary), onMouseLeave: (e) => !e.currentTarget.disabled &&
+                                                        (e.currentTarget.style.backgroundColor =
+                                                            theme.colors.backgroundTertiary), children: isTogglingMCP ? 'Disabling...' : 'Disable MCP' })) }) }) })] }) }), _jsx("div", { className: "flex-1", style: { minHeight: 0 }, children: _jsx(AgentConnectionVisualizer, { agentType: agentType, isInstalled: localInstallStatus !== null ? localInstallStatus : (agentStatus.isInstalled || false), hasHooks: agentStatus.hasHooks || false, hasMCP: mcpStatus.enabled }) })] })] }) }));
+};

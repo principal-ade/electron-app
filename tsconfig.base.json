@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "incremental": true,
+    "target": "es2022",
+    "module": "ESNext",
+    "strict": true,
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "noEmit": false,
+    "skipLibCheck": true,
+    "paths": {
+      "@/core-lib": ["./src/core-lib"],
+      "@/core-lib/*": ["./src/core-lib/*"],
+      "@/shared-lib": ["./src/shared-lib"],
+      "@/shared-lib/*": ["./src/shared-lib/*"]
+    },
+    "baseUrl": ".",
+    "isolatedModules": true
+  }
+}

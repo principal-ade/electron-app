@@ -1,0 +1,74 @@
+/* Custom titlebar styles */
+.custom-titlebar {
+  height: 48px;
+  background-color: #1e1e1e;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+/* macOS specific - leave space for traffic lights */
+.platform-darwin .custom-titlebar {
+  padding-left: 80px;
+}
+
+.titlebar-drag-region {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.titlebar-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+.titlebar-controls {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-button {
+  width: 46px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.titlebar-button.close:hover {
+  background-color: #e81123;
+}
+
+.titlebar-button svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* Adjust main content to account for titlebar */
+body.has-custom-titlebar {
+  padding-top: 48px;
+}

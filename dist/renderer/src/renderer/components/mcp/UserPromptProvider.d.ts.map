@@ -1,0 +1,1 @@
+{"version":3,"file":"UserPromptProvider.d.ts","sourceRoot":"","sources":["../../../../../../src/renderer/components/mcp/UserPromptProvider.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAK,MAAM,OAAO,CAAC;AAG1B,UAAU,uBAAuB;IAC/B,QAAQ,EAAE,KAAK,CAAC,SAAS,CAAC;CAC3B;AAED;;;;;;;;;;;;;;;;;GAiBG;AACH,eAAO,MAAM,kBAAkB,EAAE,KAAK,CAAC,EAAE,CAAC,uBAAuB,CAchE,CAAC"}

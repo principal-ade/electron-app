@@ -1,0 +1,82 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/main/main.ts",
+    "src/main/terminal.ts",
+    "src/renderer/index.tsx",
+    "src/window/preload.ts",
+    ".erb/scripts/**/*.{js,ts}",
+    ".erb/configs/**/*.ts",
+    "src/renderer/pages/LandingPage/LandingPage.tsx",
+    "src/renderer/pages/ArchivedSessionsViewer.tsx",
+    "src/renderer/pages/StandaloneTerminal.tsx",
+    "src/renderer/pages/StoreViewer.tsx",
+    "src/renderer/pages/RepositoryManager.tsx",
+    "src/renderer/pages/MultiFileEditorWindow.tsx",
+    "src/renderer/components/principal/PrincipalConfigurationView.tsx"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx,js,jsx}"
+  ],
+  "ignore": [
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/fixtures/**",
+    "**/mocks/**",
+    ".erb/**",
+    "dist/**",
+    "dist_mcp_server/**",
+    "release/**",
+    "out/**"
+  ],
+  "ignoreDependencies": [
+    "@electron-forge/*",
+    "electron-builder",
+    "playwright",
+    "@playwright/test",
+    "electron",
+    "electron-updater",
+    "electron-log",
+    "electron-store",
+    "node-pty",
+    "keytar",
+    "core"
+  ],
+  "webpack": false,
+  "eslint": {
+    "config": ["eslint.config.mjs"]
+  },
+  "jest": {
+    "config": ["package.json"]
+  },
+  "playwright": {
+    "config": ["playwright.config.ts"],
+    "entry": ["tests/e2e/**/*.spec.ts"]
+  },
+  "typescript": {
+    "config": [
+      "tsconfig.json",
+      "tsconfig.node.json",
+      "tsconfig.strict.json"
+    ]
+  },
+  "babel": {
+    "config": ["babel.config.js", ".babelrc.js"]
+  },
+  "postcss": {
+    "config": ["postcss.config.js"]
+  },
+  "tailwind": {
+    "config": ["tailwind.config.js"]
+  },
+  "ignoreBinaries": [
+    "electronmon",
+    "electron-rebuild",
+    "http-server"
+  ],
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true,
+    "enum": true
+  }
+}

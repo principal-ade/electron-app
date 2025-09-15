@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": ".erb/dll",
+    "sourceMap": true
+  },
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "**/*.test.tsx", "**/*.spec.tsx"]
+}

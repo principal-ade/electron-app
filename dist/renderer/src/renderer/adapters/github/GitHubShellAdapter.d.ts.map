@@ -1,0 +1,1 @@
+{"version":3,"file":"GitHubShellAdapter.d.ts","sourceRoot":"","sources":["../../../../../../src/renderer/adapters/github/GitHubShellAdapter.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,MAAM,oCAAoC,CAAC;AAElE,qBAAa,kBAAmB,YAAW,YAAY;IAC/C,YAAY,CAAC,GAAG,EAAE,MAAM,GAAG,OAAO,CAAC,IAAI,CAAC;CAmB/C"}

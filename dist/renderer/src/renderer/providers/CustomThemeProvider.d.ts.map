@@ -1,0 +1,1 @@
+{"version":3,"file":"CustomThemeProvider.d.ts","sourceRoot":"","sources":["../../../../../src/renderer/providers/CustomThemeProvider.tsx"],"names":[],"mappings":"AAAA,OAAO,KAA8B,MAAM,OAAO,CAAC;AAKnD,UAAU,wBAAwB;IAChC,QAAQ,EAAE,KAAK,CAAC,SAAS,CAAC;CAC3B;AAED,eAAO,MAAM,mBAAmB,EAAE,KAAK,CAAC,EAAE,CAAC,wBAAwB,CAuDlE,CAAC"}

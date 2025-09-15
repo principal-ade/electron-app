@@ -1,0 +1,85 @@
+export const jestTemplate = {
+    id: 'jest-standard',
+    name: 'Jest Testing',
+    description: 'Unit and integration testing with Jest',
+    tool: {
+        name: 'jest',
+        type: 'test-runner',
+        packageMatchers: [
+            'jest',
+            '@types/jest',
+            'ts-jest',
+            'jest-environment-*',
+            '@testing-library/jest-dom',
+        ],
+        configFiles: [
+            'jest.config.js',
+            'jest.config.ts',
+            'jest.config.mjs',
+            'jest.config.json',
+            'jest.setup.js',
+            'jest.setup.ts',
+        ],
+        requiredCommands: ['test'],
+    },
+    actions: [
+        {
+            category: 'correctness',
+            items: [
+                {
+                    id: 'test',
+                    name: 'Run Tests',
+                    command: '${pm} test',
+                    description: 'Run all tests',
+                    severity: 'error',
+                    requiresScript: 'test',
+                },
+                {
+                    id: 'test-coverage',
+                    name: 'Test Coverage',
+                    command: '${pm} test --coverage',
+                    description: 'Run tests with coverage report',
+                    severity: 'info',
+                    requiresScript: 'test',
+                },
+                {
+                    id: 'test-watch',
+                    name: 'Watch Tests',
+                    command: '${pm} test --watch',
+                    description: 'Run tests in watch mode',
+                    severity: 'info',
+                    requiresScript: 'test',
+                },
+                {
+                    id: 'test-changed',
+                    name: 'Test Changed Files',
+                    command: '${pm} test --onlyChanged',
+                    description: 'Run tests for changed files only',
+                    severity: 'warning',
+                    requiresScript: 'test',
+                },
+            ],
+        },
+        {
+            category: 'quality',
+            items: [
+                {
+                    id: 'test-update-snapshots',
+                    name: 'Update Snapshots',
+                    command: '${pm} test --updateSnapshot',
+                    description: 'Update Jest snapshots',
+                    severity: 'warning',
+                    requiresScript: 'test',
+                },
+                {
+                    id: 'test-clear-cache',
+                    name: 'Clear Test Cache',
+                    command: 'npx jest --clearCache',
+                    description: 'Clear Jest cache',
+                    severity: 'info',
+                },
+            ],
+        },
+    ],
+    tags: ['testing', 'unit-tests', 'jest'],
+};

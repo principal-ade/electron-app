@@ -1,0 +1,28 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["dom", "dom.iterable", "es2022"],
+    "jsx": "react-jsx",
+    "types": ["node", "react", "react-dom"],
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./dist/renderer",
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/renderer/**/*",
+    "src/window/**/*",
+    "src/shared/**/*",
+    "src/types/**/*",
+    "assets/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "test",
+    "release/build",
+    "release/app/dist",
+    ".erb/dll",
+    // Temporarily exclude shared files with TypeScript errors - TO BE FIXED ONE BY ONE
+  ]
+}

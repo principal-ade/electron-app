@@ -1,0 +1,22 @@
+export var FileSystemAPIEvent;
+(function (FileSystemAPIEvent) {
+    FileSystemAPIEvent["SELECT_FILE"] = "file-system:select-file";
+    FileSystemAPIEvent["SELECT_DIRECTORY"] = "file-system:select-directory";
+    FileSystemAPIEvent["READ_FILE"] = "file-system:read-file";
+    FileSystemAPIEvent["WRITE_FILE"] = "file-system:write-file";
+    FileSystemAPIEvent["WATCH_DIRECTORY"] = "file-system:watch-directory";
+    FileSystemAPIEvent["WATCH_FILE"] = "file-system:watch-file";
+    FileSystemAPIEvent["WATCH_FILES"] = "file-system:watch-files";
+    FileSystemAPIEvent["STOP_WATCHING"] = "file-system:stop-watching";
+    FileSystemAPIEvent["STOP_WATCHING_FILE"] = "file-system:stop-watching-file";
+    FileSystemAPIEvent["STOP_WATCHING_FILES"] = "file-system:stop-watching-files";
+    FileSystemAPIEvent["STOP_WATCHING_DIRECTORY"] = "file-system:stop-watching-directory";
+    FileSystemAPIEvent["WATCH_SUBDIRECTORY"] = "file-system:watch-subdirectory";
+    FileSystemAPIEvent["STOP_WATCHING_SUBDIRECTORY"] = "file-system:stop-watching-subdirectory";
+    FileSystemAPIEvent["WATCH_GIT_REPOSITORY"] = "file-system:watch-git-repository";
+    FileSystemAPIEvent["STOP_WATCHING_GIT"] = "file-system:stop-watching-git";
+    FileSystemAPIEvent["GET_HOME_PATH"] = "file-system:get-home-path";
+    FileSystemAPIEvent["GET_CURRENT_WORKING_DIRECTORY"] = "file-system:get-current-working-directory";
+    FileSystemAPIEvent["GET_DIRECTORY_STATS"] = "file-system:get-directory-stats";
+    FileSystemAPIEvent["BUILD_FILTERED_FILE_TREE"] = "file-system:build-filtered-file-tree";
+})(FileSystemAPIEvent || (FileSystemAPIEvent = {}));

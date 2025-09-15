@@ -1,0 +1,36 @@
+appId: com.a24z.specktor
+productName: Specktor
+directories:
+  output: release/build
+  app: .
+files:
+  - dist/
+  - node_modules/
+  - package.json
+  - '!**/*.ts'
+  - '!**/*.tsx'
+  - '!src/'
+  - '!.erb/'
+  - '!release/'
+includeSubNodeModules: false
+mac:
+  icon: assets/icon.icns
+  identity: null
+  notarize: false
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+npmRebuild: false
+asar: true
+asarUnpack:
+  - '**/*.{node,dll}'
+  - '**/node_modules/node-pty/**'
+extraResources:
+  - from: assets
+    to: .
+  - from: dist_mcp_server/index.js
+    to: principle-md-mcp-server.js

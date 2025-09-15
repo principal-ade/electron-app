@@ -1,0 +1,1 @@
+{"version":3,"file":"useThemedIcon.d.ts","sourceRoot":"","sources":["../../../../../src/renderer/hooks/useThemedIcon.ts"],"names":[],"mappings":"AAIA;;;GAGG;AACH,wBAAgB,aAAa,CAC3B,IAAI,GAAE,MAAW,EACjB,WAAW,GAAE,MAAwC,GACpD;IACD,OAAO,EAAE,MAAM,CAAC;IAChB,SAAS,EAAE,OAAO,CAAC;IACnB,KAAK,EAAE,MAAM,GAAG,IAAI,CAAC;CACtB,CAqDA"}

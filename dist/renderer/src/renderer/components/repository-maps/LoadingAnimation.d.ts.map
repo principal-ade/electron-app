@@ -1,0 +1,1 @@
+{"version":3,"file":"LoadingAnimation.d.ts","sourceRoot":"","sources":["../../../../../../src/renderer/components/repository-maps/LoadingAnimation.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAK,MAAM,OAAO,CAAC;AAG1B,UAAU,qBAAqB;IAC7B,OAAO,EAAE,MAAM,CAAC;IAChB,SAAS,CAAC,EAAE,MAAM,CAAC;CACpB;AAED,eAAO,MAAM,gBAAgB,EAAE,KAAK,CAAC,EAAE,CAAC,qBAAqB,CA8F5D,CAAC"}

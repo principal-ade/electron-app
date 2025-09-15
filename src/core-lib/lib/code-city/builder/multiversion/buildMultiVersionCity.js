@@ -1,0 +1,22 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.buildMultiVersionCity = buildMultiVersionCity;
+const MultiVersionCityBuilder_1 = require("./MultiVersionCityBuilder");
+/**
+ * Build a multi-version city using the simplified approach.
+ * This is the recommended way to build multi-version cities.
+ */
+function buildMultiVersionCity(versionTrees, options = {}) {
+    const result = MultiVersionCityBuilder_1.MultiVersionCityBuilder.build(versionTrees, options);
+    return {
+        ...result,
+        getVersionView: (versionId, filterPrefix) => {
+            const presentFiles = result.presenceByVersion.get(versionId);
+            if (!presentFiles)
+                return undefined;
+            return MultiVersionCityBuilder_1.MultiVersionCityBuilder.getVersionView(result.unionCity, presentFiles, {
+                filterPrefix,
+            });
+        },
+    };
+}

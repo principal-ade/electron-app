@@ -1,0 +1,22 @@
+{
+  "name": "core",
+  "version": "0.1.0",
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "import": "./lib/index.js",
+      "require": "./lib/index.js"
+    },
+    "./node-framework": "./lib/node-framework/index.js",
+    "./agents": "./lib/agents/index.js",
+    "./bridges": "./lib/bridges/index.js",
+    "./llm-providers": "./lib/llm-providers/index.js",
+    "./a24z": "./lib/a24z/a24z/index.js",
+    "./configs": "./lib/configs/configs/index.js",
+    "./local-search": "./lib/local-search/index.js",
+    "./code-city": "./lib/code-city/code-city/index.js",
+    "./code-city/server": "./lib/src/code-city/render/server/index.js",
+    "./validation": "./lib/validation/index.js",
+    "./bundles/*": "./bundles/*.js"
+  }
+}

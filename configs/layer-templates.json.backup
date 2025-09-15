@@ -1,0 +1,99 @@
+{
+  "version": "1.0",
+  "description": "Content-driven layer templates that generate layers based on file content",
+  "templates": [
+    {
+      "id": "dependency-template",
+      "name": "Package Dependencies",
+      "description": "Creates individual layers for each dependency in package.json",
+      "triggerLayer": "package-root",
+      "sourceFile": "package.json",
+      "contentParser": "packageJsonDependencies",
+      "template": {
+        "id": "dep-{name}",
+        "name": "{name}",
+        "type": "dependency",
+        "pillar": "foundationHealth",
+        "derivedFrom": {
+          "fileSets": [{
+            "id": "package-json",
+            "name": "package.json",
+            "patterns": [{ "type": "exact", "pattern": "package.json" }]
+          }],
+          "derivationType": "content",
+          "description": "Dependency declared in package.json {section}",
+          "contentExtraction": {
+            "method": "parse",
+            "parser": {
+              "format": "json",
+              "paths": ["{section}.{name}"]
+            }
+          }
+        }
+      },
+      "llmPrompt": "Extract all dependencies from this package.json content. For each dependency, return: { name: string, version: string, section: 'dependencies'|'devDependencies'|'peerDependencies' }. Return as JSON array.",
+      "outputMapping": {
+        "name": "$.name",
+        "version": "$.version", 
+        "section": "$.section",
+        "isDev": "$.section === 'devDependencies'",
+        "isPeer": "$.section === 'peerDependencies'"
+      }
+    },
+    {
+      "id": "framework-template", 
+      "name": "Framework Detection",
+      "description": "Creates layers for detected frameworks based on dependencies",
+      "triggerLayer": "package-root",
+      "sourceFile": "package.json",
+      "contentParser": "packageJsonFrameworks",
+      "template": {
+        "id": "framework-{key}",
+        "name": "{name}",
+        "type": "framework", 
+        "pillar": "foundationHealth",
+        "derivedFrom": {
+          "fileSets": [{
+            "id": "package-json",
+            "name": "package.json", 
+            "patterns": [{ "type": "exact", "pattern": "package.json" }]
+          }],
+          "derivationType": "content",
+          "description": "Framework detected from dependencies"
+        }
+      },
+      "llmPrompt": "Analyze this package.json and identify web frameworks, build tools, and major libraries. For each, return: { key: string, name: string, category: string, detectedFromDeps: string[] }",
+      "outputMapping": {
+        "key": "$.key",
+        "name": "$.name",
+        "category": "$.category", 
+        "detectedFromDeps": "$.detectedFromDeps"
+      }
+    },
+    {
+      "id": "filter-template",
+      "name": "Git Repository Filters", 
+      "description": "Creates file system filters for git repositories",
+      "triggerLayer": "git-vcs",
+      "sourceFile": null,
+      "contentParser": "gitAwareFilters",
+      "template": {
+        "id": "filter-{key}",
+        "name": "{name}",
+        "type": "filter",
+        "derivedFrom": {
+          "fileSets": [],
+          "derivationType": "presence", 
+          "description": "File system filter for {purpose}"
+        }
+      },
+      "llmPrompt": "Generate appropriate file system filters for a git repository to improve analysis performance. Include filters for: git files, node_modules, build outputs, temporary files.",
+      "outputMapping": {
+        "key": "$.key",
+        "name": "$.name", 
+        "purpose": "$.purpose",
+        "excludedPatterns": "$.excludedPatterns"
+      }
+    }
+  ]
+}

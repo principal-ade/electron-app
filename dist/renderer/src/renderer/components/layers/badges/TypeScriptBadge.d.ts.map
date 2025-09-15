@@ -1,0 +1,1 @@
+{"version":3,"file":"TypeScriptBadge.d.ts","sourceRoot":"","sources":["../../../../../../../src/renderer/components/layers/badges/TypeScriptBadge.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAK,MAAM,OAAO,CAAC;AAE1B,UAAU,oBAAoB;IAC5B,OAAO,CAAC,EAAE,OAAO,GAAG,SAAS,CAAC;IAC9B,IAAI,CAAC,EAAE,OAAO,GAAG,QAAQ,CAAC;CAC3B;AAED,eAAO,MAAM,eAAe,EAAE,KAAK,CAAC,EAAE,CAAC,oBAAoB,CAwC1D,CAAC"}

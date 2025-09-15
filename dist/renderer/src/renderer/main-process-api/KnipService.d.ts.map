@@ -1,0 +1,1 @@
+{"version":3,"file":"KnipService.d.ts","sourceRoot":"","sources":["../../../../../src/renderer/main-process-api/KnipService.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,kBAAkB,EAAE,MAAM,kDAAkD,CAAC;AAEtF;;;GAGG;AACH,qBAAa,WAAW;IACtB;;OAEG;WACU,iBAAiB,IAAI,OAAO,CAAC,OAAO,CAAC;IAIlD;;OAEG;WACU,WAAW,CAAC,aAAa,EAAE,MAAM,GAAG,OAAO,CAAC,kBAAkB,CAAC;CAG7E"}

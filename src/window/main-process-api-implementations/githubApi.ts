@@ -1,0 +1,63 @@
+import { ipcRenderer } from 'electron';
+import { type GitHubAPI, GitHubAPIEvent, ConfigFetchRequest, GitHubConfigRequest, CreateIssueRequest } from '../../shared/main-process-api-interfaces/GitHubAPI';
+
+
+export const githubAPI: GitHubAPI = {
+  detectRepository: async (path: string) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.DETECT_REPOSITORY, path);
+  },
+
+  refreshData: async (owner: string, repo: string) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.REFRESH_DATA, owner, repo);
+  },
+
+  checkAuthStatus: async () => {
+    return ipcRenderer.invoke(GitHubAPIEvent.CHECK_AUTH_STATUS);
+  },
+
+  getChangedFiles: async (directoryPath: string) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_CHANGED_FILES, directoryPath);
+  },
+
+  getMarkdownDocuments: async (owner: string, repo: string) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_MARKDOWN_DOCUMENTS,
+      owner,
+      repo,
+    );
+  },
+
+  getFileContent: async (owner: string, repo: string, path: string, ref?: string) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_FILE_CONTENT,
+      owner,
+      repo,
+      path,
+      ref,
+    );
+  },
+
+  getFileAges: async (directoryPath: string) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_FILE_AGES, directoryPath);
+  },
+  getTree: async (owner: string, repo: string, ref?: string) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_TREE, owner, repo, ref);
+  },
+
+  getIssues: async (owner: string, repo: string) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_ISSUES, owner, repo);
+  },
+
+  createIssue: async (owner: string, repo: string, issue: CreateIssueRequest) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.CREATE_ISSUE, owner, repo, issue);
+  },
+
+  // Config fetching methods (formerly ConfigAPI)
+  fetchRemoteConfig: async (request: ConfigFetchRequest) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.FETCH_REMOTE_CONFIG, request);
+  },
+
+  fetchGitHubConfig: async (request: GitHubConfigRequest) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.FETCH_GITHUB_CONFIG, request);
+  },
+};

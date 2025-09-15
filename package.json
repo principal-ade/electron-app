@@ -1,0 +1,437 @@
+{
+  "name": "specktor-electron",
+  "version": "0.0.21",
+  "description": "Specktor - The Specktor engineer for your codebase",
+  "type": "module",
+  "keywords": [
+    "electron",
+    "react",
+    "typescript",
+    "ts",
+    "sass",
+    "webpack",
+    "hot",
+    "reload"
+  ],
+  "homepage": "https://principle-md.com",
+  "bugs": {
+    "url": "https://discord.gg/k5u7StPU"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/principle-md/monorepo.git"
+  },
+  "license": "GPL-3.0",
+  "author": {
+    "name": "principle-md",
+    "email": "contact@principlemd.com",
+    "url": "https://principle-md.com"
+  },
+  "contributors": [],
+  "main": "dist/main/main.js",
+  "scripts": {
+    "sync:branding": "node .erb/scripts/sync-branding.js",
+    "icons:build": "echo 'Icons are now handled by electron-builder automatically'",
+    "icons:build:mac": "echo 'Icons are now handled by electron-builder automatically'",
+    "icons:build:windows": "echo 'Icons are now handled by electron-builder automatically'",
+    "icons:build:linux": "echo 'Icons are now handled by electron-builder automatically'",
+    "build:mcp-server": "ncc build assets/principal-ai-mcp-server.cjs -o dist_mcp_server",
+    "build": "node .erb/scripts/copy-native-deps.js && npm run icons:build && npm run build:dll && npm run build:mcp-server && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build:mac": "node .erb/scripts/copy-native-deps.js && npm run icons:build:mac && npm run build:dll && npm run build:mcp-server && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build:windows": "npm run icons:build:windows && npm run build:dll && npm run build:mcp-server && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build:linux": "npm run icons:build:linux && npm run build:dll && npm run build:mcp-server && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build:dll": "node -e \"process.exit(process.platform === 'win32' ? 0 : 1)\" && npm run build:dll:windows || npm run build:dll:unix",
+    "build:dll:unix": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.standalone.ts",
+    "build:dll:windows": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.windows.ts",
+    "build:main": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.prod.ts",
+    "build:renderer": "node -e \"process.exit(process.platform === 'win32' ? 0 : 1)\" && npm run build:renderer:windows || npm run build:renderer:unix",
+    "build:renderer:unix": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.prod.standalone.ts",
+    "build:renderer:windows": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.prod.windows.ts",
+    "postinstall": "ts-node .erb/scripts/check-native-dep.js && electron-rebuild --version 38.1.0",
+    "postinstall:full": "ts-node .erb/scripts/check-native-dep.js && electron-builder install-app-deps && electron-rebuild --version 38.1.0",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:all": "eslint . --ignore-pattern ''",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
+    "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
+    "format:staged": "prettier --write \"src/main/main.ts\" \"src/window/preload.ts\"",
+    "check": "npm run typecheck && npm run lint && npm run format:check",
+    "check:strict": "npm run typecheck:strict && npm run lint && npm run format:check",
+    "fix": "npm run format && npm run lint:fix",
+    "package": "ts-node ./.erb/scripts/clean.js dist && npm run prepare:shared-lib && npm run prepare:core && npm run build && electron-builder build --publish never && node .erb/scripts/staple-artifacts.js",
+    "package:mac": "ts-node ./.erb/scripts/clean.js dist && npm run build:mac && electron-builder build --publish never && node .erb/scripts/staple-artifacts.js",
+    "package:mac:with-shared": "ts-node ./.erb/scripts/clean.js dist && npm run prepare:shared-lib && npm run build:mac && electron-builder build --publish never && node .erb/scripts/staple-artifacts.js",
+    "package:mac:npm": "node ./.erb/scripts/build-production.js",
+    "package:windows": "ts-node ./.erb/scripts/clean.js dist && npm run build:windows && electron-builder build --publish never",
+    "package:windows:npm": "node ./.erb/scripts/build-production-windows.js",
+    "package:linux": "ts-node ./.erb/scripts/clean.js dist && npm run build:linux && electron-builder build --publish never",
+    "rebuild": "node scripts/rebuild-native.js",
+    "rebuild:direct": "electron-rebuild --version 38.1.0 --parallel --types prod,dev,optional --module-dir release/app",
+    "prestart": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.dev.ts",
+    "start": "ts-node ./.erb/scripts/check-port-in-use.js && npm run prepare:core:dev && npm run prestart && npm run start:renderer",
+    "prepare:core:dev": "node ./.erb/scripts/dev-prepare-core.js",
+    "dev": "npm run prepare:core:dev && node scripts/dev-with-prod-constraints.js",
+    "dev:unsafe": "npm run prepare:core:dev && npm run build:dll && npm run start",
+    "clean-install": "node scripts/clean-install.js",
+    "clear-extensions": "node scripts/clear-extension-cache.js",
+    "dev:static": "npm run prestart && npm run dev:renderer",
+    "dev:renderer": "concurrently -k \"npm run dev:renderer:watch\" \"npm run dev:renderer:serve\" \"npm run start:main\" \"npm run start:preload\"",
+    "dev:renderer:watch": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings --max-old-space-size=4096\" webpack --config ./.erb/configs/webpack.config.renderer.dev.nohmr.ts",
+    "dev:renderer:serve": "mkdir -p dist/renderer && sleep 5 && cd dist/renderer && npx http-server -p 1212 -c-1",
+    "start:main": "concurrently -k -P \"cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\\\"-r ts-node/register --no-warnings\\\" webpack --watch --config ./.erb/configs/webpack.config.main.dev.ts\" \"electronmon .erb/dll/main.bundle.dev.js\"",
+    "start:preload": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.preload.dev.ts",
+    "start:renderer": "node -e \"process.exit(process.platform === 'win32' ? 0 : 1)\" && npm run start:renderer:windows || npm run start:renderer:unix",
+    "start:renderer:unix": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack serve --config ./.erb/configs/webpack.config.renderer.dev.standalone.ts",
+    "start:renderer:windows": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack serve --config ./.erb/configs/webpack.config.renderer.dev.windows.ts",
+    "test": "jest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:slides": "playwright test tests/e2e/slide-interactions.spec.ts",
+    "test:e2e:mcp": "playwright test tests/e2e/mcp-slide-interactions.spec.ts",
+    "test:e2e:validation": "playwright test tests/e2e/slide-validation.spec.ts",
+    "test:e2e:keyboard": "playwright test tests/e2e/keyboard-navigation.spec.ts",
+    "test:e2e:all-slides": "playwright test tests/e2e/all-slide-tests.spec.ts",
+    "test:e2e:baseline": "playwright test tests/e2e/app-baseline.spec.ts",
+    "playwright:install": "npm install -D playwright @playwright/test && playwright install",
+    "dev:old": "npm run prepare:core:dev && npm run build:dll && npm run start",
+    "dev:watch": "npm run prepare:core:dev && npm run start",
+    "typecheck": "tsc --build",
+    "typecheck:main": "tsc --project tsconfig.main.json --noEmit",
+    "typecheck:renderer": "tsc --project tsconfig.renderer.json --noEmit",
+    "typecheck:shared": "tsc --project tsconfig.shared.json --noEmit",
+    "typecheck:strict": "tsc --project tsconfig.strict.json --noEmit",
+    "typecheck:watch": "tsc --build --watch --noEmit",
+    "typecheck:strict:watch": "tsc --project tsconfig.strict.json --noEmit --watch",
+    "knip": "knip"
+  },
+  "browserslist": [
+    "electron >= 31.0.0"
+  ],
+  "prettier": {
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": [
+          ".prettierrc",
+          ".eslintrc"
+        ],
+        "options": {
+          "parser": "json"
+        }
+      }
+    ]
+  },
+  "jest": {
+    "moduleDirectories": [
+      "node_modules",
+      "release/app/node_modules",
+      "src"
+    ],
+    "moduleFileExtensions": [
+      "js",
+      "jsx",
+      "ts",
+      "tsx",
+      "json"
+    ],
+    "moduleNameMapper": {
+      "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "<rootDir>/.erb/mocks/fileMock.js",
+      "\\.(css|less|sass|scss)$": "identity-obj-proxy"
+    },
+    "setupFiles": [
+      "./.erb/scripts/check-build-exists.ts"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/src/setupTests.ts"
+    ],
+    "testEnvironment": "jsdom",
+    "testEnvironmentOptions": {
+      "url": "http://localhost/"
+    },
+    "testPathIgnorePatterns": [
+      "release/app/dist",
+      ".erb/dll"
+    ],
+    "transform": {
+      "^.+\\.[jt]sx?$": [
+        "babel-jest",
+        {
+          "configFile": "./.babelrc.js"
+        }
+      ]
+    },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(react-markdown|remark-gfm|rehype-raw|rehype-highlight|hast-util-sanitize|unist-util-position|globby|globby/.*)/)"
+    ]
+  },
+  "dependencies": {
+    "@a24z/observability-sdk": "^0.4.1",
+    "@a24z/panels": "^1.0.3",
+    "@electron/notarize": "^3.0.0",
+    "@excalidraw/excalidraw": "^0.18.0",
+    "@excalidraw/math": "^0.18.0-f0063e113",
+    "@modelcontextprotocol/sdk": "1.11.4",
+    "@monaco-editor/react": "^4.7.0",
+    "@principal-ai/agent-monitoring": "^0.3.4",
+    "@principal-ai/code-city-react": "^0.1.1",
+    "@principal-ai/codebase-composition": "^0.1.0",
+    "@principal-ai/repository-abstraction": "^0.1.0",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/xterm": "^5.5.0",
+    "a24z-memory": "^0.5.69",
+    "ai": "^4.3.17",
+    "chokidar": "^4.0.3",
+    "concurrently": "^9.2.0",
+    "date-fns": "^4.1.0",
+    "debug": "^4.3.5",
+    "electron-log": "^5.3.2",
+    "electron-store": "^10.1.0",
+    "electron-updater": "^6.3.9",
+    "express": "^5.1.0",
+    "fdir": "^6.5.0",
+    "flexsearch": "^0.8.205",
+    "glob": "^11.0.3",
+    "gpt-tokenizer": "^3.0.1",
+    "hast-util-sanitize": "^5.0.2",
+    "highlight.js": "^11.11.1",
+    "ignore": "^7.0.5",
+    "js-toml": "^1.0.2",
+    "json5": "^2.2.3",
+    "jsonwebtoken": "^9.0.2",
+    "keytar": "^7.9.0",
+    "lucide-react": "^0.534.0",
+    "marked": "^15.0.11",
+    "mermaid": "^11.6.0",
+    "monaco-editor": "^0.52.2",
+    "monaco-vim": "^0.4.2",
+    "node-fetch": "^3.3.2",
+    "node-pty": "^1.0.0",
+    "pip-requirements-js": "^0.2.1",
+    "process": "^0.11.10",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-markdown": "^10.1.0",
+    "react-resizable-panels": "^2.0.0",
+    "react-router-dom": "^7.3.0",
+    "react-syntax-highlighter": "^15.6.1",
+    "react-zoom-pan-pinch": "^3.7.0",
+    "rehype-highlight": "^7.0.2",
+    "rehype-raw": "^7.0.0",
+    "rehype-sanitize": "^6.0.0",
+    "rehype-slug": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "roughjs": "^4.6.6",
+    "simple-peer": "^9.11.1",
+    "socket.io-client": "^4.8.1",
+    "stream-browserify": "^3.0.0",
+    "themed-markdown": "^0.1.11",
+    "ts-json-schema-generator": "^2.4.0",
+    "uuid": "^11.1.0",
+    "ws": "^8.18.3",
+    "zod": "3.25.17"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.9",
+    "@babel/helper-compilation-targets": "^7.27.2",
+    "@babel/preset-env": "^7.24.8",
+    "@babel/preset-react": "^7.24.7",
+    "@babel/preset-typescript": "^7.24.7",
+    "@electron/rebuild": "^4.0.1",
+    "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.52.0",
+    "@pmmmwh/react-refresh-webpack-plugin": "^0.5.15",
+    "@svgr/webpack": "^8.1.0",
+    "@tailwindcss/postcss": "^4",
+    "@teamsupercell/typings-for-css-modules-loader": "^2.5.2",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@types/express": "^5.0.2",
+    "@types/glob": "^8.1.0",
+    "@types/jest": "^29.5.14",
+    "@types/lodash": "^4.17.20",
+    "@types/node": "^22.13.10",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.8",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "@types/react-test-renderer": "^19.1.0",
+    "@types/uuid": "^10.0.0",
+    "@types/webpack-bundle-analyzer": "^4.7.0",
+    "@typescript-eslint/eslint-plugin": "^8.26.1",
+    "@typescript-eslint/parser": "^8.26.1",
+    "@vercel/ncc": "^0.38.3",
+    "autoprefixer": "^10.4.21",
+    "babel-loader": "^10.0.0",
+    "browserslist-config-erb": "^0.0.3",
+    "buffer": "^6.0.3",
+    "chalk": "^4.1.2",
+    "chokidar-cli": "^3.0.0",
+    "core-js": "^3.41.0",
+    "cross-env": "^7.0.3",
+    "css-loader": "^7.1.2",
+    "css-minimizer-webpack-plugin": "^7.0.2",
+    "detect-port": "^2.1.0",
+    "electron": "^38.1.0",
+    "electron-builder": "^26.0.12",
+    "electron-reload": "2.0.0-alpha.1",
+    "electronmon": "^2.0.3",
+    "eslint": "^9.32.0",
+    "eslint-import-resolver-typescript": "^4.1.1",
+    "eslint-import-resolver-webpack": "^0.13.10",
+    "eslint-plugin-compat": "^6.0.2",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-jest": "^28.11.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-promise": "^7.2.1",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "events": "^3.3.0",
+    "file-loader": "^6.2.0",
+    "globby": "^14.1.0",
+    "html-webpack-plugin": "^5.6.3",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "knip": "^5.63.0",
+    "mini-css-extract-plugin": "^2.9.2",
+    "minizlib": "^3.0.2",
+    "monaco-editor-webpack-plugin": "^7.1.0",
+    "nan": "^2.23.0",
+    "node-abi": "^4.14.0",
+    "path-browserify": "^1.0.1",
+    "playwright": "^1.52.0",
+    "postcss": "^8.5.3",
+    "postcss-loader": "^8.1.1",
+    "prettier": "^3.5.3",
+    "react-refresh": "^0.16.0",
+    "react-test-renderer": "19.1.0",
+    "rimraf": "^6.0.1",
+    "sass": "^1.86.0",
+    "sass-loader": "^16.0.5",
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^4.0.0",
+    "terser-webpack-plugin": "^5.3.14",
+    "ts-jest": "^29.2.6",
+    "ts-loader": "^9.5.2",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths-webpack-plugin": "^4.2.0",
+    "typescript": "^5.8.3",
+    "url": "^0.11.4",
+    "url-loader": "^4.1.1",
+    "webpack": "^5.98.0",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2",
+    "webpack-merge": "^6.0.1"
+  },
+  "build": {
+    "productName": "Specktor",
+    "appId": "com.a24z.specktor",
+    "copyright": "Copyright © 2025 Specktor",
+    "asar": true,
+    "asarUnpack": [
+      "**\\\\*.{node,dll}",
+      "**/node_modules/node-pty/**"
+    ],
+    "directories": {
+      "app": "release/app",
+      "output": "release/build"
+    },
+    "files": [
+      "dist/",
+      "node_modules/",
+      "package.json"
+    ],
+    "mac": {
+      "icon": "../principle-md-icon.png",
+      "target": {
+        "target": "default",
+        "arch": [
+          "arm64",
+          "x64"
+        ]
+      },
+      "type": "distribution",
+      "hardenedRuntime": true,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist",
+      "gatekeeperAssess": false
+    },
+    "afterPack": ".erb/scripts/after-pack.js",
+    "afterSign": ".erb/scripts/notarize.js",
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "icon": "../principle-md-icon.png",
+      "target": [
+        "nsis"
+      ],
+      "legalTrademarks": "Copyright © 2025 Specktor"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "icon": "../principle-md-icon.png",
+      "target": [
+        "AppImage"
+      ],
+      "category": "Development"
+    },
+    "extraResources": [
+      "./assets/**",
+      {
+        "from": "dist_mcp_server/index.js",
+        "to": "principal-ai-mcp-server.cjs"
+      }
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "principle-md",
+      "repo": "monorepo"
+    }
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=14.x",
+      "onFail": "error"
+    },
+    "packageManager": {
+      "name": "npm",
+      "version": ">=7.x",
+      "onFail": "error"
+    }
+  },
+  "electronmon": {
+    "patterns": [
+      "!**/**",
+      "src/main/**",
+      ".erb/dll/**",
+      "!.erb/dll/*.json",
+      "!.erb/dll/renderer.dev.dll.js"
+    ],
+    "logLevel": "quiet",
+    "delay": 2000,
+    "quit": "q"
+  },
+  "overrides": {
+    "unicorn-magic": "^0.3.0"
+  }
+}

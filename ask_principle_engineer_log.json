@@ -1,0 +1,8 @@
+{
+  "toolName": "askPrincipleEngineer",
+  "timestamp": "2025-08-08T03:11:43.095Z",
+  "receivedParameters": {
+    "filePath": "/Users/griever/Developer/PrincipleMD/electron-react/src/renderer/components/landing-page/CityMapView.tsx",
+    "query": "What IPC handlers exist for repository notes storage namespace? I need to add a Tribal Knowledge tab that displays repository notes stored with StorageNamespaces.REPOSITORY_NOTES"
+  }
+}

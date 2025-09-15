@@ -1,0 +1,1 @@
+{"version":3,"file":"UpdateNotification.d.ts","sourceRoot":"","sources":["../../../../../src/renderer/components/UpdateNotification.tsx"],"names":[],"mappings":"AAAA,OAAO,KAA8B,MAAM,OAAO,CAAC;AAWnD,UAAU,uBAAuB;IAC/B,KAAK,CAAC,EAAE,KAAK,CAAC,aAAa,CAAC;IAC5B,iBAAiB,CAAC,EAAE,CAAC,SAAS,EAAE,OAAO,KAAK,IAAI,CAAC;CAClD;AAED,eAAO,MAAM,kBAAkB,EAAE,KAAK,CAAC,EAAE,CAAC,uBAAuB,CAuVhE,CAAC"}
