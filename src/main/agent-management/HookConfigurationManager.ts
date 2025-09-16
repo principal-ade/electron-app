@@ -6,6 +6,9 @@ import {
   hasAgentHook,
   getAgentInfo
 } from '@principal-ai/agent-monitoring';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { EnvironmentConfig } from '../utils/environmentConfig';
 
 /**
  * Result type for hook operations
@@ -267,5 +270,192 @@ export class HookConfigurationManager {
       throw new Error(`No settings path found for agent: ${agentType}`);
     }
     return agentInfo.settingsPath;
+  }
+
+  /**
+   * Get the directory where hook fallback files are stored
+   */
+  getHookFallbackDirectory(): string {
+    return EnvironmentConfig.expandHome('~/.principle/hooks');
+  }
+
+  /**
+   * Read unprocessed events from fallback files
+   */
+  async readFallbackEvents(agentType?: SupportedAgent): Promise<{
+    success: boolean;
+    events?: Array<{
+      agent: SupportedAgent;
+      filePath: string;
+      events: any[];
+    }>;
+    error?: string;
+  }> {
+    try {
+      const directory = this.getHookFallbackDirectory();
+
+      // Check if directory exists
+      try {
+        await fs.access(directory);
+      } catch {
+        // Directory doesn't exist, no events to process
+        return { success: true, events: [] };
+      }
+
+      // Read all files in the directory
+      const files = await fs.readdir(directory);
+      const results: Array<{
+        agent: SupportedAgent;
+        filePath: string;
+        events: any[];
+      }> = [];
+
+      // Get list of agents to check
+      const agentsToCheck = agentType ? [agentType] : ['claude', 'gemini', 'opencode'] as SupportedAgent[];
+
+      for (const agent of agentsToCheck) {
+        const agentInfo = getAgentInfo(agent);
+        const fallbackFileName = agentInfo.fallbackFileName;
+
+        // Look for the agent's fallback file
+        if (files.includes(fallbackFileName)) {
+          const filePath = path.join(directory, fallbackFileName);
+
+          try {
+            const content = await fs.readFile(filePath, 'utf8');
+            const events = JSON.parse(content);
+
+            if (Array.isArray(events) && events.length > 0) {
+              results.push({
+                agent,
+                filePath,
+                events
+              });
+
+              console.log(`[HookConfigManager] Found ${events.length} events for ${agent} in ${filePath}`);
+            }
+          } catch (error) {
+            console.error(`[HookConfigManager] Failed to read fallback file ${filePath}:`, error);
+          }
+        }
+      }
+
+      return { success: true, events: results };
+    } catch (error) {
+      console.error('[HookConfigManager] Failed to read fallback events:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  /**
+   * Clear processed events from a fallback file (by backing it up and creating a new empty one)
+   */
+  async clearFallbackFile(filePath: string): Promise<{
+    success: boolean;
+    backupPath?: string;
+    error?: string;
+  }> {
+    try {
+      // Create backup with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupPath = filePath.replace('.json', `.backup-${timestamp}.json`);
+
+      // Move the original file to backup
+      await fs.rename(filePath, backupPath);
+
+      // Create new empty array file
+      await fs.writeFile(filePath, '[]', 'utf8');
+
+      console.log(`[HookConfigManager] Backed up ${filePath} to ${backupPath}`);
+
+      return { success: true, backupPath };
+    } catch (error) {
+      console.error(`[HookConfigManager] Failed to clear fallback file ${filePath}:`, error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+
+  /**
+   * Get statistics about fallback files
+   */
+  async getFallbackStats(): Promise<{
+    success: boolean;
+    stats?: {
+      directory: string;
+      exists: boolean;
+      agents: Array<{
+        agent: SupportedAgent;
+        hasFile: boolean;
+        eventCount: number;
+        fileSize?: number;
+      }>;
+    };
+    error?: string;
+  }> {
+    try {
+      const directory = this.getHookFallbackDirectory();
+      let exists = true;
+
+      try {
+        await fs.access(directory);
+      } catch {
+        exists = false;
+      }
+
+      const agentStats: Array<{
+        agent: SupportedAgent;
+        hasFile: boolean;
+        eventCount: number;
+        fileSize?: number;
+      }> = [];
+
+      if (exists) {
+        const agents: SupportedAgent[] = ['claude', 'gemini', 'opencode'];
+
+        for (const agent of agents) {
+          const agentInfo = getAgentInfo(agent);
+          const filePath = path.join(directory, agentInfo.fallbackFileName);
+
+          try {
+            const stat = await fs.stat(filePath);
+            const content = await fs.readFile(filePath, 'utf8');
+            const events = JSON.parse(content);
+
+            agentStats.push({
+              agent,
+              hasFile: true,
+              eventCount: Array.isArray(events) ? events.length : 0,
+              fileSize: stat.size
+            });
+          } catch {
+            agentStats.push({
+              agent,
+              hasFile: false,
+              eventCount: 0
+            });
+          }
+        }
+      }
+
+      return {
+        success: true,
+        stats: {
+          directory,
+          exists,
+          agents: agentStats
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
   }
 }
