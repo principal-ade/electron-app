@@ -38,7 +38,6 @@ import { GeminiInstallationService } from './GeminiInstallationService';
 import { OpenCodeInstallationService } from './OpenCodeInstallationService';
 import { EnvironmentConfig } from '../utils/environmentConfig';
 import { HookConfigurationManager } from './HookConfigurationManager';
-import { getHookManager } from './hookManagerFactory';
 
 
 // Get agent config path
@@ -154,7 +153,7 @@ export function setupAgentConfigHandlers() {
           console.log(`[AgentConfig] Found config for ${agentType}, checking hooks...`);
           
           // Use HookConfigurationManager to check hook status
-          const hookManager = getHookManager();
+          const hookManager = HookConfigurationManager.getInstance();
           const hookStatus = await hookManager.getHookStatus(agentType);
           hasHooks = hookStatus.hasHooks;
           
@@ -210,7 +209,7 @@ export function setupAgentConfigHandlers() {
   ipcMain.handle(
     AgentConfigAPIEvent.ADD_HOOKS_TO_AGENT,
     async (_event, agentType: SupportedAgent) => {
-      const hookManager = getHookManager();
+      const hookManager = HookConfigurationManager.getInstance();
       const result = await hookManager.addHooks(agentType);
 
       console.log(`[AgentConfig] Add hooks result for ${agentType}:`, result);
@@ -227,7 +226,7 @@ export function setupAgentConfigHandlers() {
   ipcMain.handle(
     AgentConfigAPIEvent.REMOVE_HOOKS_FROM_AGENT,
     async (_event, agentType: SupportedAgent) => {
-      const hookManager = getHookManager();
+      const hookManager = HookConfigurationManager.getInstance();
       const result = await hookManager.removeHooks(agentType);
 
       console.log(`[AgentConfig] Remove hooks result for ${agentType}:`, result);
