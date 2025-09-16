@@ -1,4 +1,7 @@
 export class GitService {
+    static async execCommand(directory, args) {
+        return window.mainProcess.git.execCommand(directory, args);
+    }
     static async getRepositoryInfo(directoryPath) {
         console.log(`[GitService] Getting repository info for: ${directoryPath}`);
         const info = await window.mainProcess.git.getRepositoryInfo(directoryPath);

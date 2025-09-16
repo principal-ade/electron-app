@@ -45,13 +45,13 @@ export const storeAPI = {
     },
     // Watch functionality removed for performance reasons
     // Future implementation should be more targeted if needed
-    watch: (key, namespace) => {
+    watch: (_key, _namespace) => {
         console.warn('Watch functionality has been removed for performance reasons');
         return Promise.resolve(() => { });
     },
     // Storage change events removed for performance reasons  
     // Broadcasting all changes to all windows was too expensive
-    onStorageChanged: (callback) => {
+    onStorageChanged: (_callback) => {
         console.warn('onStorageChanged has been removed for performance reasons');
         return () => { };
     },

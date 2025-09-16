@@ -1,7 +1,8 @@
 import { Menu, BrowserWindow, MenuItemConstructorOptions } from 'electron';
 export default class MenuBuilder {
     mainWindow: BrowserWindow;
-    constructor(mainWindow: BrowserWindow);
+    private createWindowFn;
+    constructor(mainWindow: BrowserWindow, createWindowFn: () => void);
     buildMenu(): Menu;
     setupDevelopmentEnvironment(): void;
     buildDarwinTemplate(): MenuItemConstructorOptions[];

@@ -7,32 +7,12 @@ import { ElectronFileSystemAdapter } from '../file-system/fileSystemHandlers';
 import { ElectronWindowManagerAdapter } from './windowManagerHandlers';
 import { McpToolsAdapter } from '../principal-mcp/mcpToolsHandlers';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
-export declare const applicationWindows: Map<number, ModernApplicationWindow>;
-export declare const specialWindows: Map<string, number>;
-/**
- * Window features configuration
- */
-export interface WindowFeatures {
-    fileSystemAdapter?: boolean;
-    windowManagerAdapter?: boolean;
-    mcpToolsAdapter?: boolean;
-    githubAdapter?: boolean;
-    terminalManager?: boolean;
-    menu?: boolean;
-    devTools?: boolean;
-    contentSecurityPolicy?: boolean;
-    externalLinkHandler?: boolean;
-    maximizeOnShow?: boolean;
-    errorHandlers?: boolean;
-}
-/**
- * Default features for different window types
- */
-declare const WINDOW_FEATURES: Record<string, WindowFeatures>;
+import { WindowFeatures, IModernApplicationWindow, WINDOW_FEATURES } from './types';
+export { applicationWindows, specialWindows, WindowFeatures } from './types';
 /**
  * Modern Application Window class
  */
-export declare class ModernApplicationWindow {
+export declare class ModernApplicationWindow implements IModernApplicationWindow {
     window: BrowserWindow;
     features: WindowFeatures;
     fileSystemAdapter?: ElectronFileSystemAdapter;
@@ -46,6 +26,7 @@ export declare class ModernApplicationWindow {
     private attachErrorHandlers;
     private setupContentSecurityPolicy;
     private setupWindowBehaviors;
+    private setupTitlebarHandlers;
     get id(): number;
     get webContents(): Electron.WebContents;
     close(): void;
@@ -58,11 +39,10 @@ export declare function createWindow(options?: BrowserWindowConstructorOptions):
  * Create a special purpose window
  */
 export declare function createSpecialWindow(purpose: string, options: BrowserWindowConstructorOptions, features?: Partial<WindowFeatures>): ModernApplicationWindow | null;
-export declare const getApplicationWindows: () => Map<number, ModernApplicationWindow>;
+export declare const getApplicationWindows: () => Map<number, IModernApplicationWindow>;
 export declare const getSpecialWindows: () => Map<string, number>;
 export declare const handleAppRestart: () => void;
 export declare const getIsRestarting: () => boolean;
 export declare const setIsRestarting: (value: boolean) => void;
 export type OldApplicationWindow = ModernApplicationWindow;
-export {};
 //# sourceMappingURL=modernWindowManager.d.ts.map

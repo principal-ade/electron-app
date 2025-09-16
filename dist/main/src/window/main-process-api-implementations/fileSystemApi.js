@@ -26,8 +26,8 @@ export const fileSystemAPI = {
         const result = await ipcRenderer.invoke(FileSystemAPIEvent.WATCH_DIRECTORY, options);
         return result;
     },
-    watchFile: async (options) => {
-        const result = await ipcRenderer.invoke(FileSystemAPIEvent.WATCH_FILE, options);
+    watchFile: async (filePath) => {
+        const result = await ipcRenderer.invoke(FileSystemAPIEvent.WATCH_FILE, filePath);
         return result;
     },
     stopWatchingFile: async (filePath) => {

@@ -91,19 +91,31 @@ export class ElectronCLI {
             // Increase timeout for ESLint as it can take a while
             timeout: options.timeout || 120000,
         });
+        console.log('[ESLint] Execute result:', {
+            exitCode: result.exitCode,
+            hasStdout: !!result.stdout,
+            stdoutLength: result.stdout?.length || 0,
+            hasStderr: !!result.stderr,
+            stderrPreview: result.stderr?.substring(0, 200)
+        });
         // Parse JSON output
         try {
             // ESLint may exit with code 1 if there are linting errors
             // But the output is still valid JSON
             if (result.stdout) {
                 const results = JSON.parse(result.stdout);
+                console.log(`[ESLint] Successfully parsed ${results.length} file results`);
+                const totalMessages = results.reduce((sum, r) => sum + r.messages.length, 0);
+                console.log(`[ESLint] Total messages across all files: ${totalMessages}`);
                 return results;
             }
+            console.log('[ESLint] No stdout, returning empty results');
             return [];
         }
         catch (error) {
             // If parsing fails, return empty results
-            console.error('Failed to parse ESLint output:', error);
+            console.error('[ESLint] Failed to parse output:', error);
+            console.error('[ESLint] Raw stdout:', result.stdout?.substring(0, 500));
             return [];
         }
     }

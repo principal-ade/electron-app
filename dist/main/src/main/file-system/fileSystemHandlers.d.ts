@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron';
-import type { ModernApplicationWindow } from '../window/modernWindowManager';
+import type { IModernApplicationWindow } from '../window/types';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 export declare class ElectronFileSystemAdapter {
     private rootPath;
@@ -99,5 +99,5 @@ export declare class ElectronFileSystemAdapter {
         }>;
     }>;
 }
-export declare function registerFileSystemIpcHandlers(appWindows: Map<number, ModernApplicationWindow>): void;
+export declare function registerFileSystemIpcHandlers(appWindows: Map<number, IModernApplicationWindow>): void;
 //# sourceMappingURL=fileSystemHandlers.d.ts.map

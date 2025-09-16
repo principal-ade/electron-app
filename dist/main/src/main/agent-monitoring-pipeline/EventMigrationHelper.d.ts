@@ -53,7 +53,7 @@ export declare class EventMigrationHelper {
         /**
          * Wrap a function that produces old format
          */
-        wrapOldFormatProducer<T extends any[], R>(fn: (...args: T) => NormalizedAgentSessionEvent): (...args: T) => UniversalAgentSessionEvent;
+        wrapOldFormatProducer<T extends any[]>(fn: (...args: T) => NormalizedAgentSessionEvent): (...args: T) => UniversalAgentSessionEvent;
         /**
          * Create a bidirectional proxy for storage
          */

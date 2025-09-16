@@ -13,7 +13,7 @@ export class FileSystemService {
     }
     static async watchFile(filePath) {
         console.info(`[FileSystemService] Watching file: ${filePath}`);
-        return window.mainProcess.fileSystem.watchFile({ filePath });
+        return window.mainProcess.fileSystem.watchFile(filePath);
     }
     static onFileChange(callback) {
         return window.mainProcess.fileSystem.onFileChange(callback);

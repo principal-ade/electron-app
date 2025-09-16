@@ -3,7 +3,7 @@
  * Centralized location for app-specific branding that's used across main/renderer processes
  */
 export declare const APP_BRANDING: {
-    readonly APP_NAME: "Specktor";
+    readonly APP_NAME: "Principal AI";
     readonly COMPANY_NAME: "A24Z";
     readonly BRIDGE_PORTS: {
         readonly AGENT_SESSION_EVENTS: 3043;

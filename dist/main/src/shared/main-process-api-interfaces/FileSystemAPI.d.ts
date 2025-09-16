@@ -58,7 +58,7 @@ export interface FileSystemAPI {
         filePath: string;
         error?: string;
     } | null>;
-    watchFile: (options: WatchFileOptions) => Promise<boolean>;
+    watchFile: (filePath: string) => Promise<boolean>;
     watchFiles: (options: {
         filePaths: string[];
     }) => Promise<boolean>;

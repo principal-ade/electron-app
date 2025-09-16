@@ -3,7 +3,6 @@ import { PackageLayerModule } from "@principal-ai/codebase-composition";
 import { createFileTreeSource, compareFileTreeSources, isTemporarySource } from '../types/file-tree-source';
 import { FileTreeCacheService } from './FileTreeCacheService';
 import { CloneVisibilityService } from './CloneVisibilityService';
-import { loadManifestContents } from '../utils/loadManifestContents';
 import { ElectronPlatformAdapters } from '../adapters';
 import { GitHubWebAdapters } from '../adapters/GitHubWebAdapters';
 /**
@@ -200,15 +199,22 @@ export class FileTreeSourceService {
         const adapters = source.type === 'remote'
             ? new GitHubWebAdapters(source.owner, source.name, source.metadata?.currentBranch || source.location)
             : new ElectronPlatformAdapters();
-        // Load manifest contents
-        const manifestContents = await loadManifestContents({
-            fileSystemTree: fileTree,
-            fileSystemAdapter: adapters.fileSystem,
-            packageModule: this.packageModule,
-            rootPath: source.type === 'local' ? source.location : undefined,
-        });
+        // Create a fileReader function for the package module
+        const fileReader = async (filePath) => {
+            try {
+                const resolvedPath = source.type === 'local' && !filePath.startsWith('/')
+                    ? `${source.location}/${filePath.replace(/^\/+/, '')}`
+                    : filePath;
+                const result = await adapters.fileSystem.readFile(resolvedPath);
+                return result?.content || null;
+            }
+            catch (error) {
+                console.warn(`Failed to read file ${filePath}:`, error);
+                return null;
+            }
+        };
         // Discover packages
-        return await this.packageModule.discoverPackages(fileTree, manifestContents);
+        return await this.packageModule.discoverPackages(fileTree, fileReader);
     }
     /**
      * Get cached packages for a source without loading

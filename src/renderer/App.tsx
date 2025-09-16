@@ -9,7 +9,8 @@ import { GlobalFeedbackProvider } from './GlobalFeedbackProvider';
 import { UserPromptProvider } from './components/mcp/UserPromptProvider';
 import { AgentUpdateNotifications } from './components/AgentUpdateNotifications';
 import { CustomThemeProvider } from './providers/CustomThemeProvider';
-import { CustomTitlebar } from './components/CustomTitlebar/CustomTitlebar';
+import { CustomTitlebar } from './pages/CustomTitlebar/CustomTitlebar';
+import { SettingsModal } from './components/landing-page/SettingsModal';
 
 import { AgentConfigurationService, AgentInstallationStatus } from './main-process-api/AgentConfigurationService';
 import { AppVersionManagerService } from './main-process-api/AppVersionManagerService';
@@ -25,7 +26,7 @@ const StoreViewer = React.lazy(() => import('./pages/StoreViewer').then(m => ({ 
 const RepositoryManager = React.lazy(() => import('./pages/RepoManager/RepositoryManager').then(m => ({ default: m.RepositoryManager })));
 const MultiFileEditorWindow = React.lazy(() => import('./pages/MultiFileEditorWindow').then(m => ({ default: m.MultiFileEditorWindow })));
 
-function AppContent() {
+function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpdate: boolean) => void }) {
   const { theme } = useTheme();
 
   const [currentView, setCurrentView] = React.useState<
@@ -177,7 +178,7 @@ function AppContent() {
     return (
       <Suspense fallback={<LoadingFallback />}>
         {/* We need to consume the context inside the provider */}
-        {agentStatus && <LandingPage initialAgentStatus={agentStatus}/>}
+        {agentStatus && <LandingPage initialAgentStatus={agentStatus} onUpdateAvailable={setHasUpdateAvailable}/>}
       </Suspense>
     );
   }
@@ -253,6 +254,9 @@ function AppContent() {
 
 
 function App() {
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+  const [hasUpdateAvailable, setHasUpdateAvailable] = React.useState(false);
+
   // Add platform class to body for CSS targeting
   React.useEffect(() => {
     const platform = navigator.platform.toLowerCase();
@@ -270,8 +274,15 @@ function App() {
     <CustomThemeProvider>
       <GlobalFeedbackProvider>
         <UserPromptProvider>
-          <CustomTitlebar />
-          <AppContent />
+          <SettingsModal
+            isOpen={isSettingsOpen}
+            onClose={() => setIsSettingsOpen(false)}
+          />
+          <CustomTitlebar
+            onSettingsClick={() => setIsSettingsOpen(true)}
+            hasUpdateAvailable={hasUpdateAvailable}
+          />
+          <AppContent setHasUpdateAvailable={setHasUpdateAvailable} />
           <AgentUpdateNotifications />
         </UserPromptProvider>
       </GlobalFeedbackProvider>

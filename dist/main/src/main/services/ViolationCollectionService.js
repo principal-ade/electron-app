@@ -66,19 +66,19 @@ export class ViolationCollectionService {
                     totalWarnings += file.warningCount;
                     totalInfo += file.infoCount;
                 }
-                if (fileViolations.size > 0) {
-                    packageResults.push({
-                        packageName: pkg.name,
-                        packagePath: pkg.path,
-                        absolutePath: pkg.absolutePath, // Preserve absolute path
-                        fileViolations,
-                        totalFiles: fileViolations.size,
-                        totalViolations,
-                        totalErrors,
-                        totalWarnings,
-                        totalInfo
-                    });
-                }
+                // Always include the package in results, even if no violations found
+                // This ensures package matching works correctly in the UI
+                packageResults.push({
+                    packageName: pkg.name,
+                    packagePath: pkg.path,
+                    absolutePath: pkg.absolutePath, // Preserve absolute path
+                    fileViolations,
+                    totalFiles: fileViolations.size,
+                    totalViolations,
+                    totalErrors,
+                    totalWarnings,
+                    totalInfo
+                });
             }
             catch (error) {
                 console.error(`[ViolationCollection] Error processing package ${pkg.name}:`, error);
@@ -236,10 +236,15 @@ export class ViolationCollectionService {
                 timeout: 120000 // 2 minute timeout for large projects
             });
             // Process the results
+            console.log(`[ESLint] Processing ${eslintResults.length} file results`);
+            let processedFiles = 0;
+            let totalViolationsFound = 0;
             for (const result of eslintResults) {
                 if (result.messages.length === 0)
                     continue;
+                processedFiles++;
                 const relativePath = path.relative(rootPath, result.filePath);
+                console.log(`[ESLint] File ${result.filePath} has ${result.messages.length} messages`);
                 // Initialize file data if needed
                 if (!fileViolations.has(relativePath)) {
                     fileViolations.set(relativePath, {
@@ -266,6 +271,7 @@ export class ViolationCollectionService {
                         endColumn: message.endColumn
                     };
                     fileData.violations.push(violation);
+                    totalViolationsFound++;
                     if (severity === 'error')
                         fileData.errorCount++;
                     else if (severity === 'warning')
@@ -274,6 +280,7 @@ export class ViolationCollectionService {
                         fileData.infoCount++;
                 }
             }
+            console.log(`[ESLint] Processed ${processedFiles} files with violations, total violations: ${totalViolationsFound}`);
             console.log('[ESLint] Successfully collected violations via electron-cli-bridge');
         }
         catch (error) {

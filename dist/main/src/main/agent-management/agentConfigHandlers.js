@@ -2,24 +2,19 @@ import { ipcMain } from 'electron';
 import fs from 'fs/promises';
 import path from 'path';
 // import os from 'os'; - removed unused import
-import { configureAgentHooks, 
-// removeAgentHooks, - removed unused import
-countAgentHooks, hasAgentHook, AGENT_INFO, getAgentInfo, convertOpenCodeToNormalized, convertNormalizedToOpenCode,
-//readAgentSettings,
-//writeAgentSettings,
- } from "@principal-ai/agent-monitoring";
+import { AGENT_INFO, convertOpenCodeToNormalized, convertNormalizedToOpenCode, } from "@principal-ai/agent-monitoring";
 // MOCK IMPLEMENTATIONS - These functions are not exported from @principal-ai/agent-monitoring
 // TODO: These need to be properly implemented or the package needs to be updated
-function configureAgentMCP(agentType, settings, serverName, serverPath) {
+function configureAgentMCP(_agentType, _settings, _serverName, _serverPath) {
     throw new Error('MOCK: configureAgentMCP is not implemented - missing from @principal-ai/agent-monitoring package');
 }
-function removeAgentMCP(agentType, settings, serverName) {
+function removeAgentMCP(_agentType, _settings, _serverName) {
     throw new Error('MOCK: removeAgentMCP is not implemented - missing from @principal-ai/agent-monitoring package');
 }
-function hasAgentMCP(agentType, settings, serverName) {
+function hasAgentMCP(_agentType, _settings, _serverName) {
     throw new Error('MOCK: hasAgentMCP is not implemented - missing from @principal-ai/agent-monitoring package');
 }
-function countAgentMCPServers(agentType, settings) {
+function countAgentMCPServers(_agentType, _settings) {
     throw new Error('MOCK: countAgentMCPServers is not implemented - missing from @principal-ai/agent-monitoring package');
 }
 import { APP_BRANDING } from '../../shared/config/appBranding';
@@ -27,7 +22,7 @@ import { AgentConfigAPIEvent } from '../../shared/main-process-api-interfaces/Ag
 import { GeminiInstallationService } from './GeminiInstallationService';
 import { OpenCodeInstallationService } from './OpenCodeInstallationService';
 import { EnvironmentConfig } from '../utils/environmentConfig';
-import { AgentConfigurationService } from './AgentConfigurationService';
+import { getHookManager } from './hookManagerFactory';
 // Get agent config path
 function getAgentConfigPath(agent) {
     const info = AGENT_INFO[agent];
@@ -136,11 +131,12 @@ export function setupAgentConfigHandlers() {
                 const content = await fs.readFile(configPath, 'utf8');
                 const settings = JSON.parse(content);
                 console.log(`[AgentConfig] Found config for ${agentType}, checking hooks...`);
-                // Check specifically for our PrincipleMD hook
-                const principleHookPath = EnvironmentConfig.getAssetsPath(getAgentInfo(agentType).hookPath);
-                hasHooks = hasAgentHook(agentType, settings, principleHookPath);
+                // Use HookConfigurationManager to check hook status
+                const hookManager = getHookManager();
+                const hookStatus = await hookManager.getHookStatus(agentType);
+                hasHooks = hookStatus.hasHooks;
                 // Still count all hooks for informational purposes
-                hookCount = countAgentHooks(agentType, settings);
+                hookCount = hookStatus.hookCount;
                 console.log(`[AgentConfig] ${agentType} has PrincipleMD hook: ${hasHooks}, total hooks: ${hookCount}`);
             }
             catch (error) {
@@ -175,58 +171,27 @@ export function setupAgentConfigHandlers() {
         const info = AGENT_INFO[agentType];
         return { success: true, filePath: EnvironmentConfig.expandHome(info.mcpConfigurationPath) };
     });
-    // Add hooks to agent using core library
+    // Add hooks to agent using HookConfigurationManager
     ipcMain.handle(AgentConfigAPIEvent.ADD_HOOKS_TO_AGENT, async (_event, agentType) => {
-        try {
-            // Read current settings
-            const configPath = EnvironmentConfig.expandHome(getAgentInfo(agentType).hooksConfigurationPath);
-            let currentSettings = {};
-            try {
-                const content = await fs.readFile(configPath, 'utf8');
-                currentSettings = JSON.parse(content);
-            }
-            catch (_error) {
-                // Config doesn't exist yet, start with empty settings
-                console.log(`No existing config for ${agentType}, creating new one`);
-            }
-            const hookPath = EnvironmentConfig.getAssetsPath(getAgentInfo(agentType).hookPath);
-            // Configure hooks using core library
-            const updatedSettings = configureAgentHooks(agentType, currentSettings, hookPath);
-            // Ensure directory exists
-            const configDir = path.dirname(configPath);
-            await fs.mkdir(configDir, { recursive: true });
-            // Write updated settings
-            await fs.writeFile(configPath, JSON.stringify(updatedSettings, null, 2));
-            return {
-                success: true,
-                hookCount: countAgentHooks(agentType, updatedSettings),
-            };
-        }
-        catch (error) {
-            console.error(`Failed to add hooks to ${agentType}:`, error);
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : String(error),
-            };
-        }
+        const hookManager = getHookManager();
+        const result = await hookManager.addHooks(agentType);
+        console.log(`[AgentConfig] Add hooks result for ${agentType}:`, result);
+        return {
+            success: result.success,
+            hookCount: result.hookCount,
+            error: result.error,
+        };
     });
-    // Remove hooks from agent using core library
+    // Remove hooks from agent using HookConfigurationManager
     ipcMain.handle(AgentConfigAPIEvent.REMOVE_HOOKS_FROM_AGENT, async (_event, agentType) => {
-        try {
-            const agentConfigService = AgentConfigurationService.getInstance();
-            const { success, hookCount } = await agentConfigService.removeHooksFromConfig(agentType);
-            return {
-                success,
-                hookCount,
-            };
-        }
-        catch (error) {
-            console.error(`Failed to remove hooks from ${agentType}:`, error);
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : String(error),
-            };
-        }
+        const hookManager = getHookManager();
+        const result = await hookManager.removeHooks(agentType);
+        console.log(`[AgentConfig] Remove hooks result for ${agentType}:`, result);
+        return {
+            success: result.success,
+            hookCount: result.hookCount,
+            error: result.error,
+        };
     });
     // Read agent settings
     ipcMain.handle(AgentConfigAPIEvent.READ_AGENT_SETTINGS, async (_event, agentType) => {

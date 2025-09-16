@@ -61,7 +61,7 @@ export interface FileSystemAPI {
     filePath: string,
     content: string,
   ) => Promise<{ success: boolean; filePath: string; error?: string } | null>;
-  watchFile: (options: WatchFileOptions) => Promise<boolean>;
+  watchFile: (filePath: string) => Promise<boolean>;
   watchFiles: (options: { filePaths: string[] }) => Promise<boolean>;
   onFileChange: (callback: (event: FileChangeEvent) => void) => () => void;
   selectDirectory: (options?: {

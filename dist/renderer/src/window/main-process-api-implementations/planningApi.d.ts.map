@@ -1,1 +1,1 @@
-{"version":3,"file":"planningApi.d.ts","sourceRoot":"","sources":["../../../../../src/window/main-process-api-implementations/planningApi.ts"],"names":[],"mappings":"AAAA;;;GAGG;AAGH,OAAO,KAAK,EAAE,WAAW,EAA+D,MAAM,sDAAsD,CAAC;AAGrJ;;GAEG;AACH,eAAO,MAAM,WAAW,EAAE,WA2BzB,CAAC"}
+{"version":3,"file":"planningApi.d.ts","sourceRoot":"","sources":["../../../../../src/window/main-process-api-implementations/planningApi.ts"],"names":[],"mappings":"AAAA;;;GAGG;AAGH,OAAO,KAAK,EACV,WAAW,EAMZ,MAAM,sDAAsD,CAAC;AAG9D;;GAEG;AACH,eAAO,MAAM,WAAW,EAAE,WA2CzB,CAAC"}

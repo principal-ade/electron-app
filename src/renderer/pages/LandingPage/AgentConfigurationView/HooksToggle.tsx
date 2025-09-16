@@ -21,6 +21,7 @@ export const HooksToggle: React.FC<HooksToggleProps> = ({
 }) => {
   const { theme } = useTheme();
   const [isToggling, setIsToggling] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
   console.log('HooksToggle', agentType, hooksEnabled);
 
 
@@ -48,9 +49,20 @@ export const HooksToggle: React.FC<HooksToggleProps> = ({
         success = result;
       }
 
-      onToggle(!hooksEnabled);
+      if (success) {
+        onToggle(!hooksEnabled);
+        setError(null);
+      } else {
+        // Check if this is an OpenCode plugin system error
+        if (agentType === 'opencode' && !hooksEnabled) {
+          setError('OpenCode uses a plugin system. Hooks are not supported.');
+        } else {
+          setError('Failed to toggle hooks. Please try again.');
+        }
+      }
     } catch (error) {
       console.error('Failed to toggle hooks:', error);
+      setError('An unexpected error occurred.');
     } finally {
       setIsToggling(false);
     }
@@ -58,16 +70,29 @@ export const HooksToggle: React.FC<HooksToggleProps> = ({
 
   const agentInfo = getAgentInfo(agentType as SupportedAgent);
 
+  // Disable toggle for OpenCode
+  const isOpenCode = agentType === 'opencode';
+  const isDisabled = isToggling || isOpenCode;
+
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div className={`flex flex-col gap-2 ${className}`}>
+      <div className="flex items-center gap-3">
       <button
         onClick={handleToggle}
-        disabled={isToggling}
-        className={`relative inline-flex items-center h-8 w-14 rounded-full transition-colors ${isToggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+        disabled={isDisabled}
+        className={`relative inline-flex items-center h-8 w-14 rounded-full transition-colors ${
+          isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+        }`}
         style={{
-          backgroundColor: hooksEnabled ? agentInfo.ui.color : '#64748b',
+          backgroundColor: hooksEnabled && !isOpenCode ? agentInfo.ui.color : '#64748b',
         }}
-        title={hooksEnabled ? 'Disable all hooks' : 'Enable hooks'}
+        title={
+          isOpenCode
+            ? 'OpenCode uses a plugin system'
+            : hooksEnabled
+            ? 'Disable all hooks'
+            : 'Enable hooks'
+        }
       >
         <span
           className={`
@@ -88,14 +113,26 @@ export const HooksToggle: React.FC<HooksToggleProps> = ({
 
       <div className="flex flex-col">
         <span className="text-sm font-medium">
-          Hooks {hooksEnabled ? 'Enabled' : 'Disabled'}
+          {isOpenCode ? 'Plugin System' : `Hooks ${hooksEnabled ? 'Enabled' : 'Disabled'}`}
         </span>
         {isToggling && (
           <span className="text-xs" style={{ color: theme.colors.textSecondary }}>
             {hooksEnabled ? 'Disabling...' : 'Enabling...'}
           </span>
         )}
+        {isOpenCode && (
+          <span className="text-xs" style={{ color: theme.colors.textSecondary }}>
+            Use OpenCode plugins instead
+          </span>
+        )}
       </div>
+      </div>
+      {error && (
+        <div className="text-xs text-red-500 flex items-center gap-1 ml-1">
+          <AlertCircle size={12} />
+          {error}
+        </div>
+      )}
     </div>
   );
 };

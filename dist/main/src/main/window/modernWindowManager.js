@@ -2,7 +2,7 @@
  * Modern Window Manager - Bridge between old and new window systems
  * Provides clean window creation while maintaining compatibility
  */
-import { BrowserWindow, app, shell } from 'electron';
+import { BrowserWindow, app, shell, ipcMain } from 'electron';
 import path from 'path';
 import log from 'electron-log';
 import { resolveHtmlPath } from '../util';
@@ -12,40 +12,12 @@ import { McpToolsAdapter } from '../principal-mcp/mcpToolsHandlers';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 import MenuBuilder from '../menu';
 import AppVersionManager from '../AppVersionManager';
-// Window tracking - compatible with old system
-export const applicationWindows = new Map();
-export const specialWindows = new Map();
-/**
- * Default features for different window types
- */
-const WINDOW_FEATURES = {
-    main: {
-        fileSystemAdapter: true,
-        windowManagerAdapter: true,
-        mcpToolsAdapter: true,
-        githubAdapter: true,
-        terminalManager: true,
-        menu: true,
-        devTools: true,
-        contentSecurityPolicy: true,
-        externalLinkHandler: true,
-        maximizeOnShow: true,
-        errorHandlers: true,
-    },
-    secondary: {
-        fileSystemAdapter: true,
-        mcpToolsAdapter: true,
-        contentSecurityPolicy: true,
-        externalLinkHandler: true,
-        devTools: true,
-        errorHandlers: true,
-    },
-    minimal: {
-        contentSecurityPolicy: true,
-        devTools: true,
-        errorHandlers: true, // Always attach error handlers
-    },
-};
+// Import shared types and data structures
+import { applicationWindows, specialWindows, WINDOW_FEATURES } from './types';
+// Re-export for backward compatibility
+export { applicationWindows, specialWindows } from './types';
+// Track if titlebar IPC handlers have been registered
+let titlebarHandlersRegistered = false;
 /**
  * Modern Application Window class
  */
@@ -170,6 +142,30 @@ export class ModernApplicationWindow {
             webPreferences.nodeIntegrationInSubFrames = false;
             webPreferences.experimentalFeatures = false;
         }
+        // Platform-specific titlebar configuration
+        const isMac = process.platform === 'darwin';
+        const isWindows = process.platform === 'win32';
+        const isLinux = !isMac && !isWindows;
+        const titleBarOptions = {};
+        if (isMac) {
+            // macOS: Hide title bar but keep traffic lights
+            titleBarOptions.titleBarStyle = 'hiddenInset';
+            // Position traffic lights centered in the 32px custom titlebar
+            titleBarOptions.trafficLightPosition = { x: 12, y: 10 };
+        }
+        else if (isWindows) {
+            // Windows: Use titleBarOverlay for native controls in custom position
+            titleBarOptions.titleBarStyle = 'hidden';
+            titleBarOptions.titleBarOverlay = {
+                color: 'rgb(31, 41, 55)', // Match app's background color (top of gradient)
+                symbolColor: '#ffffff', // White window control icons
+                height: 48 // Height of custom title bar area
+            };
+        }
+        else if (isLinux) {
+            // Linux: Remove frame entirely for full control
+            titleBarOptions.frame = false;
+        }
         return {
             width: 1024,
             height: 768,
@@ -179,6 +175,7 @@ export class ModernApplicationWindow {
             show: false, // Prevent white flash
             backgroundColor: '#1e1e1e',
             webPreferences,
+            ...titleBarOptions, // Apply platform-specific titlebar settings
         };
     }
     initializeFeatures() {
@@ -251,7 +248,7 @@ export class ModernApplicationWindow {
         }
         // Menu
         if (this.features.menu) {
-            this.menuBuilder = new MenuBuilder(this.window);
+            this.menuBuilder = new MenuBuilder(this.window, createWindow);
             this.menuBuilder.buildMenu();
         }
         // External Link Handler
@@ -335,6 +332,50 @@ export class ModernApplicationWindow {
                     this.window.maximize();
                 }
             }
+        });
+        // Setup titlebar IPC handlers for this window
+        this.setupTitlebarHandlers();
+    }
+    setupTitlebarHandlers() {
+        // Register global IPC handlers only once
+        if (!titlebarHandlersRegistered) {
+            titlebarHandlersRegistered = true;
+            // Window minimize
+            ipcMain.on('window-minimize', (event) => {
+                const win = BrowserWindow.fromWebContents(event.sender);
+                if (win)
+                    win.minimize();
+            });
+            // Window maximize/restore
+            ipcMain.on('window-maximize', (event) => {
+                const win = BrowserWindow.fromWebContents(event.sender);
+                if (win) {
+                    if (win.isMaximized()) {
+                        win.restore();
+                    }
+                    else {
+                        win.maximize();
+                    }
+                }
+            });
+            // Window close
+            ipcMain.on('window-close', (event) => {
+                const win = BrowserWindow.fromWebContents(event.sender);
+                if (win)
+                    win.close();
+            });
+            // Check if maximized
+            ipcMain.handle('window-is-maximized', (event) => {
+                const win = BrowserWindow.fromWebContents(event.sender);
+                return win ? win.isMaximized() : false;
+            });
+        }
+        // Always set up window-specific maximize state change listeners
+        this.window.on('maximize', () => {
+            this.window.webContents.send('window-maximized-changed', true);
+        });
+        this.window.on('unmaximize', () => {
+            this.window.webContents.send('window-maximized-changed', false);
         });
     }
     // Getters for compatibility

@@ -38,10 +38,10 @@ export const fileSystemAPI: FileSystemAPI = {
     );
     return result;
   },
-  watchFile: async (options: { filePath: string }) => {
+  watchFile: async (filePath: string) => {
     const result = await ipcRenderer.invoke(
       FileSystemAPIEvent.WATCH_FILE,
-      options,
+      filePath,
     );
     return result;
   },

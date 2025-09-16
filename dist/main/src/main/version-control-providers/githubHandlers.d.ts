@@ -1,4 +1,4 @@
-import type { ModernApplicationWindow } from '../window/modernWindowManager';
+import type { IModernApplicationWindow } from '../window/types';
 export interface GitRepositoryInfo {
     path: string;
     isGitRepository: boolean;
@@ -78,5 +78,5 @@ export declare class GitHubAdapter {
     createIssue(owner: string, repo: string, issue: any): Promise<any>;
     getIssues(owner: string, repo: string): Promise<any[]>;
 }
-export declare function registerGitHubIpcHandlers(appWindows: Map<number, ModernApplicationWindow>): void;
+export declare function registerGitHubIpcHandlers(appWindows: Map<number, IModernApplicationWindow>): void;
 //# sourceMappingURL=githubHandlers.d.ts.map

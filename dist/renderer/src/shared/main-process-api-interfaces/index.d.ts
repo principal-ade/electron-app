@@ -44,6 +44,7 @@ export type { AgentSessionEvent, AgentSessionEventsAPI } from './AgentSessionEve
 export { AgentSessionEventsAPIEvent } from './AgentSessionEventsAPI';
 export type { AgentUpdateAPI, AgentUpdatePreferences, UpdateCheckResult } from './AgentUpdateAPI';
 export type { AuthenticationAPI, AuthUser, AuthResult, AuthStatus, AuthState, TokenResult, TokenWithMetadata } from './AuthenticationAPI';
+export type { KnipAPI, KnipAnalysisResult } from './KnipAPI';
 export interface MainProcessAPI {
     a24z: A24zAPI;
     agentConfig: AgentConfigAPI;

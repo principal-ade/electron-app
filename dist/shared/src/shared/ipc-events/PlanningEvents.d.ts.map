@@ -1,1 +1,1 @@
-{"version":3,"file":"PlanningEvents.d.ts","sourceRoot":"","sources":["../../../../../src/shared/ipc-events/PlanningEvents.ts"],"names":[],"mappings":"AAAA;;;GAGG;AAEH,oBAAY,aAAa;IACvB,aAAa,2BAA2B;IACxC,eAAe,6BAA6B;IAC5C,eAAe,6BAA6B;CAC7C"}
+{"version":3,"file":"PlanningEvents.d.ts","sourceRoot":"","sources":["../../../../../src/shared/ipc-events/PlanningEvents.ts"],"names":[],"mappings":"AAAA;;;GAGG;AAEH,oBAAY,aAAa;IACvB,aAAa,2BAA2B;IACxC,eAAe,6BAA6B;IAC5C,eAAe,6BAA6B;IAC5C,sBAAsB,oCAAoC;IAC1D,uBAAuB,qCAAqC;CAC7D"}

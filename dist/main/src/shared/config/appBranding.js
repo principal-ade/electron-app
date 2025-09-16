@@ -3,7 +3,7 @@
  * Centralized location for app-specific branding that's used across main/renderer processes
  */
 export const APP_BRANDING = {
-    APP_NAME: 'Specktor',
+    APP_NAME: 'Principal AI',
     COMPANY_NAME: 'A24Z',
     // Bridge ports for HTTP communication
     BRIDGE_PORTS: {

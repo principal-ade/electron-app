@@ -1,11 +1,10 @@
 import { app, Menu, shell, } from 'electron';
-// Import openMarkdownFile function
-// import { openMarkdownFile } from './main';
-import { createWindow } from './window/modernWindowManager'; // Import createWindow
 export default class MenuBuilder {
     mainWindow;
-    constructor(mainWindow) {
+    createWindowFn;
+    constructor(mainWindow, createWindowFn) {
         this.mainWindow = mainWindow;
+        this.createWindowFn = createWindowFn;
     }
     buildMenu() {
         if (process.env.NODE_ENV === 'development' ||
@@ -172,7 +171,7 @@ export default class MenuBuilder {
                     label: 'New Window',
                     accelerator: 'Command+N',
                     click: () => {
-                        createWindow();
+                        this.createWindowFn();
                     },
                 },
                 /* Commenting out Open Markdown File for now
@@ -209,7 +208,7 @@ export default class MenuBuilder {
                         accelerator: 'Ctrl+N',
                         click: () => {
                             // this.mainWindow.webContents.send('new-window'); // Changed to call createWindow directly
-                            createWindow();
+                            this.createWindowFn();
                         },
                     },
                     /* Commenting out Open Markdown File for now

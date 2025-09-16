@@ -36,6 +36,7 @@ class CommandExecutor {
         // Build the full command string
         const fullCommand = this.buildCommand(command, args);
         console.log(`[Worker] Executing: ${fullCommand}`);
+        console.log(`[Worker] Working directory: ${options.cwd || process.cwd()}`);
         // Prepare execSync options
         const execOptions = {
             encoding: options.encoding || 'utf8',
@@ -70,15 +71,30 @@ class CommandExecutor {
             stdout = error.stdout ? error.stdout.toString() : '';
             stderr = error.stderr ? error.stderr.toString() : '';
             exitCode = error.status || 1;
+            console.log(`[Worker] Command exited with code ${exitCode}`);
+            console.log(`[Worker] stdout length: ${stdout.length}`);
+            console.log(`[Worker] stderr length: ${stderr.length}`);
             // For some commands (like ESLint), non-zero exit doesn't mean failure
             // It just means there were linting issues found
             if (command === 'npx' && args[0] === 'eslint') {
+                console.log(`[Worker] ESLint command completed with exit code ${exitCode}`);
+                console.log(`[Worker] ESLint stdout:`, stdout ? stdout.substring(0, 200) : 'empty');
+                console.log(`[Worker] ESLint stderr:`, stderr ? stderr.substring(0, 200) : 'empty');
                 // ESLint returns exit code 1 when it finds problems
                 // This is not an error, just a result
+                // ESLint outputs JSON to stdout even when there are errors
+                // But if stdout is empty, it might mean ESLint didn't run properly
+                const output = stdout || stderr || '';
+                console.log(`[Worker] ESLint output length: ${output.length}`);
+                // If still no output, there might be a problem with the command
+                if (!output && exitCode !== 0) {
+                    console.log(`[Worker] WARNING: ESLint exited with code ${exitCode} but no output captured`);
+                    console.log(`[Worker] Full command was: ${fullCommand}`);
+                }
                 return {
                     id,
                     type: 'complete',
-                    data: stdout,
+                    data: output,
                     exitCode: exitCode,
                     duration: Date.now() - startTime
                 };

@@ -1,5 +1,5 @@
 console.log('[Preload] Script starting...');
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 console.log('[Preload] Electron imports successful');
 console.log('[Preload] Type imports successful');
 import { mcpToolsAPI } from './main-process-api-implementations/mcpToolsApi';
@@ -106,6 +106,22 @@ try {
 }
 catch (error) {
     console.error('[Preload] ❌ Failed to expose mainProcess API:', error);
+}
+// Expose custom titlebar API
+try {
+    contextBridge.exposeInMainWorld('electronTitlebar', {
+        minimize: () => ipcRenderer.send('window-minimize'),
+        maximize: () => ipcRenderer.send('window-maximize'),
+        close: () => ipcRenderer.send('window-close'),
+        isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+        onMaximizeChange: (callback) => {
+            ipcRenderer.on('window-maximized-changed', (_, isMaximized) => callback(isMaximized));
+        }
+    });
+    console.log('[Preload] ✅ Electron Titlebar API exposed');
+}
+catch (error) {
+    console.error('[Preload] ❌ Failed to expose titlebar API:', error);
 }
 try {
     contextBridge.exposeInMainWorld('appName', 'Specktor');

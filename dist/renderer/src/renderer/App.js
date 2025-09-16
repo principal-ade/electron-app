@@ -7,6 +7,8 @@ import { GlobalFeedbackProvider } from './GlobalFeedbackProvider';
 import { UserPromptProvider } from './components/mcp/UserPromptProvider';
 import { AgentUpdateNotifications } from './components/AgentUpdateNotifications';
 import { CustomThemeProvider } from './providers/CustomThemeProvider';
+import { CustomTitlebar } from './pages/CustomTitlebar/CustomTitlebar';
+import { SettingsModal } from './components/landing-page/SettingsModal';
 import { AgentConfigurationService } from './main-process-api/AgentConfigurationService';
 import { AppVersionManagerService } from './main-process-api/AppVersionManagerService';
 // Import MarkdownView directly (not lazy loaded)
@@ -18,7 +20,7 @@ const StandaloneTerminal = React.lazy(() => import('./pages/StandaloneTerminal')
 const StoreViewer = React.lazy(() => import('./pages/StoreViewer').then(m => ({ default: m.StoreViewer })));
 const RepositoryManager = React.lazy(() => import('./pages/RepoManager/RepositoryManager').then(m => ({ default: m.RepositoryManager })));
 const MultiFileEditorWindow = React.lazy(() => import('./pages/MultiFileEditorWindow').then(m => ({ default: m.MultiFileEditorWindow })));
-function AppContent() {
+function AppContent({ setHasUpdateAvailable }) {
     const { theme } = useTheme();
     const [currentView, setCurrentView] = React.useState('landing');
     // const [useNewUI, setUseNewUI] = React.useState(false); // No longer needed
@@ -154,7 +156,7 @@ function AppContent() {
             color: theme.colors.text
         }, children: _jsx("div", { children: "Loading..." }) }));
     if (currentView === 'landing') {
-        return (_jsx(Suspense, { fallback: _jsx(LoadingFallback, {}), children: agentStatus && _jsx(LandingPage, { initialAgentStatus: agentStatus }) }));
+        return (_jsx(Suspense, { fallback: _jsx(LoadingFallback, {}), children: agentStatus && _jsx(LandingPage, { initialAgentStatus: agentStatus, onUpdateAvailable: setHasUpdateAvailable }) }));
     }
     if (currentView === 'terminal') {
         // For terminal view, use hash-based routing
@@ -182,6 +184,22 @@ function AppContent() {
     return null;
 }
 function App() {
-    return (_jsx(CustomThemeProvider, { children: _jsx(GlobalFeedbackProvider, { children: _jsxs(UserPromptProvider, { children: [_jsx(AppContent, {}), _jsx(AgentUpdateNotifications, {})] }) }) }));
+    const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+    const [hasUpdateAvailable, setHasUpdateAvailable] = React.useState(false);
+    // Add platform class to body for CSS targeting
+    React.useEffect(() => {
+        const platform = navigator.platform.toLowerCase();
+        if (platform.includes('mac')) {
+            document.body.classList.add('platform-darwin');
+        }
+        else if (platform.includes('win')) {
+            document.body.classList.add('platform-win32');
+        }
+        else {
+            document.body.classList.add('platform-linux');
+        }
+        document.body.classList.add('has-custom-titlebar');
+    }, []);
+    return (_jsx(CustomThemeProvider, { children: _jsx(GlobalFeedbackProvider, { children: _jsxs(UserPromptProvider, { children: [_jsx(SettingsModal, { isOpen: isSettingsOpen, onClose: () => setIsSettingsOpen(false) }), _jsx(CustomTitlebar, { onSettingsClick: () => setIsSettingsOpen(true), hasUpdateAvailable: hasUpdateAvailable }), _jsx(AppContent, { setHasUpdateAvailable: setHasUpdateAvailable }), _jsx(AgentUpdateNotifications, {})] }) }) }));
 }
 export default App;

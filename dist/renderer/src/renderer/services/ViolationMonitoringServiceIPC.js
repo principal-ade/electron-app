@@ -52,7 +52,8 @@ class ViolationMonitoringServiceIPC {
                     !!(layer.packageData?.devDependencies &&
                         Object.keys(layer.packageData.devDependencies).some(dep => dep.includes('eslint')));
                 // Fix package path to be relative to the source location
-                let packagePath = layer.packageData?.path || '';
+                const originalPath = layer.packageData?.path || '';
+                let packagePath = originalPath;
                 // If the path is absolute and doesn't start with the source location,
                 // we need to make it relative to the source location
                 if (path.isAbsolute(packagePath)) {
@@ -70,7 +71,7 @@ class ViolationMonitoringServiceIPC {
                 const pkg = {
                     name: layer.packageData?.name || 'unknown',
                     path: packagePath,
-                    absolutePath: layer.packageData?.path || '', // Keep the absolute path for matching
+                    absolutePath: originalPath, // Keep the original absolute path for matching
                     // Has TypeScript if there's a tsconfig.json or typescript dependency
                     hasTypescript: hasTypescriptConfig || hasTypescriptDep,
                     // Has ESLint if there's an eslint config file or eslint dependency
@@ -79,6 +80,7 @@ class ViolationMonitoringServiceIPC {
                 console.log('[ViolationMonitoringServiceIPC] Final package decision:', {
                     name: pkg.name,
                     path: pkg.path,
+                    absolutePath: pkg.absolutePath,
                     hasTypescript: pkg.hasTypescript,
                     hasEslint: pkg.hasEslint,
                     reasoning: {

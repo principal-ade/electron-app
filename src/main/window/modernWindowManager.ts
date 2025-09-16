@@ -191,13 +191,13 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     if (isMac) {
       // macOS: Hide title bar but keep traffic lights
       titleBarOptions.titleBarStyle = 'hiddenInset';
-      // Position traffic lights slightly lower to align with custom titlebar
-      titleBarOptions.trafficLightPosition = { x: 20, y: 22 };
+      // Position traffic lights centered in the 32px custom titlebar
+      titleBarOptions.trafficLightPosition = { x: 12, y: 10 };
     } else if (isWindows) {
       // Windows: Use titleBarOverlay for native controls in custom position
       titleBarOptions.titleBarStyle = 'hidden';
       titleBarOptions.titleBarOverlay = {
-        color: '#1e1e1e',  // Match app's background color
+        color: 'rgb(31, 41, 55)',  // Match app's background color (top of gradient)
         symbolColor: '#ffffff',  // White window control icons
         height: 48  // Height of custom title bar area
       } as any;

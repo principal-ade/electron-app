@@ -1,7 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useCallback, useState, useEffect, useRef } from 'react';
-import { Settings, X, Plus, ChevronDown, FolderOpen, Github, Search, } from 'lucide-react';
-import { APP_BRANDING } from '../../../shared/config/appBranding';
+import { X, Plus, ChevronDown, FolderOpen, Github, Search, } from 'lucide-react';
 import { SupportedLLMProvider } from '../../../shared/main-process-api-interfaces/LLMModelsAPI';
 import { useTheme } from 'themed-markdown';
 import { AgentConfigurationService } from '../../main-process-api/AgentConfigurationService';
@@ -9,25 +8,21 @@ import { aiService } from '../../main-process-api/AIService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { useComponentTracking } from '../../components/withComponentTracking';
-import { SettingsModal } from '../../components/landing-page/SettingsModal';
 import { UpdateNotification } from '../../components/UpdateNotification';
 // import { ProjectsView } from './ProjectsView'; // Old view - replaced with Alexandria
 import { AlexandriaRepositoryManager } from '../alexandria/AlexandriaRepositoryManager';
 import { OnboardingFlowV2 } from './OnboardingFlowV2';
-export const LandingPage = ({ initialAgentStatus, }) => {
+export const LandingPage = ({ initialAgentStatus, onUpdateAvailable, }) => {
     const { theme } = useTheme();
     const trackingProps = useComponentTracking('LandingPage', 'src/renderer/pages/LandingPage.tsx');
-    const brandingRef = useRef(null);
-    const [brandingHeight, setBrandingHeight] = useState(0);
-    const [bottomViewMode, setBottomViewMode] = useState('repos');
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [bottomViewMode] = useState('repos');
     const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-    const [agentStatus, setAgentStatus] = useState(initialAgentStatus);
-    const [hasUpdateAvailable, setHasUpdateAvailable] = useState(false);
+    const [, setAgentStatus] = useState(initialAgentStatus);
+    const [, setHasUpdateAvailable] = useState(false);
     const [showAddProjectDropdown, setShowAddProjectDropdown] = useState(false);
     const dropdownRef = useRef(null);
     // Setup configuration status
-    const [setupStatus, setSetupStatus] = useState({
+    const [, setSetupStatus] = useState({
         agentsInstalled: false,
         hooksConfigured: false,
         llmConfigured: false,
@@ -38,7 +33,7 @@ export const LandingPage = ({ initialAgentStatus, }) => {
     const [setupLoading, setSetupLoading] = useState(true);
     const checkSetup = useCallback(async () => {
         try {
-            console.log('Checking setup...');
+            console.info('Checking setup...');
             setSetupLoading(true);
             // Check agent installations
             const agentStatusData = await AgentConfigurationService.checkAgentInstallations();
@@ -84,43 +79,6 @@ export const LandingPage = ({ initialAgentStatus, }) => {
     useEffect(() => {
         checkSetup();
     }, [checkSetup]);
-    // Measure branding container height
-    useEffect(() => {
-        const measureHeight = () => {
-            if (brandingRef.current) {
-                setBrandingHeight(brandingRef.current.offsetHeight);
-            }
-        };
-        measureHeight();
-        window.addEventListener('resize', measureHeight);
-        // Use ResizeObserver if available for more accurate updates
-        if (window.ResizeObserver && brandingRef.current) {
-            const observer = new ResizeObserver(measureHeight);
-            observer.observe(brandingRef.current);
-            return () => {
-                observer.disconnect();
-                window.removeEventListener('resize', measureHeight);
-            };
-        }
-        return () => window.removeEventListener('resize', measureHeight);
-    }, []);
-    // Track empty state step
-    const [emptyStateStep, setEmptyStateStep] = useState(-1);
-    // Listen for empty state step updates
-    useEffect(() => {
-        const handleStepUpdate = (event) => {
-            const customEvent = event;
-            setEmptyStateStep(customEvent.detail.step);
-        };
-        window.addEventListener('empty-state-step', handleStepUpdate);
-        return () => {
-            window.removeEventListener('empty-state-step', handleStepUpdate);
-        };
-    }, []);
-    // Handle opening onboarding from empty state
-    const handleOpenOnboarding = () => {
-        setIsOnboardingOpen(true);
-    };
     // Handle click outside dropdown
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -161,14 +119,14 @@ export const LandingPage = ({ initialAgentStatus, }) => {
     // Handle pasting GitHub link
     const handleAddGithubLink = async () => {
         // TODO: Implement GitHub link modal
-        console.log('Add GitHub link - not yet implemented');
+        console.info('Add GitHub link - not yet implemented');
     };
     // Handle GitHub search
     const handleSearchGithub = async () => {
         // TODO: Implement GitHub search modal
-        console.log('Search GitHub - not yet implemented');
+        console.info('Search GitHub - not yet implemented');
     };
-    return (_jsxs(_Fragment, { children: [_jsx(SettingsModal, { isOpen: isSettingsOpen, onClose: () => setIsSettingsOpen(false) }), isOnboardingOpen && (_jsx("div", { style: {
+    return (_jsxs(_Fragment, { children: [isOnboardingOpen && (_jsx("div", { style: {
                     position: 'fixed',
                     top: 0,
                     left: 0,
@@ -236,164 +194,129 @@ export const LandingPage = ({ initialAgentStatus, }) => {
                                         left: '50%',
                                         transform: 'translateX(-50%)',
                                         zIndex: 10,
-                                    }, children: _jsx(UpdateNotification, { onUpdateAvailable: setHasUpdateAvailable }) }), _jsx("div", { style: {
+                                    }, children: _jsx(UpdateNotification, { onUpdateAvailable: (hasUpdate) => {
+                                            setHasUpdateAvailable(hasUpdate);
+                                            onUpdateAvailable?.(hasUpdate);
+                                        } }) }), _jsx("div", { style: {
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '16px',
-                                    }, children: _jsxs("div", { ref: brandingRef, style: {
+                                    }, children: _jsx("div", { style: {
                                             display: 'flex',
                                             flexDirection: 'column',
                                             alignItems: 'flex-start',
                                             gap: '4px',
-                                        }, children: [_jsx("h1", { style: {
-                                                    fontSize: '64px',
-                                                    fontWeight: 700,
-                                                    fontFamily: theme.fonts.heading,
-                                                    lineHeight: '1.1',
-                                                    color: theme.colors.primary,
-                                                    letterSpacing: '0.02em',
-                                                    margin: 0,
-                                                }, children: APP_BRANDING.APP_NAME }), _jsx("p", { style: {
-                                                    fontSize: '24px',
-                                                    color: theme.colors.textSecondary,
-                                                    margin: 0,
-                                                    fontWeight: 300,
-                                                }, children: "Codebase Manager" })] }) }), _jsxs("div", { style: {
+                                        }, children: _jsx("p", { style: {
+                                                fontSize: '24px',
+                                                color: theme.colors.textSecondary,
+                                                margin: 0,
+                                                fontWeight: 300,
+                                            }, children: "Codebase Manager" }) }) }), _jsx("div", { style: {
                                         display: 'flex',
                                         gap: '12px',
                                         alignItems: 'center',
-                                    }, children: [_jsxs("div", { ref: dropdownRef, style: { position: 'relative' }, children: [_jsxs("button", { onClick: () => setShowAddProjectDropdown(!showAddProjectDropdown), style: {
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        gap: '8px',
-                                                        padding: '8px 16px',
-                                                        borderRadius: '8px',
-                                                        backgroundColor: theme.colors.primary,
-                                                        color: theme.colors.background,
-                                                        border: 'none',
-                                                        cursor: 'pointer',
-                                                        fontSize: '14px',
-                                                        fontWeight: 500,
-                                                        transition: 'all 0.2s',
-                                                    }, onMouseEnter: (e) => {
-                                                        e.currentTarget.style.opacity = '0.9';
-                                                    }, onMouseLeave: (e) => {
-                                                        e.currentTarget.style.opacity = '1';
-                                                    }, children: [_jsx(Plus, { size: 16 }), "Add Project", _jsx(ChevronDown, { size: 14, style: {
-                                                                transform: showAddProjectDropdown ? 'rotate(180deg)' : 'rotate(0)',
-                                                                transition: 'transform 0.2s',
-                                                            } })] }), showAddProjectDropdown && (_jsxs("div", { style: {
-                                                        position: 'absolute',
-                                                        top: '100%',
-                                                        right: 0,
-                                                        marginTop: '4px',
-                                                        backgroundColor: theme.colors.backgroundSecondary,
-                                                        border: `1px solid ${theme.colors.border}`,
-                                                        borderRadius: '8px',
-                                                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                                                        minWidth: '200px',
-                                                        zIndex: 1000,
-                                                        overflow: 'hidden',
-                                                    }, children: [_jsxs("button", { onClick: () => {
-                                                                setShowAddProjectDropdown(false);
-                                                                handleAddLocalRepository();
-                                                            }, style: {
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '12px',
-                                                                width: '100%',
-                                                                padding: '12px 16px',
-                                                                backgroundColor: 'transparent',
-                                                                color: theme.colors.text,
-                                                                border: 'none',
-                                                                cursor: 'pointer',
-                                                                fontSize: '14px',
-                                                                fontWeight: 500,
-                                                                textAlign: 'left',
-                                                                transition: 'background-color 0.2s',
-                                                            }, onMouseEnter: (e) => {
-                                                                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                                                            }, onMouseLeave: (e) => {
-                                                                e.currentTarget.style.backgroundColor = 'transparent';
-                                                            }, children: [_jsx(FolderOpen, { size: 16 }), "Local Folder"] }), _jsx("div", { style: {
-                                                                height: '1px',
-                                                                backgroundColor: theme.colors.border,
-                                                            } }), _jsxs("button", { onClick: () => {
-                                                                setShowAddProjectDropdown(false);
-                                                                handleAddGithubLink();
-                                                            }, style: {
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '12px',
-                                                                width: '100%',
-                                                                padding: '12px 16px',
-                                                                backgroundColor: 'transparent',
-                                                                color: theme.colors.text,
-                                                                border: 'none',
-                                                                cursor: 'pointer',
-                                                                fontSize: '14px',
-                                                                fontWeight: 500,
-                                                                textAlign: 'left',
-                                                                transition: 'background-color 0.2s',
-                                                            }, onMouseEnter: (e) => {
-                                                                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                                                            }, onMouseLeave: (e) => {
-                                                                e.currentTarget.style.backgroundColor = 'transparent';
-                                                            }, children: [_jsx(Github, { size: 16 }), "Paste Link"] }), _jsx("div", { style: {
-                                                                height: '1px',
-                                                                backgroundColor: theme.colors.border,
-                                                            } }), _jsxs("button", { onClick: () => {
-                                                                setShowAddProjectDropdown(false);
-                                                                handleSearchGithub();
-                                                            }, style: {
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '12px',
-                                                                width: '100%',
-                                                                padding: '12px 16px',
-                                                                backgroundColor: 'transparent',
-                                                                color: theme.colors.text,
-                                                                border: 'none',
-                                                                cursor: 'pointer',
-                                                                fontSize: '14px',
-                                                                fontWeight: 500,
-                                                                textAlign: 'left',
-                                                                transition: 'background-color 0.2s',
-                                                            }, onMouseEnter: (e) => {
-                                                                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                                                            }, onMouseLeave: (e) => {
-                                                                e.currentTarget.style.backgroundColor = 'transparent';
-                                                            }, children: [_jsx(Search, { size: 16 }), "Search GitHub"] })] }))] }), _jsxs("button", { onClick: () => setIsSettingsOpen(true), style: {
-                                                width: '40px',
-                                                height: '40px',
-                                                borderRadius: '8px',
-                                                border: 'none',
-                                                backgroundColor: theme.colors.backgroundSecondary,
-                                                color: theme.colors.text,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s ease',
-                                                position: 'relative',
-                                            }, onMouseEnter: (e) => {
-                                                e.currentTarget.style.backgroundColor =
-                                                    theme.colors.backgroundTertiary;
-                                                e.currentTarget.style.transform = 'scale(1.05)';
-                                            }, onMouseLeave: (e) => {
-                                                e.currentTarget.style.backgroundColor =
-                                                    theme.colors.backgroundSecondary;
-                                                e.currentTarget.style.transform = 'scale(1)';
-                                            }, "aria-label": "Settings", title: hasUpdateAvailable ? "Settings (Update Available)" : "Settings", children: [_jsx(Settings, { size: 20 }), hasUpdateAvailable && (_jsx("div", { style: {
-                                                        position: 'absolute',
-                                                        top: '6px',
-                                                        right: '6px',
-                                                        width: '8px',
-                                                        height: '8px',
-                                                        borderRadius: '50%',
-                                                        backgroundColor: theme.colors.warning || '#fbbf24',
-                                                        boxShadow: `0 0 8px ${(theme.colors.warning || '#fbbf24')}80`,
-                                                    } }))] })] })] }) }), _jsx("div", { style: {
+                                    }, children: _jsxs("div", { ref: dropdownRef, style: { position: 'relative' }, children: [_jsxs("button", { onClick: () => setShowAddProjectDropdown(!showAddProjectDropdown), style: {
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    padding: '8px 16px',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: theme.colors.primary,
+                                                    color: theme.colors.background,
+                                                    border: 'none',
+                                                    cursor: 'pointer',
+                                                    fontSize: '14px',
+                                                    fontWeight: 500,
+                                                    transition: 'all 0.2s',
+                                                }, onMouseEnter: (e) => {
+                                                    e.currentTarget.style.opacity = '0.9';
+                                                }, onMouseLeave: (e) => {
+                                                    e.currentTarget.style.opacity = '1';
+                                                }, children: [_jsx(Plus, { size: 16 }), "Add Project", _jsx(ChevronDown, { size: 14, style: {
+                                                            transform: showAddProjectDropdown ? 'rotate(180deg)' : 'rotate(0)',
+                                                            transition: 'transform 0.2s',
+                                                        } })] }), showAddProjectDropdown && (_jsxs("div", { style: {
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    right: 0,
+                                                    marginTop: '4px',
+                                                    backgroundColor: theme.colors.backgroundSecondary,
+                                                    border: `1px solid ${theme.colors.border}`,
+                                                    borderRadius: '8px',
+                                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                                    minWidth: '200px',
+                                                    zIndex: 1000,
+                                                    overflow: 'hidden',
+                                                }, children: [_jsxs("button", { onClick: () => {
+                                                            setShowAddProjectDropdown(false);
+                                                            handleAddLocalRepository();
+                                                        }, style: {
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '12px',
+                                                            width: '100%',
+                                                            padding: '12px 16px',
+                                                            backgroundColor: 'transparent',
+                                                            color: theme.colors.text,
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            fontSize: '14px',
+                                                            fontWeight: 500,
+                                                            textAlign: 'left',
+                                                            transition: 'background-color 0.2s',
+                                                        }, onMouseEnter: (e) => {
+                                                            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                                                        }, onMouseLeave: (e) => {
+                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                        }, children: [_jsx(FolderOpen, { size: 16 }), "Local Folder"] }), _jsx("div", { style: {
+                                                            height: '1px',
+                                                            backgroundColor: theme.colors.border,
+                                                        } }), _jsxs("button", { onClick: () => {
+                                                            setShowAddProjectDropdown(false);
+                                                            handleAddGithubLink();
+                                                        }, style: {
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '12px',
+                                                            width: '100%',
+                                                            padding: '12px 16px',
+                                                            backgroundColor: 'transparent',
+                                                            color: theme.colors.text,
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            fontSize: '14px',
+                                                            fontWeight: 500,
+                                                            textAlign: 'left',
+                                                            transition: 'background-color 0.2s',
+                                                        }, onMouseEnter: (e) => {
+                                                            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                                                        }, onMouseLeave: (e) => {
+                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                        }, children: [_jsx(Github, { size: 16 }), "Paste Link"] }), _jsx("div", { style: {
+                                                            height: '1px',
+                                                            backgroundColor: theme.colors.border,
+                                                        } }), _jsxs("button", { onClick: () => {
+                                                            setShowAddProjectDropdown(false);
+                                                            handleSearchGithub();
+                                                        }, style: {
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '12px',
+                                                            width: '100%',
+                                                            padding: '12px 16px',
+                                                            backgroundColor: 'transparent',
+                                                            color: theme.colors.text,
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            fontSize: '14px',
+                                                            fontWeight: 500,
+                                                            textAlign: 'left',
+                                                            transition: 'background-color 0.2s',
+                                                        }, onMouseEnter: (e) => {
+                                                            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                                                        }, onMouseLeave: (e) => {
+                                                            e.currentTarget.style.backgroundColor = 'transparent';
+                                                        }, children: [_jsx(Search, { size: 16 }), "Search GitHub"] })] }))] }) })] }) }), _jsx("div", { style: {
                             flex: 1,
                             width: '100%',
                             display: 'flex',

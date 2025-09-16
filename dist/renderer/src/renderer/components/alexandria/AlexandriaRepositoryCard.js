@@ -6,7 +6,33 @@ export const AlexandriaRepositoryCard = ({ repository, onSelect }) => {
     // Extract GitHub metadata from the nested github field
     const githubData = repository.github;
     const stars = githubData?.stars || 0;
-    const owner = githubData?.owner || 'unknown';
+    // For local repositories without GitHub data, try to extract owner from remoteUrl or name
+    let owner = githubData?.owner;
+    if (!owner) {
+        // Try to extract owner from Git remote URL first
+        if (repository.remoteUrl) {
+            // Handle both SSH (git@github.com:owner/repo.git) and HTTPS (https://github.com/owner/repo.git) formats
+            const sshMatch = repository.remoteUrl.match(/git@github\.com:([^/]+)\/[^/]+\.git/);
+            const httpsMatch = repository.remoteUrl.match(/https:\/\/github\.com\/([^/]+)\/[^/]+/);
+            if (sshMatch) {
+                owner = sshMatch[1];
+            }
+            else if (httpsMatch) {
+                owner = httpsMatch[1];
+            }
+        }
+        // Fallback: try to extract owner from repository name if it follows owner/repo format
+        if (!owner) {
+            const nameMatch = repository.name.match(/^([^/]+)\/[^/]+$/);
+            if (nameMatch) {
+                owner = nameMatch[1];
+            }
+            else {
+                // For local repositories without remote or single-name repos, use "Local"
+                owner = 'Local';
+            }
+        }
+    }
     const description = githubData?.description;
     // Calculate spine width logarithmically based on chapter count
     // Base width is 20px, scales up to ~40px for many chapters

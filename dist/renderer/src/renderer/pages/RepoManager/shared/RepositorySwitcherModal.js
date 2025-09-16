@@ -149,7 +149,7 @@ export const RepositorySwitcherModal = ({ isOpen, onClose, currentRepository, on
                             }, children: [_jsx(FolderOpen, { size: 48, style: { opacity: 0.3 } }), _jsx("span", { children: searchQuery ? 'No repositories match your search' : 'No other repositories available' })] })) : (_jsx("div", { style: {
                                 display: 'grid',
                                 gap: '12px',
-                            }, children: filteredRepositories.map((repo) => {
+                            }, children: filteredRepositories.map((repo, index) => {
                                 const hasLocalClones = (repo.localClones?.length ?? 0) > 0;
                                 const isHovered = hoveredRepo === repo.remoteUrl;
                                 return (_jsx("div", { style: {
@@ -288,7 +288,7 @@ export const RepositorySwitcherModal = ({ isOpen, onClose, currentRepository, on
                                                             }, onMouseLeave: (e) => {
                                                                 e.currentTarget.style.backgroundColor = theme.colors.backgroundLight;
                                                                 e.currentTarget.style.borderColor = theme.colors.border;
-                                                            }, children: [_jsx(FolderSearch, { size: 12 }), "Evaluate"] })) })] })] }) }, repo.remoteUrl));
+                                                            }, children: [_jsx(FolderSearch, { size: 12 }), "Evaluate"] })) })] })] }) }, `${repo.remoteUrl}-${index}`));
                             }) })) }), _jsx("div", { style: {
                             padding: '16px 24px',
                             borderTop: `1px solid ${theme.colors.border}`,

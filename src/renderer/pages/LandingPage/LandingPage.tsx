@@ -1,8 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import {
-  Settings,
-  Bot,
-  Sparkles,
   X,
   Plus,
   ChevronDown,
@@ -11,7 +8,6 @@ import {
   Search,
 } from 'lucide-react';
 
-import { APP_BRANDING } from '../../../shared/config/appBranding';
 import { SupportedLLMProvider } from '../../../shared/main-process-api-interfaces/LLMModelsAPI';
 import { useTheme } from 'themed-markdown';
 
@@ -20,7 +16,6 @@ import { aiService } from '../../main-process-api/AIService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { useComponentTracking } from '../../components/withComponentTracking';
-import { SettingsModal } from '../../components/landing-page/SettingsModal';
 import { UpdateNotification } from '../../components/UpdateNotification';
 
 // import { ProjectsView } from './ProjectsView'; // Old view - replaced with Alexandria
@@ -29,6 +24,7 @@ import { OnboardingFlowV2 } from './OnboardingFlowV2';
 
 interface LandingPageProps {
   initialAgentStatus: AgentInstallationStatus;
+  onUpdateAvailable?: (hasUpdate: boolean) => void;
 }
 
 type BottomViewMode =
@@ -36,22 +32,19 @@ type BottomViewMode =
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   initialAgentStatus,
+  onUpdateAvailable,
 }) => {
   const { theme } = useTheme();
   const trackingProps = useComponentTracking('LandingPage', 'src/renderer/pages/LandingPage.tsx');
-  const brandingRef = useRef<HTMLDivElement>(null);
-  const [brandingHeight, setBrandingHeight] = useState<number>(0);
-  const [bottomViewMode, setBottomViewMode] =
-    useState<BottomViewMode>('repos');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [bottomViewMode] = useState<BottomViewMode>('repos');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  const [agentStatus, setAgentStatus] = useState<AgentInstallationStatus>(initialAgentStatus);
-  const [hasUpdateAvailable, setHasUpdateAvailable] = useState(false);
+  const [, setAgentStatus] = useState<AgentInstallationStatus>(initialAgentStatus);
+  const [, setHasUpdateAvailable] = useState(false);
   const [showAddProjectDropdown, setShowAddProjectDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Setup configuration status
-  const [setupStatus, setSetupStatus] = useState({
+  const [, setSetupStatus] = useState({
     agentsInstalled: false,
     hooksConfigured: false,
     llmConfigured: false,
@@ -64,7 +57,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const checkSetup = useCallback(async () => {
     try {
-      console.log('Checking setup...');
+      console.info('Checking setup...');
       setSetupLoading(true);
       
       // Check agent installations
@@ -117,52 +110,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     checkSetup();
   }, [checkSetup]);
 
-  // Measure branding container height
-  useEffect(() => {
-    const measureHeight = () => {
-      if (brandingRef.current) {
-        setBrandingHeight(brandingRef.current.offsetHeight);
-      }
-    };
-    
-    measureHeight();
-    window.addEventListener('resize', measureHeight);
-    
-    // Use ResizeObserver if available for more accurate updates
-    if (window.ResizeObserver && brandingRef.current) {
-      const observer = new ResizeObserver(measureHeight);
-      observer.observe(brandingRef.current);
-      return () => {
-        observer.disconnect();
-        window.removeEventListener('resize', measureHeight);
-      };
-    }
-    
-    return () => window.removeEventListener('resize', measureHeight);
-  }, []);
 
 
-  
-  // Track empty state step
-  const [emptyStateStep, setEmptyStateStep] = useState(-1);
-  
-  // Listen for empty state step updates
-  useEffect(() => {
-    const handleStepUpdate = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      setEmptyStateStep(customEvent.detail.step);
-    };
-    
-    window.addEventListener('empty-state-step', handleStepUpdate);
-    return () => {
-      window.removeEventListener('empty-state-step', handleStepUpdate);
-    };
-  }, []);
-
-  // Handle opening onboarding from empty state
-  const handleOpenOnboarding = () => {
-    setIsOnboardingOpen(true);
-  };
 
   // Handle click outside dropdown
   useEffect(() => {
@@ -210,22 +159,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Handle pasting GitHub link
   const handleAddGithubLink = async () => {
     // TODO: Implement GitHub link modal
-    console.log('Add GitHub link - not yet implemented');
+    console.info('Add GitHub link - not yet implemented');
   };
 
   // Handle GitHub search
   const handleSearchGithub = async () => {
     // TODO: Implement GitHub search modal
-    console.log('Search GitHub - not yet implemented');
+    console.info('Search GitHub - not yet implemented');
   };
 
   return (
     <>
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-      />
-      
       {/* Onboarding Modal */}
       {isOnboardingOpen && (
         <div style={{
@@ -331,7 +275,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 zIndex: 10,
               }}
             >
-              <UpdateNotification onUpdateAvailable={setHasUpdateAvailable} />
+              <UpdateNotification onUpdateAvailable={(hasUpdate) => {
+                setHasUpdateAvailable(hasUpdate);
+                onUpdateAvailable?.(hasUpdate);
+              }} />
             </div>
 
             {/* Left Section - Brand */}
@@ -342,9 +289,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 gap: '16px',
               }}
             >
-            {/* Brand Name and Tagline */}
+            {/* Brand Name removed - now shown in titlebar */}
             <div
-              ref={brandingRef}
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -352,19 +298,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 gap: '4px',
               }}
             >
-              <h1
-                style={{
-                  fontSize: '64px',
-                  fontWeight: 700,
-                  fontFamily: theme.fonts.heading,
-                  lineHeight: '1.1',
-                  color: theme.colors.primary,
-                  letterSpacing: '0.02em',
-                  margin: 0,
-                }}
-              >
-                {APP_BRANDING.APP_NAME}
-              </h1>
               <p
                 style={{
                   fontSize: '24px',
@@ -373,7 +306,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   fontWeight: 300,
                 }}
               >
-               Codebase Manager 
+               Codebase Manager
               </p>
             </div>
           </div>
@@ -539,52 +472,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
               )}
             </div>
-            
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: theme.colors.backgroundSecondary,
-                color: theme.colors.text,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                position: 'relative',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundTertiary;
-                e.currentTarget.style.transform = 'scale(1.05)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundSecondary;
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-              aria-label="Settings"
-              title={hasUpdateAvailable ? "Settings (Update Available)" : "Settings"}
-            >
-              <Settings size={20} />
-              {hasUpdateAvailable && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '6px',
-                    right: '6px',
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: theme.colors.warning || '#fbbf24',
-                    boxShadow: `0 0 8px ${(theme.colors.warning || '#fbbf24')}80`,
-                  }}
-                />
-              )}
-            </button>
           </div>
           </div>
         </div>

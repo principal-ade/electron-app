@@ -55,6 +55,10 @@ export interface GitBranchInfo {
     upstream?: string;
 }
 export declare class GitService {
+    static execCommand(directory: string, args: string[]): Promise<{
+        stdout: string;
+        stderr: string;
+    }>;
     static getRepositoryInfo(directoryPath: string): Promise<GitInfo | null>;
     static checkIfPrivateRepo(remoteUrl: string): Promise<boolean>;
     static cloneRepository(remoteUrl: string, targetPath: string): Promise<boolean>;

@@ -32,4 +32,18 @@ export const planningAPI = {
         ipcRenderer.on(PlanningEvent.DOCUMENT_LOADED, subscription);
         return () => ipcRenderer.removeListener(PlanningEvent.DOCUMENT_LOADED, subscription);
     },
+    /**
+     * Listen for agent document requests
+     */
+    onAgentDocumentRequest: (callback) => {
+        const subscription = (_event, data) => callback(data);
+        ipcRenderer.on(PlanningEvent.AGENT_DOCUMENT_REQUEST, subscription);
+        return () => ipcRenderer.removeListener(PlanningEvent.AGENT_DOCUMENT_REQUEST, subscription);
+    },
+    /**
+     * Send response to agent document request
+     */
+    sendAgentDocumentResponse: async (requestId, response) => {
+        await ipcRenderer.invoke(PlanningEvent.AGENT_DOCUMENT_RESPONSE, requestId, response);
+    },
 };
