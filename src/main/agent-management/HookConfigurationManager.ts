@@ -1,7 +1,13 @@
-import { ClaudeConfigManager, type HookOptions } from '@a24z/agent-manager';
 import {
-  SupportedAgent,
-  AgentSettings,
+  ClaudeConfigManager,
+  type HookOptions,
+  type FallbackEvent,
+  type FallbackStats,
+  type FallbackOperationResult
+} from '@a24z/agent-manager';
+import {
+  type SupportedAgent,
+  type AgentSettings,
   countAgentHooks,
   hasAgentHook,
   getAgentInfo
@@ -42,6 +48,8 @@ export class HookConfigurationManager {
 
   private constructor() {
     this.claudeManager = new ClaudeConfigManager();
+    // Set the default fallback directory for Claude
+    this.claudeManager.setFallbackDirectory('~/.principle/hooks');
   }
 
   static getInstance(): HookConfigurationManager {
@@ -292,18 +300,6 @@ export class HookConfigurationManager {
     error?: string;
   }> {
     try {
-      const directory = this.getHookFallbackDirectory();
-
-      // Check if directory exists
-      try {
-        await fs.access(directory);
-      } catch {
-        // Directory doesn't exist, no events to process
-        return { success: true, events: [] };
-      }
-
-      // Read all files in the directory
-      const files = await fs.readdir(directory);
       const results: Array<{
         agent: SupportedAgent;
         filePath: string;
@@ -314,28 +310,47 @@ export class HookConfigurationManager {
       const agentsToCheck = agentType ? [agentType] : ['claude', 'gemini', 'opencode'] as SupportedAgent[];
 
       for (const agent of agentsToCheck) {
-        const agentInfo = getAgentInfo(agent);
-        const fallbackFileName = agentInfo.fallbackFileName;
+        if (agent === 'claude') {
+          // Use ClaudeConfigManager for Claude
+          const claudeResult = await this.claudeManager.readFallbackEvents();
+          if (claudeResult.success && claudeResult.events) {
+            results.push(...claudeResult.events.map(e => ({ ...e, agent: 'claude' as SupportedAgent })));
+          }
+        } else {
+          // For other agents, use the existing implementation
+          const directory = this.getHookFallbackDirectory();
 
-        // Look for the agent's fallback file
-        if (files.includes(fallbackFileName)) {
-          const filePath = path.join(directory, fallbackFileName);
-
+          // Check if directory exists
           try {
-            const content = await fs.readFile(filePath, 'utf8');
-            const events = JSON.parse(content);
+            await fs.access(directory);
+          } catch {
+            // Directory doesn't exist, skip this agent
+            continue;
+          }
 
-            if (Array.isArray(events) && events.length > 0) {
-              results.push({
-                agent,
-                filePath,
-                events
-              });
+          const files = await fs.readdir(directory);
+          const agentInfo = getAgentInfo(agent);
+          const fallbackFileName = agentInfo.fallbackFileName;
 
-              console.log(`[HookConfigManager] Found ${events.length} events for ${agent} in ${filePath}`);
+          if (files.includes(fallbackFileName)) {
+            const filePath = path.join(directory, fallbackFileName);
+
+            try {
+              const content = await fs.readFile(filePath, 'utf8');
+              const events = JSON.parse(content);
+
+              if (Array.isArray(events) && events.length > 0) {
+                results.push({
+                  agent,
+                  filePath,
+                  events
+                });
+
+                console.log(`[HookConfigManager] Found ${events.length} events for ${agent} in ${filePath}`);
+              }
+            } catch (error) {
+              console.error(`[HookConfigManager] Failed to read fallback file ${filePath}:`, error);
             }
-          } catch (error) {
-            console.error(`[HookConfigManager] Failed to read fallback file ${filePath}:`, error);
           }
         }
       }
@@ -359,6 +374,17 @@ export class HookConfigurationManager {
     error?: string;
   }> {
     try {
+      // Check if this is a Claude fallback file
+      if (filePath.includes('claude-hook-events.json')) {
+        const result = await this.claudeManager.clearFallbackFile();
+        return {
+          success: result.success,
+          backupPath: result.backupPath,
+          error: result.error
+        };
+      }
+
+      // For other agents, use the existing implementation
       // Create backup with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const backupPath = filePath.replace('.json', `.backup-${timestamp}.json`);
@@ -415,10 +441,28 @@ export class HookConfigurationManager {
         fileSize?: number;
       }> = [];
 
-      if (exists) {
-        const agents: SupportedAgent[] = ['claude', 'gemini', 'opencode'];
+      const agents: SupportedAgent[] = ['claude' as SupportedAgent, 'gemini' as SupportedAgent, 'opencode' as SupportedAgent];
 
-        for (const agent of agents) {
+      for (const agent of agents) {
+        if (agent === 'claude') {
+          // Use ClaudeConfigManager for Claude
+          const claudeStats = await this.claudeManager.getFallbackStats();
+          if (claudeStats.success && claudeStats.stats) {
+            agentStats.push({
+              agent: 'claude' as SupportedAgent,
+              hasFile: claudeStats.stats.hasFile,
+              eventCount: claudeStats.stats.eventCount,
+              fileSize: claudeStats.stats.fileSize
+            });
+          } else {
+            agentStats.push({
+              agent: 'claude' as SupportedAgent,
+              hasFile: false,
+              eventCount: 0
+            });
+          }
+        } else if (exists) {
+          // For other agents, use the existing implementation
           const agentInfo = getAgentInfo(agent);
           const filePath = path.join(directory, agentInfo.fallbackFileName);
 
@@ -440,6 +484,12 @@ export class HookConfigurationManager {
               eventCount: 0
             });
           }
+        } else {
+          agentStats.push({
+            agent,
+            hasFile: false,
+            eventCount: 0
+          });
         }
       }
 

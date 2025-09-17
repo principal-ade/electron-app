@@ -693,11 +693,11 @@ export const RepositoryManager = React.memo(({ repository }) => {
             }, children: _jsx("div", { children: "Loading..." }) }));
     }
     return (_jsxs("div", { style: {
-            width: '100vw',
-            height: '100vh',
+            width: '100%',
+            height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            padding: '20px',
+            padding: '20px 20px 0 20px',
             overflow: 'hidden',
             boxSizing: 'border-box',
             backgroundColor: theme.colors.background
@@ -710,7 +710,8 @@ export const RepositoryManager = React.memo(({ repository }) => {
                     minHeight: 0, // Important for flexbox overflow
                     display: 'flex',
                     flexDirection: 'column',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
+                    paddingBottom: '20px'
                 }, children: _loading && !fileTree ? (_jsxs("div", { style: {
                         flex: 1,
                         display: 'flex',

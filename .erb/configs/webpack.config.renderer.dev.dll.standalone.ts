@@ -21,8 +21,8 @@ const configuration: webpack.Configuration = {
 
   target: 'web',
 
-  // Bundle everything except native modules and observability SDK (which uses Node.js modules)
-  externals: ['keytar', '@a24z/observability-sdk'],
+  // Bundle everything except native modules and libraries with Node.js dependencies
+  externals: ['keytar', '@a24z/observability-sdk', '@a24z/core-library', '@a24z/markdown-search'],
 
   stats: 'errors-only',
 
@@ -91,7 +91,8 @@ const configuration: webpack.Configuration = {
           'fdir', // Fast directory crawler - Node.js only, used in main process
           'globby', // File system globbing - Node.js only, uses native fs
           'glob', // Glob pattern matching - Node.js only, uses native fs
-          'minipass' // Stream library that uses Node.js internals
+          'minipass', // Stream library that uses Node.js internals
+          '@a24z/markdown-search' // Has Node.js dependencies for indexing
         ];
         
         // Exclude if in the list or contains electron

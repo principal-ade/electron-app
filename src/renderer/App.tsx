@@ -10,6 +10,7 @@ import { UserPromptProvider } from './components/mcp/UserPromptProvider';
 import { AgentUpdateNotifications } from './components/AgentUpdateNotifications';
 import { CustomThemeProvider } from './providers/CustomThemeProvider';
 import { CustomTitlebar } from './pages/CustomTitlebar/CustomTitlebar';
+import { RepoManagerTitlebar } from './pages/CustomTitlebar/RepoManagerTitlebar';
 import { SettingsModal } from './components/landing-page/SettingsModal';
 
 import { AgentConfigurationService, AgentInstallationStatus } from './main-process-api/AgentConfigurationService';
@@ -256,8 +257,10 @@ function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpda
 function App() {
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [hasUpdateAvailable, setHasUpdateAvailable] = React.useState(false);
+  const [currentView, setCurrentView] = React.useState<string>('');
+  const [repositoryData, setRepositoryData] = React.useState<{ owner?: string; name?: string } | null>(null);
 
-  // Add platform class to body for CSS targeting
+  // Add platform class to body for CSS targeting and track current view
   React.useEffect(() => {
     const platform = navigator.platform.toLowerCase();
     if (platform.includes('mac')) {
@@ -268,6 +271,37 @@ function App() {
       document.body.classList.add('platform-linux');
     }
     document.body.classList.add('has-custom-titlebar');
+
+    // Track current view from hash
+    const checkView = () => {
+      const { hash } = window.location;
+      if (hash.startsWith('#repository-maps')) {
+        setCurrentView('repository-maps');
+        // Extract repository data from hash
+        if (hash.includes('/')) {
+          try {
+            const hashPart = hash.substring('#repository-maps/'.length);
+            const [encodedData] = hashPart.split('?');
+            const data = JSON.parse(decodeURIComponent(encodedData));
+            if (data?.repository) {
+              setRepositoryData(data.repository);
+            }
+          } catch (e) {
+            console.error('Failed to parse repository data:', e);
+          }
+        }
+      } else {
+        setCurrentView('');
+        setRepositoryData(null);
+      }
+    };
+
+    checkView();
+    window.addEventListener('hashchange', checkView);
+
+    return () => {
+      window.removeEventListener('hashchange', checkView);
+    };
   }, []);
 
   return (
@@ -278,10 +312,19 @@ function App() {
             isOpen={isSettingsOpen}
             onClose={() => setIsSettingsOpen(false)}
           />
-          <CustomTitlebar
-            onSettingsClick={() => setIsSettingsOpen(true)}
-            hasUpdateAvailable={hasUpdateAvailable}
-          />
+          {currentView === 'repository-maps' && repositoryData ? (
+            <RepoManagerTitlebar
+              repositoryOwner={repositoryData.owner}
+              repositoryName={repositoryData.name}
+              onSettingsClick={() => setIsSettingsOpen(true)}
+              hasUpdateAvailable={hasUpdateAvailable}
+            />
+          ) : (
+            <CustomTitlebar
+              onSettingsClick={() => setIsSettingsOpen(true)}
+              hasUpdateAvailable={hasUpdateAvailable}
+            />
+          )}
           <AppContent setHasUpdateAvailable={setHasUpdateAvailable} />
           <AgentUpdateNotifications />
         </UserPromptProvider>

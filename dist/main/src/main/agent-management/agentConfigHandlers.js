@@ -22,7 +22,7 @@ import { AgentConfigAPIEvent } from '../../shared/main-process-api-interfaces/Ag
 import { GeminiInstallationService } from './GeminiInstallationService';
 import { OpenCodeInstallationService } from './OpenCodeInstallationService';
 import { EnvironmentConfig } from '../utils/environmentConfig';
-import { getHookManager } from './hookManagerFactory';
+import { HookConfigurationManager } from './HookConfigurationManager';
 // Get agent config path
 function getAgentConfigPath(agent) {
     const info = AGENT_INFO[agent];
@@ -132,7 +132,7 @@ export function setupAgentConfigHandlers() {
                 const settings = JSON.parse(content);
                 console.log(`[AgentConfig] Found config for ${agentType}, checking hooks...`);
                 // Use HookConfigurationManager to check hook status
-                const hookManager = getHookManager();
+                const hookManager = HookConfigurationManager.getInstance();
                 const hookStatus = await hookManager.getHookStatus(agentType);
                 hasHooks = hookStatus.hasHooks;
                 // Still count all hooks for informational purposes
@@ -173,7 +173,7 @@ export function setupAgentConfigHandlers() {
     });
     // Add hooks to agent using HookConfigurationManager
     ipcMain.handle(AgentConfigAPIEvent.ADD_HOOKS_TO_AGENT, async (_event, agentType) => {
-        const hookManager = getHookManager();
+        const hookManager = HookConfigurationManager.getInstance();
         const result = await hookManager.addHooks(agentType);
         console.log(`[AgentConfig] Add hooks result for ${agentType}:`, result);
         return {
@@ -184,7 +184,7 @@ export function setupAgentConfigHandlers() {
     });
     // Remove hooks from agent using HookConfigurationManager
     ipcMain.handle(AgentConfigAPIEvent.REMOVE_HOOKS_FROM_AGENT, async (_event, agentType) => {
-        const hookManager = getHookManager();
+        const hookManager = HookConfigurationManager.getInstance();
         const result = await hookManager.removeHooks(agentType);
         console.log(`[AgentConfig] Remove hooks result for ${agentType}:`, result);
         return {

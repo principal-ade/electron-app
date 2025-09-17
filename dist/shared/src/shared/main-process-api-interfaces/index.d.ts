@@ -40,6 +40,7 @@ import type { WindowAPI } from './WindowAPI';
 import type { PlanningAPI } from './PlanningAPI';
 import type { FeedbackAPI } from './FeedbackAPI';
 import type { SessionViewAPI } from './SessionViewAPI';
+import type { DocumentSearchAPI } from '../ipc/DocumentSearchIPC';
 export type { AgentSessionEvent, AgentSessionEventsAPI } from './AgentSessionEventsAPI';
 export { AgentSessionEventsAPIEvent } from './AgentSessionEventsAPI';
 export type { AgentUpdateAPI, AgentUpdatePreferences, UpdateCheckResult } from './AgentUpdateAPI';
@@ -89,6 +90,7 @@ export interface MainProcessAPI {
     feedback: FeedbackAPI;
     sessionView: SessionViewAPI;
     testDebug: TestDebugAPI;
+    documentSearch: DocumentSearchAPI;
 }
 /**
  * Test and Debug API Interface

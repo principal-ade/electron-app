@@ -1,4 +1,4 @@
-import { SupportedAgent } from '@principal-ai/agent-monitoring';
+import { type SupportedAgent } from '@principal-ai/agent-monitoring';
 /**
  * Result type for hook operations
  */
@@ -18,20 +18,14 @@ export interface HookConfigStatus {
     supportMessage?: string;
 }
 /**
- * Manages hook configuration for different AI agents.
- * This class encapsulates all logic for adding, removing, and managing hooks
- * for Claude, Gemini, and OpenCode agents.
+ * Hook Configuration Manager using @a24z/agent-manager library
  *
- * Future: This will be extracted into an NPX package that can be called via:
- * - npx @principal-ai/agent-hooks claude-hook --enable --port 3043 --dir ~/a24z/
- * - npx @principal-ai/agent-hooks gemini-hook --enable --port 3043 --dir ~/a24z/
- * - npx @principal-ai/agent-hooks opencode-hook --enable --port 3043 --dir ~/a24z/
+ * This delegates to the external library for Claude hooks,
+ * while maintaining compatibility with the existing interface.
  */
 export declare class HookConfigurationManager {
     private static instance;
-    private readonly CLAUDE_HOOK_TYPES;
-    private readonly GEMINI_HOOK_TYPES;
-    private readonly OPENCODE_HOOK_TYPES;
+    private claudeManager;
     private constructor();
     static getInstance(): HookConfigurationManager;
     /**
@@ -47,44 +41,61 @@ export declare class HookConfigurationManager {
      */
     getHookStatus(agentType: SupportedAgent): Promise<HookConfigStatus>;
     /**
-     * Check if an agent type is supported for hook configuration
+     * Check if an agent has a specific hook type configured
+     */
+    hasHook(agentType: SupportedAgent, hookType: string): Promise<boolean>;
+    /**
+     * Count the number of hooks configured for an agent
+     */
+    countHooks(agentType: SupportedAgent): Promise<number>;
+    /**
+     * Check if an agent is supported for hook configuration
      */
     private checkAgentSupport;
     /**
-     * Get the NPX command for a specific agent
+     * Get the configuration path for an agent
      */
-    private getNpxCommand;
+    getConfigPath(agentType: SupportedAgent): string;
     /**
-     * Configure hooks for a specific agent type
+     * Get the directory where hook fallback files are stored
      */
-    private configureHooksForAgent;
+    getHookFallbackDirectory(): string;
     /**
-     * Configure Claude hooks with ALL available hook types
+     * Read unprocessed events from fallback files
      */
-    private configureClaudeHooks;
+    readFallbackEvents(agentType?: SupportedAgent): Promise<{
+        success: boolean;
+        events?: Array<{
+            agent: SupportedAgent;
+            filePath: string;
+            events: any[];
+        }>;
+        error?: string;
+    }>;
     /**
-     * Count hooks for a specific agent type
+     * Clear processed events from a fallback file (by backing it up and creating a new empty one)
      */
-    private countHooksForAgent;
+    clearFallbackFile(filePath: string): Promise<{
+        success: boolean;
+        backupPath?: string;
+        error?: string;
+    }>;
     /**
-     * Get the configuration file path for an agent
+     * Get statistics about fallback files
      */
-    private getConfigPath;
-    /**
-     * Expand home directory in path
-     */
-    private expandHome;
-    /**
-     * Read agent settings from file
-     */
-    private readAgentSettings;
-    /**
-     * Write agent settings to file
-     */
-    private writeAgentSettings;
-    /**
-     * Future NPX interface - these methods simulate what the NPX package will do
-     */
-    executeNpxCommand(command: string, agentType: SupportedAgent, action: 'enable' | 'disable' | 'status'): Promise<void>;
+    getFallbackStats(): Promise<{
+        success: boolean;
+        stats?: {
+            directory: string;
+            exists: boolean;
+            agents: Array<{
+                agent: SupportedAgent;
+                hasFile: boolean;
+                eventCount: number;
+                fileSize?: number;
+            }>;
+        };
+        error?: string;
+    }>;
 }
 //# sourceMappingURL=HookConfigurationManager.d.ts.map

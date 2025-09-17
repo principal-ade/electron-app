@@ -1,50 +1,21 @@
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
-import { SupportedAgent, configureAgentHooks, removeAgentHooks, countAgentHooks, hasAgentHook, getAgentInfo } from '@principal-ai/agent-monitoring';
+import { ClaudeConfigManager } from '@a24z/agent-manager';
+import { getAgentInfo } from '@principal-ai/agent-monitoring';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { EnvironmentConfig } from '../utils/environmentConfig';
 /**
- * Manages hook configuration for different AI agents.
- * This class encapsulates all logic for adding, removing, and managing hooks
- * for Claude, Gemini, and OpenCode agents.
+ * Hook Configuration Manager using @a24z/agent-manager library
  *
- * Future: This will be extracted into an NPX package that can be called via:
- * - npx @principal-ai/agent-hooks claude-hook --enable --port 3043 --dir ~/a24z/
- * - npx @principal-ai/agent-hooks gemini-hook --enable --port 3043 --dir ~/a24z/
- * - npx @principal-ai/agent-hooks opencode-hook --enable --port 3043 --dir ~/a24z/
+ * This delegates to the external library for Claude hooks,
+ * while maintaining compatibility with the existing interface.
  */
 export class HookConfigurationManager {
     static instance;
-    // Claude hook types - includes all available hooks from documentation
-    CLAUDE_HOOK_TYPES = [
-        'PreToolUse',
-        'PostToolUse',
-        'Notification',
-        'Stop',
-        'SubagentStop',
-        'UserPromptSubmit', // Missing in current implementation
-        'PreCompact', // Missing in current implementation
-        'SessionStart', // Missing in current implementation
-        'SessionEnd' // Missing in current implementation
-    ];
-    // Gemini hook types
-    GEMINI_HOOK_TYPES = [
-        'PreToolUse',
-        'PostToolUse',
-        'Stop',
-        'Notification',
-        'SubagentStop',
-        'PreCompact'
-    ];
-    // OpenCode hook types (will be deprecated in favor of plugins)
-    OPENCODE_HOOK_TYPES = [
-        'tool_call',
-        'file_read',
-        'file_edited',
-        'web_access',
-        'session_stop'
-    ];
+    claudeManager;
     constructor() {
-        // Singleton pattern
+        this.claudeManager = new ClaudeConfigManager();
+        // Set the default fallback directory for Claude
+        this.claudeManager.setFallbackDirectory('~/.principle/hooks');
     }
     static getInstance() {
         if (!HookConfigurationManager.instance) {
@@ -66,20 +37,27 @@ export class HookConfigurationManager {
                     error: supportCheck.message
                 };
             }
-            // Get configuration path
-            const configPath = this.getConfigPath(agentType);
-            // Read current settings
-            const currentSettings = await this.readAgentSettings(configPath);
-            // Configure hooks based on agent type
-            const updatedSettings = await this.configureHooksForAgent(agentType, currentSettings);
-            // Write updated settings
-            await this.writeAgentSettings(configPath, updatedSettings);
-            // Count hooks
-            const hookCount = this.countHooksForAgent(agentType, updatedSettings);
+            // Handle Claude using the new library
+            if (agentType === 'claude') {
+                const options = {
+                    port: [3043, 3044], // Default ports, should be configurable
+                    dir: '~/.principle/hooks'
+                };
+                await this.claudeManager.enableHooks(options);
+                const status = await this.claudeManager.getHookStatus();
+                const hookCount = Array.from(status.values()).filter(enabled => enabled).length;
+                return {
+                    success: true,
+                    hookCount,
+                    configPath: '~/.claude/settings.json'
+                };
+            }
+            // For other agents, fall back to existing implementation
+            // TODO: Implement Gemini and OpenCode support
             return {
-                success: true,
-                hookCount,
-                configPath
+                success: false,
+                hookCount: 0,
+                error: `Agent ${agentType} not yet supported in V2`
             };
         }
         catch (error) {
@@ -105,30 +83,20 @@ export class HookConfigurationManager {
                     error: supportCheck.message
                 };
             }
-            // Get configuration path
-            const configPath = this.getConfigPath(agentType);
-            // Read current settings
-            const currentSettings = await this.readAgentSettings(configPath);
-            if (!currentSettings || Object.keys(currentSettings).length === 0) {
-                // No config to remove hooks from
+            // Handle Claude using the new library
+            if (agentType === 'claude') {
+                await this.claudeManager.disableHooks();
                 return {
                     success: true,
                     hookCount: 0,
-                    configPath
+                    configPath: '~/.claude/settings.json'
                 };
             }
-            // Get the NPX command for this agent to remove
-            const npxCommand = this.getNpxCommand(agentType);
-            // Remove hooks using core library
-            const updatedSettings = removeAgentHooks(agentType, currentSettings, npxCommand);
-            // Write updated settings
-            await this.writeAgentSettings(configPath, updatedSettings);
-            // Count remaining hooks
-            const hookCount = this.countHooksForAgent(agentType, updatedSettings);
+            // For other agents, fall back to existing implementation
             return {
-                success: true,
-                hookCount,
-                configPath
+                success: false,
+                hookCount: 0,
+                error: `Agent ${agentType} not yet supported in V2`
             };
         }
         catch (error) {
@@ -155,15 +123,31 @@ export class HookConfigurationManager {
                     supportMessage: supportCheck.message
                 };
             }
-            const configPath = this.getConfigPath(agentType);
-            const npxCommand = this.getNpxCommand(agentType);
-            const settings = await this.readAgentSettings(configPath);
-            const hasHooks = hasAgentHook(agentType, settings, npxCommand);
-            const hookCount = this.countHooksForAgent(agentType, settings);
+            // Handle Claude using the new library
+            if (agentType === 'claude') {
+                const isInstalled = await this.claudeManager.isClaudeInstalled();
+                if (!isInstalled) {
+                    return {
+                        hasHooks: false,
+                        hookCount: 0,
+                        isSupported: true,
+                        supportMessage: 'Claude not installed'
+                    };
+                }
+                const status = await this.claudeManager.getHookStatus();
+                const enabledHooks = Array.from(status.values()).filter(enabled => enabled);
+                return {
+                    hasHooks: enabledHooks.length > 0,
+                    hookCount: enabledHooks.length,
+                    isSupported: true
+                };
+            }
+            // For other agents, return not supported
             return {
-                hasHooks,
-                hookCount,
-                isSupported: true
+                hasHooks: false,
+                hookCount: 0,
+                isSupported: false,
+                supportMessage: `Agent ${agentType} not yet supported in V2`
             };
         }
         catch (error) {
@@ -171,176 +155,258 @@ export class HookConfigurationManager {
             return {
                 hasHooks: false,
                 hookCount: 0,
-                isSupported: true
-            };
-        }
-    }
-    /**
-     * Check if an agent type is supported for hook configuration
-     */
-    checkAgentSupport(agentType) {
-        if (agentType === SupportedAgent.OPENCODE) {
-            return {
                 isSupported: false,
-                message: 'OpenCode is transitioning to a plugin-based system. Hook configuration is not currently supported. Please use the OpenCode plugin system instead.'
+                supportMessage: error instanceof Error ? error.message : String(error)
             };
         }
-        return { isSupported: true };
     }
     /**
-     * Get the NPX command for a specific agent
+     * Check if an agent has a specific hook type configured
      */
-    getNpxCommand(agentType) {
-        switch (agentType) {
-            case SupportedAgent.CLAUDE:
-                return 'npx @principal-ai/agent-hooks claude-hook --port 3043';
-            case SupportedAgent.GEMINI:
-                return 'npx @principal-ai/agent-hooks gemini-hook --port 3043';
-            case SupportedAgent.OPENCODE:
-                return 'npx @principal-ai/agent-hooks opencode-hook --port 3043';
-            default:
-                throw new Error(`Unsupported agent type: ${agentType}`);
-        }
-    }
-    /**
-     * Configure hooks for a specific agent type
-     */
-    async configureHooksForAgent(agentType, currentSettings) {
-        const npxCommand = this.getNpxCommand(agentType);
-        switch (agentType) {
-            case SupportedAgent.CLAUDE:
-                return this.configureClaudeHooks(currentSettings, npxCommand);
-            case SupportedAgent.GEMINI:
-                // Use existing implementation from core library with NPX command
-                return configureAgentHooks(agentType, currentSettings, npxCommand);
-            case SupportedAgent.OPENCODE:
-                // This should never be reached due to support check
-                throw new Error('OpenCode hook configuration is not supported');
-            default:
-                throw new Error(`Unsupported agent type: ${agentType}`);
-        }
-    }
-    /**
-     * Configure Claude hooks with ALL available hook types
-     */
-    configureClaudeHooks(settings, npxCommand) {
-        const updatedSettings = JSON.parse(JSON.stringify(settings));
-        if (!updatedSettings.hooks) {
-            updatedSettings.hooks = {};
-        }
-        const hookConfig = {
-            type: 'command',
-            command: npxCommand,
-            timeout: 30
-        };
-        // Add ALL Claude hook types
-        this.CLAUDE_HOOK_TYPES.forEach(hookType => {
-            if (!updatedSettings.hooks[hookType]) {
-                updatedSettings.hooks[hookType] = [];
-            }
-            // Check if hook already exists
-            const existingIndex = updatedSettings.hooks[hookType].findIndex((h) => h.matcher === '*' && h.hooks.some((hook) => hook.command.includes('@principal-ai/agent-hooks')));
-            if (existingIndex === -1) {
-                updatedSettings.hooks[hookType].push({
-                    matcher: '*',
-                    hooks: [hookConfig]
-                });
-            }
-            else {
-                // Update existing
-                updatedSettings.hooks[hookType][existingIndex] = {
-                    matcher: '*',
-                    hooks: [hookConfig]
-                };
-            }
-        });
-        return updatedSettings;
-    }
-    /**
-     * Count hooks for a specific agent type
-     */
-    countHooksForAgent(agentType, settings) {
+    async hasHook(agentType, hookType) {
         try {
-            // For Claude, we need custom counting since we're adding more hook types
-            if (agentType === SupportedAgent.CLAUDE && settings.hooks) {
-                let count = 0;
-                Object.values(settings.hooks).forEach((hookArray) => {
-                    if (Array.isArray(hookArray)) {
-                        hookArray.forEach((hookConfig) => {
-                            if (hookConfig.hooks && Array.isArray(hookConfig.hooks)) {
-                                count += hookConfig.hooks.length;
-                            }
-                        });
-                    }
-                });
-                return count;
+            if (agentType === 'claude') {
+                const status = await this.claudeManager.getHookStatus();
+                return status.get(hookType) || false;
             }
-            // Use core library for other agents
-            return countAgentHooks(agentType, settings);
+            return false;
         }
         catch (error) {
-            console.error(`[HookConfigManager] Error counting hooks for ${agentType}:`, error);
+            console.error(`[HookConfigManager] Failed to check hook ${hookType} for ${agentType}:`, error);
+            return false;
+        }
+    }
+    /**
+     * Count the number of hooks configured for an agent
+     */
+    async countHooks(agentType) {
+        try {
+            if (agentType === 'claude') {
+                const status = await this.claudeManager.getHookStatus();
+                return Array.from(status.values()).filter(enabled => enabled).length;
+            }
+            return 0;
+        }
+        catch (error) {
+            console.error(`[HookConfigManager] Failed to count hooks for ${agentType}:`, error);
             return 0;
         }
     }
     /**
-     * Get the configuration file path for an agent
+     * Check if an agent is supported for hook configuration
+     */
+    checkAgentSupport(agentType) {
+        switch (agentType) {
+            case 'claude':
+                return { isSupported: true };
+            case 'gemini':
+                // Gemini support will be added later
+                return {
+                    isSupported: false,
+                    message: 'Gemini hook configuration not yet implemented in V2'
+                };
+            case 'opencode':
+                // OpenCode is transitioning to plugin system
+                return {
+                    isSupported: false,
+                    message: 'OpenCode is transitioning to a plugin-based system. Hook configuration is not supported.'
+                };
+            default:
+                return {
+                    isSupported: false,
+                    message: `Unknown agent type: ${agentType}`
+                };
+        }
+    }
+    /**
+     * Get the configuration path for an agent
      */
     getConfigPath(agentType) {
         const agentInfo = getAgentInfo(agentType);
-        return this.expandHome(agentInfo.hooksConfigurationPath);
+        if (!agentInfo?.settingsPath) {
+            throw new Error(`No settings path found for agent: ${agentType}`);
+        }
+        return agentInfo.settingsPath;
     }
     /**
-     * Expand home directory in path
+     * Get the directory where hook fallback files are stored
      */
-    expandHome(filePath) {
-        if (filePath.startsWith('~/')) {
-            return path.join(os.homedir(), filePath.slice(2));
-        }
-        if (process.platform === 'win32' && filePath.includes('%USERPROFILE%')) {
-            return filePath.replace('%USERPROFILE%', os.homedir());
-        }
-        return filePath;
+    getHookFallbackDirectory() {
+        return EnvironmentConfig.expandHome('~/.principle/hooks');
     }
     /**
-     * Read agent settings from file
+     * Read unprocessed events from fallback files
      */
-    async readAgentSettings(configPath) {
+    async readFallbackEvents(agentType) {
         try {
-            const content = await fs.readFile(configPath, 'utf8');
-            return JSON.parse(content);
+            const results = [];
+            // Get list of agents to check
+            const agentsToCheck = agentType ? [agentType] : ['claude', 'gemini', 'opencode'];
+            for (const agent of agentsToCheck) {
+                if (agent === 'claude') {
+                    // Use ClaudeConfigManager for Claude
+                    const claudeResult = await this.claudeManager.readFallbackEvents();
+                    if (claudeResult.success && claudeResult.events) {
+                        results.push(...claudeResult.events.map(e => ({ ...e, agent: 'claude' })));
+                    }
+                }
+                else {
+                    // For other agents, use the existing implementation
+                    const directory = this.getHookFallbackDirectory();
+                    // Check if directory exists
+                    try {
+                        await fs.access(directory);
+                    }
+                    catch {
+                        // Directory doesn't exist, skip this agent
+                        continue;
+                    }
+                    const files = await fs.readdir(directory);
+                    const agentInfo = getAgentInfo(agent);
+                    const fallbackFileName = agentInfo.fallbackFileName;
+                    if (files.includes(fallbackFileName)) {
+                        const filePath = path.join(directory, fallbackFileName);
+                        try {
+                            const content = await fs.readFile(filePath, 'utf8');
+                            const events = JSON.parse(content);
+                            if (Array.isArray(events) && events.length > 0) {
+                                results.push({
+                                    agent,
+                                    filePath,
+                                    events
+                                });
+                                console.log(`[HookConfigManager] Found ${events.length} events for ${agent} in ${filePath}`);
+                            }
+                        }
+                        catch (error) {
+                            console.error(`[HookConfigManager] Failed to read fallback file ${filePath}:`, error);
+                        }
+                    }
+                }
+            }
+            return { success: true, events: results };
         }
         catch (error) {
-            // Return empty settings if file doesn't exist
-            return {};
+            console.error('[HookConfigManager] Failed to read fallback events:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : String(error)
+            };
         }
     }
     /**
-     * Write agent settings to file
+     * Clear processed events from a fallback file (by backing it up and creating a new empty one)
      */
-    async writeAgentSettings(configPath, settings) {
-        const configDir = path.dirname(configPath);
-        await fs.mkdir(configDir, { recursive: true });
-        await fs.writeFile(configPath, JSON.stringify(settings, null, 2));
+    async clearFallbackFile(filePath) {
+        try {
+            // Check if this is a Claude fallback file
+            if (filePath.includes('claude-hook-events.json')) {
+                const result = await this.claudeManager.clearFallbackFile();
+                return {
+                    success: result.success,
+                    backupPath: result.backupPath,
+                    error: result.error
+                };
+            }
+            // For other agents, use the existing implementation
+            // Create backup with timestamp
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const backupPath = filePath.replace('.json', `.backup-${timestamp}.json`);
+            // Move the original file to backup
+            await fs.rename(filePath, backupPath);
+            // Create new empty array file
+            await fs.writeFile(filePath, '[]', 'utf8');
+            console.log(`[HookConfigManager] Backed up ${filePath} to ${backupPath}`);
+            return { success: true, backupPath };
+        }
+        catch (error) {
+            console.error(`[HookConfigManager] Failed to clear fallback file ${filePath}:`, error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : String(error)
+            };
+        }
     }
     /**
-     * Future NPX interface - these methods simulate what the NPX package will do
+     * Get statistics about fallback files
      */
-    async executeNpxCommand(command, agentType, action) {
-        console.log(`[HookConfigManager] Simulating: npx @principal-ai/agent-hooks ${command} --${action}`);
-        switch (action) {
-            case 'enable':
-                const addResult = await this.addHooks(agentType);
-                console.log(`Hooks ${addResult.success ? 'enabled' : 'failed to enable'} for ${agentType}`);
-                break;
-            case 'disable':
-                const removeResult = await this.removeHooks(agentType);
-                console.log(`Hooks ${removeResult.success ? 'disabled' : 'failed to disable'} for ${agentType}`);
-                break;
-            case 'status':
-                const status = await this.getHookStatus(agentType);
-                console.log(`${agentType} hooks: ${status.hasHooks ? 'enabled' : 'disabled'} (${status.hookCount} hooks)`);
-                break;
+    async getFallbackStats() {
+        try {
+            const directory = this.getHookFallbackDirectory();
+            let exists = true;
+            try {
+                await fs.access(directory);
+            }
+            catch {
+                exists = false;
+            }
+            const agentStats = [];
+            const agents = ['claude', 'gemini', 'opencode'];
+            for (const agent of agents) {
+                if (agent === 'claude') {
+                    // Use ClaudeConfigManager for Claude
+                    const claudeStats = await this.claudeManager.getFallbackStats();
+                    if (claudeStats.success && claudeStats.stats) {
+                        agentStats.push({
+                            agent: 'claude',
+                            hasFile: claudeStats.stats.hasFile,
+                            eventCount: claudeStats.stats.eventCount,
+                            fileSize: claudeStats.stats.fileSize
+                        });
+                    }
+                    else {
+                        agentStats.push({
+                            agent: 'claude',
+                            hasFile: false,
+                            eventCount: 0
+                        });
+                    }
+                }
+                else if (exists) {
+                    // For other agents, use the existing implementation
+                    const agentInfo = getAgentInfo(agent);
+                    const filePath = path.join(directory, agentInfo.fallbackFileName);
+                    try {
+                        const stat = await fs.stat(filePath);
+                        const content = await fs.readFile(filePath, 'utf8');
+                        const events = JSON.parse(content);
+                        agentStats.push({
+                            agent,
+                            hasFile: true,
+                            eventCount: Array.isArray(events) ? events.length : 0,
+                            fileSize: stat.size
+                        });
+                    }
+                    catch {
+                        agentStats.push({
+                            agent,
+                            hasFile: false,
+                            eventCount: 0
+                        });
+                    }
+                }
+                else {
+                    agentStats.push({
+                        agent,
+                        hasFile: false,
+                        eventCount: 0
+                    });
+                }
+            }
+            return {
+                success: true,
+                stats: {
+                    directory,
+                    exists,
+                    agents: agentStats
+                }
+            };
+        }
+        catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : String(error)
+            };
         }
     }
 }

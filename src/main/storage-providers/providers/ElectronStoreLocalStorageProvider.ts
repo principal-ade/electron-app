@@ -39,7 +39,6 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
       if (config?.encryption?.enabled && config.encryption.key) {
         storeOptions.encryptionKey = config.encryption.key;
       }
-
       this.store = new Store(storeOptions);
       
       // Set up global change listener for watchers

@@ -1,14 +1,17 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
+import { Search } from 'lucide-react';
 import { AlexandriaRepositoryList } from '../../components/alexandria/AlexandriaRepositoryList';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WindowService } from '../../main-process-api/WindowService';
+import { DocumentSearchView } from '../DocumentSearch/DocumentSearchView';
 export const AlexandriaRepositoryManager = () => {
     const { theme } = useTheme();
     const [repositories, setRepositories] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showSearch, setShowSearch] = useState(false);
     // Load repositories on mount and listen for backend events
     useEffect(() => {
         loadRepositories();
@@ -50,6 +53,10 @@ export const AlexandriaRepositoryManager = () => {
     const handleRefresh = async () => {
         await loadRepositories();
     };
+    // Show search view if active
+    if (showSearch) {
+        return _jsx(DocumentSearchView, { onClose: () => setShowSearch(false) });
+    }
     if (error) {
         return (_jsxs("div", { style: {
                 display: 'flex',
@@ -69,5 +76,34 @@ export const AlexandriaRepositoryManager = () => {
                         cursor: 'pointer'
                     }, children: "Retry" })] }));
     }
-    return (_jsx(AlexandriaRepositoryList, { repositories: repositories, onSelectRepository: handleSelectRepository, onRefresh: handleRefresh, isLoading: isLoading }));
+    return (_jsxs("div", { style: { height: '100vh', display: 'flex', flexDirection: 'column' }, children: [_jsxs("div", { style: {
+                    padding: '16px 24px',
+                    borderBottom: `1px solid ${theme.colors.border}`,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                }, children: [_jsx("h1", { style: {
+                            fontSize: '24px',
+                            fontWeight: 600,
+                            color: theme.colors.text,
+                            margin: 0
+                        }, children: "Repositories" }), _jsxs("button", { onClick: () => setShowSearch(true), style: {
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            padding: '8px 16px',
+                            backgroundColor: theme.colors.primary,
+                            color: theme.colors.background,
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            transition: 'opacity 0.2s'
+                        }, onMouseEnter: (e) => {
+                            e.currentTarget.style.opacity = '0.9';
+                        }, onMouseLeave: (e) => {
+                            e.currentTarget.style.opacity = '1';
+                        }, children: [_jsx(Search, { size: 18 }), "Search Documentation"] })] }), _jsx("div", { style: { flex: 1, overflow: 'auto' }, children: _jsx(AlexandriaRepositoryList, { repositories: repositories, onSelectRepository: handleSelectRepository, onRefresh: handleRefresh, isLoading: isLoading }) })] }));
 };

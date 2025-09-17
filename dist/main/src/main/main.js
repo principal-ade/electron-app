@@ -14,7 +14,7 @@ import { createWindow, applicationWindows, getIsRestarting, handleAppRestart } f
 // import { registerWindowHandlers } from './services/ipc/window/windowHandlers'; // Replaced by modernWindowHandlers
 import { initializeServices, shutdownServices } from './initialization';
 import { verifyRequiredAssets } from './util';
-import './services/SecureTokenIPC'; // Initialize secure token storage
+// Defer SecureTokenIPC initialization to avoid early keychain access
 // Configure electron-log to use app-specific directory
 log.transports.file.resolvePathFn = () => {
     return path.join(app.getPath('logs'), 'main.log');
@@ -176,6 +176,8 @@ app
     // Initialize auth state from stored credentials
     await authService.initializeAuthState();
     console.log('[Main] Auth state initialized from stored credentials');
+    // SecureTokenIPC will be initialized lazily on first use
+    // No need to require it here anymore
     // Verify all required assets exist before starting
     const assetVerification = verifyRequiredAssets();
     if (!assetVerification.success) {

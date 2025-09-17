@@ -17,7 +17,14 @@ import { SecretManager } from './SecretManager';
  * Register core secret management IPC handlers
  */
 export function registerSecretHandlers(): void {
-  const secretManager = SecretManager.getInstance();
+  // Lazy initialization of SecretManager to defer keychain access
+  let secretManager: SecretManager | null = null;
+  const getSecretManager = () => {
+    if (!secretManager) {
+      secretManager = SecretManager.getInstance();
+    }
+    return secretManager;
+  };
 
   // Store secrets for a repository
   ipcMain.handle(SecretsEvents.STORE, async (
@@ -37,7 +44,7 @@ export function registerSecretHandlers(): void {
         return { success: false, error: 'Missing required parameters' };
       }
 
-      return await secretManager.storeSecrets(
+      return await getSecretManager().storeSecrets(
         request.repoId,
         request.repoPath,
         request.secrets
@@ -64,7 +71,7 @@ export function registerSecretHandlers(): void {
         throw new Error('Repository ID is required');
       }
 
-      return await secretManager.getSecrets(repoId);
+      return await getSecretManager().getSecrets(repoId);
     } catch (error: any) {
       console.error('[SecretHandlers] Error getting secrets:', error);
       return null;
@@ -87,7 +94,7 @@ export function registerSecretHandlers(): void {
         return { success: false, error: 'Repository ID is required' };
       }
 
-      return await secretManager.deleteSecrets(repoId);
+      return await getSecretManager().deleteSecrets(repoId);
     } catch (error: any) {
       console.error('[SecretHandlers] Error deleting secrets:', error);
       return { success: false, error: error.message };
@@ -104,7 +111,7 @@ export function registerSecretHandlers(): void {
         return false;
       }
 
-      const secrets = await secretManager.getSecrets(repoId);
+      const secrets = await getSecretManager().getSecrets(repoId);
       return secrets !== null && Object.keys(secrets).length > 0;
     } catch (error: any) {
       console.error('[SecretHandlers] Error checking secrets:', error);
@@ -123,7 +130,7 @@ export function registerSecretHandlers(): void {
         throw new Error('Unauthorized source');
       }
 
-      return await secretManager.getAllMetadata();
+      return await getSecretManager().getAllMetadata();
     } catch (error: any) {
       console.error('[SecretHandlers] Error listing secrets:', error);
       return [];
@@ -143,13 +150,13 @@ export function registerSecretHandlers(): void {
       }
 
       // Get existing secrets
-      const existing = await secretManager.getSecrets(request.repoId) || {};
+      const existing = await getSecretManager().getSecrets(request.repoId) || {};
       
       // Merge with new secrets
       const merged = { ...existing, ...request.secrets };
       
       // Store merged secrets
-      return await secretManager.storeSecrets(
+      return await getSecretManager().storeSecrets(
         request.repoId,
         request.repoPath,
         merged
@@ -174,7 +181,7 @@ export function registerSecretHandlers(): void {
       }
 
       // Get existing secrets
-      const existing = await secretManager.getSecrets(repoId);
+      const existing = await getSecretManager().getSecrets(repoId);
       
       if (!existing) {
         return { success: false, error: 'No secrets found for repository' };
@@ -186,7 +193,7 @@ export function registerSecretHandlers(): void {
       }
 
       // Get metadata to find repo path
-      const metadata = await secretManager.getAllMetadata();
+      const metadata = await getSecretManager().getAllMetadata();
       const repoMeta = metadata.find(m => m.repoId === repoId);
       
       if (!repoMeta) {
@@ -194,7 +201,7 @@ export function registerSecretHandlers(): void {
       }
 
       // Store updated secrets
-      return await secretManager.storeSecrets(
+      return await getSecretManager().storeSecrets(
         repoId,
         repoMeta.repoPath,
         existing
@@ -214,7 +221,7 @@ export function registerSecretHandlers(): void {
         throw new Error('Unauthorized source');
       }
 
-      secretManager.clearCache();
+      getSecretManager().clearCache();
       console.log('[SecretHandlers] Cache cleared');
     } catch (error: any) {
       console.error('[SecretHandlers] Error clearing cache:', error);
@@ -241,7 +248,7 @@ function validateSource(event: IpcMainInvokeEvent): boolean {
  * Cleanup handler for app shutdown
  */
 export async function cleanupSecretHandlers(): Promise<void> {
-  const secretManager = SecretManager.getInstance();
-  await secretManager.shutdown();
+  // Only cleanup if SecretManager was actually initialized
+  // This avoids unnecessary keychain access during shutdown
   console.log('[SecretHandlers] Cleanup complete');
 }

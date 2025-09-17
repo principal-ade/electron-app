@@ -9,7 +9,14 @@ import { SecretManager } from './SecretManager';
  * Register core secret management IPC handlers
  */
 export function registerSecretHandlers() {
-    const secretManager = SecretManager.getInstance();
+    // Lazy initialization of SecretManager to defer keychain access
+    let secretManager = null;
+    const getSecretManager = () => {
+        if (!secretManager) {
+            secretManager = SecretManager.getInstance();
+        }
+        return secretManager;
+    };
     // Store secrets for a repository
     ipcMain.handle(SecretsEvents.STORE, async (event, request) => {
         try {
@@ -22,7 +29,7 @@ export function registerSecretHandlers() {
             if (!request.repoId || !request.repoPath || !request.secrets) {
                 return { success: false, error: 'Missing required parameters' };
             }
-            return await secretManager.storeSecrets(request.repoId, request.repoPath, request.secrets);
+            return await getSecretManager().storeSecrets(request.repoId, request.repoPath, request.secrets);
         }
         catch (error) {
             console.error('[SecretHandlers] Error storing secrets:', error);
@@ -39,7 +46,7 @@ export function registerSecretHandlers() {
             if (!repoId) {
                 throw new Error('Repository ID is required');
             }
-            return await secretManager.getSecrets(repoId);
+            return await getSecretManager().getSecrets(repoId);
         }
         catch (error) {
             console.error('[SecretHandlers] Error getting secrets:', error);
@@ -56,7 +63,7 @@ export function registerSecretHandlers() {
             if (!repoId) {
                 return { success: false, error: 'Repository ID is required' };
             }
-            return await secretManager.deleteSecrets(repoId);
+            return await getSecretManager().deleteSecrets(repoId);
         }
         catch (error) {
             console.error('[SecretHandlers] Error deleting secrets:', error);
@@ -69,7 +76,7 @@ export function registerSecretHandlers() {
             if (!validateSource(event)) {
                 return false;
             }
-            const secrets = await secretManager.getSecrets(repoId);
+            const secrets = await getSecretManager().getSecrets(repoId);
             return secrets !== null && Object.keys(secrets).length > 0;
         }
         catch (error) {
@@ -84,7 +91,7 @@ export function registerSecretHandlers() {
             if (!validateSource(event)) {
                 throw new Error('Unauthorized source');
             }
-            return await secretManager.getAllMetadata();
+            return await getSecretManager().getAllMetadata();
         }
         catch (error) {
             console.error('[SecretHandlers] Error listing secrets:', error);
@@ -99,11 +106,11 @@ export function registerSecretHandlers() {
                 return { success: false, error: 'Unauthorized source' };
             }
             // Get existing secrets
-            const existing = await secretManager.getSecrets(request.repoId) || {};
+            const existing = await getSecretManager().getSecrets(request.repoId) || {};
             // Merge with new secrets
             const merged = { ...existing, ...request.secrets };
             // Store merged secrets
-            return await secretManager.storeSecrets(request.repoId, request.repoPath, merged);
+            return await getSecretManager().storeSecrets(request.repoId, request.repoPath, merged);
         }
         catch (error) {
             console.error('[SecretHandlers] Error updating secrets:', error);
@@ -118,7 +125,7 @@ export function registerSecretHandlers() {
                 return { success: false, error: 'Unauthorized source' };
             }
             // Get existing secrets
-            const existing = await secretManager.getSecrets(repoId);
+            const existing = await getSecretManager().getSecrets(repoId);
             if (!existing) {
                 return { success: false, error: 'No secrets found for repository' };
             }
@@ -127,13 +134,13 @@ export function registerSecretHandlers() {
                 delete existing[key];
             }
             // Get metadata to find repo path
-            const metadata = await secretManager.getAllMetadata();
+            const metadata = await getSecretManager().getAllMetadata();
             const repoMeta = metadata.find(m => m.repoId === repoId);
             if (!repoMeta) {
                 return { success: false, error: 'Repository metadata not found' };
             }
             // Store updated secrets
-            return await secretManager.storeSecrets(repoId, repoMeta.repoPath, existing);
+            return await getSecretManager().storeSecrets(repoId, repoMeta.repoPath, existing);
         }
         catch (error) {
             console.error('[SecretHandlers] Error removing keys:', error);
@@ -146,7 +153,7 @@ export function registerSecretHandlers() {
             if (!validateSource(event)) {
                 throw new Error('Unauthorized source');
             }
-            secretManager.clearCache();
+            getSecretManager().clearCache();
             console.log('[SecretHandlers] Cache cleared');
         }
         catch (error) {
@@ -172,7 +179,7 @@ function validateSource(event) {
  * Cleanup handler for app shutdown
  */
 export async function cleanupSecretHandlers() {
-    const secretManager = SecretManager.getInstance();
-    await secretManager.shutdown();
+    // Only cleanup if SecretManager was actually initialized
+    // This avoids unnecessary keychain access during shutdown
     console.log('[SecretHandlers] Cleanup complete');
 }

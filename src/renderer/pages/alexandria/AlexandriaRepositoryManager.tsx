@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
+import { Search } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { AlexandriaRepositoryList } from '../../components/alexandria/AlexandriaRepositoryList';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WindowService } from '../../main-process-api/WindowService';
+import { DocumentSearchView } from '../DocumentSearch/DocumentSearchView';
 
 export const AlexandriaRepositoryManager: React.FC = () => {
   const { theme } = useTheme();
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showSearch, setShowSearch] = useState(false);
   
   // Load repositories on mount and listen for backend events
   useEffect(() => {
@@ -57,6 +60,11 @@ export const AlexandriaRepositoryManager: React.FC = () => {
     await loadRepositories();
   };
   
+  // Show search view if active
+  if (showSearch) {
+    return <DocumentSearchView onClose={() => setShowSearch(false)} />;
+  }
+
   if (error) {
     return (
       <div style={{
@@ -87,13 +95,63 @@ export const AlexandriaRepositoryManager: React.FC = () => {
       </div>
     );
   }
-  
+
   return (
-    <AlexandriaRepositoryList
-      repositories={repositories}
-      onSelectRepository={handleSelectRepository}
-      onRefresh={handleRefresh}
-      isLoading={isLoading}
-    />
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Header with Search Button */}
+      <div style={{
+        padding: '16px 24px',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        backgroundColor: theme.colors.backgroundSecondary,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+      }}>
+        <h1 style={{
+          fontSize: '24px',
+          fontWeight: 600,
+          color: theme.colors.text,
+          margin: 0
+        }}>
+          Repositories
+        </h1>
+        <button
+          onClick={() => setShowSearch(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.background,
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 500,
+            transition: 'opacity 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.9';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
+        >
+          <Search size={18} />
+          Search Documentation
+        </button>
+      </div>
+
+      {/* Repository List */}
+      <div style={{ flex: 1, overflow: 'auto' }}>
+        <AlexandriaRepositoryList
+          repositories={repositories}
+          onSelectRepository={handleSelectRepository}
+          onRefresh={handleRefresh}
+          isLoading={isLoading}
+        />
+      </div>
+    </div>
   );
 };

@@ -51,6 +51,7 @@ import { feedbackAPI } from './main-process-api-implementations/feedbackApi';
 import { sessionViewApi } from './main-process-api-implementations/sessionViewApi';
 import { llmModelsAPI } from './main-process-api-implementations/llmModelsApi';
 import { testDebugAPI } from './main-process-api-implementations/testDebugApi';
+import { documentSearchAPI } from './main-process-api-implementations/documentSearchApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
 
@@ -129,6 +130,7 @@ const mainProcessExposure: MainProcessAPI = {
   sessionView: sessionViewApi,
   llmModels: llmModelsAPI,
   testDebug: testDebugAPI,
+  documentSearch: documentSearchAPI,
 };
 
 // Mermaid removed from preload - will be loaded in renderer instead

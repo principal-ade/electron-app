@@ -406,288 +406,254 @@ export const RepositoryManagerHeader = ({ repository, ghOwner, ghRepo, mode = 'e
                                             }, onMouseLeave: (e) => {
                                                 if (!isLoggingIn)
                                                     e.currentTarget.style.opacity = '1';
-                                            }, title: isLoggingIn ? 'Authenticating...' : (loginError === 'Authentication already in progress' ? 'Click to retry' : 'Login with GitHub'), disabled: isLoggingIn && loginError !== 'Authentication already in progress', children: isLoggingIn ? (_jsxs(_Fragment, { children: [_jsx(Loader2, { size: 14, className: "spinning" }), _jsx("span", { children: "Logging in..." })] })) : (_jsxs(_Fragment, { children: [_jsx(LogIn, { size: 14 }), _jsx("span", { children: loginError === 'Authentication already in progress' ? 'Retry Login' : 'Login' })] })) })] }))] }) }), _jsxs("div", { style: { flex: '1 1 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }, children: [_jsx(RepositoryAvatar, { repository: repository, size: 48, type: "owner" }), _jsxs("div", { children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '16px' }, children: [_jsxs("button", { onClick: () => setShowRepositorySwitcher(true), style: {
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '8px',
-                                                            backgroundColor: 'transparent',
-                                                            border: 'none',
-                                                            cursor: 'pointer',
-                                                            padding: '0',
-                                                            transition: 'all 0.2s',
-                                                            flexShrink: 0,
-                                                        }, onMouseEnter: (e) => {
-                                                            e.currentTarget.style.opacity = '0.8';
-                                                        }, onMouseLeave: (e) => {
-                                                            e.currentTarget.style.opacity = '1';
-                                                        }, title: "Switch to another repository", children: [_jsx("h2", { style: {
-                                                                    fontSize: '24px',
-                                                                    fontWeight: 600,
-                                                                    color: theme.colors.text,
-                                                                    margin: 0,
-                                                                    whiteSpace: 'nowrap',
-                                                                }, children: repository?.name }), _jsx(ChevronDown, { size: 20, color: theme.colors.textSecondary })] }), customAvatarUrls.repo && (_jsxs("div", { style: {
-                                                            position: 'relative',
-                                                            width: '24px',
-                                                            height: '24px',
-                                                        }, children: [_jsx(RepositoryAvatar, { repository: repository, customAvatarUrl: customAvatarUrls.repo, size: 24, type: "repository" }), _jsx("div", { style: {
-                                                                    position: 'absolute',
-                                                                    inset: '-2px',
-                                                                    border: `2px solid ${theme.colors.background}`,
-                                                                    borderRadius: '50%',
-                                                                    pointerEvents: 'none',
-                                                                } })] }))] }), _jsx("p", { style: {
-                                                    fontSize: '14px',
-                                                    color: theme.colors.textSecondary,
-                                                    margin: '4px 0 0 0'
-                                                }, children: repository?.owner })] })] }), _jsxs("div", { style: { display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }, children: [repository?.metadata?.isFork && repository?.metadata?.parentRepo && (_jsxs("button", { onClick: () => {
-                                            setIsBadgeInfoModalOpen(true);
-                                        }, style: {
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '6px',
-                                            padding: '4px 10px',
-                                            backgroundColor: '#f59e0b15',
-                                            border: '1px solid #f59e0b40',
-                                            borderRadius: '6px',
-                                            fontSize: '13px',
-                                            fontWeight: 500,
-                                            color: '#f59e0b',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s',
-                                        }, onMouseEnter: (e) => {
-                                            e.currentTarget.style.backgroundColor = '#f59e0b25';
-                                            e.currentTarget.style.borderColor = '#f59e0b60';
-                                        }, onMouseLeave: (e) => {
-                                            e.currentTarget.style.backgroundColor = '#f59e0b15';
-                                            e.currentTarget.style.borderColor = '#f59e0b40';
-                                        }, title: "Click to see fork sync status", children: [_jsx(GitFork, { size: 12 }), _jsxs("span", { children: ["Fork of ", repository?.metadata?.parentRepo?.owner, "/", repository?.metadata?.parentRepo?.name] })] })), selectedSource && (_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0' }, children: [(() => {
-                                                const sourceName = SourceSelectionService.getSourceDisplayName(selectedSource);
-                                                const sourceType = SourceSelectionService.getSourceTypeDisplayName(selectedSource);
-                                                // Only get branch status for local sources
-                                                const branchStatus = selectedSource.type === 'local' ? cloneBranchStatuses[selectedSource.location] : null;
-                                                const syncStatus = selectedSource.type === 'local' ? cloneSyncStatuses[selectedSource.location] : null;
-                                                // Determine sync state and colors
-                                                const isBehind = (branchStatus?.behind ?? 0) > 0;
-                                                const isAhead = (branchStatus?.ahead ?? 0) > 0;
-                                                const hasDiverged = isBehind && isAhead;
-                                                // Get sync settings for local sources
-                                                let cloneSettings = null;
-                                                let isSyncEnabled = false;
-                                                let isSyncConnected = false;
-                                                let peersInRoom = 0;
-                                                if (selectedSource.type === 'local') {
-                                                    const key = `clone-sync-settings-${repository?.remoteUrl}`;
-                                                    const stored = localStorage.getItem(key);
-                                                    if (stored) {
-                                                        try {
-                                                            const settings = JSON.parse(stored);
-                                                            cloneSettings = settings.find((s) => s.path === selectedSource.location);
-                                                        }
-                                                        catch (_e) {
-                                                            // ignore
-                                                        }
+                                            }, title: isLoggingIn ? 'Authenticating...' : (loginError === 'Authentication already in progress' ? 'Click to retry' : 'Login with GitHub'), disabled: isLoggingIn && loginError !== 'Authentication already in progress', children: isLoggingIn ? (_jsxs(_Fragment, { children: [_jsx(Loader2, { size: 14, className: "spinning" }), _jsx("span", { children: "Logging in..." })] })) : (_jsxs(_Fragment, { children: [_jsx(LogIn, { size: 14 }), _jsx("span", { children: loginError === 'Authentication already in progress' ? 'Retry Login' : 'Login' })] })) })] }))] }) }), _jsx("div", { style: { flex: '1 1 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }, children: _jsxs("div", { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }, children: [repository?.metadata?.isFork && repository?.metadata?.parentRepo && (_jsxs("button", { onClick: () => {
+                                        setIsBadgeInfoModalOpen(true);
+                                    }, style: {
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        padding: '4px 10px',
+                                        backgroundColor: '#f59e0b15',
+                                        border: '1px solid #f59e0b40',
+                                        borderRadius: '6px',
+                                        fontSize: '13px',
+                                        fontWeight: 500,
+                                        color: '#f59e0b',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                    }, onMouseEnter: (e) => {
+                                        e.currentTarget.style.backgroundColor = '#f59e0b25';
+                                        e.currentTarget.style.borderColor = '#f59e0b60';
+                                    }, onMouseLeave: (e) => {
+                                        e.currentTarget.style.backgroundColor = '#f59e0b15';
+                                        e.currentTarget.style.borderColor = '#f59e0b40';
+                                    }, title: "Click to see fork sync status", children: [_jsx(GitFork, { size: 12 }), _jsxs("span", { children: ["Fork of ", repository?.metadata?.parentRepo?.owner, "/", repository?.metadata?.parentRepo?.name] })] })), selectedSource && (_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '0' }, children: [(() => {
+                                            const sourceName = SourceSelectionService.getSourceDisplayName(selectedSource);
+                                            const sourceType = SourceSelectionService.getSourceTypeDisplayName(selectedSource);
+                                            // Only get branch status for local sources
+                                            const branchStatus = selectedSource.type === 'local' ? cloneBranchStatuses[selectedSource.location] : null;
+                                            const syncStatus = selectedSource.type === 'local' ? cloneSyncStatuses[selectedSource.location] : null;
+                                            // Determine sync state and colors
+                                            const isBehind = (branchStatus?.behind ?? 0) > 0;
+                                            const isAhead = (branchStatus?.ahead ?? 0) > 0;
+                                            const hasDiverged = isBehind && isAhead;
+                                            // Get sync settings for local sources
+                                            let cloneSettings = null;
+                                            let isSyncEnabled = false;
+                                            let isSyncConnected = false;
+                                            let peersInRoom = 0;
+                                            if (selectedSource.type === 'local') {
+                                                const key = `clone-sync-settings-${repository?.remoteUrl}`;
+                                                const stored = localStorage.getItem(key);
+                                                if (stored) {
+                                                    try {
+                                                        const settings = JSON.parse(stored);
+                                                        cloneSettings = settings.find((s) => s.path === selectedSource.location);
                                                     }
-                                                    isSyncEnabled = cloneSettings && cloneSettings.mode !== 'off';
-                                                    isSyncConnected = isSyncEnabled && (syncStatus?.connected === true) && (syncStatus?.authenticated === true);
-                                                    peersInRoom = syncStatus?.peers?.length || 0;
-                                                }
-                                                // Colors based on source type and sync state
-                                                let borderColor = theme.colors.primary;
-                                                let backgroundColor = theme.colors.primary + '22';
-                                                let textColor = theme.colors.primary;
-                                                if (selectedSource.type === 'remote') {
-                                                    // Remote sources get standard styling
-                                                    borderColor = theme.colors.border;
-                                                    backgroundColor = theme.colors.backgroundTertiary;
-                                                    textColor = theme.colors.textSecondary;
-                                                }
-                                                else if (branchStatus?.hasUpstream) {
-                                                    // Local sources with upstream - color based on sync state
-                                                    if (hasDiverged) {
-                                                        borderColor = '#ff9800';
-                                                        backgroundColor = '#ff980022';
-                                                        textColor = '#ff9800';
-                                                    }
-                                                    else if (isBehind) {
-                                                        borderColor = '#ffc107';
-                                                        backgroundColor = '#ffc10722';
-                                                        textColor = '#ffc107';
-                                                    }
-                                                    else if (isAhead) {
-                                                        borderColor = theme.colors.success || '#4caf50';
-                                                        backgroundColor = (theme.colors.success || '#4caf50') + '22';
-                                                        textColor = theme.colors.success || '#4caf50';
+                                                    catch (_e) {
+                                                        // ignore
                                                     }
                                                 }
-                                                // Override with sync connection status
-                                                if (isSyncConnected) {
+                                                isSyncEnabled = cloneSettings && cloneSettings.mode !== 'off';
+                                                isSyncConnected = isSyncEnabled && (syncStatus?.connected === true) && (syncStatus?.authenticated === true);
+                                                peersInRoom = syncStatus?.peers?.length || 0;
+                                            }
+                                            // Colors based on source type and sync state
+                                            let borderColor = theme.colors.primary;
+                                            let backgroundColor = theme.colors.primary + '22';
+                                            let textColor = theme.colors.primary;
+                                            if (selectedSource.type === 'remote') {
+                                                // Remote sources get standard styling
+                                                borderColor = theme.colors.border;
+                                                backgroundColor = theme.colors.backgroundTertiary;
+                                                textColor = theme.colors.textSecondary;
+                                            }
+                                            else if (branchStatus?.hasUpstream) {
+                                                // Local sources with upstream - color based on sync state
+                                                if (hasDiverged) {
+                                                    borderColor = '#ff9800';
+                                                    backgroundColor = '#ff980022';
+                                                    textColor = '#ff9800';
+                                                }
+                                                else if (isBehind) {
+                                                    borderColor = '#ffc107';
+                                                    backgroundColor = '#ffc10722';
+                                                    textColor = '#ffc107';
+                                                }
+                                                else if (isAhead) {
                                                     borderColor = theme.colors.success || '#4caf50';
-                                                    backgroundColor = `${theme.colors.success || '#4caf50'}15`;
+                                                    backgroundColor = (theme.colors.success || '#4caf50') + '22';
+                                                    textColor = theme.colors.success || '#4caf50';
                                                 }
-                                                return (_jsxs("div", { style: { position: 'relative', display: 'inline-block' }, children: [_jsxs("button", { onClick: (e) => {
-                                                                e.stopPropagation();
-                                                                setShowSourceSelector(!showSourceSelector);
-                                                            }, style: {
-                                                                display: 'inline-flex',
-                                                                alignItems: 'center',
-                                                                gap: '6px',
-                                                                padding: '4px 10px',
-                                                                backgroundColor,
-                                                                border: `1px solid ${borderColor}`,
-                                                                borderRadius: '6px',
-                                                                fontSize: '13px',
-                                                                fontWeight: 500,
-                                                                color: textColor,
-                                                                cursor: 'pointer',
-                                                                transition: 'all 0.2s',
-                                                            }, title: `${sourceName} (${sourceType}) - Click to switch sources`, children: [selectedSource.type === 'local' ? (customAvatarUrls[selectedSource.location] ? (_jsx(RepositoryAvatar, { repository: repository, localClone: repository.localClones?.find(c => c.path === selectedSource.location), customAvatarUrl: customAvatarUrls[selectedSource.location], size: 12, type: "clone" })) : (_jsx(FolderOpen, { size: 12 }))) : (_jsx(GitBranch, { size: 12 })), sourceName, branchStatus?.branch && (_jsxs("span", { style: {
-                                                                        fontSize: '11px',
-                                                                        opacity: 0.8,
-                                                                        color: branchStatus.hasUncommittedChanges ? '#f59e0b' : 'inherit'
-                                                                    }, children: ["(", branchStatus.branch, ")", branchStatus.hasUncommittedChanges && ' ●'] })), isSyncConnected && (_jsxs("div", { style: {
-                                                                        display: 'inline-flex',
-                                                                        alignItems: 'center',
-                                                                        gap: '3px',
-                                                                        marginLeft: '4px',
-                                                                        padding: '2px 4px',
-                                                                        backgroundColor: `${theme.colors.success}20`,
-                                                                        borderRadius: '4px',
-                                                                        fontSize: '11px',
-                                                                        color: theme.colors.success,
-                                                                    }, children: [_jsx(Wifi, { size: 10, style: { animation: 'pulse-sync 2s ease-in-out infinite' } }), peersInRoom > 0 && `${peersInRoom + 1}`] })), branchStatus?.hasUpstream === true && (_jsxs(_Fragment, { children: [branchStatus.ahead !== undefined && branchStatus.ahead > 0 && (_jsxs("span", { style: {
-                                                                                display: 'inline-flex',
-                                                                                alignItems: 'center',
-                                                                                gap: '2px',
-                                                                                fontSize: '11px',
-                                                                                color: theme.colors.success || '#4caf50'
-                                                                            }, children: [_jsx(ArrowUp, { size: 10 }), branchStatus.ahead] })), branchStatus.behind !== undefined && branchStatus.behind > 0 && (_jsxs("span", { style: {
-                                                                                display: 'inline-flex',
-                                                                                alignItems: 'center',
-                                                                                gap: '2px',
-                                                                                fontSize: '11px',
-                                                                                color: '#ff9800'
-                                                                            }, children: [_jsx(ArrowDown, { size: 10 }), branchStatus.behind] }))] })), availableSources.length > 1 && (_jsx(ChevronDown, { size: 14, style: { marginLeft: '4px', opacity: 0.7 } }))] }), showSourceSelector && availableSources.length > 1 && (_jsx("div", { style: {
-                                                                position: 'absolute',
-                                                                top: '100%',
-                                                                left: 0,
-                                                                marginTop: '4px',
-                                                                backgroundColor: theme.colors.background,
-                                                                border: `1px solid ${theme.colors.border}`,
-                                                                borderRadius: '8px',
-                                                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                                                zIndex: 1000,
-                                                                minWidth: '200px',
-                                                                maxWidth: '400px',
-                                                                overflow: 'hidden',
-                                                            }, children: availableSources.map((source) => {
-                                                                const displayName = SourceSelectionService.getSourceDisplayName(source);
-                                                                const sourceTypeName = SourceSelectionService.getSourceTypeDisplayName(source);
-                                                                const isCurrentSource = selectedSource?.id === source.id;
-                                                                const sourceBranchStatus = source.type === 'local' ? cloneBranchStatuses[source.location] : null;
-                                                                return (_jsxs("button", { onClick: () => {
-                                                                        if (!isCurrentSource) {
-                                                                            // Update selection and trigger parent's onSourceSelect
-                                                                            SourceSelectionService.setSelectedSource(repository.remoteUrl, source.id);
-                                                                            onSourceSelect?.(source);
-                                                                        }
-                                                                        setShowSourceSelector(false);
-                                                                    }, style: {
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'space-between',
-                                                                        width: '100%',
-                                                                        padding: '8px 12px',
-                                                                        backgroundColor: isCurrentSource ? theme.colors.backgroundSecondary : 'transparent',
-                                                                        border: 'none',
-                                                                        cursor: isCurrentSource ? 'default' : 'pointer',
-                                                                        fontSize: '13px',
-                                                                        color: theme.colors.text,
-                                                                        transition: 'background-color 0.2s',
-                                                                    }, onMouseEnter: (e) => {
-                                                                        if (!isCurrentSource) {
-                                                                            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                                                                        }
-                                                                    }, onMouseLeave: (e) => {
-                                                                        if (!isCurrentSource) {
-                                                                            e.currentTarget.style.backgroundColor = 'transparent';
-                                                                        }
-                                                                    }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' }, children: [source.type === 'local' ? (customAvatarUrls[source.location] ? (_jsx(RepositoryAvatar, { repository: repository, localClone: repository.localClones?.find(c => c.path === source.location), customAvatarUrl: customAvatarUrls[source.location], size: 16, type: "clone" })) : (_jsx(FolderOpen, { size: 16 }))) : (_jsx(GitBranch, { size: 16 })), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }, children: [_jsx("span", { children: displayName }), _jsx("span", { style: { fontSize: '11px', opacity: 0.6, color: theme.colors.textTertiary }, children: sourceTypeName })] }), sourceBranchStatus?.branch && source.type === 'local' && (_jsxs("span", { style: { fontSize: '11px', opacity: 0.6 }, children: ["(", sourceBranchStatus.branch, ")"] }))] }), isCurrentSource && (_jsx(Check, { size: 14, color: theme.colors.primary }))] }, source.id));
-                                                            }) }))] }));
-                                            })(), _jsx("button", { onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    console.log('Clone management button clicked, setting showCloneManagement to true');
-                                                    setShowCloneManagement(true);
-                                                }, style: {
-                                                    marginLeft: '8px',
-                                                    padding: '4px',
-                                                    backgroundColor: 'transparent',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    borderRadius: '4px',
-                                                    transition: 'background-color 0.2s',
-                                                }, onMouseEnter: (e) => {
-                                                    e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                                                }, onMouseLeave: (e) => {
-                                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                                }, title: "Manage repository clones", children: _jsx(FolderGit, { size: 14, color: theme.colors.textSecondary }) }), selectedSource?.type === 'local' && (_jsx("button", { onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    setShowSecretsModal(true);
-                                                }, style: {
-                                                    marginLeft: '8px',
-                                                    padding: '4px',
-                                                    backgroundColor: 'transparent',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    borderRadius: '4px',
-                                                    transition: 'background-color 0.2s',
-                                                }, onMouseEnter: (e) => {
-                                                    e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                                                }, onMouseLeave: (e) => {
-                                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                                }, title: "Manage environment secrets", children: _jsx(Key, { size: 14, color: theme.colors.textSecondary }) })), _jsx("button", { onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    setShowProcessingDetailsModal(true);
-                                                }, style: {
-                                                    marginLeft: '8px',
-                                                    padding: '4px',
-                                                    backgroundColor: 'transparent',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    borderRadius: '4px',
-                                                    transition: 'background-color 0.2s',
-                                                }, onMouseEnter: (e) => {
-                                                    e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                                                }, onMouseLeave: (e) => {
-                                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                                }, title: "Show processing pipeline", children: _jsx(Database, { size: 14, color: theme.colors.textSecondary }) }), _jsx("button", { onClick: (e) => {
-                                                    e.stopPropagation();
-                                                    setShowSourceHelpModal(true);
-                                                }, style: {
-                                                    marginLeft: '8px',
-                                                    padding: '4px',
-                                                    backgroundColor: 'transparent',
-                                                    border: 'none',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    borderRadius: '4px',
-                                                    transition: 'background-color 0.2s',
-                                                }, onMouseEnter: (e) => {
-                                                    e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                                                }, onMouseLeave: (e) => {
-                                                    e.currentTarget.style.backgroundColor = 'transparent';
-                                                }, title: "What do these indicators mean?", children: _jsx(HelpCircle, { size: 14, color: theme.colors.textSecondary }) })] }))] })] }), _jsx("div", { style: {
+                                            }
+                                            // Override with sync connection status
+                                            if (isSyncConnected) {
+                                                borderColor = theme.colors.success || '#4caf50';
+                                                backgroundColor = `${theme.colors.success || '#4caf50'}15`;
+                                            }
+                                            return (_jsxs("div", { style: { position: 'relative', display: 'inline-block' }, children: [_jsxs("button", { onClick: (e) => {
+                                                            e.stopPropagation();
+                                                            setShowSourceSelector(!showSourceSelector);
+                                                        }, style: {
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            padding: '4px 10px',
+                                                            backgroundColor,
+                                                            border: `1px solid ${borderColor}`,
+                                                            borderRadius: '6px',
+                                                            fontSize: '13px',
+                                                            fontWeight: 500,
+                                                            color: textColor,
+                                                            cursor: 'pointer',
+                                                            transition: 'all 0.2s',
+                                                        }, title: `${sourceName} (${sourceType}) - Click to switch sources`, children: [selectedSource.type === 'local' ? (customAvatarUrls[selectedSource.location] ? (_jsx(RepositoryAvatar, { repository: repository, localClone: repository.localClones?.find(c => c.path === selectedSource.location), customAvatarUrl: customAvatarUrls[selectedSource.location], size: 12, type: "clone" })) : (_jsx(FolderOpen, { size: 12 }))) : (_jsx(GitBranch, { size: 12 })), sourceName, branchStatus?.branch && (_jsxs("span", { style: {
+                                                                    fontSize: '11px',
+                                                                    opacity: 0.8,
+                                                                    color: branchStatus.hasUncommittedChanges ? '#f59e0b' : 'inherit'
+                                                                }, children: ["(", branchStatus.branch, ")", branchStatus.hasUncommittedChanges && ' ●'] })), isSyncConnected && (_jsxs("div", { style: {
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '3px',
+                                                                    marginLeft: '4px',
+                                                                    padding: '2px 4px',
+                                                                    backgroundColor: `${theme.colors.success}20`,
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '11px',
+                                                                    color: theme.colors.success,
+                                                                }, children: [_jsx(Wifi, { size: 10, style: { animation: 'pulse-sync 2s ease-in-out infinite' } }), peersInRoom > 0 && `${peersInRoom + 1}`] })), branchStatus?.hasUpstream === true && (_jsxs(_Fragment, { children: [branchStatus.ahead !== undefined && branchStatus.ahead > 0 && (_jsxs("span", { style: {
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            gap: '2px',
+                                                                            fontSize: '11px',
+                                                                            color: theme.colors.success || '#4caf50'
+                                                                        }, children: [_jsx(ArrowUp, { size: 10 }), branchStatus.ahead] })), branchStatus.behind !== undefined && branchStatus.behind > 0 && (_jsxs("span", { style: {
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            gap: '2px',
+                                                                            fontSize: '11px',
+                                                                            color: '#ff9800'
+                                                                        }, children: [_jsx(ArrowDown, { size: 10 }), branchStatus.behind] }))] })), availableSources.length > 1 && (_jsx(ChevronDown, { size: 14, style: { marginLeft: '4px', opacity: 0.7 } }))] }), showSourceSelector && availableSources.length > 1 && (_jsx("div", { style: {
+                                                            position: 'absolute',
+                                                            top: '100%',
+                                                            left: 0,
+                                                            marginTop: '4px',
+                                                            backgroundColor: theme.colors.background,
+                                                            border: `1px solid ${theme.colors.border}`,
+                                                            borderRadius: '8px',
+                                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                            zIndex: 1000,
+                                                            minWidth: '200px',
+                                                            maxWidth: '400px',
+                                                            overflow: 'hidden',
+                                                        }, children: availableSources.map((source) => {
+                                                            const displayName = SourceSelectionService.getSourceDisplayName(source);
+                                                            const sourceTypeName = SourceSelectionService.getSourceTypeDisplayName(source);
+                                                            const isCurrentSource = selectedSource?.id === source.id;
+                                                            const sourceBranchStatus = source.type === 'local' ? cloneBranchStatuses[source.location] : null;
+                                                            return (_jsxs("button", { onClick: () => {
+                                                                    if (!isCurrentSource) {
+                                                                        // Update selection and trigger parent's onSourceSelect
+                                                                        SourceSelectionService.setSelectedSource(repository.remoteUrl, source.id);
+                                                                        onSourceSelect?.(source);
+                                                                    }
+                                                                    setShowSourceSelector(false);
+                                                                }, style: {
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'space-between',
+                                                                    width: '100%',
+                                                                    padding: '8px 12px',
+                                                                    backgroundColor: isCurrentSource ? theme.colors.backgroundSecondary : 'transparent',
+                                                                    border: 'none',
+                                                                    cursor: isCurrentSource ? 'default' : 'pointer',
+                                                                    fontSize: '13px',
+                                                                    color: theme.colors.text,
+                                                                    transition: 'background-color 0.2s',
+                                                                }, onMouseEnter: (e) => {
+                                                                    if (!isCurrentSource) {
+                                                                        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                                                                    }
+                                                                }, onMouseLeave: (e) => {
+                                                                    if (!isCurrentSource) {
+                                                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                                                    }
+                                                                }, children: [_jsxs("div", { style: { display: 'flex', alignItems: 'center', gap: '8px' }, children: [source.type === 'local' ? (customAvatarUrls[source.location] ? (_jsx(RepositoryAvatar, { repository: repository, localClone: repository.localClones?.find(c => c.path === source.location), customAvatarUrl: customAvatarUrls[source.location], size: 16, type: "clone" })) : (_jsx(FolderOpen, { size: 16 }))) : (_jsx(GitBranch, { size: 16 })), _jsxs("div", { style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }, children: [_jsx("span", { children: displayName }), _jsx("span", { style: { fontSize: '11px', opacity: 0.6, color: theme.colors.textTertiary }, children: sourceTypeName })] }), sourceBranchStatus?.branch && source.type === 'local' && (_jsxs("span", { style: { fontSize: '11px', opacity: 0.6 }, children: ["(", sourceBranchStatus.branch, ")"] }))] }), isCurrentSource && (_jsx(Check, { size: 14, color: theme.colors.primary }))] }, source.id));
+                                                        }) }))] }));
+                                        })(), _jsx("button", { onClick: (e) => {
+                                                e.stopPropagation();
+                                                console.log('Clone management button clicked, setting showCloneManagement to true');
+                                                setShowCloneManagement(true);
+                                            }, style: {
+                                                marginLeft: '8px',
+                                                padding: '4px',
+                                                backgroundColor: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                borderRadius: '4px',
+                                                transition: 'background-color 0.2s',
+                                            }, onMouseEnter: (e) => {
+                                                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                                            }, onMouseLeave: (e) => {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                            }, title: "Manage repository clones", children: _jsx(FolderGit, { size: 14, color: theme.colors.textSecondary }) }), selectedSource?.type === 'local' && (_jsx("button", { onClick: (e) => {
+                                                e.stopPropagation();
+                                                setShowSecretsModal(true);
+                                            }, style: {
+                                                marginLeft: '8px',
+                                                padding: '4px',
+                                                backgroundColor: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                borderRadius: '4px',
+                                                transition: 'background-color 0.2s',
+                                            }, onMouseEnter: (e) => {
+                                                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                                            }, onMouseLeave: (e) => {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                            }, title: "Manage environment secrets", children: _jsx(Key, { size: 14, color: theme.colors.textSecondary }) })), _jsx("button", { onClick: (e) => {
+                                                e.stopPropagation();
+                                                setShowProcessingDetailsModal(true);
+                                            }, style: {
+                                                marginLeft: '8px',
+                                                padding: '4px',
+                                                backgroundColor: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                borderRadius: '4px',
+                                                transition: 'background-color 0.2s',
+                                            }, onMouseEnter: (e) => {
+                                                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                                            }, onMouseLeave: (e) => {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                            }, title: "Show processing pipeline", children: _jsx(Database, { size: 14, color: theme.colors.textSecondary }) }), _jsx("button", { onClick: (e) => {
+                                                e.stopPropagation();
+                                                setShowSourceHelpModal(true);
+                                            }, style: {
+                                                marginLeft: '8px',
+                                                padding: '4px',
+                                                backgroundColor: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                borderRadius: '4px',
+                                                transition: 'background-color 0.2s',
+                                            }, onMouseEnter: (e) => {
+                                                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                                            }, onMouseLeave: (e) => {
+                                                e.currentTarget.style.backgroundColor = 'transparent';
+                                            }, title: "What do these indicators mean?", children: _jsx(HelpCircle, { size: 14, color: theme.colors.textSecondary }) })] }))] }) }), _jsx("div", { style: {
                             display: 'flex',
                             alignItems: 'flex-start',
                             justifyContent: 'center',

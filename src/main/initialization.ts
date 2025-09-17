@@ -54,6 +54,7 @@ import { registerOptimizedDockerHandlers } from './services/ipc/docker/optimized
 import { registerKnipAnalysisHandlers } from './services/ipc/knip/knipAnalysisHandlers';
 import { registerKnipHandlers } from './services/ipc/knip/knipHandlers';
 import { registerPlanningHandlers } from './planning-mcp/planningHandlers';
+import { registerDocumentSearchHandlers, shutdownDocumentSearch } from './services/ipc/documentSearchHandlers';
 
 let mcpIntegration: ElectronMCPIntegration | null = null;
 let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
@@ -137,6 +138,10 @@ const setupHttpBridges = async () => {
 
 // Register all IPC handlers
 const registerAllIpcHandlers = async () => {
+  // Register SecureTokenIPC handlers (lazy initialization - no keychain access)
+  const { registerSecureTokenHandlers } = require('./services/SecureTokenIPC');
+  registerSecureTokenHandlers(); // Registers handlers without creating instance
+
   registerMcpToolsIpcHandlers(applicationWindows);
   registerFileSystemIpcHandlers(applicationWindows);
   registerWindowManagerIpcHandlers(applicationWindows);
@@ -212,7 +217,8 @@ const registerAllIpcHandlers = async () => {
   registerKnipAnalysisHandlers();
   registerKnipHandlers();
   registerPlanningHandlers();
-  
+  registerDocumentSearchHandlers();
+
   // LLM Models handlers have been removed
   const typedStore = await getTypedStorageManager();
   
@@ -332,6 +338,10 @@ export const shutdownServices = async () => {
   // Shutdown agent auto-update service
   AgentAutoUpdateService.getInstance().shutdown();
   console.log('[Main Process] Agent auto-update service stopped.');
+
+  // Shutdown document search service
+  shutdownDocumentSearch();
+  console.log('[Main Process] Document search service stopped.');
 };
 
 export { mcpIntegration, agentSessionEventsHttpBridge };

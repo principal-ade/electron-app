@@ -11,7 +11,7 @@ import { getAgentEventNamespace } from '../storage-providers/typed-namespaces';
 import { AgentEventNamespaces } from '../../shared/types/namespaces.types';
 import { AgentSessionEventProcessorV2 } from './AgentSessionEventProcessorV2';
 import { BatchEventReprocessor } from './BatchEventReprocessor';
-import { EnvironmentConfig } from '../utils/environmentConfig';
+import { HookConfigurationManager } from '../agent-management/HookConfigurationManager';
 export class AgentSessionEventsHttpBridge extends EventEmitter {
     app;
     server = null;
@@ -693,52 +693,43 @@ export class AgentSessionEventsHttpBridge extends EventEmitter {
     async autoProcessFallbackFiles() {
         try {
             console.log('[Agent Session Events Bridge] Checking for fallback files to auto-process...');
-            const fs = await import('fs/promises');
-            const path = await import('path');
-            const { app } = await import('electron');
-            let totalProcessed = 0;
-            let totalFiles = 0;
-            let assetsPath = EnvironmentConfig.getAssetsPath('hooks');
-            // Check both app assets and user data directories
-            const directories = [
-                assetsPath,
-                path.join(app.getPath('userData'), 'hook-fallback')
-            ];
-            for (const directory of directories) {
-                try {
-                    // Check if directory exists
-                    await fs.access(directory);
-                    // Read all files in the directory
-                    const files = await fs.readdir(directory);
-                    // Process each fallback file
-                    for (const file of files) {
-                        // Only process .json files that match the pattern and aren't backups
-                        if (file.endsWith('-hook-events.json') && !file.includes('.backup-')) {
-                            const filePath = path.join(directory, file);
-                            // Determine the agent from the filename
-                            let agent = null;
-                            for (const supportedAgent of SUPPORTED_AGENTS) {
-                                const agentInfo = getAgentInfo(supportedAgent);
-                                if (file === agentInfo.fallbackFileName) {
-                                    agent = supportedAgent;
-                                    break;
-                                }
-                            }
-                            if (agent) {
-                                console.log(`[Agent Session Events Bridge] Auto-processing fallback file: ${file}`);
-                                const result = await this.processFallbackFile(filePath, agent);
-                                if (result.success) {
-                                    totalProcessed += result.processedCount || 0;
-                                    totalFiles++;
-                                }
-                            }
+            const hookManager = HookConfigurationManager.getInstance();
+            // Get statistics first to log what we're looking at
+            const statsResult = await hookManager.getFallbackStats();
+            if (statsResult.success && statsResult.stats) {
+                console.log(`[Agent Session Events Bridge] Fallback directory: ${statsResult.stats.directory}`);
+                console.log(`[Agent Session Events Bridge] Directory exists: ${statsResult.stats.exists}`);
+                if (statsResult.stats.exists) {
+                    for (const agentStat of statsResult.stats.agents) {
+                        if (agentStat.hasFile) {
+                            console.log(`[Agent Session Events Bridge] ${agentStat.agent}: ${agentStat.eventCount} events (${agentStat.fileSize} bytes)`);
                         }
                     }
                 }
-                catch (error) {
-                    // Directory might not exist, which is fine
-                    if (error?.code !== 'ENOENT') {
-                        console.error(`[Agent Session Events Bridge] Error checking directory ${directory}:`, error);
+            }
+            // Read all fallback events
+            const readResult = await hookManager.readFallbackEvents();
+            if (!readResult.success) {
+                console.error('[Agent Session Events Bridge] Failed to read fallback events:', readResult.error);
+                return;
+            }
+            if (!readResult.events || readResult.events.length === 0) {
+                console.log('[Agent Session Events Bridge] No fallback files with events found');
+                return;
+            }
+            let totalProcessed = 0;
+            let totalFiles = 0;
+            // Process each agent's events
+            for (const agentEvents of readResult.events) {
+                console.log(`[Agent Session Events Bridge] Processing ${agentEvents.events.length} events for ${agentEvents.agent}`);
+                const result = await this.processFallbackFile(agentEvents.filePath, agentEvents.agent);
+                if (result.success) {
+                    totalProcessed += result.processedCount || 0;
+                    totalFiles++;
+                    // Clear the processed file (backs it up first)
+                    const clearResult = await hookManager.clearFallbackFile(agentEvents.filePath);
+                    if (clearResult.success) {
+                        console.log(`[Agent Session Events Bridge] Cleared fallback file, backup at: ${clearResult.backupPath}`);
                     }
                 }
             }
@@ -751,9 +742,6 @@ export class AgentSessionEventsHttpBridge extends EventEmitter {
                         eventsProcessed: totalProcessed
                     });
                 });
-            }
-            else {
-                console.log('[Agent Session Events Bridge] No fallback files found to auto-process');
             }
         }
         catch (error) {

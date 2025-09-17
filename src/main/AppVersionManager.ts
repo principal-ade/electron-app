@@ -134,12 +134,12 @@ export default class AppVersionManager {
     ipcMain.on(AppVersionManagerAPIEvent.CHECK_FOR_UPDATE_SILENTLY, () => {
       log.info('[AppUpdater] Silent update check requested');
       console.log('[AppUpdater] Silent update check requested via IPC');
-      
+
       // In dev mode, temporarily set allowDowngrade to ensure we can test
       if (!app.isPackaged) {
         autoUpdater.allowDowngrade = true;
       }
-      
+
       autoUpdater.checkForUpdates().catch((err) => {
         log.error('[AppUpdater] Silent update check failed:', err);
         console.error('[AppUpdater] Silent update check failed:', err);

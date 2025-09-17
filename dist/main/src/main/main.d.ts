@@ -1,2 +1,2 @@
-import './services/SecureTokenIPC';
+export {};
 //# sourceMappingURL=main.d.ts.map

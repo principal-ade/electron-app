@@ -35,10 +35,10 @@ class AuthService {
       name: 'dev-collab-auth',
       // Don't use encryption key here - we'll use safeStorage for encryption
     });
-    
+
     this.setupHandlers();
     console.log('[AuthService] Initialized with Electron safeStorage');
-    console.log('[AuthService] Encryption available:', safeStorage.isEncryptionAvailable());
+    // Note: Calling safeStorage.isEncryptionAvailable() here triggers keychain access on macOS
   }
 
   private setupHandlers() {

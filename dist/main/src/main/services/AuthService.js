@@ -21,7 +21,7 @@ class AuthService {
         });
         this.setupHandlers();
         console.log('[AuthService] Initialized with Electron safeStorage');
-        console.log('[AuthService] Encryption available:', safeStorage.isEncryptionAvailable());
+        // Note: Calling safeStorage.isEncryptionAvailable() here triggers keychain access on macOS
     }
     setupHandlers() {
         // Check handler - reads from safeStorage

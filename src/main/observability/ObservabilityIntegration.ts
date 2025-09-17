@@ -41,8 +41,26 @@ export class ObservabilityIntegration extends EventEmitter {
       return;
     }
 
+    // Override console.log to filter out verbose SDK logging
+    const originalConsoleLog = console.log;
+    const filteredConsoleLog = (...args: any[]) => {
+      // Filter out ObservabilitySDK verbose logs
+      if (typeof args[0] === 'string' &&
+          (args[0].includes('[ObservabilitySDK] Event data:') ||
+           args[0].includes('[ObservabilitySDK] Processing event type:'))) {
+        return;
+      }
+      originalConsoleLog.apply(console, args);
+    };
+
+    // Temporarily replace console.log during SDK initialization
+    console.log = filteredConsoleLog;
+
     // Initialize the observability SDK with the correct constructor signature
     this.sdk = new ObservabilitySDK(databaseUrl);
+
+    // Keep the filtered console.log active since SDK will continue to log
+    // Note: This affects all console.log calls in this process, but filters only ObservabilitySDK messages
 
     console.log('[ObservabilityIntegration] Initialized with database URL');
   }

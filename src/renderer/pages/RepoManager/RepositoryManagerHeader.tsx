@@ -558,88 +558,10 @@ export const RepositoryManagerHeader: React.FC<RepositoryManagerHeaderProps> = (
         </div>
       </div>
       
-      {/* Left side - Repository info with owner avatar */}
+      {/* Left side - Repository badges */}
       <div style={{ flex: '1 1 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-          {/* Owner avatar - always shown */}
-          <RepositoryAvatar
-            repository={repository}
-            size={48}
-            type="owner"
-          />
-          
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <button
-                onClick={() => setShowRepositorySwitcher(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '0',
-                  transition: 'all 0.2s',
-                  flexShrink: 0,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.8';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-                title="Switch to another repository"
-              >
-                <h2 style={{ 
-                  fontSize: '24px', 
-                  fontWeight: 600, 
-                  color: theme.colors.text, 
-                  margin: 0,
-                  whiteSpace: 'nowrap',
-                }}>
-                  {repository?.name}
-                </h2>
-                <ChevronDown size={20} color={theme.colors.textSecondary} />
-              </button>
-              
-              
-              {/* Show small custom repo avatar badge if one is set */}
-              {customAvatarUrls.repo && (
-                <div style={{
-                  position: 'relative',
-                  width: '24px',
-                  height: '24px',
-                }}>
-                  <RepositoryAvatar
-                    repository={repository}
-                    customAvatarUrl={customAvatarUrls.repo}
-                    size={24}
-                    type="repository"
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    inset: '-2px',
-                    border: `2px solid ${theme.colors.background}`,
-                    borderRadius: '50%',
-                    pointerEvents: 'none',
-                  }}/>
-                </div>
-              )}
-            </div>
-            
-            <p style={{ 
-              fontSize: '14px', 
-              color: theme.colors.textSecondary, 
-              margin: '4px 0 0 0' 
-            }}>
-              {repository?.owner}
-            </p>
-          </div>
-        </div>
-        
-        {/* Bottom badges row with source badges */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Badges row with source badges */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Fork information - shown in both modes */}
           {repository?.metadata?.isFork && repository?.metadata?.parentRepo && (
             <button

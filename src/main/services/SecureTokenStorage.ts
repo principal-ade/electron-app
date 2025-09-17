@@ -84,7 +84,7 @@ export class SecureTokenStorage {
 
       const encryptedBuffer = Buffer.from(data.token, 'base64');
       const decrypted = safeStorage.decryptString(encryptedBuffer);
-      
+
       return {
         token: decrypted,
         metadata: data.metadata
