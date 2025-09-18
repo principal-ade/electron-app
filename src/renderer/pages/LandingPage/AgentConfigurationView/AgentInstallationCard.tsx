@@ -194,7 +194,7 @@ Your PATH will be preserved for future installations.`;
       setInstallProgress({
         stage: 'installing',
         progress: 50,
-        message: 'Uninstalling Gemini CLI...',
+        message: `Uninstalling ${agentConfig.displayName} CLI...`,
       });
       await AgentInstallationService.uninstall(agentType);
       //await checkInstallation();
@@ -238,7 +238,7 @@ Your PATH will be preserved for future installations.`;
       >
         <Loader className="animate-spin" size={20} />
         <span style={{ color: theme.colors.text }}>
-          Checking Gemini CLI installation...
+          Checking {agentConfig.displayName} CLI installation...
         </span>
       </div>
     );
@@ -312,9 +312,9 @@ Your PATH will be preserved for future installations.`;
               >
                 {installStatus.installed
                   ? installStatus.isOurVersion
-                    ? `Gemini CLI v${installStatus.version} installed`
-                    : 'Different version of Gemini CLI detected'
-                  : 'Gemini CLI not installed'}
+                    ? `${agentConfig.displayName} CLI v${installStatus.version} installed`
+                    : `Different version of ${agentConfig.displayName} CLI detected`
+                  : `${agentConfig.displayName} CLI not installed`}
               </p>
               {installStatus.installPath && (
                 <p

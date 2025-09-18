@@ -758,8 +758,8 @@ export class MultiStoreManager extends EventEmitter {
           path: 'agent-event-indexes',
           defaults: {
             [AGENT_INFO[SupportedAgent.CLAUDE].storageEventsNamespace]: [],
-            [AGENT_INFO[SupportedAgent.GEMINI].storageEventsNamespace]: [],
-            [AGENT_INFO[SupportedAgent.OPENCODE].storageEventsNamespace]: []
+            [AGENT_INFO[SupportedAgent.OPENCODE].storageEventsNamespace]: [],
+            [AGENT_INFO[SupportedAgent.CLINE].storageEventsNamespace]: []
           }
         }
       },

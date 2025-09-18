@@ -20,33 +20,8 @@ console.log('💾 Backing up package.json...');
 const packageJsonPath = path.join(projectRoot, 'package.json');
 const packageJsonBackup = fs.readFileSync(packageJsonPath, 'utf8');
 
-// Step 3: Build core hooks
-console.log('🔨 Building core hooks...');
-const coreDir = path.join(projectRoot, '../core');
-if (fs.existsSync(coreDir)) {
-  try {
-    // First, ensure core dependencies are installed
-    console.log('📦 Installing core dependencies...');
-    execSync('npm install', { cwd: coreDir, stdio: 'inherit' });
-
-    // Then build
-    execSync('npm run build:electron', { cwd: coreDir, stdio: 'inherit' });
-  } catch (error) {
-    console.error('⚠️  Warning: Failed to build core hooks:', error.message);
-    console.error(
-      'The build will continue, but agent hooks may not be available.',
-    );
-    console.error(
-      'To fix this, manually run "npm install && npm run build:electron" in the core directory',
-    );
-    // Don't exit, just continue with the build
-  }
-} else {
-  console.error('⚠️  Warning: Core directory not found at:', coreDir);
-  console.error(
-    'The build will continue, but agent hooks may not be available.',
-  );
-}
+// Step 3: Hook files are now included in assets directory
+console.log('✅ Hook files are bundled in assets directory...');
 
 // Step 4: Run prepare:shared-lib
 console.log('📦 Preparing shared library...');

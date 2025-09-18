@@ -30,10 +30,6 @@ interface DetailedConfigurationViewProps {
 
 type ViewMode = 'hooks' | 'mcp' | 'install';
 
-interface GeminiMCPStatus {
-  hasPrincipleMD: boolean;
-  mcpServers: Record<string, any>;
-}
 
 // =============================================================================
 // MAIN COMPONENT
@@ -526,7 +522,7 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
   };
 
   const renderInstallContent = () => {
-    if (agentType === SupportedAgent.GEMINI || agentType === SupportedAgent.OPENCODE) {
+    if (agentType === SupportedAgent.OPENCODE) {
       return (
         <AgentInstallationCard
           agentType={agentType}
@@ -619,9 +615,9 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     if (agentType === 'claude') {
       console.log('[MCP] Rendering Claude MCP content');
       return <ClaudeMCPContent />;
-    } else if (agentType === 'gemini') {
-      console.log('[MCP] Rendering Gemini MCP content');
-      return <GeminiMCPContent />;
+    } else if (agentType === 'cline') {
+      console.log('[MCP] Rendering Cline MCP content');
+      return <ClineMCPContent />;
     } else if (agentType === 'opencode') {
       console.log('[MCP] Rendering OpenCode MCP content');
       return <OpenCodeMCPContent />;
@@ -630,7 +626,7 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     return null;
   };
 
-  // Claude-specific MCP content - simplified like Gemini/OpenCode
+  // Claude-specific MCP content - simplified like OpenCode
   const ClaudeMCPContent = () => {
     const [claudeMCPStatus, setClaudeMCPStatus] = React.useState<{
       hasPrincipleMD: boolean;
@@ -719,7 +715,95 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     );
   };
 
-  // Gemini-specific MCP content
+  // Cline-specific MCP content - similar to Claude
+  const ClineMCPContent = () => {
+    const [clineMCPStatus, setClineMCPStatus] = React.useState<{
+      hasPrincipleMD: boolean;
+      mcpServers: Record<string, any>;
+    }>({ hasPrincipleMD: false, mcpServers: {} });
+    const [isTogglingClineMCP, setIsTogglingClineMCP] = React.useState(false);
+
+    React.useEffect(() => {
+      loadClineMCPStatus();
+    }, []);
+
+    const loadClineMCPStatus = async () => {
+      console.log('[MCP] Loading Cline MCP status...');
+      try {
+        const mcpResult = await AgentConfigurationService.getAgentMCPStatus(SupportedAgent.CLINE);
+        console.log('[MCP] Cline MCP status result:', mcpResult);
+        if (mcpResult.success && mcpResult.status) {
+          setClineMCPStatus({
+            hasPrincipleMD: mcpResult.status.hasMCP,
+            mcpServers: {} // We don't need detailed servers list for now
+          });
+        }
+      } catch (error) {
+        console.error('[MCP] Error loading Cline MCP status:', error);
+      }
+    };
+
+    const handleToggleClineMCP = async () => {
+      console.log('[MCP] Toggle Cline MCP clicked, current status:', clineMCPStatus.hasPrincipleMD);
+      setIsTogglingClineMCP(true);
+      try {
+        if (clineMCPStatus.hasPrincipleMD) {
+          console.log('[MCP] Removing MCP from Cline...');
+          const result = await AgentConfigurationService.removeMCPFromAgent(SupportedAgent.CLINE);
+          console.log('[MCP] Remove result:', result);
+          if (result.success) {
+            await loadClineMCPStatus();
+            checkConfigFile();
+          }
+        } else {
+          console.log('[MCP] Adding MCP to Cline...');
+          const result = await AgentConfigurationService.addMCPToAgent(SupportedAgent.CLINE);
+          console.log('[MCP] Add result:', result);
+          if (result.success) {
+            await loadClineMCPStatus();
+            checkConfigFile();
+          }
+        }
+      } catch (error) {
+        console.error('[MCP] Error toggling Cline MCP:', error);
+      } finally {
+        setIsTogglingClineMCP(false);
+      }
+    };
+
+    return (
+      <div className="p-4">
+        <div className="flex items-center justify-between p-4 rounded-lg border-2 transition-colors"
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderColor: clineMCPStatus.hasPrincipleMD ? agentConfig.ui.color : 'transparent'
+          }}>
+          <div className="flex-1">
+            <h4 className="font-medium text-white">Principle MD MCP Server</h4>
+            <p className="text-xs text-slate-400 mt-1">
+              {clineMCPStatus.hasPrincipleMD ? 'Enabled in Cline settings' : 'Not configured'}
+            </p>
+          </div>
+          <button
+            onClick={handleToggleClineMCP}
+            disabled={isTogglingClineMCP}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isTogglingClineMCP ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            style={{
+              backgroundColor: clineMCPStatus.hasPrincipleMD
+                ? theme.colors.error
+                : theme.colors.success,
+              color: 'white',
+            }}
+          >
+            {isTogglingClineMCP ? 'Processing...' : clineMCPStatus.hasPrincipleMD ? 'Disable' : 'Enable'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   // OpenCode-specific MCP content
   const OpenCodeMCPContent = () => {
     const [openCodeMCPStatus, setOpenCodeMCPStatus] = React.useState<{
@@ -814,90 +898,6 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     );
   };
 
-  const GeminiMCPContent = () => {
-    const [geminiMCPStatusLocal, setGeminiMCPStatusLocal] = React.useState<GeminiMCPStatus>({
-      hasPrincipleMD: false,
-      mcpServers: {}
-    });
-    const [isTogglingGeminiMCPLocal, setIsTogglingGeminiMCPLocal] = React.useState(false);
-
-    React.useEffect(() => {
-      loadGeminiMCPStatusLocal();
-    }, []);
-
-    const loadGeminiMCPStatusLocal = async () => {
-      try {
-        const mcpResult = await AgentConfigurationService.getAgentMCPStatus(SupportedAgent.GEMINI);
-        if (mcpResult.success && mcpResult.status) {
-          setGeminiMCPStatusLocal({
-            hasPrincipleMD: mcpResult.status.hasMCP,
-            mcpServers: {} // We don't need detailed servers list for now
-          });
-        }
-      } catch (error) {
-        console.error('Error loading Gemini MCP status:', error);
-      }
-    };
-
-    const handleToggleGeminiMCPLocal = async () => {
-      setIsTogglingGeminiMCPLocal(true);
-      try {
-        if (geminiMCPStatusLocal.hasPrincipleMD) {
-          const result = await AgentConfigurationService.removeMCPFromAgent(SupportedAgent.GEMINI);
-          if (result.success) {
-            await loadGeminiMCPStatusLocal();
-            checkConfigFile();
-          } else {
-            alert(`Failed to disable MCP: ${result.error}`);
-          }
-        } else {
-          const result = await AgentConfigurationService.addMCPToAgent(SupportedAgent.GEMINI);
-          if (result.success) {
-            await loadGeminiMCPStatusLocal();
-            checkConfigFile();
-          } else {
-            alert(`Failed to enable MCP: ${result.error}`);
-          }
-        }
-      } catch (error) {
-        alert(`Error ${geminiMCPStatusLocal.hasPrincipleMD ? 'disabling' : 'enabling'} MCP for Gemini`);
-      } finally {
-        setIsTogglingGeminiMCPLocal(false);
-      }
-    };
-
-    return (
-      <div className="p-4">
-        <div className="flex items-center justify-between p-4 rounded-lg border-2 transition-colors" 
-          style={{ 
-            backgroundColor: theme.colors.backgroundSecondary,
-            borderColor: geminiMCPStatusLocal.hasPrincipleMD ? agentConfig.ui.color : 'transparent'
-          }}>
-          <div className="flex-1">
-            <h4 className="font-medium text-white">Principle MD MCP Server</h4>
-            <p className="text-xs text-slate-400 mt-1">
-              {geminiMCPStatusLocal.hasPrincipleMD ? 'Enabled in ~/.gemini/settings.json' : 'Not configured'}
-            </p>
-          </div>
-          <button
-            onClick={handleToggleGeminiMCPLocal}
-            disabled={isTogglingGeminiMCPLocal}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isTogglingGeminiMCPLocal ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-            style={{
-              backgroundColor: geminiMCPStatusLocal.hasPrincipleMD
-                ? theme.colors.error
-                : theme.colors.success,
-              color: 'white',
-            }}
-          >
-            {isTogglingGeminiMCPLocal ? 'Processing...' : geminiMCPStatusLocal.hasPrincipleMD ? 'Disable' : 'Enable'}
-          </button>
-        </div>
-      </div>
-    );
-  };
 
   // =========================================================================
   // LEFT PANEL
@@ -1025,7 +1025,7 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
               Installation Instructions
             </h4>
             <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: theme.colors.backgroundSecondary }}>
-              {agentType === SupportedAgent.GEMINI || agentType === SupportedAgent.OPENCODE ? (
+              {agentType === SupportedAgent.OPENCODE ? (
                 <>
                   <p className="text-sm" style={{ color: theme.colors.text }}>
                     {window.appName} provides a custom {agentConfig.displayName} CLI with built-in hooks support.
@@ -1070,7 +1070,7 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
           </div>
 
           {/* Download Link */}
-          {!agentStatus?.isInstalled && (agentType !== SupportedAgent.GEMINI && agentType !== SupportedAgent.OPENCODE) && (
+          {!agentStatus?.isInstalled && (agentType !== SupportedAgent.OPENCODE) && (
             <div>
               <h4 className="text-sm font-medium mb-3" style={{ color: theme.colors.textSecondary }}>
                 Download

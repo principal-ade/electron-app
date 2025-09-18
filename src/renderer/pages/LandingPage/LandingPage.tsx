@@ -63,8 +63,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       // Check agent installations
       const agentStatusData = await AgentConfigurationService.checkAgentInstallations();
       setAgentStatus(agentStatusData);
-      const agentsInstalled = agentStatusData.claude.isInstalled || agentStatusData.gemini.isInstalled || agentStatusData.opencode.isInstalled;
-      const hooksConfigured = (agentStatusData.claude.hookCount || 0) > 0 || (agentStatusData.gemini.hookCount || 0) > 0 || (agentStatusData.opencode.hookCount || 0) > 0;
+      const agentsInstalled = agentStatusData.claude.isInstalled || agentStatusData.cline.isInstalled || agentStatusData.opencode.isInstalled;
+      const hooksConfigured = (agentStatusData.claude.hookCount || 0) > 0 || (agentStatusData.cline.hookCount || 0) > 0 || (agentStatusData.opencode.hookCount || 0) > 0;
       
       // Check LLM configuration
       const [ollamaStatus, openRouterConfig] = await Promise.all([
@@ -79,11 +79,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       // Check MCP configuration
       let mcpConfigured = false;
       let claudeMCP = false;
-      let geminiMCP = false;
       let opencodeMCP = false;
-      
+
       try {
-        mcpConfigured = claudeMCP || geminiMCP || opencodeMCP;
+        mcpConfigured = claudeMCP || opencodeMCP;
       } catch (e) {
         console.error('Failed to check MCP status:', e);
         mcpConfigured = false;

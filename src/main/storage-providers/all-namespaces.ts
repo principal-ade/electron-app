@@ -11,13 +11,13 @@ import { AGENT_INFO, SupportedAgent } from "@principal-ai/agent-monitoring";
 
 /**
  * Agent event namespaces derived from agent configurations
- * These are "dynamic" in that they're not in the enum, but they're 
+ * These are "dynamic" in that they're not in the enum, but they're
  * predetermined and known at compile time from the agent configurations
  */
 export const AGENT_EVENT_NAMESPACES = {
   CLAUDE_EVENTS: AGENT_INFO[SupportedAgent.CLAUDE].storageEventsNamespace,
-  GEMINI_EVENTS: AGENT_INFO[SupportedAgent.GEMINI].storageEventsNamespace,
   OPENCODE_EVENTS: AGENT_INFO[SupportedAgent.OPENCODE].storageEventsNamespace,
+  CLINE_EVENTS: AGENT_INFO[SupportedAgent.CLINE].storageEventsNamespace,
 } as const;
 
 /**

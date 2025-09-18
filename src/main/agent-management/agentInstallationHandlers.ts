@@ -1,17 +1,17 @@
 import { ipcMain } from 'electron';
-import { GeminiInstallationService } from './GeminiInstallationService';
 import { AgentInstallProgress, AgentInstallationEvents } from '../../shared/main-process-api-interfaces/AgentInstallationAPI';
 import { SupportedAgent } from "@principal-ai/agent-monitoring";
 import { OpenCodeInstallationService } from './OpenCodeInstallationService';
+import { ClineInstallationService } from './ClineInstallationService';
 import { BaseAgentInstallationService } from './BaseAgentInstallationService';
 
 export function registerAgentInstallationHandlers() {
-  const geminiService = GeminiInstallationService.getInstance();
   const openCodeService = OpenCodeInstallationService.getInstance();
+  const clineService = ClineInstallationService.getInstance();
   const agentServices: Record<SupportedAgent, BaseAgentInstallationService | undefined> = {
-    [SupportedAgent.GEMINI]: geminiService,
     [SupportedAgent.OPENCODE]: openCodeService,
     [SupportedAgent.CLAUDE]: undefined,
+    [SupportedAgent.CLINE]: clineService,
   };
 
   ipcMain.handle(AgentInstallationEvents.INSTALL, async (event, agentType: SupportedAgent, version?: string) => {

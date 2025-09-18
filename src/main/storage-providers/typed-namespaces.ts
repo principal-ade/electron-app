@@ -195,22 +195,22 @@ export interface DockerAnalysisSession {
  */
 export interface AgentEventIndexes {
   [AgentEventNamespaces.CLAUDE]: string[];
-  [AgentEventNamespaces.GEMINI]: string[];
   [AgentEventNamespaces.OPENCODE]: string[];
+  [AgentEventNamespaces.CLINE]: string[];
 }
 
 // Type mapping from SupportedAgent to specific namespace
 type AgentNamespaceMap = {
   [SupportedAgent.CLAUDE]: AgentEventNamespaces.CLAUDE;
-  [SupportedAgent.GEMINI]: AgentEventNamespaces.GEMINI;
   [SupportedAgent.OPENCODE]: AgentEventNamespaces.OPENCODE;
+  [SupportedAgent.CLINE]: AgentEventNamespaces.CLINE;
 };
 
 export function getAgentEventNamespace<T extends SupportedAgent>(agent: T): AgentNamespaceMap[T] {
   const namespaceMap: AgentNamespaceMap = {
     [SupportedAgent.CLAUDE]: AgentEventNamespaces.CLAUDE,
-    [SupportedAgent.GEMINI]: AgentEventNamespaces.GEMINI,
     [SupportedAgent.OPENCODE]: AgentEventNamespaces.OPENCODE,
+    [SupportedAgent.CLINE]: AgentEventNamespaces.CLINE,
   };
   return namespaceMap[agent];
 }
@@ -243,8 +243,8 @@ export interface NamespaceDataTypes {
   // Agent event namespaces - these store individual events by key
   // The storage system handles key-value pairs, so each event is stored separately
   [AgentEventNamespaces.CLAUDE]: AgentSessionEvent;
-  [AgentEventNamespaces.GEMINI]: AgentSessionEvent;
   [AgentEventNamespaces.OPENCODE]: AgentSessionEvent;
+  [AgentEventNamespaces.CLINE]: AgentSessionEvent;
 }
 
 /**

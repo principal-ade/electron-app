@@ -11,12 +11,6 @@
     "allowJs": true,
     "noEmit": false,
     "skipLibCheck": true,
-    "paths": {
-      "@/core-lib": ["./src/core-lib"],
-      "@/core-lib/*": ["./src/core-lib/*"],
-      "@/shared-lib": ["./src/shared-lib"],
-      "@/shared-lib/*": ["./src/shared-lib/*"]
-    },
     "baseUrl": ".",
     "isolatedModules": true
   }

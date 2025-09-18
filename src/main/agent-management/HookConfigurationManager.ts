@@ -93,7 +93,7 @@ export class HookConfigurationManager {
       }
 
       // For other agents, fall back to existing implementation
-      // TODO: Implement Gemini and OpenCode support
+      // TODO: Implement OpenCode support
       return {
         success: false,
         hookCount: 0,
@@ -247,12 +247,8 @@ export class HookConfigurationManager {
       case 'claude':
         return { isSupported: true };
 
-      case 'gemini':
-        // Gemini support will be added later
-        return {
-          isSupported: false,
-          message: 'Gemini hook configuration not yet implemented in V2'
-        };
+      case 'cline':
+        return { isSupported: true };
 
       case 'opencode':
         // OpenCode is transitioning to plugin system
@@ -307,7 +303,7 @@ export class HookConfigurationManager {
       }> = [];
 
       // Get list of agents to check
-      const agentsToCheck = agentType ? [agentType] : ['claude', 'gemini', 'opencode'] as SupportedAgent[];
+      const agentsToCheck = agentType ? [agentType] : ['claude', 'opencode', 'cline'] as SupportedAgent[];
 
       for (const agent of agentsToCheck) {
         if (agent === 'claude') {
@@ -441,7 +437,7 @@ export class HookConfigurationManager {
         fileSize?: number;
       }> = [];
 
-      const agents: SupportedAgent[] = ['claude' as SupportedAgent, 'gemini' as SupportedAgent, 'opencode' as SupportedAgent];
+      const agents: SupportedAgent[] = ['claude' as SupportedAgent, 'opencode' as SupportedAgent, 'cline' as SupportedAgent];
 
       for (const agent of agents) {
         if (agent === 'claude') {

@@ -127,7 +127,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
           setInstallProgress({ message: 'Installation complete!' });
           setIsInstallingAgent(false);
 
-          // First check Gemini installation directly
+          // First check agent installation directly
           try {
             const installationStatus =
               await AgentInstallationService.checkInstallation(agentType);
@@ -242,26 +242,26 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
 
   const handleUninstallAgent = useCallback(async () => {
     setError(null);
-    if (agentType === SupportedAgent.GEMINI || agentType === SupportedAgent.OPENCODE) {
+    if (agentType === SupportedAgent.OPENCODE || agentType === SupportedAgent.CLINE) {
       const confirmed = window.confirm(
         `Are you sure you want to uninstall ${agentConfig.displayName}?`,
       );
       if (confirmed) {
         setIsInstallingAgent(true);
-        
+
         // Set up uninstall complete listener
         const unsubscribeUninstall = AgentInstallationService.onUninstallComplete(agentType, () => {
-          console.log('Gemini uninstall complete event received');
+          console.log(`${agentType} uninstall complete event received`);
           setLocalInstallStatus(false);
           setIsInstallingAgent(false);
           checkAgentStatus();
           unsubscribeUninstall();
         });
-        
+
         try {
           await AgentInstallationService.uninstall(agentType);
         } catch (error) {
-          setError('Failed to uninstall Gemini');
+          setError(`Failed to uninstall ${agentConfig.displayName}`);
           setIsInstallingAgent(false);
           unsubscribeUninstall();
         }

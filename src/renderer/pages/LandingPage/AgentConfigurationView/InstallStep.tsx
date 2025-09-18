@@ -45,7 +45,7 @@ export const InstallStep: React.FC<InstallStepProps> = ({
   const agentConfig = getAgentInfo(agentType);
 
   const handleCheckInstallation = async () => {
-    if (agentType === SupportedAgent.GEMINI || agentType === SupportedAgent.OPENCODE) {
+    if (agentType === SupportedAgent.OPENCODE || agentType === SupportedAgent.CLINE) {
       const status = await AgentInstallationService.checkInstallation(agentType);
       if (status.installed) {
         onInstallComplete();
@@ -81,15 +81,13 @@ export const InstallStep: React.FC<InstallStepProps> = ({
         <p style={{ color: theme.colors.textSecondary, height: '48px' }}>
           {isInstalled
             ? `${agentDisplayName} is installed and ready to use`
-            : agentType === 'gemini'
-            ? "We'll install a special fork of Gemini that includes hooks support"
             : `First, we need to install the ${agentDisplayName} application`}
         </p>
       </div>
 
       <div style={{ minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       {/* Show uninstall button if already installed and can uninstall */}
-      {isInstalled && onUninstall && (agentType === SupportedAgent.GEMINI || agentType === SupportedAgent.OPENCODE) && (
+      {isInstalled && onUninstall && (agentType === SupportedAgent.OPENCODE || agentType === SupportedAgent.CLINE) && (
         <>
           <button
             onClick={onUninstall}

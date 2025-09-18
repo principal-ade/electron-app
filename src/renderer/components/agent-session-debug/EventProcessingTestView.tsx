@@ -39,6 +39,20 @@ export const EventProcessingTestView: React.FC<EventProcessingTestViewProps> = (
         }
       }, null, 2)
     },
+    [SupportedAgent.CLINE]: {
+      name: 'Cline Tool Event',
+      event: JSON.stringify({
+        type: 'tool_use',
+        sessionId: 'cline-test-789',
+        workingDirectory: '/Users/test/project',
+        timestamp: Date.now(),
+        tool: 'str_replace_editor',
+        input: {
+          command: 'view',
+          path: '/Users/test/project/src/index.ts'
+        }
+      }, null, 2)
+    },
     [SupportedAgent.GEMINI]: {
       name: 'Gemini Tool Event',
       event: JSON.stringify({
@@ -200,6 +214,7 @@ export const EventProcessingTestView: React.FC<EventProcessingTestViewProps> = (
             }}
           >
             <option value={SupportedAgent.CLAUDE}>Claude</option>
+            <option value={SupportedAgent.CLINE}>Cline</option>
             <option value={SupportedAgent.GEMINI}>Gemini</option>
             <option value={SupportedAgent.OPENCODE}>OpenCode</option>
           </select>

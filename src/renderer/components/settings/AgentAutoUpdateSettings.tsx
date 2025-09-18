@@ -130,7 +130,7 @@ export const AgentAutoUpdateSettings: React.FC = () => {
                 color: theme.colors.textSecondary,
               }}
             >
-              Automatically check for updates to Gemini and OpenCode CLI tools
+              Automatically check for updates to OpenCode CLI tools
             </p>
           </div>
         </label>

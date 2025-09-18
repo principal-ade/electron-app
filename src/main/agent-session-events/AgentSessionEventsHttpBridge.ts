@@ -10,8 +10,8 @@ import {
   SUPPORTED_AGENTS,
   type SupportedAgent,
   type ClaudeHookInput,
-  type GeminiHookInput,
-  type OpenCodeHookInput
+  type OpenCodeHookInput,
+  type ClineHookInput
 } from "@principal-ai/agent-monitoring";
 
 import { type AgentSessionEvent , AgentSessionEventsAPIEvent } from '../../shared/main-process-api-interfaces';
@@ -27,7 +27,7 @@ import { EnvironmentConfig } from '../utils/environmentConfig';
 import { HookConfigurationManager } from '../agent-management/HookConfigurationManager';
 
 // Union type for all possible hook inputs
-type AgentHookInput = ClaudeHookInput | GeminiHookInput | OpenCodeHookInput;
+type AgentHookInput = ClaudeHookInput | OpenCodeHookInput | ClineHookInput;
 
 // Type alias for processed event data
 type ProcessedEventData = {
@@ -570,8 +570,8 @@ export class AgentSessionEventsHttpBridge extends EventEmitter {
       if (!allIndexes) {
         allIndexes = {
           [AgentEventNamespaces.CLAUDE]: [],
-          [AgentEventNamespaces.GEMINI]: [],
-          [AgentEventNamespaces.OPENCODE]: []
+          [AgentEventNamespaces.OPENCODE]: [],
+          [AgentEventNamespaces.CLINE]: []
         };
       }
       

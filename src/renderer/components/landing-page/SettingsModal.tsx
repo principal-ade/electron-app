@@ -52,7 +52,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [showCustomThemeEditor, setShowCustomThemeEditor] = useState(false);
   const [activeCategory, setActiveCategory] = useState<'general' | 'ai-assistants' | 'developer-tools' | 'updates' | 'developer'>('general');
   const [agentStatus, setAgentStatus] = useState<AgentInstallationStatus | null>(null);
-  const [activeAgentView, setActiveAgentView] = useState<'claude' | 'gemini' | 'opencode' | null>(null);
+  const [activeAgentView, setActiveAgentView] = useState<'claude' | 'cline' | 'gemini' | 'opencode' | null>(null);
   const [activeToolsView, setActiveToolsView] = useState<'terminal' | 'ide' | null>(null);
   const [agentViewLayout, setAgentViewLayout] = useState<'simple' | 'detailed'>('simple');
   const [cliToolStatuses, setCliToolStatuses] = useState<Record<string, boolean>>({});
@@ -1338,6 +1338,61 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           </div>
                         </div>
 
+                        {/* Cline */}
+                        <div
+                          style={{
+                            backgroundColor: theme.colors.backgroundSecondary,
+                            borderRadius: '12px',
+                            padding: '20px',
+                            border: `1px solid ${theme.colors.border}`,
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '8px',
+                                background: 'linear-gradient(135deg, #8B5CF620, #8B5CF640)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}>
+                                <Bot size={20} color="#8B5CF6" />
+                              </div>
+                              <div>
+                                <h5 style={{ fontSize: '16px', fontWeight: 600, margin: '0 0 4px 0' }}>Cline</h5>
+                                <p style={{ fontSize: '13px', color: theme.colors.textSecondary, margin: 0 }}>
+                                  VS Code AI assistant
+                                </p>
+                                {agentStatus?.cline?.isInstalled && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                                    <CheckCircle size={12} color={theme.colors.success} />
+                                    <span style={{ fontSize: '11px', color: theme.colors.success }}>Installed</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setActiveAgentView('cline');
+                                setAgentViewLayout('simple');
+                              }}
+                              style={{
+                                padding: '8px 16px',
+                                borderRadius: '6px',
+                                border: `1px solid ${theme.colors.border}`,
+                                backgroundColor: theme.colors.background,
+                                color: theme.colors.text,
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                              }}
+                            >
+                              Configure
+                            </button>
+                          </div>
+                        </div>
+
                         {/* OpenCode */}
                         <div
                           style={{
@@ -1418,6 +1473,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       <AgentConfigurationView
                         agentType={SupportedAgent.CLAUDE}
                         agentStatus={agentStatus.claude}
+                        checkAgentStatus={checkAgentStatus}
+                        viewLayout={agentViewLayout}
+                        onShowDetails={() => setAgentViewLayout('detailed')}
+                        onBackToSetup={() => setAgentViewLayout('simple')}
+                      />
+                    )}
+                    {activeAgentView === 'cline' && agentStatus && (
+                      <AgentConfigurationView
+                        agentType={SupportedAgent.CLINE}
+                        agentStatus={agentStatus.cline}
                         checkAgentStatus={checkAgentStatus}
                         viewLayout={agentViewLayout}
                         onShowDetails={() => setAgentViewLayout('detailed')}

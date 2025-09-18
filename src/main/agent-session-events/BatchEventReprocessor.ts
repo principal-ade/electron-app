@@ -1,13 +1,13 @@
-import { 
-  SupportedAgent, 
-  ClaudeEventProcessor, 
-  GeminiEventProcessor, 
-  OpenCodeEventProcessor, 
+import {
+  SupportedAgent,
+  ClaudeEventProcessor,
+  OpenCodeEventProcessor,
+  ClineEventProcessor,
   AgentEventProcessor,
   NormalizedAgentSessionEvent,
   ClaudeHookInput,
-  GeminiHookInput,
   OpenCodeHookInput,
+  ClineHookInput,
 } from "@principal-ai/agent-monitoring";
 import { ProcessedSessionData } from '../storage-providers/typed-namespaces';
 import { getTypedStorageManager } from '../storage-providers';
@@ -16,7 +16,7 @@ import { repositoryCache } from '../stores/RepositoryCache';
 import path from 'path';
 
 // Union type for all possible hook inputs
-type AgentHookInput = ClaudeHookInput | GeminiHookInput | OpenCodeHookInput;
+type AgentHookInput = ClaudeHookInput | OpenCodeHookInput | ClineHookInput;
 
 /**
  * Optimized batch reprocessor for session events
@@ -29,8 +29,8 @@ export class BatchEventReprocessor {
     // Initialize adapters
     this.adapters = new Map<SupportedAgent, AgentEventProcessor>([
       [SupportedAgent.CLAUDE, new ClaudeEventProcessor()],
-      [SupportedAgent.GEMINI, new GeminiEventProcessor()],
-      [SupportedAgent.OPENCODE, new OpenCodeEventProcessor()]
+      [SupportedAgent.OPENCODE, new OpenCodeEventProcessor()],
+      [SupportedAgent.CLINE, new ClineEventProcessor()]
     ]);
   }
 

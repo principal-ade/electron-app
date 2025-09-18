@@ -34,8 +34,8 @@ import { APP_BRANDING } from '../../shared/config/appBranding';
 
 import { AgentConfigAPIEvent, AgentSetupStatus } from '../../shared/main-process-api-interfaces/AgentConfigAPI';
 
-import { GeminiInstallationService } from './GeminiInstallationService';
 import { OpenCodeInstallationService } from './OpenCodeInstallationService';
+import { ClineInstallationService } from './ClineInstallationService';
 import { EnvironmentConfig } from '../utils/environmentConfig';
 import { HookConfigurationManager } from './HookConfigurationManager';
 
@@ -93,21 +93,7 @@ export function setupAgentConfigHandlers() {
         let _hookScripts: string[] = [];
 
         // Check if agent is installed
-        if (agentType === 'gemini') {
-          const geminiService = GeminiInstallationService.getInstance();
-          const installStatus = await geminiService.checkInstallation();
-          // Only consider our custom version as installed
-          isInstalled = installStatus.installed && installStatus.isOurVersion;
-          
-          if (isInstalled) {
-            console.log('[AgentConfig] Found our custom Gemini installation');
-          } else if (installStatus.installed && !installStatus.isOurVersion) {
-            console.log('[AgentConfig] Found official Gemini installation, but ignoring it - we only support our custom version');
-            isInstalled = false;
-          } else {
-            console.log('[AgentConfig] Gemini not installed');
-          }
-        } else if (agentType === 'claude') {
+        if (agentType === 'claude') {
           // For Claude, check if the CLI binary exists using production-safe method
           try {
             const claudePath = await EnvironmentConfig.findExecutable('claude');
@@ -127,7 +113,7 @@ export function setupAgentConfigHandlers() {
           const installStatus = await openCodeService.checkInstallation();
           // Only consider our custom version as installed
           isInstalled = installStatus.installed && installStatus.isOurVersion;
-          
+
           if (isInstalled) {
             console.log('[AgentConfig] Found our custom OpenCode installation');
           } else if (installStatus.installed && !installStatus.isOurVersion) {
@@ -135,6 +121,20 @@ export function setupAgentConfigHandlers() {
             isInstalled = false;
           } else {
             console.log('[AgentConfig] OpenCode not installed');
+          }
+        } else if (agentType === 'cline') {
+          const clineService = ClineInstallationService.getInstance();
+          const installStatus = await clineService.checkInstallation();
+          // Only consider our custom version as installed
+          isInstalled = installStatus.installed && installStatus.isOurVersion;
+
+          if (isInstalled) {
+            console.log('[AgentConfig] Found our custom Cline installation');
+          } else if (installStatus.installed && !installStatus.isOurVersion) {
+            console.log('[AgentConfig] Found official Cline installation, but ignoring it - we only support our custom version');
+            isInstalled = false;
+          } else {
+            console.log('[AgentConfig] Cline not installed');
           }
         } else {
           // For other agents, check if config file exists

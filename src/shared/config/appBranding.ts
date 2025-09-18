@@ -9,7 +9,7 @@ export const APP_BRANDING = {
 
   // Bridge ports for HTTP communication
   BRIDGE_PORTS: {
-    AGENT_SESSION_EVENTS: 3043, // Port for claude-hook, gemini-hook, opencode-hook
+    AGENT_SESSION_EVENTS: 3043, // Port for claude-hook, opencode-hook
     PLANNING_MCP: 3045, // Port for planning document operations
   },
 

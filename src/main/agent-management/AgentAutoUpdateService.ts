@@ -1,8 +1,8 @@
 import { app, BrowserWindow, Notification } from 'electron';
 import { SupportedAgent, getAgentInfo } from "@principal-ai/agent-monitoring";
 import { BaseAgentInstallationService } from './BaseAgentInstallationService';
-import { GeminiInstallationService } from './GeminiInstallationService';
 import { OpenCodeInstallationService } from './OpenCodeInstallationService';
+import { ClineInstallationService } from './ClineInstallationService';
 import { getTypedStorageManager } from '../storage-providers';
 import { AgentInstallStatus } from '../../shared/main-process-api-interfaces/AgentInstallationAPI';
 import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
@@ -48,8 +48,8 @@ export class AgentAutoUpdateService {
 
   private constructor() {
     this.agentServices = new Map<SupportedAgent, BaseAgentInstallationService>([
-      [SupportedAgent.GEMINI, GeminiInstallationService.getInstance() as BaseAgentInstallationService],
       [SupportedAgent.OPENCODE, OpenCodeInstallationService.getInstance() as BaseAgentInstallationService],
+      [SupportedAgent.CLINE, ClineInstallationService.getInstance() as BaseAgentInstallationService],
     ]);
   }
 

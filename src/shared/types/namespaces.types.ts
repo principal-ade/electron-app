@@ -37,8 +37,8 @@ export enum StaticNamespaces {
  */
 export enum AgentEventNamespaces {
   CLAUDE = 'claude-hook-events',
-  GEMINI = 'gemini-hook-events',
   OPENCODE = 'opencode-hook-events',
+  CLINE = 'cline-hook-events',
 }
 
 /**
