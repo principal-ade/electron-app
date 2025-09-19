@@ -4,7 +4,12 @@
 This document audits all uses of GitClientFactory in the electron-app codebase to plan migration to GitLens from codebase-quality-lenses package.
 
 **Generated:** 2025-09-19
+**Updated:** 2025-09-19
 **Purpose:** Avoid technical debt and identify gaps for the lens team
+
+## Migration Status
+- ✅ **Completed:** 4 methods migrated to GitLens (40%)
+- ⏳ **Pending:** 6 methods awaiting GitLens support (60%)
 
 ## GitClientFactory Method Usage Audit
 
@@ -43,10 +48,11 @@ This document audits all uses of GitClientFactory in the electron-app codebase t
 - `src/main/version-control-providers/gitBranchService.ts` (line 80)
   - Used to get current branch with fallback logic
 
-**Migration Strategy:** Use GitLens directly
+**Migration Status:** ✅ **COMPLETED**
+**Implementation:** GitLensAdapter.getCurrentBranch()
 ```typescript
-const result = await gitLens.run();
-return result.data?.branch || null;
+// Now using GitLens in GitClientFactory:
+return await gitLensAdapter.getCurrentBranch(directory);
 ```
 
 ---
@@ -60,10 +66,22 @@ return result.data?.branch || null;
 - `src/main/file-system/gitRepositoryService.ts` (line 488)
   - Used as fallback when commit result doesn't contain hash
 
-**Migration Strategy:** Use GitLens directly
+**Migration Status:** ✅ **COMPLETED**
+**Implementation:** GitLensAdapter.getCurrentCommit()
 ```typescript
-const result = await gitLens.run();
-return result.data?.commit || null;
+// Now using GitLens in GitClientFactory:
+return await gitLensAdapter.getCurrentCommit(directory);
+```
+
+**Additional Method Added:**
+### 4a. `getLastCommitInfo(directory: string): Promise<CommitInfo | null>`
+**Purpose:** Get detailed last commit information including date for sorting
+**GitLens Support:** ✅ Available with `includeCommitDetails: true`
+**Migration Status:** ✅ **COMPLETED**
+**Implementation:** GitLensAdapter.getLastCommitInfo()
+```typescript
+// New method added for landing page repository sorting:
+return await gitLensAdapter.getLastCommitInfo(directory);
 ```
 
 ---
@@ -77,14 +95,12 @@ return result.data?.commit || null;
 - `src/main/file-system/gitRepositoryService.ts` (line 533)
   - Used in getUncommittedChanges() to get all modified files
 
-**Migration Strategy:** Use GitLens with mapping
+**Migration Status:** ✅ **COMPLETED**
+**Implementation:** GitLensAdapter.getGitStatus()
 ```typescript
-const result = await gitLens.run();
-return {
-  staged: result.data?.staged || [],
-  unstaged: result.data?.modified || [],
-  untracked: result.data?.untracked || []
-};
+// Now using GitLens in GitClientFactory:
+return await gitLensAdapter.getGitStatus(directory);
+// Maps: GitLens.modified → unstaged, GitLens.staged → staged
 ```
 
 ---
@@ -169,9 +185,15 @@ return {
 
 ## Summary Statistics
 
-**Total Methods:** 10
-**GitLens Supported:** 3 (30%)
-**GitLens Not Supported:** 7 (70%)
+**Total Methods:** 11 (10 original + 1 new)
+**GitLens Supported & Migrated:** 5 (45%)
+**GitLens Not Supported:** 6 (55%)
+
+**Completed Migrations:**
+1. ✅ `getCurrentCommit()` - Full commit hash
+2. ✅ `getLastCommitInfo()` - NEW: Detailed commit info with date
+3. ✅ `getCurrentBranch()` - Current branch name
+4. ✅ `getGitStatus()` - Staged, unstaged, untracked files
 
 **Files Affected:** 5
 1. `src/main/version-control-providers/GitService.ts`

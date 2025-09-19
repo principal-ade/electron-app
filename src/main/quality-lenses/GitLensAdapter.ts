@@ -116,6 +116,90 @@ export class GitLensAdapter {
       return null;
     }
   }
+
+  /**
+   * Get git status for a directory
+   * Returns files categorized as staged, unstaged (modified), and untracked
+   *
+   * @param directory - The directory to get git status for
+   * @returns Object with staged, unstaged, and untracked file arrays
+   */
+  public async getGitStatus(directory: string): Promise<{
+    staged: string[];
+    unstaged: string[];
+    untracked: string[];
+  }> {
+    try {
+      // Configure GitLens for this directory
+      this.gitLens.configure({
+        cwd: directory,
+        tool: {
+          name: 'git',
+          command: 'git',
+          args: [], // Git commands are specified internally by GitLens
+          cwd: directory,
+          available: true,
+        },
+        includeCommitDetails: false, // We don't need commit details for status
+      });
+
+      // Execute git commands
+      const executeResult = await this.gitLens.execute();
+
+      // Parse the results
+      const gitInfo = this.gitLens.parse(executeResult);
+
+      // Map GitLens results to our expected format
+      // GitLens uses "modified" for unstaged changes
+      return {
+        staged: gitInfo.staged || [],
+        unstaged: gitInfo.modified || [],
+        untracked: gitInfo.untracked || [],
+      };
+    } catch (error) {
+      // Return empty arrays if not a git repo or error
+      return {
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      };
+    }
+  }
+
+  /**
+   * Get current branch name for a directory
+   *
+   * @param directory - The directory to get branch name for
+   * @returns Current branch name or null if not a git repo or detached HEAD
+   */
+  public async getCurrentBranch(directory: string): Promise<string | null> {
+    try {
+      // Configure GitLens for this directory
+      this.gitLens.configure({
+        cwd: directory,
+        tool: {
+          name: 'git',
+          command: 'git',
+          args: [], // Git commands are specified internally by GitLens
+          cwd: directory,
+          available: true,
+        },
+        includeCommitDetails: false, // We don't need commit details for branch
+      });
+
+      // Execute git commands
+      const executeResult = await this.gitLens.execute();
+
+      // Parse the results
+      const gitInfo = this.gitLens.parse(executeResult);
+
+      // Return the branch name
+      return gitInfo.branch || null;
+    } catch (error) {
+      // Return null if not a git repo or error
+      return null;
+    }
+  }
 }
 
 // Export singleton instance for convenience

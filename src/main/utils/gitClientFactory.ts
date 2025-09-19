@@ -136,14 +136,15 @@ export class GitClientFactory {
 
   /**
    * Get git status for a directory
+   * Now uses GitLens for consistency with other Git operations
    */
   static async getGitStatus(directory: string): Promise<{
     staged: string[];
     unstaged: string[];
     untracked: string[];
   }> {
-    const git = await this.ensureInitialized();
-    return await git.getStatus(directory);
+    // Use GitLens adapter instead of electron-cli-bridge
+    return await gitLensAdapter.getGitStatus(directory);
   }
 
   /**
@@ -163,10 +164,11 @@ export class GitClientFactory {
 
   /**
    * Get current branch name
+   * Now uses GitLens for consistency with other Git operations
    */
   static async getCurrentBranch(directory: string): Promise<string | null> {
-    const git = await this.ensureInitialized();
-    return await git.getCurrentBranch(directory);
+    // Use GitLens adapter instead of electron-cli-bridge
+    return await gitLensAdapter.getCurrentBranch(directory);
   }
 
   /**
