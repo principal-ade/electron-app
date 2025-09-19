@@ -12,6 +12,7 @@ build/
 .erb/mocks/
 .webpack/
 *.log
+tsconfig.tsbuildinfo
 
 # IDE and OS files
 .DS_Store
