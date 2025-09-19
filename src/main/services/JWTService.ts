@@ -2,7 +2,8 @@ import { ipcMain } from 'electron';
 const jwt = require('jsonwebtoken');
 import fetch from 'node-fetch';
 
-const JWT_SECRET = process.env.SYNC_JWT_SECRET || 'dev-secret-change-in-production';
+const JWT_SECRET =
+  process.env.SYNC_JWT_SECRET || 'dev-secret-change-in-production';
 const JWT_EXPIRY = '1h'; // 1 hour expiry
 
 // JWT interface to avoid importing types
@@ -77,39 +78,45 @@ export class JWTService {
       // Get user info
       const userResponse = await fetch('https://api.github.com/user', {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
       });
 
       if (!userResponse.ok) {
         throw new Error('Invalid GitHub token');
       }
 
-      const user = await userResponse.json() as GitHubUser;
+      const user = (await userResponse.json()) as GitHubUser;
 
       // Get repositories with permissions
       // This includes repos where user is collaborator, including organization repos
-      const reposResponse = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      });
+      const reposResponse = await fetch(
+        'https://api.github.com/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/vnd.github.v3+json',
+          },
+        },
+      );
 
       if (!reposResponse.ok) {
         throw new Error('Failed to fetch repositories');
       }
 
-      const repos = await reposResponse.json() as GitHubRepository[];
-      
+      const repos = (await reposResponse.json()) as GitHubRepository[];
+
       console.log(`[JWTService] Found ${repos.length} repositories for user`);
-      console.log(`[JWTService] Repository names:`, repos.map((r) => r.full_name).slice(0, 10));
-      
+      console.log(
+        `[JWTService] Repository names:`,
+        repos.map((r) => r.full_name).slice(0, 10),
+      );
+
       // Map repositories to our permission format
       const repositories: RepositoryPermission[] = repos.map((repo) => {
         const permissions = [];
-        
+
         // Determine permissions based on GitHub's response
         if (repo.permissions) {
           if (repo.permissions.pull) permissions.push('pull');
@@ -126,7 +133,7 @@ export class JWTService {
 
         return {
           repoId: repo.full_name, // Format: "owner/repo"
-          permissions
+          permissions,
         };
       });
 
@@ -148,18 +155,19 @@ export class JWTService {
   }> {
     try {
       // Validate GitHub token and get permissions
-      const { user, repositories } = await this.validateGitHubToken(githubToken);
+      const { user, repositories } =
+        await this.validateGitHubToken(githubToken);
 
       // Create JWT payload
       const payload: JWTPayload = {
         userId: user.login,
         githubId: user.id.toString(),
-        repositories
+        repositories,
       };
 
       // Sign JWT
       const token = jwt.sign(payload, JWT_SECRET, {
-        expiresIn: JWT_EXPIRY
+        expiresIn: JWT_EXPIRY,
       } as JwtSignOptions);
 
       return {
@@ -170,14 +178,14 @@ export class JWTService {
           githubHandle: user.login,
           email: user.email,
           avatar: user.avatar_url,
-          repositories: repositories.map(r => r.repoId)
-        }
+          repositories: repositories.map((r) => r.repoId),
+        },
       };
     } catch (error) {
       console.error('JWT creation error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to create JWT'
+        error: error instanceof Error ? error.message : 'Failed to create JWT',
       };
     }
   }
@@ -194,12 +202,12 @@ export class JWTService {
       const payload = jwt.verify(token, JWT_SECRET) as JWTPayload;
       return {
         valid: true,
-        payload
+        payload,
       };
     } catch (error) {
       return {
         valid: false,
-        error: error instanceof Error ? error.message : 'Invalid token'
+        error: error instanceof Error ? error.message : 'Invalid token',
       };
     }
   }
@@ -210,11 +218,11 @@ export class JWTService {
   static hasPermission(
     payload: JWTPayload,
     repoId: string,
-    requiredPermission: 'pull' | 'push' | 'admin'
+    requiredPermission: 'pull' | 'push' | 'admin',
   ): boolean {
-    const repo = payload.repositories.find(r => r.repoId === repoId);
+    const repo = payload.repositories.find((r) => r.repoId === repoId);
     if (!repo) return false;
-    
+
     return repo.permissions.includes(requiredPermission);
   }
 
@@ -233,47 +241,64 @@ export class JWTService {
     });
 
     // Create JWT for git-sync (includes repo-specific claims)
-    ipcMain.handle('jwt:create-for-sync', async (_, params: {
-      githubToken: string;
-      repoId: string;
-    }) => {
-      try {
-        const result = await this.createJWT(params.githubToken);
-        if (!result.success || !result.token) {
+    ipcMain.handle(
+      'jwt:create-for-sync',
+      async (
+        _,
+        params: {
+          githubToken: string;
+          repoId: string;
+        },
+      ) => {
+        try {
+          const result = await this.createJWT(params.githubToken);
+          if (!result.success || !result.token) {
+            return result;
+          }
+
+          // Verify user has access to the specific repository
+          const { payload } = this.verifyJWT(result.token);
+          if (!payload) {
+            return {
+              success: false,
+              error: 'Failed to verify JWT',
+            };
+          }
+
+          console.log(
+            `[JWTService] Checking access for repository: ${params.repoId}`,
+          );
+          console.log(
+            `[JWTService] Available repositories:`,
+            payload.repositories.map((r) => r.repoId),
+          );
+
+          const hasAccess = this.hasPermission(payload, params.repoId, 'pull');
+          if (!hasAccess) {
+            console.log(
+              `[JWTService] Access denied for ${params.repoId}. User repositories:`,
+              payload.repositories.map(
+                (r) => `${r.repoId} (${r.permissions.join(', ')})`,
+              ),
+            );
+            return {
+              success: false,
+              error: `No access to repository: ${params.repoId}`,
+            };
+          }
+
+          console.log(`[JWTService] Access granted for ${params.repoId}`);
+
           return result;
-        }
-
-        // Verify user has access to the specific repository
-        const { payload } = this.verifyJWT(result.token);
-        if (!payload) {
+        } catch (error) {
+          console.error('Error creating sync JWT:', error);
           return {
             success: false,
-            error: 'Failed to verify JWT'
+            error:
+              error instanceof Error ? error.message : 'Failed to create JWT',
           };
         }
-
-        console.log(`[JWTService] Checking access for repository: ${params.repoId}`);
-        console.log(`[JWTService] Available repositories:`, payload.repositories.map(r => r.repoId));
-        
-        const hasAccess = this.hasPermission(payload, params.repoId, 'pull');
-        if (!hasAccess) {
-          console.log(`[JWTService] Access denied for ${params.repoId}. User repositories:`, payload.repositories.map(r => `${r.repoId} (${r.permissions.join(', ')})`));
-          return {
-            success: false,
-            error: `No access to repository: ${params.repoId}`
-          };
-        }
-        
-        console.log(`[JWTService] Access granted for ${params.repoId}`);
-
-        return result;
-      } catch (error) {
-        console.error('Error creating sync JWT:', error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to create JWT'
-        };
-      }
-    });
+      },
+    );
   }
 }

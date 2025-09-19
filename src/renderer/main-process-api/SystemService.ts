@@ -1,11 +1,11 @@
 // Safe window API access utilities for System
 
-import type { 
-  CommandOptions, 
-  CommandResult, 
-  DialogOptions, 
-  DialogResult, 
-  UpdateCheckResult 
+import type {
+  CommandOptions,
+  CommandResult,
+  DialogOptions,
+  DialogResult,
+  UpdateCheckResult,
 } from '../../shared/main-process-api-interfaces/SystemAPI';
 
 export class SystemService {

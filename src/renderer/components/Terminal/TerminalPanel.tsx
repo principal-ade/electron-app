@@ -69,50 +69,70 @@ function TerminalPanel({
     customName?: string;
   } | null>(null);
 
-  const createTerminalSession = useCallback(async (dir: string): Promise<string | null> => {
-    try {
-      // Check if we're hitting the session limit
-      const sessions = await TerminalService.list();
-      if (sessions && sessions.length >= 10) {
-        console.warn('[TerminalPanel] At terminal session limit, attempting cleanup...');
-        // Try to clean up orphaned sessions
-        const orphanedSessions = sessions.filter(s => 
-          // Consider a session orphaned if it's been idle or disconnected
-          s.status === 'disconnected' || !s.lastActivity || 
-          (s.lastActivity && Date.now() - new Date(s.lastActivity).getTime() > 300000) // 5 minutes idle
-        );
-        
-        for (const orphan of orphanedSessions) {
-          try {
-            console.log('[TerminalPanel] Destroying orphaned session:', orphan.id);
-            await TerminalService.destroy(orphan.id);
-          } catch (err) {
-            console.error('[TerminalPanel] Failed to destroy orphaned session:', err);
+  const createTerminalSession = useCallback(
+    async (dir: string): Promise<string | null> => {
+      try {
+        // Check if we're hitting the session limit
+        const sessions = await TerminalService.list();
+        if (sessions && sessions.length >= 10) {
+          console.warn(
+            '[TerminalPanel] At terminal session limit, attempting cleanup...',
+          );
+          // Try to clean up orphaned sessions
+          const orphanedSessions = sessions.filter(
+            (s) =>
+              // Consider a session orphaned if it's been idle or disconnected
+              s.status === 'disconnected' ||
+              !s.lastActivity ||
+              (s.lastActivity &&
+                Date.now() - new Date(s.lastActivity).getTime() > 300000), // 5 minutes idle
+          );
+
+          for (const orphan of orphanedSessions) {
+            try {
+              console.log(
+                '[TerminalPanel] Destroying orphaned session:',
+                orphan.id,
+              );
+              await TerminalService.destroy(orphan.id);
+            } catch (err) {
+              console.error(
+                '[TerminalPanel] Failed to destroy orphaned session:',
+                err,
+              );
+            }
           }
         }
+
+        // If there's an initial command, create a new terminal with that command
+        if (initialCommand) {
+          console.log(
+            '[TerminalPanel] Creating terminal with command:',
+            initialCommand,
+          );
+          const id = await TerminalService.createWithCommand(
+            dir,
+            initialCommand,
+          );
+          return id || null;
+        }
+        // For agent sessions without command, always create new
+        else if (agentSessionId) {
+          // Agent sessions should have their own terminal
+          const id = await TerminalService.create(dir);
+          return id || null;
+        } else {
+          // Regular terminals can reuse existing sessions for the same directory
+          const id = await TerminalService.getOrCreate(dir);
+          return id || null;
+        }
+      } catch (error) {
+        console.error('Failed to create terminal session:', error);
+        return null;
       }
-      
-      // If there's an initial command, create a new terminal with that command
-      if (initialCommand) {
-        console.log('[TerminalPanel] Creating terminal with command:', initialCommand);
-        const id = await TerminalService.createWithCommand(dir, initialCommand);
-        return id || null;
-      }
-      // For agent sessions without command, always create new
-      else if (agentSessionId) {
-        // Agent sessions should have their own terminal
-        const id = await TerminalService.create(dir);
-        return id || null;
-      } else {
-        // Regular terminals can reuse existing sessions for the same directory
-        const id = await TerminalService.getOrCreate(dir);
-        return id || null;
-      }
-    } catch (error) {
-      console.error('Failed to create terminal session:', error);
-      return null;
-    }
-  }, [initialCommand, agentSessionId]);
+    },
+    [initialCommand, agentSessionId],
+  );
 
   const destroyTerminalSession = async (id: string) => {
     try {
@@ -125,8 +145,7 @@ function TerminalPanel({
   // Fetch AI session info
   useEffect(() => {
     if (agentSessionId && directory) {
-      AgentSessionService
-        ?.getSession(directory, agentSessionId)
+      AgentSessionService?.getSession(directory, agentSessionId)
         .then((session) => {
           if (session) {
             setAiSessionInfo({
@@ -143,8 +162,15 @@ function TerminalPanel({
 
   // Create terminal session if needed or use provided one
   useEffect(() => {
-    console.log('[TerminalPanel] Session effect - terminalId:', terminalId, 'sessionId:', sessionId, 'directory:', directory);
-    
+    console.log(
+      '[TerminalPanel] Session effect - terminalId:',
+      terminalId,
+      'sessionId:',
+      sessionId,
+      'directory:',
+      directory,
+    );
+
     if (terminalId) {
       // Use provided terminal ID
       console.log('[TerminalPanel] Using provided terminal ID:', terminalId);
@@ -158,7 +184,10 @@ function TerminalPanel({
     }
 
     let isMounted = true;
-    console.log('[TerminalPanel] Creating new terminal session for directory:', directory);
+    console.log(
+      '[TerminalPanel] Creating new terminal session for directory:',
+      directory,
+    );
 
     createTerminalSession(directory).then((id) => {
       if (id && isMounted) {
@@ -174,7 +203,13 @@ function TerminalPanel({
     return () => {
       isMounted = false;
     };
-  }, [directory, terminalId, sessionId, onSessionCreated, createTerminalSession]);
+  }, [
+    directory,
+    terminalId,
+    sessionId,
+    onSessionCreated,
+    createTerminalSession,
+  ]);
 
   // Initialize terminal UI - only once per component mount
   useEffect(() => {
@@ -182,13 +217,13 @@ function TerminalPanel({
       console.log('[TerminalPanel] Skipping terminal init - no ref');
       return;
     }
-    
+
     // Check if we already have a terminal instance
     if (terminal) {
       console.log('[TerminalPanel] Terminal already initialized');
       return;
     }
-    
+
     console.log('[TerminalPanel] Creating xterm.js Terminal instance');
 
     // Create terminal instance (only once per component lifecycle)
@@ -282,12 +317,22 @@ function TerminalPanel({
 
   // Handle visibility changes - resize terminal when it becomes visible
   useEffect(() => {
-    console.log('[TerminalPanel] Visibility changed:', isVisible, 'Session:', sessionId, 'Has terminal:', !!terminal);
+    console.log(
+      '[TerminalPanel] Visibility changed:',
+      isVisible,
+      'Session:',
+      sessionId,
+      'Has terminal:',
+      !!terminal,
+    );
     if (terminal && fitAddonRef.current && isVisible) {
       // Trigger a resize when terminal becomes visible
       // This ensures proper dimensions after being hidden
       setTimeout(() => {
-        console.log('[TerminalPanel] Resizing terminal for session:', sessionId);
+        console.log(
+          '[TerminalPanel] Resizing terminal for session:',
+          sessionId,
+        );
         if (fitAddonRef.current) {
           fitAddonRef.current.fit();
         }
@@ -295,7 +340,12 @@ function TerminalPanel({
         if (terminal && sessionId) {
           const dimensions = fitAddonRef.current?.proposeDimensions();
           if (dimensions) {
-            console.log('[TerminalPanel] Resizing to:', dimensions.cols, 'x', dimensions.rows);
+            console.log(
+              '[TerminalPanel] Resizing to:',
+              dimensions.cols,
+              'x',
+              dimensions.rows,
+            );
             TerminalService.resize(sessionId, dimensions.cols, dimensions.rows);
           }
         }
@@ -421,18 +471,23 @@ function TerminalPanel({
             >
               Terminal
             </span>
-            <span style={{ fontSize: '12px', color: theme.colors.textSecondary }}>
+            <span
+              style={{ fontSize: '12px', color: theme.colors.textSecondary }}
+            >
               {directory.split('/').pop() || directory}
             </span>
             {aiSessionInfo && (
               <>
                 <span
-                  style={{ fontSize: '12px', color: theme.colors.textSecondary }}
+                  style={{
+                    fontSize: '12px',
+                    color: theme.colors.textSecondary,
+                  }}
                 >
                   •
                 </span>
                 <span style={{ fontSize: '12px', color: theme.colors.primary }}>
-                  AI:{" "}
+                  AI:{' '}
                   {aiSessionInfo.customName ||
                     aiSessionInfo.sessionId.slice(0, 8)}
                 </span>

@@ -7,7 +7,7 @@ import type {
   SearchableDocument,
   SearchResult,
   DocumentType,
-  MatchInfo
+  MatchInfo,
 } from '@a24z/markdown-search';
 
 // Generate mock documents that match the @a24z/markdown-search types
@@ -50,10 +50,10 @@ The system uses a microservices architecture with:
         hasTables: false,
         hasImages: false,
         hasLinks: true,
-        linkCount: 3
+        linkCount: 3,
       },
       tags: ['documentation', 'overview', 'getting-started'],
-      indexedAt: now
+      indexedAt: now,
     },
     {
       id: 'doc-2',
@@ -86,16 +86,16 @@ const engine = new SearchEngine({
       title: 'System Architecture',
       location: {
         startLine: 10,
-        endLine: 35
+        endLine: 35,
       },
       sectionLevel: 2,
       metadata: {
         hasCode: true,
         codeLanguages: ['typescript'],
-        wordCount: 65
+        wordCount: 65,
       },
       tags: ['architecture', 'technical'],
-      indexedAt: now
+      indexedAt: now,
     },
     {
       id: 'doc-3',
@@ -125,10 +125,10 @@ Use special operators for more precise results:
         hasMermaid: false,
         hasTables: false,
         hasImages: false,
-        hasLinks: false
+        hasLinks: false,
       },
       tags: ['guide', 'search', 'tutorial'],
-      indexedAt: now
+      indexedAt: now,
     },
     {
       id: 'doc-4',
@@ -156,20 +156,22 @@ Use special operators for more precise results:
       language: 'typescript',
       location: {
         startLine: 1,
-        endLine: 14
+        endLine: 14,
       },
       metadata: {
         hasCode: true,
-        codeLanguages: ['typescript']
+        codeLanguages: ['typescript'],
       },
-      indexedAt: now
+      indexedAt: now,
     },
     {
       id: 'doc-5',
       type: 'document' as DocumentType,
-      fileUri: 'file:///repos/principal-ai/electron-app/.principleMD/planning/roadmap.md',
+      fileUri:
+        'file:///repos/principal-ai/electron-app/.principleMD/planning/roadmap.md',
       fileName: 'roadmap.md',
-      filePath: '/repos/principal-ai/electron-app/.principleMD/planning/roadmap.md',
+      filePath:
+        '/repos/principal-ai/electron-app/.principleMD/planning/roadmap.md',
       content: `# Product Roadmap 2024
 
 ## Q1 Objectives
@@ -196,18 +198,18 @@ Use special operators for more precise results:
         hasTables: false,
         hasImages: false,
         hasLinks: false,
-        wordCount: 76
+        wordCount: 76,
       },
       tags: ['planning', 'roadmap', 'product'],
-      indexedAt: now
-    }
+      indexedAt: now,
+    },
   ];
 }
 
 // Mock search implementation using @a24z/markdown-search types
 export function mockSearch(
   query: string,
-  documents: SearchableDocument[]
+  documents: SearchableDocument[],
 ): SearchResult[] {
   if (!query.trim()) return [];
 
@@ -226,8 +228,8 @@ export function mockSearch(
         matchedText: doc.title,
         context: {
           before: '',
-          after: ''
-        }
+          after: '',
+        },
       });
     }
 
@@ -240,34 +242,42 @@ export function mockSearch(
 
       // Extract context around match
       const contextStart = Math.max(0, matchIndex - 50);
-      const contextEnd = Math.min(doc.content.length, matchIndex + query.length + 50);
+      const contextEnd = Math.min(
+        doc.content.length,
+        matchIndex + query.length + 50,
+      );
 
       matches.push({
         field: 'content',
-        matchedText: doc.content.substring(matchIndex, matchIndex + query.length),
+        matchedText: doc.content.substring(
+          matchIndex,
+          matchIndex + query.length,
+        ),
         context: {
           before: doc.content.substring(contextStart, matchIndex),
-          after: doc.content.substring(matchIndex + query.length, contextEnd)
+          after: doc.content.substring(matchIndex + query.length, contextEnd),
         },
         position: {
           start: matchIndex,
-          end: matchIndex + query.length
-        }
+          end: matchIndex + query.length,
+        },
       });
     }
 
     // Tag matching
-    if (doc.tags?.some(tag => tag.toLowerCase().includes(lowerQuery))) {
+    if (doc.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery))) {
       score += 3;
-      const matchedTag = doc.tags.find(tag => tag.toLowerCase().includes(lowerQuery));
+      const matchedTag = doc.tags.find((tag) =>
+        tag.toLowerCase().includes(lowerQuery),
+      );
       if (matchedTag) {
         matches.push({
           field: 'metadata',
           matchedText: matchedTag,
           context: {
             before: 'Tag: ',
-            after: ''
-          }
+            after: '',
+          },
         });
       }
     }
@@ -277,7 +287,7 @@ export function mockSearch(
         ...doc,
         score,
         matches,
-        breadcrumb: doc.filePath.split('/').slice(0, -1)
+        breadcrumb: doc.filePath.split('/').slice(0, -1),
       });
     }
   }
@@ -297,18 +307,18 @@ export function getMockIndexStatus() {
       {
         path: '/repos/principal-ai/electron-app',
         name: 'principal-ai/electron-app',
-        documentCount: 142
+        documentCount: 142,
       },
       {
         path: '/repos/principal-ai/core-library',
         name: 'principal-ai/core-library',
-        documentCount: 65
+        documentCount: 65,
       },
       {
         path: '/repos/principal-ai/markdown-search',
         name: 'principal-ai/markdown-search',
-        documentCount: 40
-      }
-    ]
+        documentCount: 40,
+      },
+    ],
   };
 }

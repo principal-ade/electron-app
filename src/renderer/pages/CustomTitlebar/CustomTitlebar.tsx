@@ -21,7 +21,10 @@ interface CustomTitlebarProps {
 }
 
 // Use the simple custom titlebar implementation instead of the library
-export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ onSettingsClick, hasUpdateAvailable }) => {
+export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
+  onSettingsClick,
+  hasUpdateAvailable,
+}) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const { theme, colorMode } = useTheme();
@@ -41,19 +44,24 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ onSettingsClick,
   }
 
   // Get the appropriate background color from theme
-  const backgroundColor = colorMode === 'dark'
-    ? theme.colors.modes?.dark?.backgroundSecondary || theme.colors.backgroundSecondary
-    : theme.colors.backgroundSecondary;
+  const backgroundColor =
+    colorMode === 'dark'
+      ? theme.colors.modes?.dark?.backgroundSecondary ||
+        theme.colors.backgroundSecondary
+      : theme.colors.backgroundSecondary;
 
   // Get the accent color for the title
-  const accentColor = colorMode === 'dark'
-    ? theme.colors.modes?.dark?.accent || theme.colors.accent
-    : theme.colors.accent;
+  const accentColor =
+    colorMode === 'dark'
+      ? theme.colors.modes?.dark?.accent || theme.colors.accent
+      : theme.colors.accent;
 
   return (
     <div className="custom-titlebar" style={{ backgroundColor }}>
       <div className="titlebar-drag-region">
-        <div className="titlebar-title" style={{ color: accentColor }}>Principal AI</div>
+        <div className="titlebar-title" style={{ color: accentColor }}>
+          Principal AI
+        </div>
       </div>
 
       {/* Settings button */}
@@ -80,17 +88,22 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ onSettingsClick,
             zIndex: 10,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = colorMode === 'dark'
-              ? 'rgba(255, 255, 255, 0.1)'
-              : 'rgba(0, 0, 0, 0.05)';
-            e.currentTarget.style.color = colorMode === 'dark' ? '#d1d5db' : '#374151';
+            e.currentTarget.style.backgroundColor =
+              colorMode === 'dark'
+                ? 'rgba(255, 255, 255, 0.1)'
+                : 'rgba(0, 0, 0, 0.05)';
+            e.currentTarget.style.color =
+              colorMode === 'dark' ? '#d1d5db' : '#374151';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = colorMode === 'dark' ? '#9ca3af' : '#6b7280';
+            e.currentTarget.style.color =
+              colorMode === 'dark' ? '#9ca3af' : '#6b7280';
           }}
           aria-label="Settings"
-          title={hasUpdateAvailable ? "Settings (Update Available)" : "Settings"}
+          title={
+            hasUpdateAvailable ? 'Settings (Update Available)' : 'Settings'
+          }
         >
           <Settings size={18} />
           {hasUpdateAvailable && (
@@ -103,7 +116,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ onSettingsClick,
                 height: '7px',
                 borderRadius: '50%',
                 backgroundColor: theme.colors.warning || '#fbbf24',
-                boxShadow: `0 0 4px ${(theme.colors.warning || '#fbbf24')}80`,
+                boxShadow: `0 0 4px ${theme.colors.warning || '#fbbf24'}80`,
               }}
             />
           )}
@@ -135,7 +148,13 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ onSettingsClick,
               </svg>
             ) : (
               <svg width="12" height="12" viewBox="0 0 12 12">
-                <rect fill="currentColor" width="12" height="12" strokeWidth="1" stroke="currentColor" />
+                <rect
+                  fill="currentColor"
+                  width="12"
+                  height="12"
+                  strokeWidth="1"
+                  stroke="currentColor"
+                />
               </svg>
             )}
           </button>
@@ -158,7 +177,10 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({ onSettingsClick,
 };
 
 // Alternative simple custom titlebar without the library
-export const SimpleCustomTitlebar: React.FC<CustomTitlebarProps> = ({ onSettingsClick, hasUpdateAvailable }) => {
+export const SimpleCustomTitlebar: React.FC<CustomTitlebarProps> = ({
+  onSettingsClick,
+  hasUpdateAvailable,
+}) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const { theme, colorMode } = useTheme();
@@ -178,19 +200,24 @@ export const SimpleCustomTitlebar: React.FC<CustomTitlebarProps> = ({ onSettings
   }
 
   // Get the appropriate background color from theme
-  const backgroundColor = colorMode === 'dark'
-    ? theme.colors.modes?.dark?.backgroundSecondary || theme.colors.backgroundSecondary
-    : theme.colors.backgroundSecondary;
+  const backgroundColor =
+    colorMode === 'dark'
+      ? theme.colors.modes?.dark?.backgroundSecondary ||
+        theme.colors.backgroundSecondary
+      : theme.colors.backgroundSecondary;
 
   // Get the accent color for the title
-  const accentColor = colorMode === 'dark'
-    ? theme.colors.modes?.dark?.accent || theme.colors.accent
-    : theme.colors.accent;
+  const accentColor =
+    colorMode === 'dark'
+      ? theme.colors.modes?.dark?.accent || theme.colors.accent
+      : theme.colors.accent;
 
   return (
     <div className="custom-titlebar" style={{ backgroundColor }}>
       <div className="titlebar-drag-region">
-        <div className="titlebar-title" style={{ color: accentColor }}>Principal AI</div>
+        <div className="titlebar-title" style={{ color: accentColor }}>
+          Principal AI
+        </div>
       </div>
 
       {/* Settings button */}
@@ -217,17 +244,22 @@ export const SimpleCustomTitlebar: React.FC<CustomTitlebarProps> = ({ onSettings
             zIndex: 10,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = colorMode === 'dark'
-              ? 'rgba(255, 255, 255, 0.1)'
-              : 'rgba(0, 0, 0, 0.05)';
-            e.currentTarget.style.color = colorMode === 'dark' ? '#d1d5db' : '#374151';
+            e.currentTarget.style.backgroundColor =
+              colorMode === 'dark'
+                ? 'rgba(255, 255, 255, 0.1)'
+                : 'rgba(0, 0, 0, 0.05)';
+            e.currentTarget.style.color =
+              colorMode === 'dark' ? '#d1d5db' : '#374151';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = colorMode === 'dark' ? '#9ca3af' : '#6b7280';
+            e.currentTarget.style.color =
+              colorMode === 'dark' ? '#9ca3af' : '#6b7280';
           }}
           aria-label="Settings"
-          title={hasUpdateAvailable ? "Settings (Update Available)" : "Settings"}
+          title={
+            hasUpdateAvailable ? 'Settings (Update Available)' : 'Settings'
+          }
         >
           <Settings size={18} />
           {hasUpdateAvailable && (
@@ -240,7 +272,7 @@ export const SimpleCustomTitlebar: React.FC<CustomTitlebarProps> = ({ onSettings
                 height: '7px',
                 borderRadius: '50%',
                 backgroundColor: theme.colors.warning || '#fbbf24',
-                boxShadow: `0 0 4px ${(theme.colors.warning || '#fbbf24')}80`,
+                boxShadow: `0 0 4px ${theme.colors.warning || '#fbbf24'}80`,
               }}
             />
           )}
@@ -272,7 +304,13 @@ export const SimpleCustomTitlebar: React.FC<CustomTitlebarProps> = ({ onSettings
               </svg>
             ) : (
               <svg width="12" height="12" viewBox="0 0 12 12">
-                <rect fill="currentColor" width="12" height="12" strokeWidth="1" stroke="currentColor" />
+                <rect
+                  fill="currentColor"
+                  width="12"
+                  height="12"
+                  strokeWidth="1"
+                  stroke="currentColor"
+                />
               </svg>
             )}
           </button>

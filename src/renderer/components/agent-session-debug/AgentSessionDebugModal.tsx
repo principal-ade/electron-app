@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
-import { X, Code, FileJson, Copy, CheckCircle, TestTube, Archive } from 'lucide-react';
-import { NormalizedAgentSessionEvent } from "@principal-ai/agent-monitoring";
+import {
+  X,
+  Code,
+  FileJson,
+  Copy,
+  CheckCircle,
+  TestTube,
+  Archive,
+} from 'lucide-react';
+import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { NormalizedEventCard } from './NormalizedEventCard';
 import { EventProcessingTestView } from './EventProcessingTestView';
 import { ArchiveTestView } from './ArchiveTestView';
-import { HighlightLayer, LayerItem } from "@principal-ai/code-city-react";
+import { HighlightLayer, LayerItem } from '@principal-ai/code-city-react';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
 import { AgentSessionArchiveService } from '../../main-process-api/AgentSessionArchiveService';
 
@@ -26,10 +34,12 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
   highlightLayer,
   onClose,
   onLoadEvents,
-  onApplyLayer
+  onApplyLayer,
 }) => {
   const { theme } = useTheme();
-  const [events, setEvents] = useState<NormalizedAgentSessionEvent[]>(initialEvents || []);
+  const [events, setEvents] = useState<NormalizedAgentSessionEvent[]>(
+    initialEvents || [],
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'events' | 'layer'>('events');
@@ -37,7 +47,9 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
   const [eventFilter, setEventFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showTestView, setShowTestView] = useState(false);
-  const [eventToReprocess, setEventToReprocess] = useState<NormalizedAgentSessionEvent | undefined>();
+  const [eventToReprocess, setEventToReprocess] = useState<
+    NormalizedAgentSessionEvent | undefined
+  >();
   const [showArchiveTest, setShowArchiveTest] = useState(false);
   const [sessionStatus, setSessionStatus] = useState<{
     isArchived: boolean;
@@ -66,44 +78,52 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
     const interval = setInterval(() => {
       if (sessionStatus.lastEventTime) {
         const timeSince = formatTimeSince(sessionStatus.lastEventTime);
-        setSessionStatus(prev => ({ ...prev, timeSinceLastEvent: timeSince }));
+        setSessionStatus((prev) => ({
+          ...prev,
+          timeSinceLastEvent: timeSince,
+        }));
       }
     }, 60000); // Update every minute
-    
+
     return () => clearInterval(interval);
   }, [sessionStatus.lastEventTime]);
 
   const loadEvents = async () => {
     if (!onLoadEvents) return;
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const loadedEvents = await onLoadEvents(sessionId);
       console.log('Loaded events:', {
         count: loadedEvents.length,
         sample: loadedEvents[0],
-        toolEvents: loadedEvents.filter(e => e.eventType === 'pre-tool-use' || e.eventType === 'post-tool-use').slice(0, 3)
+        toolEvents: loadedEvents
+          .filter(
+            (e) =>
+              e.eventType === 'pre-tool-use' || e.eventType === 'post-tool-use',
+          )
+          .slice(0, 3),
       });
       setEvents(loadedEvents);
-      
+
       // Update last event time and processed event count
       if (loadedEvents.length > 0) {
         const lastEvent = loadedEvents[loadedEvents.length - 1];
         const lastTime = lastEvent.timestamp || lastEvent.data?.timestamp;
         if (lastTime) {
-          setSessionStatus(prev => ({ 
-            ...prev, 
+          setSessionStatus((prev) => ({
+            ...prev,
             lastEventTime: lastTime as number,
             timeSinceLastEvent: formatTimeSince(lastTime as number),
-            processedEventCount: loadedEvents.length
+            processedEventCount: loadedEvents.length,
           }));
         }
       } else {
-        setSessionStatus(prev => ({ 
-          ...prev, 
-          processedEventCount: 0
+        setSessionStatus((prev) => ({
+          ...prev,
+          processedEventCount: 0,
         }));
       }
     } catch (err) {
@@ -116,8 +136,10 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
 
   const checkSessionStatus = async () => {
     try {
-      console.log(`[SessionDebugModal] Checking status for session ${sessionId}`);
-      
+      console.log(
+        `[SessionDebugModal] Checking status for session ${sessionId}`,
+      );
+
       // Check if session is archived (returns null if not found, no error thrown)
       const archived = await AgentSessionArchiveService.loadSession(sessionId);
       console.log(`[SessionDebugModal] Archive check result:`, {
@@ -126,18 +148,23 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
         isNull: archived === null,
         isUndefined: archived === undefined,
         isFalsy: !archived,
-        keys: archived ? Object.keys(archived) : 'N/A'
+        keys: archived ? Object.keys(archived) : 'N/A',
       });
-      
+
       // Check if session exists in active storage using new API
       // We need to find the directory for this session first
       let activeSession = null;
       try {
         const allSessions = await AgentSessionService.getActiveSessions();
         for (const dirSessions of allSessions) {
-          const found = dirSessions.summaries.find(s => s.sessionId === sessionId);
+          const found = dirSessions.summaries.find(
+            (s) => s.sessionId === sessionId,
+          );
           if (found) {
-            activeSession = await AgentSessionService.getSession(sessionId, dirSessions.directory);
+            activeSession = await AgentSessionService.getSession(
+              sessionId,
+              dirSessions.directory,
+            );
             break;
           }
         }
@@ -146,26 +173,34 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
       }
       console.log(`[SessionDebugModal] Active session check:`, {
         hasActiveSession: !!activeSession,
-        activeSessionKeys: activeSession ? Object.keys(activeSession).slice(0, 5) : 'N/A'
+        activeSessionKeys: activeSession
+          ? Object.keys(activeSession).slice(0, 5)
+          : 'N/A',
       });
-      
+
       // Calculate approximate storage size
-      const storageSize = activeSession ? JSON.stringify(activeSession).length : 0;
-      
+      const storageSize = activeSession
+        ? JSON.stringify(activeSession).length
+        : 0;
+
       // Check for raw events to compare with processed events
       let rawEventCount = 0;
       let processedEventCount = events.length;
       try {
         // Get raw events count from the events API
-        const rawEvents = await AgentSessionService.getRawSessionEvents(sessionId);
+        const rawEvents =
+          await AgentSessionService.getRawSessionEvents(sessionId);
         rawEventCount = rawEvents?.length || 0;
-        console.log(`[SessionDebugModal] Raw events: ${rawEventCount}, Processed events: ${processedEventCount}`);
+        console.log(
+          `[SessionDebugModal] Raw events: ${rawEventCount}, Processed events: ${processedEventCount}`,
+        );
       } catch (err) {
         console.log(`[SessionDebugModal] Could not get raw event count:`, err);
       }
-      
-      const hasDiscrepancy = rawEventCount > 0 && rawEventCount !== processedEventCount;
-      
+
+      const hasDiscrepancy =
+        rawEventCount > 0 && rawEventCount !== processedEventCount;
+
       const newStatus = {
         isArchived: !!archived,
         storageSize,
@@ -173,11 +208,11 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
         timeSinceLastEvent: sessionStatus.timeSinceLastEvent,
         rawEventCount,
         processedEventCount,
-        hasDiscrepancy
+        hasDiscrepancy,
       };
-      
+
       console.log(`[SessionDebugModal] Setting session status:`, newStatus);
-      
+
       setSessionStatus(newStatus);
     } catch (err) {
       console.error('[SessionDebugModal] Error checking session status:', err);
@@ -187,11 +222,11 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
   const formatTimeSince = (timestamp: number): string => {
     const now = Date.now();
     const diff = now - timestamp;
-    
+
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
     if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
     if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
@@ -209,14 +244,14 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
       setError('Session must be archived before cleanup');
       return;
     }
-    
+
     const confirmed = window.confirm(
       `This will remove the active session data and free up approximately ${formatBytes(sessionStatus.storageSize || 0)} of storage.\n\n` +
-      'The archived version will be preserved. Continue?'
+        'The archived version will be preserved. Continue?',
     );
-    
+
     if (!confirmed) return;
-    
+
     try {
       // Delete from active storage only (archive is already preserved)
       const result = await AgentSessionService.deleteFromActive(sessionId);
@@ -229,26 +264,30 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
       setError('Failed to cleanup active session data');
     }
   };
-  
+
   const handleReprocessEvents = async () => {
     if (isReprocessing) return;
-    
+
     const confirmed = window.confirm(
       `This will reprocess ${sessionStatus.rawEventCount || 0} raw events for this session.\n\n` +
-      'This may help recover missing processed events. Continue?'
+        'This may help recover missing processed events. Continue?',
     );
-    
+
     if (!confirmed) return;
-    
+
     setIsReprocessing(true);
     setError(null);
-    
+
     try {
-      console.log(`[SessionDebugModal] Reprocessing events for session ${sessionId}`);
+      console.log(
+        `[SessionDebugModal] Reprocessing events for session ${sessionId}`,
+      );
       const result = await AgentSessionService.reprocessSession(sessionId);
-      
+
       if (result.success) {
-        console.log(`[SessionDebugModal] Reprocessed ${result.processedCount} events`);
+        console.log(
+          `[SessionDebugModal] Reprocessed ${result.processedCount} events`,
+        );
         // Reload events to show the new processed events
         await loadEvents();
         // Recheck status to update counts
@@ -259,23 +298,38 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
       }
     } catch (err) {
       console.error('[SessionDebugModal] Reprocessing failed:', err);
-      setError('Failed to reprocess events: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      setError(
+        'Failed to reprocess events: ' +
+          (err instanceof Error ? err.message : 'Unknown error'),
+      );
     } finally {
       setIsReprocessing(false);
     }
   };
 
   // Filter events based on type and search
-  const filteredEvents = events.filter(event => {
+  const filteredEvents = events.filter((event) => {
     // Type filter
     if (eventFilter !== 'all') {
-      if (eventFilter === 'tools' && event.eventType !== 'pre-tool-use' && event.eventType !== 'post-tool-use') {
+      if (
+        eventFilter === 'tools' &&
+        event.eventType !== 'pre-tool-use' &&
+        event.eventType !== 'post-tool-use'
+      ) {
         return false;
       }
-      if (eventFilter === 'files' && (!event.files || event.files.length === 0)) {
+      if (
+        eventFilter === 'files' &&
+        (!event.files || event.files.length === 0)
+      ) {
         return false;
       }
-      if (eventFilter === 'lifecycle' && !['session-start', 'stop', 'subagent-stop', 'pre-compact'].includes(event.eventType)) {
+      if (
+        eventFilter === 'lifecycle' &&
+        !['session-start', 'stop', 'subagent-stop', 'pre-compact'].includes(
+          event.eventType,
+        )
+      ) {
         return false;
       }
     }
@@ -287,9 +341,12 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
         event.eventType,
         event.toolName,
         event.files?.[0]?.displayPath,
-        JSON.stringify(event.data)
-      ].filter(Boolean).join(' ').toLowerCase();
-      
+        JSON.stringify(event.data),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
       if (!searchableText.includes(query)) {
         return false;
       }
@@ -299,20 +356,21 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
   });
 
   // Generate separate read and write highlight layers from events
-  const generateHighlightLayers = (): { 
-    read: HighlightLayer | null; 
+  const generateHighlightLayers = (): {
+    read: HighlightLayer | null;
     write: HighlightLayer | null;
     readEventIndices: number[];
     writeEventIndices: number[];
     eventsWithPaths: number[];
   } => {
-    if (!events || events.length === 0) return { 
-      read: null, 
-      write: null, 
-      readEventIndices: [],
-      writeEventIndices: [],
-      eventsWithPaths: []
-    };
+    if (!events || events.length === 0)
+      return {
+        read: null,
+        write: null,
+        readEventIndices: [],
+        writeEventIndices: [],
+        eventsWithPaths: [],
+      };
 
     // Separate file paths by operation type
     const readPaths = new Set<string>();
@@ -320,35 +378,55 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
     const readEventIndices: number[] = [];
     const writeEventIndices: number[] = [];
     const eventsWithPaths: number[] = [];
-    
+
     events.forEach((event, index) => {
       // Check if this event has any paths
       const hasPaths = event.files && event.files.length > 0;
-      
+
       if (hasPaths) {
         eventsWithPaths.push(index);
-        
+
         // Determine if this is a read or write operation based on tool name
         // Check against known write tools (matching the main process logic)
         const writeTools = new Set([
-          'Write', 'write', 'write_file', 'writefile',
-          'Edit', 'edit', 'edit_file', 'editfile',
-          'MultiEdit', 'multiedit', 'multi_edit',
-          'str_replace_editor', 'str_replace_based_edit_tool',
-          'str_replace', 'Create', 'create', 'Delete', 'delete',
-          'NotebookWrite', 'NotebookEdit'
+          'Write',
+          'write',
+          'write_file',
+          'writefile',
+          'Edit',
+          'edit',
+          'edit_file',
+          'editfile',
+          'MultiEdit',
+          'multiedit',
+          'multi_edit',
+          'str_replace_editor',
+          'str_replace_based_edit_tool',
+          'str_replace',
+          'Create',
+          'create',
+          'Delete',
+          'delete',
+          'NotebookWrite',
+          'NotebookEdit',
         ]);
-        
-        const isWriteOperation = event.toolName && writeTools.has(event.toolName);
-        
-        console.log(`Event #${index + 1} - Tool: ${event.toolName}, Type: ${event.eventType}, IsWrite: ${isWriteOperation}, Paths:`, {
-          primary: event.files?.[0]?.displayPath,
-          additional: (event.files?.length || 0) - 1
-        });
-        
+
+        const isWriteOperation =
+          event.toolName && writeTools.has(event.toolName);
+
+        console.log(
+          `Event #${index + 1} - Tool: ${event.toolName}, Type: ${event.eventType}, IsWrite: ${isWriteOperation}, Paths:`,
+          {
+            primary: event.files?.[0]?.displayPath,
+            additional: (event.files?.length || 0) - 1,
+          },
+        );
+
         const targetSet = isWriteOperation ? writePaths : readPaths;
-        const targetIndices = isWriteOperation ? writeEventIndices : readEventIndices;
-        
+        const targetIndices = isWriteOperation
+          ? writeEventIndices
+          : readEventIndices;
+
         if (event.files && event.files.length > 0) {
           event.files.forEach((file: any) => {
             // Use displayPath for UI, with safe fallback
@@ -365,38 +443,44 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
     });
 
     // Create read layer
-    const readLayer: HighlightLayer | null = readPaths.size > 0 ? {
-      id: `session-${sessionId}-read`,
-      name: `${sessionName || `Session ${sessionId.substring(0, 8)}`} (Reads)`,
-      enabled: true,
-      color: '#3b82f6', // Blue for reads
-      opacity: 0.4,
-      borderWidth: 2,
-      priority: 10,
-      items: Array.from(readPaths).map(path => ({
-        path,
-        type: 'file' as const,
-        renderStrategy: 'border' as const
-      })),
-      dynamic: true
-    } : null;
+    const readLayer: HighlightLayer | null =
+      readPaths.size > 0
+        ? {
+            id: `session-${sessionId}-read`,
+            name: `${sessionName || `Session ${sessionId.substring(0, 8)}`} (Reads)`,
+            enabled: true,
+            color: '#3b82f6', // Blue for reads
+            opacity: 0.4,
+            borderWidth: 2,
+            priority: 10,
+            items: Array.from(readPaths).map((path) => ({
+              path,
+              type: 'file' as const,
+              renderStrategy: 'border' as const,
+            })),
+            dynamic: true,
+          }
+        : null;
 
     // Create write layer
-    const writeLayer: HighlightLayer | null = writePaths.size > 0 ? {
-      id: `session-${sessionId}-write`,
-      name: `${sessionName || `Session ${sessionId.substring(0, 8)}`} (Writes)`,
-      enabled: true,
-      color: '#ef4444', // Red for writes
-      opacity: 0.6,
-      borderWidth: 3,
-      priority: 15, // Higher priority than reads
-      items: Array.from(writePaths).map(path => ({
-        path,
-        type: 'file' as const,
-        renderStrategy: 'fill' as const // Fill for writes to make them more visible
-      })),
-      dynamic: true
-    } : null;
+    const writeLayer: HighlightLayer | null =
+      writePaths.size > 0
+        ? {
+            id: `session-${sessionId}-write`,
+            name: `${sessionName || `Session ${sessionId.substring(0, 8)}`} (Writes)`,
+            enabled: true,
+            color: '#ef4444', // Red for writes
+            opacity: 0.6,
+            borderWidth: 3,
+            priority: 15, // Higher priority than reads
+            items: Array.from(writePaths).map((path) => ({
+              path,
+              type: 'file' as const,
+              renderStrategy: 'fill' as const, // Fill for writes to make them more visible
+            })),
+            dynamic: true,
+          }
+        : null;
 
     console.log('Layer Generation Summary:', {
       totalEvents: events.length,
@@ -404,24 +488,24 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
       readEvents: readEventIndices.length,
       writeEvents: writeEventIndices.length,
       readPaths: readPaths.size,
-      writePaths: writePaths.size
+      writePaths: writePaths.size,
     });
-    
-    return { 
-      read: readLayer, 
+
+    return {
+      read: readLayer,
       write: writeLayer,
       readEventIndices,
       writeEventIndices,
-      eventsWithPaths
+      eventsWithPaths,
     };
   };
 
-  const { 
-    read: readLayer, 
-    write: writeLayer, 
-    readEventIndices, 
+  const {
+    read: readLayer,
+    write: writeLayer,
+    readEventIndices,
     writeEventIndices,
-    eventsWithPaths 
+    eventsWithPaths,
   } = generateHighlightLayers();
   const displayLayers = { read: readLayer, write: writeLayer };
   // For backward compatibility, use provided highlightLayer or combine read/write for display
@@ -435,185 +519,222 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-    }}>
-      <div style={{
-        width: '90%',
-        maxWidth: '1400px',
-        height: '85%',
-        backgroundColor: theme.colors.background,
-        borderRadius: '8px',
-        border: `1px solid ${theme.colors.border}`,
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
         display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}>
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+    >
+      <div
+        style={{
+          width: '90%',
+          maxWidth: '1400px',
+          height: '85%',
+          backgroundColor: theme.colors.background,
+          borderRadius: '8px',
+          border: `1px solid ${theme.colors.border}`,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
         {/* Header */}
-        <div style={{
-          padding: '16px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-          backgroundColor: theme.colors.backgroundSecondary,
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
+        <div
+          style={{
+            padding: '16px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.backgroundSecondary,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Code size={20} color="#7c3aed" />
-              <h2 style={{
-                fontSize: '18px',
-                fontWeight: 600,
-                color: theme.colors.text,
-                margin: 0,
-              }}>
+              <h2
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  margin: 0,
+                }}
+              >
                 Session Debug View
               </h2>
-              <span style={{
-                fontSize: '12px',
-                color: theme.colors.textSecondary,
-                fontFamily: 'monospace',
-              }}>
+              <span
+                style={{
+                  fontSize: '12px',
+                  color: theme.colors.textSecondary,
+                  fontFamily: 'monospace',
+                }}
+              >
                 {sessionId.substring(0, 12)}...
               </span>
               {sessionName && (
-                <span style={{
-                  fontSize: '12px',
-                  color: '#7c3aed',
-                  padding: '2px 8px',
-                  backgroundColor: 'rgba(124, 58, 237, 0.1)',
-                  borderRadius: '4px',
-                }}>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: '#7c3aed',
+                    padding: '2px 8px',
+                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                    borderRadius: '4px',
+                  }}
+                >
                   {sessionName}
                 </span>
               )}
             </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button
-              onClick={() => setShowArchiveTest(true)}
-              style={{
-                padding: '6px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#8b5cf6',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Test Archive Functionality"
-            >
-              <Archive size={20} />
-            </button>
-            <button
-              onClick={() => setShowTestView(true)}
-              style={{
-                padding: '6px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#10b981',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Open Event Processing Test"
-            >
-              <TestTube size={20} />
-            </button>
-            <button
-              onClick={onClose}
-              style={{
-                padding: '6px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                color: theme.colors.textSecondary,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <X size={20} />
-            </button>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                onClick={() => setShowArchiveTest(true)}
+                style={{
+                  padding: '6px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#8b5cf6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                title="Test Archive Functionality"
+              >
+                <Archive size={20} />
+              </button>
+              <button
+                onClick={() => setShowTestView(true)}
+                style={{
+                  padding: '6px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#10b981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                title="Open Event Processing Test"
+              >
+                <TestTube size={20} />
+              </button>
+              <button
+                onClick={onClose}
+                style={{
+                  padding: '6px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: theme.colors.textSecondary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
           </div>
-          </div>
-          
+
           {/* Session Status Info */}
-          <div style={{
-            marginTop: '12px',
-            padding: '8px 0',
-            display: 'flex',
-            gap: '24px',
-            alignItems: 'center',
-            fontSize: '12px',
-            color: theme.colors.textSecondary,
-          }}>
+          <div
+            style={{
+              marginTop: '12px',
+              padding: '8px 0',
+              display: 'flex',
+              gap: '24px',
+              alignItems: 'center',
+              fontSize: '12px',
+              color: theme.colors.textSecondary,
+            }}
+          >
             {sessionStatus.timeSinceLastEvent && (
               <div>
                 <span style={{ fontWeight: 600 }}>Last Event:</span>{' '}
-                <span style={{ color: theme.colors.text }}>{sessionStatus.timeSinceLastEvent}</span>
+                <span style={{ color: theme.colors.text }}>
+                  {sessionStatus.timeSinceLastEvent}
+                </span>
               </div>
             )}
             <div>
               <span style={{ fontWeight: 600 }}>Status:</span>{' '}
-              <span style={{ 
-                color: sessionStatus.isArchived ? '#10b981' : '#f59e0b',
-                fontWeight: 600 
-              }}>
+              <span
+                style={{
+                  color: sessionStatus.isArchived ? '#10b981' : '#f59e0b',
+                  fontWeight: 600,
+                }}
+              >
                 {sessionStatus.isArchived ? '✓ Archived' : '○ Active'}
               </span>
             </div>
             {sessionStatus.storageSize && sessionStatus.storageSize > 0 && (
               <div>
                 <span style={{ fontWeight: 600 }}>Active Storage:</span>{' '}
-                <span style={{ color: theme.colors.text }}>{formatBytes(sessionStatus.storageSize)}</span>
-              </div>
-            )}
-            {sessionStatus.rawEventCount !== undefined && sessionStatus.processedEventCount !== undefined && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span style={{ fontWeight: 600 }}>Events:</span>{' '}
-                <span style={{ 
-                  color: sessionStatus.hasDiscrepancy ? '#ef4444' : theme.colors.text,
-                  fontWeight: sessionStatus.hasDiscrepancy ? 600 : 400
-                }}>
-                  {sessionStatus.processedEventCount} processed / {sessionStatus.rawEventCount} raw
+                <span style={{ color: theme.colors.text }}>
+                  {formatBytes(sessionStatus.storageSize)}
                 </span>
-                {sessionStatus.hasDiscrepancy && (
-                  <span style={{
-                    padding: '2px 6px',
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    borderRadius: '4px',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase'
-                  }}>
-                    Discrepancy!
-                  </span>
-                )}
               </div>
             )}
+            {sessionStatus.rawEventCount !== undefined &&
+              sessionStatus.processedEventCount !== undefined && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <span style={{ fontWeight: 600 }}>Events:</span>{' '}
+                  <span
+                    style={{
+                      color: sessionStatus.hasDiscrepancy
+                        ? '#ef4444'
+                        : theme.colors.text,
+                      fontWeight: sessionStatus.hasDiscrepancy ? 600 : 400,
+                    }}
+                  >
+                    {sessionStatus.processedEventCount} processed /{' '}
+                    {sessionStatus.rawEventCount} raw
+                  </span>
+                  {sessionStatus.hasDiscrepancy && (
+                    <span
+                      style={{
+                        padding: '2px 6px',
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      Discrepancy!
+                    </span>
+                  )}
+                </div>
+              )}
             {sessionStatus.hasDiscrepancy && (
               <button
                 onClick={handleReprocessEvents}
                 disabled={isReprocessing}
                 style={{
-                  marginLeft: sessionStatus.isArchived && sessionStatus.storageSize && sessionStatus.storageSize > 0 ? '0' : 'auto',
+                  marginLeft:
+                    sessionStatus.isArchived &&
+                    sessionStatus.storageSize &&
+                    sessionStatus.storageSize > 0
+                      ? '0'
+                      : 'auto',
                   padding: '4px 12px',
                   backgroundColor: isReprocessing ? '#6b7280' : '#f59e0b',
                   border: 'none',
@@ -625,71 +746,81 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  opacity: isReprocessing ? 0.7 : 1
+                  opacity: isReprocessing ? 0.7 : 1,
                 }}
                 title="Reprocess all raw events to fix discrepancy"
               >
                 {isReprocessing ? '⏳ Reprocessing...' : '🔄 Reprocess Events'}
               </button>
             )}
-            {sessionStatus.isArchived && sessionStatus.storageSize && sessionStatus.storageSize > 0 && (
-              <button
-                onClick={handleArchiveCleanup}
-                style={{
-                  marginLeft: sessionStatus.hasDiscrepancy ? '0' : 'auto',
-                  padding: '4px 12px',
-                  backgroundColor: '#dc2626',
-                  border: 'none',
-                  borderRadius: '4px',
-                  color: 'white',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-                title={`Free up ${formatBytes(sessionStatus.storageSize)} by removing active data (archive will be preserved)`}
-              >
-                🧹 Clean Up Active Data
-              </button>
-            )}
+            {sessionStatus.isArchived &&
+              sessionStatus.storageSize &&
+              sessionStatus.storageSize > 0 && (
+                <button
+                  onClick={handleArchiveCleanup}
+                  style={{
+                    marginLeft: sessionStatus.hasDiscrepancy ? '0' : 'auto',
+                    padding: '4px 12px',
+                    backgroundColor: '#dc2626',
+                    border: 'none',
+                    borderRadius: '4px',
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                  title={`Free up ${formatBytes(sessionStatus.storageSize)} by removing active data (archive will be preserved)`}
+                >
+                  🧹 Clean Up Active Data
+                </button>
+              )}
           </div>
-          
+
           {/* Error Display */}
           {error && (
-            <div style={{
-              marginTop: '8px',
-              padding: '8px 12px',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid #ef4444',
-              borderRadius: '4px',
-              color: '#ef4444',
-              fontSize: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
+            <div
+              style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid #ef4444',
+                borderRadius: '4px',
+                color: '#ef4444',
+                fontSize: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
               ⚠️ {error}
             </div>
           )}
         </div>
 
         {/* Tabs */}
-        <div style={{
-          display: 'flex',
-          gap: '4px',
-          padding: '0 16px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-          backgroundColor: theme.colors.backgroundSecondary,
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '4px',
+            padding: '0 16px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.backgroundSecondary,
+          }}
+        >
           <button
             onClick={() => setActiveTab('events')}
             style={{
               padding: '8px 16px',
               border: 'none',
-              backgroundColor: activeTab === 'events' ? theme.colors.background : 'transparent',
-              color: activeTab === 'events' ? '#7c3aed' : theme.colors.textSecondary,
+              backgroundColor:
+                activeTab === 'events'
+                  ? theme.colors.background
+                  : 'transparent',
+              color:
+                activeTab === 'events' ? '#7c3aed' : theme.colors.textSecondary,
               borderRadius: '4px 4px 0 0',
               cursor: 'pointer',
               fontSize: '13px',
@@ -708,8 +839,10 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
             style={{
               padding: '8px 16px',
               border: 'none',
-              backgroundColor: activeTab === 'layer' ? theme.colors.background : 'transparent',
-              color: activeTab === 'layer' ? '#7c3aed' : theme.colors.textSecondary,
+              backgroundColor:
+                activeTab === 'layer' ? theme.colors.background : 'transparent',
+              color:
+                activeTab === 'layer' ? '#7c3aed' : theme.colors.textSecondary,
               borderRadius: '4px 4px 0 0',
               cursor: 'pointer',
               fontSize: '13px',
@@ -726,25 +859,31 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
         </div>
 
         {/* Content */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          overflow: 'hidden',
-        }}>
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            overflow: 'hidden',
+          }}
+        >
           {activeTab === 'events' ? (
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              padding: '16px',
-            }}>
-              {/* Filters */}
-              <div style={{
+            <div
+              style={{
+                flex: 1,
                 display: 'flex',
-                gap: '12px',
-                marginBottom: '16px',
-                alignItems: 'center',
-              }}>
+                flexDirection: 'column',
+                padding: '16px',
+              }}
+            >
+              {/* Filters */}
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  marginBottom: '16px',
+                  alignItems: 'center',
+                }}
+              >
                 <select
                   value={eventFilter}
                   onChange={(e) => setEventFilter(e.target.value)}
@@ -763,7 +902,7 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
                   <option value="files">File Events</option>
                   <option value="lifecycle">Lifecycle Events</option>
                 </select>
-                
+
                 <input
                   type="text"
                   placeholder="Search events..."
@@ -780,75 +919,93 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
                     fontSize: '12px',
                   }}
                 />
-                
-                <span style={{
-                  fontSize: '12px',
-                  color: theme.colors.textSecondary,
-                }}>
+
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: theme.colors.textSecondary,
+                  }}
+                >
                   Showing {filteredEvents.length} of {events.length} events
                 </span>
               </div>
 
               {/* Layer Statistics */}
-              {(readEventIndices.length > 0 || writeEventIndices.length > 0) && (
-                <div style={{
-                  padding: '8px',
-                  backgroundColor: theme.colors.backgroundTertiary,
-                  borderRadius: '4px',
-                  marginBottom: '12px',
-                  fontSize: '11px',
-                  display: 'flex',
-                  gap: '16px',
-                }}>
+              {(readEventIndices.length > 0 ||
+                writeEventIndices.length > 0) && (
+                <div
+                  style={{
+                    padding: '8px',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                    marginBottom: '12px',
+                    fontSize: '11px',
+                    display: 'flex',
+                    gap: '16px',
+                  }}
+                >
                   <div style={{ color: theme.colors.text }}>
-                    <strong>Events with paths:</strong> {eventsWithPaths.length}/{events.length}
+                    <strong>Events with paths:</strong> {eventsWithPaths.length}
+                    /{events.length}
                   </div>
                   <div style={{ color: '#3b82f6' }}>
-                    <strong>Read layer:</strong> {readEventIndices.length} events → {readLayer?.items.length || 0} files
+                    <strong>Read layer:</strong> {readEventIndices.length}{' '}
+                    events → {readLayer?.items.length || 0} files
                   </div>
                   <div style={{ color: '#ef4444' }}>
-                    <strong>Write layer:</strong> {writeEventIndices.length} events → {writeLayer?.items.length || 0} files
+                    <strong>Write layer:</strong> {writeEventIndices.length}{' '}
+                    events → {writeLayer?.items.length || 0} files
                   </div>
                 </div>
               )}
-              
+
               {/* Events List */}
-              <div style={{
-                flex: 1,
-                overflowY: 'auto',
-                paddingRight: '8px',
-              }}>
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  paddingRight: '8px',
+                }}
+              >
                 {loading ? (
-                  <div style={{
-                    textAlign: 'center',
-                    color: theme.colors.textSecondary,
-                    padding: '40px',
-                  }}>
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      color: theme.colors.textSecondary,
+                      padding: '40px',
+                    }}
+                  >
                     Loading events...
                   </div>
                 ) : error ? (
-                  <div style={{
-                    textAlign: 'center',
-                    color: theme.colors.error || '#ef4444',
-                    padding: '40px',
-                  }}>
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      color: theme.colors.error || '#ef4444',
+                      padding: '40px',
+                    }}
+                  >
                     {error}
                   </div>
                 ) : filteredEvents.length === 0 ? (
-                  <div style={{
-                    textAlign: 'center',
-                    color: theme.colors.textSecondary,
-                    padding: '40px',
-                  }}>
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      color: theme.colors.textSecondary,
+                      padding: '40px',
+                    }}
+                  >
                     No events found
                   </div>
                 ) : (
                   filteredEvents.map((event, idx) => {
                     const globalIndex = events.indexOf(event);
-                    const isInReadLayer = readEventIndices.includes(globalIndex);
-                    const isInWriteLayer = writeEventIndices.includes(globalIndex);
+                    const isInReadLayer =
+                      readEventIndices.includes(globalIndex);
+                    const isInWriteLayer =
+                      writeEventIndices.includes(globalIndex);
                     const hasPath = eventsWithPaths.includes(globalIndex);
-                    
+
                     return (
                       <NormalizedEventCard
                         key={idx}
@@ -857,12 +1014,14 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
                         compact={false}
                         showRawData={true}
                         layerBadges={
-                          (isInReadLayer || isInWriteLayer || hasPath) ? (
-                            <div style={{
-                              display: 'flex',
-                              gap: '4px',
-                              marginLeft: '8px',
-                            }}>
+                          isInReadLayer || isInWriteLayer || hasPath ? (
+                            <div
+                              style={{
+                                display: 'flex',
+                                gap: '4px',
+                                marginLeft: '8px',
+                              }}
+                            >
                               {isInReadLayer && (
                                 <span
                                   style={{
@@ -878,7 +1037,8 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
                                   }}
                                   title="Included in Read Layer"
                                 >
-                                  <span style={{ fontSize: '8px' }}>📖</span> READ
+                                  <span style={{ fontSize: '8px' }}>📖</span>{' '}
+                                  READ
                                 </span>
                               )}
                               {isInWriteLayer && (
@@ -896,7 +1056,8 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
                                   }}
                                   title="Included in Write Layer"
                                 >
-                                  <span style={{ fontSize: '8px' }}>✏️</span> WRITE
+                                  <span style={{ fontSize: '8px' }}>✏️</span>{' '}
+                                  WRITE
                                 </span>
                               )}
                               {hasPath && !isInReadLayer && !isInWriteLayer && (
@@ -914,7 +1075,8 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
                                   }}
                                   title="Has paths but not categorized"
                                 >
-                                  <span style={{ fontSize: '8px' }}>❓</span> UNCATEGORIZED
+                                  <span style={{ fontSize: '8px' }}>❓</span>{' '}
+                                  UNCATEGORIZED
                                 </span>
                               )}
                             </div>
@@ -931,25 +1093,31 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
               </div>
             </div>
           ) : (
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              padding: '16px',
-            }}>
-              {/* Layer JSON Header */}
-              <div style={{
+            <div
+              style={{
+                flex: 1,
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '12px',
-              }}>
-                <h3 style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  margin: 0,
-                }}>
+                flexDirection: 'column',
+                padding: '16px',
+              }}
+            >
+              {/* Layer JSON Header */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '12px',
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                    margin: 0,
+                  }}
+                >
                   Highlight Layer Configuration
                 </h3>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -998,7 +1166,15 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
                     </>
                   )}
                   <button
-                    onClick={() => copyToClipboard(JSON.stringify({ read: readLayer, write: writeLayer }, null, 2))}
+                    onClick={() =>
+                      copyToClipboard(
+                        JSON.stringify(
+                          { read: readLayer, write: writeLayer },
+                          null,
+                          2,
+                        ),
+                      )
+                    }
                     style={{
                       padding: '6px 12px',
                       borderRadius: '4px',
@@ -1019,51 +1195,80 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
               </div>
 
               {/* Layer JSON */}
-              <div style={{
-                flex: 1,
-                overflowY: 'auto',
-                backgroundColor: theme.colors.backgroundTertiary,
-                borderRadius: '4px',
-                border: `1px solid ${theme.colors.border}`,
-                padding: '16px',
-              }}>
-                <pre style={{
-                  margin: 0,
-                  fontFamily: 'monospace',
-                  fontSize: '12px',
-                  color: theme.colors.text,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-all',
-                }}>
-                  {readLayer || writeLayer ? JSON.stringify({ read: readLayer, write: writeLayer }, null, 2) : 'No highlight layer data available'}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  backgroundColor: theme.colors.backgroundTertiary,
+                  borderRadius: '4px',
+                  border: `1px solid ${theme.colors.border}`,
+                  padding: '16px',
+                }}
+              >
+                <pre
+                  style={{
+                    margin: 0,
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                  }}
+                >
+                  {readLayer || writeLayer
+                    ? JSON.stringify(
+                        { read: readLayer, write: writeLayer },
+                        null,
+                        2,
+                      )
+                    : 'No highlight layer data available'}
                 </pre>
               </div>
 
               {/* Layer Summary */}
               {(readLayer || writeLayer) && (
-                <div style={{
-                  marginTop: '12px',
-                  padding: '12px',
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  borderRadius: '4px',
-                  border: `1px solid ${theme.colors.border}`,
-                }}>
-                  <div style={{
-                    fontSize: '12px',
-                    color: theme.colors.textSecondary,
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                    gap: '12px',
-                  }}>
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    borderRadius: '4px',
+                    border: `1px solid ${theme.colors.border}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: theme.colors.textSecondary,
+                      display: 'grid',
+                      gridTemplateColumns:
+                        'repeat(auto-fit, minmax(150px, 1fr))',
+                      gap: '12px',
+                    }}
+                  >
                     <div>
-                      <span style={{ fontWeight: 600, color: theme.colors.text }}>Read Files:</span> {readLayer?.items.length || 0}
+                      <span
+                        style={{ fontWeight: 600, color: theme.colors.text }}
+                      >
+                        Read Files:
+                      </span>{' '}
+                      {readLayer?.items.length || 0}
                     </div>
                     <div>
-                      <span style={{ fontWeight: 600, color: theme.colors.text }}>Written Files:</span> {writeLayer?.items.length || 0}
+                      <span
+                        style={{ fontWeight: 600, color: theme.colors.text }}
+                      >
+                        Written Files:
+                      </span>{' '}
+                      {writeLayer?.items.length || 0}
                     </div>
                     {readLayer && (
                       <div>
-                        <span style={{ fontWeight: 600, color: theme.colors.text }}>Read Color:</span>
+                        <span
+                          style={{ fontWeight: 600, color: theme.colors.text }}
+                        >
+                          Read Color:
+                        </span>
                         <span
                           style={{
                             marginLeft: '6px',
@@ -1080,7 +1285,11 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
                     )}
                     {writeLayer && (
                       <div>
-                        <span style={{ fontWeight: 600, color: theme.colors.text }}>Write Color:</span>
+                        <span
+                          style={{ fontWeight: 600, color: theme.colors.text }}
+                        >
+                          Write Color:
+                        </span>
                         <span
                           style={{
                             marginLeft: '6px',
@@ -1102,7 +1311,7 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
           )}
         </div>
       </div>
-      
+
       {/* Event Processing Test View */}
       {showTestView && (
         <EventProcessingTestView
@@ -1113,7 +1322,7 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
           initialEvent={eventToReprocess}
         />
       )}
-      
+
       {/* Archive Test View */}
       {showArchiveTest && (
         <ArchiveTestView

@@ -5,55 +5,65 @@ import { UserPreferencesService } from '../../main-process-api/UserPreferencesSe
 
 /**
  * ThemedMarkdownSlide - A wrapper around IndustryMarkdownSlide that applies theming
- * 
+ *
  * This component:
  * 1. By default uses the current application theme
  * 2. Can optionally use a custom markdown theme from user preferences
  * 3. Updates when preferences change
- * 
+ *
  * Use this instead of importing IndustryMarkdownSlide directly.
  */
 
 // Re-export the original component's props type and add our custom prop
-export type ThemedMarkdownSlideProps = React.ComponentProps<typeof IndustryMarkdownSlide> & {
+export type ThemedMarkdownSlideProps = React.ComponentProps<
+  typeof IndustryMarkdownSlide
+> & {
   useCustomTheme?: boolean; // If true, use custom markdown theme from preferences
 };
 
-export const ThemedMarkdownSlide: React.FC<ThemedMarkdownSlideProps> = ({ 
+export const ThemedMarkdownSlide: React.FC<ThemedMarkdownSlideProps> = ({
   useCustomTheme = false,
-  ...props 
+  ...props
 }) => {
   const { theme: appTheme } = useTheme();
   const [markdownTheme, setMarkdownTheme] = React.useState<any>(null);
   const [shouldUseCustom, setShouldUseCustom] = React.useState(false);
-  
+
   React.useEffect(() => {
     // Load user preferences
     const loadPreferences = async () => {
       try {
         const prefs = await UserPreferencesService.getPreferences();
-        
+
         // Check if user wants to use custom markdown theme
-        if (useCustomTheme && prefs.useCustomMarkdownTheme && prefs.customMarkdownTheme) {
+        if (
+          useCustomTheme &&
+          prefs.useCustomMarkdownTheme &&
+          prefs.customMarkdownTheme
+        ) {
           setMarkdownTheme(prefs.customMarkdownTheme);
           setShouldUseCustom(true);
         } else {
           setShouldUseCustom(false);
         }
       } catch (error) {
-        console.error('[ThemedMarkdownSlide] Failed to load preferences:', error);
+        console.error(
+          '[ThemedMarkdownSlide] Failed to load preferences:',
+          error,
+        );
         setShouldUseCustom(false);
       }
     };
-    
+
     if (useCustomTheme) {
       loadPreferences();
     }
   }, [useCustomTheme]);
-  
+
   // Determine which theme to use
-  const themeToUse = (shouldUseCustom && markdownTheme) ? markdownTheme : appTheme;
-  
+  const themeToUse =
+    shouldUseCustom && markdownTheme ? markdownTheme : appTheme;
+
   // Apply theme-specific styles
   const themedProps = {
     ...props,
@@ -76,16 +86,16 @@ export const ThemedMarkdownSlide: React.FC<ThemedMarkdownSlideProps> = ({
     // Pass theme colors as props if the component accepts them
     theme: themeToUse,
   };
-  
+
   return (
-    <div 
+    <div
       className="themed-markdown-container"
       style={{
         // Container styles that respect the theme
         color: themeToUse.colors.text,
         backgroundColor: 'transparent',
         // CSS variables for child elements
-        ...themedProps.style
+        ...themedProps.style,
       }}
     >
       <style>
@@ -220,11 +230,11 @@ export const ThemedMarkdownSlide: React.FC<ThemedMarkdownSlideProps> = ({
 export const useMarkdownTheme = (useCustom: boolean = false) => {
   const { theme: appTheme } = useTheme();
   const [customTheme, setCustomTheme] = React.useState<any>(null);
-  
+
   React.useEffect(() => {
     if (useCustom) {
       UserPreferencesService.getPreferences()
-        .then(prefs => {
+        .then((prefs) => {
           if (prefs.useCustomMarkdownTheme && prefs.customMarkdownTheme) {
             setCustomTheme(prefs.customMarkdownTheme);
           }
@@ -232,7 +242,7 @@ export const useMarkdownTheme = (useCustom: boolean = false) => {
         .catch(console.error);
     }
   }, [useCustom]);
-  
+
   // Return custom theme if available and requested, otherwise app theme
-  return (useCustom && customTheme) ? customTheme : appTheme;
+  return useCustom && customTheme ? customTheme : appTheme;
 };

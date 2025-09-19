@@ -40,9 +40,16 @@ export class PeerManager {
     this.onDataReceived = options.onDataReceived;
   }
 
-  createPeer(peerId: string, githubHandle: string, initiator: boolean, signalCallback: (signal: any) => void): SimplePeer.Instance {
-    console.log(`Creating peer connection to ${githubHandle} (${peerId}), initiator: ${initiator}`);
-    
+  createPeer(
+    peerId: string,
+    githubHandle: string,
+    initiator: boolean,
+    signalCallback: (signal: any) => void,
+  ): SimplePeer.Instance {
+    console.log(
+      `Creating peer connection to ${githubHandle} (${peerId}), initiator: ${initiator}`,
+    );
+
     const peer = new SimplePeer({
       initiator,
       trickle: true,
@@ -61,7 +68,7 @@ export class PeerManager {
     peer.on('connect', () => {
       console.log(`Connected to peer ${githubHandle}`);
       this.updatePeerStatus(peerId, true);
-      
+
       // Send initial handshake
       this.sendToPeer(peerId, {
         type: 'handshake',
@@ -166,7 +173,7 @@ export class PeerManager {
       timestamp: Date.now(),
     };
     const messageStr = JSON.stringify(message);
-    
+
     this.peers.forEach((peerInfo) => {
       if (peerInfo.peer && peerInfo.connected) {
         peerInfo.peer.send(messageStr);
@@ -231,6 +238,6 @@ export class PeerManager {
   }
 
   getConnectedPeers(): PeerInfo[] {
-    return Array.from(this.peers.values()).filter(p => p.connected);
+    return Array.from(this.peers.values()).filter((p) => p.connected);
   }
 }

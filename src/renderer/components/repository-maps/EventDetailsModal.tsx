@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTheme } from 'themed-markdown';
 import { X, Copy, CheckCircle } from 'lucide-react';
-import { NormalizedAgentSessionEvent } from "@principal-ai/agent-monitoring";
+import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 interface EventDetailsModalProps {
   event: NormalizedAgentSessionEvent | null;
@@ -14,10 +14,12 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   event,
   rawEvent,
   isOpen,
-  onClose
+  onClose,
 }) => {
   const { theme } = useTheme();
-  const [copiedSide, setCopiedSide] = React.useState<'normalized' | 'raw' | null>(null);
+  const [copiedSide, setCopiedSide] = React.useState<
+    'normalized' | 'raw' | null
+  >(null);
 
   if (!isOpen || !event) return null;
 
@@ -36,44 +38,53 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: theme.colors.background,
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: '8px',
-        width: '90%',
-        maxWidth: '1200px',
-        height: '80%',
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '16px',
-          borderBottom: `1px solid ${theme.colors.border}`,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: theme.colors.background,
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: '8px',
+          width: '90%',
+          maxWidth: '1200px',
+          height: '80%',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <h2 style={{
-            fontSize: '16px',
-            fontWeight: 600,
-            color: theme.colors.text,
-            margin: 0
-          }}>
-            Event Details: {event.eventType} {event.toolName && `- ${event.toolName}`}
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '16px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <h2
+            style={{
+              fontSize: '16px',
+              fontWeight: 600,
+              color: theme.colors.text,
+              margin: 0,
+            }}
+          >
+            Event Details: {event.eventType}{' '}
+            {event.toolName && `- ${event.toolName}`}
           </h2>
           <button
             onClick={onClose}
@@ -87,10 +98,11 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
               color: theme.colors.textSecondary,
               cursor: 'pointer',
               borderRadius: '4px',
-              transition: 'background-color 0.2s'
+              transition: 'background-color 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundHover;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundHover;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -101,35 +113,43 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         </div>
 
         {/* Content */}
-        <div style={{
-          flex: 1,
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '1px',
-          backgroundColor: theme.colors.border,
-          overflow: 'hidden'
-        }}>
+        <div
+          style={{
+            flex: 1,
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '1px',
+            backgroundColor: theme.colors.border,
+            overflow: 'hidden',
+          }}
+        >
           {/* Normalized Event */}
-          <div style={{
-            backgroundColor: theme.colors.backgroundSecondary,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              padding: '12px 16px',
-              backgroundColor: theme.colors.background,
-              borderBottom: `1px solid ${theme.colors.border}`,
+          <div
+            style={{
+              backgroundColor: theme.colors.backgroundSecondary,
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h3 style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: theme.colors.text,
-                margin: 0
-              }}>
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                padding: '12px 16px',
+                backgroundColor: theme.colors.background,
+                borderBottom: `1px solid ${theme.colors.border}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  margin: 0,
+                }}
+              >
                 Normalized Event
               </h3>
               <button
@@ -145,14 +165,16 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                   color: theme.colors.text,
                   fontSize: '12px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundHover;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundHover;
                   e.currentTarget.style.borderColor = theme.colors.primary;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
                   e.currentTarget.style.borderColor = theme.colors.border;
                 }}
               >
@@ -169,45 +191,55 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 )}
               </button>
             </div>
-            <div style={{
-              flex: 1,
-              overflow: 'auto',
-              padding: '16px'
-            }}>
-              <pre style={{
-                margin: 0,
-                fontSize: '12px',
-                fontFamily: 'monospace',
-                color: theme.colors.text,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word'
-              }}>
+            <div
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                padding: '16px',
+              }}
+            >
+              <pre
+                style={{
+                  margin: 0,
+                  fontSize: '12px',
+                  fontFamily: 'monospace',
+                  color: theme.colors.text,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}
+              >
                 {formatJson(event)}
               </pre>
             </div>
           </div>
 
           {/* Raw Event */}
-          <div style={{
-            backgroundColor: theme.colors.backgroundSecondary,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              padding: '12px 16px',
-              backgroundColor: theme.colors.background,
-              borderBottom: `1px solid ${theme.colors.border}`,
+          <div
+            style={{
+              backgroundColor: theme.colors.backgroundSecondary,
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h3 style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: theme.colors.text,
-                margin: 0
-              }}>
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                padding: '12px 16px',
+                backgroundColor: theme.colors.background,
+                borderBottom: `1px solid ${theme.colors.border}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  margin: 0,
+                }}
+              >
                 Raw Event
               </h3>
               {rawEvent && (
@@ -224,14 +256,16 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                     color: theme.colors.text,
                     fontSize: '12px',
                     cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.backgroundHover;
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundHover;
                     e.currentTarget.style.borderColor = theme.colors.primary;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
                     e.currentTarget.style.borderColor = theme.colors.border;
                   }}
                 >
@@ -249,29 +283,35 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
                 </button>
               )}
             </div>
-            <div style={{
-              flex: 1,
-              overflow: 'auto',
-              padding: '16px'
-            }}>
+            <div
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                padding: '16px',
+              }}
+            >
               {rawEvent ? (
-                <pre style={{
-                  margin: 0,
-                  fontSize: '12px',
-                  fontFamily: 'monospace',
-                  color: theme.colors.text,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word'
-                }}>
+                <pre
+                  style={{
+                    margin: 0,
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                    color: theme.colors.text,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}
+                >
                   {formatJson(rawEvent)}
                 </pre>
               ) : (
-                <div style={{
-                  color: theme.colors.textSecondary,
-                  fontSize: '13px',
-                  textAlign: 'center',
-                  marginTop: '40px'
-                }}>
+                <div
+                  style={{
+                    color: theme.colors.textSecondary,
+                    fontSize: '13px',
+                    textAlign: 'center',
+                    marginTop: '40px',
+                  }}
+                >
                   Raw event data not available
                 </div>
               )}
@@ -280,16 +320,19 @@ export const EventDetailsModal: React.FC<EventDetailsModalProps> = ({
         </div>
 
         {/* Footer with metadata */}
-        <div style={{
-          padding: '12px 16px',
-          borderTop: `1px solid ${theme.colors.border}`,
-          display: 'flex',
-          gap: '24px',
-          fontSize: '12px',
-          color: theme.colors.textSecondary
-        }}>
+        <div
+          style={{
+            padding: '12px 16px',
+            borderTop: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            gap: '24px',
+            fontSize: '12px',
+            color: theme.colors.textSecondary,
+          }}
+        >
           <div>
-            <strong>Timestamp:</strong> {new Date(event.timestamp).toLocaleString()}
+            <strong>Timestamp:</strong>{' '}
+            {new Date(event.timestamp).toLocaleString()}
           </div>
           {event.sessionId && (
             <div>

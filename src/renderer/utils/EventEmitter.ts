@@ -15,7 +15,7 @@ export class EventEmitter {
 
   off(event: string, listener: (...args: any[]) => void): this {
     if (!this.events[event]) return this;
-    
+
     const index = this.events[event].indexOf(listener);
     if (index > -1) {
       this.events[event].splice(index, 1);
@@ -25,8 +25,8 @@ export class EventEmitter {
 
   emit(event: string, ...args: any[]): boolean {
     if (!this.events[event]) return false;
-    
-    this.events[event].forEach(listener => {
+
+    this.events[event].forEach((listener) => {
       listener(...args);
     });
     return true;

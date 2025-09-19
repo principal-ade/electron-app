@@ -54,11 +54,16 @@ export interface GitBranchInfo {
 }
 
 export class GitService {
-  static async execCommand(directory: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+  static async execCommand(
+    directory: string,
+    args: string[],
+  ): Promise<{ stdout: string; stderr: string }> {
     return window.mainProcess.git.execCommand(directory, args);
   }
 
-  static async getRepositoryInfo(directoryPath: string): Promise<GitInfo | null> {
+  static async getRepositoryInfo(
+    directoryPath: string,
+  ): Promise<GitInfo | null> {
     console.log(`[GitService] Getting repository info for: ${directoryPath}`);
     const info = await window.mainProcess.git.getRepositoryInfo(directoryPath);
     if (!info) return null;
@@ -68,18 +73,23 @@ export class GitService {
       remotes: info.remotes,
       // These fields may need to be fetched separately if needed
       currentBranch: undefined,
-      lastCommit: undefined
+      lastCommit: undefined,
     };
   }
 
   static async checkIfPrivateRepo(remoteUrl: string): Promise<boolean> {
     console.log(`[GitService] Checking if repo is private: ${remoteUrl}`);
-    
+
     return window.mainProcess.git.checkIfPrivateRepo(remoteUrl);
   }
 
-  static async cloneRepository(remoteUrl: string, targetPath: string): Promise<boolean> {
-    console.log(`[GitService] Cloning repository ${remoteUrl} to ${targetPath}`);
+  static async cloneRepository(
+    remoteUrl: string,
+    targetPath: string,
+  ): Promise<boolean> {
+    console.log(
+      `[GitService] Cloning repository ${remoteUrl} to ${targetPath}`,
+    );
     return window.mainProcess.git.cloneRepository(remoteUrl, targetPath);
   }
 
@@ -117,7 +127,10 @@ export class GitService {
     return window.mainProcess.git.getStatus(directory);
   }
 
-  static async getDetailedChanges(directory: string, files?: string[]): Promise<GitDetailedChanges> {
+  static async getDetailedChanges(
+    directory: string,
+    files?: string[],
+  ): Promise<GitDetailedChanges> {
     console.log(`[GitService] Getting detailed changes for: ${directory}`);
     return window.mainProcess.git.getDetailedChanges(directory, files);
   }
@@ -127,28 +140,30 @@ export class GitService {
     return window.mainProcess.git.getUncommittedChanges(directory);
   }
 
-  static async fastForwardMerge(directory: string): Promise<{ success: boolean; message: string }> {
+  static async fastForwardMerge(
+    directory: string,
+  ): Promise<{ success: boolean; message: string }> {
     console.log(`[GitService] Attempting fast-forward merge for: ${directory}`);
     try {
       // First, ensure we have the latest remote info
-      await window.mainProcess.git.execCommand(directory, [
-        'fetch', 'origin'
-      ]);
+      await window.mainProcess.git.execCommand(directory, ['fetch', 'origin']);
 
       // Perform fast-forward merge
       const result = await window.mainProcess.git.execCommand(directory, [
-        'merge', '--ff-only', '@{u}'
+        'merge',
+        '--ff-only',
+        '@{u}',
       ]);
 
       return {
         success: true,
-        message: result.stdout || 'Fast-forward successful'
+        message: result.stdout || 'Fast-forward successful',
       };
     } catch (error: any) {
       console.error('[GitService] Fast-forward failed:', error);
       return {
         success: false,
-        message: error.message || 'Fast-forward failed'
+        message: error.message || 'Fast-forward failed',
       };
     }
   }
@@ -158,14 +173,21 @@ export class GitService {
     try {
       // Get current branch and upstream tracking info
       const branchResult = await window.mainProcess.git.execCommand(directory, [
-        'rev-parse', '--abbrev-ref', 'HEAD'
+        'rev-parse',
+        '--abbrev-ref',
+        'HEAD',
       ]);
       const branch = branchResult.stdout.trim();
 
       // Get upstream branch
-      const upstreamResult = await window.mainProcess.git.execCommand(directory, [
-        'rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'
-      ]).catch(() => ({ stdout: '', stderr: '' }));
+      const upstreamResult = await window.mainProcess.git
+        .execCommand(directory, [
+          'rev-parse',
+          '--abbrev-ref',
+          '--symbolic-full-name',
+          '@{u}',
+        ])
+        .catch(() => ({ stdout: '', stderr: '' }));
       const upstream = upstreamResult.stdout.trim();
 
       if (!upstream) {
@@ -173,23 +195,30 @@ export class GitService {
           branch,
           hasUpstream: false,
           ahead: 0,
-          behind: 0
+          behind: 0,
         };
       }
 
       // Try to update remote tracking info (doesn't modify working files, only updates refs)
       try {
         await window.mainProcess.git.execCommand(directory, [
-          'fetch', 'origin', branch
+          'fetch',
+          'origin',
+          branch,
         ]);
       } catch (fetchError) {
         // Ignore fetch errors - we'll use the local cached info
-        console.log('[GitService] Could not fetch remote info (may be offline), using cached info');
+        console.log(
+          '[GitService] Could not fetch remote info (may be offline), using cached info',
+        );
       }
 
       // Get ahead/behind counts
       const countResult = await window.mainProcess.git.execCommand(directory, [
-        'rev-list', '--left-right', '--count', `${upstream}...HEAD`
+        'rev-list',
+        '--left-right',
+        '--count',
+        `${upstream}...HEAD`,
       ]);
       const counts = countResult.stdout.trim().split('\t');
       const behind = parseInt(counts[0] || '0', 10);
@@ -198,16 +227,18 @@ export class GitService {
       // Check for uncommitted changes
       let hasUncommittedChanges = false;
       try {
-        const statusResult = await window.mainProcess.git.execCommand(directory, [
-          'status', '--porcelain'
-        ]);
+        const statusResult = await window.mainProcess.git.execCommand(
+          directory,
+          ['status', '--porcelain'],
+        );
         hasUncommittedChanges = statusResult.stdout.trim().length > 0;
       } catch (error) {
         console.log('[GitService] Could not check git status');
       }
 
       // Can fast-forward if: behind > 0, ahead == 0, and no uncommitted changes
-      const canFastForward = behind > 0 && ahead === 0 && !hasUncommittedChanges;
+      const canFastForward =
+        behind > 0 && ahead === 0 && !hasUncommittedChanges;
 
       return {
         branch,
@@ -216,7 +247,7 @@ export class GitService {
         ahead,
         behind,
         canFastForward,
-        hasUncommittedChanges
+        hasUncommittedChanges,
       };
     } catch (error) {
       console.error('[GitService] Failed to get branch status:', error);
@@ -224,40 +255,44 @@ export class GitService {
         branch: 'unknown',
         hasUpstream: false,
         ahead: 0,
-        behind: 0
+        behind: 0,
       };
     }
   }
 
-  static async fetchUpstream(directory: string): Promise<{ success: boolean; message: string }> {
+  static async fetchUpstream(
+    directory: string,
+  ): Promise<{ success: boolean; message: string }> {
     console.log(`[GitService] Fetching upstream for: ${directory}`);
     try {
       // First try to fetch from upstream remote
       try {
         await window.mainProcess.git.execCommand(directory, [
-          'fetch', 'upstream'
+          'fetch',
+          'upstream',
         ]);
         console.log('[GitService] Fetched from upstream remote');
         return {
           success: true,
-          message: 'Fetched from upstream'
+          message: 'Fetched from upstream',
         };
       } catch (upstreamError) {
         // If upstream doesn't exist, try origin
         console.log('[GitService] No upstream remote, trying origin');
         await window.mainProcess.git.execCommand(directory, [
-          'fetch', 'origin'
+          'fetch',
+          'origin',
         ]);
         return {
           success: true,
-          message: 'Fetched from origin'
+          message: 'Fetched from origin',
         };
       }
     } catch (error: any) {
       console.error('[GitService] Fetch failed:', error);
       return {
         success: false,
-        message: error.message || 'Fetch failed'
+        message: error.message || 'Fetch failed',
       };
     }
   }
@@ -267,23 +302,26 @@ export class GitService {
     console.log(`[GitService] Getting current branch for: ${directory}`);
     try {
       const branch = await window.mainProcess.git.execCommand(directory, [
-        'rev-parse', '--abbrev-ref', 'HEAD'
+        'rev-parse',
+        '--abbrev-ref',
+        'HEAD',
       ]);
-      
+
       // Try to get upstream tracking branch
       let upstream: string | undefined;
       try {
-        const upstreamResult = await window.mainProcess.git.execCommand(directory, [
-          'rev-parse', '--abbrev-ref', '@{u}'
-        ]);
+        const upstreamResult = await window.mainProcess.git.execCommand(
+          directory,
+          ['rev-parse', '--abbrev-ref', '@{u}'],
+        );
         upstream = upstreamResult.stdout;
       } catch {
         // No upstream tracking branch
       }
-      
+
       return {
         branch: branch.stdout.trim(),
-        upstream: upstream?.trim()
+        upstream: upstream?.trim(),
       };
     } catch (error: any) {
       console.error('[GitService] Failed to get current branch:', error);
@@ -295,26 +333,33 @@ export class GitService {
     console.log(`[GitService] Getting latest commit for: ${directory}`);
     try {
       const hash = await window.mainProcess.git.execCommand(directory, [
-        'rev-parse', 'HEAD'
+        'rev-parse',
+        'HEAD',
       ]);
-      
+
       const message = await window.mainProcess.git.execCommand(directory, [
-        'log', '-1', '--pretty=%B'
+        'log',
+        '-1',
+        '--pretty=%B',
       ]);
-      
+
       const author = await window.mainProcess.git.execCommand(directory, [
-        'log', '-1', '--pretty=%an'
+        'log',
+        '-1',
+        '--pretty=%an',
       ]);
-      
+
       const date = await window.mainProcess.git.execCommand(directory, [
-        'log', '-1', '--pretty=%ai'
+        'log',
+        '-1',
+        '--pretty=%ai',
       ]);
-      
+
       return {
         hash: hash.stdout.trim(),
         message: message.stdout.trim(),
         author: author.stdout.trim(),
-        date: date.stdout.trim()
+        date: date.stdout.trim(),
       };
     } catch (error: any) {
       console.error('[GitService] Failed to get latest commit:', error);
@@ -322,75 +367,80 @@ export class GitService {
         hash: '',
         message: '',
         author: '',
-        date: ''
+        date: '',
       };
     }
   }
 
-  static async commitChanges(directory: string, message: string, files: string[]): Promise<{ success: boolean; message: string }> {
+  static async commitChanges(
+    directory: string,
+    message: string,
+    files: string[],
+  ): Promise<{ success: boolean; message: string }> {
     console.log(`[GitService] Committing changes in: ${directory}`);
     try {
       // Add specified files
       if (files.length > 0) {
-        await window.mainProcess.git.execCommand(directory, [
-          'add', ...files
-        ]);
+        await window.mainProcess.git.execCommand(directory, ['add', ...files]);
       }
-      
+
       // Commit
       await window.mainProcess.git.execCommand(directory, [
-        'commit', '-m', message
+        'commit',
+        '-m',
+        message,
       ]);
-      
+
       return {
         success: true,
-        message: 'Changes committed successfully'
+        message: 'Changes committed successfully',
       };
     } catch (error: any) {
       console.error('[GitService] Commit failed:', error);
       return {
         success: false,
-        message: error.message || 'Commit failed'
+        message: error.message || 'Commit failed',
       };
     }
   }
 
-  static async fetch(directory: string): Promise<{ success: boolean; message: string }> {
+  static async fetch(
+    directory: string,
+  ): Promise<{ success: boolean; message: string }> {
     console.log(`[GitService] Fetching for: ${directory}`);
     try {
-      await window.mainProcess.git.execCommand(directory, [
-        'fetch', 'origin'
-      ]);
-      
+      await window.mainProcess.git.execCommand(directory, ['fetch', 'origin']);
+
       return {
         success: true,
-        message: 'Fetched successfully'
+        message: 'Fetched successfully',
       };
     } catch (error: any) {
       console.error('[GitService] Fetch failed:', error);
       return {
         success: false,
-        message: error.message || 'Fetch failed'
+        message: error.message || 'Fetch failed',
       };
     }
   }
 
-  static async merge(directory: string, branch: string): Promise<{ success: boolean; message: string }> {
+  static async merge(
+    directory: string,
+    branch: string,
+  ): Promise<{ success: boolean; message: string }> {
     console.log(`[GitService] Merging ${branch} in: ${directory}`);
     try {
-      await window.mainProcess.git.execCommand(directory, [
-        'merge', branch
-      ]);
-      
+      await window.mainProcess.git.execCommand(directory, ['merge', branch]);
+
       return {
         success: true,
-        message: `Merged ${branch} successfully`
+        message: `Merged ${branch} successfully`,
       };
     } catch (error: any) {
       console.error('[GitService] Merge failed:', error);
       return {
         success: false,
-        message: error.message || 'Merge failed'
+        message: error.message || 'Merge failed',
       };
     }
   }
@@ -399,7 +449,9 @@ export class GitService {
    * Subscribe to git status updates
    * @returns Unsubscribe function
    */
-  static onStatusUpdate(callback: (status: GitWatcherStatus) => void): () => void {
+  static onStatusUpdate(
+    callback: (status: GitWatcherStatus) => void,
+  ): () => void {
     if (window.mainProcess.git.onStatusUpdate) {
       return window.mainProcess.git.onStatusUpdate(callback);
     }
@@ -411,7 +463,9 @@ export class GitService {
    * Subscribe to repository updated events
    * @returns Unsubscribe function
    */
-  static onRepositoryUpdated(callback: (updatedRepo: Repository) => void): () => void {
+  static onRepositoryUpdated(
+    callback: (updatedRepo: Repository) => void,
+  ): () => void {
     return window.mainProcess.git.onRepositoryUpdated(callback);
   }
 
@@ -419,7 +473,9 @@ export class GitService {
    * Subscribe to repository clone added events
    * @returns Unsubscribe function
    */
-  static onRepositoryCloneAdded(callback: (data: { repository: Repository; clonePath: string }) => void): () => void {
+  static onRepositoryCloneAdded(
+    callback: (data: { repository: Repository; clonePath: string }) => void,
+  ): () => void {
     return window.mainProcess.git.onRepositoryCloneAdded(callback);
   }
 
@@ -427,7 +483,9 @@ export class GitService {
    * Subscribe to repository clone removed events
    * @returns Unsubscribe function
    */
-  static onRepositoryCloneRemoved(callback: (data: { repository: Repository; clonePath: string }) => void): () => void {
+  static onRepositoryCloneRemoved(
+    callback: (data: { repository: Repository; clonePath: string }) => void,
+  ): () => void {
     return window.mainProcess.git.onRepositoryCloneRemoved(callback);
   }
 
@@ -435,7 +493,9 @@ export class GitService {
    * Subscribe to local clone missing events
    * @returns Unsubscribe function
    */
-  static onLocalCloneMissing(callback: (data: { repoPath: string }) => void): () => void {
+  static onLocalCloneMissing(
+    callback: (data: { repoPath: string }) => void,
+  ): () => void {
     return window.mainProcess.git.onLocalCloneMissing(callback);
   }
 }

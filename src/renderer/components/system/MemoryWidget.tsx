@@ -35,45 +35,51 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
   const [memoryInfo, setMemoryInfo] = React.useState<MemoryInfo | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  const checkMemory = React.useCallback(async (forceRefresh = false) => {
-    try {
-      // Check cache first
-      if (!forceRefresh && memoryCache && 
-          Date.now() - memoryCache.timestamp < cacheTimeout) {
-        setMemoryInfo(memoryCache.data);
-        onMemoryChange?.(memoryCache.data!);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Get full system info but we'll only use memory data
-      const info = await SystemService.getSystemInfo();
-      if (info) {
-        const memData: MemoryInfo = {
-          totalMemory: info.totalMemory,
-          freeMemory: info.freeMemory,
-          cpus: info.cpus,
-          platform: info.platform,
-          arch: info.arch,
+  const checkMemory = React.useCallback(
+    async (forceRefresh = false) => {
+      try {
+        // Check cache first
+        if (
+          !forceRefresh &&
+          memoryCache &&
+          Date.now() - memoryCache.timestamp < cacheTimeout
+        ) {
+          setMemoryInfo(memoryCache.data);
+          onMemoryChange?.(memoryCache.data!);
+          setIsLoading(false);
+          return;
+        }
+
+        // Get full system info but we'll only use memory data
+        const info = await SystemService.getSystemInfo();
+        if (info) {
+          const memData: MemoryInfo = {
+            totalMemory: info.totalMemory,
+            freeMemory: info.freeMemory,
+            cpus: info.cpus,
+            platform: info.platform,
+            arch: info.arch,
+          };
+
+          // Update cache
+          memoryCache = { data: memData, timestamp: Date.now() };
+          setMemoryInfo(memData);
+          onMemoryChange?.(memData);
+        }
+      } catch (error) {
+        console.error('Error checking memory:', error);
+        // Fallback data
+        const fallback: MemoryInfo = {
+          totalMemory: 16,
+          freeMemory: 8,
         };
-        
-        // Update cache
-        memoryCache = { data: memData, timestamp: Date.now() };
-        setMemoryInfo(memData);
-        onMemoryChange?.(memData);
+        setMemoryInfo(fallback);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error checking memory:', error);
-      // Fallback data
-      const fallback: MemoryInfo = {
-        totalMemory: 16,
-        freeMemory: 8,
-      };
-      setMemoryInfo(fallback);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [cacheTimeout, onMemoryChange]);
+    },
+    [cacheTimeout, onMemoryChange],
+  );
 
   React.useEffect(() => {
     checkMemory();
@@ -94,7 +100,10 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
     return null;
   }
 
-  const usagePercent = ((memoryInfo.totalMemory - memoryInfo.freeMemory) / memoryInfo.totalMemory) * 100;
+  const usagePercent =
+    ((memoryInfo.totalMemory - memoryInfo.freeMemory) /
+      memoryInfo.totalMemory) *
+    100;
   const isWarning = showWarning && usagePercent > warningThreshold;
 
   if (compact) {
@@ -112,14 +121,22 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
           fontSize: '12px',
         }}
       >
-        <Cpu size={14} style={{ color: isWarning ? theme.colors.warning : theme.colors.primary }} />
+        <Cpu
+          size={14}
+          style={{
+            color: isWarning ? theme.colors.warning : theme.colors.primary,
+          }}
+        />
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span style={{ color: theme.colors.text, fontWeight: 500 }}>
             {memoryInfo.freeMemory}GB
           </span>
           <span style={{ color: theme.colors.textSecondary }}>free</span>
           {isWarning && (
-            <AlertTriangle size={12} style={{ color: theme.colors.warning, marginLeft: '4px' }} />
+            <AlertTriangle
+              size={12}
+              style={{ color: theme.colors.warning, marginLeft: '4px' }}
+            />
           )}
         </div>
         <div
@@ -135,7 +152,9 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
             style={{
               height: '100%',
               width: `${usagePercent}%`,
-              backgroundColor: isWarning ? theme.colors.warning : theme.colors.primary,
+              backgroundColor: isWarning
+                ? theme.colors.warning
+                : theme.colors.primary,
               transition: 'width 0.3s',
             }}
           />
@@ -172,7 +191,7 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
           </span>
         )}
       </div>
-      
+
       <div
         style={{
           fontSize: '20px',
@@ -183,7 +202,7 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
       >
         {memoryInfo.freeMemory} GB available
       </div>
-      
+
       <div
         style={{
           fontSize: '12px',
@@ -193,7 +212,7 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
       >
         of {memoryInfo.totalMemory} GB total ({Math.round(usagePercent)}% used)
       </div>
-      
+
       <div
         style={{
           height: '6px',
@@ -206,7 +225,9 @@ export const MemoryWidget: React.FC<MemoryWidgetProps> = ({
           style={{
             height: '100%',
             width: `${usagePercent}%`,
-            backgroundColor: isWarning ? theme.colors.warning : theme.colors.primary,
+            backgroundColor: isWarning
+              ? theme.colors.warning
+              : theme.colors.primary,
             transition: 'width 0.3s',
           }}
         />
@@ -240,13 +261,16 @@ export const useMemoryInfo = (refreshInterval = 0, cacheTimeout = 1000) => {
     const checkMemory = async (forceRefresh = false) => {
       try {
         // Check cache first
-        if (!forceRefresh && memoryCache && 
-            Date.now() - memoryCache.timestamp < cacheTimeout) {
+        if (
+          !forceRefresh &&
+          memoryCache &&
+          Date.now() - memoryCache.timestamp < cacheTimeout
+        ) {
           setMemoryInfo(memoryCache.data);
           setLoading(false);
           return;
         }
-        
+
         const info = await SystemService.getSystemInfo();
         if (info) {
           const memData: MemoryInfo = {
@@ -256,7 +280,7 @@ export const useMemoryInfo = (refreshInterval = 0, cacheTimeout = 1000) => {
             platform: info.platform,
             arch: info.arch,
           };
-          
+
           // Update cache
           memoryCache = { data: memData, timestamp: Date.now() };
           setMemoryInfo(memData);

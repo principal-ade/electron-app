@@ -1,1 +1,0 @@
-{"version":3,"file":"ElectronShellAdapter.d.ts","sourceRoot":"","sources":["../../../../../src/renderer/adapters/ElectronShellAdapter.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,YAAY,EAAE,MAAM,oCAAoC,CAAC;AAGlE,qBAAa,oBAAqB,YAAW,YAAY;IACjD,YAAY,CAAC,GAAG,EAAE,MAAM,GAAG,OAAO,CAAC,IAAI,CAAC;CAG/C"}

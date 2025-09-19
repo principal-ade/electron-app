@@ -34,42 +34,48 @@ export const DiskSpaceWidget: React.FC<DiskSpaceWidgetProps> = ({
   const [diskInfo, setDiskInfo] = React.useState<DiskInfo | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  const checkDisk = React.useCallback(async (forceRefresh = false) => {
-    try {
-      // Check cache first
-      if (!forceRefresh && diskCache && 
-          Date.now() - diskCache.timestamp < cacheTimeout) {
-        setDiskInfo(diskCache.data);
-        onDiskChange?.(diskCache.data!);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Get full system info but we'll only use disk data
-      const info = await SystemService.getSystemInfo();
-      if (info) {
-        const diskData: DiskInfo = {
-          totalDisk: info.totalDisk,
-          freeDisk: info.freeDisk,
+  const checkDisk = React.useCallback(
+    async (forceRefresh = false) => {
+      try {
+        // Check cache first
+        if (
+          !forceRefresh &&
+          diskCache &&
+          Date.now() - diskCache.timestamp < cacheTimeout
+        ) {
+          setDiskInfo(diskCache.data);
+          onDiskChange?.(diskCache.data!);
+          setIsLoading(false);
+          return;
+        }
+
+        // Get full system info but we'll only use disk data
+        const info = await SystemService.getSystemInfo();
+        if (info) {
+          const diskData: DiskInfo = {
+            totalDisk: info.totalDisk,
+            freeDisk: info.freeDisk,
+          };
+
+          // Update cache
+          diskCache = { data: diskData, timestamp: Date.now() };
+          setDiskInfo(diskData);
+          onDiskChange?.(diskData);
+        }
+      } catch (error) {
+        console.error('Error checking disk space:', error);
+        // Fallback data
+        const fallback: DiskInfo = {
+          totalDisk: 500,
+          freeDisk: 150,
         };
-        
-        // Update cache
-        diskCache = { data: diskData, timestamp: Date.now() };
-        setDiskInfo(diskData);
-        onDiskChange?.(diskData);
+        setDiskInfo(fallback);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error checking disk space:', error);
-      // Fallback data
-      const fallback: DiskInfo = {
-        totalDisk: 500,
-        freeDisk: 150,
-      };
-      setDiskInfo(fallback);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [cacheTimeout, onDiskChange]);
+    },
+    [cacheTimeout, onDiskChange],
+  );
 
   React.useEffect(() => {
     checkDisk();
@@ -90,8 +96,12 @@ export const DiskSpaceWidget: React.FC<DiskSpaceWidgetProps> = ({
     return null;
   }
 
-  const totalAdditionalUsage = additionalUsage.reduce((sum, item) => sum + item.sizeGB, 0);
-  const usagePercent = ((diskInfo.totalDisk - diskInfo.freeDisk) / diskInfo.totalDisk) * 100;
+  const totalAdditionalUsage = additionalUsage.reduce(
+    (sum, item) => sum + item.sizeGB,
+    0,
+  );
+  const usagePercent =
+    ((diskInfo.totalDisk - diskInfo.freeDisk) / diskInfo.totalDisk) * 100;
   const isWarning = showWarning && usagePercent > warningThreshold;
 
   if (compact) {
@@ -109,14 +119,22 @@ export const DiskSpaceWidget: React.FC<DiskSpaceWidgetProps> = ({
           fontSize: '12px',
         }}
       >
-        <HardDrive size={14} style={{ color: isWarning ? theme.colors.warning : theme.colors.primary }} />
+        <HardDrive
+          size={14}
+          style={{
+            color: isWarning ? theme.colors.warning : theme.colors.primary,
+          }}
+        />
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <span style={{ color: theme.colors.text, fontWeight: 500 }}>
             {diskInfo.freeDisk}GB
           </span>
           <span style={{ color: theme.colors.textSecondary }}>free</span>
           {isWarning && (
-            <AlertTriangle size={12} style={{ color: theme.colors.warning, marginLeft: '4px' }} />
+            <AlertTriangle
+              size={12}
+              style={{ color: theme.colors.warning, marginLeft: '4px' }}
+            />
           )}
         </div>
         <div
@@ -179,7 +197,7 @@ export const DiskSpaceWidget: React.FC<DiskSpaceWidgetProps> = ({
           title="Disk checks are cached for 30 seconds to reduce system load"
         />
       </div>
-      
+
       <div
         style={{
           fontSize: '20px',
@@ -190,7 +208,7 @@ export const DiskSpaceWidget: React.FC<DiskSpaceWidgetProps> = ({
       >
         {diskInfo.freeDisk} GB free
       </div>
-      
+
       <div
         style={{
           fontSize: '12px',
@@ -211,7 +229,7 @@ export const DiskSpaceWidget: React.FC<DiskSpaceWidgetProps> = ({
           </span>
         )}
       </div>
-      
+
       <div
         style={{
           height: '8px',
@@ -267,7 +285,10 @@ export const DiskSpaceWidget: React.FC<DiskSpaceWidgetProps> = ({
             <span style={{ color: theme.colors.textSecondary }}>System</span>
           </div>
           {additionalUsage.map((item, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div
+              key={i}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
               <div
                 style={{
                   width: '8px',
@@ -276,7 +297,9 @@ export const DiskSpaceWidget: React.FC<DiskSpaceWidgetProps> = ({
                   backgroundColor: item.color || theme.colors.primary,
                 }}
               />
-              <span style={{ color: theme.colors.textSecondary }}>{item.label}</span>
+              <span style={{ color: theme.colors.textSecondary }}>
+                {item.label}
+              </span>
             </div>
           ))}
         </div>
@@ -310,20 +333,23 @@ export const useDiskInfo = (refreshInterval = 0, cacheTimeout = 30000) => {
     const checkDisk = async (forceRefresh = false) => {
       try {
         // Check cache first
-        if (!forceRefresh && diskCache && 
-            Date.now() - diskCache.timestamp < cacheTimeout) {
+        if (
+          !forceRefresh &&
+          diskCache &&
+          Date.now() - diskCache.timestamp < cacheTimeout
+        ) {
           setDiskInfo(diskCache.data);
           setLoading(false);
           return;
         }
-        
+
         const info = await SystemService.getSystemInfo();
         if (info) {
           const diskData: DiskInfo = {
             totalDisk: info.totalDisk,
             freeDisk: info.freeDisk,
           };
-          
+
           // Update cache
           diskCache = { data: diskData, timestamp: Date.now() };
           setDiskInfo(diskData);

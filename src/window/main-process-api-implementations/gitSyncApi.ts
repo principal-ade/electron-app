@@ -9,14 +9,13 @@ export enum GitSyncEvent {
   GET_ROOM_TOKEN = 'git-sync:get-room-token',
   GET_SERVER_URL = 'git-sync:get-server-url',
   CHECK_REPO_ACCESS = 'git-sync:check-repo-access',
-  
+
   // Events (from main to renderer)
   ON_MESSAGE = 'git-sync:message',
 }
 
 export const gitSyncAPI: GitSyncAPI = {
-  connect: (config) =>
-    ipcRenderer.invoke(GitSyncEvent.CONNECT, config),
+  connect: (config) => ipcRenderer.invoke(GitSyncEvent.CONNECT, config),
 
   disconnect: (connectionId) =>
     ipcRenderer.invoke(GitSyncEvent.DISCONNECT, connectionId),
@@ -30,16 +29,16 @@ export const gitSyncAPI: GitSyncAPI = {
   getRoomToken: (request) =>
     ipcRenderer.invoke(GitSyncEvent.GET_ROOM_TOKEN, request),
 
-  getServerUrl: () =>
-    ipcRenderer.invoke(GitSyncEvent.GET_SERVER_URL),
+  getServerUrl: () => ipcRenderer.invoke(GitSyncEvent.GET_SERVER_URL),
 
   checkRepoAccess: (repoUrl, token) =>
     ipcRenderer.invoke(GitSyncEvent.CHECK_REPO_ACCESS, repoUrl, token),
 
   onMessage: (callback: (connectionKey: string, message: any) => void) => {
-    const subscription = (_event: any, connectionKey: string, message: any) => 
+    const subscription = (_event: any, connectionKey: string, message: any) =>
       callback(connectionKey, message);
     ipcRenderer.on(GitSyncEvent.ON_MESSAGE, subscription);
-    return () => ipcRenderer.removeListener(GitSyncEvent.ON_MESSAGE, subscription);
+    return () =>
+      ipcRenderer.removeListener(GitSyncEvent.ON_MESSAGE, subscription);
   },
 };

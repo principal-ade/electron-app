@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from 'themed-markdown';
-import { AnimatedResizableLayout } from "@a24z/panels";
-import "@a24z/panels/style.css";
+import { AnimatedResizableLayout } from '@a24z/panels';
+import '@a24z/panels/style.css';
 import { FileText, Wrench, Globe, X, Clipboard, Check } from 'lucide-react';
 import { AnimatedTimelineEvent } from '../landing-page/AnimatedTimelineEvent';
 import { FileViewer } from '../FileViewer';
@@ -158,7 +158,10 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
         const packageInfo = {
           name: bestMatch.name,
           type: 'npm',
-          color: { background: `${theme.colors.surface}33`, color: theme.colors.textSecondary },
+          color: {
+            background: `${theme.colors.surface}33`,
+            color: theme.colors.textSecondary,
+          },
         };
 
         return { fileName, dirPath: relDirPath, packageInfo };
@@ -200,12 +203,24 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
           type: bestMatch.pkg.type,
           color:
             bestMatch.pkg.type === 'npm'
-              ? { background: `${theme.colors.success}33`, color: theme.colors.success }
+              ? {
+                  background: `${theme.colors.success}33`,
+                  color: theme.colors.success,
+                }
               : bestMatch.pkg.type === 'yarn'
-                ? { background: `${theme.colors.primary}33`, color: theme.colors.primary }
+                ? {
+                    background: `${theme.colors.primary}33`,
+                    color: theme.colors.primary,
+                  }
                 : bestMatch.pkg.type === 'pnpm'
-                  ? { background: `${theme.colors.warning}33`, color: theme.colors.warning }
-                  : { background: `${theme.colors.surface}33`, color: theme.colors.textSecondary },
+                  ? {
+                      background: `${theme.colors.warning}33`,
+                      color: theme.colors.warning,
+                    }
+                  : {
+                      background: `${theme.colors.surface}33`,
+                      color: theme.colors.textSecondary,
+                    },
         };
         const relDirPath =
           bestMatch.relativePath.substring(
@@ -260,7 +275,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
             className="font-mono text-base text-white truncate block"
             title={`${fileName} (from: ${filePath})`}
           >
-            <span 
+            <span
               className="text-base px-2 py-0.5 mr-2"
               style={{
                 backgroundColor: packageInfo.color.background,
@@ -343,7 +358,10 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                 }}
                 title="Open file"
               >
-                <FileText size={14} style={{ color: theme.colors.textSecondary }} />
+                <FileText
+                  size={14}
+                  style={{ color: theme.colors.textSecondary }}
+                />
               </button>
             )}
             <button
@@ -371,7 +389,10 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
               {copiedPath === filePath ? (
                 <Check size={14} style={{ color: theme.colors.success }} />
               ) : (
-                <Clipboard size={14} style={{ color: theme.colors.textSecondary }} />
+                <Clipboard
+                  size={14}
+                  style={{ color: theme.colors.textSecondary }}
+                />
               )}
             </button>
           </div>
@@ -457,11 +478,20 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                 </span>
               )}
             </span>
-            <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: theme.colors.surface, color: theme.colors.textSecondary }}>
+            <span
+              className="text-xs px-1.5 py-0.5 rounded"
+              style={{
+                backgroundColor: theme.colors.surface,
+                color: theme.colors.textSecondary,
+              }}
+            >
               {events.length} operations
             </span>
           </div>
-          <span className="absolute top-0 right-0 text-xs" style={{ color: theme.colors.textMuted }}>
+          <span
+            className="absolute top-0 right-0 text-xs"
+            style={{ color: theme.colors.textMuted }}
+          >
             {timeStr}
           </span>
           <FilePathDisplay
@@ -493,11 +523,19 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                   >
                     ↑ Collapse edit
                   </button>
-                  <div className="rounded p-2 text-xs font-mono" style={{ backgroundColor: theme.colors.background }}>
+                  <div
+                    className="rounded p-2 text-xs font-mono"
+                    style={{ backgroundColor: theme.colors.background }}
+                  >
                     <div className="text-red-400 line-through whitespace-pre-wrap">
                       {editEvent.data.parameters.old_string}
                     </div>
-                    <div className="my-2" style={{ color: theme.colors.textMuted }}>→</div>
+                    <div
+                      className="my-2"
+                      style={{ color: theme.colors.textMuted }}
+                    >
+                      →
+                    </div>
                     <div className="text-green-400 whitespace-pre-wrap">
                       {editEvent.data.parameters.new_string}
                     </div>
@@ -551,7 +589,10 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
               )}
             </span>
           </div>
-          <span className="absolute top-0 right-0 text-xs" style={{ color: theme.colors.textMuted }}>
+          <span
+            className="absolute top-0 right-0 text-xs"
+            style={{ color: theme.colors.textMuted }}
+          >
             {timeStr}
           </span>
           {event.data.parameters && (
@@ -594,7 +635,10 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                         >
                           ↑ Collapse edit
                         </button>
-                        <div className="rounded p-2 text-xs font-mono" style={{ backgroundColor: theme.colors.background }}>
+                        <div
+                          className="rounded p-2 text-xs font-mono"
+                          style={{ backgroundColor: theme.colors.background }}
+                        >
                           <div className="text-red-400 line-through whitespace-pre-wrap">
                             {event.data.parameters?.old_string}
                           </div>
@@ -617,7 +661,8 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                           transition: 'color 0.2s',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = theme.colors.textSecondary;
+                          e.currentTarget.style.color =
+                            theme.colors.textSecondary;
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.color = theme.colors.textMuted;
@@ -634,7 +679,10 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
 
               {event.data.toolName === 'Grep' && (
                 <div className="mt-2 space-y-2">
-                  <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
+                  <p
+                    className="text-sm"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
                     Searched for "{event.data.parameters?.pattern || 'pattern'}"
                     {event.data.parameters?.glob &&
                       ` in ${event.data.parameters.glob} files`}
@@ -679,10 +727,12 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                       transition: 'background-color 0.2s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.surface;
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.surface;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.background;
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.background;
                     }}
                   >
                     Re-run
@@ -690,14 +740,23 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
 
                   {/* Show grep results if available */}
                   {grepResults[`grep-${event.data.timestamp}`] && (
-                    <div className="mt-2 rounded p-2" style={{ backgroundColor: theme.colors.background }}>
+                    <div
+                      className="mt-2 rounded p-2"
+                      style={{ backgroundColor: theme.colors.background }}
+                    >
                       {grepResults[`grep-${event.data.timestamp}`].loading ? (
-                        <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                        <p
+                          className="text-xs"
+                          style={{ color: theme.colors.textSecondary }}
+                        >
                           Running grep...
                         </p>
                       ) : grepResults[`grep-${event.data.timestamp}`].data
                           ?.error ? (
-                        <p className="text-xs" style={{ color: theme.colors.error }}>
+                        <p
+                          className="text-xs"
+                          style={{ color: theme.colors.error }}
+                        >
                           Error:{' '}
                           {
                             grepResults[`grep-${event.data.timestamp}`].data
@@ -707,7 +766,10 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                       ) : grepResults[`grep-${event.data.timestamp}`].data
                           ?.matches ? (
                         <div className="space-y-1">
-                          <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                          <p
+                            className="text-xs"
+                            style={{ color: theme.colors.textSecondary }}
+                          >
                             Found{' '}
                             {
                               grepResults[`grep-${event.data.timestamp}`].data
@@ -731,7 +793,10 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                               ))}
                             {grepResults[`grep-${event.data.timestamp}`].data
                               .matches.length > 20 && (
-                              <p className="text-xs mt-1" style={{ color: theme.colors.textMuted }}>
+                              <p
+                                className="text-xs mt-1"
+                                style={{ color: theme.colors.textMuted }}
+                              >
                                 ... and{' '}
                                 {grepResults[`grep-${event.data.timestamp}`]
                                   .data.matches.length - 20}{' '}
@@ -741,7 +806,12 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                           </div>
                         </div>
                       ) : (
-                        <p className="text-xs" style={{ color: theme.colors.textSecondary }}>No results</p>
+                        <p
+                          className="text-xs"
+                          style={{ color: theme.colors.textSecondary }}
+                        >
+                          No results
+                        </p>
                       )}
                     </div>
                   )}
@@ -755,8 +825,14 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                       {event.data.parameters.description}
                     </p>
                   )}
-                  <div className="rounded p-2" style={{ backgroundColor: theme.colors.background }}>
-                    <code className="text-xs font-mono block whitespace-pre-wrap" style={{ color: theme.colors.textTertiary }}>
+                  <div
+                    className="rounded p-2"
+                    style={{ backgroundColor: theme.colors.background }}
+                  >
+                    <code
+                      className="text-xs font-mono block whitespace-pre-wrap"
+                      style={{ color: theme.colors.textTertiary }}
+                    >
                       {event.data.parameters?.command}
                     </code>
                   </div>
@@ -796,10 +872,12 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                       transition: 'background-color 0.2s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.surface;
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.surface;
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.background;
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.background;
                     }}
                   >
                     Re-run
@@ -807,14 +885,23 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
 
                   {/* Show bash results if available */}
                   {bashResults[`bash-${event.data.timestamp}`] && (
-                    <div className="mt-2 rounded p-2" style={{ backgroundColor: theme.colors.background }}>
+                    <div
+                      className="mt-2 rounded p-2"
+                      style={{ backgroundColor: theme.colors.background }}
+                    >
                       {bashResults[`bash-${event.data.timestamp}`].loading ? (
-                        <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                        <p
+                          className="text-xs"
+                          style={{ color: theme.colors.textSecondary }}
+                        >
                           Running command...
                         </p>
                       ) : bashResults[`bash-${event.data.timestamp}`].data
                           ?.error ? (
-                        <p className="text-xs" style={{ color: theme.colors.error }}>
+                        <p
+                          className="text-xs"
+                          style={{ color: theme.colors.error }}
+                        >
                           Error:{' '}
                           {
                             bashResults[`bash-${event.data.timestamp}`].data
@@ -826,10 +913,16 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                           {bashResults[`bash-${event.data.timestamp}`].data
                             ?.stdout && (
                             <div className="max-h-40 overflow-y-auto">
-                              <p className="text-xs mb-1" style={{ color: theme.colors.textMuted }}>
+                              <p
+                                className="text-xs mb-1"
+                                style={{ color: theme.colors.textMuted }}
+                              >
                                 Output:
                               </p>
-                              <pre className="text-xs font-mono whitespace-pre-wrap" style={{ color: theme.colors.success }}>
+                              <pre
+                                className="text-xs font-mono whitespace-pre-wrap"
+                                style={{ color: theme.colors.success }}
+                              >
                                 {
                                   bashResults[`bash-${event.data.timestamp}`]
                                     .data.stdout
@@ -840,10 +933,16 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                           {bashResults[`bash-${event.data.timestamp}`].data
                             ?.stderr && (
                             <div className="mt-2">
-                              <p className="text-xs mb-1" style={{ color: theme.colors.textMuted }}>
+                              <p
+                                className="text-xs mb-1"
+                                style={{ color: theme.colors.textMuted }}
+                              >
                                 Errors:
                               </p>
-                              <pre className="text-xs font-mono whitespace-pre-wrap" style={{ color: theme.colors.error }}>
+                              <pre
+                                className="text-xs font-mono whitespace-pre-wrap"
+                                style={{ color: theme.colors.error }}
+                              >
                                 {
                                   bashResults[`bash-${event.data.timestamp}`]
                                     .data.stderr
@@ -883,7 +982,10 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
               )}
             </span>
           </div>
-          <span className="absolute top-0 right-0 text-xs" style={{ color: theme.colors.textMuted }}>
+          <span
+            className="absolute top-0 right-0 text-xs"
+            style={{ color: theme.colors.textMuted }}
+          >
             {timeStr}
           </span>
           <FilePathDisplay
@@ -933,7 +1035,10 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
               )}
             </span>
           </div>
-          <span className="absolute top-0 right-0 text-xs" style={{ color: theme.colors.textMuted }}>
+          <span
+            className="absolute top-0 right-0 text-xs"
+            style={{ color: theme.colors.textMuted }}
+          >
             {timeStr}
           </span>
           <FilePathDisplay
@@ -954,7 +1059,9 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
         <>
           <div className="flex items-center gap-2">
             <span className="font-medium text-white">Web Access</span>
-            <span className="text-xs" style={{ color: theme.colors.textMuted }}>{timeStr}</span>
+            <span className="text-xs" style={{ color: theme.colors.textMuted }}>
+              {timeStr}
+            </span>
           </div>
           <p
             className="text-sm mt-1 truncate"
@@ -964,7 +1071,10 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
             {event.data.url}
           </p>
           {event.data.prompt && (
-            <p className="text-xs mt-1 line-clamp-2" style={{ color: theme.colors.textMuted }}>
+            <p
+              className="text-xs mt-1 line-clamp-2"
+              style={{ color: theme.colors.textMuted }}
+            >
               {event.data.prompt}
             </p>
           )}
@@ -977,15 +1087,25 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
         <div className="relative">
           <div className="flex items-center gap-2">
             <span className="font-medium text-red-400">Session Stop</span>
-            <span className="text-xs" style={{ color: theme.colors.textMuted }}>{timeStr}</span>
+            <span className="text-xs" style={{ color: theme.colors.textMuted }}>
+              {timeStr}
+            </span>
           </div>
           {event.data.trigger && (
-            <p className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
+            <p
+              className="text-sm mt-1"
+              style={{ color: theme.colors.textSecondary }}
+            >
               Trigger: <span className="text-white">{event.data.trigger}</span>
             </p>
           )}
           {event.data.reason && (
-            <p className="text-xs mt-1" style={{ color: theme.colors.textMuted }}>{event.data.reason}</p>
+            <p
+              className="text-xs mt-1"
+              style={{ color: theme.colors.textMuted }}
+            >
+              {event.data.reason}
+            </p>
           )}
         </div>
       );

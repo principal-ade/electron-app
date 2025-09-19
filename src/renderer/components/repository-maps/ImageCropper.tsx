@@ -1,6 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useTheme } from 'themed-markdown';
-import { Upload, X, Check, RotateCw, ZoomIn, ZoomOut, Move } from 'lucide-react';
+import {
+  Upload,
+  X,
+  Check,
+  RotateCw,
+  ZoomIn,
+  ZoomOut,
+  Move,
+} from 'lucide-react';
 
 interface ImageCropperProps {
   isOpen: boolean;
@@ -15,7 +23,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
   isOpen,
   onClose,
   onSave,
-  title = "Upload & Crop Image",
+  title = 'Upload & Crop Image',
   aspectRatio = 1,
   shape = 'circle',
 }) => {
@@ -27,7 +35,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,7 +79,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
     // Draw image with clipping
     ctx.save();
     ctx.beginPath();
-    
+
     if (shape === 'circle') {
       ctx.arc(CROP_SIZE / 2, CROP_SIZE / 2, CROP_SIZE / 2, 0, Math.PI * 2);
     } else {
@@ -79,24 +87,18 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
       const borderRadius = 16;
       ctx.roundRect(0, 0, CROP_SIZE, CROP_SIZE, borderRadius);
     }
-    
+
     ctx.closePath();
     ctx.clip();
-    
-    ctx.drawImage(
-      image,
-      offsetX,
-      offsetY,
-      scaledWidth,
-      scaledHeight
-    );
-    
+
+    ctx.drawImage(image, offsetX, offsetY, scaledWidth, scaledHeight);
+
     ctx.restore();
 
     // Draw border
     ctx.strokeStyle = theme.colors.border;
     ctx.lineWidth = 2;
-    
+
     if (shape === 'circle') {
       ctx.beginPath();
       ctx.arc(CROP_SIZE / 2, CROP_SIZE / 2, CROP_SIZE / 2 - 1, 0, Math.PI * 2);
@@ -121,7 +123,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const file = e.dataTransfer.files[0];
     handleFileSelect(file);
   };
@@ -167,7 +169,7 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
     finalCanvas.width = 128;
     finalCanvas.height = 128;
     const finalCtx = finalCanvas.getContext('2d');
-    
+
     if (!finalCtx) return;
 
     // Draw the cropped image to the smaller canvas
@@ -229,18 +231,22 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '20px',
-        }}>
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: 600,
-            color: theme.colors.text,
-            margin: 0,
-          }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '20px',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: '18px',
+              fontWeight: 600,
+              color: theme.colors.text,
+              margin: 0,
+            }}
+          >
             {title}
           </h3>
           <button
@@ -257,7 +263,8 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
               alignItems: 'center',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -276,7 +283,9 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
               borderRadius: '12px',
               padding: '40px',
               textAlign: 'center',
-              backgroundColor: isDragging ? `${theme.colors.primary}10` : theme.colors.backgroundTertiary,
+              backgroundColor: isDragging
+                ? `${theme.colors.primary}10`
+                : theme.colors.backgroundTertiary,
               transition: 'all 0.2s',
               cursor: 'pointer',
             }}
@@ -285,18 +294,26 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
             onDragLeave={handleDragLeave}
             onClick={() => fileInputRef.current?.click()}
           >
-            <Upload size={48} color={theme.colors.textSecondary} style={{ marginBottom: '16px' }} />
-            <p style={{
-              fontSize: '16px',
-              color: theme.colors.text,
-              marginBottom: '8px',
-            }}>
+            <Upload
+              size={48}
+              color={theme.colors.textSecondary}
+              style={{ marginBottom: '16px' }}
+            />
+            <p
+              style={{
+                fontSize: '16px',
+                color: theme.colors.text,
+                marginBottom: '8px',
+              }}
+            >
               Drop an image here or click to browse
             </p>
-            <p style={{
-              fontSize: '13px',
-              color: theme.colors.textSecondary,
-            }}>
+            <p
+              style={{
+                fontSize: '13px',
+                color: theme.colors.textSecondary,
+              }}
+            >
               Supports JPG, PNG, GIF, WebP
             </p>
             <input
@@ -344,12 +361,14 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
             </div>
 
             {/* Controls */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              marginBottom: '20px',
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '20px',
+              }}
+            >
               <button
                 onClick={() => setScale(Math.max(0.3, scale - 0.1))}
                 style={{
@@ -364,11 +383,13 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.background;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.background;
                   e.currentTarget.style.borderColor = theme.colors.primary;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
                   e.currentTarget.style.borderColor = theme.colors.border;
                 }}
               >
@@ -405,11 +426,13 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.background;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.background;
                   e.currentTarget.style.borderColor = theme.colors.primary;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
                   e.currentTarget.style.borderColor = theme.colors.border;
                 }}
               >
@@ -430,11 +453,13 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.background;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.background;
                   e.currentTarget.style.borderColor = theme.colors.primary;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
                   e.currentTarget.style.borderColor = theme.colors.border;
                 }}
                 title="Reset position and zoom"
@@ -443,17 +468,19 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
               </button>
             </div>
 
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px',
-              backgroundColor: theme.colors.backgroundTertiary,
-              borderRadius: '8px',
-              fontSize: '13px',
-              color: theme.colors.textSecondary,
-              marginBottom: '20px',
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px',
+                backgroundColor: theme.colors.backgroundTertiary,
+                borderRadius: '8px',
+                fontSize: '13px',
+                color: theme.colors.textSecondary,
+                marginBottom: '20px',
+              }}
+            >
               <Move size={14} />
               <span>Drag image to reposition • Use slider to zoom</span>
             </div>
@@ -462,11 +489,13 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
 
         {/* Footer buttons */}
         {imageUrl && (
-          <div style={{
-            display: 'flex',
-            gap: '12px',
-            marginTop: 'auto',
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '12px',
+              marginTop: 'auto',
+            }}
+          >
             <button
               onClick={() => {
                 setImageFile(null);
@@ -491,13 +520,14 @@ export const ImageCropper: React.FC<ImageCropperProps> = ({
                 e.currentTarget.style.borderColor = theme.colors.primary;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
                 e.currentTarget.style.borderColor = theme.colors.border;
               }}
             >
               Choose Different
             </button>
-            
+
             <button
               onClick={handleSave}
               style={{

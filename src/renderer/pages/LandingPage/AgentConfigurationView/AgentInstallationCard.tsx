@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { AgentInstallationService } from '../../../main-process-api/AgentInstallationService';
 import { AgentAutoUpdateService } from '../../../main-process-api/AgentAutoUpdateService';
-import { AgentInfo, SupportedAgent } from "@principal-ai/agent-monitoring";
+import { AgentInfo, SupportedAgent } from '@principal-ai/agent-monitoring';
 
 interface AgentInstallationCardProps {
   agentType: SupportedAgent;
@@ -41,12 +41,14 @@ export const AgentInstallationCard: React.FC<AgentInstallationCardProps> = ({
     checkAutoUpdateStatus();
 
     // Listen for update notifications
-    const unsubscribeUpdate = AgentAutoUpdateService.onUpdateAvailable((update) => {
-      if (update && update.agentType === agentType && update.hasUpdate) {
-        setUpdateAvailable(update.hasUpdate);
-        setLatestVersion(update.latestVersion);
-      }
-    });
+    const unsubscribeUpdate = AgentAutoUpdateService.onUpdateAvailable(
+      (update) => {
+        if (update && update.agentType === agentType && update.hasUpdate) {
+          setUpdateAvailable(update.hasUpdate);
+          setLatestVersion(update.latestVersion);
+        }
+      },
+    );
 
     return () => {
       // Cleanup event listeners
@@ -81,19 +83,25 @@ export const AgentInstallationCard: React.FC<AgentInstallationCardProps> = ({
       },
     );
 
-    const unsubscribeError = AgentInstallationService.onInstallError(agentType, (error) => {
-      setError(error);
-      setIsInstalling(false);
-      setInstallProgress(null);
-    });
+    const unsubscribeError = AgentInstallationService.onInstallError(
+      agentType,
+      (error) => {
+        setError(error);
+        setIsInstalling(false);
+        setInstallProgress(null);
+      },
+    );
 
-    const unsubscribeUninstall = AgentInstallationService.onUninstallComplete(agentType, () => {
-      setIsInstalling(false);
-      checkInstallation();
-      if (onInstallComplete) {
-        onInstallComplete();
-      }
-    });
+    const unsubscribeUninstall = AgentInstallationService.onUninstallComplete(
+      agentType,
+      () => {
+        setIsInstalling(false);
+        checkInstallation();
+        if (onInstallComplete) {
+          onInstallComplete();
+        }
+      },
+    );
 
     return () => {
       unsubscribeProgress();
@@ -107,9 +115,10 @@ export const AgentInstallationCard: React.FC<AgentInstallationCardProps> = ({
     try {
       const prefs = await AgentAutoUpdateService.getUpdatePreferences();
       setAutoUpdateEnabled(prefs.enabled);
-      
+
       // Check for stored update info
-      const storedUpdate = await AgentAutoUpdateService.getStoredUpdateInfo(agentType);
+      const storedUpdate =
+        await AgentAutoUpdateService.getStoredUpdateInfo(agentType);
       if (storedUpdate?.hasUpdate) {
         setUpdateAvailable(true);
         setLatestVersion(storedUpdate.latestVersion);
@@ -124,7 +133,7 @@ export const AgentInstallationCard: React.FC<AgentInstallationCardProps> = ({
       const newValue = !autoUpdateEnabled;
       await AgentAutoUpdateService.saveUpdatePreferences({ enabled: newValue });
       setAutoUpdateEnabled(newValue);
-      
+
       if (newValue) {
         // Trigger an immediate check when enabling
         const result = await AgentAutoUpdateService.checkForUpdate(agentType);
@@ -143,16 +152,19 @@ export const AgentInstallationCard: React.FC<AgentInstallationCardProps> = ({
       setIsChecking(true);
       setError(null);
 
-      const status = await AgentInstallationService.checkInstallation(agentType);
+      const status =
+        await AgentInstallationService.checkInstallation(agentType);
       setInstallStatus(status);
       if (status.installed && status.isOurVersion) {
-        const updateCheck = await AgentInstallationService.checkForUpdates(agentType);
+        const updateCheck =
+          await AgentInstallationService.checkForUpdates(agentType);
         if (updateCheck) {
           setUpdateAvailable(updateCheck.hasUpdate);
         }
       }
 
-      const versions = await AgentInstallationService.getAvailableVersions(agentType);
+      const versions =
+        await AgentInstallationService.getAvailableVersions(agentType);
       setAvailableVersions(versions);
     } catch (err) {
       setError(
@@ -272,7 +284,8 @@ Your PATH will be preserved for future installations.`;
             fontSize: '14px',
           }}
         >
-          {window.appName}'s custom {agentConfig.displayName} CLI for enhanced development workflows
+          {window.appName}'s custom {agentConfig.displayName} CLI for enhanced
+          development workflows
         </p>
       </div>
 
@@ -336,7 +349,8 @@ Your PATH will be preserved for future installations.`;
                     fontWeight: 500,
                   }}
                 >
-                  🎉 Update available! Version {latestVersion} is ready to install
+                  🎉 Update available! Version {latestVersion} is ready to
+                  install
                 </p>
               )}
             </div>
@@ -506,7 +520,9 @@ Your PATH will be preserved for future installations.`;
             style={{
               padding: '10px 20px',
               backgroundColor: 'transparent',
-              color: autoUpdateEnabled ? theme.colors.success : theme.colors.textSecondary,
+              color: autoUpdateEnabled
+                ? theme.colors.success
+                : theme.colors.textSecondary,
               border: `1px solid ${autoUpdateEnabled ? theme.colors.success : theme.colors.border}`,
               borderRadius: '6px',
               cursor: 'pointer',
@@ -517,7 +533,11 @@ Your PATH will be preserved for future installations.`;
               fontWeight: 500,
               marginLeft: 'auto',
             }}
-            title={autoUpdateEnabled ? 'Auto-update is enabled' : 'Auto-update is disabled'}
+            title={
+              autoUpdateEnabled
+                ? 'Auto-update is enabled'
+                : 'Auto-update is disabled'
+            }
           >
             {autoUpdateEnabled ? <Bell size={16} /> : <BellOff size={16} />}
             {autoUpdateEnabled ? 'Auto-update On' : 'Auto-update Off'}

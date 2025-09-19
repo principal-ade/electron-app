@@ -1,4 +1,4 @@
-import { SupportedAgent } from "@principal-ai/agent-monitoring";
+import { SupportedAgent } from '@principal-ai/agent-monitoring';
 
 /**
  * Preferences for agent auto-update functionality
@@ -29,32 +29,36 @@ export interface AgentUpdateAPI {
    * Check all agents for available updates
    */
   checkAllForUpdates(): Promise<UpdateCheckResult[]>;
-  
+
   /**
    * Check a specific agent for updates
    */
   checkForUpdate(agentType: SupportedAgent): Promise<UpdateCheckResult | null>;
-  
+
   /**
    * Get update preferences
    */
   getUpdatePreferences(): Promise<AgentUpdatePreferences>;
-  
+
   /**
    * Save update preferences
    */
-  saveUpdatePreferences(preferences: Partial<AgentUpdatePreferences>): Promise<void>;
-  
+  saveUpdatePreferences(
+    preferences: Partial<AgentUpdatePreferences>,
+  ): Promise<void>;
+
   /**
    * Get stored update info for an agent
    */
-  getStoredUpdateInfo(agentType: SupportedAgent): Promise<UpdateCheckResult | null>;
-  
+  getStoredUpdateInfo(
+    agentType: SupportedAgent,
+  ): Promise<UpdateCheckResult | null>;
+
   /**
    * Clear stored update info for an agent
    */
   clearStoredUpdateInfo(agentType: SupportedAgent): Promise<void>;
-  
+
   /**
    * Listen for update available events
    * @returns Unsubscribe function

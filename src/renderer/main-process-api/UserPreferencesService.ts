@@ -1,6 +1,4 @@
-import { UserPreferences } from "../../shared/types/userPreferences.types";
-
-
+import { UserPreferences } from '../../shared/types/userPreferences.types';
 
 export class UserPreferencesService {
   static async getPreferences(): Promise<UserPreferences> {

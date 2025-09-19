@@ -1,6 +1,12 @@
-import type { SessionViewAPI, SessionViewResult, SessionStatistics } from '../../shared/main-process-api-interfaces/SessionViewAPI';
-import type { SessionView, SessionSegment } from '../../shared/sessionViewTypes';
-
+import type {
+  SessionViewAPI,
+  SessionViewResult,
+  SessionStatistics,
+} from '../../shared/main-process-api-interfaces/SessionViewAPI';
+import type {
+  SessionView,
+  SessionSegment,
+} from '../../shared/sessionViewTypes';
 
 /**
  * Service layer for session view operations
@@ -14,7 +20,9 @@ export class SessionViewService {
    * @param sessionId - The session ID to retrieve
    * @returns Promise resolving to session view result
    */
-  static async getSessionView(sessionId: string): Promise<SessionViewResult<SessionView>> {
+  static async getSessionView(
+    sessionId: string,
+  ): Promise<SessionViewResult<SessionView>> {
     return await this.api.getSessionView(sessionId);
   }
 
@@ -24,7 +32,10 @@ export class SessionViewService {
    * @param segmentId - The specific segment ID to retrieve
    * @returns Promise resolving to session segment result
    */
-  static async getSegment(sessionId: string, segmentId: string): Promise<SessionViewResult<SessionSegment>> {
+  static async getSegment(
+    sessionId: string,
+    segmentId: string,
+  ): Promise<SessionViewResult<SessionSegment>> {
     return await this.api.getSegment(sessionId, segmentId);
   }
 
@@ -33,7 +44,9 @@ export class SessionViewService {
    * @param sessionId - The session ID to get statistics for
    * @returns Promise resolving to session statistics result
    */
-  static async getStatistics(sessionId: string): Promise<SessionViewResult<SessionStatistics>> {
+  static async getStatistics(
+    sessionId: string,
+  ): Promise<SessionViewResult<SessionStatistics>> {
     return await this.api.getStatistics(sessionId);
   }
 }

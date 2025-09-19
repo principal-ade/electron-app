@@ -43,7 +43,7 @@ export class FileSystemService {
 
   static async getDirectoryTree(
     dirPath: string,
-    options: FileTreeOptions = {}
+    options: FileTreeOptions = {},
   ): Promise<FileTreeNode> {
     const {
       maxDepth = 5,
@@ -52,7 +52,15 @@ export class FileSystemService {
       maxFileSize = this.DEFAULT_MAX_FILE_SIZE,
     } = options;
 
-    return this.buildTree(dirPath, dirPath, 0, maxDepth, includeContent, exclude, maxFileSize);
+    return this.buildTree(
+      dirPath,
+      dirPath,
+      0,
+      maxDepth,
+      includeContent,
+      exclude,
+      maxFileSize,
+    );
   }
 
   private static async buildTree(
@@ -62,7 +70,7 @@ export class FileSystemService {
     maxDepth: number,
     includeContent: boolean,
     exclude: string[],
-    maxFileSize: number
+    maxFileSize: number,
   ): Promise<FileTreeNode> {
     const name = path.basename(currentPath);
     const stats = await stat(currentPath);
@@ -81,11 +89,37 @@ export class FileSystemService {
           // Only read text files
           const ext = path.extname(name).toLowerCase();
           const textExtensions = [
-            '.ts', '.tsx', '.js', '.jsx', '.json', '.md', '.txt',
-            '.html', '.css', '.scss', '.yaml', '.yml', '.toml',
-            '.env', '.gitignore', '.prettierrc', '.eslintrc',
-            '.py', '.java', '.c', '.cpp', '.h', '.hpp', '.go',
-            '.rs', '.swift', '.kt', '.rb', '.php', '.sh', '.bash',
+            '.ts',
+            '.tsx',
+            '.js',
+            '.jsx',
+            '.json',
+            '.md',
+            '.txt',
+            '.html',
+            '.css',
+            '.scss',
+            '.yaml',
+            '.yml',
+            '.toml',
+            '.env',
+            '.gitignore',
+            '.prettierrc',
+            '.eslintrc',
+            '.py',
+            '.java',
+            '.c',
+            '.cpp',
+            '.h',
+            '.hpp',
+            '.go',
+            '.rs',
+            '.swift',
+            '.kt',
+            '.rb',
+            '.php',
+            '.sh',
+            '.bash',
           ];
 
           if (textExtensions.includes(ext) || !ext) {
@@ -114,7 +148,7 @@ export class FileSystemService {
 
     try {
       const items = await readdir(currentPath);
-      
+
       for (const item of items) {
         // Skip excluded directories
         if (exclude.includes(item)) {
@@ -127,7 +161,7 @@ export class FileSystemService {
         }
 
         const itemPath = path.join(currentPath, item);
-        
+
         try {
           const childNode = await this.buildTree(
             rootPath,
@@ -136,7 +170,7 @@ export class FileSystemService {
             maxDepth,
             includeContent,
             exclude,
-            maxFileSize
+            maxFileSize,
           );
           node.children!.push(childNode);
         } catch (error) {
@@ -160,10 +194,10 @@ export class FileSystemService {
 
   static async loadAllTextFiles(
     dirPath: string,
-    options: Partial<FileTreeOptions> = {}
+    options: Partial<FileTreeOptions> = {},
   ): Promise<Map<string, string>> {
     const fileContents = new Map<string, string>();
-    
+
     const tree = await this.getDirectoryTree(dirPath, {
       ...options,
       includeContent: true,
@@ -175,7 +209,7 @@ export class FileSystemService {
 
   private static collectFileContents(
     node: FileTreeNode,
-    fileContents: Map<string, string>
+    fileContents: Map<string, string>,
   ): void {
     if (node.type === 'file' && node.content) {
       fileContents.set(node.path, node.content);
@@ -186,11 +220,13 @@ export class FileSystemService {
     }
   }
 
-  static async getAvailableLocalClones(): Promise<Array<{
-    path: string;
-    name: string;
-    remote?: string;
-  }>> {
+  static async getAvailableLocalClones(): Promise<
+    Array<{
+      path: string;
+      name: string;
+      remote?: string;
+    }>
+  > {
     // This would typically scan a known directory for git repositories
     // For now, return empty array - can be implemented later
     return [];

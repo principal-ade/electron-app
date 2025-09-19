@@ -10,22 +10,25 @@ import type { AlexandriaEntry } from '@a24z/core-library';
 
 export class AlexandriaApiEventHandler implements AlexandriaAPI {
   private registryService: AlexandriaRegistryService;
-  
+
   constructor() {
     this.registryService = AlexandriaRegistryService.getInstance();
   }
-  
+
   // This is implemented in the preload/renderer side, not in main process
   onRepositoryChange(): () => void {
     throw new Error('onRepositoryChange is only available in renderer process');
   }
-  
+
   /**
    * Broadcast Alexandria events to all windows
    */
   private broadcastAlexandriaEvent(
-    eventType: AlexandriaAPIEvent.REPOSITORY_ADDED | AlexandriaAPIEvent.REPOSITORY_UPDATED | AlexandriaAPIEvent.REPOSITORY_REMOVED, 
-    data: AlexandriaEntry | { name: string }
+    eventType:
+      | AlexandriaAPIEvent.REPOSITORY_ADDED
+      | AlexandriaAPIEvent.REPOSITORY_UPDATED
+      | AlexandriaAPIEvent.REPOSITORY_REMOVED,
+    data: AlexandriaEntry | { name: string },
   ): void {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((window) => {
@@ -34,56 +37,61 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
       }
     });
   }
-  
+
   async getRepositories() {
     return this.registryService.getRepositories();
   }
-  
+
   async getRepository(name: string) {
     return this.registryService.getRepository(name);
   }
-  
+
   async getRepositoryByPath(path: string) {
     return this.registryService.getRepositoryByPath(path);
   }
-  
+
   async registerRepository(name: string, path: string) {
     const repo = await this.registryService.registerRepository(name, path);
     // Broadcast the event to all windows
     this.broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_ADDED, repo);
     return repo;
   }
-  
+
   async removeRepository(name: string) {
     const success = await this.registryService.removeRepository(name);
     if (success) {
       // Broadcast the event to all windows
-      this.broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_REMOVED, { name });
+      this.broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_REMOVED, {
+        name,
+      });
     }
     return success;
   }
-  
+
   async searchRepositories(query: string) {
     return this.registryService.searchRepositories(query);
   }
-  
+
   async getRepositoriesWithViews() {
     return this.registryService.getRepositoriesWithViews();
   }
-  
+
   async refreshRepository(name: string) {
     const repo = await this.registryService.refreshRepository(name);
     if (repo) {
       // Broadcast the event to all windows
-      this.broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_UPDATED, repo);
+      this.broadcastAlexandriaEvent(
+        AlexandriaAPIEvent.REPOSITORY_UPDATED,
+        repo,
+      );
     }
     return repo;
   }
-  
+
   async getRepositoryCount() {
     return this.registryService.getRepositoryCount();
   }
-  
+
   /**
    * Clean up handlers when shutting down
    */
@@ -106,17 +114,33 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
  */
 export function registerAlexandriaHandlers(): void {
   const handler = new AlexandriaApiEventHandler();
-  
+
   // Register all IPC handlers using enum values
   ipcMain.handle(AlexandriaAPIEvent.GET_ALL, () => handler.getRepositories());
-  ipcMain.handle(AlexandriaAPIEvent.GET, (_, name: string) => handler.getRepository(name));
-  ipcMain.handle(AlexandriaAPIEvent.GET_BY_PATH, (_, path: string) => handler.getRepositoryByPath(path));
-  ipcMain.handle(AlexandriaAPIEvent.REGISTER, (_, name: string, path: string) => handler.registerRepository(name, path));
-  ipcMain.handle(AlexandriaAPIEvent.REMOVE, (_, name: string) => handler.removeRepository(name));
-  ipcMain.handle(AlexandriaAPIEvent.SEARCH, (_, query: string) => handler.searchRepositories(query));
-  ipcMain.handle(AlexandriaAPIEvent.GET_WITH_VIEWS, () => handler.getRepositoriesWithViews());
-  ipcMain.handle(AlexandriaAPIEvent.REFRESH, (_, name: string) => handler.refreshRepository(name));
-  ipcMain.handle(AlexandriaAPIEvent.GET_COUNT, () => handler.getRepositoryCount());
-  
+  ipcMain.handle(AlexandriaAPIEvent.GET, (_, name: string) =>
+    handler.getRepository(name),
+  );
+  ipcMain.handle(AlexandriaAPIEvent.GET_BY_PATH, (_, path: string) =>
+    handler.getRepositoryByPath(path),
+  );
+  ipcMain.handle(AlexandriaAPIEvent.REGISTER, (_, name: string, path: string) =>
+    handler.registerRepository(name, path),
+  );
+  ipcMain.handle(AlexandriaAPIEvent.REMOVE, (_, name: string) =>
+    handler.removeRepository(name),
+  );
+  ipcMain.handle(AlexandriaAPIEvent.SEARCH, (_, query: string) =>
+    handler.searchRepositories(query),
+  );
+  ipcMain.handle(AlexandriaAPIEvent.GET_WITH_VIEWS, () =>
+    handler.getRepositoriesWithViews(),
+  );
+  ipcMain.handle(AlexandriaAPIEvent.REFRESH, (_, name: string) =>
+    handler.refreshRepository(name),
+  );
+  ipcMain.handle(AlexandriaAPIEvent.GET_COUNT, () =>
+    handler.getRepositoryCount(),
+  );
+
   console.log('[Alexandria] IPC handlers registered');
 }

@@ -6,7 +6,7 @@ import type { FileChangeEvent } from '../../shared/types/git.types';
 /**
  * Service that listens to file system changes and intelligently invalidates
  * the FileTree cache when needed.
- * 
+ *
  * Strategy:
  * - Batch file changes to avoid excessive invalidations
  * - Only invalidate when structure changes (add/remove files)
@@ -18,30 +18,42 @@ export class FileTreeInvalidator {
   private pendingInvalidations = new Map<string, Set<string>>(); // repoPath -> affected paths
   private invalidationTimer: NodeJS.Timeout | null = null;
   private structuralChangeTypes = new Set(['add', 'unlink']);
-  
-  constructor(cacheService: FileTreeCacheService, cityDataCache?: CityDataCacheService) {
+
+  constructor(
+    cacheService: FileTreeCacheService,
+    cityDataCache?: CityDataCacheService,
+  ) {
     this.cacheService = cacheService;
     this.cityDataCache = cityDataCache;
     this.setupListeners();
   }
-  
+
   /**
    * Set up IPC listeners for file change events from main process
    */
   private setupListeners(): void {
     // Listen for file changes from GitRepositoryWatcher
-    window.electron?.ipcRenderer?.on('git:file-changed', (_event, changeEvent: FileChangeEvent) => {
-      this.handleFileChange(changeEvent);
-    });
+    window.electron?.ipcRenderer?.on(
+      'git:file-changed',
+      (_event, changeEvent: FileChangeEvent) => {
+        this.handleFileChange(changeEvent);
+      },
+    );
   }
-  
+
   /**
    * Handle a file change event
    */
   private handleFileChange(event: FileChangeEvent): void {
-    console.log('[FileTreeInvalidator] File change:', event.type, event.path, 'in', event.repoPath);
-    
-    // Only care about structural changes (add/remove) 
+    console.log(
+      '[FileTreeInvalidator] File change:',
+      event.type,
+      event.path,
+      'in',
+      event.repoPath,
+    );
+
+    // Only care about structural changes (add/remove)
     // Content changes don't affect the FileTree structure
     if (!this.structuralChangeTypes.has(event.type)) {
       // For 'change' events, only care if it's a directory change
@@ -49,17 +61,17 @@ export class FileTreeInvalidator {
         return;
       }
     }
-    
+
     // Add to pending invalidations
     if (!this.pendingInvalidations.has(event.repoPath)) {
       this.pendingInvalidations.set(event.repoPath, new Set());
     }
     this.pendingInvalidations.get(event.repoPath)!.add(event.path);
-    
+
     // Debounce invalidations to batch changes
     this.scheduleInvalidation();
   }
-  
+
   /**
    * Schedule a batched invalidation
    */
@@ -68,62 +80,81 @@ export class FileTreeInvalidator {
     if (this.invalidationTimer) {
       clearTimeout(this.invalidationTimer);
     }
-    
+
     // Wait 1 second to batch changes (e.g., multiple files being added)
     this.invalidationTimer = setTimeout(() => {
       this.processPendingInvalidations();
     }, 1000);
   }
-  
+
   /**
    * Process all pending invalidations
    */
   private processPendingInvalidations(): void {
     if (this.pendingInvalidations.size === 0) return;
-    
-    console.log('[FileTreeInvalidator] Processing invalidations for', this.pendingInvalidations.size, 'repositories');
-    
+
+    console.log(
+      '[FileTreeInvalidator] Processing invalidations for',
+      this.pendingInvalidations.size,
+      'repositories',
+    );
+
     // Process each repository's changes
-    for (const [repoPath, changedPaths] of this.pendingInvalidations.entries()) {
+    for (const [
+      repoPath,
+      changedPaths,
+    ] of this.pendingInvalidations.entries()) {
       this.invalidateRepository(repoPath, changedPaths);
     }
-    
+
     // Clear pending invalidations
     this.pendingInvalidations.clear();
     this.invalidationTimer = null;
   }
-  
+
   /**
    * Invalidate cache for a specific repository
    */
-  private invalidateRepository(repoPath: string, changedPaths: Set<string>): void {
-    console.log('[FileTreeInvalidator] Invalidating cache for', repoPath, 'with', changedPaths.size, 'changed paths');
-    
+  private invalidateRepository(
+    repoPath: string,
+    changedPaths: Set<string>,
+  ): void {
+    console.log(
+      '[FileTreeInvalidator] Invalidating cache for',
+      repoPath,
+      'with',
+      changedPaths.size,
+      'changed paths',
+    );
+
     // Find all sources that match this repository path
     this.cacheService.invalidateMatching((source: FileTreeSource) => {
       // For local sources, check if the path matches
       if (source.type === 'local' && source.location === repoPath) {
-        console.log('[FileTreeInvalidator] Invalidating local source:', source.id);
+        console.log(
+          '[FileTreeInvalidator] Invalidating local source:',
+          source.id,
+        );
         return true;
       }
       return false;
     });
-    
+
     // Also invalidate analysis cache for affected sources
     const affectedSourceIds = this.getAffectedSourceIds(repoPath);
-    affectedSourceIds.forEach(sourceId => {
+    affectedSourceIds.forEach((sourceId) => {
       this.cacheService.removeAnalysis(sourceId);
     });
-    
+
     // Invalidate city data cache for affected sources
     if (this.cityDataCache) {
       this.cityDataCache.invalidateMatching(() => true); // For now, invalidate all - could be more selective
     }
-    
+
     // Emit an event that the cache was invalidated
     this.emitInvalidationEvent(repoPath, changedPaths);
   }
-  
+
   /**
    * Get source IDs affected by changes to a repository
    */
@@ -135,24 +166,27 @@ export class FileTreeInvalidator {
       `local-${repoPath}-HEAD`,
     ];
   }
-  
+
   /**
    * Emit an event to notify UI components that cache was invalidated
    */
-  private emitInvalidationEvent(repoPath: string, changedPaths: Set<string>): void {
+  private emitInvalidationEvent(
+    repoPath: string,
+    changedPaths: Set<string>,
+  ): void {
     // Create a custom event
     const event = new CustomEvent('filetree:cache-invalidated', {
       detail: {
         repoPath,
         changedPaths: Array.from(changedPaths),
-        timestamp: Date.now()
-      }
+        timestamp: Date.now(),
+      },
     });
-    
+
     // Dispatch to window for any listeners
     window.dispatchEvent(event);
   }
-  
+
   /**
    * Manually invalidate cache for a repository
    */
@@ -160,14 +194,14 @@ export class FileTreeInvalidator {
     console.log('[FileTreeInvalidator] Manual invalidation for', repoPath);
     this.invalidateRepository(repoPath, new Set(['manual-invalidation']));
   }
-  
+
   /**
    * Set the city data cache (for cases where it's created after the invalidator)
    */
   setCityDataCache(cityDataCache: CityDataCacheService): void {
     this.cityDataCache = cityDataCache;
   }
-  
+
   /**
    * Clean up listeners
    */
@@ -175,7 +209,7 @@ export class FileTreeInvalidator {
     if (this.invalidationTimer) {
       clearTimeout(this.invalidationTimer);
     }
-    
+
     // Remove IPC listeners
     window.electron?.ipcRenderer?.removeAllListeners('git:file-changed');
   }

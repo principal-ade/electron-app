@@ -1,8 +1,14 @@
-import { NormalizedAgentSessionEvent, SupportedAgent } from "@principal-ai/agent-monitoring";
+import {
+  NormalizedAgentSessionEvent,
+  SupportedAgent,
+} from '@principal-ai/agent-monitoring';
 
 import { Repository } from '../../shared/types/repository.types';
 import { LLMConfiguration } from '../../shared/main-process-api-interfaces/LLMModelsAPI';
-import { StorageNamespaceConfig, NamespaceCategory } from '../../shared/main-process-api-interfaces/StoreAPI';
+import {
+  StorageNamespaceConfig,
+  NamespaceCategory,
+} from '../../shared/main-process-api-interfaces/StoreAPI';
 import { AgentSessionEvent } from '../../shared/main-process-api-interfaces';
 import { UserPreferences } from '../../shared/types/userPreferences.types';
 import { AgentSessionRecord } from '../../shared/sessionTypes';
@@ -32,7 +38,6 @@ export interface SessionSummary {
   archivePath?: string; // Path to archived file if archived
 }
 
-
 export interface ArchiveConfiguration {
   // Auto-archiving settings
   autoArchive: {
@@ -44,7 +49,7 @@ export interface ArchiveConfiguration {
     // Check for stale sessions every X minutes
     checkInterval: number; // Default: 60 minutes
   };
-  
+
   // Storage management
   storage: {
     // Maximum age for archived files (in days)
@@ -56,7 +61,7 @@ export interface ArchiveConfiguration {
     // Compress archives to save space
     compressArchives: boolean; // Default: true
   };
-  
+
   // Session handling
   sessions: {
     // Archive sessions even without Stop event
@@ -68,7 +73,7 @@ export interface ArchiveConfiguration {
     // Archive sessions by repository
     groupByRepository: boolean; // Default: false
   };
-  
+
   // Export settings
   export: {
     // Default export format
@@ -113,14 +118,14 @@ export interface ToolContainerState {
   status: 'ready' | 'busy' | 'stopped' | 'error';
   created: number;
   lastUsed: number;
-  
+
   // Current analysis session
   currentSession?: {
     sessionId: string;
     projectPath: string;
     startTime: number;
   };
-  
+
   // Performance tracking
   metrics: {
     totalAnalyses: number;
@@ -128,7 +133,7 @@ export interface ToolContainerState {
     uptime: number;
     errorCount: number;
   };
-  
+
   // Health status
   health?: {
     lastHealthCheck: number;
@@ -147,37 +152,43 @@ export interface DockerAnalysisSession {
   containerId: string;
   repositoryUrl: string;
   packagePath?: string;
-  
+
   // Session state
-  status: 'preparing' | 'mounting' | 'running' | 'completed' | 'failed' | 'cancelled';
+  status:
+    | 'preparing'
+    | 'mounting'
+    | 'running'
+    | 'completed'
+    | 'failed'
+    | 'cancelled';
   startTime: number;
   endTime?: number;
-  
+
   // Configuration used
   configSource: 'repository' | 'generated' | 'default';
   configUsed?: any;
   commandExecuted: string;
-  
+
   // Results and performance
   output?: {
     stdout: string;
     stderr: string;
     exitCode?: number;
   };
-  
+
   results?: any; // Tool-specific results (e.g., knip analysis results)
   error?: string;
-  
+
   // Performance metrics
   metrics: {
-    preparationTime?: number;  // Time to prepare container
-    mountTime?: number;        // Time to mount/copy files
-    executionTime?: number;    // Time for actual analysis
-    totalTime?: number;        // Total session time
-    memoryPeak?: number;       // Peak memory usage
-    cpuTime?: number;         // CPU time used
+    preparationTime?: number; // Time to prepare container
+    mountTime?: number; // Time to mount/copy files
+    executionTime?: number; // Time for actual analysis
+    totalTime?: number; // Total session time
+    memoryPeak?: number; // Peak memory usage
+    cpuTime?: number; // CPU time used
   };
-  
+
   // File handling
   fileOperations?: {
     filesScanned?: number;
@@ -186,8 +197,6 @@ export interface DockerAnalysisSession {
     mountPath?: string;
   };
 }
-
-
 
 /**
  * Agent event indexes structure
@@ -206,7 +215,9 @@ type AgentNamespaceMap = {
   [SupportedAgent.CLINE]: AgentEventNamespaces.CLINE;
 };
 
-export function getAgentEventNamespace<T extends SupportedAgent>(agent: T): AgentNamespaceMap[T] {
+export function getAgentEventNamespace<T extends SupportedAgent>(
+  agent: T,
+): AgentNamespaceMap[T] {
   const namespaceMap: AgentNamespaceMap = {
     [SupportedAgent.CLAUDE]: AgentEventNamespaces.CLAUDE,
     [SupportedAgent.OPENCODE]: AgentEventNamespaces.OPENCODE,
@@ -232,14 +243,14 @@ export interface NamespaceDataTypes {
   [StaticNamespaces.ARCHIVE_CONFIGURATION]: ArchiveConfiguration; // Archive system configuration settings
   [StaticNamespaces.AGENT_EVENT_INDEXES]: AgentEventIndexes; // Centralized storage for agent event indexes
   [StaticNamespaces.MCP_BRIDGE_DATA]: any; // MCP Bridge data storage (MCPBridgeDataEntry from MCPBridgeDataStore)
-  
+
   // Docker Management namespaces
   [StaticNamespaces.DOCKER_CONTAINERS]: ToolContainerState; // Persistent container state
   [StaticNamespaces.DOCKER_SESSIONS]: DockerAnalysisSession; // Analysis session tracking
-  
+
   // Secrets Management namespace
   [StaticNamespaces.SECRETS_METADATA]: SecretMetadata; // Metadata for encrypted secrets
-  
+
   // Agent event namespaces - these store individual events by key
   // The storage system handles key-value pairs, so each event is stored separately
   [AgentEventNamespaces.CLAUDE]: AgentSessionEvent;
@@ -256,25 +267,25 @@ export interface ProcessedSessionData {
   sessionId: string;
   provider: SupportedAgent;
   workingDirectory: string;
-  
+
   // Timing
   startTime: number;
   lastUpdateTime: number;
-  
+
   // Flat list of all normalized events from core
   // Events have normalizedWorkingDirectory set to git root when in a repository
   events: NormalizedAgentSessionEvent[];
-  
+
   // Aggregates for quick access (optional, for performance)
   totalEvents: number;
-  
+
   // Repository tracking with git root paths for efficient detection
   // Multiple entries can have the same remoteUrl (different clones)
   repositoriesAccessed?: Array<{
     remoteUrl: string;
     gitRoot: string;
   }>;
-  
+
   // Basic counters (optional, for performance)
   counters?: {
     fileAccesses: number;
@@ -282,34 +293,40 @@ export interface ProcessedSessionData {
     toolCalls: number;
     webAccesses: number;
   };
-  
+
   // File tracking maps for centralized event processor
-  fileAccesses?: Record<string, Array<{
-    timestamp: number;
-    normalizedPath?: string;
-    metadata?: any;
-  }>>;
-  fileWrites?: Record<string, Array<{
-    timestamp: number;
-    operation: string;
-    normalizedPath?: string;
-    metadata?: any;
-  }>>;
-  
+  fileAccesses?: Record<
+    string,
+    Array<{
+      timestamp: number;
+      normalizedPath?: string;
+      metadata?: any;
+    }>
+  >;
+  fileWrites?: Record<
+    string,
+    Array<{
+      timestamp: number;
+      operation: string;
+      normalizedPath?: string;
+      metadata?: any;
+    }>
+  >;
+
   // Additional file tracking arrays
   filesRead?: string[];
   filesWritten?: string[];
-  
+
   // Metadata storage
   metadata?: Record<string, any>;
-  
+
   // File context tracking
   fileContexts?: {
-    repositories: string[];           // Git roots accessed (unique)
-    systemFiles: number;              // Count of system files accessed
-    configFiles: number;              // Count of config files accessed
-    tempFiles: number;                // Count of temp files accessed
-    externalFiles: string[];          // Notable external files accessed (non-repo, non-system)
+    repositories: string[]; // Git roots accessed (unique)
+    systemFiles: number; // Count of system files accessed
+    configFiles: number; // Count of config files accessed
+    tempFiles: number; // Count of temp files accessed
+    externalFiles: string[]; // Notable external files accessed (non-repo, non-system)
   };
 }
 
@@ -320,7 +337,7 @@ export interface ProcessedSessionData {
 export interface GlobalSessionRegistry {
   // Global session index - sessionId -> session data
   sessions: Record<string, AgentSessionRecord>;
-  
+
   // Active session tracking - directory -> active sessionId
   activeSessionsByDirectory: Record<string, string>;
 }
@@ -422,7 +439,9 @@ export class TypedNamespaceRegistry {
   }
 
   getConfigsByCategory(category: NamespaceCategory): StorageNamespaceConfig[] {
-    return this.getAllConfigs().filter(config => config.category === category);
+    return this.getAllConfigs().filter(
+      (config) => config.category === category,
+    );
   }
 }
 
@@ -433,7 +452,7 @@ export class TypedNamespaceRegistry {
 export class TypedStorageProvider {
   constructor(
     private provider: StorageProvider,
-    private registry: TypedNamespaceRegistry
+    private registry: TypedNamespaceRegistry,
   ) {}
 
   /**
@@ -441,7 +460,7 @@ export class TypedStorageProvider {
    */
   async get<K extends StorageNamespaces>(
     namespace: K,
-    key: string
+    key: string,
   ): Promise<NamespaceDataTypes[K] | undefined> {
     const namespacedKey = this.getNamespacedKey(namespace, key);
     return this.provider.get<NamespaceDataTypes[K]>(namespacedKey);
@@ -453,7 +472,7 @@ export class TypedStorageProvider {
   async set<K extends StorageNamespaces>(
     namespace: K,
     key: string,
-    value: NamespaceDataTypes[K]
+    value: NamespaceDataTypes[K],
   ): Promise<void> {
     const namespacedKey = this.getNamespacedKey(namespace, key);
     return this.provider.set(namespacedKey, value);
@@ -463,7 +482,7 @@ export class TypedStorageProvider {
    * Get all data for a namespace
    */
   async getNamespaceData<K extends StorageNamespaces>(
-    namespace: K
+    namespace: K,
   ): Promise<Record<string, NamespaceDataTypes[K]>> {
     const keys = await this.provider.keys();
     const namespacePrefix = `${namespace}:`;
@@ -487,7 +506,7 @@ export class TypedStorageProvider {
    */
   async delete<K extends StorageNamespaces>(
     namespace: K,
-    key: string
+    key: string,
   ): Promise<void> {
     const namespacedKey = this.getNamespacedKey(namespace, key);
     return this.provider.delete(namespacedKey);
@@ -498,7 +517,7 @@ export class TypedStorageProvider {
    */
   async has<K extends StorageNamespaces>(
     namespace: K,
-    key: string
+    key: string,
   ): Promise<boolean> {
     const namespacedKey = this.getNamespacedKey(namespace, key);
     return this.provider.has(namespacedKey);
@@ -508,11 +527,11 @@ export class TypedStorageProvider {
    * Clear all data in a namespace
    */
   async clearNamespace<K extends StorageNamespaces>(
-    namespace: K
+    namespace: K,
   ): Promise<void> {
     const keys = await this.provider.keys();
     const namespacePrefix = `${namespace}:`;
-    
+
     for (const key of keys) {
       if (key.startsWith(namespacePrefix)) {
         await this.provider.delete(key);
@@ -526,7 +545,10 @@ export class TypedStorageProvider {
   watch<K extends StorageNamespaces>(
     namespace: K,
     key: string,
-    callback: (newValue: NamespaceDataTypes[K] | undefined, oldValue: NamespaceDataTypes[K] | undefined) => void
+    callback: (
+      newValue: NamespaceDataTypes[K] | undefined,
+      oldValue: NamespaceDataTypes[K] | undefined,
+    ) => void,
   ): (() => void) | undefined {
     if (!this.provider.watch) {
       return undefined;
@@ -544,7 +566,9 @@ export class TypedStorageProvider {
 /**
  * Factory function to create a typed storage provider
  */
-export function createTypedStorageProvider(provider: StorageProvider): TypedStorageProvider {
+export function createTypedStorageProvider(
+  provider: StorageProvider,
+): TypedStorageProvider {
   const registry = new TypedNamespaceRegistry();
   return new TypedStorageProvider(provider, registry);
 }
@@ -552,15 +576,20 @@ export function createTypedStorageProvider(provider: StorageProvider): TypedStor
 /**
  * Type guard to check if a string is a valid namespace
  */
-export function isValidNamespace(namespace: string): namespace is StorageNamespaces {
-  return Object.values(StaticNamespaces).includes(namespace as StaticNamespaces);
+export function isValidNamespace(
+  namespace: string,
+): namespace is StorageNamespaces {
+  return Object.values(StaticNamespaces).includes(
+    namespace as StaticNamespaces,
+  );
 }
 
 /**
  * Helper type for namespace-specific operations
  * Now supports ALL namespaces including agent event namespaces
  */
-export type NamespaceData<K extends keyof NamespaceDataTypes> = NamespaceDataTypes[K];
+export type NamespaceData<K extends keyof NamespaceDataTypes> =
+  NamespaceDataTypes[K];
 
 /**
  * Helper type for namespace keys

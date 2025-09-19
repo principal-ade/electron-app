@@ -2,7 +2,7 @@
 export enum SupportedLLMProvider {
   OPENROUTER = 'openrouter',
   OLLAMA = 'ollama',
-  OPENAI = 'openai'
+  OPENAI = 'openai',
 }
 
 export interface LLMModel {
@@ -114,12 +114,16 @@ export interface ExportModelsResponse {
 
 export interface LLMModelsAPI {
   getAllModels: () => Promise<LLMModel[]>;
-  getProviderModels: (request: GetProviderModelsRequest) => Promise<GetProviderModelsResponse>;
+  getProviderModels: (
+    request: GetProviderModelsRequest,
+  ) => Promise<GetProviderModelsResponse>;
   addModel: (request: AddModelRequest) => Promise<AddModelResponse>;
   updateModel: (request: UpdateModelRequest) => Promise<UpdateModelResponse>;
   deleteModel: (request: DeleteModelRequest) => Promise<DeleteModelResponse>;
   getConfiguration: () => Promise<LLMConfiguration>;
-  updateConfiguration: (config: Partial<LLMConfiguration>) => Promise<LLMConfiguration>;
+  updateConfiguration: (
+    config: Partial<LLMConfiguration>,
+  ) => Promise<LLMConfiguration>;
   importModels: (request: ImportModelsRequest) => Promise<ImportModelsResponse>;
   exportModels: () => Promise<ExportModelsResponse>;
 }

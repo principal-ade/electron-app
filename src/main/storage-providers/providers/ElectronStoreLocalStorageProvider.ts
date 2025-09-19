@@ -1,13 +1,13 @@
 import Store from 'electron-store';
-import { 
-  StorageProvider,
-  StorageProviderType,
-} from '../types';
-import { StorageStats, StorageProviderConfig } from '../../../shared/main-process-api-interfaces/StoreAPI';
+import { StorageProvider, StorageProviderType } from '../types';
+import {
+  StorageStats,
+  StorageProviderConfig,
+} from '../../../shared/main-process-api-interfaces/StoreAPI';
 
 /**
  * Electron Store Backend Implementation
- * 
+ *
  * This backend uses electron-store for local file-based storage.
  * It provides persistent storage that survives app restarts.
  */
@@ -32,7 +32,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
       const storeOptions: any = {
         name: config?.path || this.name,
         defaults: config?.defaults || {},
-        ...config?.options
+        ...config?.options,
       };
 
       // Handle encryption if specified
@@ -40,10 +40,9 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
         storeOptions.encryptionKey = config.encryption.key;
       }
       this.store = new Store(storeOptions);
-      
+
       // Set up global change listener for watchers
       this.setupGlobalWatcher();
-      
     } catch (error) {
       throw new Error(`Failed to initialize ElectronStoreBackend: ${error}`);
     }
@@ -52,11 +51,14 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
   /**
    * Get a value by key
    */
-  public async get<T = any>(key: string, defaultValue?: T): Promise<T | undefined> {
+  public async get<T = any>(
+    key: string,
+    defaultValue?: T,
+  ): Promise<T | undefined> {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
     }
-    
+
     try {
       return this.store.get(key, defaultValue) as T;
     } catch (error) {
@@ -71,7 +73,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
     }
-    
+
     try {
       this.store.set(key, value);
     } catch (error) {
@@ -86,7 +88,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
     }
-    
+
     try {
       this.store.delete(key);
     } catch (error) {
@@ -101,7 +103,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
     }
-    
+
     try {
       return this.store.has(key);
     } catch (error) {
@@ -116,7 +118,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
     }
-    
+
     try {
       this.store.clear();
     } catch (error) {
@@ -131,9 +133,9 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
     }
-    
+
     try {
-      // electron-store doesn't have a direct keys() method, 
+      // electron-store doesn't have a direct keys() method,
       // so we use the store property to get all keys
       return Object.keys(this.store.store);
     } catch (error) {
@@ -148,22 +150,22 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
     }
-    
+
     try {
       const data = this.store.store || {};
       const keys = Object.keys(data);
-      
+
       // Calculate approximate size
       const jsonString = JSON.stringify(data);
       const sizeInBytes = new TextEncoder().encode(jsonString).length;
-      
+
       return {
         totalKeys: keys.length,
         sizeBytes: sizeInBytes,
         metadata: {
           filePath: this.store.path,
-          name: this.name
-        }
+          name: this.name,
+        },
       };
     } catch (error) {
       throw new Error(`Failed to get stats: ${error}`);
@@ -177,7 +179,7 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
     try {
       // Clear all watchers
       this.watchers.clear();
-      
+
       // electron-store doesn't need explicit closing,
       // but we set store to null to indicate it's closed
       this.store = null;
@@ -189,7 +191,10 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
   /**
    * Watch for changes to a specific key
    */
-  public watch(key: string, callback: (newValue: any, oldValue: any) => void): () => void {
+  public watch(
+    key: string,
+    callback: (newValue: any, oldValue: any) => void,
+  ): () => void {
     if (!this.store) {
       throw new Error('ElectronStoreBackend not initialized');
     }
@@ -197,13 +202,13 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
     try {
       // Set up the watcher using electron-store's onDidChange method
       const unsubscribe = this.store.onDidChange(key, callback);
-      
+
       // Track the unsubscribe function
       if (!this.watchers.has(key)) {
         this.watchers.set(key, []);
       }
       this.watchers.get(key)!.push(unsubscribe);
-      
+
       // Return a function that removes this specific watcher
       return () => {
         unsubscribe();
@@ -257,8 +262,8 @@ export class ElectronStoreLocalStorageProvider implements StorageProvider {
    * Create a new ElectronStoreBackend with specific configuration
    */
   public static async create(
-    name: string, 
-    config?: StorageProviderConfig
+    name: string,
+    config?: StorageProviderConfig,
   ): Promise<ElectronStoreLocalStorageProvider> {
     const storageProvider = new ElectronStoreLocalStorageProvider(name);
     await storageProvider.initialize(config);

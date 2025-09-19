@@ -1,5 +1,9 @@
-import { OrderedExcalidrawElement } from "@excalidraw/excalidraw/element/types";
-import { AppState as ExcalidrawAppState, BinaryFiles, LibraryItem } from "@excalidraw/excalidraw/types";
+import { OrderedExcalidrawElement } from '@excalidraw/excalidraw/element/types';
+import {
+  AppState as ExcalidrawAppState,
+  BinaryFiles,
+  LibraryItem,
+} from '@excalidraw/excalidraw/types';
 
 export interface ExcalidrawDiagramData {
   type: 'excalidraw';
@@ -27,13 +31,17 @@ export interface ExcalidrawDiagram {
 }
 
 export interface ExcalidrawAPI {
-  saveDiagram: (diagram: ExcalidrawDiagram) => Promise<{ success: boolean; error?: string }>;
+  saveDiagram: (
+    diagram: ExcalidrawDiagram,
+  ) => Promise<{ success: boolean; error?: string }>;
   loadDiagram: (
     diagramId: string,
   ) => Promise<{ success: boolean; data?: ExcalidrawDiagram; error?: string }>;
-  listDiagrams: (
-    projectPath?: string,
-  ) => Promise<{ success: boolean; data?: ExcalidrawDiagram[]; error?: string }>;
+  listDiagrams: (projectPath?: string) => Promise<{
+    success: boolean;
+    data?: ExcalidrawDiagram[];
+    error?: string;
+  }>;
   deleteDiagram: (
     diagramId: string,
   ) => Promise<{ success: boolean; error?: string }>;

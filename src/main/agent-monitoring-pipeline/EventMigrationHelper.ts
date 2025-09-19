@@ -23,10 +23,11 @@ export class EventMigrationHelper {
    * Note: This is lossy as the old format has normalized paths, not raw paths
    */
   static toUniversalFormat(
-    old: NormalizedAgentSessionEvent
+    old: NormalizedAgentSessionEvent,
   ): UniversalAgentSessionEvent {
     // Extract raw file paths from normalized paths (best effort)
-    const rawFilePaths = old.files?.map(f => f.originalPath || f.absolutePath) || [];
+    const rawFilePaths =
+      old.files?.map((f) => f.originalPath || f.absolutePath) || [];
 
     // Determine operation from tool name
     let operation: FileOperation | undefined;
@@ -71,22 +72,27 @@ export class EventMigrationHelper {
    * Note: This requires path normalization to have been done
    */
   static fromUniversalFormat(
-    universal: UniversalAgentSessionEvent | RepoNormalizedUniversalAgentSessionEvent
+    universal:
+      | UniversalAgentSessionEvent
+      | RepoNormalizedUniversalAgentSessionEvent,
   ): NormalizedAgentSessionEvent {
     // Check if this is already repo-normalized
-    const isRepoNormalized = 'files' in universal && !('rawFilePaths' in universal);
+    const isRepoNormalized =
+      'files' in universal && !('rawFilePaths' in universal);
 
     let files: NormalizedPathInfo[] | undefined;
 
     if (isRepoNormalized) {
       // Already has normalized files
-      const repoNormalized = universal as RepoNormalizedUniversalAgentSessionEvent;
+      const repoNormalized =
+        universal as RepoNormalizedUniversalAgentSessionEvent;
       files = repoNormalized.files;
     } else {
       // Create minimal normalized path info from raw paths
-      const rawPaths = (universal as UniversalAgentSessionEvent).rawFilePaths || [];
+      const rawPaths =
+        (universal as UniversalAgentSessionEvent).rawFilePaths || [];
       if (rawPaths.length > 0) {
-        files = rawPaths.map(path => ({
+        files = rawPaths.map((path) => ({
           originalPath: path,
           absolutePath: path, // Can't determine without normalization
           displayPath: path,
@@ -123,9 +129,11 @@ export class EventMigrationHelper {
 
     // Add normalizedWorkingDirectory if available
     if (isRepoNormalized) {
-      const repoNormalized = universal as RepoNormalizedUniversalAgentSessionEvent;
+      const repoNormalized =
+        universal as RepoNormalizedUniversalAgentSessionEvent;
       if (repoNormalized.normalizedWorkingDirectory) {
-        normalized.normalizedWorkingDirectory = repoNormalized.normalizedWorkingDirectory;
+        normalized.normalizedWorkingDirectory =
+          repoNormalized.normalizedWorkingDirectory;
       }
     }
 
@@ -136,15 +144,18 @@ export class EventMigrationHelper {
    * Convert a repo-normalized event to old format with full path information
    */
   static fromRepoNormalizedFormat(
-    repoNormalized: RepoNormalizedUniversalAgentSessionEvent
+    repoNormalized: RepoNormalizedUniversalAgentSessionEvent,
   ): NormalizedAgentSessionEvent {
     // Convert new NormalizedPathInfo to old format
-    const files = repoNormalized.files?.map(file => {
+    const files = repoNormalized.files?.map((file) => {
       // Determine context based on repository info
       let context = PathContext.USER_FILE;
       if (file.repository) {
         context = PathContext.REPO_FILE;
-      } else if (file.absolutePath?.includes('/tmp/') || file.absolutePath?.includes('\\Temp\\')) {
+      } else if (
+        file.absolutePath?.includes('/tmp/') ||
+        file.absolutePath?.includes('\\Temp\\')
+      ) {
         context = PathContext.TEMP_FILE;
       } else if (file.absolutePath?.includes('node_modules')) {
         context = PathContext.SYSTEM_FILE;
@@ -189,7 +200,11 @@ export class EventMigrationHelper {
       'sessionId' in event &&
       'provider' in event &&
       ('files' in event || !('rawFilePaths' in event)) &&
-      !('normalizedWorkingDirectory' in event && 'files' in event && !('rawFilePaths' in event))
+      !(
+        'normalizedWorkingDirectory' in event &&
+        'files' in event &&
+        !('rawFilePaths' in event)
+      )
     );
   }
 
@@ -210,7 +225,9 @@ export class EventMigrationHelper {
   /**
    * Check if an event is in the repo-normalized format
    */
-  static isRepoNormalizedFormat(event: any): event is RepoNormalizedUniversalAgentSessionEvent {
+  static isRepoNormalizedFormat(
+    event: any,
+  ): event is RepoNormalizedUniversalAgentSessionEvent {
     return (
       event &&
       typeof event === 'object' &&
@@ -219,7 +236,8 @@ export class EventMigrationHelper {
       'provider' in event &&
       'files' in event &&
       !('rawFilePaths' in event) &&
-      ('normalizedWorkingDirectory' in event || event.files?.some((f: any) => f.repository))
+      ('normalizedWorkingDirectory' in event ||
+        event.files?.some((f: any) => f.repository))
     );
   }
 
@@ -242,9 +260,13 @@ export class EventMigrationHelper {
    * Batch convert events to old format
    */
   static batchToOldFormat(
-    events: Array<NormalizedAgentSessionEvent | UniversalAgentSessionEvent | RepoNormalizedUniversalAgentSessionEvent>
+    events: Array<
+      | NormalizedAgentSessionEvent
+      | UniversalAgentSessionEvent
+      | RepoNormalizedUniversalAgentSessionEvent
+    >,
   ): NormalizedAgentSessionEvent[] {
-    return events.map(event => this.ensureOldFormat(event));
+    return events.map((event) => this.ensureOldFormat(event));
   }
 
   /**
@@ -256,7 +278,7 @@ export class EventMigrationHelper {
        * Wrap a function that expects old format
        */
       wrapOldFormatConsumer<T>(
-        fn: (event: NormalizedAgentSessionEvent) => T
+        fn: (event: NormalizedAgentSessionEvent) => T,
       ): (event: any) => T {
         return (event: any) => {
           const oldFormat = EventMigrationHelper.ensureOldFormat(event);
@@ -268,7 +290,7 @@ export class EventMigrationHelper {
        * Wrap a function that produces old format
        */
       wrapOldFormatProducer<T extends any[]>(
-        fn: (...args: T) => NormalizedAgentSessionEvent
+        fn: (...args: T) => NormalizedAgentSessionEvent,
       ): (...args: T) => UniversalAgentSessionEvent {
         return (...args: T) => {
           const oldFormat = fn(...args);
@@ -279,20 +301,22 @@ export class EventMigrationHelper {
       /**
        * Create a bidirectional proxy for storage
        */
-      createStorageProxy(
-        store: {
-          get: () => Promise<NormalizedAgentSessionEvent[]>;
-          set: (events: NormalizedAgentSessionEvent[]) => Promise<void>;
-        }
-      ) {
+      createStorageProxy(store: {
+        get: () => Promise<NormalizedAgentSessionEvent[]>;
+        set: (events: NormalizedAgentSessionEvent[]) => Promise<void>;
+      }) {
         return {
           async get(): Promise<UniversalAgentSessionEvent[]> {
             const oldEvents = await store.get();
-            return oldEvents.map(e => EventMigrationHelper.toUniversalFormat(e));
+            return oldEvents.map((e) =>
+              EventMigrationHelper.toUniversalFormat(e),
+            );
           },
 
           async set(events: UniversalAgentSessionEvent[]): Promise<void> {
-            const oldEvents = events.map(e => EventMigrationHelper.fromUniversalFormat(e));
+            const oldEvents = events.map((e) =>
+              EventMigrationHelper.fromUniversalFormat(e),
+            );
             return store.set(oldEvents);
           },
         };
@@ -316,13 +340,16 @@ export class EventMigrationHelper {
     const firstEvent = sessionData.events[0];
 
     // If already in new format, return as-is
-    if (this.isUniversalFormat(firstEvent) || this.isRepoNormalizedFormat(firstEvent)) {
+    if (
+      this.isUniversalFormat(firstEvent) ||
+      this.isRepoNormalizedFormat(firstEvent)
+    ) {
       return sessionData;
     }
 
     // Convert all events to new format
-    const migratedEvents = sessionData.events.map((e: NormalizedAgentSessionEvent) =>
-      this.toUniversalFormat(e)
+    const migratedEvents = sessionData.events.map(
+      (e: NormalizedAgentSessionEvent) => this.toUniversalFormat(e),
     );
 
     return {

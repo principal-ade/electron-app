@@ -1,1 +1,0 @@
-{"version":3,"file":"useAIConfiguration.d.ts","sourceRoot":"","sources":["../../../../../src/renderer/hooks/useAIConfiguration.ts"],"names":[],"mappings":"AAEA,MAAM,WAAW,qBAAqB;IACpC,SAAS,EAAE,OAAO,CAAC;IACnB,QAAQ,CAAC,EAAE,MAAM,CAAC;IAClB,KAAK,CAAC,EAAE,MAAM,CAAC;IACf,UAAU,CAAC,EAAE,MAAM,CAAC;IACpB,OAAO,EAAE,OAAO,CAAC;CAClB;AAED,wBAAgB,kBAAkB;;;;EA6CjC"}

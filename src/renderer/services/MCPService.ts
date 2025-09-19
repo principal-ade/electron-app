@@ -212,8 +212,7 @@ export class MCPService {
       ]);
 
       const claudeConfigPath = `${homeDir}/.claude.json`;
-      const result =
-        await FileSystemService.readFile(claudeConfigPath);
+      const result = await FileSystemService.readFile(claudeConfigPath);
 
       let config: any = {};
       if (result?.content) {
@@ -280,8 +279,7 @@ export class MCPService {
       ]);
 
       const claudeConfigPath = `${homeDir}/.claude.json`;
-      const result =
-        await FileSystemService.readFile(claudeConfigPath);
+      const result = await FileSystemService.readFile(claudeConfigPath);
 
       if (!result?.content) {
         return { success: false, error: 'Configuration file not found' };
@@ -338,8 +336,7 @@ export class MCPService {
       ]);
 
       const claudeConfigPath = `${homeDir}/.claude.json`;
-      const result =
-        await FileSystemService.readFile(claudeConfigPath);
+      const result = await FileSystemService.readFile(claudeConfigPath);
 
       let config: any = {};
       if (result?.content) {
@@ -360,8 +357,14 @@ export class MCPService {
         }
 
         // Only add if not already present
-        if (!config.projects[projectPath].mcpServers[APP_BRANDING.MCP_SERVER_CONFIG_KEY]) {
-          config.projects[projectPath].mcpServers[APP_BRANDING.MCP_SERVER_CONFIG_KEY] = {
+        if (
+          !config.projects[projectPath].mcpServers[
+            APP_BRANDING.MCP_SERVER_CONFIG_KEY
+          ]
+        ) {
+          config.projects[projectPath].mcpServers[
+            APP_BRANDING.MCP_SERVER_CONFIG_KEY
+          ] = {
             type: 'stdio',
             command: 'node',
             args: [mcpServerPath],
@@ -403,8 +406,7 @@ export class MCPService {
     try {
       const homeDir = await FileSystemService.getHomePath();
       const claudeConfigPath = `${homeDir}/.claude.json`;
-      const result =
-        await FileSystemService.readFile(claudeConfigPath);
+      const result = await FileSystemService.readFile(claudeConfigPath);
 
       if (!result?.content) {
         return { success: true, projects: [] };
@@ -418,7 +420,8 @@ export class MCPService {
           config.projects,
         )) {
           const mcpServers = (projectConfig as any)?.mcpServers || {};
-          const hasPrincipleMD = !!mcpServers[APP_BRANDING.MCP_SERVER_CONFIG_KEY];
+          const hasPrincipleMD =
+            !!mcpServers[APP_BRANDING.MCP_SERVER_CONFIG_KEY];
 
           projects.push({
             path: projectPath,
@@ -452,8 +455,7 @@ export class MCPService {
       ]);
 
       const claudeConfigPath = `${homeDir}/.claude.json`;
-      const result =
-        await FileSystemService.readFile(claudeConfigPath);
+      const result = await FileSystemService.readFile(claudeConfigPath);
 
       let config: any = {};
       if (result?.content) {
@@ -487,7 +489,9 @@ export class MCPService {
 
       if (enable) {
         // Add MCP server
-        config.projects[projectPath].mcpServers[APP_BRANDING.MCP_SERVER_CONFIG_KEY] = {
+        config.projects[projectPath].mcpServers[
+          APP_BRANDING.MCP_SERVER_CONFIG_KEY
+        ] = {
           type: 'stdio',
           command: 'node',
           args: [mcpServerPath],
@@ -495,7 +499,9 @@ export class MCPService {
         };
       } else {
         // Remove MCP server
-        delete config.projects[projectPath].mcpServers[APP_BRANDING.MCP_SERVER_CONFIG_KEY];
+        delete config.projects[projectPath].mcpServers[
+          APP_BRANDING.MCP_SERVER_CONFIG_KEY
+        ];
       }
 
       // Write updated config back
@@ -525,14 +531,18 @@ export class MCPService {
     mcpServers?: Record<string, any>;
     error?: string;
   }> {
-    console.warn('MCPService.getGeminiMCPStatus is deprecated. Use main process handlers instead.');
+    console.warn(
+      'MCPService.getGeminiMCPStatus is deprecated. Use main process handlers instead.',
+    );
     return { success: false, error: 'Deprecated method' };
   }
 
   async toggleGeminiMCP(
     enable: boolean,
   ): Promise<{ success: boolean; error?: string }> {
-    console.warn('MCPService.toggleGeminiMCP is deprecated. Use main process handlers instead.');
+    console.warn(
+      'MCPService.toggleGeminiMCP is deprecated. Use main process handlers instead.',
+    );
     return { success: false, error: 'Deprecated method' };
   }
 }

@@ -22,7 +22,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   mode,
   onModeChange,
   hasLocalClones = false,
-  disabled = false
+  disabled = false,
 }) => {
   const { theme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
@@ -31,31 +31,31 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
     {
       value: 'exploration',
       label: 'Explore',
-      color: '#3b82f6'
+      color: '#3b82f6',
     },
     {
       value: 'collaboration',
       label: 'Develop',
       color: '#10b981',
-      requiresClone: true
+      requiresClone: true,
     },
     {
       value: 'planning',
       label: 'Planning',
       color: '#f59e0b',
-      requiresClone: true
+      requiresClone: true,
     },
     {
       value: 'deployment',
       label: 'Maintain',
-      color: '#8b5cf6'
-    }
+      color: '#8b5cf6',
+    },
   ];
 
-  const currentMode = modes.find(m => m.value === mode) || modes[0];
-  
+  const currentMode = modes.find((m) => m.value === mode) || modes[0];
+
   const handleModeSelect = (newMode: RepositoryMode) => {
-    const modeOption = modes.find(m => m.value === newMode);
+    const modeOption = modes.find((m) => m.value === newMode);
     if (modeOption?.requiresClone && !hasLocalClones) {
       return;
     }
@@ -67,7 +67,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   const customAngles = [-90, -20, 20, 90]; // Explore, Develop, Planning, Maintain - outer ones horizontal, middle ones closer
 
   return (
-    <div 
+    <div
       style={{
         position: 'relative',
         display: 'inline-flex',
@@ -103,7 +103,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
 
       {/* Invisible hover bridge to maintain open state */}
       {isOpen && (
-        <div 
+        <div
           style={{
             position: 'absolute',
             top: '100%',
@@ -116,7 +116,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
           }}
         />
       )}
-      
+
       {/* Half-wheel selector */}
       <div
         style={{
@@ -137,10 +137,10 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
           const radius = 120; // Increased radius for more spacing
           const x = Math.sin((angle * Math.PI) / 180) * radius;
           const y = Math.cos((angle * Math.PI) / 180) * radius * 0.25;
-          
+
           const isDisabled = modeOption.requiresClone && !hasLocalClones;
           const isCurrent = modeOption.value === mode;
-          
+
           return (
             <button
               key={modeOption.value}
@@ -159,26 +159,33 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
                 justifyContent: 'center',
                 padding: '3px 12px',
                 minWidth: '70px',
-                backgroundColor: isCurrent 
+                backgroundColor: isCurrent
                   ? theme.colors.backgroundTertiary + '60' // Ghosted background for current
-                  : isDisabled 
-                  ? theme.colors.backgroundTertiary 
-                  : modeOption.color + '15',
-                border: `2px solid ${isCurrent
-                  ? theme.colors.border + '40' // Ghosted border for current
-                  : isDisabled 
-                  ? theme.colors.border 
-                  : modeOption.color}`,
+                  : isDisabled
+                    ? theme.colors.backgroundTertiary
+                    : modeOption.color + '15',
+                border: `2px solid ${
+                  isCurrent
+                    ? theme.colors.border + '40' // Ghosted border for current
+                    : isDisabled
+                      ? theme.colors.border
+                      : modeOption.color
+                }`,
                 borderRadius: '6px',
                 color: isCurrent
                   ? theme.colors.textTertiary + '80' // Ghosted text for current
-                  : isDisabled 
-                  ? theme.colors.textTertiary 
-                  : modeOption.color,
+                  : isDisabled
+                    ? theme.colors.textTertiary
+                    : modeOption.color,
                 fontSize: '12px',
                 fontWeight: 600,
-                cursor: isCurrent ? 'default' : isDisabled ? 'not-allowed' : 'pointer',
-                transition: 'opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease',
+                cursor: isCurrent
+                  ? 'default'
+                  : isDisabled
+                    ? 'not-allowed'
+                    : 'pointer',
+                transition:
+                  'opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease',
                 opacity: isOpen ? (isCurrent ? 0.4 : isDisabled ? 0.5 : 1) : 0,
                 transitionDelay: isOpen ? `${index * 50}ms` : '0ms',
                 whiteSpace: 'nowrap',
@@ -186,16 +193,22 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
               onMouseEnter={(e) => {
                 if (!isDisabled && !isCurrent) {
                   e.currentTarget.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(1.1)`;
-                  e.currentTarget.style.backgroundColor = modeOption.color + '25';
+                  e.currentTarget.style.backgroundColor =
+                    modeOption.color + '25';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isDisabled && !isCurrent) {
                   e.currentTarget.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(1)`;
-                  e.currentTarget.style.backgroundColor = modeOption.color + '15';
+                  e.currentTarget.style.backgroundColor =
+                    modeOption.color + '15';
                 }
               }}
-              title={isCurrent ? `${modeOption.label} (current)` : `${modeOption.label}${isDisabled ? ' (requires local clone)' : ''}`}
+              title={
+                isCurrent
+                  ? `${modeOption.label} (current)`
+                  : `${modeOption.label}${isDisabled ? ' (requires local clone)' : ''}`
+              }
             >
               {modeOption.label}
             </button>
@@ -222,7 +235,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
             const x = Math.sin((angle * Math.PI) / 180) * radius + 125; // Adjusted center point
             const y = Math.cos((angle * Math.PI) / 180) * radius * 0.25 + 6;
             const isCurrent = modeOption.value === mode;
-            
+
             return (
               <line
                 key={index}
@@ -230,9 +243,11 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
                 y1="6"
                 x2={x}
                 y2={y}
-                stroke={isCurrent ? theme.colors.border + '40' : theme.colors.border}
+                stroke={
+                  isCurrent ? theme.colors.border + '40' : theme.colors.border
+                }
                 strokeWidth="1"
-                strokeDasharray={isCurrent ? "1,3" : "2,2"}
+                strokeDasharray={isCurrent ? '1,3' : '2,2'}
                 opacity={isCurrent ? 0.3 : 1}
               />
             );

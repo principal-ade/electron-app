@@ -45,7 +45,7 @@ class ThemeServiceClass extends EventEmitter {
    */
   async applyTheme(themeName: string, persist: boolean = true): Promise<void> {
     console.log('[ThemeService] Applying theme:', themeName);
-    
+
     const theme = getThemeByName(themeName);
     if (!theme) {
       console.error('[ThemeService] Theme not found:', themeName);
@@ -53,7 +53,7 @@ class ThemeServiceClass extends EventEmitter {
     }
 
     this.currentThemeName = themeName;
-    
+
     // Generate themed icon for common sizes
     // This happens asynchronously to not block theme switching
     IconThemeService.generateThemedIcon(themeName, 32).catch(console.error);
@@ -65,14 +65,14 @@ class ThemeServiceClass extends EventEmitter {
     this.emit('themeChange', {
       themeName,
       theme,
-      colorMode: this.currentColorMode
+      colorMode: this.currentColorMode,
     } as ThemeChangeEvent);
 
     // Persist to preferences if requested
     if (persist) {
       try {
-        await UserPreferencesService.updatePreferences({ 
-          selectedTheme: themeName 
+        await UserPreferencesService.updatePreferences({
+          selectedTheme: themeName,
         });
         console.log('[ThemeService] Theme persisted to preferences');
       } catch (error) {
@@ -84,25 +84,28 @@ class ThemeServiceClass extends EventEmitter {
   /**
    * Change color mode (light/dark)
    */
-  async setColorMode(mode: 'light' | 'dark', persist: boolean = true): Promise<void> {
+  async setColorMode(
+    mode: 'light' | 'dark',
+    persist: boolean = true,
+  ): Promise<void> {
     console.log('[ThemeService] Setting color mode:', mode);
-    
+
     this.currentColorMode = mode;
-    
+
     const theme = getThemeByName(this.currentThemeName);
     if (theme) {
       this.emit('themeChange', {
         themeName: this.currentThemeName,
         theme,
-        colorMode: mode
+        colorMode: mode,
       } as ThemeChangeEvent);
     }
 
     // Persist to preferences if requested
     if (persist) {
       try {
-        await UserPreferencesService.updatePreferences({ 
-          colorMode: mode 
+        await UserPreferencesService.updatePreferences({
+          colorMode: mode,
         });
         console.log('[ThemeService] Color mode persisted to preferences');
       } catch (error) {
@@ -117,22 +120,24 @@ class ThemeServiceClass extends EventEmitter {
   async loadPreferences(): Promise<void> {
     try {
       const preferences = await UserPreferencesService.getPreferences();
-      
+
       if (preferences.selectedTheme) {
         this.currentThemeName = preferences.selectedTheme;
       }
-      
+
       if (preferences.colorMode) {
         this.currentColorMode = preferences.colorMode;
       } else {
         // Check system preference
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const prefersDark = window.matchMedia(
+          '(prefers-color-scheme: dark)',
+        ).matches;
         this.currentColorMode = prefersDark ? 'dark' : 'light';
       }
-      
+
       console.log('[ThemeService] Loaded preferences:', {
         theme: this.currentThemeName,
-        colorMode: this.currentColorMode
+        colorMode: this.currentColorMode,
       });
     } catch (error) {
       console.error('[ThemeService] Failed to load preferences:', error);

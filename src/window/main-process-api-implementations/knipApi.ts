@@ -1,5 +1,8 @@
 import { ipcRenderer } from 'electron';
-import { KnipAPI, KnipAnalysisResult } from '../../shared/main-process-api-interfaces/KnipAPI';
+import {
+  KnipAPI,
+  KnipAnalysisResult,
+} from '../../shared/main-process-api-interfaces/KnipAPI';
 
 export const knipAPI: KnipAPI = {
   checkAvailability: (): Promise<boolean> => {

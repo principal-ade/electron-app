@@ -1,14 +1,18 @@
 /**
  * FeedbackService - Service layer for feedback operations
- * 
+ *
  * This service encapsulates all window.mainProcess.feedback calls to maintain
  * clean architecture and separation of concerns.
- * 
+ *
  * ALL calls to window.mainProcess.feedback MUST be made through this service.
  */
 
-import type { ContextMenuParams, FeedbackModalData, FeedbackSubmissionData, FeedbackSubmissionResult } from '../../shared/main-process-api-interfaces/FeedbackAPI';
-
+import type {
+  ContextMenuParams,
+  FeedbackModalData,
+  FeedbackSubmissionData,
+  FeedbackSubmissionResult,
+} from '../../shared/main-process-api-interfaces/FeedbackAPI';
 
 /**
  * Service for managing feedback operations
@@ -36,7 +40,10 @@ export class FeedbackService {
     try {
       return window.mainProcess.feedback.onShowModal(callback);
     } catch (error) {
-      console.error('[FeedbackService] Failed to subscribe to modal events:', error);
+      console.error(
+        '[FeedbackService] Failed to subscribe to modal events:',
+        error,
+      );
       // Return a no-op cleanup function
       return () => {};
     }
@@ -47,7 +54,9 @@ export class FeedbackService {
    * @param feedbackData - The feedback data to submit
    * @returns Promise resolving to submission result
    */
-  static async submitFeedback(feedbackData: FeedbackSubmissionData): Promise<FeedbackSubmissionResult> {
+  static async submitFeedback(
+    feedbackData: FeedbackSubmissionData,
+  ): Promise<FeedbackSubmissionResult> {
     try {
       return await window.mainProcess.feedback.submitFeedback(feedbackData);
     } catch (error) {

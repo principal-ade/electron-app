@@ -9,7 +9,7 @@ interface HeaderSearchBarProps {
 
 export const HeaderSearchBar: React.FC<HeaderSearchBarProps> = ({
   onSearch,
-  placeholder = "Search files..."
+  placeholder = 'Search files...',
 }) => {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -18,19 +18,22 @@ export const HeaderSearchBar: React.FC<HeaderSearchBarProps> = ({
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Debounced search
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchQuery(value);
-    
-    // Clear previous timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-    
-    // Debounce the search with shorter delay for snappier feel
-    searchTimeoutRef.current = setTimeout(() => {
-      onSearch(value);
-    }, 150);
-  }, [onSearch]);
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value);
+
+      // Clear previous timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+
+      // Debounce the search with shorter delay for snappier feel
+      searchTimeoutRef.current = setTimeout(() => {
+        onSearch(value);
+      }, 150);
+    },
+    [onSearch],
+  );
 
   const handleClear = useCallback(() => {
     setSearchQuery('');
@@ -80,22 +83,24 @@ export const HeaderSearchBar: React.FC<HeaderSearchBarProps> = ({
           alignItems: 'center',
           gap: '8px',
           padding: '8px 12px',
-          backgroundColor: isFocused 
-            ? theme.colors.backgroundTertiary 
+          backgroundColor: isFocused
+            ? theme.colors.backgroundTertiary
             : theme.colors.backgroundSecondary,
           border: `1px solid ${isFocused ? theme.colors.primary : theme.colors.border}`,
           borderRadius: '8px',
           transition: 'all 0.2s ease',
         }}
       >
-        <Search 
-          size={16} 
-          style={{ 
-            color: isFocused ? theme.colors.primary : theme.colors.textSecondary,
+        <Search
+          size={16}
+          style={{
+            color: isFocused
+              ? theme.colors.primary
+              : theme.colors.textSecondary,
             flexShrink: 0,
-          }} 
+          }}
         />
-        
+
         <input
           ref={inputRef}
           type="text"
@@ -114,7 +119,7 @@ export const HeaderSearchBar: React.FC<HeaderSearchBarProps> = ({
             width: '100%',
           }}
         />
-        
+
         {searchQuery && (
           <button
             onClick={handleClear}
@@ -131,7 +136,8 @@ export const HeaderSearchBar: React.FC<HeaderSearchBarProps> = ({
               transition: 'all 0.2s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
               e.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(e) => {
@@ -144,7 +150,7 @@ export const HeaderSearchBar: React.FC<HeaderSearchBarProps> = ({
           </button>
         )}
       </div>
-      
+
       {/* Keyboard shortcut hint */}
       {!isFocused && !searchQuery && (
         <div

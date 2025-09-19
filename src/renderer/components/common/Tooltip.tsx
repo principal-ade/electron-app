@@ -8,11 +8,11 @@ interface TooltipProps {
   delay?: number;
 }
 
-export const Tooltip: React.FC<TooltipProps> = ({ 
-  content, 
-  children, 
+export const Tooltip: React.FC<TooltipProps> = ({
+  content,
+  children,
   placement = 'top',
-  delay = 500 
+  delay = 500,
 }) => {
   const { theme } = useTheme();
   const [isVisible, setIsVisible] = useState(false);
@@ -66,8 +66,14 @@ export const Tooltip: React.FC<TooltipProps> = ({
 
     // Keep tooltip within viewport
     const padding = 10;
-    left = Math.max(padding, Math.min(left, window.innerWidth - tooltipRect.width - padding));
-    top = Math.max(padding, Math.min(top, window.innerHeight - tooltipRect.height - padding));
+    left = Math.max(
+      padding,
+      Math.min(left, window.innerWidth - tooltipRect.width - padding),
+    );
+    top = Math.max(
+      padding,
+      Math.min(top, window.innerHeight - tooltipRect.height - padding),
+    );
 
     setPosition({ top, left });
   };

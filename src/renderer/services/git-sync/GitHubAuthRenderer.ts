@@ -14,7 +14,7 @@ export class GitHubAuthRenderer {
     if (!ipcRenderer) {
       throw new Error('IPC not available');
     }
-    
+
     // Main process handles everything
     return await ipcRenderer.invoke('github:authenticate');
   }
@@ -26,7 +26,7 @@ export class GitHubAuthRenderer {
     if (!ipcRenderer) {
       return { authenticated: false };
     }
-    
+
     return await ipcRenderer.invoke('github:check-auth');
   }
 
@@ -43,7 +43,7 @@ export class GitHubAuthRenderer {
     if (!ipcRenderer) {
       throw new Error('IPC not available');
     }
-    
+
     // Main process has the GitHub token and creates JWT
     return await ipcRenderer.invoke('github:create-jwt', payload);
   }
@@ -55,7 +55,7 @@ export class GitHubAuthRenderer {
     if (!ipcRenderer) {
       return;
     }
-    
+
     await ipcRenderer.invoke('github:logout');
   }
 }

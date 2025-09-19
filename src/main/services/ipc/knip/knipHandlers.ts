@@ -7,7 +7,7 @@ export function registerKnipHandlers() {
       const { exec } = require('child_process');
       const { promisify } = require('util');
       const execAsync = promisify(exec);
-      
+
       // Try to check if knip is available globally or locally
       try {
         await execAsync('npx knip --version', { timeout: 5000 });
@@ -33,7 +33,7 @@ export function registerKnipHandlers() {
       console.error('[Knip] Error running analysis:', error);
       return {
         error: `Failed to run Knip analysis: ${error}`,
-        hasIssues: false
+        hasIssues: false,
       };
     }
   });

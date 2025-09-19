@@ -1,7 +1,16 @@
 import React from 'react';
 import { useTheme } from 'themed-markdown';
-import { Github, Gitlab, GitBranch, GitCommitHorizontal, FolderOpen } from 'lucide-react';
-import type { Repository, LocalClone } from '../../../shared/types/repository.types';
+import {
+  Github,
+  Gitlab,
+  GitBranch,
+  GitCommitHorizontal,
+  FolderOpen,
+} from 'lucide-react';
+import type {
+  Repository,
+  LocalClone,
+} from '../../../shared/types/repository.types';
 
 interface RepositoryAvatarProps {
   repository?: Repository;
@@ -26,10 +35,10 @@ export const RepositoryAvatar: React.FC<RepositoryAvatarProps> = ({
   fallbackIcon,
 }) => {
   const { theme } = useTheme();
-  
+
   // Use rounded squares for all types
   const borderRadius = `${Math.min(12, size / 4)}px`;
-  
+
   // Determine what to display
   const getContent = () => {
     // Custom avatar URL takes priority
@@ -46,7 +55,7 @@ export const RepositoryAvatar: React.FC<RepositoryAvatarProps> = ({
         />
       );
     }
-    
+
     // For owner type, use repository's GitHub avatar
     if (type === 'owner' && repository?.avatarUrl) {
       return (
@@ -61,7 +70,7 @@ export const RepositoryAvatar: React.FC<RepositoryAvatarProps> = ({
         />
       );
     }
-    
+
     // For repository type without custom, show GitHub avatar or fallback
     if (type === 'repository' && repository?.avatarUrl && !customAvatarUrl) {
       return (
@@ -76,17 +85,19 @@ export const RepositoryAvatar: React.FC<RepositoryAvatarProps> = ({
         />
       );
     }
-    
+
     // Fallback icons
     if (fallbackIcon) {
       return fallbackIcon;
     }
-    
+
     // Default icons based on type and VCS
     if (type === 'clone') {
-      return <FolderOpen size={size * 0.4} color={theme.colors.textSecondary} />;
+      return (
+        <FolderOpen size={size * 0.4} color={theme.colors.textSecondary} />
+      );
     }
-    
+
     if (repository?.vcsType === 'gitlab') {
       return <Gitlab size={size * 0.5} />;
     } else if (repository?.vcsType === 'bitbucket') {
@@ -94,10 +105,10 @@ export const RepositoryAvatar: React.FC<RepositoryAvatarProps> = ({
     } else if (repository?.vcsType === 'generic') {
       return <GitBranch size={size * 0.5} />;
     }
-    
+
     return <Github size={size * 0.5} />;
   };
-  
+
   return (
     <div
       style={{

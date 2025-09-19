@@ -1,7 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
-import { AppState as ExcalidrawAppState } from "@excalidraw/excalidraw/types";
+import { AppState as ExcalidrawAppState } from '@excalidraw/excalidraw/types';
 
-import { ExcalidrawDiagram, ExcalidrawDiagramData } from '../../shared/main-process-api-interfaces/ExcalidrawAPI';
+import {
+  ExcalidrawDiagram,
+  ExcalidrawDiagramData,
+} from '../../shared/main-process-api-interfaces/ExcalidrawAPI';
 
 export interface DiagramListItem {
   id: string;
@@ -47,7 +50,9 @@ export class ExcalidrawStorageService {
     return id;
   }
 
-  static async loadDiagram(diagramId: string): Promise<ExcalidrawDiagram | null> {
+  static async loadDiagram(
+    diagramId: string,
+  ): Promise<ExcalidrawDiagram | null> {
     const result = await window.mainProcess.excalidraw.loadDiagram(diagramId);
     if (!result.success) {
       throw new Error(result.error || 'Failed to load diagram');
@@ -57,7 +62,8 @@ export class ExcalidrawStorageService {
   }
 
   static async listDiagrams(projectPath?: string): Promise<DiagramListItem[]> {
-    const result = await window.mainProcess.excalidraw.listDiagrams(projectPath);
+    const result =
+      await window.mainProcess.excalidraw.listDiagrams(projectPath);
     if (!result.success) {
       throw new Error(result.error || 'Failed to list diagrams');
     }
@@ -76,7 +82,10 @@ export class ExcalidrawStorageService {
     diagramId: string,
     format: 'png' | 'svg' | 'json',
   ): Promise<Blob | null> {
-    const result = await window.mainProcess.excalidraw.exportDiagram(diagramId, format);
+    const result = await window.mainProcess.excalidraw.exportDiagram(
+      diagramId,
+      format,
+    );
     if (!result.success) {
       throw new Error(result.error || 'Failed to export diagram');
     }
@@ -101,8 +110,7 @@ export class ExcalidrawStorageService {
       elements: [],
       appState: {} as ExcalidrawAppState,
       files: {},
-      libraryItems: []
+      libraryItems: [],
     };
   }
 }
-

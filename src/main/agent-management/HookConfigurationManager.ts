@@ -1,16 +1,13 @@
 import {
   ClaudeConfigManager,
+  ClineConfigManager,
+  OpenCodeConfigManager,
   type HookOptions,
-  type FallbackEvent,
-  type FallbackStats,
-  type FallbackOperationResult
+  type OpenCodePluginOptions,
 } from '@a24z/agent-manager';
 import {
   type SupportedAgent,
-  type AgentSettings,
-  countAgentHooks,
-  hasAgentHook,
-  getAgentInfo
+  getAgentInfo,
 } from '@principal-ai/agent-monitoring';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -45,10 +42,15 @@ export interface HookConfigStatus {
 export class HookConfigurationManager {
   private static instance: HookConfigurationManager;
   private claudeManager: ClaudeConfigManager;
+  private clineManager: ClineConfigManager;
+  private openCodeManager: OpenCodeConfigManager;
 
   private constructor() {
     this.claudeManager = new ClaudeConfigManager();
-    // Set the default fallback directory for Claude
+    this.clineManager = new ClineConfigManager();
+    this.openCodeManager = new OpenCodeConfigManager();
+
+    // Set the default fallback directory for Claude (Cline doesn't have this method)
     this.claudeManager.setFallbackDirectory('~/.principle/hooks');
   }
 
@@ -70,7 +72,7 @@ export class HookConfigurationManager {
         return {
           success: false,
           hookCount: 0,
-          error: supportCheck.message
+          error: supportCheck.message,
         };
       }
 
@@ -78,33 +80,72 @@ export class HookConfigurationManager {
       if (agentType === 'claude') {
         const options: HookOptions = {
           port: [3043, 3044], // Default ports, should be configurable
-          dir: '~/.principle/hooks'
+          dir: '~/.principle/hooks',
         };
 
         await this.claudeManager.enableHooks(options);
         const status = await this.claudeManager.getHookStatus();
-        const hookCount = Array.from(status.values()).filter(enabled => enabled).length;
+        const hookCount = Array.from(status.values()).filter(
+          (enabled) => enabled,
+        ).length;
 
         return {
           success: true,
           hookCount,
-          configPath: '~/.claude/settings.json'
+          configPath: '~/.claude/settings.json',
         };
       }
 
-      // For other agents, fall back to existing implementation
-      // TODO: Implement OpenCode support
+      // Handle Cline using the ClineConfigManager
+      if (agentType === 'cline') {
+        const options: HookOptions = {
+          port: [3043, 3044], // Default ports, should be configurable
+          dir: '~/.principle/hooks',
+        };
+
+        await this.clineManager.enableHooks(options);
+        const status = await this.clineManager.getHookStatus();
+        const hookCount = status.hookCount;
+
+        return {
+          success: true,
+          hookCount,
+          configPath: '~/.cline/settings.json',
+        };
+      }
+
+      // Handle OpenCode using the OpenCodeConfigManager (plugin system)
+      if (agentType === 'opencode') {
+        const options: OpenCodePluginOptions = {
+          port: 3043, // Default port, should be configurable
+          local: false, // Use global config
+        };
+
+        await this.openCodeManager.enablePlugin(options);
+        const status = await this.openCodeManager.getPluginStatus();
+        const isEnabled = status.globalInstalled || status.localInstalled;
+
+        return {
+          success: true,
+          hookCount: isEnabled ? 1 : 0, // OpenCode uses a single plugin
+          configPath: status.paths.global || '~/.config/openCode/openCode.json',
+        };
+      }
+
       return {
         success: false,
         hookCount: 0,
-        error: `Agent ${agentType} not yet supported in V2`
+        error: `Agent ${agentType} not supported`,
       };
     } catch (error) {
-      console.error(`[HookConfigManager] Failed to add hooks to ${agentType}:`, error);
+      console.error(
+        `[HookConfigManager] Failed to add hooks to ${agentType}:`,
+        error,
+      );
       return {
         success: false,
         hookCount: 0,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -120,7 +161,7 @@ export class HookConfigurationManager {
         return {
           success: false,
           hookCount: 0,
-          error: supportCheck.message
+          error: supportCheck.message,
         };
       }
 
@@ -131,22 +172,46 @@ export class HookConfigurationManager {
         return {
           success: true,
           hookCount: 0,
-          configPath: '~/.claude/settings.json'
+          configPath: '~/.claude/settings.json',
         };
       }
 
-      // For other agents, fall back to existing implementation
+      // Handle Cline using the ClineConfigManager
+      if (agentType === 'cline') {
+        await this.clineManager.disableHooks();
+
+        return {
+          success: true,
+          hookCount: 0,
+          configPath: '~/.cline/settings.json',
+        };
+      }
+
+      // Handle OpenCode using the OpenCodeConfigManager
+      if (agentType === 'opencode') {
+        await this.openCodeManager.disablePlugin();
+
+        return {
+          success: true,
+          hookCount: 0,
+          configPath: '~/.config/openCode/openCode.json',
+        };
+      }
+
       return {
         success: false,
         hookCount: 0,
-        error: `Agent ${agentType} not yet supported in V2`
+        error: `Agent ${agentType} not supported`,
       };
     } catch (error) {
-      console.error(`[HookConfigManager] Failed to remove hooks from ${agentType}:`, error);
+      console.error(
+        `[HookConfigManager] Failed to remove hooks from ${agentType}:`,
+        error,
+      );
       return {
         success: false,
         hookCount: 0,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -163,7 +228,7 @@ export class HookConfigurationManager {
           hasHooks: false,
           hookCount: 0,
           isSupported: false,
-          supportMessage: supportCheck.message
+          supportMessage: supportCheck.message,
         };
       }
 
@@ -175,34 +240,63 @@ export class HookConfigurationManager {
             hasHooks: false,
             hookCount: 0,
             isSupported: true,
-            supportMessage: 'Claude not installed'
+            supportMessage: 'Claude not installed',
           };
         }
 
         const status = await this.claudeManager.getHookStatus();
-        const enabledHooks = Array.from(status.values()).filter(enabled => enabled);
+        const enabledHooks = Array.from(status.values()).filter(
+          (enabled) => enabled,
+        );
 
         return {
           hasHooks: enabledHooks.length > 0,
           hookCount: enabledHooks.length,
-          isSupported: true
+          isSupported: true,
         };
       }
 
-      // For other agents, return not supported
+      // Handle Cline using the ClineConfigManager
+      if (agentType === 'cline') {
+        // Cline is a VS Code extension, we can still configure hooks
+        // The hooks will be picked up when the extension is installed
+        const status = await this.clineManager.getHookStatus();
+
+        return {
+          hasHooks: status.configured,
+          hookCount: status.hookCount,
+          isSupported: true,
+        };
+      }
+
+      // Handle OpenCode using the OpenCodeConfigManager
+      if (agentType === 'opencode') {
+        const status = await this.openCodeManager.getPluginStatus();
+        const isEnabled = status.globalInstalled || status.localInstalled;
+
+        return {
+          hasHooks: isEnabled,
+          hookCount: isEnabled ? 1 : 0,
+          isSupported: true,
+        };
+      }
+
       return {
         hasHooks: false,
         hookCount: 0,
         isSupported: false,
-        supportMessage: `Agent ${agentType} not yet supported in V2`
+        supportMessage: `Agent ${agentType} not supported`,
       };
     } catch (error) {
-      console.error(`[HookConfigManager] Failed to get hook status for ${agentType}:`, error);
+      console.error(
+        `[HookConfigManager] Failed to get hook status for ${agentType}:`,
+        error,
+      );
       return {
         hasHooks: false,
         hookCount: 0,
         isSupported: false,
-        supportMessage: error instanceof Error ? error.message : String(error)
+        supportMessage: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -214,11 +308,41 @@ export class HookConfigurationManager {
     try {
       if (agentType === 'claude') {
         const status = await this.claudeManager.getHookStatus();
-        return status.get(hookType as any) || false;
+        // Check if the specific hook type is enabled
+        const hookEvents = [
+          'PreToolUse',
+          'PostToolUse',
+          'Notification',
+          'UserPromptSubmit',
+          'Stop',
+          'SubagentStop',
+          'PreCompact',
+          'SessionStart',
+          'SessionEnd',
+        ] as const;
+        if (hookEvents.includes(hookType as (typeof hookEvents)[number])) {
+          return status.get(hookType as (typeof hookEvents)[number]) || false;
+        }
+        return false;
+      }
+      if (agentType === 'cline') {
+        const status = await this.clineManager.getHookStatus();
+        // Cline uses the same hook events as Claude
+        return status.events.includes(
+          hookType as (typeof status.events)[number],
+        );
+      }
+      if (agentType === 'opencode') {
+        // OpenCode uses a single plugin, not individual hook types
+        const status = await this.openCodeManager.getPluginStatus();
+        return status.globalInstalled || status.localInstalled;
       }
       return false;
     } catch (error) {
-      console.error(`[HookConfigManager] Failed to check hook ${hookType} for ${agentType}:`, error);
+      console.error(
+        `[HookConfigManager] Failed to check hook ${hookType} for ${agentType}:`,
+        error,
+      );
       return false;
     }
   }
@@ -230,11 +354,22 @@ export class HookConfigurationManager {
     try {
       if (agentType === 'claude') {
         const status = await this.claudeManager.getHookStatus();
-        return Array.from(status.values()).filter(enabled => enabled).length;
+        return Array.from(status.values()).filter((enabled) => enabled).length;
+      }
+      if (agentType === 'cline') {
+        const status = await this.clineManager.getHookStatus();
+        return status.hookCount;
+      }
+      if (agentType === 'opencode') {
+        const status = await this.openCodeManager.getPluginStatus();
+        return status.globalInstalled || status.localInstalled ? 1 : 0;
       }
       return 0;
     } catch (error) {
-      console.error(`[HookConfigManager] Failed to count hooks for ${agentType}:`, error);
+      console.error(
+        `[HookConfigManager] Failed to count hooks for ${agentType}:`,
+        error,
+      );
       return 0;
     }
   }
@@ -242,7 +377,10 @@ export class HookConfigurationManager {
   /**
    * Check if an agent is supported for hook configuration
    */
-  private checkAgentSupport(agentType: SupportedAgent): { isSupported: boolean; message?: string } {
+  private checkAgentSupport(agentType: SupportedAgent): {
+    isSupported: boolean;
+    message?: string;
+  } {
     switch (agentType) {
       case 'claude':
         return { isSupported: true };
@@ -251,16 +389,13 @@ export class HookConfigurationManager {
         return { isSupported: true };
 
       case 'opencode':
-        // OpenCode is transitioning to plugin system
-        return {
-          isSupported: false,
-          message: 'OpenCode is transitioning to a plugin-based system. Hook configuration is not supported.'
-        };
+        // OpenCode uses a plugin system for hooks
+        return { isSupported: true };
 
       default:
         return {
           isSupported: false,
-          message: `Unknown agent type: ${agentType}`
+          message: `Unknown agent type: ${agentType}`,
         };
     }
   }
@@ -303,14 +438,21 @@ export class HookConfigurationManager {
       }> = [];
 
       // Get list of agents to check
-      const agentsToCheck = agentType ? [agentType] : ['claude', 'opencode', 'cline'] as SupportedAgent[];
+      const agentsToCheck = agentType
+        ? [agentType]
+        : (['claude', 'opencode', 'cline'] as SupportedAgent[]);
 
       for (const agent of agentsToCheck) {
         if (agent === 'claude') {
           // Use ClaudeConfigManager for Claude
           const claudeResult = await this.claudeManager.readFallbackEvents();
           if (claudeResult.success && claudeResult.events) {
-            results.push(...claudeResult.events.map(e => ({ ...e, agent: 'claude' as SupportedAgent })));
+            results.push(
+              ...claudeResult.events.map((e: any) => ({
+                ...e,
+                agent: 'claude' as SupportedAgent,
+              })),
+            );
           }
         } else {
           // For other agents, use the existing implementation
@@ -339,13 +481,18 @@ export class HookConfigurationManager {
                 results.push({
                   agent,
                   filePath,
-                  events
+                  events,
                 });
 
-                console.log(`[HookConfigManager] Found ${events.length} events for ${agent} in ${filePath}`);
+                console.log(
+                  `[HookConfigManager] Found ${events.length} events for ${agent} in ${filePath}`,
+                );
               }
             } catch (error) {
-              console.error(`[HookConfigManager] Failed to read fallback file ${filePath}:`, error);
+              console.error(
+                `[HookConfigManager] Failed to read fallback file ${filePath}:`,
+                error,
+              );
             }
           }
         }
@@ -353,10 +500,13 @@ export class HookConfigurationManager {
 
       return { success: true, events: results };
     } catch (error) {
-      console.error('[HookConfigManager] Failed to read fallback events:', error);
+      console.error(
+        '[HookConfigManager] Failed to read fallback events:',
+        error,
+      );
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -375,8 +525,8 @@ export class HookConfigurationManager {
         const result = await this.claudeManager.clearFallbackFile();
         return {
           success: result.success,
-          backupPath: result.backupPath,
-          error: result.error
+          backupPath: result.backupPath as string | undefined,
+          error: result.error as string | undefined,
         };
       }
 
@@ -395,10 +545,13 @@ export class HookConfigurationManager {
 
       return { success: true, backupPath };
     } catch (error) {
-      console.error(`[HookConfigManager] Failed to clear fallback file ${filePath}:`, error);
+      console.error(
+        `[HookConfigManager] Failed to clear fallback file ${filePath}:`,
+        error,
+      );
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -437,7 +590,11 @@ export class HookConfigurationManager {
         fileSize?: number;
       }> = [];
 
-      const agents: SupportedAgent[] = ['claude' as SupportedAgent, 'opencode' as SupportedAgent, 'cline' as SupportedAgent];
+      const agents: SupportedAgent[] = [
+        'claude' as SupportedAgent,
+        'opencode' as SupportedAgent,
+        'cline' as SupportedAgent,
+      ];
 
       for (const agent of agents) {
         if (agent === 'claude') {
@@ -448,13 +605,13 @@ export class HookConfigurationManager {
               agent: 'claude' as SupportedAgent,
               hasFile: claudeStats.stats.hasFile,
               eventCount: claudeStats.stats.eventCount,
-              fileSize: claudeStats.stats.fileSize
+              fileSize: claudeStats.stats.fileSize,
             });
           } else {
             agentStats.push({
               agent: 'claude' as SupportedAgent,
               hasFile: false,
-              eventCount: 0
+              eventCount: 0,
             });
           }
         } else if (exists) {
@@ -471,20 +628,20 @@ export class HookConfigurationManager {
               agent,
               hasFile: true,
               eventCount: Array.isArray(events) ? events.length : 0,
-              fileSize: stat.size
+              fileSize: stat.size,
             });
           } catch {
             agentStats.push({
               agent,
               hasFile: false,
-              eventCount: 0
+              eventCount: 0,
             });
           }
         } else {
           agentStats.push({
             agent,
             hasFile: false,
-            eventCount: 0
+            eventCount: 0,
           });
         }
       }
@@ -494,13 +651,13 @@ export class HookConfigurationManager {
         stats: {
           directory,
           exists,
-          agents: agentStats
-        }
+          agents: agentStats,
+        },
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }

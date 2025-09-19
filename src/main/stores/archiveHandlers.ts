@@ -32,7 +32,9 @@ export function registerArchiveHandlers(): void {
       // Import default config
       const { DEFAULT_ARCHIVE_CONFIG } = await import('./ArchiveConfiguration');
       // Update with default config to reset
-      await agentSessionAutoArchivingService.updateConfiguration(DEFAULT_ARCHIVE_CONFIG);
+      await agentSessionAutoArchivingService.updateConfiguration(
+        DEFAULT_ARCHIVE_CONFIG,
+      );
       return await archiveConfigService.getConfiguration();
     } catch (error) {
       console.error('[ArchiveHandlers] Failed to reset configuration:', error);
@@ -71,32 +73,48 @@ export function registerArchiveHandlers(): void {
   });
 
   // Archive a single session
-  ipcMain.handle('archive:archive-session', async (_, sessionId: string, options?: { skipCleanup?: boolean; skipProcessedDelete?: boolean }) => {
-    try {
-      await agentSessionArchivingService.archiveSession(sessionId, options);
-      return { success: true };
-    } catch (error) {
-      console.error(`[ArchiveHandlers] Failed to archive session ${sessionId}:`, error);
-      throw error;
-    }
-  });
+  ipcMain.handle(
+    'archive:archive-session',
+    async (
+      _,
+      sessionId: string,
+      options?: { skipCleanup?: boolean; skipProcessedDelete?: boolean },
+    ) => {
+      try {
+        await agentSessionArchivingService.archiveSession(sessionId, options);
+        return { success: true };
+      } catch (error) {
+        console.error(
+          `[ArchiveHandlers] Failed to archive session ${sessionId}:`,
+          error,
+        );
+        throw error;
+      }
+    },
+  );
 
   // Load archived session
   ipcMain.handle('archive:load-session', async (_, sessionId: string) => {
-    console.log(`[ArchiveHandlers] Request to load archived session ${sessionId}`);
+    console.log(
+      `[ArchiveHandlers] Request to load archived session ${sessionId}`,
+    );
     try {
-      const result = await agentSessionArchivingService.loadArchivedSession(sessionId);
+      const result =
+        await agentSessionArchivingService.loadArchivedSession(sessionId);
       console.log(`[ArchiveHandlers] Archive load result for ${sessionId}:`, {
         found: !!result,
         hasSession: result ? !!result.session : false,
         hasMetadata: result ? !!result.metadata : false,
         hasRawEvents: result ? !!result.rawEvents : false,
         rawEventCount: result?.rawEvents?.length || 0,
-        type: result ? typeof result : 'null'
+        type: result ? typeof result : 'null',
       });
       return result; // Will be null if not found
     } catch (error) {
-      console.error(`[ArchiveHandlers] Failed to load session ${sessionId}:`, error);
+      console.error(
+        `[ArchiveHandlers] Failed to load session ${sessionId}:`,
+        error,
+      );
       return null; // Return null instead of throwing - let the renderer decide how to handle
     }
   });
@@ -114,50 +132,75 @@ export function registerArchiveHandlers(): void {
   // List all archived sessions
   ipcMain.handle('archive:list-archived-sessions', async () => {
     try {
-      const archivedSessions = await agentSessionArchivingService.listArchivedSessions();
+      const archivedSessions =
+        await agentSessionArchivingService.listArchivedSessions();
       return archivedSessions;
     } catch (error) {
-      console.error('[ArchiveHandlers] Failed to list archived sessions:', error);
+      console.error(
+        '[ArchiveHandlers] Failed to list archived sessions:',
+        error,
+      );
       throw error;
     }
   });
 
   // Get a specific archived session
-  ipcMain.handle('archive:get-archived-session', async (_, sessionId: string) => {
-    try {
-      const archivedSession = await agentSessionArchivingService.loadArchivedSession(sessionId);
-      if (!archivedSession || !archivedSession.session) {
-        console.log(`[ArchiveHandlers] Archived session ${sessionId} not found`);
-        return null; // Return null instead of throwing error
+  ipcMain.handle(
+    'archive:get-archived-session',
+    async (_, sessionId: string) => {
+      try {
+        const archivedSession =
+          await agentSessionArchivingService.loadArchivedSession(sessionId);
+        if (!archivedSession || !archivedSession.session) {
+          console.log(
+            `[ArchiveHandlers] Archived session ${sessionId} not found`,
+          );
+          return null; // Return null instead of throwing error
+        }
+        return archivedSession.session;
+      } catch (error) {
+        console.error(
+          `[ArchiveHandlers] Failed to get archived session ${sessionId}:`,
+          error,
+        );
+        return null; // Return null on error instead of throwing
       }
-      return archivedSession.session;
-    } catch (error) {
-      console.error(`[ArchiveHandlers] Failed to get archived session ${sessionId}:`, error);
-      return null; // Return null on error instead of throwing
-    }
-  });
+    },
+  );
 
   // Delete an archived session
-  ipcMain.handle('archive:delete-archived-session', async (_, sessionId: string) => {
-    try {
-      await agentSessionArchivingService.deleteArchivedSession(sessionId);
-      return { success: true };
-    } catch (error) {
-      console.error(`[ArchiveHandlers] Failed to delete archived session ${sessionId}:`, error);
-      throw error;
-    }
-  });
+  ipcMain.handle(
+    'archive:delete-archived-session',
+    async (_, sessionId: string) => {
+      try {
+        await agentSessionArchivingService.deleteArchivedSession(sessionId);
+        return { success: true };
+      } catch (error) {
+        console.error(
+          `[ArchiveHandlers] Failed to delete archived session ${sessionId}:`,
+          error,
+        );
+        throw error;
+      }
+    },
+  );
 
   // Restore an archived session to active
-  ipcMain.handle('archive:restore-archived-session', async (_, sessionId: string) => {
-    try {
-      await agentSessionArchivingService.restoreArchivedSession(sessionId);
-      return { success: true };
-    } catch (error) {
-      console.error(`[ArchiveHandlers] Failed to restore archived session ${sessionId}:`, error);
-      throw error;
-    }
-  });
+  ipcMain.handle(
+    'archive:restore-archived-session',
+    async (_, sessionId: string) => {
+      try {
+        await agentSessionArchivingService.restoreArchivedSession(sessionId);
+        return { success: true };
+      } catch (error) {
+        console.error(
+          `[ArchiveHandlers] Failed to restore archived session ${sessionId}:`,
+          error,
+        );
+        throw error;
+      }
+    },
+  );
 
   console.log('[ArchiveHandlers] Archive IPC handlers registered');
 }

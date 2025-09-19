@@ -22,40 +22,43 @@ export class SignalingClient {
   private pollInterval: NodeJS.Timeout | null = null;
   private isConnected: boolean = false;
   private knownPeers: Set<string> = new Set();
-  
+
   setCallbacks(callbacks: SignalingCallbacks) {
     this.callbacks = callbacks;
   }
-  
+
   async connect(token: string, repoUrl: string) {
     this.token = token;
     this.repoUrl = repoUrl;
-    
+
     try {
       // Join the room
-      const joinResponse = await fetch(`${OrbitConfig.apiUrl}/api/orbit/signal/join`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, repoUrl }),
-      });
-      
+      const joinResponse = await fetch(
+        `${OrbitConfig.apiUrl}/api/orbit/signal/join`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, repoUrl }),
+        },
+      );
+
       if (!joinResponse.ok) {
         throw new Error('Failed to join room');
       }
-      
+
       const joinData = await joinResponse.json();
       this.peerId = joinData.peerId;
       this.isConnected = true;
-      
+
       // Notify connected
       this.callbacks?.onConnected(joinData.peerId, joinData.githubHandle);
-      
+
       // Notify of existing peers
       for (const peer of joinData.peers) {
         this.knownPeers.add(peer.peerId);
         this.callbacks?.onPeerJoined(peer.peerId, peer.githubHandle);
       }
-      
+
       // Start polling for signals
       this.startPolling();
     } catch (error) {
@@ -64,36 +67,39 @@ export class SignalingClient {
       this.callbacks?.onDisconnected();
     }
   }
-  
+
   private startPolling() {
     // Poll every 1 second for signals
     this.pollInterval = setInterval(async () => {
       if (!this.isConnected || !this.peerId || !this.repoUrl) return;
-      
+
       try {
-        const response = await fetch(`${OrbitConfig.apiUrl}/api/orbit/signal/poll`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            peerId: this.peerId, 
-            repoUrl: this.repoUrl 
-          }),
-        });
-        
+        const response = await fetch(
+          `${OrbitConfig.apiUrl}/api/orbit/signal/poll`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              peerId: this.peerId,
+              repoUrl: this.repoUrl,
+            }),
+          },
+        );
+
         if (!response.ok) {
           throw new Error('Poll failed');
         }
-        
+
         const data = await response.json();
-        
+
         // Process signals
         for (const signal of data.signals) {
           this.callbacks?.onSignal(signal.from, signal.data);
         }
-        
+
         // Update peer list
         const currentPeerIds = new Set(data.peers.map((p: any) => p.peerId));
-        
+
         // Find new peers
         for (const peer of data.peers) {
           if (!this.knownPeers.has(peer.peerId)) {
@@ -101,7 +107,7 @@ export class SignalingClient {
             this.callbacks?.onPeerJoined(peer.peerId, peer.githubHandle);
           }
         }
-        
+
         // Find disconnected peers
         for (const knownPeerId of this.knownPeers) {
           if (!currentPeerIds.has(knownPeerId)) {
@@ -115,25 +121,28 @@ export class SignalingClient {
       }
     }, 1000);
   }
-  
+
   async sendSignal(to: string, signal: any) {
     if (!this.isConnected || !this.peerId) {
       console.warn('Cannot send signal: not connected');
       return;
     }
-    
+
     try {
-      const response = await fetch(`${OrbitConfig.apiUrl}/api/orbit/signal/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from: this.peerId,
-          to,
-          type: signal.type || 'signal',
-          data: signal,
-        }),
-      });
-      
+      const response = await fetch(
+        `${OrbitConfig.apiUrl}/api/orbit/signal/send`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: this.peerId,
+            to,
+            type: signal.type || 'signal',
+            data: signal,
+          }),
+        },
+      );
+
       if (!response.ok) {
         throw new Error('Failed to send signal');
       }
@@ -141,16 +150,16 @@ export class SignalingClient {
       console.error('Send signal error:', error);
     }
   }
-  
+
   async disconnect() {
     this.isConnected = false;
-    
+
     // Stop polling
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
     }
-    
+
     // Leave the room
     if (this.peerId && this.repoUrl) {
       try {
@@ -166,15 +175,15 @@ export class SignalingClient {
         console.error('Leave room error:', error);
       }
     }
-    
+
     this.peerId = null;
     this.token = null;
     this.repoUrl = null;
     this.knownPeers.clear();
-    
+
     this.callbacks?.onDisconnected();
   }
-  
+
   isActive(): boolean {
     return this.isConnected;
   }

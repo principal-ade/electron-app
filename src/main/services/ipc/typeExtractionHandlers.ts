@@ -1,5 +1,8 @@
 import { ipcMain } from 'electron';
-import { TypeExtractionModule, PackageLayer } from "@principal-ai/codebase-composition";
+import {
+  TypeExtractionModule,
+  PackageLayer,
+} from '@principal-ai/codebase-composition';
 import { TypeExtractionAPIEvent } from '../../../shared/main-process-api-interfaces/TypeExtractionAPI';
 
 export function setupTypeExtractionHandlers() {

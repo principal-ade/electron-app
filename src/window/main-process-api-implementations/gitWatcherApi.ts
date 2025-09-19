@@ -1,8 +1,8 @@
 import { ipcRenderer } from 'electron';
-import { 
-  GitStatus, 
-  GitWatcherEvents, 
-  WatchResult 
+import {
+  GitStatus,
+  GitWatcherEvents,
+  WatchResult,
 } from '../../shared/main-process-api-interfaces/GitWatcherAPI';
 
 export const gitWatcherAPI = {
@@ -28,12 +28,13 @@ export const gitWatcherAPI = {
 
   // Event listener management
   onStatusUpdate: (callback: (status: GitStatus) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, status: GitStatus) => callback(status);
+    const handler = (_event: Electron.IpcRendererEvent, status: GitStatus) =>
+      callback(status);
     ipcRenderer.on(GitWatcherEvents.STATUS_UPDATE, handler);
-    
+
     // Return unsubscribe function
     return () => {
       ipcRenderer.removeListener(GitWatcherEvents.STATUS_UPDATE, handler);
     };
-  }
+  },
 };

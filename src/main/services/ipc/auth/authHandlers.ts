@@ -1,9 +1,9 @@
 /**
  * Consolidated authentication handlers for IPC communication
- * 
+ *
  * This module registers unified authentication channel names that wrap
  * the existing handlers from AuthService, AuthStateManager, and SecureTokenIPC.
- * 
+ *
  * During migration, both old and new channel names will work.
  * Once migration is complete, the logic will be moved here.
  */
@@ -28,18 +28,21 @@ function wrapExistingHandler(newChannel: string, oldChannel: string) {
       if (tempHandler) {
         ipcMain.removeHandler(newChannel);
       }
-      
+
       // Now invoke the existing handler
       const result = await (event.sender as any).invoke(oldChannel, ...args);
-      
+
       // Re-register our handler
       if (tempHandler) {
         ipcMain.handle(newChannel, tempHandler as any);
       }
-      
+
       return result;
     } catch (error) {
-      console.error(`[AuthHandlers] Error forwarding ${newChannel} to ${oldChannel}:`, error);
+      console.error(
+        `[AuthHandlers] Error forwarding ${newChannel} to ${oldChannel}:`,
+        error,
+      );
       throw error;
     }
   });
@@ -54,6 +57,8 @@ export function registerAuthenticationHandlers(): void {
 
   // For now, let's just register aliases that the preload script can use
   // The preload script will handle the actual forwarding
-  
-  console.log('[AuthHandlers] Authentication handlers ready for preload forwarding');
+
+  console.log(
+    '[AuthHandlers] Authentication handlers ready for preload forwarding',
+  );
 }

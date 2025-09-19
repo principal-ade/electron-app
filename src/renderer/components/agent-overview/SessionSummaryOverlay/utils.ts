@@ -12,7 +12,7 @@ export const formatDuration = (start: number, end: number | null) => {
   const duration = (end || Date.now()) - start;
   const hours = Math.floor(duration / 3600000);
   const minutes = Math.floor((duration % 3600000) / 60000);
-  
+
   if (hours > 0) {
     return `${hours}h ${minutes}m`;
   }

@@ -26,9 +26,7 @@ export const ReposButton: React.FC<ReposButtonProps> = ({
         backgroundColor: isActive
           ? theme.colors.primary
           : theme.colors.backgroundSecondary,
-        color: isActive
-          ? theme.colors.background
-          : theme.colors.text,
+        color: isActive ? theme.colors.background : theme.colors.text,
         fontSize: '14px',
         fontWeight: 500,
         display: 'flex',
@@ -40,14 +38,16 @@ export const ReposButton: React.FC<ReposButtonProps> = ({
       }}
       onMouseEnter={(e) => {
         if (!isActive) {
-          e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+          e.currentTarget.style.backgroundColor =
+            theme.colors.backgroundTertiary;
           e.currentTarget.style.color = theme.colors.primary;
         }
         onMouseEnter?.(e);
       }}
       onMouseLeave={(e) => {
         if (!isActive) {
-          e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+          e.currentTarget.style.backgroundColor =
+            theme.colors.backgroundSecondary;
           e.currentTarget.style.color = theme.colors.text;
         }
         onMouseLeave?.(e);

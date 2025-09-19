@@ -32,13 +32,13 @@ export class TerminalEnvironment {
     }
 
     const fs = require('fs');
-    
+
     if (process.platform === 'win32') {
       this.userShell = 'powershell.exe';
     } else if (process.platform === 'darwin') {
       // macOS - prefer user's configured shell, fallback to zsh (default since Catalina)
       const preferredShell = process.env.SHELL || '/bin/zsh';
-      
+
       // Verify the shell exists
       if (fs.existsSync(preferredShell)) {
         this.userShell = preferredShell;
@@ -50,7 +50,7 @@ export class TerminalEnvironment {
     } else {
       // Linux
       const preferredShell = process.env.SHELL || '/bin/bash';
-      
+
       if (fs.existsSync(preferredShell)) {
         this.userShell = preferredShell;
       } else if (fs.existsSync('/bin/bash')) {
@@ -71,45 +71,45 @@ export class TerminalEnvironment {
   async getUserPath(): Promise<string> {
     // Check cache
     const now = Date.now();
-    if (this.userPath && (now - this.lastPathFetch) < this.PATH_CACHE_DURATION) {
+    if (this.userPath && now - this.lastPathFetch < this.PATH_CACHE_DURATION) {
       return this.userPath;
     }
 
     try {
       // Try multiple approaches to get the most complete PATH
       const paths: string[] = [];
-      
+
       // Method 1: Get PATH from login shell
       const shells = [
         process.env.SHELL,
         '/bin/zsh',
         '/bin/bash',
-        '/bin/sh'
+        '/bin/sh',
       ].filter(Boolean);
 
       for (const shell of shells) {
         try {
-          const result = execSync(
-            `${shell} -l -c "echo $PATH"`,
-            { 
-              encoding: 'utf8',
-              timeout: 5000,
-              env: {
-                ...process.env,
-                // Ensure we get a clean environment
-                ELECTRON_RUN_AS_NODE: undefined,
-                NODE_OPTIONS: undefined
-              }
-            }
-          );
-          
+          const result = execSync(`${shell} -l -c "echo $PATH"`, {
+            encoding: 'utf8',
+            timeout: 5000,
+            env: {
+              ...process.env,
+              // Ensure we get a clean environment
+              ELECTRON_RUN_AS_NODE: undefined,
+              NODE_OPTIONS: undefined,
+            },
+          });
+
           if (result && result.trim()) {
             paths.push(result.trim());
             console.log(`[TerminalEnvironment] Got PATH from ${shell}`);
             break;
           }
         } catch (e) {
-          console.debug(`[TerminalEnvironment] Failed to get PATH from ${shell}:`, e);
+          console.debug(
+            `[TerminalEnvironment] Failed to get PATH from ${shell}:`,
+            e,
+          );
         }
       }
 
@@ -122,7 +122,7 @@ export class TerminalEnvironment {
         '/usr/bin',
         '/bin',
         '/usr/sbin',
-        '/sbin'
+        '/sbin',
       ];
 
       // Method 3: Include platform-specific paths
@@ -132,21 +132,21 @@ export class TerminalEnvironment {
           '/Library/Apple/usr/bin',
           path.join(os.homedir(), '.cargo', 'bin'),
           path.join(os.homedir(), '.npm-global', 'bin'),
-          EnvironmentConfig.getPlatformHomeLocalBinPath()
+          EnvironmentConfig.getPlatformHomeLocalBinPath(),
         );
       }
 
       // Combine all paths, deduplicate, and filter existing directories
       const fs = require('fs');
       const allPathElements = new Set<string>();
-      
+
       // Add discovered PATH first
       if (paths.length > 0) {
-        paths[0].split(':').forEach(p => allPathElements.add(p));
+        paths[0].split(':').forEach((p) => allPathElements.add(p));
       }
-      
+
       // Add additional paths
-      additionalPaths.forEach(p => {
+      additionalPaths.forEach((p) => {
         if (fs.existsSync(p)) {
           allPathElements.add(p);
         }
@@ -154,13 +154,17 @@ export class TerminalEnvironment {
 
       // Add current process PATH as fallback
       if (process.env.PATH) {
-        process.env.PATH.split(path.delimiter).forEach(p => allPathElements.add(p));
+        process.env.PATH.split(path.delimiter).forEach((p) =>
+          allPathElements.add(p),
+        );
       }
 
       this.userPath = Array.from(allPathElements).join(path.delimiter);
       this.lastPathFetch = now;
-      
-      console.log(`[TerminalEnvironment] Resolved PATH with ${allPathElements.size} directories`);
+
+      console.log(
+        `[TerminalEnvironment] Resolved PATH with ${allPathElements.size} directories`,
+      );
       return this.userPath;
     } catch (error) {
       console.error('[TerminalEnvironment] Failed to get user PATH:', error);
@@ -181,16 +185,19 @@ export class TerminalEnvironment {
   /**
    * Get a complete environment for spawning terminals
    */
-  async getTerminalEnvironment(workingDirectory: string, sessionId?: string): Promise<NodeJS.ProcessEnv> {
+  async getTerminalEnvironment(
+    workingDirectory: string,
+    sessionId?: string,
+  ): Promise<NodeJS.ProcessEnv> {
     const userPath = await this.getUserPath();
-    
+
     // Clean the current environment
     const cleanEnv = { ...process.env };
-    
+
     // Remove Electron/Node specific variables that might interfere
     delete cleanEnv.NODE_OPTIONS;
     delete cleanEnv.ELECTRON_RUN_AS_NODE;
-    
+
     // Build the terminal environment
     const env: NodeJS.ProcessEnv = {
       ...cleanEnv,
@@ -228,13 +235,13 @@ export class TerminalEnvironment {
     try {
       const userPath = await this.getUserPath();
       const env = { PATH: userPath };
-      
-      execSync(`which ${command}`, { 
+
+      execSync(`which ${command}`, {
         encoding: 'utf8',
         env,
-        timeout: 2000
+        timeout: 2000,
       });
-      
+
       return true;
     } catch {
       return false;
@@ -248,13 +255,13 @@ export class TerminalEnvironment {
     try {
       const userPath = await this.getUserPath();
       const env = { PATH: userPath };
-      
-      const result = execSync(`which ${command}`, { 
+
+      const result = execSync(`which ${command}`, {
         encoding: 'utf8',
         env,
-        timeout: 2000
+        timeout: 2000,
       });
-      
+
       return result.trim();
     } catch {
       return null;

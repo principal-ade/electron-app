@@ -1,7 +1,7 @@
 import { DirectorySessions } from '../../shared/main-process-api-interfaces/AgentSessionAPI';
 import { SessionState } from '../../shared/event-processing/SessionEventProcessor';
 import { AgentSessionRecord } from '../../shared/sessionTypes';
-import { NormalizedAgentSessionEvent } from "@principal-ai/agent-monitoring";
+import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 /**
  * File operation types we track
@@ -26,9 +26,9 @@ export interface ExtractedFilePath {
  * File operation with details
  */
 export interface FileOperation {
-  path: string;           // Display path for UI
-  fullPath?: string;      // Absolute path if available
-  relativePath?: string;  // Path relative to git root if in repo
+  path: string; // Display path for UI
+  fullPath?: string; // Absolute path if available
+  relativePath?: string; // Path relative to git root if in repo
   operations: Array<{
     type: FileOperationType;
     timestamp: number;
@@ -62,7 +62,10 @@ export class AgentSessionService {
   /**
    * Get a session by ID
    */
-  static getSession(sessionId: string, directory: string): Promise<SessionState | null> {
+  static getSession(
+    sessionId: string,
+    directory: string,
+  ): Promise<SessionState | null> {
     return window.mainProcess.agentSession.getSession(sessionId, directory);
   }
 
@@ -71,7 +74,9 @@ export class AgentSessionService {
    * @param sessionId - The session ID to get events for
    * @returns Promise with array of normalized events or null if not found
    */
-  static async getSessionEvents(sessionId: string): Promise<NormalizedAgentSessionEvent[] | null> {
+  static async getSessionEvents(
+    sessionId: string,
+  ): Promise<NormalizedAgentSessionEvent[] | null> {
     return window.mainProcess.agentSession.getSessionEvents(sessionId);
   }
 
@@ -82,8 +87,16 @@ export class AgentSessionService {
    * @param metadata - The metadata to update
    * @returns Promise indicating success
    */
-  static async updateSessionMetadata(sessionId: string, directory: string, metadata: { customName?: string }): Promise<boolean> {
-    return window.mainProcess.agentSession.updateSessionMetadata(sessionId, directory, metadata);
+  static async updateSessionMetadata(
+    sessionId: string,
+    directory: string,
+    metadata: { customName?: string },
+  ): Promise<boolean> {
+    return window.mainProcess.agentSession.updateSessionMetadata(
+      sessionId,
+      directory,
+      metadata,
+    );
   }
 
   /**
@@ -92,7 +105,9 @@ export class AgentSessionService {
    * @param event - The normalized event to extract paths from
    * @returns Extracted file path info or undefined if no file path found
    */
-  static extractFilePath(event: NormalizedAgentSessionEvent): ExtractedFilePath | undefined {
+  static extractFilePath(
+    event: NormalizedAgentSessionEvent,
+  ): ExtractedFilePath | undefined {
     // Use new files array structure
     if (event.files && event.files.length > 0) {
       const file = event.files[0];
@@ -100,10 +115,10 @@ export class AgentSessionService {
         displayPath: file.displayPath || '[path not normalized]',
         relativePath: file.displayPath, // Use displayPath as it's repository-relative
         absolutePath: undefined, // Never expose absolute paths
-        originalPath: file.displayPath || '' // Use displayPath instead of originalPath
+        originalPath: file.displayPath || '', // Use displayPath instead of originalPath
       };
     }
-    
+
     // No normalized paths available - return undefined
     // This will help us identify events that haven't been properly normalized
     return undefined;
@@ -135,10 +150,12 @@ export class AgentSessionService {
    */
   static extractWrittenFiles(events: NormalizedAgentSessionEvent[]): string[] {
     const writtenFiles = new Set<string>();
-    
+
     for (const event of events) {
       // Only track write/edit operations
-      const opType = event.toolName ? this.getOperationType(event.toolName) : undefined;
+      const opType = event.toolName
+        ? this.getOperationType(event.toolName)
+        : undefined;
       if (opType === 'write' || opType === 'edit') {
         const filePath = this.extractFilePath(event);
         if (filePath) {
@@ -147,7 +164,7 @@ export class AgentSessionService {
         }
       }
     }
-    
+
     return Array.from(writtenFiles);
   }
 
@@ -156,41 +173,43 @@ export class AgentSessionService {
    * @param events - Array of normalized events
    * @returns Map of file paths to their operations
    */
-  static extractFileOperations(events: NormalizedAgentSessionEvent[]): Map<string, FileOperation> {
+  static extractFileOperations(
+    events: NormalizedAgentSessionEvent[],
+  ): Map<string, FileOperation> {
     const fileOps = new Map<string, FileOperation>();
     const TRACKED_TOOLS = new Set(['Read', 'Write', 'Edit', 'MultiEdit']);
-    
+
     for (const event of events) {
       if (event.toolName && TRACKED_TOOLS.has(event.toolName)) {
         const filePath = this.extractFilePath(event);
         if (filePath) {
           const key = filePath.displayPath;
           let fileOp = fileOps.get(key);
-          
+
           if (!fileOp) {
             fileOp = {
               path: filePath.displayPath,
               fullPath: filePath.absolutePath,
               relativePath: filePath.relativePath,
               operations: [],
-              lastModified: event.timestamp
+              lastModified: event.timestamp,
             };
             fileOps.set(key, fileOp);
           }
-          
+
           const opType = this.getOperationType(event.toolName);
           if (opType) {
             fileOp.operations.push({
               type: opType,
               timestamp: event.timestamp,
-              tool: event.toolName
+              tool: event.toolName,
             });
             fileOp.lastModified = event.timestamp;
           }
         }
       }
     }
-    
+
     return fileOps;
   }
 
@@ -199,18 +218,23 @@ export class AgentSessionService {
    * @param events - Array of normalized events
    * @returns Last todo list or undefined if no todos found
    */
-  static extractLastTodos(events: NormalizedAgentSessionEvent[]): TodoItem[] | undefined {
+  static extractLastTodos(
+    events: NormalizedAgentSessionEvent[],
+  ): TodoItem[] | undefined {
     // Find the last TodoWrite event (post-tool-use)
     for (let i = events.length - 1; i >= 0; i--) {
       const event = events[i];
-      if (event.toolName === 'TodoWrite' && event.eventType === 'post-tool-use') {
+      if (
+        event.toolName === 'TodoWrite' &&
+        event.eventType === 'post-tool-use'
+      ) {
         const todoData = event.toolInput as any;
         if (todoData?.todos && Array.isArray(todoData.todos)) {
           return todoData.todos.map((todo: any) => ({
             id: todo.id || Math.random().toString(36).substr(2, 9),
             content: todo.content || todo.task || '',
             status: todo.status || 'pending',
-            timestamp: event.timestamp
+            timestamp: event.timestamp,
           }));
         }
       }
@@ -241,7 +265,9 @@ export class AgentSessionService {
    * @param sessionId - The session ID to reprocess
    * @returns Promise with reprocessing result
    */
-  static reprocessSession(sessionId: string): Promise<{ success: boolean; processedCount?: number; error?: string }> {
+  static reprocessSession(
+    sessionId: string,
+  ): Promise<{ success: boolean; processedCount?: number; error?: string }> {
     return window.mainProcess.agentSession.reprocessSession(sessionId);
   }
 

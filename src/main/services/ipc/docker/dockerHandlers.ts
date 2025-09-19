@@ -3,7 +3,7 @@ import { dockerService } from '../../../docker/dockerService';
 
 export function registerDockerHandlers() {
   console.log('[DockerHandlers] Registering Docker IPC handlers...');
-  
+
   // Check Docker status
   ipcMain.handle('docker:check-status', async () => {
     console.log('[DockerHandlers] docker:check-status called');
@@ -14,9 +14,9 @@ export function registerDockerHandlers() {
       return { success: true, data: status };
     } catch (error) {
       console.error('[DockerHandlers] Error checking Docker status:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
@@ -24,16 +24,19 @@ export function registerDockerHandlers() {
   // Pull Docker image
   ipcMain.handle('docker:pull-image', async (event, imageName: string) => {
     try {
-      const result = await dockerService.pullDockerImage(imageName, (message) => {
-        // Send progress updates to renderer
-        event.sender.send('docker:pull-progress', { imageName, message });
-      });
+      const result = await dockerService.pullDockerImage(
+        imageName,
+        (message) => {
+          // Send progress updates to renderer
+          event.sender.send('docker:pull-progress', { imageName, message });
+        },
+      );
       return { success: result };
     } catch (error) {
       console.error('Error pulling Docker image:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
@@ -45,26 +48,32 @@ export function registerDockerHandlers() {
       return { success: true, hasImage };
     } catch (error) {
       console.error('Error checking Knip image:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
 
   // Run Knip analysis in Docker
-  ipcMain.handle('docker:run-knip', async (event, projectPath: string, options?: any) => {
-    try {
-      const result = await dockerService.runKnipInDocker(projectPath, options);
-      return { success: true, data: result };
-    } catch (error) {
-      console.error('Error running Knip in Docker:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      };
-    }
-  });
+  ipcMain.handle(
+    'docker:run-knip',
+    async (event, projectPath: string, options?: any) => {
+      try {
+        const result = await dockerService.runKnipInDocker(
+          projectPath,
+          options,
+        );
+        return { success: true, data: result };
+      } catch (error) {
+        console.error('Error running Knip in Docker:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+  );
 
   // Create custom Knip image
   ipcMain.handle('docker:create-knip-image', async () => {
@@ -73,26 +82,29 @@ export function registerDockerHandlers() {
       return { success: result };
     } catch (error) {
       console.error('Error creating custom Knip image:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
 
   // Start Knip container
-  ipcMain.handle('docker:start-knip-container', async (event, projectPath: string) => {
-    try {
-      const containerId = await dockerService.startKnipContainer(projectPath);
-      return { success: true, containerId };
-    } catch (error) {
-      console.error('Error starting Knip container:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
-      };
-    }
-  });
+  ipcMain.handle(
+    'docker:start-knip-container',
+    async (event, projectPath: string) => {
+      try {
+        const containerId = await dockerService.startKnipContainer(projectPath);
+        return { success: true, containerId };
+      } catch (error) {
+        console.error('Error starting Knip container:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+  );
 
   // Execute command in Knip container
   ipcMain.handle('docker:exec-in-container', async (event, command: string) => {
@@ -101,9 +113,9 @@ export function registerDockerHandlers() {
       return { success: true, data: result };
     } catch (error) {
       console.error('Error executing in Knip container:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
@@ -115,9 +127,9 @@ export function registerDockerHandlers() {
       return { success: true };
     } catch (error) {
       console.error('Error stopping Knip container:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
@@ -129,9 +141,9 @@ export function registerDockerHandlers() {
       return { success: true, instructions };
     } catch (error) {
       console.error('Error getting Docker install instructions:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });

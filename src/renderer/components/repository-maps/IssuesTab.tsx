@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
-import { Github, AlertCircle, Copy, CheckCircle2, ExternalLink, Tag, Calendar, MessageSquare, Loader2, Plus, X, Edit, Check } from 'lucide-react';
+import {
+  Github,
+  AlertCircle,
+  Copy,
+  CheckCircle2,
+  ExternalLink,
+  Tag,
+  Calendar,
+  MessageSquare,
+  Loader2,
+  Plus,
+  X,
+  Edit,
+  Check,
+} from 'lucide-react';
 import { GithubService } from '../../main-process-api/GithubService';
 
 interface GitHubIssue {
@@ -37,7 +51,11 @@ interface IssuesTabProps {
   ghRepo?: string;
 }
 
-export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRepo }) => {
+export const IssuesTab: React.FC<IssuesTabProps> = ({
+  repository,
+  ghOwner,
+  ghRepo,
+}) => {
   const { theme } = useTheme();
   const [issues, setIssues] = useState<GitHubIssue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,7 +63,9 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
   const [authRequired, setAuthRequired] = useState(false);
   const [selectedIssues, setSelectedIssues] = useState<Set<number>>(new Set());
   const [copiedPrompt, setCopiedPrompt] = useState(false);
-  const [issueFilter, setIssueFilter] = useState<'all' | 'open' | 'closed'>('open');
+  const [issueFilter, setIssueFilter] = useState<'all' | 'open' | 'closed'>(
+    'open',
+  );
   const [selectedIssue, setSelectedIssue] = useState<GitHubIssue | null>(null);
   const [showIssueModal, setShowIssueModal] = useState(false);
   const [isClosingIssue, setIsClosingIssue] = useState(false);
@@ -55,7 +75,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
     title: '',
     body: '',
     labels: [] as string[],
-    assignees: [] as string[]
+    assignees: [] as string[],
   });
   const [labelInput, setLabelInput] = useState('');
   const [assigneeInput, setAssigneeInput] = useState('');
@@ -64,44 +84,49 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
   const repo = ghRepo || repository.name;
 
   const fetchIssues = async () => {
-      if (!owner || !repo) {
-        setError('Repository information not available');
-        setLoading(false);
-        return;
-      }
+    if (!owner || !repo) {
+      setError('Repository information not available');
+      setLoading(false);
+      return;
+    }
 
-      try {
-        setLoading(true);
-        setError(null);
-        setAuthRequired(false);
-        
-        const data = await GithubService.getIssues(owner, repo);
-        
-        // Check if the response is an authentication error
-        if (data && data.length === 1 && data[0].requiresAuth) {
-          setAuthRequired(true);
-          setError(data[0].message);
-          setIssues([]);
-        } else if (!data || data.length === 0) {
-          // No issues found
-          setIssues([]);
-        } else {
-          // Filter out pull requests (they have a pull_request property)
-          setIssues(data.filter((issue: any) => !issue.hasOwnProperty('pull_request') && !issue.error));
-        }
-      } catch (err) {
-        console.error('Error fetching issues:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch issues');
-      } finally {
-        setLoading(false);
+    try {
+      setLoading(true);
+      setError(null);
+      setAuthRequired(false);
+
+      const data = await GithubService.getIssues(owner, repo);
+
+      // Check if the response is an authentication error
+      if (data && data.length === 1 && data[0].requiresAuth) {
+        setAuthRequired(true);
+        setError(data[0].message);
+        setIssues([]);
+      } else if (!data || data.length === 0) {
+        // No issues found
+        setIssues([]);
+      } else {
+        // Filter out pull requests (they have a pull_request property)
+        setIssues(
+          data.filter(
+            (issue: any) =>
+              !issue.hasOwnProperty('pull_request') && !issue.error,
+          ),
+        );
       }
-    };
+    } catch (err) {
+      console.error('Error fetching issues:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch issues');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchIssues();
   }, [owner, repo]);
 
-  const filteredIssues = issues.filter(issue => {
+  const filteredIssues = issues.filter((issue) => {
     if (issueFilter === 'all') return true;
     return issue.state === issueFilter;
   });
@@ -110,7 +135,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
     if (selectedIssues.size === filteredIssues.length) {
       setSelectedIssues(new Set());
     } else {
-      setSelectedIssues(new Set(filteredIssues.map(i => i.number)));
+      setSelectedIssues(new Set(filteredIssues.map((i) => i.number)));
     }
   };
 
@@ -140,14 +165,14 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
 
   const handleCloseIssue = async () => {
     if (!selectedIssue) return;
-    
+
     setIsClosingIssue(true);
     try {
       // Open GitHub page to close the issue
       // We can't close directly via API without auth token
       const closeUrl = `${selectedIssue.html_url}#issue-comment`;
       window.open(closeUrl, '_blank');
-      
+
       // Refresh issues after a delay
       setTimeout(() => {
         fetchIssues();
@@ -165,7 +190,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
       title: '',
       body: '',
       labels: [],
-      assignees: []
+      assignees: [],
     });
   };
 
@@ -178,16 +203,18 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
     setIsCreatingIssue(true);
     try {
       const result = await GithubService.createIssue(owner, repo, newIssue);
-      
+
       if (result?.success) {
         // Refresh the issues list
         await fetchIssues();
         setShowCreateModal(false);
         setNewIssue({ title: '', body: '', labels: [], assignees: [] });
-        
+
         // Optionally open the created issue
         if (result.issue?.html_url) {
-          const openInBrowser = confirm('Issue created successfully! Do you want to view it on GitHub?');
+          const openInBrowser = confirm(
+            'Issue created successfully! Do you want to view it on GitHub?',
+          );
           if (openInBrowser) {
             window.open(result.issue.html_url, '_blank');
           }
@@ -197,7 +224,9 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
       }
     } catch (error) {
       console.error('Error creating issue:', error);
-      alert('Failed to create issue. Please check your GitHub CLI authentication.');
+      alert(
+        'Failed to create issue. Please check your GitHub CLI authentication.',
+      );
     } finally {
       setIsCreatingIssue(false);
     }
@@ -205,63 +234,68 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
 
   const handleAddLabel = () => {
     if (labelInput.trim() && !newIssue.labels.includes(labelInput.trim())) {
-      setNewIssue(prev => ({
+      setNewIssue((prev) => ({
         ...prev,
-        labels: [...prev.labels, labelInput.trim()]
+        labels: [...prev.labels, labelInput.trim()],
       }));
       setLabelInput('');
     }
   };
 
   const handleRemoveLabel = (label: string) => {
-    setNewIssue(prev => ({
+    setNewIssue((prev) => ({
       ...prev,
-      labels: prev.labels.filter(l => l !== label)
+      labels: prev.labels.filter((l) => l !== label),
     }));
   };
 
   const handleAddAssignee = () => {
-    if (assigneeInput.trim() && !newIssue.assignees.includes(assigneeInput.trim())) {
-      setNewIssue(prev => ({
+    if (
+      assigneeInput.trim() &&
+      !newIssue.assignees.includes(assigneeInput.trim())
+    ) {
+      setNewIssue((prev) => ({
         ...prev,
-        assignees: [...prev.assignees, assigneeInput.trim()]
+        assignees: [...prev.assignees, assigneeInput.trim()],
       }));
       setAssigneeInput('');
     }
   };
 
   const handleRemoveAssignee = (assignee: string) => {
-    setNewIssue(prev => ({
+    setNewIssue((prev) => ({
       ...prev,
-      assignees: prev.assignees.filter(a => a !== assignee)
+      assignees: prev.assignees.filter((a) => a !== assignee),
     }));
   };
 
   const generatePrompt = () => {
-    const selectedIssueData = issues.filter(i => selectedIssues.has(i.number));
-    
+    const selectedIssueData = issues.filter((i) =>
+      selectedIssues.has(i.number),
+    );
+
     if (selectedIssueData.length === 0) return '';
 
     let prompt = `I'm working on the GitHub repository ${owner}/${repo}. Here are the issues I need help with:\n\n`;
-    
-    selectedIssueData.forEach(issue => {
+
+    selectedIssueData.forEach((issue) => {
       prompt += `## Issue #${issue.number}: ${issue.title}\n`;
       prompt += `- Status: ${issue.state}\n`;
       prompt += `- URL: ${issue.html_url}\n`;
-      
+
       if (issue.labels.length > 0) {
-        prompt += `- Labels: ${issue.labels.map(l => l.name).join(', ')}\n`;
+        prompt += `- Labels: ${issue.labels.map((l) => l.name).join(', ')}\n`;
       }
-      
+
       if (issue.body) {
         prompt += `- Description:\n${issue.body}\n`;
       }
-      
+
       prompt += '\n';
     });
 
     prompt += `Please help me understand and address these issues.`;
-    
+
     return prompt;
   };
 
@@ -283,7 +317,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -294,15 +328,17 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        gap: '16px',
-        color: theme.colors.textSecondary
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          gap: '16px',
+          color: theme.colors.textSecondary,
+        }}
+      >
         <Loader2 size={32} className="animate-spin" />
         <span>Loading issues from GitHub...</span>
       </div>
@@ -311,46 +347,68 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
 
   if (error) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        gap: '16px',
-        padding: '24px',
-        textAlign: 'center'
-      }}>
-        <AlertCircle size={48} color={authRequired ? theme.colors.warning || '#f59e0b' : theme.colors.error} />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          gap: '16px',
+          padding: '24px',
+          textAlign: 'center',
+        }}
+      >
+        <AlertCircle
+          size={48}
+          color={
+            authRequired
+              ? theme.colors.warning || '#f59e0b'
+              : theme.colors.error
+          }
+        />
         <div>
           <h3 style={{ color: theme.colors.text, marginBottom: '8px' }}>
             {authRequired ? 'Authentication Required' : 'Failed to Load Issues'}
           </h3>
-          <p style={{ color: theme.colors.textSecondary, maxWidth: '500px', marginBottom: '16px' }}>
+          <p
+            style={{
+              color: theme.colors.textSecondary,
+              maxWidth: '500px',
+              marginBottom: '16px',
+            }}
+          >
             {error}
           </p>
           {authRequired && (
-            <div style={{
-              padding: '16px',
-              borderRadius: '8px',
-              backgroundColor: theme.colors.backgroundLight,
-              border: `1px solid ${theme.colors.border}`,
-              textAlign: 'left',
-              maxWidth: '400px'
-            }}>
-              <p style={{ 
-                fontFamily: 'monospace', 
-                fontSize: '14px',
-                color: theme.colors.text,
-                marginBottom: '8px'
-              }}>
+            <div
+              style={{
+                padding: '16px',
+                borderRadius: '8px',
+                backgroundColor: theme.colors.backgroundLight,
+                border: `1px solid ${theme.colors.border}`,
+                textAlign: 'left',
+                maxWidth: '400px',
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '14px',
+                  color: theme.colors.text,
+                  marginBottom: '8px',
+                }}
+              >
                 gh auth login
               </p>
-              <p style={{ 
-                fontSize: '12px', 
-                color: theme.colors.textSecondary 
-              }}>
-                Run this command in your terminal to authenticate with GitHub CLI
+              <p
+                style={{
+                  fontSize: '12px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                Run this command in your terminal to authenticate with GitHub
+                CLI
               </p>
             </div>
           )}
@@ -361,40 +419,60 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '16px',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        backgroundColor: theme.colors.backgroundLight
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '16px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.backgroundLight,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
-            {(['open', 'closed', 'all'] as const).map(filter => (
+            {(['open', 'closed', 'all'] as const).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setIssueFilter(filter)}
                 style={{
                   padding: '6px 12px',
                   borderRadius: '6px',
-                  border: issueFilter === filter ? 'none' : `1px solid ${theme.colors.border}`,
-                  backgroundColor: issueFilter === filter ? theme.colors.primary : theme.colors.background,
-                  color: issueFilter === filter ? theme.colors.background : theme.colors.text,
+                  border:
+                    issueFilter === filter
+                      ? 'none'
+                      : `1px solid ${theme.colors.border}`,
+                  backgroundColor:
+                    issueFilter === filter
+                      ? theme.colors.primary
+                      : theme.colors.background,
+                  color:
+                    issueFilter === filter
+                      ? theme.colors.background
+                      : theme.colors.text,
                   fontSize: '13px',
                   fontWeight: issueFilter === filter ? 600 : 400,
                   cursor: 'pointer',
-                  textTransform: 'capitalize'
+                  textTransform: 'capitalize',
                 }}
               >
-                {filter === 'all' ? 'All' : filter === 'open' ? 'Open' : 'Closed'}
+                {filter === 'all'
+                  ? 'All'
+                  : filter === 'open'
+                    ? 'Open'
+                    : 'Closed'}
                 <span style={{ marginLeft: '6px', opacity: 0.8 }}>
-                  ({issues.filter(i => filter === 'all' || i.state === filter).length})
+                  (
+                  {
+                    issues.filter((i) => filter === 'all' || i.state === filter)
+                      .length
+                  }
+                  )
                 </span>
               </button>
             ))}
           </div>
-          
+
           {filteredIssues.length > 0 && (
             <button
               onClick={handleSelectAll}
@@ -405,10 +483,12 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                 backgroundColor: theme.colors.background,
                 color: theme.colors.textSecondary,
                 fontSize: '13px',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
-              {selectedIssues.size === filteredIssues.length ? 'Deselect All' : 'Select All'}
+              {selectedIssues.size === filteredIssues.length
+                ? 'Deselect All'
+                : 'Select All'}
             </button>
           )}
         </div>
@@ -427,57 +507,72 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
               color: theme.colors.text,
               fontSize: '14px',
               fontWeight: 600,
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             <Plus size={16} />
             New Issue
           </button>
-          
+
           <button
             onClick={handleCopyPrompt}
-          disabled={selectedIssues.size === 0}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: 'none',
-            backgroundColor: selectedIssues.size > 0 ? theme.colors.primary : theme.colors.backgroundTertiary,
-            color: selectedIssues.size > 0 ? theme.colors.background : theme.colors.textSecondary,
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: selectedIssues.size > 0 ? 'pointer' : 'not-allowed',
-            opacity: selectedIssues.size > 0 ? 1 : 0.5
-          }}
-        >
-          {copiedPrompt ? <CheckCircle2 size={16} /> : <Copy size={16} />}
-          {copiedPrompt ? 'Copied!' : `Copy Prompt (${selectedIssues.size})`}
-        </button>
-      </div>
+            disabled={selectedIssues.size === 0}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor:
+                selectedIssues.size > 0
+                  ? theme.colors.primary
+                  : theme.colors.backgroundTertiary,
+              color:
+                selectedIssues.size > 0
+                  ? theme.colors.background
+                  : theme.colors.textSecondary,
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: selectedIssues.size > 0 ? 'pointer' : 'not-allowed',
+              opacity: selectedIssues.size > 0 ? 1 : 0.5,
+            }}
+          >
+            {copiedPrompt ? <CheckCircle2 size={16} /> : <Copy size={16} />}
+            {copiedPrompt ? 'Copied!' : `Copy Prompt (${selectedIssues.size})`}
+          </button>
+        </div>
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: '16px' }}>
         {filteredIssues.length === 0 ? (
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            gap: '16px',
-            color: theme.colors.textSecondary
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              gap: '16px',
+              color: theme.colors.textSecondary,
+            }}
+          >
             <Github size={48} />
             <div style={{ textAlign: 'center' }}>
-              <h3 style={{ color: theme.colors.text, marginBottom: '8px' }}>No Issues Found</h3>
-              <p>There are no {issueFilter !== 'all' ? issueFilter : ''} issues in this repository.</p>
+              <h3 style={{ color: theme.colors.text, marginBottom: '8px' }}>
+                No Issues Found
+              </h3>
+              <p>
+                There are no {issueFilter !== 'all' ? issueFilter : ''} issues
+                in this repository.
+              </p>
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {filteredIssues.map(issue => (
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+          >
+            {filteredIssues.map((issue) => (
               <div
                 key={issue.id}
                 onClick={(e) => handleIssueClick(issue, e)}
@@ -485,14 +580,20 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                   padding: '16px',
                   borderRadius: '8px',
                   border: `1px solid ${selectedIssues.has(issue.number) ? theme.colors.primary : theme.colors.border}`,
-                  backgroundColor: selectedIssues.has(issue.number) 
-                    ? theme.colors.primary + '11' 
+                  backgroundColor: selectedIssues.has(issue.number)
+                    ? theme.colors.primary + '11'
                     : theme.colors.background,
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={selectedIssues.has(issue.number)}
@@ -500,28 +601,43 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                     onClick={(e) => e.stopPropagation()}
                     style={{ marginTop: '2px', cursor: 'pointer' }}
                   />
-                  
+
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <span style={{
-                        display: 'inline-flex',
+                    <div
+                      style={{
+                        display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        backgroundColor: issue.state === 'open' ? '#22c55e22' : '#6b728022',
-                        color: issue.state === 'open' ? '#22c55e' : '#6b7280',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        textTransform: 'uppercase'
-                      }}>
+                        gap: '8px',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          backgroundColor:
+                            issue.state === 'open' ? '#22c55e22' : '#6b728022',
+                          color: issue.state === 'open' ? '#22c55e' : '#6b7280',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                        }}
+                      >
                         {issue.state}
                       </span>
-                      
-                      <span style={{ color: theme.colors.textSecondary, fontSize: '13px' }}>
+
+                      <span
+                        style={{
+                          color: theme.colors.textSecondary,
+                          fontSize: '13px',
+                        }}
+                      >
                         #{issue.number}
                       </span>
-                      
+
                       <a
                         href={issue.html_url}
                         target="_blank"
@@ -532,25 +648,34 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                           textDecoration: 'none',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '4px'
+                          gap: '4px',
                         }}
                       >
                         <ExternalLink size={12} />
                       </a>
                     </div>
-                    
-                    <h4 style={{ 
-                      color: theme.colors.text, 
-                      marginBottom: '8px',
-                      fontSize: '15px',
-                      fontWeight: 600
-                    }}>
+
+                    <h4
+                      style={{
+                        color: theme.colors.text,
+                        marginBottom: '8px',
+                        fontSize: '15px',
+                        fontWeight: 600,
+                      }}
+                    >
                       {issue.title}
                     </h4>
-                    
+
                     {issue.labels.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
-                        {issue.labels.map(label => (
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: '6px',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        {issue.labels.map((label) => (
                           <span
                             key={label.id}
                             style={{
@@ -562,7 +687,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                               backgroundColor: `#${label.color}22`,
                               color: `#${label.color}`,
                               fontSize: '11px',
-                              fontWeight: 500
+                              fontWeight: 500,
                             }}
                           >
                             <Tag size={10} />
@@ -571,32 +696,57 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                         ))}
                       </div>
                     )}
-                    
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '16px',
-                      fontSize: '12px',
-                      color: theme.colors.textSecondary
-                    }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <img 
-                          src={issue.user.avatar_url} 
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '16px',
+                        fontSize: '12px',
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <img
+                          src={issue.user.avatar_url}
                           alt={issue.user.login}
-                          style={{ width: '16px', height: '16px', borderRadius: '50%' }}
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            borderRadius: '50%',
+                          }}
                         />
                         {issue.user.login}
                       </span>
-                      
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+
+                      <span
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
                         <Calendar size={12} />
                         {formatDate(issue.created_at)}
                       </span>
-                      
+
                       {issue.comments > 0 && (
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
                           <MessageSquare size={12} />
-                          {issue.comments} {issue.comments === 1 ? 'comment' : 'comments'}
+                          {issue.comments}{' '}
+                          {issue.comments === 1 ? 'comment' : 'comments'}
                         </span>
                       )}
                     </div>
@@ -610,60 +760,86 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
 
       {/* Issue Detail Modal */}
       {showIssueModal && selectedIssue && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: theme.colors.background,
-            borderRadius: '12px',
-            width: '90%',
-            maxWidth: '800px',
-            maxHeight: '80vh',
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
             display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            border: `1px solid ${theme.colors.border}`
-          }}>
-            {/* Modal Header */}
-            <div style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: theme.colors.background,
+              borderRadius: '12px',
+              width: '90%',
+              maxWidth: '800px',
+              maxHeight: '80vh',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '20px',
-              borderBottom: `1px solid ${theme.colors.border}`
-            }}>
+              flexDirection: 'column',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '20px',
+                borderBottom: `1px solid ${theme.colors.border}`,
+              }}
+            >
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                  <span style={{
-                    display: 'inline-flex',
+                <div
+                  style={{
+                    display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    padding: '4px 10px',
-                    borderRadius: '12px',
-                    backgroundColor: selectedIssue.state === 'open' ? '#22c55e22' : '#6b728022',
-                    color: selectedIssue.state === 'open' ? '#22c55e' : '#6b7280',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase'
-                  }}>
+                    gap: '12px',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      backgroundColor:
+                        selectedIssue.state === 'open'
+                          ? '#22c55e22'
+                          : '#6b728022',
+                      color:
+                        selectedIssue.state === 'open' ? '#22c55e' : '#6b7280',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                    }}
+                  >
                     {selectedIssue.state}
                   </span>
-                  <span style={{ color: theme.colors.textSecondary, fontSize: '14px' }}>
+                  <span
+                    style={{
+                      color: theme.colors.textSecondary,
+                      fontSize: '14px',
+                    }}
+                  >
                     #{selectedIssue.number}
                   </span>
                 </div>
-                <h2 style={{
-                  color: theme.colors.text,
-                  fontSize: '20px',
-                  fontWeight: 600,
-                  margin: 0
-                }}>
+                <h2
+                  style={{
+                    color: theme.colors.text,
+                    fontSize: '20px',
+                    fontWeight: 600,
+                    margin: 0,
+                  }}
+                >
                   {selectedIssue.title}
                 </h2>
               </div>
@@ -677,7 +853,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                   border: 'none',
                   color: theme.colors.textSecondary,
                   cursor: 'pointer',
-                  padding: '8px'
+                  padding: '8px',
                 }}
               >
                 <X size={20} />
@@ -685,44 +861,70 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
             </div>
 
             {/* Modal Body */}
-            <div style={{
-              flex: 1,
-              overflow: 'auto',
-              padding: '20px'
-            }}>
+            <div
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                padding: '20px',
+              }}
+            >
               {/* Issue Metadata */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '20px',
-                marginBottom: '20px',
-                fontSize: '13px',
-                color: theme.colors.textSecondary
-              }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <img 
-                    src={selectedIssue.user.avatar_url} 
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '20px',
+                  marginBottom: '20px',
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                <span
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <img
+                    src={selectedIssue.user.avatar_url}
                     alt={selectedIssue.user.login}
-                    style={{ width: '20px', height: '20px', borderRadius: '50%' }}
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                    }}
                   />
                   <strong>{selectedIssue.user.login}</strong> opened
                 </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
                   <Calendar size={14} />
                   {formatDate(selectedIssue.created_at)}
                 </span>
                 {selectedIssue.comments > 0 && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
                     <MessageSquare size={14} />
-                    {selectedIssue.comments} {selectedIssue.comments === 1 ? 'comment' : 'comments'}
+                    {selectedIssue.comments}{' '}
+                    {selectedIssue.comments === 1 ? 'comment' : 'comments'}
                   </span>
                 )}
               </div>
 
               {/* Labels */}
               {selectedIssue.labels.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
-                  {selectedIssue.labels.map(label => (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                    marginBottom: '20px',
+                  }}
+                >
+                  {selectedIssue.labels.map((label) => (
                     <span
                       key={label.id}
                       style={{
@@ -734,7 +936,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                         backgroundColor: `#${label.color}22`,
                         color: `#${label.color}`,
                         fontSize: '12px',
-                        fontWeight: 500
+                        fontWeight: 500,
                       }}
                     >
                       <Tag size={12} />
@@ -746,28 +948,34 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
 
               {/* Issue Body */}
               {selectedIssue.body && (
-                <div style={{
-                  backgroundColor: theme.colors.backgroundLight,
-                  borderRadius: '8px',
-                  padding: '16px',
-                  border: `1px solid ${theme.colors.border}`
-                }}>
-                  <h3 style={{
-                    color: theme.colors.text,
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    marginTop: 0,
-                    marginBottom: '12px'
-                  }}>
+                <div
+                  style={{
+                    backgroundColor: theme.colors.backgroundLight,
+                    borderRadius: '8px',
+                    padding: '16px',
+                    border: `1px solid ${theme.colors.border}`,
+                  }}
+                >
+                  <h3
+                    style={{
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      marginTop: 0,
+                      marginBottom: '12px',
+                    }}
+                  >
                     Description
                   </h3>
-                  <div style={{
-                    color: theme.colors.text,
-                    fontSize: '14px',
-                    lineHeight: 1.6,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word'
-                  }}>
+                  <div
+                    style={{
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      lineHeight: 1.6,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
                     {selectedIssue.body}
                   </div>
                 </div>
@@ -775,13 +983,15 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
             </div>
 
             {/* Modal Footer */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '20px',
-              borderTop: `1px solid ${theme.colors.border}`
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '20px',
+                borderTop: `1px solid ${theme.colors.border}`,
+              }}
+            >
               <a
                 href={selectedIssue.html_url}
                 target="_blank"
@@ -792,13 +1002,13 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                   gap: '6px',
                   color: theme.colors.primary,
                   textDecoration: 'none',
-                  fontSize: '14px'
+                  fontSize: '14px',
                 }}
               >
                 <ExternalLink size={14} />
                 View on GitHub
               </a>
-              
+
               <div style={{ display: 'flex', gap: '8px' }}>
                 {selectedIssue.state === 'open' && (
                   <button
@@ -816,7 +1026,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                       fontSize: '14px',
                       fontWeight: 500,
                       cursor: isClosingIssue ? 'not-allowed' : 'pointer',
-                      opacity: isClosingIssue ? 0.5 : 1
+                      opacity: isClosingIssue ? 0.5 : 1,
                     }}
                   >
                     <Check size={14} />
@@ -838,7 +1048,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                     color: theme.colors.background,
                     fontSize: '14px',
                     fontWeight: 500,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
                   }}
                 >
                   <Edit size={14} />
@@ -852,40 +1062,48 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
 
       {/* Create Issue Modal */}
       {showCreateModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            backgroundColor: theme.colors.background,
-            borderRadius: '12px',
-            width: '90%',
-            maxWidth: '700px',
-            maxHeight: '80vh',
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
             display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            border: `1px solid ${theme.colors.border}`
-          }}>
-            {/* Modal Header */}
-            <div style={{
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: theme.colors.background,
+              borderRadius: '12px',
+              width: '90%',
+              maxWidth: '700px',
+              maxHeight: '80vh',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '20px',
-              borderBottom: `1px solid ${theme.colors.border}`
-            }}>
-              <h2 style={{
-                color: theme.colors.text,
-                fontSize: '20px',
-                fontWeight: 600,
-                margin: 0
-              }}>
+              flexDirection: 'column',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '20px',
+                borderBottom: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              <h2
+                style={{
+                  color: theme.colors.text,
+                  fontSize: '20px',
+                  fontWeight: 600,
+                  margin: 0,
+                }}
+              >
                 Create New Issue
               </h2>
               <button
@@ -895,7 +1113,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                   border: 'none',
                   color: theme.colors.textSecondary,
                   cursor: 'pointer',
-                  padding: '8px'
+                  padding: '8px',
                 }}
               >
                 <X size={20} />
@@ -903,26 +1121,32 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
             </div>
 
             {/* Modal Body */}
-            <div style={{
-              flex: 1,
-              overflow: 'auto',
-              padding: '20px'
-            }}>
+            <div
+              style={{
+                flex: 1,
+                overflow: 'auto',
+                padding: '20px',
+              }}
+            >
               {/* Title Input */}
               <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  color: theme.colors.text,
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  marginBottom: '8px'
-                }}>
+                <label
+                  style={{
+                    display: 'block',
+                    color: theme.colors.text,
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    marginBottom: '8px',
+                  }}
+                >
                   Title <span style={{ color: theme.colors.error }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={newIssue.title}
-                  onChange={(e) => setNewIssue(prev => ({ ...prev, title: e.target.value }))}
+                  onChange={(e) =>
+                    setNewIssue((prev) => ({ ...prev, title: e.target.value }))
+                  }
                   placeholder="Issue title"
                   style={{
                     width: '100%',
@@ -931,25 +1155,29 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                     border: `1px solid ${theme.colors.border}`,
                     backgroundColor: theme.colors.backgroundLight,
                     color: theme.colors.text,
-                    fontSize: '14px'
+                    fontSize: '14px',
                   }}
                 />
               </div>
 
               {/* Body Input */}
               <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  color: theme.colors.text,
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  marginBottom: '8px'
-                }}>
+                <label
+                  style={{
+                    display: 'block',
+                    color: theme.colors.text,
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    marginBottom: '8px',
+                  }}
+                >
                   Description
                 </label>
                 <textarea
                   value={newIssue.body}
-                  onChange={(e) => setNewIssue(prev => ({ ...prev, body: e.target.value }))}
+                  onChange={(e) =>
+                    setNewIssue((prev) => ({ ...prev, body: e.target.value }))
+                  }
                   placeholder="Describe the issue..."
                   rows={8}
                   style={{
@@ -960,23 +1188,27 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                     backgroundColor: theme.colors.backgroundLight,
                     color: theme.colors.text,
                     fontSize: '14px',
-                    resize: 'vertical'
+                    resize: 'vertical',
                   }}
                 />
               </div>
 
               {/* Labels Input */}
               <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  color: theme.colors.text,
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  marginBottom: '8px'
-                }}>
+                <label
+                  style={{
+                    display: 'block',
+                    color: theme.colors.text,
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    marginBottom: '8px',
+                  }}
+                >
                   Labels
                 </label>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <div
+                  style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}
+                >
                   <input
                     type="text"
                     value={labelInput}
@@ -990,7 +1222,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                       border: `1px solid ${theme.colors.border}`,
                       backgroundColor: theme.colors.backgroundLight,
                       color: theme.colors.text,
-                      fontSize: '14px'
+                      fontSize: '14px',
                     }}
                   />
                   <button
@@ -1002,15 +1234,17 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                       backgroundColor: theme.colors.primary,
                       color: theme.colors.background,
                       fontSize: '14px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
                     }}
                   >
                     Add
                   </button>
                 </div>
                 {newIssue.labels.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {newIssue.labels.map(label => (
+                  <div
+                    style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}
+                  >
+                    {newIssue.labels.map((label) => (
                       <span
                         key={label}
                         style={{
@@ -1021,7 +1255,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                           borderRadius: '12px',
                           backgroundColor: theme.colors.primary + '22',
                           color: theme.colors.primary,
-                          fontSize: '12px'
+                          fontSize: '12px',
                         }}
                       >
                         {label}
@@ -1032,7 +1266,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                             border: 'none',
                             color: theme.colors.primary,
                             cursor: 'pointer',
-                            padding: 0
+                            padding: 0,
                           }}
                         >
                           <X size={12} />
@@ -1045,16 +1279,20 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
 
               {/* Assignees Input */}
               <div style={{ marginBottom: '20px' }}>
-                <label style={{
-                  display: 'block',
-                  color: theme.colors.text,
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  marginBottom: '8px'
-                }}>
+                <label
+                  style={{
+                    display: 'block',
+                    color: theme.colors.text,
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    marginBottom: '8px',
+                  }}
+                >
                   Assignees
                 </label>
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <div
+                  style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}
+                >
                   <input
                     type="text"
                     value={assigneeInput}
@@ -1068,7 +1306,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                       border: `1px solid ${theme.colors.border}`,
                       backgroundColor: theme.colors.backgroundLight,
                       color: theme.colors.text,
-                      fontSize: '14px'
+                      fontSize: '14px',
                     }}
                   />
                   <button
@@ -1080,15 +1318,17 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                       backgroundColor: theme.colors.primary,
                       color: theme.colors.background,
                       fontSize: '14px',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
                     }}
                   >
                     Add
                   </button>
                 </div>
                 {newIssue.assignees.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {newIssue.assignees.map(assignee => (
+                  <div
+                    style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}
+                  >
+                    {newIssue.assignees.map((assignee) => (
                       <span
                         key={assignee}
                         style={{
@@ -1099,7 +1339,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                           borderRadius: '12px',
                           backgroundColor: theme.colors.textSecondary + '22',
                           color: theme.colors.text,
-                          fontSize: '12px'
+                          fontSize: '12px',
                         }}
                       >
                         @{assignee}
@@ -1110,7 +1350,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                             border: 'none',
                             color: theme.colors.text,
                             cursor: 'pointer',
-                            padding: 0
+                            padding: 0,
                           }}
                         >
                           <X size={12} />
@@ -1123,14 +1363,16 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
             </div>
 
             {/* Modal Footer */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'flex-end',
-              gap: '12px',
-              padding: '20px',
-              borderTop: `1px solid ${theme.colors.border}`
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '12px',
+                padding: '20px',
+                borderTop: `1px solid ${theme.colors.border}`,
+              }}
+            >
               <button
                 onClick={() => setShowCreateModal(false)}
                 style={{
@@ -1141,7 +1383,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                   color: theme.colors.text,
                   fontSize: '14px',
                   fontWeight: 500,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
                 }}
               >
                 Cancel
@@ -1156,16 +1398,21 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({ repository, ghOwner, ghRep
                   padding: '10px 20px',
                   borderRadius: '6px',
                   border: 'none',
-                  backgroundColor: isCreatingIssue || !newIssue.title.trim() 
-                    ? theme.colors.backgroundTertiary 
-                    : theme.colors.primary,
-                  color: isCreatingIssue || !newIssue.title.trim()
-                    ? theme.colors.textSecondary
-                    : theme.colors.background,
+                  backgroundColor:
+                    isCreatingIssue || !newIssue.title.trim()
+                      ? theme.colors.backgroundTertiary
+                      : theme.colors.primary,
+                  color:
+                    isCreatingIssue || !newIssue.title.trim()
+                      ? theme.colors.textSecondary
+                      : theme.colors.background,
                   fontSize: '14px',
                   fontWeight: 600,
-                  cursor: isCreatingIssue || !newIssue.title.trim() ? 'not-allowed' : 'pointer',
-                  opacity: isCreatingIssue || !newIssue.title.trim() ? 0.5 : 1
+                  cursor:
+                    isCreatingIssue || !newIssue.title.trim()
+                      ? 'not-allowed'
+                      : 'pointer',
+                  opacity: isCreatingIssue || !newIssue.title.trim() ? 0.5 : 1,
                 }}
               >
                 {isCreatingIssue ? (

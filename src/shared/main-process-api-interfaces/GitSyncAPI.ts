@@ -54,7 +54,9 @@ export interface GitSyncAPI {
   /**
    * Disconnect from git-sync server
    */
-  disconnect(connectionId: string): Promise<{ success: boolean; message?: string }>;
+  disconnect(
+    connectionId: string,
+  ): Promise<{ success: boolean; message?: string }>;
 
   /**
    * Get current connection status
@@ -64,12 +66,16 @@ export interface GitSyncAPI {
   /**
    * Send a message through the git-sync connection
    */
-  sendMessage(message: GitSyncMessage): Promise<{ success: boolean; error?: string }>;
+  sendMessage(
+    message: GitSyncMessage,
+  ): Promise<{ success: boolean; error?: string }>;
 
   /**
    * Get a room token for git-sync collaboration
    */
-  getRoomToken(request: GitSyncRoomTokenRequest): Promise<GitSyncRoomTokenResponse>;
+  getRoomToken(
+    request: GitSyncRoomTokenRequest,
+  ): Promise<GitSyncRoomTokenResponse>;
 
   /**
    * Get the git-sync server URL
@@ -85,5 +91,7 @@ export interface GitSyncAPI {
    * Subscribe to git-sync messages
    * @returns Unsubscribe function
    */
-  onMessage(callback: (connectionKey: string, message: any) => void): () => void;
+  onMessage(
+    callback: (connectionKey: string, message: any) => void,
+  ): () => void;
 }

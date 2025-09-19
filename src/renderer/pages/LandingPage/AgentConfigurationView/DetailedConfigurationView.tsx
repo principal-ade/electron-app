@@ -1,18 +1,21 @@
 import React, { useEffect } from 'react';
 import { Bot, Lock, Unlock, Wand2 } from 'lucide-react';
 
-import { AgentInfo, getAgentInfo, SupportedAgent } from "@principal-ai/agent-monitoring";
+import {
+  AgentInfo,
+  getAgentInfo,
+  SupportedAgent,
+} from '@principal-ai/agent-monitoring';
 
 import { Theme, useTheme } from 'themed-markdown';
-import { AnimatedResizableLayout } from "@a24z/panels";
-import "@a24z/panels/style.css";
+import { AnimatedResizableLayout } from '@a24z/panels';
+import '@a24z/panels/style.css';
 
 import { AgentSetupStatus } from '../../../../shared/main-process-api-interfaces/AgentConfigAPI';
 
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { AgentConfigurationService } from '../../../main-process-api/AgentConfigurationService';
 
-import { AgentInstallationCard } from './AgentInstallationCard';
 import { HooksGrid } from './HooksGrid';
 import { HooksToggle } from './HooksToggle';
 import { WatchingFileViewer } from './WatchingFileViewer';
@@ -30,34 +33,34 @@ interface DetailedConfigurationViewProps {
 
 type ViewMode = 'hooks' | 'mcp' | 'install';
 
-
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
 
-export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps> = ({
-  agentType,
-  initialAgentStatus,
-  checkAgentStatus,
-  onBackToSetup,
-}) => {
+export const DetailedConfigurationView: React.FC<
+  DetailedConfigurationViewProps
+> = ({ agentType, initialAgentStatus, checkAgentStatus, onBackToSetup }) => {
   const { theme } = useTheme();
   const agentConfig = getAgentInfo(agentType);
 
   // =========================================================================
   // STATE - View Control
   // =========================================================================
-  const [agentStatus, setAgentStatus] = React.useState<AgentSetupStatus>(initialAgentStatus);
+  const [agentStatus, setAgentStatus] =
+    React.useState<AgentSetupStatus>(initialAgentStatus);
   const [viewMode, setViewMode] = React.useState<ViewMode>('hooks');
   const [isEditMode, setIsEditMode] = React.useState<boolean>(false);
   const [isSaving, setIsSaving] = React.useState<boolean>(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState<boolean>(false);
-  const [currentFileContent, setCurrentFileContent] = React.useState<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] =
+    React.useState<boolean>(false);
+  const [currentFileContent, setCurrentFileContent] =
+    React.useState<string>('');
 
   // =========================================================================
   // STATE - File Management
   // =========================================================================
-  const [configFileExists, setConfigFileExists] = React.useState<boolean>(false);
+  const [configFileExists, setConfigFileExists] =
+    React.useState<boolean>(false);
   const [configFilePath, setConfigFilePath] = React.useState<string>('');
   const [hooksFilePath, setHooksFilePath] = React.useState<string>('');
   const [hooksFileExists, setHooksFileExists] = React.useState<boolean>(false);
@@ -69,7 +72,6 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
   // =========================================================================
   const [mcpServers, setMcpServers] = React.useState<any>({});
 
-
   // =========================================================================
   // FILE CHECKING FUNCTIONS
   // =========================================================================
@@ -80,12 +82,14 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
   const checkConfigFile = async () => {
     try {
       // Get the MCP file path for MCP-specific operations
-      const mcpPathResult = await AgentConfigurationService.getAgentMCPFilePath(agentType);
+      const mcpPathResult =
+        await AgentConfigurationService.getAgentMCPFilePath(agentType);
       const mcpPath = mcpPathResult;
       setMcpFilePath(mcpPath);
 
       // Get the agent setup status which includes the config path
-      const statusResult = await AgentConfigurationService.getAgentSetupStatus(agentType);
+      const statusResult =
+        await AgentConfigurationService.getAgentSetupStatus(agentType);
       if (!statusResult.success || !statusResult.status) {
         setConfigFileExists(false);
         setMcpServers({});
@@ -137,8 +141,6 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
           const mcpServersFound = projectConfig?.mcpServers || {};
           setMcpServers(mcpServersFound);
            */
-
-
         } catch (parseError) {
           console.error('Error parsing MCP config:', parseError);
           setMcpServers({});
@@ -153,12 +155,9 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     }
   };
 
-
   // =========================================================================
   // MCP PROJECT MANAGEMENT
   // =========================================================================
-
-
 
   // =========================================================================
   // FILE EDITING FUNCTIONS
@@ -205,7 +204,7 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     if (hasUnsavedChanges) {
       // Show confirmation dialog
       const confirmed = window.confirm(
-        'You have unsaved changes. Are you sure you want to discard them?'
+        'You have unsaved changes. Are you sure you want to discard them?',
       );
       if (!confirmed) {
         return;
@@ -220,7 +219,8 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     const checkFiles = async () => {
       try {
         // Get the agent setup status which includes the config path
-        const statusResult = await AgentConfigurationService.getAgentSetupStatus(agentType);
+        const statusResult =
+          await AgentConfigurationService.getAgentSetupStatus(agentType);
         if (!statusResult.success || !statusResult.status) {
           return;
         }
@@ -264,7 +264,8 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
 
   React.useEffect(() => {
     const loadHooksFilePath = async () => {
-      const agentHooksFilePath = await AgentConfigurationService.getAgentHooksFilePath(agentType);
+      const agentHooksFilePath =
+        await AgentConfigurationService.getAgentHooksFilePath(agentType);
       setHooksFilePath(agentHooksFilePath);
       checkHooksFile(agentHooksFilePath);
     };
@@ -274,7 +275,8 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
   // Load MCP file path
   React.useEffect(() => {
     const loadMcpFilePath = async () => {
-      const agentMcpFilePath = await AgentConfigurationService.getAgentMCPFilePath(agentType);
+      const agentMcpFilePath =
+        await AgentConfigurationService.getAgentMCPFilePath(agentType);
       setMcpFilePath(agentMcpFilePath);
       // Check if MCP file exists
       try {
@@ -314,7 +316,6 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     }
   }, [viewMode, agentType]);
 
-
   // =========================================================================
   // RENDER FUNCTIONS
   // =========================================================================
@@ -330,38 +331,49 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
             <Bot size={20} style={{ color: agentConfig.ui.color }} />
           </div>
           <div>
-            <h3 className="font-semibold">{agentConfig.displayName} Configuration</h3>
-            <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
+            <h3 className="font-semibold">
+              {agentConfig.displayName} Configuration
+            </h3>
+            <div
+              className="text-sm"
+              style={{ color: theme.colors.textSecondary }}
+            >
               {viewMode === 'install'
                 ? `${agentConfig.displayName} ${agentStatus?.isInstalled ? 'installed' : 'not installed'}`
                 : viewMode === 'hooks'
-                ? agentStatus?.hasHooks
-                  ? `${agentStatus?.hookCount} hooks configured`
-                  : 'No hooks configured'
-                : `${Object.keys(mcpServers).length} MCP servers`}
+                  ? agentStatus?.hasHooks
+                    ? `${agentStatus?.hookCount} hooks configured`
+                    : 'No hooks configured'
+                  : `${Object.keys(mcpServers).length} MCP servers`}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          
           {/* Edit mode lock button - only show when not in install view */}
           {viewMode !== 'install' && (
             <button
               onClick={() => {
                 if (isEditMode && hasUnsavedChanges) {
-                  alert('Please save or cancel your changes before locking the configuration.');
+                  alert(
+                    'Please save or cancel your changes before locking the configuration.',
+                  );
                   return;
                 }
                 setIsEditMode(!isEditMode);
               }}
               className="p-2 rounded-lg transition-colors"
-              style={{ 
-                backgroundColor: isEditMode ? `${theme.colors.warning}20` : theme.colors.backgroundSecondary,
-                color: isEditMode ? theme.colors.warning : theme.colors.textSecondary
+              style={{
+                backgroundColor: isEditMode
+                  ? `${theme.colors.warning}20`
+                  : theme.colors.backgroundSecondary,
+                color: isEditMode
+                  ? theme.colors.warning
+                  : theme.colors.textSecondary,
               }}
               onMouseEnter={(e) => {
                 if (!isEditMode) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundHover;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundHover;
                   e.currentTarget.style.color = theme.colors.text;
                 } else {
                   e.currentTarget.style.backgroundColor = `${theme.colors.warning}30`;
@@ -369,7 +381,8 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
               }}
               onMouseLeave={(e) => {
                 if (!isEditMode) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundSecondary;
                   e.currentTarget.style.color = theme.colors.textSecondary;
                 } else {
                   e.currentTarget.style.backgroundColor = `${theme.colors.warning}20`;
@@ -391,16 +404,18 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
           <button
             onClick={onBackToSetup}
             className="p-2 rounded-lg transition-colors"
-            style={{ 
+            style={{
               backgroundColor: theme.colors.backgroundSecondary,
-              color: theme.colors.textSecondary
+              color: theme.colors.textSecondary,
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundHover;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundHover;
               e.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
               e.currentTarget.style.color = theme.colors.textSecondary;
             }}
             title="Return to Setup Wizard"
@@ -419,10 +434,19 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
           onClick={() => !isEditMode && setViewMode('install')}
           disabled={isEditMode}
           className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-            viewMode === 'install' ? 'text-white' : 'text-slate-400 hover:text-white'
+            viewMode === 'install'
+              ? 'text-white'
+              : 'text-slate-400 hover:text-white'
           } ${isEditMode ? 'cursor-not-allowed' : ''}`}
-          style={{ backgroundColor: viewMode === 'install' ? agentConfig.ui.color : 'transparent' }}
-          title={isEditMode ? 'Exit edit mode to switch views' : 'View installation information'}
+          style={{
+            backgroundColor:
+              viewMode === 'install' ? agentConfig.ui.color : 'transparent',
+          }}
+          title={
+            isEditMode
+              ? 'Exit edit mode to switch views'
+              : 'View installation information'
+          }
         >
           Install
         </button>
@@ -430,16 +454,30 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
           onClick={() => !isEditMode && setViewMode('hooks')}
           disabled={isEditMode}
           className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-            viewMode === 'hooks' ? 'text-white' : 'text-slate-400 hover:text-white'
+            viewMode === 'hooks'
+              ? 'text-white'
+              : 'text-slate-400 hover:text-white'
           } ${isEditMode ? 'cursor-not-allowed' : ''}`}
-          style={{ backgroundColor: viewMode === 'hooks' ? agentConfig.ui.color : 'transparent' }}
-          title={isEditMode ? 'Exit edit mode to switch views' : 'View hooks configuration'}
+          style={{
+            backgroundColor:
+              viewMode === 'hooks' ? agentConfig.ui.color : 'transparent',
+          }}
+          title={
+            isEditMode
+              ? 'Exit edit mode to switch views'
+              : 'View hooks configuration'
+          }
         >
           Hooks
         </button>
         <button
           onClick={() => {
-            console.log('[MCP] Tab button clicked, isEditMode:', isEditMode, 'currentViewMode:', viewMode);
+            console.log(
+              '[MCP] Tab button clicked, isEditMode:',
+              isEditMode,
+              'currentViewMode:',
+              viewMode,
+            );
             if (!isEditMode) {
               console.log('[MCP] Setting view mode to mcp');
               setViewMode('mcp');
@@ -447,10 +485,19 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
           }}
           disabled={isEditMode}
           className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-            viewMode === 'mcp' ? 'text-white' : 'text-slate-400 hover:text-white'
+            viewMode === 'mcp'
+              ? 'text-white'
+              : 'text-slate-400 hover:text-white'
           } ${isEditMode ? 'cursor-not-allowed' : ''}`}
-          style={{ backgroundColor: viewMode === 'mcp' ? agentConfig.ui.color : 'transparent' }}
-          title={isEditMode ? 'Exit edit mode to switch views' : 'View MCP servers configuration'}
+          style={{
+            backgroundColor:
+              viewMode === 'mcp' ? agentConfig.ui.color : 'transparent',
+          }}
+          title={
+            isEditMode
+              ? 'Exit edit mode to switch views'
+              : 'View MCP servers configuration'
+          }
         >
           MCP Servers
         </button>
@@ -462,12 +509,18 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     if (!isEditMode || viewMode === 'install') return null;
 
     return (
-      <div className="px-4 py-2 border-b" style={{ 
-        backgroundColor: `${theme.colors.warning}10`, 
-        borderColor: `${theme.colors.warning}20` 
-      }}>
+      <div
+        className="px-4 py-2 border-b"
+        style={{
+          backgroundColor: `${theme.colors.warning}10`,
+          borderColor: `${theme.colors.warning}20`,
+        }}
+      >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm" style={{ color: theme.colors.warning }}>
+          <div
+            className="flex items-center gap-2 text-sm"
+            style={{ color: theme.colors.warning }}
+          >
             <Unlock size={16} />
             <span>Configuration unlocked - editing enabled</span>
             {hasUnsavedChanges && (
@@ -481,10 +534,17 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
               onClick={() => handleSaveConfig(currentFileContent)}
               disabled={!hasUnsavedChanges || isSaving}
               className="px-3 py-1 text-xs rounded transition-colors"
-              style={{ 
-                backgroundColor: hasUnsavedChanges && !isSaving ? theme.colors.success : theme.colors.backgroundSecondary,
-                color: hasUnsavedChanges && !isSaving ? '#fff' : theme.colors.textMuted,
-                cursor: hasUnsavedChanges && !isSaving ? 'pointer' : 'not-allowed'
+              style={{
+                backgroundColor:
+                  hasUnsavedChanges && !isSaving
+                    ? theme.colors.success
+                    : theme.colors.backgroundSecondary,
+                color:
+                  hasUnsavedChanges && !isSaving
+                    ? '#fff'
+                    : theme.colors.textMuted,
+                cursor:
+                  hasUnsavedChanges && !isSaving ? 'pointer' : 'not-allowed',
               }}
               onMouseEnter={(e) => {
                 if (hasUnsavedChanges && !isSaving) {
@@ -494,22 +554,28 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
               onMouseLeave={(e) => {
                 e.currentTarget.style.filter = 'brightness(1)';
               }}
-              title={hasUnsavedChanges ? 'Save changes (Cmd+S)' : 'No changes to save'}
+              title={
+                hasUnsavedChanges
+                  ? 'Save changes (Cmd+S)'
+                  : 'No changes to save'
+              }
             >
               {isSaving ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={handleCancel}
               className="px-3 py-1 text-xs rounded transition-colors"
-              style={{ 
+              style={{
                 backgroundColor: theme.colors.backgroundSecondary,
-                color: theme.colors.textSecondary
+                color: theme.colors.textSecondary,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundHover;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundHover;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
               }}
               title="Cancel editing and discard changes"
             >
@@ -522,18 +588,6 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
   };
 
   const renderInstallContent = () => {
-    if (agentType === SupportedAgent.OPENCODE) {
-      return (
-        <AgentInstallationCard
-          agentType={agentType}
-          agentConfig={agentConfig}
-          onInstallComplete={() => {
-            checkAgentStatus();
-          }}
-        />
-      );
-    }
-
     return (
       <div className="text-center py-8">
         <div className="mb-6">
@@ -541,7 +595,7 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
             {agentConfig.displayName} Installation
           </h4>
           <p className="text-slate-400">
-            {agentStatus?.isInstalled 
+            {agentStatus?.isInstalled
               ? `${agentConfig.displayName} is installed and ready to use`
               : `${agentConfig.displayName} is not installed on this system`}
           </p>
@@ -581,8 +635,10 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
 
     return (
       <div className="space-y-4">
-        <div className="flex justify-between items-center p-4 rounded-lg" 
-          style={{ backgroundColor: theme.colors.backgroundSecondary }}>
+        <div
+          className="flex justify-between items-center p-4 rounded-lg"
+          style={{ backgroundColor: theme.colors.backgroundSecondary }}
+        >
           <div>
             <h4 className="font-medium text-white">Quick Toggle</h4>
             <p className="text-sm text-slate-400 mt-1">
@@ -595,7 +651,7 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
             onToggle={() => {
               checkAgentStatus();
               // Force HooksGrid to reload by changing its key
-              setHooksGridKey(prev => prev + 1);
+              setHooksGridKey((prev) => prev + 1);
             }}
           />
         </div>
@@ -641,12 +697,14 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     const loadClaudeMCPStatus = async () => {
       console.log('[MCP] Loading Claude MCP status...');
       try {
-        const mcpResult = await AgentConfigurationService.getAgentMCPStatus(SupportedAgent.CLAUDE);
+        const mcpResult = await AgentConfigurationService.getAgentMCPStatus(
+          SupportedAgent.CLAUDE,
+        );
         console.log('[MCP] Claude MCP status result:', mcpResult);
         if (mcpResult.success && mcpResult.status) {
           setClaudeMCPStatus({
             hasPrincipleMD: mcpResult.status.hasMCP,
-            mcpServers: {} // We don't need detailed servers list for now
+            mcpServers: {}, // We don't need detailed servers list for now
           });
         }
       } catch (error) {
@@ -655,12 +713,17 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     };
 
     const handleToggleClaudeMCP = async () => {
-      console.log('[MCP] Toggle Claude MCP clicked, current status:', claudeMCPStatus.hasPrincipleMD);
+      console.log(
+        '[MCP] Toggle Claude MCP clicked, current status:',
+        claudeMCPStatus.hasPrincipleMD,
+      );
       setIsTogglingClaudeMCP(true);
       try {
         if (claudeMCPStatus.hasPrincipleMD) {
           console.log('[MCP] Removing MCP from Claude...');
-          const result = await AgentConfigurationService.removeMCPFromAgent(SupportedAgent.CLAUDE);
+          const result = await AgentConfigurationService.removeMCPFromAgent(
+            SupportedAgent.CLAUDE,
+          );
           console.log('[MCP] Remove result:', result);
           if (result.success) {
             await loadClaudeMCPStatus();
@@ -668,7 +731,9 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
           }
         } else {
           console.log('[MCP] Adding MCP to Claude...');
-          const result = await AgentConfigurationService.addMCPToAgent(SupportedAgent.CLAUDE);
+          const result = await AgentConfigurationService.addMCPToAgent(
+            SupportedAgent.CLAUDE,
+          );
           console.log('[MCP] Add result:', result);
           if (result.success) {
             await loadClaudeMCPStatus();
@@ -684,15 +749,21 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
 
     return (
       <div className="p-4">
-        <div className="flex items-center justify-between p-4 rounded-lg border-2 transition-colors" 
-          style={{ 
+        <div
+          className="flex items-center justify-between p-4 rounded-lg border-2 transition-colors"
+          style={{
             backgroundColor: theme.colors.backgroundSecondary,
-            borderColor: claudeMCPStatus.hasPrincipleMD ? agentConfig.ui.color : 'transparent'
-          }}>
+            borderColor: claudeMCPStatus.hasPrincipleMD
+              ? agentConfig.ui.color
+              : 'transparent',
+          }}
+        >
           <div className="flex-1">
             <h4 className="font-medium text-white">Principle MD MCP Server</h4>
             <p className="text-xs text-slate-400 mt-1">
-              {claudeMCPStatus.hasPrincipleMD ? 'Enabled in ~/.claude.json' : 'Not configured'}
+              {claudeMCPStatus.hasPrincipleMD
+                ? 'Enabled in ~/.claude.json'
+                : 'Not configured'}
             </p>
           </div>
           <button
@@ -708,7 +779,11 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
               color: 'white',
             }}
           >
-            {isTogglingClaudeMCP ? 'Processing...' : claudeMCPStatus.hasPrincipleMD ? 'Disable' : 'Enable'}
+            {isTogglingClaudeMCP
+              ? 'Processing...'
+              : claudeMCPStatus.hasPrincipleMD
+                ? 'Disable'
+                : 'Enable'}
           </button>
         </div>
       </div>
@@ -730,12 +805,14 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     const loadClineMCPStatus = async () => {
       console.log('[MCP] Loading Cline MCP status...');
       try {
-        const mcpResult = await AgentConfigurationService.getAgentMCPStatus(SupportedAgent.CLINE);
+        const mcpResult = await AgentConfigurationService.getAgentMCPStatus(
+          SupportedAgent.CLINE,
+        );
         console.log('[MCP] Cline MCP status result:', mcpResult);
         if (mcpResult.success && mcpResult.status) {
           setClineMCPStatus({
             hasPrincipleMD: mcpResult.status.hasMCP,
-            mcpServers: {} // We don't need detailed servers list for now
+            mcpServers: {}, // We don't need detailed servers list for now
           });
         }
       } catch (error) {
@@ -744,12 +821,17 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     };
 
     const handleToggleClineMCP = async () => {
-      console.log('[MCP] Toggle Cline MCP clicked, current status:', clineMCPStatus.hasPrincipleMD);
+      console.log(
+        '[MCP] Toggle Cline MCP clicked, current status:',
+        clineMCPStatus.hasPrincipleMD,
+      );
       setIsTogglingClineMCP(true);
       try {
         if (clineMCPStatus.hasPrincipleMD) {
           console.log('[MCP] Removing MCP from Cline...');
-          const result = await AgentConfigurationService.removeMCPFromAgent(SupportedAgent.CLINE);
+          const result = await AgentConfigurationService.removeMCPFromAgent(
+            SupportedAgent.CLINE,
+          );
           console.log('[MCP] Remove result:', result);
           if (result.success) {
             await loadClineMCPStatus();
@@ -757,7 +839,9 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
           }
         } else {
           console.log('[MCP] Adding MCP to Cline...');
-          const result = await AgentConfigurationService.addMCPToAgent(SupportedAgent.CLINE);
+          const result = await AgentConfigurationService.addMCPToAgent(
+            SupportedAgent.CLINE,
+          );
           console.log('[MCP] Add result:', result);
           if (result.success) {
             await loadClineMCPStatus();
@@ -773,15 +857,21 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
 
     return (
       <div className="p-4">
-        <div className="flex items-center justify-between p-4 rounded-lg border-2 transition-colors"
+        <div
+          className="flex items-center justify-between p-4 rounded-lg border-2 transition-colors"
           style={{
             backgroundColor: theme.colors.backgroundSecondary,
-            borderColor: clineMCPStatus.hasPrincipleMD ? agentConfig.ui.color : 'transparent'
-          }}>
+            borderColor: clineMCPStatus.hasPrincipleMD
+              ? agentConfig.ui.color
+              : 'transparent',
+          }}
+        >
           <div className="flex-1">
             <h4 className="font-medium text-white">Principle MD MCP Server</h4>
             <p className="text-xs text-slate-400 mt-1">
-              {clineMCPStatus.hasPrincipleMD ? 'Enabled in Cline settings' : 'Not configured'}
+              {clineMCPStatus.hasPrincipleMD
+                ? 'Enabled in Cline settings'
+                : 'Not configured'}
             </p>
           </div>
           <button
@@ -797,7 +887,11 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
               color: 'white',
             }}
           >
-            {isTogglingClineMCP ? 'Processing...' : clineMCPStatus.hasPrincipleMD ? 'Disable' : 'Enable'}
+            {isTogglingClineMCP
+              ? 'Processing...'
+              : clineMCPStatus.hasPrincipleMD
+                ? 'Disable'
+                : 'Enable'}
           </button>
         </div>
       </div>
@@ -810,7 +904,8 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
       hasPrincipleMD: boolean;
       mcpServers: Record<string, any>;
     }>({ hasPrincipleMD: false, mcpServers: {} });
-    const [isTogglingOpenCodeMCP, setIsTogglingOpenCodeMCP] = React.useState(false);
+    const [isTogglingOpenCodeMCP, setIsTogglingOpenCodeMCP] =
+      React.useState(false);
 
     React.useEffect(() => {
       loadOpenCodeMCPStatus();
@@ -819,18 +914,23 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     const loadOpenCodeMCPStatus = async () => {
       console.log('[MCP] Loading OpenCode MCP status...');
       try {
-        const mcpResult = await AgentConfigurationService.getAgentMCPStatus(SupportedAgent.OPENCODE);
+        const mcpResult = await AgentConfigurationService.getAgentMCPStatus(
+          SupportedAgent.OPENCODE,
+        );
         console.log('[MCP] OpenCode MCP status result:', mcpResult);
         if (mcpResult.success && mcpResult.status) {
           setOpenCodeMCPStatus({
             hasPrincipleMD: mcpResult.status.hasMCP,
-            mcpServers: {} // We don't need detailed servers list for now
+            mcpServers: {}, // We don't need detailed servers list for now
           });
           console.log('[MCP] OpenCode MCP status updated:', {
-            hasPrincipleMD: mcpResult.status.hasMCP
+            hasPrincipleMD: mcpResult.status.hasMCP,
           });
         } else {
-          console.log('[MCP] Failed to get OpenCode MCP status:', mcpResult.error);
+          console.log(
+            '[MCP] Failed to get OpenCode MCP status:',
+            mcpResult.error,
+          );
         }
       } catch (error) {
         console.error('[MCP] Error loading OpenCode MCP status:', error);
@@ -838,12 +938,17 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     };
 
     const handleToggleOpenCodeMCP = async () => {
-      console.log('[MCP] Toggle OpenCode MCP clicked, current status:', openCodeMCPStatus.hasPrincipleMD);
+      console.log(
+        '[MCP] Toggle OpenCode MCP clicked, current status:',
+        openCodeMCPStatus.hasPrincipleMD,
+      );
       setIsTogglingOpenCodeMCP(true);
       try {
         if (openCodeMCPStatus.hasPrincipleMD) {
           console.log('[MCP] Removing MCP from OpenCode...');
-          const result = await AgentConfigurationService.removeMCPFromAgent(SupportedAgent.OPENCODE);
+          const result = await AgentConfigurationService.removeMCPFromAgent(
+            SupportedAgent.OPENCODE,
+          );
           console.log('[MCP] Remove result:', result);
           if (result.success) {
             await loadOpenCodeMCPStatus();
@@ -851,7 +956,9 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
           }
         } else {
           console.log('[MCP] Adding MCP to OpenCode...');
-          const result = await AgentConfigurationService.addMCPToAgent(SupportedAgent.OPENCODE);
+          const result = await AgentConfigurationService.addMCPToAgent(
+            SupportedAgent.OPENCODE,
+          );
           console.log('[MCP] Add result:', result);
           if (result.success) {
             await loadOpenCodeMCPStatus();
@@ -867,15 +974,21 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
 
     return (
       <div className="p-4">
-        <div className="flex items-center justify-between p-4 rounded-lg border-2 transition-colors" 
-          style={{ 
+        <div
+          className="flex items-center justify-between p-4 rounded-lg border-2 transition-colors"
+          style={{
             backgroundColor: theme.colors.backgroundSecondary,
-            borderColor: openCodeMCPStatus.hasPrincipleMD ? agentConfig.ui.color : 'transparent'
-          }}>
+            borderColor: openCodeMCPStatus.hasPrincipleMD
+              ? agentConfig.ui.color
+              : 'transparent',
+          }}
+        >
           <div className="flex-1">
             <h4 className="font-medium text-white">Principle MD MCP Server</h4>
             <p className="text-xs text-slate-400 mt-1">
-              {openCodeMCPStatus.hasPrincipleMD ? 'Enabled in ~/.config/openCode/openCode.json' : 'Not configured'}
+              {openCodeMCPStatus.hasPrincipleMD
+                ? 'Enabled in ~/.config/openCode/openCode.json'
+                : 'Not configured'}
             </p>
           </div>
           <button
@@ -891,13 +1004,16 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
               color: 'white',
             }}
           >
-            {isTogglingOpenCodeMCP ? 'Processing...' : openCodeMCPStatus.hasPrincipleMD ? 'Disable' : 'Enable'}
+            {isTogglingOpenCodeMCP
+              ? 'Processing...'
+              : openCodeMCPStatus.hasPrincipleMD
+                ? 'Disable'
+                : 'Enable'}
           </button>
         </div>
       </div>
     );
   };
-
 
   // =========================================================================
   // LEFT PANEL
@@ -925,14 +1041,16 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
       {(() => {
         // For install view, show installation details
         if (viewMode === 'install') {
-          return <InstallationDetailsPanel
-            theme={theme}
-            agentConfig={agentConfig}
-            agentStatus={agentStatus}
-            agentType={agentType}
-            configFilePath={configFilePath}
-            hooksFilePath={hooksFilePath}
-          />;
+          return (
+            <InstallationDetailsPanel
+              theme={theme}
+              agentConfig={agentConfig}
+              agentStatus={agentStatus}
+              agentType={agentType}
+              configFilePath={configFilePath}
+              hooksFilePath={hooksFilePath}
+            />
+          );
         }
 
         // For hooks and mcp views, show file viewer
@@ -960,15 +1078,17 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
           );
         }
 
-        return <FileNotFoundPanel 
-          theme={theme}
-          fileTitle={fileTitle}
-          fileDescription={fileDescription}
-          filePath={filePath}
-          onRefresh={async () => {
-            checkAgentStatus();
-          }}
-        />;
+        return (
+          <FileNotFoundPanel
+            theme={theme}
+            fileTitle={fileTitle}
+            fileDescription={fileDescription}
+            filePath={filePath}
+            onRefresh={async () => {
+              checkAgentStatus();
+            }}
+          />
+        );
       })()}
     </div>
   );
@@ -990,112 +1110,201 @@ export const DetailedConfigurationView: React.FC<DetailedConfigurationViewProps>
     />
   );
 };
-  const InstallationDetailsPanel = ({ theme, agentConfig, agentStatus, agentType, configFilePath, hooksFilePath }: { theme: Theme, agentConfig: AgentInfo, agentStatus: AgentSetupStatus, agentType: SupportedAgent, configFilePath: string, hooksFilePath: string }) => (
-    <>
-      <div className="p-4 border-b" style={{ borderColor: theme.colors.border }}>
-        <h3 className="font-semibold mb-1" style={{ color: theme.colors.text }}>
-          Installation Details
-        </h3>
-        <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
-          {agentConfig.displayName} setup and configuration information
-        </div>
+const InstallationDetailsPanel = ({
+  theme,
+  agentConfig,
+  agentStatus,
+  agentType,
+  configFilePath,
+  hooksFilePath,
+}: {
+  theme: Theme;
+  agentConfig: AgentInfo;
+  agentStatus: AgentSetupStatus;
+  agentType: SupportedAgent;
+  configFilePath: string;
+  hooksFilePath: string;
+}) => (
+  <>
+    <div className="p-4 border-b" style={{ borderColor: theme.colors.border }}>
+      <h3 className="font-semibold mb-1" style={{ color: theme.colors.text }}>
+        Installation Details
+      </h3>
+      <div className="text-sm" style={{ color: theme.colors.textSecondary }}>
+        {agentConfig.displayName} setup and configuration information
       </div>
-      
-      <div className="flex-1 p-6 overflow-y-auto">
-        <div className="space-y-6">
-          {/* Installation Status */}
-          <div>
-            <h4 className="text-sm font-medium mb-3" style={{ color: theme.colors.textSecondary }}>
-              Installation Status
-            </h4>
-            <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.backgroundSecondary }}>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full" 
-                  style={{ backgroundColor: agentStatus?.isInstalled ? theme.colors.success : theme.colors.muted }} />
-                <span style={{ color: theme.colors.text }}>
-                  {agentStatus?.isInstalled ? 'Installed' : 'Not Installed'}
-                </span>
-              </div>
+    </div>
+
+    <div className="flex-1 p-6 overflow-y-auto">
+      <div className="space-y-6">
+        {/* Installation Status */}
+        <div>
+          <h4
+            className="text-sm font-medium mb-3"
+            style={{ color: theme.colors.textSecondary }}
+          >
+            Installation Status
+          </h4>
+          <div
+            className="rounded-lg p-4"
+            style={{ backgroundColor: theme.colors.backgroundSecondary }}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className="w-3 h-3 rounded-full"
+                style={{
+                  backgroundColor: agentStatus?.isInstalled
+                    ? theme.colors.success
+                    : theme.colors.muted,
+                }}
+              />
+              <span style={{ color: theme.colors.text }}>
+                {agentStatus?.isInstalled ? 'Installed' : 'Not Installed'}
+              </span>
             </div>
           </div>
+        </div>
 
-          {/* Installation Instructions */}
-          <div>
-            <h4 className="text-sm font-medium mb-3" style={{ color: theme.colors.textSecondary }}>
-              Installation Instructions
-            </h4>
-            <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: theme.colors.backgroundSecondary }}>
-              {agentType === SupportedAgent.OPENCODE ? (
-                <>
-                  <p className="text-sm" style={{ color: theme.colors.text }}>
-                    {window.appName} provides a custom {agentConfig.displayName} CLI with built-in hooks support.
-                  </p>
-                  <p className="text-sm" style={{ color: theme.colors.text }}>
-                    Use the installation card on the left to manage your {agentConfig.displayName} CLI installation.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm" style={{ color: theme.colors.text }}>
-                    1. Download {agentConfig.displayName} from the official website
-                  </p>
-                  <p className="text-sm" style={{ color: theme.colors.text }}>
-                    2. Install the application following the standard installation process
-                  </p>
-                  <p className="text-sm" style={{ color: theme.colors.text }}>
-                    3. Once installed, return here to configure hooks and MCP servers
-                  </p>
-                </>
-              )}
-            </div>
+        {/* Installation Instructions */}
+        <div>
+          <h4
+            className="text-sm font-medium mb-3"
+            style={{ color: theme.colors.textSecondary }}
+          >
+            Installation Instructions
+          </h4>
+          <div
+            className="rounded-lg p-4 space-y-3"
+            style={{ backgroundColor: theme.colors.backgroundSecondary }}
+          >
+            {agentType === SupportedAgent.OPENCODE ? (
+              <>
+                <p className="text-sm" style={{ color: theme.colors.text }}>
+                  {window.appName} provides a custom {agentConfig.displayName}{' '}
+                  CLI with built-in hooks support.
+                </p>
+                <p className="text-sm" style={{ color: theme.colors.text }}>
+                  Use the installation card on the left to manage your{' '}
+                  {agentConfig.displayName} CLI installation.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm" style={{ color: theme.colors.text }}>
+                  1. Download {agentConfig.displayName} from the official
+                  website
+                </p>
+                <p className="text-sm" style={{ color: theme.colors.text }}>
+                  2. Install the application following the standard installation
+                  process
+                </p>
+                <p className="text-sm" style={{ color: theme.colors.text }}>
+                  3. Once installed, return here to configure hooks and MCP
+                  servers
+                </p>
+              </>
+            )}
           </div>
+        </div>
 
-          {/* Configuration Paths */}
-          <div>
-            <h4 className="text-sm font-medium mb-3" style={{ color: theme.colors.textSecondary }}>
-              Configuration Paths
-            </h4>
-            <div className="rounded-lg p-4 space-y-3" style={{ backgroundColor: theme.colors.backgroundSecondary }}>
-              <div>
-                <p className="text-xs mb-1" style={{ color: theme.colors.textSecondary }}>Settings Path:</p>
-                <code className="text-xs" style={{ color: theme.colors.success }}>{configFilePath}</code>
-              </div>
-              {hooksFilePath && (
-                <div>
-                  <p className="text-xs mb-1" style={{ color: theme.colors.textSecondary }}>Hooks Path:</p>
-                  <code className="text-xs" style={{ color: theme.colors.success }}>{hooksFilePath}</code>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Download Link */}
-          {!agentStatus?.isInstalled && (agentType !== SupportedAgent.OPENCODE) && (
+        {/* Configuration Paths */}
+        <div>
+          <h4
+            className="text-sm font-medium mb-3"
+            style={{ color: theme.colors.textSecondary }}
+          >
+            Configuration Paths
+          </h4>
+          <div
+            className="rounded-lg p-4 space-y-3"
+            style={{ backgroundColor: theme.colors.backgroundSecondary }}
+          >
             <div>
-              <h4 className="text-sm font-medium mb-3" style={{ color: theme.colors.textSecondary }}>
-                Download
-              </h4>
-              <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.backgroundSecondary }}>
-                <button
-                  onClick={() => window.open(agentConfig.ui.downloadUrl, '_blank')}
-                  className="w-full px-4 py-2 text-white rounded-md transition-colors flex items-center justify-center gap-2"
-                  style={{ backgroundColor: agentConfig.ui.color }}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                  Open Download Page
-                </button>
-              </div>
+              <p
+                className="text-xs mb-1"
+                style={{ color: theme.colors.textSecondary }}
+              >
+                Settings Path:
+              </p>
+              <code className="text-xs" style={{ color: theme.colors.success }}>
+                {configFilePath}
+              </code>
             </div>
-          )}
+            {hooksFilePath && (
+              <div>
+                <p
+                  className="text-xs mb-1"
+                  style={{ color: theme.colors.textSecondary }}
+                >
+                  Hooks Path:
+                </p>
+                <code
+                  className="text-xs"
+                  style={{ color: theme.colors.success }}
+                >
+                  {hooksFilePath}
+                </code>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </>
-  );
 
-const FileNotFoundPanel = ({ theme, fileTitle, fileDescription, filePath, onRefresh }: { theme: Theme, fileTitle: string, fileDescription: string, filePath: string, onRefresh: () => void }) => (
+        {/* Download Link */}
+        {!agentStatus?.isInstalled && agentType !== SupportedAgent.OPENCODE && (
+          <div>
+            <h4
+              className="text-sm font-medium mb-3"
+              style={{ color: theme.colors.textSecondary }}
+            >
+              Download
+            </h4>
+            <div
+              className="rounded-lg p-4"
+              style={{ backgroundColor: theme.colors.backgroundSecondary }}
+            >
+              <button
+                onClick={() =>
+                  window.open(agentConfig.ui.downloadUrl, '_blank')
+                }
+                className="w-full px-4 py-2 text-white rounded-md transition-colors flex items-center justify-center gap-2"
+                style={{ backgroundColor: agentConfig.ui.color }}
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  />
+                </svg>
+                Open Download Page
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </>
+);
+
+const FileNotFoundPanel = ({
+  theme,
+  fileTitle,
+  fileDescription,
+  filePath,
+  onRefresh,
+}: {
+  theme: Theme;
+  fileTitle: string;
+  fileDescription: string;
+  filePath: string;
+  onRefresh: () => void;
+}) => (
   <>
     <div className="p-4 border-b" style={{ borderColor: theme.colors.border }}>
       <h3 className="font-semibold mb-1">{fileTitle}</h3>
@@ -1105,29 +1314,50 @@ const FileNotFoundPanel = ({ theme, fileTitle, fileDescription, filePath, onRefr
     <div className="flex-1 p-6">
       <div className="space-y-4">
         <div>
-          <div className="text-sm font-medium text-slate-300 mb-2">File Path:</div>
-          <code className="block text-xs rounded p-3" 
-            style={{ backgroundColor: theme.colors.backgroundSecondary, color: theme.colors.textSecondary }}>
+          <div className="text-sm font-medium text-slate-300 mb-2">
+            File Path:
+          </div>
+          <code
+            className="block text-xs rounded p-3"
+            style={{
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.textSecondary,
+            }}
+          >
             {filePath}
           </code>
         </div>
 
         <div className="pt-4">
-          <div className="p-4 rounded-lg" style={{ 
-            backgroundColor: `${theme.colors.warning}20`, 
-            border: `1px solid ${theme.colors.warning}30` 
-          }}>
-            <div className="flex items-center gap-2" style={{ color: theme.colors.warning }}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          <div
+            className="p-4 rounded-lg"
+            style={{
+              backgroundColor: `${theme.colors.warning}20`,
+              border: `1px solid ${theme.colors.warning}30`,
+            }}
+          >
+            <div
+              className="flex items-center gap-2"
+              style={{ color: theme.colors.warning }}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
               </svg>
               <span className="font-medium">Configuration file not found</span>
             </div>
             <p className="text-sm text-slate-300 mt-2">{fileDescription}</p>
           </div>
         </div>
-
 
         <div className="pt-4">
           <button

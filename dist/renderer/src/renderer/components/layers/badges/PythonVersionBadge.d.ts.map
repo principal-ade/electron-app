@@ -1,1 +1,0 @@
-{"version":3,"file":"PythonVersionBadge.d.ts","sourceRoot":"","sources":["../../../../../../../src/renderer/components/layers/badges/PythonVersionBadge.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAK,MAAM,OAAO,CAAC;AAE1B,UAAU,uBAAuB;IAC/B,OAAO,CAAC,EAAE,MAAM,CAAC;IACjB,IAAI,CAAC,EAAE,OAAO,GAAG,QAAQ,CAAC;CAC3B;AAED,eAAO,MAAM,kBAAkB,EAAE,KAAK,CAAC,EAAE,CAAC,uBAAuB,CA2BhE,CAAC"}

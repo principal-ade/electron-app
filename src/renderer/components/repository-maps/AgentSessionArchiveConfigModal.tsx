@@ -34,10 +34,9 @@ interface AgentSessionArchiveConfigModalProps {
   onClose: () => void;
 }
 
-export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigModalProps> = ({
-  isOpen,
-  onClose,
-}) => {
+export const AgentSessionArchiveConfigModal: React.FC<
+  AgentSessionArchiveConfigModalProps
+> = ({ isOpen, onClose }) => {
   const { theme } = useTheme();
   const [config, setConfig] = useState<ArchiveConfiguration | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +64,7 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
 
   const handleSave = async () => {
     if (!config) return;
-    
+
     try {
       setSaving(true);
       // Save configuration to main process
@@ -94,42 +93,50 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-    }}>
-      <div style={{
-        backgroundColor: theme.colors.background,
-        borderRadius: '12px',
-        border: `1px solid ${theme.colors.border}`,
-        width: '600px',
-        maxWidth: '90vw',
-        maxHeight: '80vh',
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
-        flexDirection: 'column',
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '20px',
-          borderBottom: `1px solid ${theme.colors.border}`,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: theme.colors.background,
+          borderRadius: '12px',
+          border: `1px solid ${theme.colors.border}`,
+          width: '600px',
+          maxWidth: '90vw',
+          maxHeight: '80vh',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
-          <h2 style={{
-            margin: 0,
-            fontSize: '18px',
-            fontWeight: 600,
-            color: theme.colors.text,
-          }}>
+          flexDirection: 'column',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '20px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontSize: '18px',
+              fontWeight: 600,
+              color: theme.colors.text,
+            }}
+          >
             Archive Configuration
           </h2>
           <button
@@ -150,73 +157,103 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
         </div>
 
         {/* Content */}
-        <div style={{
-          flex: 1,
-          padding: '20px',
-          overflowY: 'auto',
-        }}>
+        <div
+          style={{
+            flex: 1,
+            padding: '20px',
+            overflowY: 'auto',
+          }}
+        >
           {loading ? (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px',
-              color: theme.colors.textSecondary,
-            }}>
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '40px',
+                color: theme.colors.textSecondary,
+              }}
+            >
               Loading configuration...
             </div>
           ) : config ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
+            >
               {/* Auto-Archive Settings */}
               <div>
-                <h3 style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: '12px',
-                }}>
+                <h3
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                    marginBottom: '12px',
+                  }}
+                >
                   Auto-Archive Settings
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <label style={{
+                <div
+                  style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: theme.colors.text,
-                    fontSize: '13px',
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={config.autoArchive.enabled}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        autoArchive: {
-                          ...config.autoArchive,
-                          enabled: e.target.checked,
-                        },
-                      })}
-                    />
-                    Enable auto-archiving
-                  </label>
-                  
-                  <div style={{ marginLeft: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{
+                    flexDirection: 'column',
+                    gap: '12px',
+                  }}
+                >
+                  <label
+                    style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      color: theme.colors.textSecondary,
+                      color: theme.colors.text,
                       fontSize: '13px',
-                    }}>
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={config.autoArchive.enabled}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          autoArchive: {
+                            ...config.autoArchive,
+                            enabled: e.target.checked,
+                          },
+                        })
+                      }
+                    />
+                    Enable auto-archiving
+                  </label>
+
+                  <div
+                    style={{
+                      marginLeft: '24px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: theme.colors.textSecondary,
+                        fontSize: '13px',
+                      }}
+                    >
                       Inactivity threshold:
                       <input
                         type="number"
                         min="1"
                         value={config.autoArchive.inactivityThreshold}
-                        onChange={(e) => setConfig({
-                          ...config,
-                          autoArchive: {
-                            ...config.autoArchive,
-                            inactivityThreshold: parseInt(e.target.value) || 24,
-                          },
-                        })}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            autoArchive: {
+                              ...config.autoArchive,
+                              inactivityThreshold:
+                                parseInt(e.target.value) || 24,
+                            },
+                          })
+                        }
                         disabled={!config.autoArchive.enabled}
                         style={{
                           width: '60px',
@@ -229,26 +266,30 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
                       />
                       hours
                     </label>
-                    
-                    <label style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      color: theme.colors.textSecondary,
-                      fontSize: '13px',
-                    }}>
+
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: theme.colors.textSecondary,
+                        fontSize: '13px',
+                      }}
+                    >
                       Check interval:
                       <input
                         type="number"
                         min="1"
                         value={config.autoArchive.checkInterval}
-                        onChange={(e) => setConfig({
-                          ...config,
-                          autoArchive: {
-                            ...config.autoArchive,
-                            checkInterval: parseInt(e.target.value) || 60,
-                          },
-                        })}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            autoArchive: {
+                              ...config.autoArchive,
+                              checkInterval: parseInt(e.target.value) || 60,
+                            },
+                          })
+                        }
                         disabled={!config.autoArchive.enabled}
                         style={{
                           width: '60px',
@@ -262,25 +303,30 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
                       minutes
                     </label>
 
-                    <label style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      color: theme.colors.textSecondary,
-                      fontSize: '13px',
-                    }}>
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: theme.colors.textSecondary,
+                        fontSize: '13px',
+                      }}
+                    >
                       Completed session delay:
                       <input
                         type="number"
                         min="0"
                         value={config.autoArchive.completedSessionDelay}
-                        onChange={(e) => setConfig({
-                          ...config,
-                          autoArchive: {
-                            ...config.autoArchive,
-                            completedSessionDelay: parseInt(e.target.value) || 5,
-                          },
-                        })}
+                        onChange={(e) =>
+                          setConfig({
+                            ...config,
+                            autoArchive: {
+                              ...config.autoArchive,
+                              completedSessionDelay:
+                                parseInt(e.target.value) || 5,
+                            },
+                          })
+                        }
                         disabled={!config.autoArchive.enabled}
                         style={{
                           width: '60px',
@@ -299,34 +345,46 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
 
               {/* Storage Settings */}
               <div>
-                <h3 style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: '12px',
-                }}>
+                <h3
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                    marginBottom: '12px',
+                  }}
+                >
                   Storage Settings
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{
+                <div
+                  style={{
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     gap: '8px',
-                    color: theme.colors.textSecondary,
-                    fontSize: '13px',
-                  }}>
+                  }}
+                >
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: theme.colors.textSecondary,
+                      fontSize: '13px',
+                    }}
+                  >
                     Max archive age:
                     <input
                       type="number"
                       min="1"
                       value={config.storage.maxArchiveAge}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        storage: {
-                          ...config.storage,
-                          maxArchiveAge: parseInt(e.target.value) || 30,
-                        },
-                      })}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          storage: {
+                            ...config.storage,
+                            maxArchiveAge: parseInt(e.target.value) || 30,
+                          },
+                        })
+                      }
                       style={{
                         width: '60px',
                         padding: '4px 8px',
@@ -338,26 +396,30 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
                     />
                     days
                   </label>
-                  
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: theme.colors.textSecondary,
-                    fontSize: '13px',
-                  }}>
+
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: theme.colors.textSecondary,
+                      fontSize: '13px',
+                    }}
+                  >
                     Max archive size:
                     <input
                       type="number"
                       min="100"
                       value={config.storage.maxArchiveSize}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        storage: {
-                          ...config.storage,
-                          maxArchiveSize: parseInt(e.target.value) || 1000,
-                        },
-                      })}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          storage: {
+                            ...config.storage,
+                            maxArchiveSize: parseInt(e.target.value) || 1000,
+                          },
+                        })
+                      }
                       style={{
                         width: '80px',
                         padding: '4px 8px',
@@ -369,24 +431,28 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
                     />
                     MB
                   </label>
-                  
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: theme.colors.text,
-                    fontSize: '13px',
-                  }}>
+
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: theme.colors.text,
+                      fontSize: '13px',
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={config.storage.compressArchives}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        storage: {
-                          ...config.storage,
-                          compressArchives: e.target.checked,
-                        },
-                      })}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          storage: {
+                            ...config.storage,
+                            compressArchives: e.target.checked,
+                          },
+                        })
+                      }
                     />
                     Compress archives
                   </label>
@@ -395,34 +461,46 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
 
               {/* Session Settings */}
               <div>
-                <h3 style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: '12px',
-                }}>
+                <h3
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                    marginBottom: '12px',
+                  }}
+                >
                   Session Settings
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <label style={{
+                <div
+                  style={{
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: 'column',
                     gap: '8px',
-                    color: theme.colors.textSecondary,
-                    fontSize: '13px',
-                  }}>
+                  }}
+                >
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: theme.colors.textSecondary,
+                      fontSize: '13px',
+                    }}
+                  >
                     Minimum events to archive:
                     <input
                       type="number"
                       min="0"
                       value={config.sessions.minEventsToArchive}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        sessions: {
-                          ...config.sessions,
-                          minEventsToArchive: parseInt(e.target.value) || 5,
-                        },
-                      })}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          sessions: {
+                            ...config.sessions,
+                            minEventsToArchive: parseInt(e.target.value) || 5,
+                          },
+                        })
+                      }
                       style={{
                         width: '60px',
                         padding: '4px 8px',
@@ -433,45 +511,53 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
                       }}
                     />
                   </label>
-                  
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: theme.colors.text,
-                    fontSize: '13px',
-                  }}>
+
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: theme.colors.text,
+                      fontSize: '13px',
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={config.sessions.archiveIncompleteSessions}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        sessions: {
-                          ...config.sessions,
-                          archiveIncompleteSessions: e.target.checked,
-                        },
-                      })}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          sessions: {
+                            ...config.sessions,
+                            archiveIncompleteSessions: e.target.checked,
+                          },
+                        })
+                      }
                     />
                     Archive incomplete sessions
                   </label>
-                  
-                  <label style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    color: theme.colors.text,
-                    fontSize: '13px',
-                  }}>
+
+                  <label
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: theme.colors.text,
+                      fontSize: '13px',
+                    }}
+                  >
                     <input
                       type="checkbox"
                       checked={config.sessions.keepRawEvents}
-                      onChange={(e) => setConfig({
-                        ...config,
-                        sessions: {
-                          ...config.sessions,
-                          keepRawEvents: e.target.checked,
-                        },
-                      })}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          sessions: {
+                            ...config.sessions,
+                            keepRawEvents: e.target.checked,
+                          },
+                        })
+                      }
                     />
                     Keep raw events in archives
                   </label>
@@ -479,24 +565,28 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
               </div>
             </div>
           ) : (
-            <div style={{
-              textAlign: 'center',
-              padding: '40px',
-              color: theme.colors.textSecondary,
-            }}>
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '40px',
+                color: theme.colors.textSecondary,
+              }}
+            >
               Failed to load configuration
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '20px',
-          borderTop: `1px solid ${theme.colors.border}`,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
+        <div
+          style={{
+            padding: '20px',
+            borderTop: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <button
             onClick={handleReset}
             disabled={loading || saving}
@@ -518,7 +608,7 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
             <RotateCcw size={14} />
             Reset to Defaults
           </button>
-          
+
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
               onClick={onClose}
@@ -537,7 +627,7 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
             >
               Cancel
             </button>
-            
+
             <button
               onClick={handleSave}
               disabled={loading || saving || !config}
@@ -552,7 +642,8 @@ export const AgentSessionArchiveConfigModal: React.FC<AgentSessionArchiveConfigM
                 color: '#fff',
                 fontSize: '13px',
                 fontWeight: 500,
-                cursor: loading || saving || !config ? 'not-allowed' : 'pointer',
+                cursor:
+                  loading || saving || !config ? 'not-allowed' : 'pointer',
                 opacity: loading || saving || !config ? 0.5 : 1,
               }}
             >

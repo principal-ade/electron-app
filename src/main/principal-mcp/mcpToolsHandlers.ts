@@ -48,11 +48,13 @@ export class McpToolsAdapter {
     mcpId: string;
     metadata: any;
   }): Promise<any> {
-    console.log(`[McpToolsAdapter WID-${this.window.id}] handleStoreMarkdownFile`, params);
+    console.log(
+      `[McpToolsAdapter WID-${this.window.id}] handleStoreMarkdownFile`,
+      params,
+    );
     throw new Error('Not implemented');
   }
 }
-
 
 // Function to register IPC Handlers. HTTPBridge will invoke these.
 export function registerMcpToolsIpcHandlers(
@@ -102,27 +104,44 @@ export function registerMcpToolsIpcHandlers(
 
   // Register the additional MCP server management handlers using enums
   // These don't need the adapter pattern since they're global operations
-  
+
   // MCP Server Management
   ipcMain.handle(McpToolsEvent.GET_SERVERS, async () => {
     throw new Error('MCP GET_SERVERS not yet implemented');
   });
 
-  ipcMain.handle(McpToolsEvent.GET_TOOLS, async (_event, serverName: string) => {
-    throw new Error(`MCP GET_TOOLS not yet implemented for server: ${serverName}`);
-  });
+  ipcMain.handle(
+    McpToolsEvent.GET_TOOLS,
+    async (_event, serverName: string) => {
+      throw new Error(
+        `MCP GET_TOOLS not yet implemented for server: ${serverName}`,
+      );
+    },
+  );
 
   ipcMain.handle(McpToolsEvent.CALL_TOOL, async (_event, params: any) => {
-    throw new Error(`MCP CALL_TOOL not yet implemented for tool: ${params.toolName}`);
+    throw new Error(
+      `MCP CALL_TOOL not yet implemented for tool: ${params.toolName}`,
+    );
   });
 
-  ipcMain.handle(McpToolsEvent.START_SERVER, async (_event, serverName: string) => {
-    throw new Error(`MCP START_SERVER not yet implemented for server: ${serverName}`);
-  });
+  ipcMain.handle(
+    McpToolsEvent.START_SERVER,
+    async (_event, serverName: string) => {
+      throw new Error(
+        `MCP START_SERVER not yet implemented for server: ${serverName}`,
+      );
+    },
+  );
 
-  ipcMain.handle(McpToolsEvent.STOP_SERVER, async (_event, serverName: string) => {
-    throw new Error(`MCP STOP_SERVER not yet implemented for server: ${serverName}`);
-  });
+  ipcMain.handle(
+    McpToolsEvent.STOP_SERVER,
+    async (_event, serverName: string) => {
+      throw new Error(
+        `MCP STOP_SERVER not yet implemented for server: ${serverName}`,
+      );
+    },
+  );
 
   ipcMain.handle(McpToolsEvent.SEND_MESSAGE, async (_event, params: any) => {
     throw new Error('MCP SEND_MESSAGE not yet implemented');
@@ -131,7 +150,13 @@ export function registerMcpToolsIpcHandlers(
   // MCP Configuration - These are actually implemented
   ipcMain.handle(McpToolsEvent.GET_CONFIG, async () => {
     try {
-      const configPath = path.join(app.getPath('home'), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+      const configPath = path.join(
+        app.getPath('home'),
+        'Library',
+        'Application Support',
+        'Claude',
+        'claude_desktop_config.json',
+      );
       const configData = await fs.readFile(configPath, 'utf-8');
       return JSON.parse(configData);
     } catch {
@@ -140,14 +165,26 @@ export function registerMcpToolsIpcHandlers(
   });
 
   ipcMain.handle(McpToolsEvent.UPDATE_CONFIG, async (_event, config: any) => {
-    const configPath = path.join(app.getPath('home'), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+    const configPath = path.join(
+      app.getPath('home'),
+      'Library',
+      'Application Support',
+      'Claude',
+      'claude_desktop_config.json',
+    );
     const configDir = path.dirname(configPath);
     await fs.mkdir(configDir, { recursive: true });
     await fs.writeFile(configPath, JSON.stringify(config, null, 2), 'utf-8');
   });
 
   ipcMain.handle(McpToolsEvent.OPEN_CONFIG, async () => {
-    const configPath = path.join(app.getPath('home'), 'Library', 'Application Support', 'Claude', 'claude_desktop_config.json');
+    const configPath = path.join(
+      app.getPath('home'),
+      'Library',
+      'Application Support',
+      'Claude',
+      'claude_desktop_config.json',
+    );
     await shell.openPath(configPath);
   });
 
@@ -163,7 +200,11 @@ export function registerMcpToolsIpcHandlers(
   ipcMain.handle(McpToolsEvent.GET_RESOLVED_SCRIPT_PATH, async () => {
     const isProd = app.isPackaged;
     return isProd
-      ? path.join(process.resourcesPath, 'assets', 'principal-ai-mcp-server.cjs')
+      ? path.join(
+          process.resourcesPath,
+          'assets',
+          'principal-ai-mcp-server.cjs',
+        )
       : path.join(__dirname, '../../../assets/principal-ai-mcp-server.cjs');
   });
 

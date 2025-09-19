@@ -31,13 +31,13 @@ export class AppErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback;
       }
-      
+
       return (
-        <div 
+        <div
           className="min-h-screen flex items-center justify-center p-8"
-          style={{ 
+          style={{
             backgroundColor: theme.colors.background,
-            color: theme.colors.text
+            color: theme.colors.text,
           }}
         >
           <div className="max-w-md text-center">
@@ -46,7 +46,7 @@ export class AppErrorBoundary extends Component<Props, State> {
               An unexpected error occurred. Please try refreshing the page.
             </p>
             {this.state.error && (
-              <details 
+              <details
                 className="text-left p-4 rounded-lg"
                 style={{ backgroundColor: theme.colors.surface }}
               >

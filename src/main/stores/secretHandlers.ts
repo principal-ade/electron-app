@@ -4,12 +4,12 @@
  */
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
-import { 
-  SecretsEvents, 
+import {
+  SecretsEvents,
   SecretStoreRequest,
   SecretOperationResult,
   RepositorySecrets,
-  SecretMetadata 
+  SecretMetadata,
 } from '../../shared/main-process-api-interfaces/SecretsAPI';
 import { SecretManager } from './SecretManager';
 
@@ -27,206 +27,237 @@ export function registerSecretHandlers(): void {
   };
 
   // Store secrets for a repository
-  ipcMain.handle(SecretsEvents.STORE, async (
-    event: IpcMainInvokeEvent,
-    request: SecretStoreRequest
-  ): Promise<SecretOperationResult> => {
-    try {
-      console.log('[SecretHandlers] Storing secrets for repository:', request.repoId);
-      
-      // Validate the request comes from our app
-      if (!validateSource(event)) {
-        return { success: false, error: 'Unauthorized source' };
-      }
+  ipcMain.handle(
+    SecretsEvents.STORE,
+    async (
+      event: IpcMainInvokeEvent,
+      request: SecretStoreRequest,
+    ): Promise<SecretOperationResult> => {
+      try {
+        console.log(
+          '[SecretHandlers] Storing secrets for repository:',
+          request.repoId,
+        );
 
-      // Validate inputs
-      if (!request.repoId || !request.repoPath || !request.secrets) {
-        return { success: false, error: 'Missing required parameters' };
-      }
+        // Validate the request comes from our app
+        if (!validateSource(event)) {
+          return { success: false, error: 'Unauthorized source' };
+        }
 
-      return await getSecretManager().storeSecrets(
-        request.repoId,
-        request.repoPath,
-        request.secrets
-      );
-    } catch (error: any) {
-      console.error('[SecretHandlers] Error storing secrets:', error);
-      return { success: false, error: error.message };
-    }
-  });
+        // Validate inputs
+        if (!request.repoId || !request.repoPath || !request.secrets) {
+          return { success: false, error: 'Missing required parameters' };
+        }
+
+        return await getSecretManager().storeSecrets(
+          request.repoId,
+          request.repoPath,
+          request.secrets,
+        );
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error storing secrets:', error);
+        return { success: false, error: error.message };
+      }
+    },
+  );
 
   // Get secrets for a repository
-  ipcMain.handle(SecretsEvents.GET, async (
-    event: IpcMainInvokeEvent,
-    repoId: string
-  ): Promise<RepositorySecrets | null> => {
-    try {
-      console.log('[SecretHandlers] Getting secrets for repository:', repoId);
-      
-      if (!validateSource(event)) {
-        throw new Error('Unauthorized source');
-      }
+  ipcMain.handle(
+    SecretsEvents.GET,
+    async (
+      event: IpcMainInvokeEvent,
+      repoId: string,
+    ): Promise<RepositorySecrets | null> => {
+      try {
+        console.log('[SecretHandlers] Getting secrets for repository:', repoId);
 
-      if (!repoId) {
-        throw new Error('Repository ID is required');
-      }
+        if (!validateSource(event)) {
+          throw new Error('Unauthorized source');
+        }
 
-      return await getSecretManager().getSecrets(repoId);
-    } catch (error: any) {
-      console.error('[SecretHandlers] Error getting secrets:', error);
-      return null;
-    }
-  });
+        if (!repoId) {
+          throw new Error('Repository ID is required');
+        }
+
+        return await getSecretManager().getSecrets(repoId);
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error getting secrets:', error);
+        return null;
+      }
+    },
+  );
 
   // Delete secrets for a repository
-  ipcMain.handle(SecretsEvents.DELETE, async (
-    event: IpcMainInvokeEvent,
-    repoId: string
-  ): Promise<SecretOperationResult> => {
-    try {
-      console.log('[SecretHandlers] Deleting secrets for repository:', repoId);
-      
-      if (!validateSource(event)) {
-        return { success: false, error: 'Unauthorized source' };
-      }
+  ipcMain.handle(
+    SecretsEvents.DELETE,
+    async (
+      event: IpcMainInvokeEvent,
+      repoId: string,
+    ): Promise<SecretOperationResult> => {
+      try {
+        console.log(
+          '[SecretHandlers] Deleting secrets for repository:',
+          repoId,
+        );
 
-      if (!repoId) {
-        return { success: false, error: 'Repository ID is required' };
-      }
+        if (!validateSource(event)) {
+          return { success: false, error: 'Unauthorized source' };
+        }
 
-      return await getSecretManager().deleteSecrets(repoId);
-    } catch (error: any) {
-      console.error('[SecretHandlers] Error deleting secrets:', error);
-      return { success: false, error: error.message };
-    }
-  });
+        if (!repoId) {
+          return { success: false, error: 'Repository ID is required' };
+        }
+
+        return await getSecretManager().deleteSecrets(repoId);
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error deleting secrets:', error);
+        return { success: false, error: error.message };
+      }
+    },
+  );
 
   // Check if secrets exist for a repository
-  ipcMain.handle(SecretsEvents.EXISTS, async (
-    event: IpcMainInvokeEvent,
-    repoId: string
-  ): Promise<boolean> => {
-    try {
-      if (!validateSource(event)) {
+  ipcMain.handle(
+    SecretsEvents.EXISTS,
+    async (event: IpcMainInvokeEvent, repoId: string): Promise<boolean> => {
+      try {
+        if (!validateSource(event)) {
+          return false;
+        }
+
+        const secrets = await getSecretManager().getSecrets(repoId);
+        return secrets !== null && Object.keys(secrets).length > 0;
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error checking secrets:', error);
         return false;
       }
-
-      const secrets = await getSecretManager().getSecrets(repoId);
-      return secrets !== null && Object.keys(secrets).length > 0;
-    } catch (error: any) {
-      console.error('[SecretHandlers] Error checking secrets:', error);
-      return false;
-    }
-  });
+    },
+  );
 
   // Get metadata for all stored secrets
-  ipcMain.handle(SecretsEvents.LIST, async (
-    event: IpcMainInvokeEvent
-  ): Promise<SecretMetadata[]> => {
-    try {
-      console.log('[SecretHandlers] Listing all secret metadata');
-      
-      if (!validateSource(event)) {
-        throw new Error('Unauthorized source');
-      }
+  ipcMain.handle(
+    SecretsEvents.LIST,
+    async (event: IpcMainInvokeEvent): Promise<SecretMetadata[]> => {
+      try {
+        console.log('[SecretHandlers] Listing all secret metadata');
 
-      return await getSecretManager().getAllMetadata();
-    } catch (error: any) {
-      console.error('[SecretHandlers] Error listing secrets:', error);
-      return [];
-    }
-  });
+        if (!validateSource(event)) {
+          throw new Error('Unauthorized source');
+        }
+
+        return await getSecretManager().getAllMetadata();
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error listing secrets:', error);
+        return [];
+      }
+    },
+  );
 
   // Update existing secrets (merge with existing)
-  ipcMain.handle(SecretsEvents.UPDATE, async (
-    event: IpcMainInvokeEvent,
-    request: SecretStoreRequest
-  ): Promise<SecretOperationResult> => {
-    try {
-      console.log('[SecretHandlers] Updating secrets for repository:', request.repoId);
-      
-      if (!validateSource(event)) {
-        return { success: false, error: 'Unauthorized source' };
-      }
+  ipcMain.handle(
+    SecretsEvents.UPDATE,
+    async (
+      event: IpcMainInvokeEvent,
+      request: SecretStoreRequest,
+    ): Promise<SecretOperationResult> => {
+      try {
+        console.log(
+          '[SecretHandlers] Updating secrets for repository:',
+          request.repoId,
+        );
 
-      // Get existing secrets
-      const existing = await getSecretManager().getSecrets(request.repoId) || {};
-      
-      // Merge with new secrets
-      const merged = { ...existing, ...request.secrets };
-      
-      // Store merged secrets
-      return await getSecretManager().storeSecrets(
-        request.repoId,
-        request.repoPath,
-        merged
-      );
-    } catch (error: any) {
-      console.error('[SecretHandlers] Error updating secrets:', error);
-      return { success: false, error: error.message };
-    }
-  });
+        if (!validateSource(event)) {
+          return { success: false, error: 'Unauthorized source' };
+        }
+
+        // Get existing secrets
+        const existing =
+          (await getSecretManager().getSecrets(request.repoId)) || {};
+
+        // Merge with new secrets
+        const merged = { ...existing, ...request.secrets };
+
+        // Store merged secrets
+        return await getSecretManager().storeSecrets(
+          request.repoId,
+          request.repoPath,
+          merged,
+        );
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error updating secrets:', error);
+        return { success: false, error: error.message };
+      }
+    },
+  );
 
   // Remove specific secrets from a repository
-  ipcMain.handle(SecretsEvents.REMOVE_KEYS, async (
-    event: IpcMainInvokeEvent,
-    repoId: string,
-    keys: string[]
-  ): Promise<SecretOperationResult> => {
-    try {
-      console.log('[SecretHandlers] Removing keys from repository:', repoId, keys);
-      
-      if (!validateSource(event)) {
-        return { success: false, error: 'Unauthorized source' };
-      }
+  ipcMain.handle(
+    SecretsEvents.REMOVE_KEYS,
+    async (
+      event: IpcMainInvokeEvent,
+      repoId: string,
+      keys: string[],
+    ): Promise<SecretOperationResult> => {
+      try {
+        console.log(
+          '[SecretHandlers] Removing keys from repository:',
+          repoId,
+          keys,
+        );
 
-      // Get existing secrets
-      const existing = await getSecretManager().getSecrets(repoId);
-      
-      if (!existing) {
-        return { success: false, error: 'No secrets found for repository' };
-      }
+        if (!validateSource(event)) {
+          return { success: false, error: 'Unauthorized source' };
+        }
 
-      // Remove specified keys
-      for (const key of keys) {
-        delete existing[key];
-      }
+        // Get existing secrets
+        const existing = await getSecretManager().getSecrets(repoId);
 
-      // Get metadata to find repo path
-      const metadata = await getSecretManager().getAllMetadata();
-      const repoMeta = metadata.find(m => m.repoId === repoId);
-      
-      if (!repoMeta) {
-        return { success: false, error: 'Repository metadata not found' };
-      }
+        if (!existing) {
+          return { success: false, error: 'No secrets found for repository' };
+        }
 
-      // Store updated secrets
-      return await getSecretManager().storeSecrets(
-        repoId,
-        repoMeta.repoPath,
-        existing
-      );
-    } catch (error: any) {
-      console.error('[SecretHandlers] Error removing keys:', error);
-      return { success: false, error: error.message };
-    }
-  });
+        // Remove specified keys
+        for (const key of keys) {
+          delete existing[key];
+        }
+
+        // Get metadata to find repo path
+        const metadata = await getSecretManager().getAllMetadata();
+        const repoMeta = metadata.find((m) => m.repoId === repoId);
+
+        if (!repoMeta) {
+          return { success: false, error: 'Repository metadata not found' };
+        }
+
+        // Store updated secrets
+        return await getSecretManager().storeSecrets(
+          repoId,
+          repoMeta.repoPath,
+          existing,
+        );
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error removing keys:', error);
+        return { success: false, error: error.message };
+      }
+    },
+  );
 
   // Clear all caches
-  ipcMain.handle(SecretsEvents.CLEAR_CACHE, async (
-    event: IpcMainInvokeEvent
-  ): Promise<void> => {
-    try {
-      if (!validateSource(event)) {
-        throw new Error('Unauthorized source');
-      }
+  ipcMain.handle(
+    SecretsEvents.CLEAR_CACHE,
+    async (event: IpcMainInvokeEvent): Promise<void> => {
+      try {
+        if (!validateSource(event)) {
+          throw new Error('Unauthorized source');
+        }
 
-      getSecretManager().clearCache();
-      console.log('[SecretHandlers] Cache cleared');
-    } catch (error: any) {
-      console.error('[SecretHandlers] Error clearing cache:', error);
-    }
-  });
+        getSecretManager().clearCache();
+        console.log('[SecretHandlers] Cache cleared');
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error clearing cache:', error);
+      }
+    },
+  );
 
   console.log('[SecretHandlers] All handlers registered successfully');
 }

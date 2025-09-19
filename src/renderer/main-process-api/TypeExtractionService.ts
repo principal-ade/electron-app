@@ -15,22 +15,28 @@ export class TypeExtractionService {
 
   async extractPackageTypes(packagePath: string): Promise<any> {
     try {
-      return await (window.mainProcess.typeExtraction as any).extractPackageTypes(
-        packagePath,
-      );
+      return await (
+        window.mainProcess.typeExtraction as any
+      ).extractPackageTypes(packagePath);
     } catch (error) {
-      console.error('[TypeExtractionService] Error extracting package types:', error);
+      console.error(
+        '[TypeExtractionService] Error extracting package types:',
+        error,
+      );
       return null;
     }
   }
 
   async generateDefinitionFile(packagePath: string): Promise<any> {
     try {
-      return await (window.mainProcess.typeExtraction as any).generateDefinitionFile(
-        packagePath,
-      );
+      return await (
+        window.mainProcess.typeExtraction as any
+      ).generateDefinitionFile(packagePath);
     } catch (error) {
-      console.error('[TypeExtractionService] Error generating definition file:', error);
+      console.error(
+        '[TypeExtractionService] Error generating definition file:',
+        error,
+      );
       return null;
     }
   }
@@ -44,7 +50,10 @@ export class TypeExtractionService {
         window.mainProcess.typeExtraction as any
       ).extractPackageTypesFromLayer(layer, workingDirectory);
     } catch (error) {
-      console.error('[TypeExtractionService] Error extracting types from layer:', error);
+      console.error(
+        '[TypeExtractionService] Error extracting types from layer:',
+        error,
+      );
       return null;
     }
   }

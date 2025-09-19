@@ -1,8 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Users, Circle, MessageSquare, Github, AlertCircle, 
-  CheckCircle, Clock, GitBranch, GitCommit, RefreshCw,
-  AlertTriangle, ArrowUpDown, Check
+import {
+  Users,
+  Circle,
+  MessageSquare,
+  Github,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  GitBranch,
+  GitCommit,
+  RefreshCw,
+  AlertTriangle,
+  ArrowUpDown,
+  Check,
 } from 'lucide-react';
 import { PeerManager, PeerInfo } from '../services/p2p/PeerManager';
 import { SignalingClient } from '../services/p2p/SignalingClientHTTP';
@@ -24,23 +34,22 @@ interface PeerSyncInfo {
   syncStatus?: SyncStatus;
 }
 
-export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProps> = ({ 
-  repoUrl, 
-  repoPath,
-  onClose,
-  isMinimized = false 
-}) => {
+export const CollaborationPanelWithSync: React.FC<
+  CollaborationPanelWithSyncProps
+> = ({ repoUrl, repoPath, onClose, isMinimized = false }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<GitHubUser | null>(null);
   const [peers, setPeers] = useState<PeerInfo[]>([]);
-  const [peerSyncInfo, setPeerSyncInfo] = useState<Map<string, SyncStatus>>(new Map());
+  const [peerSyncInfo, setPeerSyncInfo] = useState<Map<string, SyncStatus>>(
+    new Map(),
+  );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null); // peerId being synced
   const [conflicts, setConflicts] = useState<string[]>([]);
   const [showOAuthModal, setShowOAuthModal] = useState(false);
-  
+
   const peerManagerRef = useRef<PeerManager | null>(null);
   const signalingClientRef = useRef<SignalingClient | null>(null);
   const authRef = useRef<GitHubAuth | null>(null);
@@ -62,7 +71,7 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
   const initializeAuth = async () => {
     authRef.current = GitHubAuth.getInstance();
     const status = await authRef.current.checkStatus();
-    
+
     if (status.user) {
       setUser(status.user);
       setIsAuthenticated(true);
@@ -80,12 +89,12 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
     try {
       // Initialize peer manager
       peerManagerRef.current = new PeerManager();
-      
+
       // Initialize git sync manager
       gitSyncManagerRef.current = new GitSyncManager(peerManagerRef.current);
       gitSyncManagerRef.current.setCallbacks({
         onSyncUpdate: (status, peerId) => {
-          setPeerSyncInfo(prev => {
+          setPeerSyncInfo((prev) => {
             const newMap = new Map(prev);
             newMap.set(peerId, status);
             return newMap;
@@ -104,7 +113,7 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
         onPeerUpdate: (updatedPeers) => {
           setPeers(updatedPeers);
           // Request sync status from new peers
-          updatedPeers.forEach(peer => {
+          updatedPeers.forEach((peer) => {
             if (peer.connected && !peerSyncInfo.has(peer.peerId)) {
               gitSyncManagerRef.current?.requestSync(peer.peerId);
             }
@@ -130,13 +139,15 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
             true,
             (signal) => {
               signalingClientRef.current?.sendSignal(peerId, signal);
-            }
+            },
           );
         },
         onPeerLeft: () => {},
         onSignal: (from, signal) => {
-          const existingPeer = peerManagerRef.current?.getPeers().find(p => p.peerId === from);
-          
+          const existingPeer = peerManagerRef.current
+            ?.getPeers()
+            .find((p) => p.peerId === from);
+
           if (!existingPeer) {
             peerManagerRef.current?.createPeer(
               from,
@@ -144,10 +155,10 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
               false,
               (signal) => {
                 signalingClientRef.current?.sendSignal(from, signal);
-              }
+              },
             );
           }
-          
+
           peerManagerRef.current?.addSignal(from, signal);
         },
         onError: (error) => {
@@ -177,13 +188,13 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
 
   const handleSync = async (peerId: string) => {
     if (!gitSyncManagerRef.current) return;
-    
+
     setSyncing(peerId);
     setError(null);
-    
+
     try {
       const result = await gitSyncManagerRef.current.performSync(peerId);
-      
+
       if (result.success) {
         // Broadcast our new state to all peers
         await gitSyncManagerRef.current.broadcastSyncState();
@@ -199,7 +210,7 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
 
   const handleBroadcastChanges = async () => {
     if (!gitSyncManagerRef.current) return;
-    
+
     try {
       await gitSyncManagerRef.current.broadcastSyncState();
       setError(null);
@@ -231,7 +242,7 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
         {isConnected ? (
           <>
             <Circle size={8} fill="currentColor" />
-            {peers.filter(p => p.connected).length + 1} users
+            {peers.filter((p) => p.connected).length + 1} users
           </>
         ) : (
           'Orbit'
@@ -242,36 +253,38 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
 
   // Full panel view
   return (
-    <div style={{
-      position: 'fixed',
-      right: '20px',
-      top: '80px',
-      width: '360px',
-      maxHeight: '600px',
-      backgroundColor: 'white',
-      border: '1px solid #e5e7eb',
-      borderRadius: '8px',
-      boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-      display: 'flex',
-      flexDirection: 'column',
-      zIndex: 1000,
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: '12px',
-        borderBottom: '1px solid #e5e7eb',
+    <div
+      style={{
+        position: 'fixed',
+        right: '20px',
+        top: '80px',
+        width: '360px',
+        maxHeight: '600px',
+        backgroundColor: 'white',
+        border: '1px solid #e5e7eb',
+        borderRadius: '8px',
+        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
+        flexDirection: 'column',
+        zIndex: 1000,
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          padding: '12px',
+          borderBottom: '1px solid #e5e7eb',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Users size={18} />
           <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600 }}>
             Orbit Collaboration
           </h3>
-          {isConnected && (
-            <Circle size={8} fill="#10b981" />
-          )}
+          {isConnected && <Circle size={8} fill="#10b981" />}
         </div>
         <button
           onClick={onClose}
@@ -288,16 +301,18 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
 
       {/* Error Display */}
       {error && (
-        <div style={{
-          padding: '8px 12px',
-          backgroundColor: '#fef2f2',
-          borderBottom: '1px solid #fecaca',
-          fontSize: '13px',
-          color: '#dc2626',
-          display: 'flex',
-          alignItems: 'start',
-          gap: '8px',
-        }}>
+        <div
+          style={{
+            padding: '8px 12px',
+            backgroundColor: '#fef2f2',
+            borderBottom: '1px solid #fecaca',
+            fontSize: '13px',
+            color: '#dc2626',
+            display: 'flex',
+            alignItems: 'start',
+            gap: '8px',
+          }}
+        >
           <AlertCircle size={14} style={{ marginTop: '2px' }} />
           <div>{error}</div>
         </div>
@@ -308,7 +323,10 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
         {!isAuthenticated ? (
           // Authentication required
           <div style={{ padding: '20px', textAlign: 'center' }}>
-            <Github size={32} style={{ marginBottom: '12px', color: '#6b7280' }} />
+            <Github
+              size={32}
+              style={{ marginBottom: '12px', color: '#6b7280' }}
+            />
             <p style={{ marginBottom: '16px', color: '#6b7280' }}>
               Sign in to join collaboration
             </p>
@@ -339,11 +357,14 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
         ) : user?.status !== 'approved' ? (
           // Waitlist status
           <div style={{ padding: '20px', textAlign: 'center' }}>
-            <Clock size={32} style={{ marginBottom: '12px', color: '#f59e0b' }} />
+            <Clock
+              size={32}
+              style={{ marginBottom: '12px', color: '#f59e0b' }}
+            />
             <p style={{ color: '#6b7280' }}>
-              {user?.status === 'waitlisted' 
+              {user?.status === 'waitlisted'
                 ? "You're on the waitlist"
-                : "Access denied"}
+                : 'Access denied'}
             </p>
           </div>
         ) : (
@@ -351,13 +372,17 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
           <>
             {/* Sync Status Section */}
             <div style={{ padding: '12px', borderBottom: '1px solid #e5e7eb' }}>
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between',
-                marginBottom: '8px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '8px',
+                }}
+              >
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
                   <GitBranch size={14} />
                   <span style={{ fontSize: '13px', fontWeight: 500 }}>
                     Git Sync Status
@@ -382,43 +407,49 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
                   Broadcast
                 </button>
               </div>
-              
+
               {/* Show overall sync status */}
               {gitSyncManagerRef.current?.areAllPeersSynced() ? (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px',
-                  backgroundColor: '#f0fdf4',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  color: '#16a34a',
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px',
+                    backgroundColor: '#f0fdf4',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    color: '#16a34a',
+                  }}
+                >
                   <CheckCircle size={14} />
                   All peers synced
                 </div>
               ) : peers.length === 0 ? (
-                <div style={{
-                  padding: '6px',
-                  backgroundColor: '#f9fafb',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  color: '#6b7280',
-                }}>
+                <div
+                  style={{
+                    padding: '6px',
+                    backgroundColor: '#f9fafb',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    color: '#6b7280',
+                  }}
+                >
                   No peers connected
                 </div>
               ) : (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '6px',
-                  backgroundColor: '#fef3c7',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  color: '#d97706',
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px',
+                    backgroundColor: '#fef3c7',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    color: '#d97706',
+                  }}
+                >
                   <AlertCircle size={14} />
                   Sync needed with some peers
                 </div>
@@ -427,31 +458,41 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
 
             {/* Peers List with Sync Status */}
             <div style={{ padding: '12px' }}>
-              <div style={{ 
-                fontSize: '13px', 
-                fontWeight: 500, 
-                marginBottom: '8px',
-                color: '#4b5563'
-              }}>
-                Active Peers ({peers.filter(p => p.connected).length})
+              <div
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  marginBottom: '8px',
+                  color: '#4b5563',
+                }}
+              >
+                Active Peers ({peers.filter((p) => p.connected).length})
               </div>
-              
+
               {peers.length === 0 ? (
-                <div style={{ 
-                  fontSize: '13px', 
-                  color: '#9ca3af',
-                  fontStyle: 'italic' 
-                }}>
+                <div
+                  style={{
+                    fontSize: '13px',
+                    color: '#9ca3af',
+                    fontStyle: 'italic',
+                  }}
+                >
                   No other users in room
                 </div>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {peers.map(peer => {
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  {peers.map((peer) => {
                     const syncStatus = peerSyncInfo.get(peer.peerId);
                     const isSyncing = syncing === peer.peerId;
-                    
+
                     return (
-                      <div 
+                      <div
                         key={peer.peerId}
                         style={{
                           padding: '8px',
@@ -460,26 +501,36 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
                           border: '1px solid #e5e7eb',
                         }}
                       >
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                        }}>
-                          <div style={{
+                        <div
+                          style={{
                             display: 'flex',
                             alignItems: 'center',
-                            gap: '6px',
-                            fontSize: '13px',
-                          }}>
-                            <Circle 
-                              size={8} 
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              fontSize: '13px',
+                            }}
+                          >
+                            <Circle
+                              size={8}
                               fill={peer.connected ? '#10b981' : '#6b7280'}
                             />
                             <span>{peer.githubHandle}</span>
                           </div>
-                          
+
                           {peer.connected && syncStatus && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                              }}
+                            >
                               {syncStatus.isSynced ? (
                                 <Check size={14} color="#10b981" />
                               ) : syncStatus.conflicts.length > 0 ? (
@@ -494,7 +545,9 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
                                     gap: '4px',
                                     padding: '3px 8px',
                                     fontSize: '11px',
-                                    backgroundColor: isSyncing ? '#e5e7eb' : '#3b82f6',
+                                    backgroundColor: isSyncing
+                                      ? '#e5e7eb'
+                                      : '#3b82f6',
                                     color: isSyncing ? '#6b7280' : 'white',
                                     border: 'none',
                                     borderRadius: '4px',
@@ -508,16 +561,18 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Sync details */}
                         {syncStatus && !syncStatus.isSynced && (
-                          <div style={{
-                            marginTop: '6px',
-                            paddingTop: '6px',
-                            borderTop: '1px solid #e5e7eb',
-                            fontSize: '11px',
-                            color: '#6b7280',
-                          }}>
+                          <div
+                            style={{
+                              marginTop: '6px',
+                              paddingTop: '6px',
+                              borderTop: '1px solid #e5e7eb',
+                              fontSize: '11px',
+                              color: '#6b7280',
+                            }}
+                          >
                             {syncStatus.conflicts.length > 0 ? (
                               <span style={{ color: '#ef4444' }}>
                                 Conflicts: {syncStatus.conflicts.join(', ')}
@@ -538,7 +593,7 @@ export const CollaborationPanelWithSync: React.FC<CollaborationPanelWithSyncProp
           </>
         )}
       </div>
-      
+
       {/* OAuth Callback Modal */}
       <OAuthCallbackModal
         isOpen={showOAuthModal}

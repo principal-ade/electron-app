@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 #root {
   height: 100%;
   width: 100%;
@@ -14,20 +14,21 @@
     padding: 0;
     font-family: ui-sans-serif, system-ui, sans-serif;
   }
-  
+
   /* Hide scrollbars */
   ::-webkit-scrollbar {
     display: none;
   }
-  
+
   * {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
 }
 
 /* Spin animation for refresh button and loading spinner */
-.spin, .loading-spinner {
+.spin,
+.loading-spinner {
   animation: spin 1s linear infinite;
 }
 
@@ -42,7 +43,9 @@
 
 /* Pulse animation for loading dots */
 @keyframes pulse {
-  0%, 80%, 100% {
+  0%,
+  80%,
+  100% {
     transform: scale(0);
     opacity: 0.5;
   }
@@ -84,7 +87,9 @@
 
 /* Smooth transitions for presentation changes */
 .presentation-transition {
-  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  transition:
+    opacity 0.3s ease-in-out,
+    transform 0.3s ease-in-out;
 }
 
 .presentation-transition.loading {

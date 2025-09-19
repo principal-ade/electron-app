@@ -61,10 +61,18 @@ export interface CheckProgressData {
 
 export interface PackageManagerAPI {
   checkVersions: (params: CheckVersionsParams) => Promise<VersionCheckResult[]>;
-  checkVulnerabilities: (params: CheckVersionsParams) => Promise<VulnerabilityCheckResult[]>;
+  checkVulnerabilities: (
+    params: CheckVersionsParams,
+  ) => Promise<VulnerabilityCheckResult[]>;
   checkLicenses: (params: CheckVersionsParams) => Promise<LicenseCheckResult[]>;
-  onVersionCheckProgress: (callback: (data: CheckProgressData) => void) => () => void;
-  onVulnerabilityCheckProgress: (callback: (data: CheckProgressData) => void) => () => void;
-  onLicenseCheckProgress: (callback: (data: CheckProgressData) => void) => () => void;
+  onVersionCheckProgress: (
+    callback: (data: CheckProgressData) => void,
+  ) => () => void;
+  onVulnerabilityCheckProgress: (
+    callback: (data: CheckProgressData) => void,
+  ) => () => void;
+  onLicenseCheckProgress: (
+    callback: (data: CheckProgressData) => void,
+  ) => () => void;
   removeAllListeners: () => void;
 }

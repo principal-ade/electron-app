@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Users, Circle, MessageSquare, Github, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import {
+  Users,
+  Circle,
+  MessageSquare,
+  Github,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+} from 'lucide-react';
 import { PeerManager, PeerInfo, PeerData } from '../services/p2p/PeerManager';
 import { SignalingClient } from '../services/p2p/SignalingClient';
 import { GitHubAuth, GitHubUser } from '../services/p2p/GitHubAuth';
@@ -17,7 +25,10 @@ interface ChatMessage {
   isLocal: boolean;
 }
 
-export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl, onClose }) => {
+export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({
+  repoUrl,
+  onClose,
+}) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<GitHubUser | null>(null);
@@ -26,7 +37,7 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
   const [inputMessage, setInputMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
+
   const peerManagerRef = useRef<PeerManager | null>(null);
   const signalingClientRef = useRef<SignalingClient | null>(null);
   const authRef = useRef<GitHubAuth | null>(null);
@@ -47,10 +58,10 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
 
   const initializeAuth = async () => {
     authRef.current = GitHubAuth.getInstance();
-    
+
     // Check existing authentication
     const status = await authRef.current.checkStatus();
-    
+
     if (status.user) {
       setUser(status.user);
       setIsAuthenticated(true);
@@ -60,16 +71,18 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
   const handleAuthenticate = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const result = await authRef.current!.authenticate();
-      
+
       if (result.success && result.user) {
         setUser(result.user);
         setIsAuthenticated(true);
-        
+
         if (result.user.status === 'waitlisted') {
-          setError('You are on the waitlist. Please wait for approval to access collaboration features.');
+          setError(
+            'You are on the waitlist. Please wait for approval to access collaboration features.',
+          );
         } else if (result.user.status === 'denied') {
           setError('Your access request has been denied.');
         }
@@ -124,7 +137,7 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
             true,
             (signal) => {
               signalingClientRef.current?.sendSignal(peerId, signal);
-            }
+            },
           );
         },
         onPeerLeft: (peerId) => {
@@ -132,8 +145,10 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
         },
         onSignal: (from, signal) => {
           // Handle incoming signals
-          const existingPeer = peerManagerRef.current?.getPeers().find(p => p.peerId === from);
-          
+          const existingPeer = peerManagerRef.current
+            ?.getPeers()
+            .find((p) => p.peerId === from);
+
           if (!existingPeer) {
             // Create new peer as receiver
             peerManagerRef.current?.createPeer(
@@ -142,10 +157,10 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
               false,
               (signal) => {
                 signalingClientRef.current?.sendSignal(from, signal);
-              }
+              },
             );
           }
-          
+
           peerManagerRef.current?.addSignal(from, signal);
         },
         onError: (error) => {
@@ -183,9 +198,9 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
           timestamp: data.timestamp,
           isLocal: false,
         };
-        setMessages(prev => [...prev, message]);
+        setMessages((prev) => [...prev, message]);
         break;
-      
+
       // Handle other data types (cursor, selection, etc.)
       default:
         console.log('Received peer data:', data);
@@ -205,7 +220,7 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
       isLocal: true,
     };
 
-    setMessages(prev => [...prev, message]);
+    setMessages((prev) => [...prev, message]);
     peerManagerRef.current.sendChatMessage(inputMessage);
     setInputMessage('');
   };
@@ -236,7 +251,8 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
           <Clock className="w-12 h-12 mx-auto mb-4 text-yellow-600" />
           <h3 className="text-lg font-semibold mb-2">You're on the Waitlist</h3>
           <p className="text-sm text-gray-600">
-            Thank you for your interest! You'll be notified when your access is approved.
+            Thank you for your interest! You'll be notified when your access is
+            approved.
           </p>
         </div>
       );
@@ -280,12 +296,16 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
         <div className="p-3 border-b bg-gray-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Circle 
+              <Circle
                 className={`w-3 h-3 ${isConnected ? 'text-green-500' : 'text-gray-400'}`}
                 fill="currentColor"
               />
               <span className="text-sm font-medium">
-                {isConnected ? 'Connected' : loading ? 'Connecting...' : 'Disconnected'}
+                {isConnected
+                  ? 'Connected'
+                  : loading
+                    ? 'Connecting...'
+                    : 'Disconnected'}
               </span>
             </div>
             {isConnected && (
@@ -309,16 +329,21 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
           <div className="flex items-center gap-2 mb-2">
             <Users className="w-4 h-4 text-gray-600" />
             <span className="text-sm font-medium">
-              Active Peers ({peers.filter(p => p.connected).length})
+              Active Peers ({peers.filter((p) => p.connected).length})
             </span>
           </div>
           <div className="space-y-1">
             {peers.length === 0 ? (
-              <div className="text-sm text-gray-500">No other users in room</div>
+              <div className="text-sm text-gray-500">
+                No other users in room
+              </div>
             ) : (
-              peers.map(peer => (
-                <div key={peer.peerId} className="flex items-center gap-2 text-sm">
-                  <Circle 
+              peers.map((peer) => (
+                <div
+                  key={peer.peerId}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <Circle
                     className={`w-2 h-2 ${peer.connected ? 'text-green-500' : 'text-gray-400'}`}
                     fill="currentColor"
                   />
@@ -332,14 +357,16 @@ export const CollaborationPanel: React.FC<CollaborationPanelProps> = ({ repoUrl,
         {/* Chat Messages */}
         <div className="flex-1 overflow-y-auto p-3">
           <div className="space-y-2">
-            {messages.map(msg => (
-              <div 
-                key={msg.id} 
+            {messages.map((msg) => (
+              <div
+                key={msg.id}
                 className={`text-sm ${msg.isLocal ? 'text-right' : 'text-left'}`}
               >
-                <div className={`inline-block px-3 py-1 rounded ${
-                  msg.isLocal ? 'bg-blue-100' : 'bg-gray-100'
-                }`}>
+                <div
+                  className={`inline-block px-3 py-1 rounded ${
+                    msg.isLocal ? 'bg-blue-100' : 'bg-gray-100'
+                  }`}
+                >
                   <div className="font-medium text-xs text-gray-600">
                     {msg.sender}
                   </div>

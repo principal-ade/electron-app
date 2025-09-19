@@ -1,4 +1,3 @@
-
 // Import types from electron-updater
 interface UpdateInfo {
   version: string;
@@ -28,14 +27,18 @@ export interface AppVersionManagerAPI {
   checkForUpdate: () => void;
   checkForUpdateManually: () => void;
   checkForUpdateSilently: () => void;
-  onUpdateAvailable: (callback: (info: UpdateInfo) => void) => (() => void);
-  onUpdateNotAvailable: (callback: (info: UpdateInfo) => void) => (() => void);
-  onUpdateError: (callback: (error: Error) => void) => (() => void);
-  onUpdateCheckComplete: (callback: () => void) => (() => void);
+  onUpdateAvailable: (callback: (info: UpdateInfo) => void) => () => void;
+  onUpdateNotAvailable: (callback: (info: UpdateInfo) => void) => () => void;
+  onUpdateError: (callback: (error: Error) => void) => () => void;
+  onUpdateCheckComplete: (callback: () => void) => () => void;
   removeUpdateListeners: () => void;
   downloadUpdate: () => void;
   installUpdate: () => void;
-  onUpdateDownloadProgress: (callback: (progress: ProgressInfo) => void) => (() => void);
-  onUpdateDownloaded: (callback: (info: UpdateDownloadedEvent) => void) => (() => void);
+  onUpdateDownloadProgress: (
+    callback: (progress: ProgressInfo) => void,
+  ) => () => void;
+  onUpdateDownloaded: (
+    callback: (info: UpdateDownloadedEvent) => void,
+  ) => () => void;
   testDownloadUpdate: () => void;
 }

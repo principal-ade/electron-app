@@ -1,4 +1,4 @@
-import type { FileTree } from "@principal-ai/repository-abstraction";
+import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { AgentSessionRecord } from '../../shared/sessionTypes';
 
 /**
@@ -87,7 +87,7 @@ function findFileInTree(
   currentPath: string = '',
 ): string | null {
   // This is expensive so last resolrt
-  tree.allFiles.forEach(file => {
+  tree.allFiles.forEach((file) => {
     if (file.name === fileName) {
       return `${currentPath}/${file.name}`;
     }

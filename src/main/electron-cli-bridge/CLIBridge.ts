@@ -62,22 +62,38 @@ export class CLIBridge extends EventEmitter {
       // Workers are plain JS files that don't need webpack compilation
       const fs = require('fs');
       let workerPath: string;
-      
+
       // Try multiple possible locations
       const possiblePaths = [
         // Source location (most likely)
-        path.join(process.cwd(), 'src', 'main', 'electron-cli-bridge', 'workers', scriptName),
+        path.join(
+          process.cwd(),
+          'src',
+          'main',
+          'electron-cli-bridge',
+          'workers',
+          scriptName,
+        ),
         // Alternative if __dirname is available
         path.join(__dirname, 'workers', scriptName),
         // Development build location
-        path.join(__dirname, '..', '..', 'src', 'main', 'electron-cli-bridge', 'workers', scriptName),
+        path.join(
+          __dirname,
+          '..',
+          '..',
+          'src',
+          'main',
+          'electron-cli-bridge',
+          'workers',
+          scriptName,
+        ),
       ];
-      
+
       // Log debugging info
       this.log('debug', `Looking for worker ${name} in:`);
       this.log('debug', `  - cwd: ${process.cwd()}`);
       this.log('debug', `  - __dirname: ${__dirname}`);
-      
+
       // Find the first existing path
       for (const tryPath of possiblePaths) {
         this.log('debug', `  - Checking: ${tryPath}`);
@@ -86,11 +102,13 @@ export class CLIBridge extends EventEmitter {
           break;
         }
       }
-      
+
       if (!workerPath!) {
-        throw new Error(`Worker script not found. Tried: ${possiblePaths.join(', ')}`);
+        throw new Error(
+          `Worker script not found. Tried: ${possiblePaths.join(', ')}`,
+        );
       }
-      
+
       this.log('info', `Spawning ${name} worker from: ${workerPath}`);
 
       const worker = utilityProcess.fork(workerPath, [], {
@@ -129,17 +147,20 @@ export class CLIBridge extends EventEmitter {
           this.log('error', `[${name} stderr] ${output}`);
         });
       }
-      
+
       // Handle exit with error reporting
       worker.on('exit', (code: number) => {
         if (code !== 0 && stderrBuffer) {
-          this.log('error', `Worker ${name} failed with stderr:\n${stderrBuffer}`);
+          this.log(
+            'error',
+            `Worker ${name} failed with stderr:\n${stderrBuffer}`,
+          );
         }
         this.handleWorkerExit(name, code);
       });
 
       this.workers.set(name, worker);
-      
+
       // Wait for ready signal
       await this.waitForWorkerReady(name);
     } catch (error) {
@@ -175,7 +196,7 @@ export class CLIBridge extends EventEmitter {
   private handleWorkerMessage(workerName: string, msg: any): void {
     this.log('debug', `Message from ${workerName}: ${JSON.stringify(msg)}`);
     this.emit('worker-message', workerName, msg);
-    
+
     // Handle ready messages
     if (msg && msg.type === 'ready') {
       this.log('info', `Worker ${workerName} is ready`);
@@ -205,7 +226,8 @@ export class CLIBridge extends EventEmitter {
         break;
 
       case 'complete':
-        const duration = response.duration || (Date.now() - pendingCall.startTime);
+        const duration =
+          response.duration || Date.now() - pendingCall.startTime;
         const result: ExecuteResult = {
           success: response.exitCode === 0,
           stdout: response.data || '',
@@ -245,9 +267,11 @@ export class CLIBridge extends EventEmitter {
       this.log('info', `Attempting to restart worker ${name}`);
       setTimeout(() => {
         if (name === 'universal') {
-          this.spawnWorker('universal', 'universal-worker.js').catch(error => {
-            this.log('error', `Failed to restart worker ${name}: ${error}`);
-          });
+          this.spawnWorker('universal', 'universal-worker.js').catch(
+            (error) => {
+              this.log('error', `Failed to restart worker ${name}: ${error}`);
+            },
+          );
         }
       }, 1000);
     }
@@ -259,7 +283,7 @@ export class CLIBridge extends EventEmitter {
   async execute(
     command: string,
     args: string[] = [],
-    options: ExecuteOptions = {}
+    options: ExecuteOptions = {},
   ): Promise<ExecuteResult> {
     if (!this.initialized) {
       throw new Error('CLIBridge not initialized. Call initialize() first.');
@@ -271,7 +295,7 @@ export class CLIBridge extends EventEmitter {
     }
 
     const id = this.generateCallId();
-    
+
     return new Promise((resolve, reject) => {
       // Store pending call
       this.pendingCalls.set(id, {
@@ -291,7 +315,10 @@ export class CLIBridge extends EventEmitter {
       };
 
       worker.postMessage(workerCommand);
-      this.log('debug', `Sent command ${id} to worker: ${command} ${args.join(' ')}`);
+      this.log(
+        'debug',
+        `Sent command ${id} to worker: ${command} ${args.join(' ')}`,
+      );
 
       // Set timeout if specified
       if (options.timeout) {
@@ -354,7 +381,9 @@ export class CLIBridge extends EventEmitter {
 
     if (messageLevelIndex >= currentLevelIndex) {
       const timestamp = new Date().toISOString();
-      console.log(`[${timestamp}] [CLIBridge] [${level.toUpperCase()}] ${message}`);
+      console.log(
+        `[${timestamp}] [CLIBridge] [${level.toUpperCase()}] ${message}`,
+      );
     }
   }
 }

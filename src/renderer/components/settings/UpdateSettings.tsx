@@ -12,15 +12,15 @@ export const UpdateSettings: React.FC = () => {
 
   const checkForUpdates = async () => {
     setIsChecking(true);
-    
+
     try {
       const result = await SystemService.checkForUpdateManually();
       setLastCheck(new Date());
-      
+
       if (result.error) {
         console.error('Update check failed:', result.error);
       }
-      
+
       if (result.updateAvailable && result.version) {
         console.log('Update available:', result.version);
       }

@@ -32,7 +32,7 @@ export const PrincipalInfoModal: React.FC<PrincipalInfoModalProps> = ({
         }}
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div
         style={{
@@ -90,7 +90,8 @@ export const PrincipalInfoModal: React.FC<PrincipalInfoModalProps> = ({
               transition: 'all 0.2s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
               e.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(e) => {

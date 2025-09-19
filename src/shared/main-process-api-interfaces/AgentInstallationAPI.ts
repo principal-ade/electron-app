@@ -1,4 +1,4 @@
-import { SupportedAgent } from "@principal-ai/agent-monitoring";
+import { SupportedAgent } from '@principal-ai/agent-monitoring';
 export interface AgentVersion {
   version: string;
   releaseDate: string;
@@ -23,7 +23,12 @@ export interface AgentInstallStatus {
   lastChecked: Date;
 }
 
-export type AgentInstallProgressStage = 'downloading' | 'installing' | 'configuring' | 'completed' | 'error';
+export type AgentInstallProgressStage =
+  | 'downloading'
+  | 'installing'
+  | 'configuring'
+  | 'completed'
+  | 'error';
 export interface AgentInstallProgress {
   agentType: SupportedAgent;
   stage: AgentInstallProgressStage;

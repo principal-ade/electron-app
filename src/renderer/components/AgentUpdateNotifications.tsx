@@ -24,7 +24,7 @@ export const AgentUpdateNotifications: React.FC = () => {
         maxWidth: '400px',
       }}
     >
-      {notifications.map(notification => (
+      {notifications.map((notification) => (
         <div
           key={notification.id}
           style={{
@@ -37,7 +37,11 @@ export const AgentUpdateNotifications: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'start', gap: '12px' }}>
-            <Info size={20} color={theme.colors.primary} style={{ flexShrink: 0, marginTop: '2px' }} />
+            <Info
+              size={20}
+              color={theme.colors.primary}
+              style={{ flexShrink: 0, marginTop: '2px' }}
+            />
             <div style={{ flex: 1 }}>
               <h4
                 style={{
@@ -57,7 +61,8 @@ export const AgentUpdateNotifications: React.FC = () => {
                 }}
               >
                 Version {notification.latestVersion} is ready to install
-                {notification.currentVersion && ` (current: ${notification.currentVersion})`}
+                {notification.currentVersion &&
+                  ` (current: ${notification.currentVersion})`}
               </p>
               <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
                 <button
@@ -118,7 +123,7 @@ export const AgentUpdateNotifications: React.FC = () => {
           </div>
         </div>
       ))}
-      
+
       <style>
         {`
           @keyframes slideIn {

@@ -165,8 +165,8 @@
   },
   "dependencies": {
     "@a24z/agent-manager": "^1.0.1",
-    "@a24z/core-library": "^0.1.4",
-    "@a24z/markdown-search": "^2.0.0",
+    "@a24z/core-library": "^0.1.6",
+    "@a24z/markdown-search": "^2.0.5",
     "@a24z/observability-sdk": "^0.4.1",
     "@a24z/panels": "^1.0.3",
     "@electron/notarize": "^3.0.0",

@@ -4,7 +4,11 @@
  */
 
 import { ipcRenderer } from 'electron';
-import type { WindowAPI, StoreViewerOptions, MultiFileEditorOptions } from '../../shared/main-process-api-interfaces/WindowAPI';
+import type {
+  WindowAPI,
+  StoreViewerOptions,
+  MultiFileEditorOptions,
+} from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 

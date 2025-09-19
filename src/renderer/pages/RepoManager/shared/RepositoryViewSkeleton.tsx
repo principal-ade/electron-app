@@ -1,9 +1,12 @@
 import React, { ReactNode } from 'react';
 import { useTheme } from 'themed-markdown';
-import type { CityData, HighlightLayer } from "@principal-ai/code-city-react";
-import { AnimatedResizableLayout } from "@a24z/panels";
-import "@a24z/panels/style.css";
-import { RightPaneContainer, RightPaneView } from '../../../components/repository-maps/RightPaneContainer';
+import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
+import { AnimatedResizableLayout } from '@a24z/panels';
+import '@a24z/panels/style.css';
+import {
+  RightPaneContainer,
+  RightPaneView,
+} from '../../../components/repository-maps/RightPaneContainer';
 import type { ToolbarItem } from './RepositoryToolbar';
 import { EnhancedUIAgentSessionData } from '../../../types/session.types';
 import { SessionFileActivity } from '../../../contexts/FileChangeContext';
@@ -24,18 +27,18 @@ interface RepositoryViewSkeletonProps {
   tabs: TabConfig[];
   activeTab: string;
   onTabChange: (tabId: string) => void;
-  
+
   // Right panel (Code City) configuration
   cityData: CityData | null;
   highlightLayers: HighlightLayer[];
   loading: boolean;
   treeStats?: { fileCount: number; directoryCount: number } | null;
-  
+
   // Source management
   sourceBadges?: ReactNode;
   activeSource?: FileTreeSource | null;
   onHelpClick?: () => void;
-  
+
   // Optional customization
   cityHeaderExtra?: ReactNode;
   loadingMessage?: string;
@@ -50,7 +53,7 @@ interface RepositoryViewSkeletonProps {
     addClaudeSession: (sessionId: string, sessionName?: string) => void;
   } | null>;
   showViewSwitcher?: boolean;
-  
+
   // Session detail configuration (notes will be integrated here in the future)
   sessions?: EnhancedUIAgentSessionData[];
   sessionFileActivities?: Map<string, SessionFileActivity[]>;
@@ -59,7 +62,7 @@ interface RepositoryViewSkeletonProps {
     name: string;
     localClones?: Array<{ path: string }>;
   };
-  
+
   // Session detail props
   selectedSessionCardData?: SessionCardData | null;
   sessionColor?: string;
@@ -73,12 +76,12 @@ interface RepositoryViewSkeletonProps {
   onArchive?: () => void;
   onOpenPackageCommands?: (project: any) => Promise<void>;
   getTimeAgo?: (timestamp: number) => string;
-  
+
   // Toolbar configuration
   toolbarItems?: ToolbarItem[];
   toolbarExpanded?: boolean;
   onToolbarExpandedChange?: (expanded: boolean) => void;
-  
+
   // Document view props
   documentContent?: React.ReactNode;
 }
@@ -125,33 +128,37 @@ export const RepositoryViewSkeleton: React.FC<RepositoryViewSkeletonProps> = ({
   documentContent,
 }) => {
   const { theme } = useTheme();
-  
+
   // Filter out hidden tabs
-  const visibleTabs = tabs.filter(tab => tab.visible !== false);
-  const activeTabConfig = visibleTabs.find(tab => tab.id === activeTab);
-  
+  const visibleTabs = tabs.filter((tab) => tab.visible !== false);
+  const activeTabConfig = visibleTabs.find((tab) => tab.id === activeTab);
+
   // Left panel content
   const leftPanel = (
-    <div style={{ 
-      backgroundColor: theme.colors.backgroundSecondary, 
-      borderRadius: '8px 0 0 8px', // Round only left corners
-      border: `1px solid ${theme.colors.border}`, 
-      borderRight: 'none', // Remove right border since resize handle will be there
-      display: 'flex', 
-      flexDirection: 'column',
-      overflow: 'hidden',
-      height: '100%'
-    }}>
+    <div
+      style={{
+        backgroundColor: theme.colors.backgroundSecondary,
+        borderRadius: '8px 0 0 8px', // Round only left corners
+        border: `1px solid ${theme.colors.border}`,
+        borderRight: 'none', // Remove right border since resize handle will be there
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        height: '100%',
+      }}
+    >
       {/* Tab Headers */}
-      <div style={{ 
-        display: 'grid',
-        gridTemplateColumns: `repeat(${visibleTabs.length}, 1fr)`,
-        borderBottom: `1px solid ${theme.colors.border}`,
-        backgroundColor: theme.colors.backgroundLight,
-        padding: '0 8px',
-        flexShrink: 0
-      }}>
-        {visibleTabs.map(tab => (
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${visibleTabs.length}, 1fr)`,
+          borderBottom: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.backgroundLight,
+          padding: '0 8px',
+          flexShrink: 0,
+        }}
+      >
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
@@ -162,9 +169,15 @@ export const RepositoryViewSkeleton: React.FC<RepositoryViewSkeletonProps> = ({
               gap: '6px',
               padding: '12px 16px',
               backgroundColor: 'transparent',
-              color: activeTab === tab.id ? theme.colors.primary : theme.colors.textSecondary,
+              color:
+                activeTab === tab.id
+                  ? theme.colors.primary
+                  : theme.colors.textSecondary,
               border: 'none',
-              borderBottom: activeTab === tab.id ? `3px solid ${theme.colors.primary}` : '3px solid transparent',
+              borderBottom:
+                activeTab === tab.id
+                  ? `3px solid ${theme.colors.primary}`
+                  : '3px solid transparent',
               marginBottom: activeTab === tab.id ? '-2px' : '-2px',
               cursor: 'pointer',
               fontSize: '13px',
@@ -174,7 +187,7 @@ export const RepositoryViewSkeleton: React.FC<RepositoryViewSkeletonProps> = ({
               minWidth: 0,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
-              opacity: activeTab === tab.id ? 1 : 0.7
+              opacity: activeTab === tab.id ? 1 : 0.7,
             }}
             onMouseEnter={(e) => {
               if (activeTab !== tab.id) {
@@ -190,22 +203,26 @@ export const RepositoryViewSkeleton: React.FC<RepositoryViewSkeletonProps> = ({
             }}
           >
             {tab.icon}
-            <span style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
-            }}>
+            <span
+              style={{
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
               {tab.label}
             </span>
           </button>
         ))}
       </div>
-      
+
       {/* Tab Content */}
-      <div style={{ 
-        flex: 1, 
-        overflow: 'auto',
-        padding: '16px'
-      }}>
+      <div
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: '16px',
+        }}
+      >
         {activeTabConfig?.content}
       </div>
     </div>
@@ -213,15 +230,17 @@ export const RepositoryViewSkeleton: React.FC<RepositoryViewSkeletonProps> = ({
 
   // Right panel content with adjusted border radius
   const rightPanel = (
-    <div style={{
-      borderRadius: '0 8px 8px 0', // Round only right corners
-      border: `1px solid ${theme.colors.border}`,
-      borderLeft: 'none', // Remove left border since resize handle will be there
-      overflow: 'hidden',
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
+    <div
+      style={{
+        borderRadius: '0 8px 8px 0', // Round only right corners
+        border: `1px solid ${theme.colors.border}`,
+        borderLeft: 'none', // Remove left border since resize handle will be there
+        overflow: 'hidden',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <RightPaneContainer
         activeView={rightPaneMode as RightPaneView}
         onViewChange={(view) => onRightPaneModeChange?.(view)}
@@ -263,7 +282,14 @@ export const RepositoryViewSkeleton: React.FC<RepositoryViewSkeletonProps> = ({
   );
 
   return (
-    <div style={{ width: '100%', height: '100%', padding: '16px', boxSizing: 'border-box' }}>
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        padding: '16px',
+        boxSizing: 'border-box',
+      }}
+    >
       <AnimatedResizableLayout
         leftPanel={leftPanel}
         rightPanel={rightPanel}

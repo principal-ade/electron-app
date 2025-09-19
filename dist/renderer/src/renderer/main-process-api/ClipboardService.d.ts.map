@@ -1,1 +1,0 @@
-{"version":3,"file":"ClipboardService.d.ts","sourceRoot":"","sources":["../../../../../src/renderer/main-process-api/ClipboardService.ts"],"names":[],"mappings":"AAEA,qBAAa,gBAAgB;WACd,QAAQ,IAAI,OAAO,CAAC;QAAE,OAAO,EAAE,OAAO,CAAC;QAAC,IAAI,EAAE,MAAM,CAAA;KAAE,CAAC;WAGvD,SAAS,CAAC,IAAI,EAAE,MAAM,GAAG,OAAO,CAAC,OAAO,CAAC;CAGvD"}

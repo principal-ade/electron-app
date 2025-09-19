@@ -12,17 +12,17 @@ import {
 export class TestCoverageService {
   private static cache: Map<string, TestCoverageResult> = new Map();
   private static cacheTimeout = 5 * 60 * 1000; // 5 minutes
-  
+
   /**
    * Collect test coverage for specified packages
    */
   static async collectCoverage(
     rootPath: string,
     packages: Array<{ name: string; path: string }>,
-    options: CoverageCollectionOptions & { useCache?: boolean } = {}
+    options: CoverageCollectionOptions & { useCache?: boolean } = {},
   ): Promise<TestCoverageResult> {
-    const cacheKey = `${rootPath}-${packages.map(p => p.name).join(',')}`;
-    
+    const cacheKey = `${rootPath}-${packages.map((p) => p.name).join(',')}`;
+
     // Check cache if enabled
     if (options.useCache) {
       const cached = this.cache.get(cacheKey);
@@ -31,28 +31,31 @@ export class TestCoverageService {
         return cached;
       }
     }
-    
-    console.log('[TestCoverageService] Collecting test coverage for packages:', packages);
-    
+
+    console.log(
+      '[TestCoverageService] Collecting test coverage for packages:',
+      packages,
+    );
+
     try {
       const result = await window.mainProcess.testCoverage.collectCoverage(
         rootPath,
         packages,
-        options
+        options,
       );
-      
+
       // Cache the result
       if (options.useCache) {
         this.cache.set(cacheKey, result);
       }
-      
+
       return result;
     } catch (error) {
       console.error('[TestCoverageService] Failed to collect coverage:', error);
       throw error;
     }
   }
-  
+
   /**
    * Cancel coverage collection for a specific package
    */
@@ -64,7 +67,7 @@ export class TestCoverageService {
       throw error;
     }
   }
-  
+
   /**
    * Cancel all running coverage collections
    */
@@ -72,22 +75,28 @@ export class TestCoverageService {
     try {
       await window.mainProcess.testCoverage.cancelAllCoverage();
     } catch (error) {
-      console.error('[TestCoverageService] Failed to cancel all coverage:', error);
+      console.error(
+        '[TestCoverageService] Failed to cancel all coverage:',
+        error,
+      );
       throw error;
     }
   }
-  
+
   /**
    * Clear the cache
    */
   static clearCache(): void {
     this.cache.clear();
   }
-  
+
   /**
    * Get coverage summary for a file path
    */
-  static getCoverageForFile(result: TestCoverageResult, filePath: string): FileCoverage | null {
+  static getCoverageForFile(
+    result: TestCoverageResult,
+    filePath: string,
+  ): FileCoverage | null {
     for (const pkg of result.packages) {
       // Convert the serialized array back to Map for searching
       const fileCoverageMap = new Map(pkg.fileCoverage);
@@ -98,7 +107,7 @@ export class TestCoverageService {
     }
     return null;
   }
-  
+
   /**
    * Get coverage class for percentage (for styling)
    */
@@ -107,7 +116,7 @@ export class TestCoverageService {
     if (percentage >= 50) return 'medium';
     return 'low';
   }
-  
+
   /**
    * Format coverage percentage for display
    */

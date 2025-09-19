@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from '@jest/globals';
 import { Repository } from '../../shared/types/repository.types';
 import { StaticNamespaces } from '../storage-providers/types';
 
@@ -68,16 +75,16 @@ describe('RepositoryApiEventHandler', () => {
   beforeEach(() => {
     // Reset all mocks
     jest.clearAllMocks();
-    
+
     // Setup mock branch service BEFORE creating the handler
     mockBranchService = {
       getBranchInfo: jest.fn(),
     };
     (GitBranchService as jest.Mock).mockImplementation(() => mockBranchService);
-    
+
     // Create instance (this will use the mocked GitBranchService)
     handler = new RepositoryApiEventHandler();
-    
+
     // Setup mock storage manager
     mockStorageManager = {
       get: jest.fn(),
@@ -85,8 +92,10 @@ describe('RepositoryApiEventHandler', () => {
       delete: jest.fn(),
       keys: jest.fn(),
     };
-    (getTypedStorageManagerInstance as jest.Mock).mockResolvedValue(mockStorageManager);
-    
+    (getTypedStorageManagerInstance as jest.Mock).mockResolvedValue(
+      mockStorageManager,
+    );
+
     // Setup mock window for broadcasting
     mockWindow = {
       isDestroyed: jest.fn().mockReturnValue(false),
@@ -95,14 +104,17 @@ describe('RepositoryApiEventHandler', () => {
       },
     };
     (BrowserWindow.getAllWindows as jest.Mock).mockReturnValue([mockWindow]);
-    
+
     // Setup default fetch mock
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       status: 200,
       json: jest.fn().mockResolvedValue({
         name: 'test-repo',
-        owner: { login: 'test-owner', avatar_url: 'https://github.com/test-owner.png' },
+        owner: {
+          login: 'test-owner',
+          avatar_url: 'https://github.com/test-owner.png',
+        },
         description: 'Test repository',
         language: 'TypeScript',
         stargazers_count: 100,
@@ -143,10 +155,12 @@ describe('RepositoryApiEventHandler', () => {
           vcsType: 'github',
           description: 'Test repository',
           avatarUrl: 'https://github.com/test-owner.png',
-          localClones: [{
-            path: '/path/to/repo',
-            currentBranch: 'main',
-          }],
+          localClones: [
+            {
+              path: '/path/to/repo',
+              currentBranch: 'main',
+            },
+          ],
           metadata: {
             language: 'TypeScript',
             stars: 100,
@@ -158,7 +172,10 @@ describe('RepositoryApiEventHandler', () => {
         });
 
         expect(mockStorageManager.set).toHaveBeenCalled();
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('repository:repository-added', expect.any(Object));
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+          'repository:repository-added',
+          expect.any(Object),
+        );
       });
 
       it('should handle non-GitHub repositories', async () => {
@@ -202,13 +219,22 @@ describe('RepositoryApiEventHandler', () => {
           vcsType: 'github',
           owner: 'test-owner',
           name: 'test-repo',
-          localClones: [{ path: '/existing/path', addedAt: Date.now(), lastAccessed: Date.now() }],
+          localClones: [
+            {
+              path: '/existing/path',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
+          ],
           addedAt: Date.now(),
           lastAccessed: Date.now(),
           tags: ['existing-tag'],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
 
         const params = {
           remoteUrl: 'https://github.com/test-owner/test-repo',
@@ -220,10 +246,17 @@ describe('RepositoryApiEventHandler', () => {
         const result = await handler.addRepository(params);
 
         expect(result.localClones).toHaveLength(2);
-        expect(result.localClones.some(c => c.path === '/new/path')).toBe(true);
-        expect(result.localClones.some(c => c.path === '/existing/path')).toBe(true);
+        expect(result.localClones.some((c) => c.path === '/new/path')).toBe(
+          true,
+        );
+        expect(
+          result.localClones.some((c) => c.path === '/existing/path'),
+        ).toBe(true);
         expect(result.tags).toEqual(['existing-tag']); // Preserve existing tags
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('repository:repository-updated', expect.any(Object));
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+          'repository:repository-updated',
+          expect.any(Object),
+        );
       });
 
       it('should not add duplicate local paths', async () => {
@@ -232,13 +265,22 @@ describe('RepositoryApiEventHandler', () => {
           vcsType: 'github',
           owner: 'test-owner',
           name: 'test-repo',
-          localClones: [{ path: '/existing/path', addedAt: Date.now(), lastAccessed: Date.now() }],
+          localClones: [
+            {
+              path: '/existing/path',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
+          ],
           addedAt: Date.now(),
           lastAccessed: Date.now(),
           tags: [],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
 
         const params = {
           remoteUrl: 'https://github.com/test-owner/test-repo',
@@ -283,19 +325,23 @@ describe('RepositoryApiEventHandler', () => {
         mockStorageManager.get.mockResolvedValue({ success: false });
 
         await handler.addRepository(params1);
-        const firstCallKey = (mockStorageManager.set as jest.Mock).mock.calls[0][0];
+        const firstCallKey = (mockStorageManager.set as jest.Mock).mock
+          .calls[0][0];
 
         jest.clearAllMocks();
         mockStorageManager.get.mockResolvedValue({ success: false });
 
         await handler.addRepository(params2);
-        const secondCallKey = (mockStorageManager.set as jest.Mock).mock.calls[0][0];
+        const secondCallKey = (mockStorageManager.set as jest.Mock).mock
+          .calls[0][0];
 
         expect(firstCallKey).toBe(secondCallKey); // Should generate same key for normalized URLs
       });
 
       it('should handle network failures during GitHub metadata fetch', async () => {
-        (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+        (global.fetch as jest.Mock).mockRejectedValue(
+          new Error('Network error'),
+        );
 
         const params = {
           remoteUrl: 'https://github.com/test-owner/test-repo',
@@ -314,7 +360,9 @@ describe('RepositoryApiEventHandler', () => {
       });
 
       it('should handle invalid local path for branch info', async () => {
-        mockBranchService.getBranchInfo.mockRejectedValue(new Error('Not a git repository'));
+        mockBranchService.getBranchInfo.mockRejectedValue(
+          new Error('Not a git repository'),
+        );
 
         const params = {
           remoteUrl: 'https://github.com/test-owner/test-repo',
@@ -338,13 +386,22 @@ describe('RepositoryApiEventHandler', () => {
           vcsType: 'github',
           owner: 'test-owner',
           name: 'test-repo',
-          localClones: [{ path: '/existing/path', addedAt: Date.now(), lastAccessed: Date.now() }],
+          localClones: [
+            {
+              path: '/existing/path',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
+          ],
           addedAt: Date.now(),
           lastAccessed: Date.now(),
           tags: [],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
         mockBranchService.getBranchInfo.mockResolvedValue({
           currentBranch: 'feature-branch',
           defaultBranch: 'main',
@@ -352,13 +409,21 @@ describe('RepositoryApiEventHandler', () => {
 
         const result = await handler.addLocalClone(
           'https://github.com/test-owner/test-repo',
-          '/new/clone/path'
+          '/new/clone/path',
         );
 
         expect(result?.localClones).toHaveLength(2);
-        expect(result?.localClones.some(c => c.path === '/new/clone/path')).toBe(true);
-        expect(result?.localClones.find(c => c.path === '/new/clone/path')?.currentBranch).toBe('feature-branch');
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('repository:clone-added', expect.any(Object));
+        expect(
+          result?.localClones.some((c) => c.path === '/new/clone/path'),
+        ).toBe(true);
+        expect(
+          result?.localClones.find((c) => c.path === '/new/clone/path')
+            ?.currentBranch,
+        ).toBe('feature-branch');
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+          'repository:clone-added',
+          expect.any(Object),
+        );
       });
 
       it('should not add duplicate clone paths', async () => {
@@ -367,17 +432,26 @@ describe('RepositoryApiEventHandler', () => {
           vcsType: 'github',
           owner: 'test-owner',
           name: 'test-repo',
-          localClones: [{ path: '/existing/path', addedAt: Date.now(), lastAccessed: Date.now() }],
+          localClones: [
+            {
+              path: '/existing/path',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
+          ],
           addedAt: Date.now(),
           lastAccessed: Date.now(),
           tags: [],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
 
         const result = await handler.addLocalClone(
           'https://github.com/test-owner/test-repo',
-          '/existing/path'
+          '/existing/path',
         );
 
         expect(result?.localClones).toHaveLength(1);
@@ -389,7 +463,7 @@ describe('RepositoryApiEventHandler', () => {
 
         const result = await handler.addLocalClone(
           'https://github.com/non-existent/repo',
-          '/some/path'
+          '/some/path',
         );
 
         expect(result).toBeUndefined();
@@ -400,20 +474,24 @@ describe('RepositoryApiEventHandler', () => {
   describe('Repository Removal Tests', () => {
     describe('removeRepository()', () => {
       it('should completely remove repository from storage', async () => {
-        const result = await handler.removeRepository('https://github.com/test-owner/test-repo');
+        const result = await handler.removeRepository(
+          'https://github.com/test-owner/test-repo',
+        );
 
         expect(result).toBe(true);
         expect(mockStorageManager.delete).toHaveBeenCalled();
         expect(mockWindow.webContents.send).toHaveBeenCalledWith(
           'repository:repository-removed',
-          { remoteUrl: 'https://github.com/test-owner/test-repo' }
+          { remoteUrl: 'https://github.com/test-owner/test-repo' },
         );
       });
 
       it('should handle removal of non-existent repository', async () => {
         mockStorageManager.delete.mockResolvedValue(undefined);
 
-        const result = await handler.removeRepository('https://github.com/non-existent/repo');
+        const result = await handler.removeRepository(
+          'https://github.com/non-existent/repo',
+        );
 
         expect(result).toBe(true);
         expect(mockStorageManager.delete).toHaveBeenCalled();
@@ -422,7 +500,9 @@ describe('RepositoryApiEventHandler', () => {
       it('should handle storage errors gracefully', async () => {
         mockStorageManager.delete.mockRejectedValue(new Error('Storage error'));
 
-        const result = await handler.removeRepository('https://github.com/test-owner/test-repo');
+        const result = await handler.removeRepository(
+          'https://github.com/test-owner/test-repo',
+        );
 
         expect(result).toBe(false);
       });
@@ -436,31 +516,56 @@ describe('RepositoryApiEventHandler', () => {
           owner: 'test-owner',
           name: 'test-repo',
           localClones: [
-            { path: '/clone/one', addedAt: Date.now(), lastAccessed: Date.now() },
-            { path: '/clone/two', addedAt: Date.now(), lastAccessed: Date.now() },
-            { path: '/clone/three', addedAt: Date.now(), lastAccessed: Date.now() },
+            {
+              path: '/clone/one',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
+            {
+              path: '/clone/two',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
+            {
+              path: '/clone/three',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
           ],
           addedAt: Date.now(),
           lastAccessed: Date.now(),
           tags: [],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
 
         const result = await handler.removeLocalClone(
           'https://github.com/test-owner/test-repo',
-          '/clone/two'
+          '/clone/two',
         );
 
         expect(result).toBe(true);
-        
-        const savedRepo = (mockStorageManager.set as jest.Mock).mock.calls[0][1];
+
+        const savedRepo = (mockStorageManager.set as jest.Mock).mock
+          .calls[0][1];
         expect(savedRepo.localClones).toHaveLength(2);
-        expect(savedRepo.localClones.some((c: any) => c.path === '/clone/one')).toBe(true);
-        expect(savedRepo.localClones.some((c: any) => c.path === '/clone/three')).toBe(true);
-        expect(savedRepo.localClones.some((c: any) => c.path === '/clone/two')).toBe(false);
-        
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('repository:clone-removed', expect.any(Object));
+        expect(
+          savedRepo.localClones.some((c: any) => c.path === '/clone/one'),
+        ).toBe(true);
+        expect(
+          savedRepo.localClones.some((c: any) => c.path === '/clone/three'),
+        ).toBe(true);
+        expect(
+          savedRepo.localClones.some((c: any) => c.path === '/clone/two'),
+        ).toBe(false);
+
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+          'repository:clone-removed',
+          expect.any(Object),
+        );
       });
 
       it('should remove entire repository when last clone is removed', async () => {
@@ -470,18 +575,25 @@ describe('RepositoryApiEventHandler', () => {
           owner: 'test-owner',
           name: 'test-repo',
           localClones: [
-            { path: '/last/clone', addedAt: Date.now(), lastAccessed: Date.now() },
+            {
+              path: '/last/clone',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
           ],
           addedAt: Date.now(),
           lastAccessed: Date.now(),
           tags: [],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
 
         const result = await handler.removeLocalClone(
           'https://github.com/test-owner/test-repo',
-          '/last/clone'
+          '/last/clone',
         );
 
         expect(result).toBe(true);
@@ -489,7 +601,7 @@ describe('RepositoryApiEventHandler', () => {
         expect(mockStorageManager.set).not.toHaveBeenCalled();
         expect(mockWindow.webContents.send).toHaveBeenCalledWith(
           'repository:repository-removed',
-          { remoteUrl: 'https://github.com/test-owner/test-repo' }
+          { remoteUrl: 'https://github.com/test-owner/test-repo' },
         );
       });
 
@@ -500,18 +612,25 @@ describe('RepositoryApiEventHandler', () => {
           owner: 'test-owner',
           name: 'test-repo',
           localClones: [
-            { path: '/existing/clone', addedAt: Date.now(), lastAccessed: Date.now() },
+            {
+              path: '/existing/clone',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
           ],
           addedAt: Date.now(),
           lastAccessed: Date.now(),
           tags: [],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
 
         const result = await handler.removeLocalClone(
           'https://github.com/test-owner/test-repo',
-          '/non-existent/path'
+          '/non-existent/path',
         );
 
         expect(result).toBe(false);
@@ -524,7 +643,7 @@ describe('RepositoryApiEventHandler', () => {
 
         const result = await handler.removeLocalClone(
           'https://github.com/non-existent/repo',
-          '/some/path'
+          '/some/path',
         );
 
         expect(result).toBe(false);
@@ -537,19 +656,26 @@ describe('RepositoryApiEventHandler', () => {
           owner: 'test-owner',
           name: 'test-repo',
           localClones: [
-            { path: '/last/clone', addedAt: Date.now(), lastAccessed: Date.now() },
+            {
+              path: '/last/clone',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
           ],
           addedAt: Date.now(),
           lastAccessed: Date.now(),
           tags: [],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
         mockStorageManager.delete.mockRejectedValue(new Error('Storage error'));
 
         const result = await handler.removeLocalClone(
           'https://github.com/test-owner/test-repo',
-          '/last/clone'
+          '/last/clone',
         );
 
         expect(result).toBe(false);
@@ -580,7 +706,8 @@ describe('RepositoryApiEventHandler', () => {
           name: 'repo',
         });
 
-        const secondKey = (mockStorageManager.set as jest.Mock).mock.calls[0][0];
+        const secondKey = (mockStorageManager.set as jest.Mock).mock
+          .calls[0][0];
 
         expect(firstKey).toBe(secondKey);
         expect(firstKey).toMatch(/^repos_[a-f0-9]{16}$/);
@@ -598,7 +725,7 @@ describe('RepositoryApiEventHandler', () => {
         expect(mockStorageManager.set).toHaveBeenCalledWith(
           expect.any(String),
           expect.any(Object),
-          StaticNamespaces.REPOSITORIES
+          StaticNamespaces.REPOSITORIES,
         );
       });
     });
@@ -614,7 +741,10 @@ describe('RepositoryApiEventHandler', () => {
           webContents: { send: jest.fn() },
         };
 
-        (BrowserWindow.getAllWindows as jest.Mock).mockReturnValue([window1, window2]);
+        (BrowserWindow.getAllWindows as jest.Mock).mockReturnValue([
+          window1,
+          window2,
+        ]);
         mockStorageManager.get.mockResolvedValue({ success: false });
 
         await handler.addRepository({
@@ -623,8 +753,14 @@ describe('RepositoryApiEventHandler', () => {
           name: 'repo',
         });
 
-        expect(window1.webContents.send).toHaveBeenCalledWith('repository:repository-added', expect.any(Object));
-        expect(window2.webContents.send).toHaveBeenCalledWith('repository:repository-added', expect.any(Object));
+        expect(window1.webContents.send).toHaveBeenCalledWith(
+          'repository:repository-added',
+          expect.any(Object),
+        );
+        expect(window2.webContents.send).toHaveBeenCalledWith(
+          'repository:repository-added',
+          expect.any(Object),
+        );
       });
 
       it('should skip destroyed windows', async () => {
@@ -637,7 +773,10 @@ describe('RepositoryApiEventHandler', () => {
           webContents: { send: jest.fn() },
         };
 
-        (BrowserWindow.getAllWindows as jest.Mock).mockReturnValue([window1, window2]);
+        (BrowserWindow.getAllWindows as jest.Mock).mockReturnValue([
+          window1,
+          window2,
+        ]);
         mockStorageManager.get.mockResolvedValue({ success: false });
 
         await handler.addRepository({
@@ -666,7 +805,7 @@ describe('RepositoryApiEventHandler', () => {
             remoteUrl: 'https://github.com/owner/repo',
             owner: 'test-owner', // GitHub API returns this
             name: 'test-repo', // GitHub API returns this
-          })
+          }),
         );
 
         jest.clearAllMocks();
@@ -676,20 +815,24 @@ describe('RepositoryApiEventHandler', () => {
 
         expect(mockWindow.webContents.send).toHaveBeenCalledWith(
           'repository:repository-removed',
-          { remoteUrl: 'https://github.com/owner/repo' }
+          { remoteUrl: 'https://github.com/owner/repo' },
         );
       });
     });
 
     describe('Storage Manager Initialization', () => {
       it('should handle storage manager initialization failure', async () => {
-        (getTypedStorageManagerInstance as jest.Mock).mockRejectedValue(new Error('Init failed'));
+        (getTypedStorageManagerInstance as jest.Mock).mockRejectedValue(
+          new Error('Init failed'),
+        );
 
-        await expect(handler.addRepository({
-          remoteUrl: 'https://github.com/owner/repo',
-          owner: 'owner',
-          name: 'repo',
-        })).rejects.toThrow('Init failed');
+        await expect(
+          handler.addRepository({
+            remoteUrl: 'https://github.com/owner/repo',
+            owner: 'owner',
+            name: 'repo',
+          }),
+        ).rejects.toThrow('Init failed');
       });
 
       it('should handle concurrent storage operations', async () => {
@@ -735,11 +878,14 @@ describe('RepositoryApiEventHandler', () => {
           tags: [],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
 
         const result = await handler.updateRepository(
           'https://github.com/owner/repo',
-          { remoteUrl: 'https://github.com/different/repo' } as any
+          { remoteUrl: 'https://github.com/different/repo' } as any,
         );
 
         expect(result?.remoteUrl).toBe('https://github.com/owner/repo');
@@ -757,15 +903,18 @@ describe('RepositoryApiEventHandler', () => {
           tags: [],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
 
         const result = await handler.updateRepository(
           'https://github.com/owner/repo',
-          { 
+          {
             owner: 'different-owner',
             name: 'different-name',
             vcsType: 'gitlab',
-          } as any
+          } as any,
         );
 
         expect(result?.owner).toBe('owner');
@@ -789,16 +938,19 @@ describe('RepositoryApiEventHandler', () => {
           },
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
 
         const result = await handler.updateRepository(
           'https://github.com/owner/repo',
-          { 
+          {
             metadata: {
               defaultBranch: 'main',
               topics: ['test'],
             },
-          }
+          },
         );
 
         expect(result?.metadata).toEqual({
@@ -823,9 +975,14 @@ describe('RepositoryApiEventHandler', () => {
           // No tags field
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: oldRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: oldRepo,
+        });
 
-        const result = await handler.getRepository('https://github.com/owner/repo');
+        const result = await handler.getRepository(
+          'https://github.com/owner/repo',
+        );
 
         expect(result?.tags).toEqual([]);
       });
@@ -842,11 +999,14 @@ describe('RepositoryApiEventHandler', () => {
           tags: ['important', 'work'],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
 
         const result = await handler.updateRepository(
           'https://github.com/owner/repo',
-          { description: 'Updated description' }
+          { description: 'Updated description' },
         );
 
         expect(result?.tags).toEqual(['important', 'work']);
@@ -859,7 +1019,7 @@ describe('RepositoryApiEventHandler', () => {
       it('should handle add → update → remove flow', async () => {
         // Add repository
         mockStorageManager.get.mockResolvedValue({ success: false });
-        
+
         const addResult = await handler.addRepository({
           remoteUrl: 'https://github.com/owner/repo',
           owner: 'owner',
@@ -868,25 +1028,36 @@ describe('RepositoryApiEventHandler', () => {
         });
 
         expect(addResult).toBeDefined();
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('repository:repository-added', expect.any(Object));
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+          'repository:repository-added',
+          expect.any(Object),
+        );
 
         // Update repository
         jest.clearAllMocks();
-        mockStorageManager.get.mockResolvedValue({ success: true, data: addResult });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: addResult,
+        });
 
         const updateResult = await handler.updateRepository(
           'https://github.com/owner/repo',
-          { description: 'Updated' }
+          { description: 'Updated' },
         );
 
         expect(updateResult?.description).toBe('Updated');
 
         // Remove repository
         jest.clearAllMocks();
-        const removeResult = await handler.removeRepository('https://github.com/owner/repo');
+        const removeResult = await handler.removeRepository(
+          'https://github.com/owner/repo',
+        );
 
         expect(removeResult).toBe(true);
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('repository:repository-removed', expect.any(Object));
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+          'repository:repository-removed',
+          expect.any(Object),
+        );
       });
     });
 
@@ -894,7 +1065,7 @@ describe('RepositoryApiEventHandler', () => {
       it('should handle multiple clone additions and removals correctly', async () => {
         // Add repository with first clone
         mockStorageManager.get.mockResolvedValue({ success: false });
-        
+
         const repo1 = await handler.addRepository({
           remoteUrl: 'https://github.com/owner/repo',
           owner: 'owner',
@@ -906,46 +1077,70 @@ describe('RepositoryApiEventHandler', () => {
 
         // Add second clone
         jest.clearAllMocks();
-        mockStorageManager.get.mockResolvedValue({ success: true, data: repo1 });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: repo1,
+        });
 
         const repo2 = await handler.addLocalClone(
           'https://github.com/owner/repo',
-          '/clone/two'
+          '/clone/two',
         );
 
         expect(repo2?.localClones).toHaveLength(2);
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('repository:clone-added', expect.any(Object));
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+          'repository:clone-added',
+          expect.any(Object),
+        );
 
         // Remove first clone
         jest.clearAllMocks();
-        mockStorageManager.get.mockResolvedValue({ success: true, data: repo2 });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: repo2,
+        });
 
         const removeResult1 = await handler.removeLocalClone(
           'https://github.com/owner/repo',
-          '/clone/one'
+          '/clone/one',
         );
 
         expect(removeResult1).toBe(true);
         expect(mockStorageManager.set).toHaveBeenCalled();
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('repository:clone-removed', expect.any(Object));
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+          'repository:clone-removed',
+          expect.any(Object),
+        );
 
         // Remove second clone (should remove entire repository)
         // After first removal, only /clone/two should remain
-        const updatedRepo = { 
-          ...repo2, 
-          localClones: [{ path: '/clone/two', addedAt: Date.now(), lastAccessed: Date.now() }] 
+        const updatedRepo = {
+          ...repo2,
+          localClones: [
+            {
+              path: '/clone/two',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
+          ],
         };
         jest.clearAllMocks();
-        mockStorageManager.get.mockResolvedValue({ success: true, data: updatedRepo });
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: updatedRepo,
+        });
 
         const removeResult2 = await handler.removeLocalClone(
           'https://github.com/owner/repo',
-          '/clone/two'
+          '/clone/two',
         );
 
         expect(removeResult2).toBe(true);
         expect(mockStorageManager.delete).toHaveBeenCalled();
-        expect(mockWindow.webContents.send).toHaveBeenCalledWith('repository:repository-removed', expect.any(Object));
+        expect(mockWindow.webContents.send).toHaveBeenCalledWith(
+          'repository:repository-removed',
+          expect.any(Object),
+        );
       });
     });
 
@@ -962,12 +1157,17 @@ describe('RepositoryApiEventHandler', () => {
           tags: [],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
-        mockStorageManager.set.mockRejectedValue(new Error('Storage write failed'));
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
+        mockStorageManager.set.mockRejectedValue(
+          new Error('Storage write failed'),
+        );
 
         const result = await handler.updateRepository(
           'https://github.com/owner/repo',
-          { description: 'This will fail' }
+          { description: 'This will fail' },
         );
 
         expect(result).toBeUndefined();
@@ -980,22 +1180,35 @@ describe('RepositoryApiEventHandler', () => {
           owner: 'owner',
           name: 'repo',
           localClones: [
-            { path: '/clone/one', addedAt: Date.now(), lastAccessed: Date.now() },
-            { path: '/clone/two', addedAt: Date.now(), lastAccessed: Date.now() },
+            {
+              path: '/clone/one',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
+            {
+              path: '/clone/two',
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+            },
           ],
           addedAt: Date.now(),
           lastAccessed: Date.now(),
           tags: [],
         };
 
-        mockStorageManager.get.mockResolvedValue({ success: true, data: existingRepo });
-        
+        mockStorageManager.get.mockResolvedValue({
+          success: true,
+          data: existingRepo,
+        });
+
         // Simulate a failure during the set operation
-        mockStorageManager.set.mockRejectedValue(new Error('Storage write failed'));
+        mockStorageManager.set.mockRejectedValue(
+          new Error('Storage write failed'),
+        );
 
         const result = await handler.removeLocalClone(
           'https://github.com/owner/repo',
-          '/clone/one'
+          '/clone/one',
         );
 
         expect(result).toBe(false);
@@ -1015,7 +1228,11 @@ describe('RepositoryApiEventHandler', () => {
           { remoteUrl: 'repo3', lastAccessed: now - 2000 },
         ];
 
-        mockStorageManager.keys.mockResolvedValue(['repos_1', 'repos_2', 'repos_3']);
+        mockStorageManager.keys.mockResolvedValue([
+          'repos_1',
+          'repos_2',
+          'repos_3',
+        ]);
         mockStorageManager.get
           .mockResolvedValueOnce({ success: true, data: repos[0] })
           .mockResolvedValueOnce({ success: true, data: repos[1] })
@@ -1030,10 +1247,21 @@ describe('RepositoryApiEventHandler', () => {
       });
 
       it('should filter out non-repository keys', async () => {
-        mockStorageManager.keys.mockResolvedValue(['repos_1', 'other_key', 'repos_2', 'config']);
+        mockStorageManager.keys.mockResolvedValue([
+          'repos_1',
+          'other_key',
+          'repos_2',
+          'config',
+        ]);
         mockStorageManager.get
-          .mockResolvedValueOnce({ success: true, data: { remoteUrl: 'repo1' } })
-          .mockResolvedValueOnce({ success: true, data: { remoteUrl: 'repo2' } });
+          .mockResolvedValueOnce({
+            success: true,
+            data: { remoteUrl: 'repo1' },
+          })
+          .mockResolvedValueOnce({
+            success: true,
+            data: { remoteUrl: 'repo2' },
+          });
 
         const result = await handler.getRepositories();
 

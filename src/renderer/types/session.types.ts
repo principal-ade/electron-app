@@ -18,15 +18,15 @@ export interface UIAgentSessionData extends Partial<AgentSessionRecord> {
   lastActivity: number;
   firstAccess: number;
   isActive: boolean;
-  
+
   // Optional metadata
   customName?: string;
   metadata?: any;
-  
+
   // Archive-specific fields (only present for archived sessions)
   archivedAt?: number;
   archivedReason?: string;
-  
+
   // Last action/event tracking
   lastAction?: {
     tool: string;
@@ -40,7 +40,7 @@ export interface UIAgentSessionData extends Partial<AgentSessionRecord> {
     fileName: string;
     timestamp: number;
   };
-  
+
   // Statistics
   fileAccessCount?: number;
   fileWriteCount?: number;

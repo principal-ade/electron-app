@@ -315,30 +315,26 @@ export class ElectronMCPServer {
 
   private setupResources() {
     // Application state resource
-    this.server.resource(
-      'app-state',
-      'electron://app/state',
-      async () => ({
-        contents: [
-          {
-            uri: 'electron://app/state',
-            text: JSON.stringify(
-              {
-                appName: app.getName(),
-                version: app.getVersion(),
-                isReady: app.isReady(),
-                windows: BrowserWindow.getAllWindows().length,
-                platform: process.platform,
-                timestamp: new Date().toISOString(),
-              },
-              null,
-              2,
-            ),
-            mimeType: 'application/json',
-          },
-        ],
-      }),
-    );
+    this.server.resource('app-state', 'electron://app/state', async () => ({
+      contents: [
+        {
+          uri: 'electron://app/state',
+          text: JSON.stringify(
+            {
+              appName: app.getName(),
+              version: app.getVersion(),
+              isReady: app.isReady(),
+              windows: BrowserWindow.getAllWindows().length,
+              platform: process.platform,
+              timestamp: new Date().toISOString(),
+            },
+            null,
+            2,
+          ),
+          mimeType: 'application/json',
+        },
+      ],
+    }));
 
     // Message queue resource
     this.server.resource(

@@ -56,7 +56,7 @@ export class ElectronCLI {
   async execute(
     command: string,
     args: string[] = [],
-    options: ExecuteOptions = {}
+    options: ExecuteOptions = {},
   ): Promise<ExecuteResult> {
     await this.ensureInitialized();
     return this.bridge.execute(command, args, options);
@@ -65,15 +65,17 @@ export class ElectronCLI {
   /**
    * Execute a command from a string (parses command and args)
    */
-  async exec(commandString: string, options?: ExecuteOptions): Promise<ExecuteResult> {
+  async exec(
+    commandString: string,
+    options?: ExecuteOptions,
+  ): Promise<ExecuteResult> {
     // Simple parsing - splits on spaces but respects quotes
     const parts = commandString.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
     const command = parts[0] || '';
-    const args = parts.slice(1).map(arg => arg.replace(/^"|"$/g, ''));
-    
+    const args = parts.slice(1).map((arg) => arg.replace(/^"|"$/g, ''));
+
     return this.execute(command, args, options);
   }
-
 
   /**
    * Execute npm commands
@@ -101,21 +103,21 @@ export class ElectronCLI {
    */
   async eslint(
     patterns: string[],
-    options: ExecuteOptions & { fix?: boolean; format?: string } = {}
+    options: ExecuteOptions & { fix?: boolean; format?: string } = {},
   ): Promise<ESLintResult[]> {
     const eslintArgs = ['eslint'];
-    
+
     // Add format flag for JSON output
     eslintArgs.push('--format', options.format || 'json');
-    
+
     // Add fix flag if requested
     if (options.fix) {
       eslintArgs.push('--fix');
     }
-    
+
     // Add file patterns
     eslintArgs.push(...patterns);
-    
+
     // Execute ESLint
     const result = await this.execute('npx', eslintArgs, {
       ...options,
@@ -128,7 +130,7 @@ export class ElectronCLI {
       hasStdout: !!result.stdout,
       stdoutLength: result.stdout?.length || 0,
       hasStderr: !!result.stderr,
-      stderrPreview: result.stderr?.substring(0, 200)
+      stderrPreview: result.stderr?.substring(0, 200),
     });
 
     // Parse JSON output
@@ -137,9 +139,16 @@ export class ElectronCLI {
       // But the output is still valid JSON
       if (result.stdout) {
         const results = JSON.parse(result.stdout) as ESLintResult[];
-        console.log(`[ESLint] Successfully parsed ${results.length} file results`);
-        const totalMessages = results.reduce((sum, r) => sum + r.messages.length, 0);
-        console.log(`[ESLint] Total messages across all files: ${totalMessages}`);
+        console.log(
+          `[ESLint] Successfully parsed ${results.length} file results`,
+        );
+        const totalMessages = results.reduce(
+          (sum, r) => sum + r.messages.length,
+          0,
+        );
+        console.log(
+          `[ESLint] Total messages across all files: ${totalMessages}`,
+        );
         return results;
       }
       console.log('[ESLint] No stdout, returning empty results');
@@ -157,23 +166,23 @@ export class ElectronCLI {
    */
   async prettier(
     patterns: string[],
-    options: ExecuteOptions & { write?: boolean; check?: boolean } = {}
+    options: ExecuteOptions & { write?: boolean; check?: boolean } = {},
   ): Promise<ExecuteResult> {
     const prettierArgs = ['prettier'];
-    
+
     // Add write flag if requested
     if (options.write) {
       prettierArgs.push('--write');
     }
-    
+
     // Add check flag if requested
     if (options.check) {
       prettierArgs.push('--check');
     }
-    
+
     // Add file patterns
     prettierArgs.push(...patterns);
-    
+
     return this.execute('npx', prettierArgs, options);
   }
 
@@ -182,30 +191,33 @@ export class ElectronCLI {
    */
   async jest(
     args: string[] = [],
-    options: ExecuteOptions & { coverage?: boolean; watch?: boolean } = {}
+    options: ExecuteOptions & { coverage?: boolean; watch?: boolean } = {},
   ): Promise<ExecuteResult> {
     const jestArgs = ['jest'];
-    
+
     // Add coverage flag if requested
     if (options.coverage) {
       jestArgs.push('--coverage');
     }
-    
+
     // Add watch flag if requested
     if (options.watch) {
       jestArgs.push('--watch');
     }
-    
+
     // Add any additional args
     jestArgs.push(...args);
-    
+
     return this.execute('npx', jestArgs, options);
   }
 
   /**
    * Run TypeScript compiler
    */
-  async tsc(args: string[] = [], options?: ExecuteOptions): Promise<ExecuteResult> {
+  async tsc(
+    args: string[] = [],
+    options?: ExecuteOptions,
+  ): Promise<ExecuteResult> {
     return this.execute('npx', ['tsc', ...args], options);
   }
 

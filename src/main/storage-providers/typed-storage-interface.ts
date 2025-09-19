@@ -1,12 +1,8 @@
-import { 
-  StorageProvider, 
-  StorageResult, 
-  StaticNamespaces
-} from './types';
-import { 
-  NamespaceDataTypes, 
+import { StorageProvider, StorageResult, StaticNamespaces } from './types';
+import {
+  NamespaceDataTypes,
   TypedNamespaceRegistry,
-  NamespaceData
+  NamespaceData,
 } from './typed-namespaces';
 import { StorageNamespaces } from './all-namespaces';
 import { StorageStats } from '../../shared/main-process-api-interfaces/StoreAPI';
@@ -21,7 +17,7 @@ export interface TypedStorageProvider<T = any> extends StorageProvider {
   getTyped<K extends StorageNamespaces>(
     namespace: K,
     key: string,
-    defaultValue?: NamespaceData<K>
+    defaultValue?: NamespaceData<K>,
   ): Promise<NamespaceData<K> | undefined>;
 
   /**
@@ -30,7 +26,7 @@ export interface TypedStorageProvider<T = any> extends StorageProvider {
   setTyped<K extends StorageNamespaces>(
     namespace: K,
     key: string,
-    value: NamespaceData<K>
+    value: NamespaceData<K>,
   ): Promise<void>;
 
   /**
@@ -38,7 +34,7 @@ export interface TypedStorageProvider<T = any> extends StorageProvider {
    */
   batchGet<K extends StorageNamespaces>(
     namespace: K,
-    keys: string[]
+    keys: string[],
   ): Promise<Map<string, NamespaceData<K>>>;
 
   /**
@@ -46,14 +42,15 @@ export interface TypedStorageProvider<T = any> extends StorageProvider {
    */
   batchSet<K extends StorageNamespaces>(
     namespace: K,
-    items: Map<string, NamespaceData<K>>
+    items: Map<string, NamespaceData<K>>,
   ): Promise<void>;
 }
 
 /**
  * Type-safe storage result
  */
-export interface TypedStorageResult<K extends StorageNamespaces> extends StorageResult {
+export interface TypedStorageResult<K extends StorageNamespaces>
+  extends StorageResult {
   data?: NamespaceData<K>;
   namespace: K;
 }
@@ -62,7 +59,10 @@ export interface TypedStorageResult<K extends StorageNamespaces> extends Storage
  * Namespace-specific storage operations
  */
 export interface NamespaceOperations<K extends StorageNamespaces> {
-  get(key: string, defaultValue?: NamespaceData<K>): Promise<NamespaceData<K> | undefined>;
+  get(
+    key: string,
+    defaultValue?: NamespaceData<K>,
+  ): Promise<NamespaceData<K> | undefined>;
   set(key: string, value: NamespaceData<K>): Promise<void>;
   delete(key: string): Promise<void>;
   has(key: string): Promise<boolean>;
@@ -86,7 +86,7 @@ export interface TypedMultiStoreManager {
   get<K extends StorageNamespaces>(
     key: string,
     namespace: K,
-    defaultValue?: NamespaceData<K>
+    defaultValue?: NamespaceData<K>,
   ): Promise<TypedStorageResult<K>>;
 
   /**
@@ -95,7 +95,7 @@ export interface TypedMultiStoreManager {
   set<K extends StorageNamespaces>(
     key: string,
     value: NamespaceData<K>,
-    namespace: K
+    namespace: K,
   ): Promise<TypedStorageResult<K>>;
 
   /**
@@ -103,36 +103,29 @@ export interface TypedMultiStoreManager {
    */
   delete<K extends StorageNamespaces>(
     key: string,
-    namespace: K
+    namespace: K,
   ): Promise<TypedStorageResult<K>>;
 
   /**
    * Check if a key exists in a namespace
    */
-  has<K extends StorageNamespaces>(
-    key: string,
-    namespace: K
-  ): Promise<boolean>;
+  has<K extends StorageNamespaces>(key: string, namespace: K): Promise<boolean>;
 
   /**
    * Get all keys in a namespace
    */
-  keys<K extends StorageNamespaces>(
-    namespace: K
-  ): Promise<string[]>;
+  keys<K extends StorageNamespaces>(namespace: K): Promise<string[]>;
 
   /**
    * Clear all data in a namespace
    */
-  clearNamespace<K extends StorageNamespaces>(
-    namespace: K
-  ): Promise<void>;
+  clearNamespace<K extends StorageNamespaces>(namespace: K): Promise<void>;
 
   /**
    * Get statistics for a namespace
    */
   getNamespaceStats<K extends StorageNamespaces>(
-    namespace: K
+    namespace: K,
   ): Promise<StorageStats>;
 
   /**
@@ -141,7 +134,7 @@ export interface TypedMultiStoreManager {
   migrate<From extends StorageNamespaces, To extends StorageNamespaces>(
     fromNamespace: From,
     toNamespace: To,
-    transformer?: (data: NamespaceData<From>) => NamespaceData<To>
+    transformer?: (data: NamespaceData<From>) => NamespaceData<To>,
   ): Promise<void>;
 }
 
@@ -150,13 +143,16 @@ export interface TypedMultiStoreManager {
  */
 export function createNamespaceOperations<K extends StorageNamespaces>(
   namespace: K,
-  provider: StorageProvider
+  provider: StorageProvider,
 ): NamespaceOperations<K> {
   const getNamespacedKey = (key: string) => `${namespace}:${key}`;
 
   return {
     async get(key: string, defaultValue?: NamespaceData<K>) {
-      return provider.get<NamespaceData<K>>(getNamespacedKey(key), defaultValue);
+      return provider.get<NamespaceData<K>>(
+        getNamespacedKey(key),
+        defaultValue,
+      );
     },
 
     async set(key: string, value: NamespaceData<K>) {
@@ -175,8 +171,8 @@ export function createNamespaceOperations<K extends StorageNamespaces>(
       const allKeys = await provider.keys();
       const prefix = `${namespace}:`;
       return allKeys
-        .filter(k => k.startsWith(prefix))
-        .map(k => k.slice(prefix.length));
+        .filter((k) => k.startsWith(prefix))
+        .map((k) => k.slice(prefix.length));
     },
 
     async clear() {
@@ -189,16 +185,16 @@ export function createNamespaceOperations<K extends StorageNamespaces>(
     async getAll() {
       const namespaceKeys = await this.keys();
       const result: Record<string, NamespaceData<K>> = {};
-      
+
       for (const key of namespaceKeys) {
         const value = await this.get(key);
         if (value !== undefined) {
           result[key] = value;
         }
       }
-      
+
       return result;
-    }
+    },
   };
 }
 
@@ -206,29 +202,45 @@ export function createNamespaceOperations<K extends StorageNamespaces>(
  * Type predicates for namespace data validation
  */
 export class NamespaceDataValidator {
-  static isUserPreferences(data: any): data is NamespaceDataTypes[StaticNamespaces.USER_PREFERENCES] {
+  static isUserPreferences(
+    data: any,
+  ): data is NamespaceDataTypes[StaticNamespaces.USER_PREFERENCES] {
     // UserPreferences can have various optional fields, so just check it's an object
     // The actual fields are: defaultEditor, defaultView, ollamaModel, agentAutoUpdate, etc.
     return data && typeof data === 'object';
   }
 
-  static isRepositories(data: any): data is NamespaceDataTypes[StaticNamespaces.REPOSITORIES] {
+  static isRepositories(
+    data: any,
+  ): data is NamespaceDataTypes[StaticNamespaces.REPOSITORIES] {
     // Individual repository object, not an array
-    return data && typeof data === 'object' && 
-      'remoteUrl' in data && 
+    return (
+      data &&
+      typeof data === 'object' &&
+      'remoteUrl' in data &&
       'name' in data &&
       'localClones' in data &&
-      Array.isArray(data.localClones);
+      Array.isArray(data.localClones)
+    );
   }
 
-  static isAIConfiguration(data: any): data is NamespaceDataTypes[StaticNamespaces.AI_CONFIGURATION] {
-    return data && typeof data === 'object' && 
-      'defaultProvider' in data && 
-      'providers' in data;
+  static isAIConfiguration(
+    data: any,
+  ): data is NamespaceDataTypes[StaticNamespaces.AI_CONFIGURATION] {
+    return (
+      data &&
+      typeof data === 'object' &&
+      'defaultProvider' in data &&
+      'providers' in data
+    );
   }
 
-  static isAgentSessions(data: any): data is NamespaceDataTypes[StaticNamespaces.AGENT_SESSIONS] {
-    return data && typeof data === 'object' && 
+  static isAgentSessions(
+    data: any,
+  ): data is NamespaceDataTypes[StaticNamespaces.AGENT_SESSIONS] {
+    return (
+      data &&
+      typeof data === 'object' &&
       'sessionId' in data &&
       'provider' in data &&
       'workingDirectory' in data &&
@@ -236,20 +248,29 @@ export class NamespaceDataValidator {
       'lastUpdateTime' in data &&
       'events' in data &&
       Array.isArray(data.events) &&
-      'totalEvents' in data;
+      'totalEvents' in data
+    );
   }
 
-  static isLLMModels(data: any): data is NamespaceDataTypes[StaticNamespaces.LLM_MODELS] {
-    return data && typeof data === 'object' && 
+  static isLLMModels(
+    data: any,
+  ): data is NamespaceDataTypes[StaticNamespaces.LLM_MODELS] {
+    return (
+      data &&
+      typeof data === 'object' &&
       'providers' in data &&
       'customModels' in data &&
       Array.isArray(data.customModels) &&
-      'lastUpdated' in data;
+      'lastUpdated' in data
+    );
   }
 
-
-  static isToolContainerState(data: any): data is NamespaceDataTypes[StaticNamespaces.DOCKER_CONTAINERS] {
-    return data && typeof data === 'object' && 
+  static isToolContainerState(
+    data: any,
+  ): data is NamespaceDataTypes[StaticNamespaces.DOCKER_CONTAINERS] {
+    return (
+      data &&
+      typeof data === 'object' &&
       'id' in data &&
       'toolName' in data &&
       'containerId' in data &&
@@ -258,15 +279,21 @@ export class NamespaceDataValidator {
       'created' in data &&
       'lastUsed' in data &&
       'metrics' in data &&
-      data.metrics && typeof data.metrics === 'object' &&
+      data.metrics &&
+      typeof data.metrics === 'object' &&
       'totalAnalyses' in data.metrics &&
       'avgExecutionTime' in data.metrics &&
       'uptime' in data.metrics &&
-      'errorCount' in data.metrics;
+      'errorCount' in data.metrics
+    );
   }
 
-  static isDockerAnalysisSession(data: any): data is NamespaceDataTypes[StaticNamespaces.DOCKER_SESSIONS] {
-    return data && typeof data === 'object' && 
+  static isDockerAnalysisSession(
+    data: any,
+  ): data is NamespaceDataTypes[StaticNamespaces.DOCKER_SESSIONS] {
+    return (
+      data &&
+      typeof data === 'object' &&
       'id' in data &&
       'toolName' in data &&
       'containerId' in data &&
@@ -276,12 +303,14 @@ export class NamespaceDataValidator {
       'configSource' in data &&
       'commandExecuted' in data &&
       'metrics' in data &&
-      data.metrics && typeof data.metrics === 'object';
+      data.metrics &&
+      typeof data.metrics === 'object'
+    );
   }
 
   static validateNamespaceData<K extends StorageNamespaces>(
     namespace: K,
-    data: any
+    data: any,
   ): data is NamespaceData<K> {
     switch (namespace) {
       case StaticNamespaces.USER_PREFERENCES:

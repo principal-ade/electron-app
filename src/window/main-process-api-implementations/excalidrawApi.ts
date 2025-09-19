@@ -1,5 +1,8 @@
 import { ipcRenderer } from 'electron';
-import type { ExcalidrawAPI, ExcalidrawDiagram   } from '../../shared/main-process-api-interfaces/ExcalidrawAPI';
+import type {
+  ExcalidrawAPI,
+  ExcalidrawDiagram,
+} from '../../shared/main-process-api-interfaces/ExcalidrawAPI';
 
 export enum ExcalidrawAPIEvents {
   SAVE_DIAGRAM = 'excalidraw:saveDiagram',
@@ -10,7 +13,7 @@ export enum ExcalidrawAPIEvents {
 }
 
 export const excalidrawAPI: ExcalidrawAPI = {
-    saveDiagram: (diagram: ExcalidrawDiagram) =>
+  saveDiagram: (diagram: ExcalidrawDiagram) =>
     ipcRenderer.invoke(ExcalidrawAPIEvents.SAVE_DIAGRAM, diagram),
   loadDiagram: (diagramId: string) =>
     ipcRenderer.invoke(ExcalidrawAPIEvents.LOAD_DIAGRAM, diagramId),

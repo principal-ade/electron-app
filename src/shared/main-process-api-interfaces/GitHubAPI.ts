@@ -97,7 +97,11 @@ export interface GitHubAPI {
     isGitHub: boolean;
   } | null>;
   getIssues: (owner: string, repo: string) => Promise<GitHubIssue[]>;
-  createIssue: (owner: string, repo: string, issue: CreateIssueRequest) => Promise<CreateIssueResponse>;
+  createIssue: (
+    owner: string,
+    repo: string,
+    issue: CreateIssueRequest,
+  ) => Promise<CreateIssueResponse>;
   //getPullRequests: (
   //  owner: string,
   //  repo: string,
@@ -143,7 +147,11 @@ export interface GitHubAPI {
       daysSinceLastCommit: number;
     }>
   >;
-  getTree: (owner: string, repo: string, ref?: string) => Promise<{
+  getTree: (
+    owner: string,
+    repo: string,
+    ref?: string,
+  ) => Promise<{
     success: boolean;
     data?: {
       sha: string;
@@ -161,6 +169,10 @@ export interface GitHubAPI {
     error?: string;
   } | null>;
   // Config fetching methods (formerly ConfigAPI)
-  fetchRemoteConfig: (request: ConfigFetchRequest) => Promise<ConfigFetchResponse>;
-  fetchGitHubConfig: (request: GitHubConfigRequest) => Promise<ConfigFetchResponse>;
+  fetchRemoteConfig: (
+    request: ConfigFetchRequest,
+  ) => Promise<ConfigFetchResponse>;
+  fetchGitHubConfig: (
+    request: GitHubConfigRequest,
+  ) => Promise<ConfigFetchResponse>;
 }

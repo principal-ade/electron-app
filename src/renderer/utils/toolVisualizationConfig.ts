@@ -1,4 +1,4 @@
-import type { LayerRenderStrategy } from "@principal-ai/code-city-react";
+import type { LayerRenderStrategy } from '@principal-ai/code-city-react';
 
 export interface ToolVisualization {
   icon: string;

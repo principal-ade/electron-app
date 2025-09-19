@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FolderOpen, AlertCircle } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
-import type { FileSystemTree } from "@principal-ai/codebase-composition";
-import { PackageLayerModule, PackageLayer } from "@principal-ai/codebase-composition";
+import type { FileSystemTree } from '@principal-ai/codebase-composition';
+import {
+  PackageLayerModule,
+  PackageLayer,
+} from '@principal-ai/codebase-composition';
 
 import { FileTreeCacheService } from '../../../services/FileTreeCacheService';
 import { GitHubWebAdapters } from '../../../adapters/GitHubWebAdapters';
@@ -28,7 +31,9 @@ interface RepoSourceArchitecturePanelSimpleProps {
  * Analyzes package dependencies for updates, vulnerabilities, and license compliance
  * Used in Explore view to help maintain healthy dependencies
  */
-export const RepoSourceArchitecturePanelSimple: React.FC<RepoSourceArchitecturePanelSimpleProps> = ({
+export const RepoSourceArchitecturePanelSimple: React.FC<
+  RepoSourceArchitecturePanelSimpleProps
+> = ({
   source,
   cacheService,
   packageLayers: packageLayersProp,
@@ -37,61 +42,70 @@ export const RepoSourceArchitecturePanelSimple: React.FC<RepoSourceArchitectureP
   onPackageAnalysisStart,
   onPackageAnalysisEnd,
   onPackageSelected,
-  onPackageDeselected
+  onPackageDeselected,
 }) => {
   const { theme } = useTheme();
-  
+
   // State
   const [loading, setLoading] = useState(true);
   const [analyzingLayers, setAnalyzingLayers] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileSystemTree, setFileSystemTree] = useState<FileSystemTree | null>(null);
+  const [fileSystemTree, setFileSystemTree] = useState<FileSystemTree | null>(
+    null,
+  );
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
-  
+
   // Analysis results - use prop if provided, otherwise maintain local state
-  const [localPackageLayers, setLocalPackageLayers] = useState<PackageLayer[] | null>(null);
+  const [localPackageLayers, setLocalPackageLayers] = useState<
+    PackageLayer[] | null
+  >(null);
   const packageLayers = packageLayersProp ?? localPackageLayers;
-  
+
   // Create adapters based on source type
   const adapters = useMemo(() => {
     if (source.type === 'remote') {
-      const ref = source.metadata?.currentBranch || source.metadata?.commitSha || source.location;
+      const ref =
+        source.metadata?.currentBranch ||
+        source.metadata?.commitSha ||
+        source.location;
       return new GitHubWebAdapters(source.owner, source.name, ref);
     } else if (source.type === 'local') {
       return new ElectronPlatformAdapters();
     }
     return null;
   }, [source]);
-  
+
   // Load filesystem tree for the source
   useEffect(() => {
     const loadTree = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Load tree from cache or fetch with strong typing
         const result = await cacheService.loadFileTree(source);
-        
-        
+
         setFileSystemTree(result.tree);
         setLastRefresh(Date.now());
       } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Failed to load architecture data';
+        const errorMsg =
+          err instanceof Error
+            ? err.message
+            : 'Failed to load architecture data';
         setError(errorMsg);
         if (onError) onError(errorMsg);
       } finally {
         setLoading(false);
       }
     };
-    
+
     loadTree();
   }, [source, cacheService]);
-  
+
   // Only analyze layers if not provided as prop
   useEffect(() => {
     if (!fileSystemTree || !adapters || packageLayersProp) return;
-    
+
     const analyzeLayers = async () => {
       try {
         setAnalyzingLayers(true);
@@ -107,11 +121,11 @@ export const RepoSourceArchitecturePanelSimple: React.FC<RepoSourceArchitectureP
         }
 
         // Add small delay for nice loading experience
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Create package module
         const packageModule = new PackageLayerModule();
-        
+
         // Load manifest contents using utility function
         console.debug('[ArchitecturePanel] manifest load start', {
           sourceType: source.type,
@@ -125,10 +139,15 @@ export const RepoSourceArchitecturePanelSimple: React.FC<RepoSourceArchitectureP
           packageModule, // Reuse the same module instance
           rootPath: source.type === 'local' ? source.location : undefined,
         });
-        console.debug('[ArchitecturePanel] manifest load done', { count: manifestContents.size });
-        
+        console.debug('[ArchitecturePanel] manifest load done', {
+          count: manifestContents.size,
+        });
+
         // Package layer analysis
-        const packageResult = await packageModule.discoverPackages(fileSystemTree, manifestContents);
+        const packageResult = await packageModule.discoverPackages(
+          fileSystemTree,
+          manifestContents,
+        );
         setLocalPackageLayers(packageResult);
         if (!packageLayersProp) {
           onPackageLayersChanged?.(packageResult);
@@ -138,14 +157,13 @@ export const RepoSourceArchitecturePanelSimple: React.FC<RepoSourceArchitectureP
         cacheService.setAnalysis(source.id, {
           packageLayers: packageResult,
         });
-        
       } catch (err) {
         console.error('Error analyzing layers:', err);
       } finally {
         setAnalyzingLayers(false);
       }
     };
-    
+
     analyzeLayers();
   }, [fileSystemTree, adapters, packageLayersProp]);
 
@@ -157,66 +175,78 @@ export const RepoSourceArchitecturePanelSimple: React.FC<RepoSourceArchitectureP
     // Trigger reload
     setLastRefresh(Date.now());
   };
-  
 
   // Loading skeleton
   const LoadingSkeleton = () => (
-    <div style={{ 
-      padding: '32px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: '200px',
-    }}>
-      <div style={{
-        width: '48px',
-        height: '48px',
-        borderRadius: '12px',
-        backgroundColor: `${theme.colors.primary}15`,
+    <div
+      style={{
+        padding: '32px',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: '16px',
-        animation: 'gentlePulse 2s ease-in-out infinite',
-      }}>
+        minHeight: '200px',
+      }}
+    >
+      <div
+        style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '12px',
+          backgroundColor: `${theme.colors.primary}15`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '16px',
+          animation: 'gentlePulse 2s ease-in-out infinite',
+        }}
+      >
         <FolderOpen size={24} color={theme.colors.primary} />
       </div>
-      
-      <h3 style={{
-        fontSize: '15px',
-        fontWeight: 600,
-        color: theme.colors.text,
-        marginBottom: '8px',
-      }}>
+
+      <h3
+        style={{
+          fontSize: '15px',
+          fontWeight: 600,
+          color: theme.colors.text,
+          marginBottom: '8px',
+        }}
+      >
         Analyzing architecture
       </h3>
-      
-      <p style={{
-        fontSize: '13px',
-        color: theme.colors.textSecondary,
-        marginBottom: '20px',
-      }}>
+
+      <p
+        style={{
+          fontSize: '13px',
+          color: theme.colors.textSecondary,
+          marginBottom: '20px',
+        }}
+      >
         Discovering packages and frameworks...
       </p>
-      
-      <div style={{
-        display: 'flex',
-        gap: '6px',
-      }}>
+
+      <div
+        style={{
+          display: 'flex',
+          gap: '6px',
+        }}
+      >
         {[...Array(3)].map((_, i) => (
-          <div key={i} style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: theme.colors.primary,
-            opacity: 0.3,
-            animation: 'bounce 1.4s ease-in-out infinite',
-            animationDelay: `${i * 0.2}s`,
-          }} />
+          <div
+            key={i}
+            style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: theme.colors.primary,
+              opacity: 0.3,
+              animation: 'bounce 1.4s ease-in-out infinite',
+              animationDelay: `${i * 0.2}s`,
+            }}
+          />
         ))}
       </div>
-      
+
       <style>{`
         @keyframes gentlePulse {
           0%, 100% { 
@@ -246,36 +276,46 @@ export const RepoSourceArchitecturePanelSimple: React.FC<RepoSourceArchitectureP
   // Loading state - show loading if either fetching tree or analyzing layers
   if (loading || analyzingLayers) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        height: '100%',
-        backgroundColor: theme.colors.background 
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          backgroundColor: theme.colors.background,
+        }}
+      >
         <LoadingSkeleton />
       </div>
     );
   }
-  
+
   // Error state
   if (error || !fileSystemTree) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        height: '100%',
-        backgroundColor: theme.colors.background 
-      }}>
-        <div style={{ 
-          flex: 1,
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          color: theme.colors.textSecondary,
-          padding: '20px'
-        }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          backgroundColor: theme.colors.background,
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: theme.colors.textSecondary,
+            padding: '20px',
+          }}
+        >
           <div style={{ textAlign: 'center' }}>
-            <AlertCircle size={24} color={theme.colors.error || '#ff6b6b'} style={{ marginBottom: '8px' }} />
+            <AlertCircle
+              size={24}
+              color={theme.colors.error || '#ff6b6b'}
+              style={{ marginBottom: '8px' }}
+            />
             <div style={{ fontSize: '13px', marginBottom: '12px' }}>
               {error || 'Failed to load architecture data'}
             </div>
@@ -288,7 +328,7 @@ export const RepoSourceArchitecturePanelSimple: React.FC<RepoSourceArchitectureP
                 color: '#fff',
                 border: 'none',
                 fontSize: '12px',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Try Again
@@ -298,16 +338,18 @@ export const RepoSourceArchitecturePanelSimple: React.FC<RepoSourceArchitectureP
       </div>
     );
   }
-  
+
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      height: '100%',
-      backgroundColor: theme.colors.background 
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        backgroundColor: theme.colors.background,
+      }}
+    >
       {/* Dependencies Panel */}
-      <DependenciesPanel 
+      <DependenciesPanel
         packageLayers={packageLayers}
         onAnalysisComplete={(results) => {
           console.log('Dependency analysis complete:', results);

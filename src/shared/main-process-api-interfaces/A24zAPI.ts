@@ -12,7 +12,10 @@ export interface A24zNote {
 
 export interface A24zAPI {
   getAllNotes: (repositoryPath: string) => Promise<A24zNote[]>;
-  getNotesForPath: (filePath: string, repositoryPath: string) => Promise<A24zNote[]>;
+  getNotesForPath: (
+    filePath: string,
+    repositoryPath: string,
+  ) => Promise<A24zNote[]>;
   hasA24zDirectory: (repositoryPath: string) => Promise<boolean>;
   getNoteCount: (repositoryPath: string) => Promise<number>;
 }

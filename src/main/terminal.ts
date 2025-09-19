@@ -7,7 +7,7 @@ import { resolveHtmlPath } from './util';
 import { EnvironmentConfig } from './utils/environmentConfig';
 import { terminalEnvironment } from './terminalEnvironment';
 import { TerminalAPIEvents } from '../shared/main-process-api-interfaces/TerminalService';
-import { TerminalInfo } from "../shared/main-process-api-interfaces/TerminalService";
+import { TerminalInfo } from '../shared/main-process-api-interfaces/TerminalService';
 import { ModernApplicationWindow } from './window/modernWindowManager';
 import { WindowType } from './window/windowTypes';
 
@@ -16,7 +16,7 @@ import { WindowType } from './window/windowTypes';
 let pty: any;
 try {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const dynamicRequire: any = eval("require");
+  const dynamicRequire: any = eval('require');
   pty = dynamicRequire('node-pty');
   // Optionally sanity check property to ensure native loaded; if not, fall into catch
   if (!pty) {
@@ -38,7 +38,7 @@ interface TerminalSession {
 
 class TerminalManager {
   private sessions: Map<string, TerminalSession> = new Map();
-  
+
   // Track sessions by repository path for persistence
   private sessionsByRepo: Map<string, string> = new Map(); // repoPath -> sessionId
 
@@ -67,7 +67,7 @@ class TerminalManager {
       }
     }
   }
-  
+
   // Extract terminal creation logic - delegates to the main create handler
   private async createTerminalForDirectory(directory: string): Promise<string> {
     // For now, we'll use the existing IPC handler directly
@@ -76,9 +76,12 @@ class TerminalManager {
     const event = { sender: { send: () => {} } }; // Dummy event for the handler
     return await this.handleTerminalCreate(event as any, directory);
   }
-  
+
   // Extract the create logic into a separate method
-  private async handleTerminalCreate(event: any, directory: string): Promise<string> {
+  private async handleTerminalCreate(
+    event: any,
+    directory: string,
+  ): Promise<string> {
     // This will contain the actual terminal creation logic
     // We'll move the existing create handler logic here
     const sessionId = uuidv4();
@@ -105,9 +108,14 @@ class TerminalManager {
     }
 
     // Get properly configured environment with user's full PATH
-    const env = await terminalEnvironment.getTerminalEnvironment(workingDirectory, claudeSessionId);
+    const env = await terminalEnvironment.getTerminalEnvironment(
+      workingDirectory,
+      claudeSessionId,
+    );
 
-    console.log(`[Terminal] Using shell: ${shell} in directory: ${workingDirectory}`);
+    console.log(
+      `[Terminal] Using shell: ${shell} in directory: ${workingDirectory}`,
+    );
 
     // Create PTY process
     const ptyProcess = pty.spawn(shell, args, {
@@ -121,7 +129,8 @@ class TerminalManager {
     // Check for active AI session
     let activeAgentSessionId: string | null = null;
     try {
-      const sessionStore = await agentSessionService.getSessionsForDirectory(directory);
+      const sessionStore =
+        await agentSessionService.getSessionsForDirectory(directory);
       activeAgentSessionId = sessionStore.activeSessionId;
     } catch (err) {
       console.warn('[Terminal] Could not get active agent session:', err);
@@ -137,11 +146,14 @@ class TerminalManager {
       lastActivity: now,
     };
     this.sessions.set(sessionId, session);
-    
+
     // If there's an active AI session, update it to include this terminal
     if (activeAgentSessionId) {
       try {
-        const agentSession = await agentSessionService.getSession(directory, activeAgentSessionId);
+        const agentSession = await agentSessionService.getSession(
+          directory,
+          activeAgentSessionId,
+        );
         if (agentSession) {
           if (!agentSession.terminalSessions) {
             agentSession.terminalSessions = [];
@@ -153,7 +165,9 @@ class TerminalManager {
             status: 'active',
           });
           await agentSessionService.upsertSession(directory, agentSession);
-          console.log(`[Terminal] Associated terminal ${sessionId} with AI session ${activeAgentSessionId}`);
+          console.log(
+            `[Terminal] Associated terminal ${sessionId} with AI session ${activeAgentSessionId}`,
+          );
         }
       } catch (err) {
         console.warn('[Terminal] Could not associate with agent session:', err);
@@ -179,11 +193,14 @@ class TerminalManager {
           code: exitCode.exitCode,
         });
       }
-      
+
       // Update AI session to mark terminal as closed
       if (session.agentSessionId) {
         try {
-          const agentSession = await agentSessionService.getSession(directory, session.agentSessionId);
+          const agentSession = await agentSessionService.getSession(
+            directory,
+            session.agentSessionId,
+          );
           if (agentSession && agentSession.terminalSessions) {
             const terminalSession = agentSession.terminalSessions.find(
               (t) => t.terminalId === sessionId,
@@ -195,21 +212,26 @@ class TerminalManager {
             }
           }
         } catch (err) {
-          console.warn('[Terminal] Could not update agent session on exit:', err);
+          console.warn(
+            '[Terminal] Could not update agent session on exit:',
+            err,
+          );
         }
       }
-      
+
       this.cleanupSession(sessionId);
     });
 
     console.log(`Terminal session created successfully: ${sessionId}`);
-    
+
     // Send a newline to trigger the shell prompt (only if no command will be sent)
     setTimeout(() => {
-      console.log(`[Terminal] Sending initial newline to trigger prompt for ${sessionId}`);
+      console.log(
+        `[Terminal] Sending initial newline to trigger prompt for ${sessionId}`,
+      );
       ptyProcess.write('\r');
     }, 200);
-    
+
     return sessionId;
   }
 
@@ -227,7 +249,9 @@ class TerminalManager {
         // Check if we already have a session for this directory
         const existingSessionId = this.sessionsByRepo.get(directory);
         if (existingSessionId && this.sessions.has(existingSessionId)) {
-          console.log(`[Terminal] Reusing existing session ${existingSessionId} for ${directory}`);
+          console.log(
+            `[Terminal] Reusing existing session ${existingSessionId} for ${directory}`,
+          );
           return existingSessionId;
         }
 
@@ -240,17 +264,17 @@ class TerminalManager {
 
         // Create new session (use existing create logic)
         const sessionId = await this.createTerminalForDirectory(directory);
-        
+
         // Track by repository
         this.sessionsByRepo.set(directory, sessionId);
-        
+
         return sessionId;
       } catch (error) {
         console.error('Failed to get or create terminal session:', error);
         throw error;
       }
     });
-    
+
     // Create a new terminal session (keep for backward compatibility)
     ipcMain.handle('terminal:create', async (event, directory: string) => {
       try {
@@ -296,7 +320,9 @@ class TerminalManager {
         event,
         { directory, command }: { directory: string; command: string },
       ) => {
-        console.log(`[Terminal] create-with-command called with command: "${command}" in directory: "${directory}"`);
+        console.log(
+          `[Terminal] create-with-command called with command: "${command}" in directory: "${directory}"`,
+        );
         try {
           // Check if we've reached the session limit
           if (this.sessions.size >= this.maxSessions) {
@@ -330,7 +356,10 @@ class TerminalManager {
           );
 
           // Get properly configured environment with user's full PATH
-          const env = await terminalEnvironment.getTerminalEnvironment(workingDirectory, claudeSessionId);
+          const env = await terminalEnvironment.getTerminalEnvironment(
+            workingDirectory,
+            claudeSessionId,
+          );
 
           // Create PTY instance with error handling
           let ptyProcess;
@@ -504,14 +533,17 @@ class TerminalManager {
     );
 
     // Destroy terminal session
-    ipcMain.handle(TerminalAPIEvents.DESTROY, async (event, sessionId: string) => {
-      const session = this.sessions.get(sessionId);
-      if (session) {
-        session.pty.kill();
-        this.cleanupSession(sessionId);
-        console.log(`Terminal session destroyed: ${sessionId}`);
-      }
-    });
+    ipcMain.handle(
+      TerminalAPIEvents.DESTROY,
+      async (event, sessionId: string) => {
+        const session = this.sessions.get(sessionId);
+        if (session) {
+          session.pty.kill();
+          this.cleanupSession(sessionId);
+          console.log(`Terminal session destroyed: ${sessionId}`);
+        }
+      },
+    );
 
     // Get list of active terminals
     ipcMain.handle(TerminalAPIEvents.LIST, async (event) => {
@@ -529,68 +561,85 @@ class TerminalManager {
     });
 
     // Request terminal to refresh its display
-    ipcMain.handle(TerminalAPIEvents.REFRESH, async (event, sessionId: string) => {
-      const session = this.sessions.get(sessionId);
-      if (session && session.pty) {
-        // Send a refresh sequence to the terminal
-        // This triggers the terminal to redraw its current state
-        try {
-          // Send Ctrl+L to clear and redraw
-          session.pty.write('\x0c');
-          return true;
-        } catch (error) {
-          console.error('Failed to refresh terminal:', error);
-          return false;
+    ipcMain.handle(
+      TerminalAPIEvents.REFRESH,
+      async (event, sessionId: string) => {
+        const session = this.sessions.get(sessionId);
+        if (session && session.pty) {
+          // Send a refresh sequence to the terminal
+          // This triggers the terminal to redraw its current state
+          try {
+            // Send Ctrl+L to clear and redraw
+            session.pty.write('\x0c');
+            return true;
+          } catch (error) {
+            console.error('Failed to refresh terminal:', error);
+            return false;
+          }
         }
-      }
-      return false;
-    });
+        return false;
+      },
+    );
 
     // Pop out terminal to new window
-    ipcMain.handle(TerminalAPIEvents.POP_OUT, async (event, sessionId: string) => {
-      try {
-        const session = this.sessions.get(sessionId);
-        if (!session) {
-          throw new Error(`Terminal session ${sessionId} not found`);
-        }
-
-        return this.createTerminalWindow(sessionId, session);
-      } catch (error) {
-        console.error('Failed to pop out terminal:', error);
-        throw error;
-      }
-    });
-    
-    // Focus a terminal window by window ID
-    ipcMain.handle(TerminalAPIEvents.FOCUS_WINDOW, async (event, windowId: number) => {
-      try {
-        const window = BrowserWindow.fromId(windowId);
-        if (window && !window.isDestroyed()) {
-          window.focus();
-          if (window.isMinimized()) {
-            window.restore();
+    ipcMain.handle(
+      TerminalAPIEvents.POP_OUT,
+      async (event, sessionId: string) => {
+        try {
+          const session = this.sessions.get(sessionId);
+          if (!session) {
+            throw new Error(`Terminal session ${sessionId} not found`);
           }
-          console.log(`[Terminal] Focused window ${windowId}`);
-        } else {
-          console.warn(`[Terminal] Window ${windowId} not found or destroyed`);
+
+          return this.createTerminalWindow(sessionId, session);
+        } catch (error) {
+          console.error('Failed to pop out terminal:', error);
+          throw error;
         }
-      } catch (error) {
-        console.error('Failed to focus terminal window:', error);
-        throw error;
-      }
-    });
+      },
+    );
+
+    // Focus a terminal window by window ID
+    ipcMain.handle(
+      TerminalAPIEvents.FOCUS_WINDOW,
+      async (event, windowId: number) => {
+        try {
+          const window = BrowserWindow.fromId(windowId);
+          if (window && !window.isDestroyed()) {
+            window.focus();
+            if (window.isMinimized()) {
+              window.restore();
+            }
+            console.log(`[Terminal] Focused window ${windowId}`);
+          } else {
+            console.warn(
+              `[Terminal] Window ${windowId} not found or destroyed`,
+            );
+          }
+        } catch (error) {
+          console.error('Failed to focus terminal window:', error);
+          throw error;
+        }
+      },
+    );
 
     // Check if a command is available in the user's PATH
-    ipcMain.handle(TerminalAPIEvents.CHECK_COMMAND, async (event, command: string) => {
-      try {
-        const isAvailable = await terminalEnvironment.isCommandAvailable(command);
-        const fullPath = isAvailable ? await terminalEnvironment.findCommand(command) : null;
-        return { available: isAvailable, path: fullPath };
-      } catch (error) {
-        console.error(`Failed to check command ${command}:`, error);
-        return { available: false, path: null };
-      }
-    });
+    ipcMain.handle(
+      TerminalAPIEvents.CHECK_COMMAND,
+      async (event, command: string) => {
+        try {
+          const isAvailable =
+            await terminalEnvironment.isCommandAvailable(command);
+          const fullPath = isAvailable
+            ? await terminalEnvironment.findCommand(command)
+            : null;
+          return { available: isAvailable, path: fullPath };
+        } catch (error) {
+          console.error(`Failed to check command ${command}:`, error);
+          return { available: false, path: null };
+        }
+      },
+    );
 
     // Clear cached PATH (useful after installing new tools)
     ipcMain.handle(TerminalAPIEvents.CLEAR_PATH_CACHE, async () => {
@@ -641,7 +690,10 @@ class TerminalManager {
       );
 
       // Get properly configured environment with user's full PATH
-      const env = await terminalEnvironment.getTerminalEnvironment(workingDirectory, claudeSessionId);
+      const env = await terminalEnvironment.getTerminalEnvironment(
+        workingDirectory,
+        claudeSessionId,
+      );
 
       // Create PTY instance with error handling
       let ptyProcess;
@@ -780,41 +832,47 @@ class TerminalManager {
 
     // Get screen dimensions for positioning
     const primaryDisplay = screen.getPrimaryDisplay();
-    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
-    
+    const { width: screenWidth, height: screenHeight } =
+      primaryDisplay.workAreaSize;
+
     // Position on left half of screen
     const windowWidth = Math.floor(screenWidth / 2);
     const windowHeight = screenHeight;
 
     // Create terminal window using ApplicationWindow with TERMINAL type
-    const terminalAppWindow = new ModernApplicationWindow({
-      // Window sizing and positioning
-      width: windowWidth,
-      height: windowHeight,
-      x: 0,
-      y: 0,
-      title: `Terminal - ${session.directory.split('/').pop()}`,
-      icon: iconPath,
-    }, WindowType.TERMINAL);
+    const terminalAppWindow = new ModernApplicationWindow(
+      {
+        // Window sizing and positioning
+        width: windowWidth,
+        height: windowHeight,
+        x: 0,
+        y: 0,
+        title: `Terminal - ${session.directory.split('/').pop()}`,
+        icon: iconPath,
+      },
+      WindowType.TERMINAL,
+    );
 
     const terminalWindow = terminalAppWindow.window;
 
     // Track the window
     this.terminalWindows.set(sessionId, terminalWindow);
-    
+
     // Terminal-specific: Notify all windows when the terminal window is shown
     terminalWindow.once('show', () => {
       const windows = BrowserWindow.getAllWindows();
-      windows.forEach(window => {
+      windows.forEach((window) => {
         if (!window.isDestroyed()) {
           window.webContents.send(TerminalAPIEvents.ON_WINDOW_READY, {
             terminalId: sessionId,
             agentSessionId: session.agentSessionId,
-            windowId: terminalWindow.id
+            windowId: terminalWindow.id,
           });
         }
       });
-      console.log(`[Terminal] Window ready event sent for terminal ${sessionId}, agent session ${session.agentSessionId}`);
+      console.log(
+        `[Terminal] Window ready event sent for terminal ${sessionId}, agent session ${session.agentSessionId}`,
+      );
     });
 
     // Load the terminal route with session ID

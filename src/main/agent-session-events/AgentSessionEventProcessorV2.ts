@@ -20,8 +20,8 @@ import {
   UniversalAgentSessionEvent,
   RepoNormalizedUniversalAgentSessionEvent,
   AgentEventPipeline,
-  PipelineMetrics
-} from "@principal-ai/agent-monitoring";
+  PipelineMetrics,
+} from '@principal-ai/agent-monitoring';
 
 import { EventMigrationHelper } from '../agent-monitoring-pipeline/EventMigrationHelper';
 import { EventQueue } from './EventQueue';
@@ -35,11 +35,14 @@ import { repositoryCache } from '../stores/RepositoryCache';
 // Import centralized event processor for session state updates
 import {
   sessionEventProcessor,
-  SessionState
+  SessionState,
 } from '../../shared/event-processing/SessionEventProcessor';
 
 // Import observability integration
-import { getObservabilityIntegration, ObservabilityIntegration } from '../observability/ObservabilityIntegration';
+import {
+  getObservabilityIntegration,
+  ObservabilityIntegration,
+} from '../observability/ObservabilityIntegration';
 
 /**
  * Node.js implementation of PathNormalizationAdapter
@@ -47,10 +50,14 @@ import { getObservabilityIntegration, ObservabilityIntegration } from '../observ
 class NodePathNormalizationAdapter implements PathNormalizationAdapter {
   constructor(
     private homeDir: string,
-    private findRepositoryRoot: (absolutePath: string) => Promise<RepositoryInfo | null>
+    private findRepositoryRoot: (
+      absolutePath: string,
+    ) => Promise<RepositoryInfo | null>,
   ) {}
 
-  async getRawRepositoryInfo(absolutePath: string): Promise<RepositoryInfo | null> {
+  async getRawRepositoryInfo(
+    absolutePath: string,
+  ): Promise<RepositoryInfo | null> {
     const repoInfo = await this.findRepositoryRoot(absolutePath);
     // The repoInfo already contains headCommit from GitInfo if available
     return repoInfo;
@@ -109,7 +116,8 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
       os.homedir(),
       async (absolutePath: string): Promise<RepositoryInfo | null> => {
         try {
-          const repoInfo = await repositoryCache.getRepositoryForPath(absolutePath);
+          const repoInfo =
+            await repositoryCache.getRepositoryForPath(absolutePath);
           if (repoInfo?.gitInfo.root) {
             return {
               root: repoInfo.gitInfo.root,
@@ -117,14 +125,14 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
               owner: repoInfo.gitInfo.owner,
               repo: repoInfo.gitInfo.repo,
               branch: repoInfo.gitInfo.branch,
-              headCommit: repoInfo.gitInfo.headCommit
+              headCommit: repoInfo.gitInfo.headCommit,
             };
           }
         } catch (error) {
           console.error('[EventProcessorV2] Error finding repository:', error);
         }
         return null;
-      }
+      },
     );
 
     // Create metrics for monitoring
@@ -132,19 +140,25 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
       onEventProcessed: (event, durationMs, agent) => {
         this.processedEventCount++;
         if (durationMs > 100) {
-          console.warn(`[EventProcessorV2] Slow processing: ${durationMs}ms for ${agent} event`);
+          console.warn(
+            `[EventProcessorV2] Slow processing: ${durationMs}ms for ${agent} event`,
+          );
         }
       },
       onError: (error, context) => {
         this.errorCount++;
-        console.error('[EventProcessorV2] Pipeline error:', error.message, context);
-      }
+        console.error(
+          '[EventProcessorV2] Pipeline error:',
+          error.message,
+          context,
+        );
+      },
     };
 
     // Initialize the pipeline
     this.pipeline = new AgentEventPipeline(adapter, {
       logErrors: true,
-      metrics
+      metrics,
     });
 
     console.log('[EventProcessorV2] Initialized with new pipeline');
@@ -156,10 +170,10 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
   private async initializeObservability(): Promise<void> {
     try {
       this.observability = getObservabilityIntegration({
-        environment: process.env.NODE_ENV as any || 'development',
+        environment: (process.env.NODE_ENV as any) || 'development',
         debug: process.env.DEBUG_OBSERVABILITY === 'true',
         batchSize: 50,
-        flushInterval: 15000 // 15 seconds
+        flushInterval: 15000, // 15 seconds
       });
 
       await this.observability.initialize();
@@ -173,12 +187,17 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
 
         console.log('[EventProcessorV2] Observability integration initialized');
       } else {
-        console.log('[EventProcessorV2] Observability integration disabled (no database URL)');
+        console.log(
+          '[EventProcessorV2] Observability integration disabled (no database URL)',
+        );
         // Clear the reference since it's not usable
         this.observability = null;
       }
     } catch (error) {
-      console.error('[EventProcessorV2] Failed to initialize observability:', error);
+      console.error(
+        '[EventProcessorV2] Failed to initialize observability:',
+        error,
+      );
       // Don't fail the entire processor if observability fails
       this.observability = null;
     }
@@ -187,7 +206,10 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
   /**
    * Process a raw event from a hook using the new pipeline
    */
-  async processRawEvent(provider: SupportedAgent, rawData: unknown): Promise<NormalizedAgentSessionEvent> {
+  async processRawEvent(
+    provider: SupportedAgent,
+    rawData: unknown,
+  ): Promise<NormalizedAgentSessionEvent> {
     try {
       // Validate raw data
       if (!rawData || typeof rawData !== 'object') {
@@ -195,11 +217,15 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
       }
 
       // Step 1: Process through new pipeline
-      const repoNormalizedEvent = await this.pipeline.processRawEvent(provider, rawData);
+      const repoNormalizedEvent = await this.pipeline.processRawEvent(
+        provider,
+        rawData,
+      );
 
       // Step 2: Convert to old format for compatibility
       // This already includes normalizedWorkingDirectory from the pipeline
-      const normalizedEvent = EventMigrationHelper.fromRepoNormalizedFormat(repoNormalizedEvent);
+      const normalizedEvent =
+        EventMigrationHelper.fromRepoNormalizedFormat(repoNormalizedEvent);
 
       // Step 3: Log important events
       this.logEvent(normalizedEvent);
@@ -210,9 +236,14 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
       // Step 5: Forward to observability SDK
       if (this.observability) {
         // Use the RepoNormalized event directly for better data quality
-        this.observability.processRepoEvent(repoNormalizedEvent).catch(error => {
-          console.error('[EventProcessorV2] Failed to send event to observability:', error);
-        });
+        this.observability
+          .processRepoEvent(repoNormalizedEvent)
+          .catch((error) => {
+            console.error(
+              '[EventProcessorV2] Failed to send event to observability:',
+              error,
+            );
+          });
       }
 
       // Step 6: Emit for real-time listeners
@@ -231,7 +262,9 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
   private logEvent(event: NormalizedAgentSessionEvent): void {
     // Log conversation lifecycle events (check against string values since enum might have different values)
     if (event.eventType && event.eventType.toString().includes('start')) {
-      console.log(`[EventProcessorV2] Session started: ${event.sessionId} in ${event.workingDirectory}`);
+      console.log(
+        `[EventProcessorV2] Session started: ${event.sessionId} in ${event.workingDirectory}`,
+      );
     } else if (event.eventType && event.eventType.toString().includes('stop')) {
       console.log(`[EventProcessorV2] Session stopped: ${event.sessionId}`);
     }
@@ -240,7 +273,9 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
     if (isToolEvent(event) && event.toolName) {
       const fileCount = event.files?.length || 0;
       if (fileCount > 0) {
-        console.log(`[EventProcessorV2] Tool ${event.toolName} accessed ${fileCount} file(s)`);
+        console.log(
+          `[EventProcessorV2] Tool ${event.toolName} accessed ${fileCount} file(s)`,
+        );
       }
     }
   }
@@ -250,10 +285,19 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
    * Uses EventQueue to serialize writes per session and prevent race conditions
    * (Identical to V1 implementation for compatibility)
    */
-  private async storeNormalizedEvent(event: NormalizedAgentSessionEvent): Promise<void> {
+  private async storeNormalizedEvent(
+    event: NormalizedAgentSessionEvent,
+  ): Promise<void> {
     // Validate session ID
-    if (!event.sessionId || typeof event.sessionId !== 'string' || event.sessionId.trim() === '') {
-      console.error('[EventProcessorV2] Invalid session ID, skipping event:', event.sessionId);
+    if (
+      !event.sessionId ||
+      typeof event.sessionId !== 'string' ||
+      event.sessionId.trim() === ''
+    ) {
+      console.error(
+        '[EventProcessorV2] Invalid session ID, skipping event:',
+        event.sessionId,
+      );
       return;
     }
 
@@ -268,7 +312,10 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
         const sessionKey = normalizedSessionId;
 
         // Get or create session data
-        const existingResult = await typedStore.get(sessionKey, StaticNamespaces.AGENT_SESSIONS);
+        const existingResult = await typedStore.get(
+          sessionKey,
+          StaticNamespaces.AGENT_SESSIONS,
+        );
 
         let sessionData: ProcessedSessionData;
 
@@ -292,17 +339,20 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
               fileAccesses: 0,
               fileWrites: 0,
               toolCalls: 0,
-              webAccesses: 0
+              webAccesses: 0,
             },
             fileAccesses: {},
             fileWrites: {},
             filesRead: [],
             filesWritten: [],
-            metadata: {}
+            metadata: {},
           };
 
           // Emit SESSION_CREATED event to notify UI
-          this.emitSessionCreatedEvent(normalizedSessionId, event.workingDirectory);
+          this.emitSessionCreatedEvent(
+            normalizedSessionId,
+            event.workingDirectory,
+          );
         }
 
         // Use centralized event processor for consistent processing
@@ -320,31 +370,51 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
           filesRead: sessionData.filesRead || [],
           filesWritten: sessionData.filesWritten || [],
           toolCallCount: sessionData.counters?.toolCalls || 0,
-          webAccessCount: sessionData.counters?.webAccesses || 0
+          webAccessCount: sessionData.counters?.webAccesses || 0,
         };
 
         // Process event through centralized processor
-        const processingResult = sessionEventProcessor.processEvent(event, currentState);
+        const processingResult = sessionEventProcessor.processEvent(
+          event,
+          currentState,
+        );
 
         // Update session data with processing results
         if (processingResult.session) {
-          sessionData.totalEvents = processingResult.session.eventCount || sessionData.totalEvents;
+          sessionData.totalEvents =
+            processingResult.session.eventCount || sessionData.totalEvents;
           sessionData.counters = {
-            fileAccesses: processingResult.session.fileAccessCount || sessionData.counters?.fileAccesses || 0,
-            fileWrites: processingResult.session.fileWriteCount || sessionData.counters?.fileWrites || 0,
-            toolCalls: processingResult.session.toolCallCount || sessionData.counters?.toolCalls || 0,
-            webAccesses: processingResult.session.webAccessCount || sessionData.counters?.webAccesses || 0
+            fileAccesses:
+              processingResult.session.fileAccessCount ||
+              sessionData.counters?.fileAccesses ||
+              0,
+            fileWrites:
+              processingResult.session.fileWriteCount ||
+              sessionData.counters?.fileWrites ||
+              0,
+            toolCalls:
+              processingResult.session.toolCallCount ||
+              sessionData.counters?.toolCalls ||
+              0,
+            webAccesses:
+              processingResult.session.webAccessCount ||
+              sessionData.counters?.webAccesses ||
+              0,
           };
-          sessionData.fileAccesses = processingResult.session.fileAccesses || sessionData.fileAccesses;
-          sessionData.fileWrites = processingResult.session.fileWrites || sessionData.fileWrites;
-          sessionData.filesRead = processingResult.session.filesRead || sessionData.filesRead;
-          sessionData.filesWritten = processingResult.session.filesWritten || sessionData.filesWritten;
+          sessionData.fileAccesses =
+            processingResult.session.fileAccesses || sessionData.fileAccesses;
+          sessionData.fileWrites =
+            processingResult.session.fileWrites || sessionData.fileWrites;
+          sessionData.filesRead =
+            processingResult.session.filesRead || sessionData.filesRead;
+          sessionData.filesWritten =
+            processingResult.session.filesWritten || sessionData.filesWritten;
 
           // Handle todos if present in metadata
           if (processingResult.session.metadata?.lastTodos) {
             sessionData.metadata = {
               ...sessionData.metadata,
-              lastTodos: processingResult.session.metadata.lastTodos
+              lastTodos: processingResult.session.metadata.lastTodos,
             };
           }
         }
@@ -352,19 +422,27 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
         // Handle stop events
         if (isStopEvent(event)) {
           // Note: endTime property may not exist in ProcessedSessionData
-          console.log(`[EventProcessorV2] Session ended: ${normalizedSessionId}`);
+          console.log(
+            `[EventProcessorV2] Session ended: ${normalizedSessionId}`,
+          );
         }
 
         // Store updated session data
-        const storeResult = await typedStore.set(sessionKey, sessionData, StaticNamespaces.AGENT_SESSIONS);
+        const storeResult = await typedStore.set(
+          sessionKey,
+          sessionData,
+          StaticNamespaces.AGENT_SESSIONS,
+        );
 
         if (!storeResult.success) {
           throw new Error(`Failed to store session data: ${storeResult.error}`);
         }
 
         // Emit SESSION_UPDATED event
-        this.emitSessionUpdatedEvent(normalizedSessionId, event.workingDirectory);
-
+        this.emitSessionUpdatedEvent(
+          normalizedSessionId,
+          event.workingDirectory,
+        );
       } catch (error) {
         console.error('[EventProcessorV2] Error storing event:', error);
         throw error;
@@ -375,12 +453,15 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
   /**
    * Emit session created event to notify UI
    */
-  private emitSessionCreatedEvent(sessionId: string, workingDirectory: string): void {
+  private emitSessionCreatedEvent(
+    sessionId: string,
+    workingDirectory: string,
+  ): void {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((window) => {
       window.webContents.send(AgentSessionAPIEvents.SESSION_CREATED, {
         sessionId,
-        directory: workingDirectory
+        directory: workingDirectory,
       });
     });
   }
@@ -388,12 +469,15 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
   /**
    * Emit session updated event to notify UI
    */
-  private emitSessionUpdatedEvent(sessionId: string, workingDirectory: string): void {
+  private emitSessionUpdatedEvent(
+    sessionId: string,
+    workingDirectory: string,
+  ): void {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((window) => {
       window.webContents.send(AgentSessionAPIEvents.SESSION_UPDATED, {
         sessionId,
-        directory: workingDirectory
+        directory: workingDirectory,
       });
     });
   }
@@ -402,7 +486,10 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
    * Test-only method: Process event through pipeline without storing or emitting
    * Used for parallel testing to validate the pipeline works
    */
-  async processRawEventTestOnly(provider: SupportedAgent, rawData: unknown): Promise<NormalizedAgentSessionEvent> {
+  async processRawEventTestOnly(
+    provider: SupportedAgent,
+    rawData: unknown,
+  ): Promise<NormalizedAgentSessionEvent> {
     try {
       // Validate raw data
       if (!rawData || typeof rawData !== 'object') {
@@ -410,10 +497,14 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
       }
 
       // Step 1: Process through new pipeline
-      const repoNormalizedEvent = await this.pipeline.processRawEvent(provider, rawData);
+      const repoNormalizedEvent = await this.pipeline.processRawEvent(
+        provider,
+        rawData,
+      );
 
       // Step 2: Convert to old format for compatibility
-      const normalizedEvent = EventMigrationHelper.fromRepoNormalizedFormat(repoNormalizedEvent);
+      const normalizedEvent =
+        EventMigrationHelper.fromRepoNormalizedFormat(repoNormalizedEvent);
 
       // That's it! Don't store, don't emit, just return for testing
       return normalizedEvent;
@@ -431,7 +522,7 @@ export class AgentSessionEventProcessorV2 extends EventEmitter {
       processedEvents: this.processedEventCount,
       errors: this.errorCount,
       pipelineInfo: this.pipeline.getInfo(),
-      observability: this.observability?.getStats()
+      observability: this.observability?.getStats(),
     };
   }
 

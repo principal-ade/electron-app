@@ -3,7 +3,7 @@
  * Provides meaningful segmentation for event history visualization
  */
 
-import { NormalizedAgentSessionEvent } from "@principal-ai/agent-monitoring";
+import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 export interface TodoInfo {
   id: string;
@@ -35,7 +35,7 @@ export class EventSegmenterService {
    */
   segmentEvents(
     events: NormalizedAgentSessionEvent[],
-    mode: SegmentationMode = 'hybrid'
+    mode: SegmentationMode = 'hybrid',
   ): EventSegment[] {
     switch (mode) {
       case 'todo':
@@ -52,7 +52,9 @@ export class EventSegmenterService {
   /**
    * Segment events based on todo transitions
    */
-  private segmentByTodos(events: NormalizedAgentSessionEvent[]): EventSegment[] {
+  private segmentByTodos(
+    events: NormalizedAgentSessionEvent[],
+  ): EventSegment[] {
     const segments: EventSegment[] = [];
     let currentTodo: TodoInfo | null = null;
     let segmentStart = 0;
@@ -61,29 +63,33 @@ export class EventSegmenterService {
     events.forEach((event, index) => {
       if (event.toolName === 'TodoWrite' && event.toolInput) {
         const todos = (event.toolInput as any).todos as TodoInfo[];
-        const activeTodo = todos.find(t => t.status === 'in_progress');
-        
+        const activeTodo = todos.find((t) => t.status === 'in_progress');
+
         // Check if active todo changed
         if (activeTodo?.id !== currentTodo?.id) {
           // Close previous segment
           if (currentTodo && index > segmentStart) {
-            segments.push(this.createSegment(
-              events.slice(segmentStart, index),
-              segmentStart,
-              index - 1,
-              'todo',
-              currentTodo
-            ));
+            segments.push(
+              this.createSegment(
+                events.slice(segmentStart, index),
+                segmentStart,
+                index - 1,
+                'todo',
+                currentTodo,
+              ),
+            );
           } else if (!currentTodo && index > orphanedStart) {
             // Create orphaned segment for events before first todo
-            segments.push(this.createSegment(
-              events.slice(orphanedStart, index),
-              orphanedStart,
-              index - 1,
-              orphanedStart === 0 ? 'setup' : 'orphaned'
-            ));
+            segments.push(
+              this.createSegment(
+                events.slice(orphanedStart, index),
+                orphanedStart,
+                index - 1,
+                orphanedStart === 0 ? 'setup' : 'orphaned',
+              ),
+            );
           }
-          
+
           // Update current todo
           currentTodo = activeTodo || null;
           segmentStart = index;
@@ -93,20 +99,24 @@ export class EventSegmenterService {
 
     // Handle remaining events
     if (currentTodo && events.length > segmentStart) {
-      segments.push(this.createSegment(
-        events.slice(segmentStart),
-        segmentStart,
-        events.length - 1,
-        'todo',
-        currentTodo
-      ));
+      segments.push(
+        this.createSegment(
+          events.slice(segmentStart),
+          segmentStart,
+          events.length - 1,
+          'todo',
+          currentTodo,
+        ),
+      );
     } else if (!currentTodo && events.length > segmentStart) {
-      segments.push(this.createSegment(
-        events.slice(segmentStart),
-        segmentStart,
-        events.length - 1,
-        'orphaned'
-      ));
+      segments.push(
+        this.createSegment(
+          events.slice(segmentStart),
+          segmentStart,
+          events.length - 1,
+          'orphaned',
+        ),
+      );
     }
 
     return segments;
@@ -115,31 +125,37 @@ export class EventSegmenterService {
   /**
    * Segment events based on stop events
    */
-  private segmentByStops(events: NormalizedAgentSessionEvent[]): EventSegment[] {
+  private segmentByStops(
+    events: NormalizedAgentSessionEvent[],
+  ): EventSegment[] {
     const segments: EventSegment[] = [];
     let segmentStart = 0;
 
     events.forEach((event, index) => {
       if (event.eventType === 'stop' || event.eventType === 'subagent-stop') {
         // Create segment up to and including stop event
-        segments.push(this.createSegment(
-          events.slice(segmentStart, index + 1),
-          segmentStart,
-          index,
-          'stop'
-        ));
+        segments.push(
+          this.createSegment(
+            events.slice(segmentStart, index + 1),
+            segmentStart,
+            index,
+            'stop',
+          ),
+        );
         segmentStart = index + 1;
       }
     });
 
     // Handle remaining events after last stop
     if (segmentStart < events.length) {
-      segments.push(this.createSegment(
-        events.slice(segmentStart),
-        segmentStart,
-        events.length - 1,
-        'stop'
-      ));
+      segments.push(
+        this.createSegment(
+          events.slice(segmentStart),
+          segmentStart,
+          events.length - 1,
+          'stop',
+        ),
+      );
     }
 
     return segments;
@@ -157,13 +173,15 @@ export class EventSegmenterService {
       // Check for stop events first (higher priority)
       if (event.eventType === 'stop' || event.eventType === 'subagent-stop') {
         if (index > segmentStart) {
-          segments.push(this.createSegment(
-            events.slice(segmentStart, index + 1),
-            segmentStart,
-            index,
-            'stop',
-            currentTodo
-          ));
+          segments.push(
+            this.createSegment(
+              events.slice(segmentStart, index + 1),
+              segmentStart,
+              index,
+              'stop',
+              currentTodo,
+            ),
+          );
         }
         segmentStart = index + 1;
         currentTodo = null; // Reset todo tracking after stop
@@ -171,20 +189,26 @@ export class EventSegmenterService {
       // Check for todo changes
       else if (event.toolName === 'TodoWrite' && event.toolInput) {
         const todos = (event.toolInput as any).todos as TodoInfo[];
-        const activeTodo = todos.find(t => t.status === 'in_progress');
-        
+        const activeTodo = todos.find((t) => t.status === 'in_progress');
+
         if (activeTodo?.id !== currentTodo?.id) {
           // Only create segment if we have events
           if (index > segmentStart) {
-            segments.push(this.createSegment(
-              events.slice(segmentStart, index),
-              segmentStart,
-              index - 1,
-              currentTodo ? 'todo' : (segmentStart === 0 ? 'setup' : 'orphaned'),
-              currentTodo
-            ));
+            segments.push(
+              this.createSegment(
+                events.slice(segmentStart, index),
+                segmentStart,
+                index - 1,
+                currentTodo
+                  ? 'todo'
+                  : segmentStart === 0
+                    ? 'setup'
+                    : 'orphaned',
+                currentTodo,
+              ),
+            );
           }
-          
+
           currentTodo = activeTodo || null;
           segmentStart = index;
         }
@@ -193,13 +217,15 @@ export class EventSegmenterService {
 
     // Handle remaining events
     if (segmentStart < events.length) {
-      segments.push(this.createSegment(
-        events.slice(segmentStart),
-        segmentStart,
-        events.length - 1,
-        currentTodo ? 'todo' : 'orphaned',
-        currentTodo
-      ));
+      segments.push(
+        this.createSegment(
+          events.slice(segmentStart),
+          segmentStart,
+          events.length - 1,
+          currentTodo ? 'todo' : 'orphaned',
+          currentTodo,
+        ),
+      );
     }
 
     return segments;
@@ -213,7 +239,7 @@ export class EventSegmenterService {
     startIndex: number,
     endIndex: number,
     type: 'todo' | 'stop' | 'orphaned' | 'setup',
-    todoInfo?: TodoInfo | null
+    todoInfo?: TodoInfo | null,
   ): EventSegment {
     const stats = this.computeStats(events);
     const summary = this.generateSummary(events, type, todoInfo);
@@ -226,14 +252,16 @@ export class EventSegmenterService {
       events,
       timestamp: events[0]?.timestamp || Date.now(),
       summary,
-      stats
+      stats,
     };
   }
 
   /**
    * Compute statistics for a segment
    */
-  private computeStats(events: NormalizedAgentSessionEvent[]): EventSegment['stats'] {
+  private computeStats(
+    events: NormalizedAgentSessionEvent[],
+  ): EventSegment['stats'] {
     const toolCounts: Record<string, number> = {};
     const filesAccessed = new Set<string>();
     const fileWrites = new Set<string>();
@@ -241,7 +269,7 @@ export class EventSegmenterService {
     let startTime = events[0]?.timestamp || 0;
     let endTime = events[events.length - 1]?.timestamp || 0;
 
-    events.forEach(event => {
+    events.forEach((event) => {
       // Count tool usage
       if (event.toolName) {
         toolCounts[event.toolName] = (toolCounts[event.toolName] || 0) + 1;
@@ -249,10 +277,10 @@ export class EventSegmenterService {
 
       // Track file access
       if (event.files && event.files.length > 0) {
-        event.files.forEach(file => {
+        event.files.forEach((file) => {
           if (file.absolutePath) {
             filesAccessed.add(file.absolutePath);
-            
+
             // Track writes specifically
             if (['Write', 'Edit', 'MultiEdit'].includes(event.toolName || '')) {
               fileWrites.add(file.absolutePath);
@@ -266,7 +294,7 @@ export class EventSegmenterService {
       duration: endTime - startTime,
       toolCounts,
       filesAccessed: Array.from(filesAccessed),
-      fileWrites: Array.from(fileWrites)
+      fileWrites: Array.from(fileWrites),
     };
   }
 
@@ -276,7 +304,7 @@ export class EventSegmenterService {
   private generateSummary(
     events: NormalizedAgentSessionEvent[],
     type: 'todo' | 'stop' | 'orphaned' | 'setup',
-    todoInfo?: TodoInfo | null
+    todoInfo?: TodoInfo | null,
   ): string {
     if (type === 'todo' && todoInfo) {
       return `Working on: ${todoInfo.content}`;
@@ -292,7 +320,7 @@ export class EventSegmenterService {
     }
 
     if (type === 'orphaned') {
-      const eventCount = events.filter(e => e.toolName).length;
+      const eventCount = events.filter((e) => e.toolName).length;
       return `${eventCount} events without todo context`;
     }
 
@@ -304,10 +332,12 @@ export class EventSegmenterService {
   /**
    * Get the most frequently used tool in a set of events
    */
-  private getMostUsedTool(events: NormalizedAgentSessionEvent[]): string | null {
+  private getMostUsedTool(
+    events: NormalizedAgentSessionEvent[],
+  ): string | null {
     const toolCounts: Record<string, number> = {};
-    
-    events.forEach(event => {
+
+    events.forEach((event) => {
       if (event.toolName) {
         toolCounts[event.toolName] = (toolCounts[event.toolName] || 0) + 1;
       }

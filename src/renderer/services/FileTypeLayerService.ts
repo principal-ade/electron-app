@@ -2,7 +2,7 @@ import {
   HighlightLayer,
   LayerItem,
   LayerRenderStrategy,
-} from "@principal-ai/code-city-react";
+} from '@principal-ai/code-city-react';
 
 export interface FileTypeLayerDefinition {
   id: string;

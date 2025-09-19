@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { useTheme } from 'themed-markdown';
 import { Search, X, FileText, Tag, Calendar, Filter } from 'lucide-react';
@@ -13,13 +19,19 @@ interface DocumentSearchViewProps {
   onClose?: () => void;
 }
 
-export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose }) => {
+export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({
+  onClose,
+}) => {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [selectedDocument, setSelectedDocument] = useState<SearchResult | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<SearchResult | null>(
+    null,
+  );
   const [isSearching, setIsSearching] = useState(false);
-  const [indexStatus, setIndexStatus] = useState<GetIndexStatusResponse | null>(null);
+  const [indexStatus, setIndexStatus] = useState<GetIndexStatusResponse | null>(
+    null,
+  );
   const [showFilters, setShowFilters] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -31,20 +43,42 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
         await documentSearchService.initialize();
 
         // Get Alexandria repositories and index them
-        console.log('[DocumentSearchView] Getting Alexandria repositories for indexing...');
-        const { AlexandriaService } = await import('../../main-process-api/AlexandriaService');
+        console.log(
+          '[DocumentSearchView] Getting Alexandria repositories for indexing...',
+        );
+        const { AlexandriaService } = await import(
+          '../../main-process-api/AlexandriaService'
+        );
         const repositories = await AlexandriaService.getRepositories();
 
-        console.log(`[DocumentSearchView] Found ${repositories.length} Alexandria repositories`);
+        console.log(
+          `[DocumentSearchView] Found ${repositories.length} Alexandria repositories`,
+        );
 
-        // Index each repository
-        for (const repo of repositories) {
-          if (repo.path) {
-            console.log(`[DocumentSearchView] Indexing repository: ${repo.name} at ${repo.path}`);
+        // Use batch indexing for all repositories
+        if (repositories.length > 0) {
+          const reposToIndex = repositories
+            .filter((r) => r.path) // Only repos with valid paths
+            .map((r) => ({ path: r.path, name: r.name }));
+
+          if (reposToIndex.length > 0) {
+            console.log(
+              `[DocumentSearchView] Batch indexing ${reposToIndex.length} repositories`,
+            );
             try {
-              await documentSearchService.indexRepository(repo.path, repo.name);
+              const result =
+                await documentSearchService.indexMultipleRepositories(
+                  reposToIndex,
+                );
+              console.log(
+                '[DocumentSearchView] Batch indexing complete:',
+                result,
+              );
             } catch (error) {
-              console.error(`[DocumentSearchView] Failed to index ${repo.name}:`, error);
+              console.error(
+                '[DocumentSearchView] Batch indexing failed:',
+                error,
+              );
             }
           }
         }
@@ -61,9 +95,14 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
 
     // Subscribe to index updates
     const unsubscribe = documentSearchService.onIndexUpdate((event) => {
-      console.log('Index update:', event);
-      // Refresh status after index update
-      documentSearchService.getStatus().then(setIndexStatus);
+      // Only log completion events, not every progress update
+      if (event.type === 'completed' || event.type === 'error') {
+        console.log('Index update completed:', event.type);
+        // Refresh status after index completes
+        documentSearchService.getStatus().then(setIndexStatus);
+      }
+      // For progress events, we could update a progress indicator if needed
+      // but don't spam the console or refresh status constantly
     });
 
     return () => {
@@ -84,7 +123,10 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
             setSearchResults(results);
             setIsSearching(false);
             // Maintain focus on the search input after results load
-            if (searchInputRef.current && document.activeElement !== searchInputRef.current) {
+            if (
+              searchInputRef.current &&
+              document.activeElement !== searchInputRef.current
+            ) {
               searchInputRef.current.focus();
             }
           })
@@ -93,7 +135,10 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
             setSearchResults([]);
             setIsSearching(false);
             // Maintain focus on error too
-            if (searchInputRef.current && document.activeElement !== searchInputRef.current) {
+            if (
+              searchInputRef.current &&
+              document.activeElement !== searchInputRef.current
+            ) {
               searchInputRef.current.focus();
             }
           });
@@ -109,11 +154,14 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
     setSelectedDocument(doc);
   }, []);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape' && onClose) {
-      onClose();
-    }
-  }, [onClose]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape' && onClose) {
+        onClose();
+      }
+    },
+    [onClose],
+  );
 
   // Keep focus on search input when component mounts or view changes
   useEffect(() => {
@@ -129,10 +177,10 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
 
   return (
     <div
-      className="h-screen flex flex-col"
+      className="h-full flex flex-col"
       style={{
         backgroundColor: theme.colors.background,
-        color: theme.colors.text
+        color: theme.colors.text,
       }}
       onKeyDown={handleKeyDown}
     >
@@ -141,7 +189,7 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
         className="flex items-center justify-between px-6 py-4 border-b"
         style={{
           borderColor: theme.colors.border,
-          backgroundColor: theme.colors.backgroundSecondary
+          backgroundColor: theme.colors.backgroundSecondary,
         }}
       >
         <div className="flex items-center gap-4 flex-1">
@@ -157,7 +205,7 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
               style={{
                 backgroundColor: theme.colors.background,
                 borderColor: theme.colors.border,
-                color: theme.colors.text
+                color: theme.colors.text,
               }}
               autoFocus
             />
@@ -166,9 +214,11 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
             onClick={() => setShowFilters(!showFilters)}
             className="px-3 py-2 rounded border transition-colors"
             style={{
-              backgroundColor: showFilters ? theme.colors.primary : 'transparent',
+              backgroundColor: showFilters
+                ? theme.colors.primary
+                : 'transparent',
               borderColor: theme.colors.border,
-              color: showFilters ? theme.colors.background : theme.colors.text
+              color: showFilters ? theme.colors.background : theme.colors.text,
             }}
           >
             <Filter size={18} />
@@ -180,7 +230,7 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
             className="ml-4 p-2 rounded hover:opacity-80 transition-opacity"
             style={{
               backgroundColor: 'transparent',
-              color: theme.colors.textSecondary
+              color: theme.colors.textSecondary,
             }}
           >
             <X size={20} />
@@ -194,7 +244,7 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
         style={{
           borderColor: theme.colors.border,
           backgroundColor: theme.colors.backgroundSecondary,
-          color: theme.colors.textSecondary
+          color: theme.colors.textSecondary,
         }}
       >
         <div className="flex items-center gap-4">
@@ -225,7 +275,9 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
           </span>
           <span className="flex items-center gap-1">
             <Calendar size={14} />
-            {indexStatus?.lastUpdate ? `Updated ${new Date(indexStatus.lastUpdate).toLocaleTimeString()}` : 'Not indexed'}
+            {indexStatus?.lastUpdate
+              ? `Updated ${new Date(indexStatus.lastUpdate).toLocaleTimeString()}`
+              : 'Not indexed'}
           </span>
         </div>
       </div>
@@ -249,13 +301,16 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
             <PanelResizeHandle
               className="w-1 hover:bg-opacity-50 transition-colors"
               style={{
-                backgroundColor: theme.colors.border
+                backgroundColor: theme.colors.border,
               }}
             />
 
             {/* Document Viewer Panel */}
             <Panel defaultSize={65} minSize={40}>
-              <DocumentViewer document={selectedDocument} searchQuery={searchQuery} />
+              <DocumentViewer
+                document={selectedDocument}
+                searchQuery={searchQuery}
+              />
             </Panel>
           </PanelGroup>
         ) : (
@@ -267,7 +322,7 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
                 className="mx-auto mb-4"
                 style={{
                   color: theme.colors.textSecondary,
-                  opacity: 0.5
+                  opacity: 0.5,
                 }}
               />
               <h2
@@ -280,15 +335,16 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({ onClose 
                 className="text-sm mb-6"
                 style={{ color: theme.colors.textSecondary }}
               >
-                Find documentation, code snippets, planning notes, and more across all your
-                repositories
+                Find documentation, code snippets, planning notes, and more
+                across all your repositories
               </p>
               <div
                 className="text-xs space-y-2"
                 style={{ color: theme.colors.textSecondary }}
               >
                 <p>
-                  <strong>Tip:</strong> Use quotes for exact phrases: "search engine"
+                  <strong>Tip:</strong> Use quotes for exact phrases: "search
+                  engine"
                 </p>
                 <p>
                   <strong>Filter:</strong> Use tags like <code>tag:api</code> or{' '}

@@ -61,23 +61,31 @@ export interface GitAPI {
     https: { available: boolean; reason?: string };
     suggestions: string[];
   }>;
-  deleteGitRepository: (repoPath: string) => Promise<{ 
-    success: boolean; 
+  deleteGitRepository: (repoPath: string) => Promise<{
+    success: boolean;
     error?: string;
     hasUncommittedChanges?: boolean;
     unpushedCommits?: number;
     currentBranch?: string;
     requiresConfirmation?: boolean;
   }>;
-  forceDeleteGitRepository: (repoPath: string) => Promise<{ 
-    success: boolean; 
+  forceDeleteGitRepository: (repoPath: string) => Promise<{
+    success: boolean;
     error?: string;
   }>;
   onStatusUpdate?: (callback: (status: GitStatus) => void) => () => void;
-  
+
   // Event listeners for repository changes
-  onRepositoryUpdated: (callback: (updatedRepo: Repository) => void) => () => void;
-  onRepositoryCloneAdded: (callback: (data: { repository: Repository; clonePath: string }) => void) => () => void;
-  onRepositoryCloneRemoved: (callback: (data: { repository: Repository; clonePath: string }) => void) => () => void;
-  onLocalCloneMissing: (callback: (data: { repoPath: string }) => void) => () => void;
+  onRepositoryUpdated: (
+    callback: (updatedRepo: Repository) => void,
+  ) => () => void;
+  onRepositoryCloneAdded: (
+    callback: (data: { repository: Repository; clonePath: string }) => void,
+  ) => () => void;
+  onRepositoryCloneRemoved: (
+    callback: (data: { repository: Repository; clonePath: string }) => void,
+  ) => () => void;
+  onLocalCloneMissing: (
+    callback: (data: { repoPath: string }) => void,
+  ) => () => void;
 }

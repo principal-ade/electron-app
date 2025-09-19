@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { GitBranch, Check, Loader2, GitPullRequest, AlertCircle } from 'lucide-react';
+import {
+  GitBranch,
+  Check,
+  Loader2,
+  GitPullRequest,
+  AlertCircle,
+} from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 import { FileTreeSource } from '../../types/file-tree-source';
 import { useGitChanges } from '../../contexts/GitChangesContext';
@@ -9,13 +15,16 @@ interface GitChangesButtonProps {
   style?: React.CSSProperties;
 }
 
-export const GitChangesButton: React.FC<GitChangesButtonProps> = ({ source, style }) => {
+export const GitChangesButton: React.FC<GitChangesButtonProps> = ({
+  source,
+  style,
+}) => {
   const { theme } = useTheme();
   const { checkGitStatus, toggleGitChanges, getGitState } = useGitChanges();
   const [isChecking, setIsChecking] = useState(false);
-  
+
   const gitState = getGitState(source.id);
-  
+
   // Check git status on mount and when source changes
   useEffect(() => {
     if (source.type === 'local' && !gitState?.gitStatus) {
@@ -25,12 +34,12 @@ export const GitChangesButton: React.FC<GitChangesButtonProps> = ({ source, styl
       });
     }
   }, [source, gitState?.gitStatus, checkGitStatus]);
-  
+
   // Don't show for non-local sources
   if (source.type !== 'local') {
     return null;
   }
-  
+
   // Determine button state and appearance
   const getButtonConfig = () => {
     // Loading HEAD tree
@@ -41,10 +50,10 @@ export const GitChangesButton: React.FC<GitChangesButtonProps> = ({ source, styl
         color: theme.colors.textSecondary,
         backgroundColor: theme.colors.backgroundTertiary,
         clickable: false,
-        title: 'Loading git changes'
+        title: 'Loading git changes',
       };
     }
-    
+
     // Error state
     if (gitState?.error) {
       return {
@@ -53,10 +62,10 @@ export const GitChangesButton: React.FC<GitChangesButtonProps> = ({ source, styl
         color: '#ef4444',
         backgroundColor: '#ef444420',
         clickable: true,
-        title: gitState.error
+        title: gitState.error,
       };
     }
-    
+
     // Changes visible (enabled)
     if (gitState?.enabled) {
       // Special case: no commits yet
@@ -67,25 +76,25 @@ export const GitChangesButton: React.FC<GitChangesButtonProps> = ({ source, styl
           color: '#fff',
           backgroundColor: theme.colors.primary,
           clickable: true,
-          title: 'Repository has no commits yet. All files shown as new.'
+          title: 'Repository has no commits yet. All files shown as new.',
         };
       }
-      
-      const changeCount = 
+
+      const changeCount =
         (gitState.gitStatus?.created.length || 0) +
         (gitState.gitStatus?.modified.length || 0) +
         (gitState.gitStatus?.deleted.length || 0);
-      
+
       return {
         icon: <GitPullRequest size={14} />,
         text: `Hide changes (${changeCount})`,
         color: '#fff',
         backgroundColor: theme.colors.primary,
         clickable: true,
-        title: 'Click to hide git changes'
+        title: 'Click to hide git changes',
       };
     }
-    
+
     // Checking status
     if (isChecking) {
       return {
@@ -94,10 +103,10 @@ export const GitChangesButton: React.FC<GitChangesButtonProps> = ({ source, styl
         color: theme.colors.textSecondary,
         backgroundColor: theme.colors.backgroundTertiary,
         clickable: false,
-        title: 'Checking for git changes'
+        title: 'Checking for git changes',
       };
     }
-    
+
     // Special case: no commits yet (not enabled)
     if (gitState?.hasNoCommits) {
       return {
@@ -107,17 +116,17 @@ export const GitChangesButton: React.FC<GitChangesButtonProps> = ({ source, styl
         backgroundColor: theme.colors.primary + '20',
         border: `1px solid ${theme.colors.primary}40`,
         clickable: true,
-        title: 'Repository has no commits. Click to view all files as new.'
+        title: 'Repository has no commits. Click to view all files as new.',
       };
     }
-    
+
     // Has changes (not enabled)
     if (gitState?.hasChanges) {
-      const changeCount = 
+      const changeCount =
         (gitState.gitStatus?.created.length || 0) +
         (gitState.gitStatus?.modified.length || 0) +
         (gitState.gitStatus?.deleted.length || 0);
-      
+
       return {
         icon: <GitBranch size={14} />,
         text: `Show changes (${changeCount})`,
@@ -125,10 +134,10 @@ export const GitChangesButton: React.FC<GitChangesButtonProps> = ({ source, styl
         backgroundColor: theme.colors.primary + '20',
         border: `1px solid ${theme.colors.primary}40`,
         clickable: true,
-        title: `${changeCount} uncommitted changes. Click to visualize.`
+        title: `${changeCount} uncommitted changes. Click to visualize.`,
       };
     }
-    
+
     // Clean branch
     return {
       icon: <Check size={14} />,
@@ -136,19 +145,19 @@ export const GitChangesButton: React.FC<GitChangesButtonProps> = ({ source, styl
       color: '#10b981',
       backgroundColor: '#10b98120',
       clickable: false,
-      title: 'No uncommitted changes'
+      title: 'No uncommitted changes',
     };
   };
-  
+
   const config = getButtonConfig();
-  
+
   const handleClick = () => {
     if (!config.clickable) return;
-    
+
     // Toggle git changes
     toggleGitChanges(source, !gitState?.enabled);
   };
-  
+
   return (
     <button
       onClick={handleClick}
@@ -168,7 +177,7 @@ export const GitChangesButton: React.FC<GitChangesButtonProps> = ({ source, styl
         cursor: config.clickable ? 'pointer' : 'default',
         opacity: config.clickable ? 1 : 0.8,
         transition: 'all 0.2s ease',
-        ...style
+        ...style,
       }}
       onMouseEnter={(e) => {
         if (config.clickable) {
@@ -185,7 +194,7 @@ export const GitChangesButton: React.FC<GitChangesButtonProps> = ({ source, styl
     >
       {config.icon}
       <span>{config.text}</span>
-      
+
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }

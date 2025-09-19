@@ -3,6 +3,7 @@ import { useTheme } from 'themed-markdown';
 import { FileText, ExternalLink, Copy, Check } from 'lucide-react';
 import type { SearchResult } from '@a24z/markdown-search';
 import { MarkdownDocumentViewer } from '../RepoManager/shared/MarkdownDocumentViewer';
+import { FileSystemService } from '../../main-process-api/FileSystemService';
 
 interface DocumentViewerProps {
   document: SearchResult | null;
@@ -11,25 +12,69 @@ interface DocumentViewerProps {
 
 export const DocumentViewer: React.FC<DocumentViewerProps> = ({
   document,
-  searchQuery
+  searchQuery,
 }) => {
   const { theme } = useTheme();
   const [copied, setCopied] = useState(false);
   const [highlightedContent, setHighlightedContent] = useState<string>('');
+  const [fullContent, setFullContent] = useState<string>('');
+  const [isLoadingContent, setIsLoadingContent] = useState(false);
+
+  // Load full content when document changes
+  useEffect(() => {
+    const loadContent = async () => {
+      if (!document) {
+        setFullContent('');
+        return;
+      }
+
+      // Check if content is already loaded (backward compatibility)
+      if (document.content && !document.content.startsWith('[Content')) {
+        setFullContent(document.content);
+        return;
+      }
+
+      // Load content from file using the file path
+      if (document.filePath) {
+        setIsLoadingContent(true);
+        try {
+          // Use the FileSystemService abstraction layer
+          const result = await FileSystemService.readFile(document.filePath);
+          // Handle the result object that contains { content, filePath }
+          if (result && typeof result === 'object' && 'content' in result) {
+            setFullContent(result.content || '');
+          } else if (typeof result === 'string') {
+            // In case it returns a string directly
+            setFullContent(result);
+          } else {
+            setFullContent('');
+          }
+        } catch (error) {
+          console.error('Failed to load document content:', error);
+          // Fallback to the content field if available
+          setFullContent(document.content || 'Failed to load document content');
+        } finally {
+          setIsLoadingContent(false);
+        }
+      } else {
+        // No file path available, use whatever content we have
+        setFullContent(document.content || '');
+      }
+    };
+
+    loadContent();
+  }, [document]);
 
   useEffect(() => {
-    if (document?.content && searchQuery) {
+    if (fullContent && searchQuery) {
       // Highlight search terms in the content
       const regex = new RegExp(`(${escapeRegex(searchQuery)})`, 'gi');
-      const highlighted = document.content.replace(
-        regex,
-        '**<mark>$1</mark>**'
-      );
+      const highlighted = fullContent.replace(regex, '**<mark>$1</mark>**');
       setHighlightedContent(highlighted);
-    } else if (document?.content) {
-      setHighlightedContent(document.content);
+    } else if (fullContent) {
+      setHighlightedContent(fullContent);
     }
-  }, [document, searchQuery]);
+  }, [fullContent, searchQuery]);
 
   const escapeRegex = (str: string): string => {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -57,13 +102,10 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
             className="mx-auto mb-4"
             style={{
               color: theme.colors.textSecondary,
-              opacity: 0.3
+              opacity: 0.3,
             }}
           />
-          <p
-            className="text-sm"
-            style={{ color: theme.colors.textSecondary }}
-          >
+          <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
             Select a document to view
           </p>
         </div>
@@ -78,7 +120,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
         className="px-6 py-4 border-b"
         style={{
           borderColor: theme.colors.border,
-          backgroundColor: theme.colors.backgroundSecondary
+          backgroundColor: theme.colors.backgroundSecondary,
         }}
       >
         <div className="flex items-start justify-between">
@@ -102,7 +144,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
               className="p-2 rounded hover:opacity-80 transition-all"
               style={{
                 backgroundColor: theme.colors.backgroundTertiary,
-                color: theme.colors.text
+                color: theme.colors.text,
               }}
               title="Copy file path"
             >
@@ -113,7 +155,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
               className="p-2 rounded hover:opacity-80 transition-all"
               style={{
                 backgroundColor: theme.colors.backgroundTertiary,
-                color: theme.colors.text
+                color: theme.colors.text,
               }}
               title="Open in editor"
             >
@@ -129,11 +171,13 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
               {document.metadata.wordCount} words
             </span>
           )}
-          {document.metadata?.codeLanguages && document.metadata.codeLanguages.length > 0 && (
-            <span style={{ color: theme.colors.textSecondary }}>
-              Languages: {(document.metadata.codeLanguages as string[]).join(', ')}
-            </span>
-          )}
+          {document.metadata?.codeLanguages &&
+            document.metadata.codeLanguages.length > 0 && (
+              <span style={{ color: theme.colors.textSecondary }}>
+                Languages:{' '}
+                {(document.metadata.codeLanguages as string[]).join(', ')}
+              </span>
+            )}
           {document.indexedAt && (
             <span style={{ color: theme.colors.textSecondary }}>
               Indexed: {new Date(document.indexedAt).toLocaleDateString()}
@@ -150,7 +194,7 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
                 className="text-xs px-2 py-1 rounded"
                 style={{
                   backgroundColor: `${theme.colors.primary}20`,
-                  color: theme.colors.primary
+                  color: theme.colors.primary,
                 }}
               >
                 #{tag}
@@ -163,18 +207,32 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
       {/* Document Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-6">
-          <MarkdownDocumentViewer
-            content={highlightedContent}
-            slides={[highlightedContent]}
-            currentSlide={0}
-            theme={theme}
-            showSegmented={false}
-            onContentChange={() => {}}
-            onSlideNavigate={() => {}}
-            onCheckboxChange={() => {}}
-            viewMode="document"
-            showEditor={false}
-          />
+          {isLoadingContent ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div
+                  className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-4"
+                  style={{ borderColor: theme.colors.primary }}
+                ></div>
+                <p style={{ color: theme.colors.textSecondary }}>
+                  Loading document content...
+                </p>
+              </div>
+            </div>
+          ) : (
+            <MarkdownDocumentViewer
+              content={highlightedContent}
+              slides={[highlightedContent]}
+              currentSlide={0}
+              theme={theme}
+              showSegmented={false}
+              onContentChange={() => {}}
+              onSlideNavigate={() => {}}
+              onCheckboxChange={() => {}}
+              viewMode="document"
+              showEditor={false}
+            />
+          )}
         </div>
       </div>
 

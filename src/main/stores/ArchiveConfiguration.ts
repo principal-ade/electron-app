@@ -3,7 +3,6 @@ import { getTypedStorageManagerInstance } from './initialization';
 import { ArchiveConfiguration } from '../storage-providers/typed-namespaces';
 import { BrowserWindow } from 'electron';
 
-
 export const DEFAULT_ARCHIVE_CONFIG: ArchiveConfiguration = {
   autoArchive: {
     enabled: true,
@@ -31,38 +30,41 @@ export const DEFAULT_ARCHIVE_CONFIG: ArchiveConfiguration = {
 };
 
 export class ArchiveConfigurationService {
-  private readonly configNamespace = StaticNamespaces.ARCHIVE_CONFIGURATION as const;
+  private readonly configNamespace =
+    StaticNamespaces.ARCHIVE_CONFIGURATION as const;
   private readonly configKey = 'settings';
-  
+
   async getConfiguration(): Promise<ArchiveConfiguration> {
     try {
       const storageManager = await getTypedStorageManagerInstance();
       const result = await storageManager.get(
         this.configKey,
-        this.configNamespace
+        this.configNamespace,
       );
-      
+
       if (result.success && result.data) {
         // Merge with defaults to ensure all fields exist
         return this.mergeWithDefaults(result.data as ArchiveConfiguration);
       }
-      
+
       return DEFAULT_ARCHIVE_CONFIG;
     } catch (error) {
       console.error('[ArchiveConfig] Failed to get configuration:', error);
       return DEFAULT_ARCHIVE_CONFIG;
     }
   }
-  
-  async updateConfiguration(config: Partial<ArchiveConfiguration>): Promise<void> {
+
+  async updateConfiguration(
+    config: Partial<ArchiveConfiguration>,
+  ): Promise<void> {
     try {
       const storageManager = await getTypedStorageManagerInstance();
       const current = await this.getConfiguration();
       const updated = this.deepMerge(current, config);
-      
+
       await storageManager.set(this.configKey, updated, this.configNamespace);
       console.log('[ArchiveConfig] Configuration updated:', updated);
-      
+
       // Emit event for any listeners
       const { BrowserWindow } = require('electron');
       BrowserWindow.getAllWindows().forEach((window: BrowserWindow) => {
@@ -73,14 +75,16 @@ export class ArchiveConfigurationService {
       throw error;
     }
   }
-  
-  private mergeWithDefaults(config: Partial<ArchiveConfiguration>): ArchiveConfiguration {
+
+  private mergeWithDefaults(
+    config: Partial<ArchiveConfiguration>,
+  ): ArchiveConfiguration {
     return this.deepMerge(DEFAULT_ARCHIVE_CONFIG, config);
   }
-  
+
   private deepMerge(target: any, source: any): any {
     const result = { ...target };
-    
+
     for (const key in source) {
       if (source[key] !== undefined) {
         if (typeof source[key] === 'object' && !Array.isArray(source[key])) {
@@ -90,7 +94,7 @@ export class ArchiveConfigurationService {
         }
       }
     }
-    
+
     return result;
   }
 }

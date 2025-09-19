@@ -25,8 +25,8 @@ export interface ViolationsAPI {
   collect(
     sourcePath: string,
     packages: PackageInfo[],
-    options: ViolationCollectionOptions
+    options: ViolationCollectionOptions,
   ): Promise<ViolationResult>;
-  
+
   clearCache(sourcePath?: string): Promise<void>;
 }

@@ -13,10 +13,14 @@ import { SessionEventType } from '../../../shared/sessionEnums';
 
 // Temporary API stubs for archived sessions
 const agentSession = {
-  getSession: async (directory: string, sessionId: string): Promise<AgentSessionRecord | null> => {
+  getSession: async (
+    directory: string,
+    sessionId: string,
+  ): Promise<AgentSessionRecord | null> => {
     try {
       // Try to get archived session first
-      const archivedSession = await AgentSessionArchiveService.getArchivedSession(sessionId);
+      const archivedSession =
+        await AgentSessionArchiveService.getArchivedSession(sessionId);
       if (archivedSession) {
         return archivedSession as AgentSessionRecord;
       }
@@ -30,7 +34,7 @@ const agentSession = {
   updateRepositoryInfo: async (directory: string, sessionId: string) => {
     // Stub - archived sessions don't need repository info updates
     return Promise.resolve();
-  }
+  },
 };
 
 // Configuration constants

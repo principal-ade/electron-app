@@ -14,7 +14,11 @@ interface MarkdownDocumentViewerProps {
   showSegmented?: boolean;
   onContentChange: (content: string) => void;
   onSlideNavigate: (slideNumber: number) => void;
-  onCheckboxChange: (slideIndex: number, lineNumber: number, checked: boolean) => void;
+  onCheckboxChange: (
+    slideIndex: number,
+    lineNumber: number,
+    checked: boolean,
+  ) => void;
 }
 
 export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
@@ -27,21 +31,23 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
   showSegmented = true,
   onContentChange,
   onSlideNavigate,
-  onCheckboxChange
+  onCheckboxChange,
 }) => {
-
   // Editor View - shown when showEditor is true
   if (showEditor) {
     // In editor mode, show either the current slide or full document based on viewMode
-    const editorContent = viewMode === 'slides' ? slides[currentSlide] : content;
-    
+    const editorContent =
+      viewMode === 'slides' ? slides[currentSlide] : content;
+
     return (
-      <div style={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: theme.colors.background
-      }}>
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: theme.colors.background,
+        }}
+      >
         <ThemedMonaco
           value={editorContent}
           onChange={(newValue) => {

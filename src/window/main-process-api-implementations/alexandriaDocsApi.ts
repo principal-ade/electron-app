@@ -1,0 +1,18 @@
+import { ipcRenderer } from 'electron';
+import type { AlexandriaDocsAPI } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
+import { AlexandriaDocsAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
+import type { AlexandriaEntry } from '@a24z/core-library';
+
+export const alexandriaDocsAPI: AlexandriaDocsAPI = {
+  getDocuments: (entry: AlexandriaEntry) =>
+    ipcRenderer.invoke(AlexandriaDocsAPIEvent.GET_DOCUMENTS, entry),
+
+  getExcludedDocuments: (entry: AlexandriaEntry) =>
+    ipcRenderer.invoke(AlexandriaDocsAPIEvent.GET_EXCLUDED_DOCUMENTS, entry),
+
+  getDocumentsWithExclusions: (entry: AlexandriaEntry) =>
+    ipcRenderer.invoke(
+      AlexandriaDocsAPIEvent.GET_DOCUMENTS_WITH_EXCLUSIONS,
+      entry,
+    ),
+};

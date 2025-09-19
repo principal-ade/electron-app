@@ -11,30 +11,30 @@ export class PlanningViewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
   private documentManager: SlideDocumentManager;
   private currentFilePath?: string;
-  
+
   constructor(
     private readonly _extensionUri: vscode.Uri,
-    private readonly _context: vscode.ExtensionContext
+    private readonly _context: vscode.ExtensionContext,
   ) {
     // Initialize with VS Code adapter
     const adapter = new VSCodeFileSystemAdapter(vscode);
     this.documentManager = new SlideDocumentManager(adapter);
   }
-  
+
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
     context: vscode.WebviewViewResolveContext,
-    _token: vscode.CancellationToken
+    _token: vscode.CancellationToken,
   ) {
     this._view = webviewView;
-    
+
     webviewView.webview.options = {
       enableScripts: true,
-      localResourceRoots: [this._extensionUri]
+      localResourceRoots: [this._extensionUri],
     };
-    
+
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
-    
+
     // Handle messages from the webview
     webviewView.webview.onDidReceiveMessage(async (data) => {
       switch (data.type) {
@@ -59,86 +59,105 @@ export class PlanningViewProvider implements vscode.WebviewViewProvider {
       }
     });
   }
-  
+
   private async loadDocument(filePath: string) {
     this.currentFilePath = filePath;
     const doc = await this.documentManager.loadDocument(filePath);
-    
+
     this._view?.webview.postMessage({
       type: 'documentLoaded',
       document: {
         slides: doc.slides,
         currentSlide: doc.currentSlide,
-        metadata: doc.metadata
-      }
+        metadata: doc.metadata,
+      },
     });
   }
-  
+
   private async navigateSlide(slideNumber: number) {
     if (!this.currentFilePath) return;
-    
-    const success = this.documentManager.navigateToSlide(this.currentFilePath, slideNumber);
+
+    const success = this.documentManager.navigateToSlide(
+      this.currentFilePath,
+      slideNumber,
+    );
     if (success) {
       const doc = this.documentManager.getDocument(this.currentFilePath)!;
       this._view?.webview.postMessage({
         type: 'slideNavigated',
         currentSlide: doc.currentSlide,
-        content: doc.slides[doc.currentSlide]
+        content: doc.slides[doc.currentSlide],
       });
     }
   }
-  
+
   private async updateSlide(slideNumber: number, content: string) {
     if (!this.currentFilePath) return;
-    
-    const success = this.documentManager.updateSlide(this.currentFilePath, slideNumber, content);
+
+    const success = this.documentManager.updateSlide(
+      this.currentFilePath,
+      slideNumber,
+      content,
+    );
     if (success) {
       this._view?.webview.postMessage({
         type: 'slideUpdated',
         slideNumber,
-        content
+        content,
       });
     }
   }
-  
-  private async createSlide(position: 'before' | 'after' | 'end', content?: string) {
+
+  private async createSlide(
+    position: 'before' | 'after' | 'end',
+    content?: string,
+  ) {
     if (!this.currentFilePath) return;
-    
-    const slideNumber = this.documentManager.createSlide(this.currentFilePath, position, content);
+
+    const slideNumber = this.documentManager.createSlide(
+      this.currentFilePath,
+      position,
+      content,
+    );
     if (slideNumber !== -1) {
       const doc = this.documentManager.getDocument(this.currentFilePath)!;
       this._view?.webview.postMessage({
         type: 'slideCreated',
         slideNumber,
-        totalSlides: doc.slides.length
+        totalSlides: doc.slides.length,
       });
     }
   }
-  
+
   private async deleteSlide(slideNumber: number) {
     if (!this.currentFilePath) return;
-    
-    const success = this.documentManager.deleteSlide(this.currentFilePath, slideNumber);
+
+    const success = this.documentManager.deleteSlide(
+      this.currentFilePath,
+      slideNumber,
+    );
     if (success) {
       const doc = this.documentManager.getDocument(this.currentFilePath)!;
       this._view?.webview.postMessage({
         type: 'slideDeleted',
         totalSlides: doc.slides.length,
-        currentSlide: doc.currentSlide
+        currentSlide: doc.currentSlide,
       });
     }
   }
-  
+
   private async saveDocument() {
     if (!this.currentFilePath) return;
-    
-    const success = await this.documentManager.saveDocument(this.currentFilePath);
+
+    const success = await this.documentManager.saveDocument(
+      this.currentFilePath,
+    );
     this._view?.webview.postMessage({
       type: 'documentSaved',
-      success
+      success,
     });
   }
-  
+
   /**
    * Register MCP tools that agents can use
    */
@@ -152,40 +171,73 @@ export class PlanningViewProvider implements vscode.WebviewViewProvider {
         return {
           slideNumber: doc.currentSlide,
           content: doc.slides[doc.currentSlide],
-          totalSlides: doc.slides.length
+          totalSlides: doc.slides.length,
         };
       }),
-      
-      vscode.commands.registerCommand('planning.navigateToSlide', async (slideNumber: number) => {
-        if (!this.currentFilePath) return false;
-        return this.documentManager.navigateToSlide(this.currentFilePath, slideNumber);
-      }),
-      
-      vscode.commands.registerCommand('planning.updateSlide', async (slideNumber: number, content: string) => {
-        if (!this.currentFilePath) return false;
-        return this.documentManager.updateSlide(this.currentFilePath, slideNumber, content);
-      }),
-      
-      vscode.commands.registerCommand('planning.createSlide', async (position: 'before' | 'after' | 'end', content?: string) => {
-        if (!this.currentFilePath) return -1;
-        return this.documentManager.createSlide(this.currentFilePath, position, content);
-      }),
-      
-      vscode.commands.registerCommand('planning.deleteSlide', async (slideNumber: number) => {
-        if (!this.currentFilePath) return false;
-        return this.documentManager.deleteSlide(this.currentFilePath, slideNumber);
-      }),
-      
-      vscode.commands.registerCommand('planning.searchSlides', async (query: string, caseSensitive?: boolean) => {
-        if (!this.currentFilePath) return [];
-        return this.documentManager.searchSlides(this.currentFilePath, query, caseSensitive || false);
-      })
+
+      vscode.commands.registerCommand(
+        'planning.navigateToSlide',
+        async (slideNumber: number) => {
+          if (!this.currentFilePath) return false;
+          return this.documentManager.navigateToSlide(
+            this.currentFilePath,
+            slideNumber,
+          );
+        },
+      ),
+
+      vscode.commands.registerCommand(
+        'planning.updateSlide',
+        async (slideNumber: number, content: string) => {
+          if (!this.currentFilePath) return false;
+          return this.documentManager.updateSlide(
+            this.currentFilePath,
+            slideNumber,
+            content,
+          );
+        },
+      ),
+
+      vscode.commands.registerCommand(
+        'planning.createSlide',
+        async (position: 'before' | 'after' | 'end', content?: string) => {
+          if (!this.currentFilePath) return -1;
+          return this.documentManager.createSlide(
+            this.currentFilePath,
+            position,
+            content,
+          );
+        },
+      ),
+
+      vscode.commands.registerCommand(
+        'planning.deleteSlide',
+        async (slideNumber: number) => {
+          if (!this.currentFilePath) return false;
+          return this.documentManager.deleteSlide(
+            this.currentFilePath,
+            slideNumber,
+          );
+        },
+      ),
+
+      vscode.commands.registerCommand(
+        'planning.searchSlides',
+        async (query: string, caseSensitive?: boolean) => {
+          if (!this.currentFilePath) return [];
+          return this.documentManager.searchSlides(
+            this.currentFilePath,
+            query,
+            caseSensitive || false,
+          );
+        },
+      ),
     ];
-    
+
     // Store command disposables
     this._context.subscriptions.push(...commands);
   }
-  
+
   private _getHtmlForWebview(webview: vscode.Webview) {
     // This would contain the UI for the planning view
     // Similar to the IndustryMarkdownSlide component but adapted for VS Code

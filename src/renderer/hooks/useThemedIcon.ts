@@ -8,7 +8,7 @@ import { IconThemeService } from '../services/IconThemeService';
  */
 export function useThemedIcon(
   size: number = 48,
-  fallbackSrc: string = '/assets/icons/owl-default.png'
+  fallbackSrc: string = '/assets/icons/owl-default.png',
 ): {
   iconSrc: string;
   isLoading: boolean;
@@ -17,10 +17,10 @@ export function useThemedIcon(
   const [iconSrc, setIconSrc] = useState<string>(fallbackSrc);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const loadIcon = async () => {
     const themeName = ThemeService.getCurrentThemeName();
-    
+
     // Check cache first
     const cached = IconThemeService.getCachedIcon(themeName, size);
     if (cached) {
@@ -28,13 +28,16 @@ export function useThemedIcon(
       setIsLoading(false);
       return;
     }
-    
+
     // Generate if not cached
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const generatedIcon = await IconThemeService.generateThemedIcon(themeName, size);
+      const generatedIcon = await IconThemeService.generateThemedIcon(
+        themeName,
+        size,
+      );
       if (generatedIcon) {
         setIconSrc(generatedIcon);
       } else {
@@ -48,22 +51,22 @@ export function useThemedIcon(
       setIsLoading(false);
     }
   };
-  
+
   // Load on mount and size change
   useEffect(() => {
     loadIcon();
   }, [size]);
-  
+
   // Subscribe to theme changes
   useEffect(() => {
     const unsubscribe = ThemeService.onThemeChange(() => {
       loadIcon();
     });
-    
+
     return () => {
       unsubscribe();
     };
   }, [size]);
-  
+
   return { iconSrc, isLoading, error };
 }

@@ -1,60 +1,49 @@
-import { SupportedAgent } from "@principal-ai/agent-monitoring";
-import { AgentUpdatePreferences, UpdateCheckResult } from '../../shared/main-process-api-interfaces/AgentUpdateAPI';
+/**
+ * Stub for AgentAutoUpdateService
+ * Since agent auto-updates are no longer supported, this provides compatibility
+ */
 
-// Re-export types for backward compatibility
-export type { AgentUpdatePreferences, UpdateCheckResult };
+import { SupportedAgent } from '@principal-ai/agent-monitoring';
+
+export interface UpdateCheckResult {
+  hasUpdate: boolean;
+  currentVersion?: string;
+  availableVersion?: string;
+}
 
 /**
- * Service layer for agent auto-update functionality
- * ALL window.mainProcess.agentUpdate calls MUST be encapsulated here
+ * Stub implementation that always returns no updates available
  */
 export class AgentAutoUpdateService {
   /**
-   * Check all agents for updates
+   * Always returns no updates available
    */
-  static async checkAllForUpdates(): Promise<UpdateCheckResult[]> {
-    return window.mainProcess.agentUpdate.checkAllForUpdates();
+  static async checkForUpdates(
+    agentType: SupportedAgent,
+  ): Promise<UpdateCheckResult> {
+    return {
+      hasUpdate: false,
+      currentVersion: 'unknown',
+      availableVersion: 'unknown',
+    };
   }
 
   /**
-   * Check a specific agent for updates
+   * No-op auto-update toggle
    */
-  static async checkForUpdate(agentType: SupportedAgent): Promise<UpdateCheckResult | null> {
-    return window.mainProcess.agentUpdate.checkForUpdate(agentType);
+  static async setAutoUpdateEnabled(
+    agentType: SupportedAgent,
+    enabled: boolean,
+  ): Promise<void> {
+    console.log(`Auto-update settings not supported for ${agentType}`);
   }
 
   /**
-   * Get update preferences
+   * Always returns false
    */
-  static async getUpdatePreferences(): Promise<AgentUpdatePreferences> {
-    return window.mainProcess.agentUpdate.getUpdatePreferences();
-  }
-
-  /**
-   * Save update preferences
-   */
-  static async saveUpdatePreferences(preferences: Partial<AgentUpdatePreferences>): Promise<void> {
-    return window.mainProcess.agentUpdate.saveUpdatePreferences(preferences);
-  }
-
-  /**
-   * Get stored update info for an agent
-   */
-  static async getStoredUpdateInfo(agentType: SupportedAgent): Promise<UpdateCheckResult | null> {
-    return window.mainProcess.agentUpdate.getStoredUpdateInfo(agentType);
-  }
-
-  /**
-   * Clear stored update info for an agent
-   */
-  static async clearStoredUpdateInfo(agentType: SupportedAgent): Promise<void> {
-    return window.mainProcess.agentUpdate.clearStoredUpdateInfo(agentType);
-  }
-
-  /**
-   * Listen for update available events
-   */
-  static onUpdateAvailable(callback: (update: UpdateCheckResult) => void): () => void {
-    return window.mainProcess.agentUpdate.onUpdateAvailable(callback);
+  static async isAutoUpdateEnabled(
+    agentType: SupportedAgent,
+  ): Promise<boolean> {
+    return false;
   }
 }

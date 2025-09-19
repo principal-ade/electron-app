@@ -1,1 +1,0 @@
-{"version":3,"file":"A24zService.d.ts","sourceRoot":"","sources":["../../../../../src/renderer/main-process-api/A24zService.ts"],"names":[],"mappings":"AAAA;;GAEG;AAEH,qBAAa,WAAW;IACpB;;OAEG;WACU,WAAW,CAAC,cAAc,EAAE,MAAM;IAI/C;;OAEG;WACU,eAAe,CAAC,QAAQ,EAAE,MAAM,EAAE,cAAc,EAAE,MAAM;IAIrE;;OAEG;WACU,gBAAgB,CAAC,cAAc,EAAE,MAAM;IAIpD;;OAEG;WACU,YAAY,CAAC,cAAc,EAAE,MAAM;CAGnD"}

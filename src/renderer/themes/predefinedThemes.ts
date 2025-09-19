@@ -5,8 +5,10 @@ const baseTheme: Theme = {
   space: [0, 4, 8, 16, 32, 64, 128, 256, 512],
   fonts: {
     body: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-    heading: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-    monospace: '"SF Mono", "Monaco", "Inconsolata", "Roboto Mono", "Source Code Pro", monospace'
+    heading:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    monospace:
+      '"SF Mono", "Monaco", "Inconsolata", "Roboto Mono", "Source Code Pro", monospace',
   },
   fontSizes: [12, 14, 16, 18, 20, 24, 32, 48, 64, 96],
   fontScale: 1,
@@ -16,13 +18,13 @@ const baseTheme: Theme = {
     bold: 700,
     light: 300,
     medium: 500,
-    semibold: 600
+    semibold: 600,
   },
   lineHeights: {
     body: 1.5,
     heading: 1.2,
     tight: 1.25,
-    relaxed: 1.75
+    relaxed: 1.75,
   },
   breakpoints: ['640px', '768px', '1024px', '1280px'],
   sizes: [16, 32, 64, 128, 256, 512, 768, 1024, 1536],
@@ -33,7 +35,7 @@ const baseTheme: Theme = {
     '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
     '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
     '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+    '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
   ],
   zIndices: [0, 1, 10, 20, 30, 40, 50],
   colors: {
@@ -78,99 +80,107 @@ const baseTheme: Theme = {
         surface: '#1A1F2E',
         textSecondary: '#E0E7FF',
         textTertiary: '#A5B4CD',
-        textMuted: '#8B9AAF'
-      }
-    }
+        textMuted: '#8B9AAF',
+      },
+    },
   },
   buttons: {
     primary: {
       color: 'background',
       bg: 'primary',
       '&:hover': {
-        bg: 'secondary'
-      }
+        bg: 'secondary',
+      },
     },
     secondary: {
       color: 'text',
       bg: 'muted',
       '&:hover': {
-        bg: 'backgroundSecondary'
-      }
+        bg: 'backgroundSecondary',
+      },
     },
     ghost: {
       color: 'primary',
       bg: 'transparent',
       '&:hover': {
-        bg: 'muted'
-      }
-    }
+        bg: 'muted',
+      },
+    },
   },
   text: {
     heading: {
       fontFamily: 'heading',
       fontWeight: 'heading',
-      lineHeight: 'heading'
+      lineHeight: 'heading',
     },
     body: {
       fontFamily: 'body',
       fontWeight: 'body',
-      lineHeight: 'body'
+      lineHeight: 'body',
     },
     caption: {
       fontSize: 1,
-      color: 'textSecondary'
-    }
+      color: 'textSecondary',
+    },
   },
   cards: {
     primary: {
       bg: 'background',
       border: '1px solid',
       borderColor: 'border',
-      borderRadius: 2
+      borderRadius: 2,
     },
     secondary: {
       bg: 'backgroundSecondary',
       border: '1px solid',
       borderColor: 'border',
-      borderRadius: 2
-    }
-  }
+      borderRadius: 2,
+    },
+  },
 };
 
 // Icon theme configurations for each theme
 export const iconThemes = {
   default: {
     eyeColor: '#1976D2', // Matching primary blue
-    style: 'gradient' as const
+    style: 'gradient' as const,
   },
   professional: {
     eyeColor: '#003D82', // Deep professional blue
-    style: 'solid' as const
+    style: 'solid' as const,
   },
   ocean: {
     eyeColor: '#0891B2', // Ocean teal
-    style: 'glow' as const
+    style: 'glow' as const,
   },
   sunset: {
     eyeColor: '#EA580C', // Warm orange
-    style: 'gradient' as const
+    style: 'gradient' as const,
   },
   minimal: {
     eyeColor: '#6B7280', // Subtle gray
-    style: 'solid' as const
+    style: 'solid' as const,
   },
   highContrast: {
     eyeColor: '#0000FF', // Pure blue for high contrast
-    style: 'solid' as const
-  }
+    style: 'solid' as const,
+  },
 };
 
-export const predefinedThemes: Record<string, { name: string; description: string; theme: Theme; iconTheme?: typeof iconThemes.default }> = {
+export const predefinedThemes: Record<
+  string,
+  {
+    name: string;
+    description: string;
+    theme: Theme;
+    iconTheme?: typeof iconThemes.default;
+  }
+> = {
   default: {
     name: 'Default',
     description: 'Dark Academia theme with muted gold accents',
     theme: { ...coreTheme },
-    iconTheme: iconThemes.default
+    iconTheme: iconThemes.default,
   },
   professional: {
     name: 'Professional',
@@ -221,11 +231,11 @@ export const predefinedThemes: Record<string, { name: string; description: strin
             surface: '#1E293B',
             textSecondary: '#CBD5E1',
             textTertiary: '#94A3B8',
-            textMuted: '#64748B'
-          }
-        }
-      }
-    }
+            textMuted: '#64748B',
+          },
+        },
+      },
+    },
   },
   ocean: {
     name: 'Ocean',
@@ -276,11 +286,11 @@ export const predefinedThemes: Record<string, { name: string; description: strin
             surface: '#083344',
             textSecondary: '#7DD3C0',
             textTertiary: '#5EEAD4',
-            textMuted: '#22D3EE'
-          }
-        }
-      }
-    }
+            textMuted: '#22D3EE',
+          },
+        },
+      },
+    },
   },
   sunset: {
     name: 'Sunset',
@@ -331,11 +341,11 @@ export const predefinedThemes: Record<string, { name: string; description: strin
             surface: '#451A03',
             textSecondary: '#FDBA74',
             textTertiary: '#FED7AA',
-            textMuted: '#FB923C'
-          }
-        }
-      }
-    }
+            textMuted: '#FB923C',
+          },
+        },
+      },
+    },
   },
   minimal: {
     name: 'Minimal',
@@ -386,11 +396,11 @@ export const predefinedThemes: Record<string, { name: string; description: strin
             surface: '#1F2937',
             textSecondary: '#D1D5DB',
             textTertiary: '#9CA3AF',
-            textMuted: '#6B7280'
-          }
-        }
-      }
-    }
+            textMuted: '#6B7280',
+          },
+        },
+      },
+    },
   },
   highContrast: {
     name: 'High Contrast',
@@ -441,12 +451,12 @@ export const predefinedThemes: Record<string, { name: string; description: strin
             surface: '#1A1A1A',
             textSecondary: '#CCCCCC',
             textTertiary: '#999999',
-            textMuted: '#666666'
-          }
-        }
-      }
-    }
-  }
+            textMuted: '#666666',
+          },
+        },
+      },
+    },
+  },
 };
 
 // Get list of available theme names

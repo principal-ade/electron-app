@@ -1,8 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
-import { Key, Plus, Trash2, Eye, EyeOff, Save, AlertCircle, Shield } from 'lucide-react';
+import {
+  Key,
+  Plus,
+  Trash2,
+  Eye,
+  EyeOff,
+  Save,
+  AlertCircle,
+  Shield,
+} from 'lucide-react';
 import type { Repository } from '../../../../shared/types/repository.types';
-import type { RepositorySecrets, SecretMetadata } from '../../../../shared/main-process-api-interfaces/SecretsAPI';
+import type {
+  RepositorySecrets,
+  SecretMetadata,
+} from '../../../../shared/main-process-api-interfaces/SecretsAPI';
 import { SecretsService } from '../../../main-process-api/SecretsService';
 
 interface SecretsModalProps {
@@ -64,13 +76,13 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
     try {
       const repoId = getRepoId();
       const storedSecrets = await SecretsService.get(repoId);
-      
+
       if (storedSecrets) {
         setSecrets(storedSecrets);
-        
+
         // Get metadata
         const allMetadata = await SecretsService.list();
-        const repoMeta = allMetadata.find(m => m.repoId === repoId);
+        const repoMeta = allMetadata.find((m) => m.repoId === repoId);
         setMetadata(repoMeta || null);
       } else {
         setSecrets({});
@@ -119,7 +131,9 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
     }
 
     if (!/^[A-Z_][A-Z0-9_]*$/i.test(newKey)) {
-      setError('Key must be a valid environment variable name (letters, numbers, underscore)');
+      setError(
+        'Key must be a valid environment variable name (letters, numbers, underscore)',
+      );
       return;
     }
 
@@ -156,48 +170,63 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10000,
-    }}>
-      <div style={{
-        backgroundColor: theme.colors.background,
-        borderRadius: '12px',
-        width: '90%',
-        maxWidth: '700px',
-        maxHeight: '80vh',
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
-        flexDirection: 'column',
-        border: `1px solid ${theme.colors.border}`,
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '20px 24px',
-          borderBottom: `1px solid ${theme.colors.border}`,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10000,
+      }}
+    >
+      <div
+        style={{
+          backgroundColor: theme.colors.background,
+          borderRadius: '12px',
+          width: '90%',
+          maxWidth: '700px',
+          maxHeight: '80vh',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
+          flexDirection: 'column',
+          border: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '20px 24px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Shield size={20} color={theme.colors.primary} />
-            <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: theme.colors.text }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: '18px',
+                fontWeight: 600,
+                color: theme.colors.text,
+              }}
+            >
               Environment Secrets
             </h2>
-            <span style={{
-              fontSize: '12px',
-              color: theme.colors.textSecondary,
-              padding: '2px 8px',
-              backgroundColor: theme.colors.backgroundSecondary,
-              borderRadius: '4px',
-            }}>
+            <span
+              style={{
+                fontSize: '12px',
+                color: theme.colors.textSecondary,
+                padding: '2px 8px',
+                backgroundColor: theme.colors.backgroundSecondary,
+                borderRadius: '4px',
+              }}
+            >
               {repository.name}
             </span>
           </div>
@@ -222,50 +251,69 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
         </div>
 
         {/* Info Banner */}
-        <div style={{
-          margin: '16px 24px 0',
-          padding: '12px',
-          backgroundColor: `${theme.colors.primary}10`,
-          border: `1px solid ${theme.colors.primary}30`,
-          borderRadius: '8px',
-          display: 'flex',
-          gap: '12px',
-          alignItems: 'flex-start',
-        }}>
-          <AlertCircle size={16} color={theme.colors.primary} style={{ flexShrink: 0, marginTop: '2px' }} />
-          <div style={{ fontSize: '13px', color: theme.colors.text, lineHeight: '1.5' }}>
-            <strong>Secure Storage:</strong> Secrets are encrypted using your system's secure storage.
-            They are never logged or exposed in plain text. Environment files are created only when needed
-            and automatically cleaned up.
+        <div
+          style={{
+            margin: '16px 24px 0',
+            padding: '12px',
+            backgroundColor: `${theme.colors.primary}10`,
+            border: `1px solid ${theme.colors.primary}30`,
+            borderRadius: '8px',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'flex-start',
+          }}
+        >
+          <AlertCircle
+            size={16}
+            color={theme.colors.primary}
+            style={{ flexShrink: 0, marginTop: '2px' }}
+          />
+          <div
+            style={{
+              fontSize: '13px',
+              color: theme.colors.text,
+              lineHeight: '1.5',
+            }}
+          >
+            <strong>Secure Storage:</strong> Secrets are encrypted using your
+            system's secure storage. They are never logged or exposed in plain
+            text. Environment files are created only when needed and
+            automatically cleaned up.
           </div>
         </div>
 
         {/* Metadata */}
         {metadata && (
-          <div style={{
-            margin: '12px 24px 0',
-            fontSize: '12px',
-            color: theme.colors.textSecondary,
-          }}>
-            Last updated: {new Date(metadata.updatedAt).toLocaleString()} • 
-            {' '}{metadata.secretCount} secret{metadata.secretCount !== 1 ? 's' : ''}
+          <div
+            style={{
+              margin: '12px 24px 0',
+              fontSize: '12px',
+              color: theme.colors.textSecondary,
+            }}
+          >
+            Last updated: {new Date(metadata.updatedAt).toLocaleString()} •{' '}
+            {metadata.secretCount} secret{metadata.secretCount !== 1 ? 's' : ''}
           </div>
         )}
 
         {/* Content */}
-        <div style={{
-          flex: 1,
-          padding: '16px 24px',
-          overflowY: 'auto',
-        }}>
+        <div
+          style={{
+            flex: 1,
+            padding: '16px 24px',
+            overflowY: 'auto',
+          }}
+        >
           {loading ? (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '40px',
-              color: theme.colors.textSecondary,
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '40px',
+                color: theme.colors.textSecondary,
+              }}
+            >
               Loading secrets...
             </div>
           ) : (
@@ -273,15 +321,23 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
               {/* Existing Secrets */}
               {Object.keys(secrets).length > 0 && (
                 <div style={{ marginBottom: '24px' }}>
-                  <h3 style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: theme.colors.text,
-                    marginBottom: '12px',
-                  }}>
+                  <h3
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: theme.colors.text,
+                      marginBottom: '12px',
+                    }}
+                  >
                     Stored Secrets
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
                     {Object.entries(secrets).map(([key, value]) => (
                       <div
                         key={key}
@@ -296,16 +352,18 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                         }}
                       >
                         <Key size={14} color={theme.colors.textSecondary} />
-                        <span style={{
-                          fontFamily: 'monospace',
-                          fontSize: '13px',
-                          fontWeight: 500,
-                          color: theme.colors.text,
-                          minWidth: '150px',
-                        }}>
+                        <span
+                          style={{
+                            fontFamily: 'monospace',
+                            fontSize: '13px',
+                            fontWeight: 500,
+                            color: theme.colors.text,
+                            minWidth: '150px',
+                          }}
+                        >
                           {key}
                         </span>
-                        
+
                         {editingKey === key ? (
                           <>
                             <input
@@ -354,7 +412,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                               }}
                               style={{
                                 padding: '4px 8px',
-                                backgroundColor: theme.colors.backgroundTertiary,
+                                backgroundColor:
+                                  theme.colors.backgroundTertiary,
                                 color: theme.colors.text,
                                 border: `1px solid ${theme.colors.border}`,
                                 borderRadius: '4px',
@@ -367,15 +426,17 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                           </>
                         ) : (
                           <>
-                            <div style={{
-                              flex: 1,
-                              fontFamily: 'monospace',
-                              fontSize: '13px',
-                              color: theme.colors.textSecondary,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}>
+                            <div
+                              style={{
+                                flex: 1,
+                                fontFamily: 'monospace',
+                                fontSize: '13px',
+                                color: theme.colors.textSecondary,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
                               {showValues[key] ? value : '••••••••'}
                             </div>
                             <button
@@ -389,9 +450,15 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                                 display: 'flex',
                                 alignItems: 'center',
                               }}
-                              title={showValues[key] ? 'Hide value' : 'Show value'}
+                              title={
+                                showValues[key] ? 'Hide value' : 'Show value'
+                              }
                             >
-                              {showValues[key] ? <EyeOff size={14} /> : <Eye size={14} />}
+                              {showValues[key] ? (
+                                <EyeOff size={14} />
+                              ) : (
+                                <Eye size={14} />
+                              )}
                             </button>
                             <button
                               onClick={() => {
@@ -439,24 +506,34 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
 
               {/* Add New Secret */}
               <div>
-                <h3 style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: '12px',
-                }}>
+                <h3
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                    marginBottom: '12px',
+                  }}
+                >
                   Add New Secret
                 </h3>
-                <div style={{
-                  display: 'flex',
-                  gap: '8px',
-                  alignItems: 'flex-start',
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'flex-start',
+                  }}
+                >
                   <input
                     type="text"
                     placeholder="KEY_NAME"
                     value={newKey}
-                    onChange={(e) => setNewKey(e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_'))}
+                    onChange={(e) =>
+                      setNewKey(
+                        e.target.value
+                          .toUpperCase()
+                          .replace(/[^A-Z0-9_]/g, '_'),
+                      )
+                    }
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newKey) {
                         document.getElementById('secret-value-input')?.focus();
@@ -502,8 +579,14 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                     disabled={!newKey || !newValue}
                     style={{
                       padding: '8px 16px',
-                      backgroundColor: newKey && newValue ? theme.colors.primary : theme.colors.backgroundTertiary,
-                      color: newKey && newValue ? theme.colors.background : theme.colors.textSecondary,
+                      backgroundColor:
+                        newKey && newValue
+                          ? theme.colors.primary
+                          : theme.colors.backgroundTertiary,
+                      color:
+                        newKey && newValue
+                          ? theme.colors.background
+                          : theme.colors.textSecondary,
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '13px',
@@ -520,15 +603,17 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                   </button>
                 </div>
                 {error && (
-                  <div style={{
-                    marginTop: '8px',
-                    padding: '8px 12px',
-                    backgroundColor: `${theme.colors.error || '#ef4444'}10`,
-                    border: `1px solid ${theme.colors.error || '#ef4444'}30`,
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    color: theme.colors.error || '#ef4444',
-                  }}>
+                  <div
+                    style={{
+                      marginTop: '8px',
+                      padding: '8px 12px',
+                      backgroundColor: `${theme.colors.error || '#ef4444'}10`,
+                      border: `1px solid ${theme.colors.error || '#ef4444'}30`,
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      color: theme.colors.error || '#ef4444',
+                    }}
+                  >
                     {error}
                   </div>
                 )}
@@ -538,13 +623,15 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '16px 24px',
-          borderTop: `1px solid ${theme.colors.border}`,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}>
+        <div
+          style={{
+            padding: '16px 24px',
+            borderTop: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <div style={{ fontSize: '12px', color: theme.colors.textSecondary }}>
             {hasChanges && '• Unsaved changes'}
           </div>
@@ -569,8 +656,12 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
               disabled={!hasChanges || saving}
               style={{
                 padding: '8px 16px',
-                backgroundColor: hasChanges ? theme.colors.primary : theme.colors.backgroundTertiary,
-                color: hasChanges ? theme.colors.background : theme.colors.textSecondary,
+                backgroundColor: hasChanges
+                  ? theme.colors.primary
+                  : theme.colors.backgroundTertiary,
+                color: hasChanges
+                  ? theme.colors.background
+                  : theme.colors.textSecondary,
                 border: 'none',
                 borderRadius: '6px',
                 fontSize: '13px',

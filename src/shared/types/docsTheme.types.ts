@@ -12,7 +12,7 @@ import type { Theme } from 'themed-markdown';
 export interface DocsThemeConfig {
   name?: string;
   description?: string;
-  
+
   // Allow partial theme overrides
   colors?: Partial<{
     text: string;
@@ -36,16 +36,16 @@ export interface DocsThemeConfig {
     textTertiary: string;
     textMuted: string;
   }>;
-  
+
   fonts?: Partial<{
     body: string;
     heading: string;
     monospace: string;
   }>;
-  
+
   fontSizes?: number[];
   fontScale?: number;
-  
+
   fontWeights?: Partial<{
     body: number;
     heading: number;
@@ -54,7 +54,7 @@ export interface DocsThemeConfig {
     medium: number;
     semibold: number;
   }>;
-  
+
   lineHeights?: Partial<{
     body: number;
     heading: number;

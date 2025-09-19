@@ -1,6 +1,6 @@
 /**
  * Utility functions for terminal operations
- * 
+ *
  * Now uses the unified ShellAPI instead of direct IPC calls.
  */
 
@@ -17,7 +17,7 @@ export async function checkCommandAvailability(command: string): Promise<{
     const result = await ShellService.checkCommand(command);
     return {
       available: result.exists,
-      path: result.path || null
+      path: result.path || null,
     };
   } catch (error) {
     console.error(`Failed to check command ${command}:`, error);
@@ -41,7 +41,9 @@ export async function clearTerminalPathCache(): Promise<boolean> {
 /**
  * Debug helper to check common developer tools
  */
-export async function checkDeveloperTools(): Promise<Record<string, { available: boolean; path: string | null }>> {
+export async function checkDeveloperTools(): Promise<
+  Record<string, { available: boolean; path: string | null }>
+> {
   const tools = [
     'claude',
     'git',
@@ -61,11 +63,12 @@ export async function checkDeveloperTools(): Promise<Record<string, { available:
     'php',
     'perl',
     'swift',
-    'dotnet'
+    'dotnet',
   ];
 
-  const results: Record<string, { available: boolean; path: string | null }> = {};
-  
+  const results: Record<string, { available: boolean; path: string | null }> =
+    {};
+
   for (const tool of tools) {
     results[tool] = await checkCommandAvailability(tool);
   }
@@ -78,22 +81,22 @@ export async function checkDeveloperTools(): Promise<Record<string, { available:
  */
 export async function logAvailableTools(): Promise<void> {
   console.group('🔧 Developer Tools Availability');
-  
+
   const tools = await checkDeveloperTools();
-  
+
   const available = Object.entries(tools)
     .filter(([_, info]) => info.available)
     .map(([name, info]) => ({ name, path: info.path }));
-  
+
   const unavailable = Object.entries(tools)
     .filter(([_, info]) => !info.available)
     .map(([name]) => name);
 
   console.table(available);
-  
+
   if (unavailable.length > 0) {
     console.log('❌ Unavailable:', unavailable.join(', '));
   }
-  
+
   console.groupEnd();
 }

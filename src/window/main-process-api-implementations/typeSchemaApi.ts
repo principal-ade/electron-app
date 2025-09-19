@@ -5,22 +5,24 @@ import {
   TypeSchemaAPIResponse,
   TypeSchemaGenerationOptions,
   TypeSchemaResult,
-  TypeSchemaError
+  TypeSchemaError,
 } from '../../shared/main-process-api-interfaces/TypeSchemaAPI';
 
 export const typeSchemaApi: TypeSchemaAPI = {
   generateSchemas: async (
-    options: TypeSchemaGenerationOptions
-  ): Promise<TypeSchemaAPIResponse<{
-    schemas: TypeSchemaResult[];
-    errors: TypeSchemaError[];
-  }>> => {
+    options: TypeSchemaGenerationOptions,
+  ): Promise<
+    TypeSchemaAPIResponse<{
+      schemas: TypeSchemaResult[];
+      errors: TypeSchemaError[];
+    }>
+  > => {
     return ipcRenderer.invoke(TypeSchemaAPIEvent.GENERATE_SCHEMAS, options);
   },
 
   extractTypes: async (
     filePath: string,
-    tsConfigPath?: string
+    tsConfigPath?: string,
   ): Promise<TypeSchemaAPIResponse<string[]>> => {
     return ipcRenderer.invoke(TypeSchemaAPIEvent.EXTRACT_TYPES, {
       filePath,
@@ -31,7 +33,7 @@ export const typeSchemaApi: TypeSchemaAPI = {
   validateTypeExists: async (
     filePath: string,
     typeName: string,
-    tsConfigPath?: string
+    tsConfigPath?: string,
   ): Promise<TypeSchemaAPIResponse<boolean>> => {
     return ipcRenderer.invoke(TypeSchemaAPIEvent.VALIDATE_TYPE_EXISTS, {
       filePath,
@@ -42,8 +44,10 @@ export const typeSchemaApi: TypeSchemaAPI = {
 
   generateDeclarations: async (
     filePath: string,
-    tsConfigPath?: string
-  ): Promise<TypeSchemaAPIResponse<{ declarations: string; exportedTypes: string[] }>> => {
+    tsConfigPath?: string,
+  ): Promise<
+    TypeSchemaAPIResponse<{ declarations: string; exportedTypes: string[] }>
+  > => {
     return ipcRenderer.invoke(TypeSchemaAPIEvent.GENERATE_DECLARATIONS, {
       filePath,
       tsConfigPath,

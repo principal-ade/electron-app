@@ -1,9 +1,16 @@
 import { ipcRenderer } from 'electron';
-import { type AgentSessionEventsAPI, AgentSessionEventsAPIEvent } from '../../shared/main-process-api-interfaces/AgentSessionEventsAPI';
-import { NormalizedAgentSessionEvent } from "@principal-ai/agent-monitoring";
+import {
+  type AgentSessionEventsAPI,
+  AgentSessionEventsAPIEvent,
+} from '../../shared/main-process-api-interfaces/AgentSessionEventsAPI';
+import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 // Event types for real-time updates
-export type SessionEventType = 'session-created' | 'session-updated' | 'session-stopped' | 'event-processed';
+export type SessionEventType =
+  | 'session-created'
+  | 'session-updated'
+  | 'session-stopped'
+  | 'event-processed';
 
 export interface SessionEventUpdate {
   type: SessionEventType;
@@ -15,54 +22,70 @@ export interface SessionEventUpdate {
 
 // Extend the existing API with watching capabilities
 class AgentSessionEventsAPIExtended implements AgentSessionEventsAPI {
-  private eventListeners: Map<string, Set<(update: SessionEventUpdate) => void>> = new Map();
-  
+  private eventListeners: Map<
+    string,
+    Set<(update: SessionEventUpdate) => void>
+  > = new Map();
+
   constructor() {
     // Listen for real-time session events from main process
-    ipcRenderer.on('session-event-update', (_event, update: SessionEventUpdate) => {
-      this.notifyListeners(update);
-    });
+    ipcRenderer.on(
+      'session-event-update',
+      (_event, update: SessionEventUpdate) => {
+        this.notifyListeners(update);
+      },
+    );
   }
-  
+
   // Existing API methods
-  subscribe = (provider?: string) => 
+  subscribe = (provider?: string) =>
     ipcRenderer.invoke(AgentSessionEventsAPIEvent.SUBSCRIBE, provider);
-  
-  getRecentEvents = (provider?: string) => 
+
+  getRecentEvents = (provider?: string) =>
     ipcRenderer.invoke(AgentSessionEventsAPIEvent.GET_RECENT_EVENTS, provider);
-  
+
   getSessionEvents = (sessionId: string) =>
-    ipcRenderer.invoke(AgentSessionEventsAPIEvent.GET_SESSION_EVENTS, sessionId);
-  
-  clearEvents = (provider?: string) => 
+    ipcRenderer.invoke(
+      AgentSessionEventsAPIEvent.GET_SESSION_EVENTS,
+      sessionId,
+    );
+
+  clearEvents = (provider?: string) =>
     ipcRenderer.invoke(AgentSessionEventsAPIEvent.CLEAR_EVENTS, provider);
-  
-  reprocessAllEvents = () => 
+
+  reprocessAllEvents = () =>
     ipcRenderer.invoke(AgentSessionEventsAPIEvent.REPROCESS_ALL_EVENTS);
-  
+
   reprocessSessionEvents = (sessionId: string) =>
-    ipcRenderer.invoke(AgentSessionEventsAPIEvent.REPROCESS_SESSION_EVENTS, sessionId);
-    
+    ipcRenderer.invoke(
+      AgentSessionEventsAPIEvent.REPROCESS_SESSION_EVENTS,
+      sessionId,
+    );
+
   processFallbackFile = (filePath: string, cli: string) =>
-    ipcRenderer.invoke('agent-session-events:process-fallback-file', filePath, cli);
-  
+    ipcRenderer.invoke(
+      'agent-session-events:process-fallback-file',
+      filePath,
+      cli,
+    );
+
   // New watching methods
-  
+
   /**
    * Watch for real-time session events for a directory
    */
   watchSessionEvents(
     directory: string,
-    callback: (update: SessionEventUpdate) => void
+    callback: (update: SessionEventUpdate) => void,
   ): () => void {
     if (!this.eventListeners.has(directory)) {
       this.eventListeners.set(directory, new Set());
       // Tell main process we want real-time updates for this directory
       ipcRenderer.send('watch-session-events', directory);
     }
-    
+
     this.eventListeners.get(directory)!.add(callback);
-    
+
     // Return unsubscribe function
     return () => {
       const listeners = this.eventListeners.get(directory);
@@ -75,7 +98,7 @@ class AgentSessionEventsAPIExtended implements AgentSessionEventsAPI {
       }
     };
   }
-  
+
   /**
    * Get live session statistics
    */
@@ -91,18 +114,21 @@ class AgentSessionEventsAPIExtended implements AgentSessionEventsAPI {
   }> {
     return ipcRenderer.invoke('get-session-stats', sessionId);
   }
-  
+
   private notifyListeners(update: SessionEventUpdate) {
     // Notify directory-specific listeners
     const listeners = this.eventListeners.get(update.workingDirectory);
     if (listeners) {
-      listeners.forEach(callback => callback(update));
+      listeners.forEach((callback) => callback(update));
     }
-    
+
     // Also notify listeners watching parent directories
     for (const [dir, dirListeners] of this.eventListeners) {
-      if (update.workingDirectory.startsWith(dir) && dir !== update.workingDirectory) {
-        dirListeners.forEach(callback => callback(update));
+      if (
+        update.workingDirectory.startsWith(dir) &&
+        dir !== update.workingDirectory
+      ) {
+        dirListeners.forEach((callback) => callback(update));
       }
     }
   }

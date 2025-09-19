@@ -1,13 +1,16 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { AnimatedResizableLayout } from "@a24z/panels";
-import "@a24z/panels/style.css";
+import { AnimatedResizableLayout } from '@a24z/panels';
+import '@a24z/panels/style.css';
 import { ExcalidrawWrapper } from './shared/ExcalidrawWrapper';
 import {
   DiagramBrowser,
   DiagramBrowserHandle,
 } from '../../components/LocalSessionWorkspace/WorkspaceSidebar/DiagramBrowser';
 import { ExcalidrawStorageService } from '../../main-process-api/ExcalidrawStorageService';
-import { diagramEventBus, DIAGRAM_EVENTS } from '../../services/DiagramEventBus';
+import {
+  diagramEventBus,
+  DIAGRAM_EVENTS,
+} from '../../services/DiagramEventBus';
 import { ExcalidrawDiagramData } from '../../../shared/main-process-api-interfaces/ExcalidrawAPI';
 
 interface DiagramWorkspaceProps {
@@ -22,7 +25,8 @@ export const DiagramWorkspace: React.FC<DiagramWorkspaceProps> = ({
   onDiagramChange,
 }) => {
   const [currentDiagramId, setCurrentDiagramId] = useState<string | null>(null);
-  const [currentDiagramData, setCurrentDiagramData] = useState<ExcalidrawDiagramData | null>(null);
+  const [currentDiagramData, setCurrentDiagramData] =
+    useState<ExcalidrawDiagramData | null>(null);
   const [currentDiagramName, setCurrentDiagramName] =
     useState<string>('Untitled Diagram');
   const browserRef = useRef<DiagramBrowserHandle>(null);

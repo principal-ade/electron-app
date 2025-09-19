@@ -1,40 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
-import { Search } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { AlexandriaRepositoryList } from '../../components/alexandria/AlexandriaRepositoryList';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WindowService } from '../../main-process-api/WindowService';
 import { DocumentSearchView } from '../DocumentSearch/DocumentSearchView';
 
-export const AlexandriaRepositoryManager: React.FC = () => {
+interface AlexandriaRepositoryManagerProps {
+  showSearch?: boolean;
+  onSearchClose?: () => void;
+}
+
+export const AlexandriaRepositoryManager: React.FC<
+  AlexandriaRepositoryManagerProps
+> = ({ showSearch = false, onSearchClose }) => {
   const { theme } = useTheme();
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showSearch, setShowSearch] = useState(false);
-  
+
   // Load repositories on mount and listen for backend events
   useEffect(() => {
     loadRepositories();
-    
+
     // Subscribe to repository changes from backend
     const unsubscribe = window.mainProcess.alexandria.onRepositoryChange(() => {
       // Reload repositories when any change occurs
       loadRepositories();
     });
-    
+
     // Cleanup subscription on unmount
     return () => {
       unsubscribe();
     };
   }, []);
-  
+
   const loadRepositories = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // Call the Alexandria service
       const repos = await AlexandriaService.getRepositories();
       setRepositories(repos);
@@ -45,7 +50,7 @@ export const AlexandriaRepositoryManager: React.FC = () => {
       setIsLoading(false);
     }
   };
-  
+
   const handleSelectRepository = async (repo: AlexandriaEntry) => {
     try {
       // Open repository dashboard - backend will handle the mapping
@@ -54,28 +59,29 @@ export const AlexandriaRepositoryManager: React.FC = () => {
       console.error('Failed to open repository:', err);
     }
   };
-  
-  
+
   const handleRefresh = async () => {
     await loadRepositories();
   };
-  
+
   // Show search view if active
   if (showSearch) {
-    return <DocumentSearchView onClose={() => setShowSearch(false)} />;
+    return <DocumentSearchView onClose={onSearchClose || (() => {})} />;
   }
 
   if (error) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        backgroundColor: theme.colors.background,
-        color: theme.colors.error
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100vh',
+          backgroundColor: theme.colors.background,
+          color: theme.colors.error,
+        }}
+      >
         <h2 style={{ marginBottom: theme.space[3] }}>Error</h2>
         <p>{error}</p>
         <button
@@ -87,7 +93,7 @@ export const AlexandriaRepositoryManager: React.FC = () => {
             color: theme.colors.background,
             border: 'none',
             borderRadius: theme.radii[2],
-            cursor: 'pointer'
+            cursor: 'pointer',
           }}
         >
           Retry
@@ -99,48 +105,26 @@ export const AlexandriaRepositoryManager: React.FC = () => {
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Header with Search Button */}
-      <div style={{
-        padding: '16px 24px',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        backgroundColor: theme.colors.backgroundSecondary,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <h1 style={{
-          fontSize: '24px',
-          fontWeight: 600,
-          color: theme.colors.text,
-          margin: 0
-        }}>
-          Repositories
-        </h1>
-        <button
-          onClick={() => setShowSearch(true)}
+      <div
+        style={{
+          padding: '16px 24px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.backgroundSecondary,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <h1
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.background,
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 500,
-            transition: 'opacity 0.2s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = '0.9';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = '1';
+            fontSize: '24px',
+            fontWeight: 600,
+            color: theme.colors.text,
+            margin: 0,
           }}
         >
-          <Search size={18} />
-          Search Documentation
-        </button>
+          Repositories
+        </h1>
       </div>
 
       {/* Repository List */}

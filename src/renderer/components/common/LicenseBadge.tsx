@@ -1,6 +1,9 @@
 import React from 'react';
 import { Shield, FileText } from 'lucide-react';
-import { getLicenseColor, getLicenseDisplayName } from '../../utils/licenseUtils';
+import {
+  getLicenseColor,
+  getLicenseDisplayName,
+} from '../../utils/licenseUtils';
 
 interface LicenseBadgeProps {
   license: {
@@ -25,7 +28,7 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({
   showFullName = false,
 }) => {
   const isClickable = interactive && onClick;
-  
+
   // Size configurations
   const sizeConfig = {
     small: {
@@ -50,15 +53,15 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({
       gap: '6px',
     },
   };
-  
+
   const config = sizeConfig[size];
   const color = getLicenseColor(license.key);
-  const displayName = showFullName 
-    ? (license.name || license.spdxId || 'License')
+  const displayName = showFullName
+    ? license.name || license.spdxId || 'License'
     : getLicenseDisplayName(license);
-  
+
   const Icon = iconType === 'shield' ? Shield : FileText;
-  
+
   const baseStyle: React.CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
@@ -74,21 +77,24 @@ export const LicenseBadge: React.FC<LicenseBadgeProps> = ({
     cursor: isClickable ? 'pointer' : 'default',
     userSelect: 'none',
   };
-  
+
   const [hover, setHover] = React.useState(false);
-  
-  const dynamicStyle: React.CSSProperties = hover && isClickable ? {
-    backgroundColor: `${color}25`,
-    borderColor: `${color}60`,
-  } : {};
-  
+
+  const dynamicStyle: React.CSSProperties =
+    hover && isClickable
+      ? {
+          backgroundColor: `${color}25`,
+          borderColor: `${color}60`,
+        }
+      : {};
+
   const handleClick = (e: React.MouseEvent) => {
     if (isClickable) {
       e.stopPropagation();
       onClick();
     }
   };
-  
+
   return (
     <div
       style={{ ...baseStyle, ...dynamicStyle }}

@@ -29,26 +29,28 @@ export interface TypeSchemaAPIResponse<T> {
 }
 
 export interface TypeSchemaAPI {
-  generateSchemas: (
-    options: TypeSchemaGenerationOptions
-  ) => Promise<TypeSchemaAPIResponse<{
-    schemas: TypeSchemaResult[];
-    errors: TypeSchemaError[];
-  }>>;
-  
+  generateSchemas: (options: TypeSchemaGenerationOptions) => Promise<
+    TypeSchemaAPIResponse<{
+      schemas: TypeSchemaResult[];
+      errors: TypeSchemaError[];
+    }>
+  >;
+
   extractTypes: (
     filePath: string,
-    tsConfigPath?: string
+    tsConfigPath?: string,
   ) => Promise<TypeSchemaAPIResponse<string[]>>;
-  
+
   validateTypeExists: (
     filePath: string,
     typeName: string,
-    tsConfigPath?: string
+    tsConfigPath?: string,
   ) => Promise<TypeSchemaAPIResponse<boolean>>;
-  
+
   generateDeclarations: (
     filePath: string,
-    tsConfigPath?: string
-  ) => Promise<TypeSchemaAPIResponse<{ declarations: string; exportedTypes: string[] }>>;
+    tsConfigPath?: string,
+  ) => Promise<
+    TypeSchemaAPIResponse<{ declarations: string; exportedTypes: string[] }>
+  >;
 }

@@ -9,7 +9,6 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import chokidar, { FSWatcher } from 'chokidar';
 import {
   SearchEngine,
   DocumentIndexer,
@@ -23,11 +22,10 @@ import {
   type MarkdownFileProvider,
   type MarkdownFile,
   type FindOptions,
-  type FileChange
+  type FileChange,
 } from '@a24z/markdown-search';
 
-import { InterimDocumentScanner } from './InterimDocumentScanner';
-import type { IndexableDocument } from '../../shared/types/document-discovery.types';
+import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import {
   DocumentSearchChannel,
   type InitializeSearchRequest,
@@ -41,29 +39,19 @@ import {
   type IndexUpdateEvent,
   type DocumentChangedEvent,
   type IndexErrorEvent,
-  type RepositoryIndexStatus
+  type RepositoryIndexStatus,
 } from '../../shared/ipc/DocumentSearchIPC';
 
-interface RepositoryInfo {
-  id: string;
-  path: string;
-  name: string;
-  watcher?: FSWatcher;
-  documentCount: number;
-  lastIndexed: Date;
-  status: 'healthy' | 'stale' | 'error';
-  error?: string;
-}
+// Removed RepositoryInfo interface - no longer tracking individual repositories
 
 export class DocumentIndexingService {
   private searchEngine: SearchEngine | null = null;
   private documentIndexer: DocumentIndexer | null = null;
-  private scanner: InterimDocumentScanner;
-  private repositories: Map<string, RepositoryInfo> = new Map();
+  private alexandriaRegistry: AlexandriaRegistryService;
+  private alexandriaRepositories: Array<{ path: string; name: string }> = [];
   private isInitialized = false;
   private isIndexing = false;
-  private currentIndexingRepo: string | null = null;
-  private indexingProgress: IndexingProgress | null = null;
+  private lastIndexTime: Date | undefined = undefined;
 
   // Configuration
   private config = {
@@ -71,11 +59,11 @@ export class DocumentIndexingService {
     enableWatching: true,
     persistIndex: true,
     maxDocumentsInMemory: 10000,
-    autoIndex: true
+    autoIndex: true,
   };
 
   constructor() {
-    this.scanner = new InterimDocumentScanner();
+    this.alexandriaRegistry = AlexandriaRegistryService.getInstance();
   }
 
   /**
@@ -94,9 +82,11 @@ export class DocumentIndexingService {
     // Set default storage path if not specified
     if (!this.config.storagePath) {
       const { app } = require('electron');
-      this.config.storagePath = path.join(app.getPath('userData'), 'document-index');
+      this.config.storagePath = path.join(
+        app.getPath('userData'),
+        'document-index',
+      );
     }
-
 
     // Create storage directory if it doesn't exist
     await fs.mkdir(this.config.storagePath, { recursive: true });
@@ -105,36 +95,89 @@ export class DocumentIndexingService {
     const searchAdapter = new FlexSearchAdapter({
       preset: 'performance',
       tokenize: 'forward',
-      cache: true
+      cache: true,
     });
 
     // Initialize storage adapter with the correct parameter (just a string path)
     const storageAdapter = new NodeStorageAdapter(
-      path.join(this.config.storagePath, 'search-index')
+      path.join(this.config.storagePath, 'search-index'),
     );
 
-    // Create a markdown provider implementation
-    const markdownProvider: MarkdownFileProvider = {
-      findMarkdownFiles: async (_options?: FindOptions) => {
-        // Use the InterimDocumentScanner to find files
-        const scanner = new InterimDocumentScanner();
-        const basePath = process.cwd();
-        const docs = await scanner.scanRepository(basePath, {
-          formats: ['markdown', 'mdx']
-        });
+    // Create a markdown provider that knows about all repositories
+    const multiRepoProvider = this.createMultiRepositoryProvider();
+    const engineConfig: SearchEngineConfig = {
+      storage: storageAdapter,
+      markdownProvider: multiRepoProvider,
+      searchEngine: searchAdapter,
+    };
 
-        // Convert to MarkdownFile format expected by the library
-        return docs.map(doc => ({
-          path: doc.path,
-          name: path.basename(doc.path),
-          size: 0, // Will be filled by the library
-          modifiedAt: doc.metadata?.lastModified || new Date(),
-          uri: `file://${doc.path}`
-        }));
+    this.searchEngine = new SearchEngine(engineConfig);
+    await this.searchEngine.initialize();
+    this.documentIndexer = new DocumentIndexer();
+
+    this.isInitialized = true;
+  }
+
+  /**
+   * Create a markdown provider that scans ALL configured repositories
+   */
+  private createMultiRepositoryProvider(): MarkdownFileProvider {
+    return {
+      findMarkdownFiles: async (_options?: FindOptions) => {
+        console.log(
+          `[DocumentIndexingService] findMarkdownFiles called - scanning ${this.alexandriaRepositories.length} repositories`,
+        );
+        const allFiles: MarkdownFile[] = [];
+
+        for (const repo of this.alexandriaRepositories) {
+          try {
+            console.log(
+              `[DocumentIndexingService] Scanning repository: ${repo.name} at ${repo.path}`,
+            );
+
+            // Use AlexandriaRegistryService to get documents
+            const { documents } =
+              await this.alexandriaRegistry.getRepositoryDocumentsWithExclusions(
+                repo.name,
+              );
+
+            console.log(
+              `[DocumentIndexingService] Found ${documents.length} files in ${repo.name}`,
+            );
+
+            // Convert to MarkdownFile format
+            // TODO: Once @a24z/markdown-search supports metadata in indexing,
+            // we should pass repository metadata here (repository name, path, etc.)
+            // See docs/MARKDOWN_SEARCH_FEATURE_REQUEST.md for proposed API
+            for (const docPath of documents) {
+              const fullPath = path.join(repo.path, docPath);
+              allFiles.push({
+                path: fullPath,
+                name: path.basename(fullPath),
+                size: 0, // Will be filled by the library
+                modifiedAt: new Date(), // Will be updated by the library
+                uri: `file://${fullPath}`,
+                // Future: metadata: { repository: repo.name, repositoryPath: repo.path }
+              });
+            }
+          } catch (error) {
+            console.error(
+              `[DocumentIndexingService] Failed to scan ${repo.name}:`,
+              error,
+            );
+          }
+        }
+
+        console.log(
+          `[DocumentIndexingService] Total files found across all repositories: ${allFiles.length}`,
+        );
+        return allFiles;
       },
+
       readMarkdownFile: async (filePath: string): Promise<string> => {
         return await fs.readFile(filePath, 'utf-8');
       },
+
       getFileInfo: async (filePath: string): Promise<MarkdownFile> => {
         const stats = await fs.stat(filePath);
         return {
@@ -142,269 +185,180 @@ export class DocumentIndexingService {
           name: path.basename(filePath),
           size: stats.size,
           modifiedAt: stats.mtime,
-          uri: `file://${filePath}`
+          uri: `file://${filePath}`,
         };
       },
+
       watchFiles: (callback: (changes: FileChange[]) => void) => {
         // Return a disposable that does nothing for now
         return { dispose: () => {} };
-      }
+      },
     };
-
-    // Initialize search engine with correct config
-    const engineConfig: SearchEngineConfig = {
-      storage: storageAdapter,
-      markdownProvider: markdownProvider,
-      searchEngine: searchAdapter
-    };
-
-    this.searchEngine = new SearchEngine(engineConfig);
-
-    // Initialize the search engine
-    await this.searchEngine.initialize();
-
-    // DocumentIndexer doesn't need any parameters
-    this.documentIndexer = new DocumentIndexer();
-
-    // Check if index exists and has data
-    if (this.config.persistIndex) {
-      try {
-        const hasIndex = await this.searchEngine.hasIndex();
-        if (!hasIndex && this.config.autoIndex) {
-          const currentPath = process.cwd();
-
-          // Only auto-index if we're in a valid project directory
-          if (currentPath && !currentPath.includes('node_modules')) {
-            setTimeout(async () => {
-              try {
-                await this.indexRepository({
-                  path: currentPath,
-                  name: path.basename(currentPath),
-                  force: false
-                });
-              } catch (error) {
-                console.error('Auto-index failed:', error);
-              }
-            }, 2000); // Small delay to let everything initialize
-          }
-        }
-      } catch (error) {
-        console.error('Error checking for persisted index:', error);
-      }
-    }
-
-    // IPC handlers are registered externally via documentSearchHandlers.ts
-    // to avoid duplicate registration issues
-
-    this.isInitialized = true;
   }
 
   /**
-   * Refresh index for one or all repositories
+   * Index all Alexandria repositories
+   * This is the ONLY indexing method we need since we always index all repositories together
    */
-  public async refreshIndex(repositoryId?: string): Promise<void> {
-    if (repositoryId) {
-      const repo = this.repositories.get(repositoryId);
-      if (repo) {
-        await this.indexRepository({
-          path: repo.path,
-          id: repo.id,
-          name: repo.name,
-          force: true
-        });
-      }
-    } else {
-      // Refresh all repositories
-      for (const repo of this.repositories.values()) {
-        await this.indexRepository({
-          path: repo.path,
-          id: repo.id,
-          name: repo.name,
-          force: true
-        });
-      }
-    }
-  }
-
-  /**
-   * Index a repository
-   */
-  public async indexRepository(request: IndexRepositoryRequest): Promise<IndexRepositoryResponse> {
-    if (!this.searchEngine || !this.documentIndexer) {
+  public async indexAlexandriaRepositories(
+    repositories: Array<{ path: string; name?: string }>,
+  ): Promise<{
+    totalIndexed: number;
+    totalFailed: number;
+    results: Array<{
+      name: string;
+      success: boolean;
+      documentsIndexed?: number;
+      error?: string;
+    }>;
+  }> {
+    if (!this.isInitialized || !this.searchEngine) {
       throw new Error('Service not initialized');
     }
 
+    // Set the repositories to index
+    const reposWithNames = repositories.map((r) => ({
+      path: r.path,
+      name: r.name || path.basename(r.path),
+    }));
+    this.alexandriaRepositories = reposWithNames;
+
+    console.log(
+      `[DocumentIndexingService] Starting indexing of ${this.alexandriaRepositories.length} Alexandria repositories`,
+    );
+
     const startTime = Date.now();
-    const repoId = request.id || request.path;
-    const repoName = request.name || path.basename(request.path);
-
-    // Check if already indexing
-    if (this.isIndexing) {
-      return {
-        success: false,
-        documentsIndexed: 0,
-        documentsFailed: 0,
-        duration: 0,
-        error: 'Another indexing operation is in progress'
-      };
-    }
-
-    this.isIndexing = true;
-    this.currentIndexingRepo = repoId;
-
-    // Send indexing started event
-    this.sendIndexUpdate({
-      type: 'started',
-      repository: { id: repoId, path: request.path, name: repoName }
-    });
-
     try {
-      // Remove old index if force refresh
-      if (request.force && this.repositories.has(repoId)) {
-        await this.removeRepositoryDocuments(repoId);
-      }
-
-      // Use the search engine's built-in file indexing
+      // Use the library's indexFiles method properly
+      // It will call our MarkdownFileProvider to get ALL files from ALL repositories
+      // and handle the batching internally
       const indexResult = await this.searchEngine.indexFiles({
-        patterns: ['**/*.md', '**/*.mdx'],
         onProgress: (progress) => {
+          console.log(
+            `[DocumentIndexingService] Progress: ${progress.filesProcessed}/${progress.totalFiles} files, phase: ${progress.phase}`,
+          );
           this.sendIndexUpdate({
             type: 'progress',
-            repository: { id: repoId, path: request.path, name: repoName },
+            repository: {
+              id: 'all',
+              path: 'multiple',
+              name: 'All Repositories',
+            },
             progress: {
               current: progress.filesProcessed || 0,
               total: progress.totalFiles || 0,
-              percentage: progress.filesProcessed && progress.totalFiles ?
-                Math.round((progress.filesProcessed / progress.totalFiles) * 100) : 0,
-              currentFile: progress.currentFile
-            }
+              percentage: progress.percentage || 0,
+              currentFile: progress.currentFile,
+            },
           });
-        }
+        },
       });
-
-      const indexed = indexResult.filesIndexed;
-      const failed = indexResult.errors?.length || 0;
-      const failures = indexResult.errors?.map(e => ({
-        path: e.file,
-        error: e.error
-      })) || [];
-
-      // Set up file watcher
-      if (this.config.enableWatching) {
-        await this.setupWatcher(repoId, request.path);
-      }
-
-      // Update repository info
-      this.repositories.set(repoId, {
-        id: repoId,
-        path: request.path,
-        name: repoName,
-        documentCount: indexed,
-        lastIndexed: new Date(),
-        status: 'healthy'
-      });
-
-      // Persist index
-      if (this.config.persistIndex) {
-        await this.searchEngine.saveIndex();
-      }
 
       const duration = Date.now() - startTime;
+      const documentsIndexed = indexResult.documentsIndexed || 0;
+      const documentsFailed = indexResult.errors?.length || 0;
+
+      console.log(
+        `[DocumentIndexingService] Indexing complete: ${documentsIndexed} documents indexed, ${documentsFailed} failed`,
+      );
+
+      // Save the index
+      if (this.config.persistIndex) {
+        await this.searchEngine.saveIndex();
+        console.log('[DocumentIndexingService] Index saved to disk');
+      }
+
+      // Update last index time
+      this.lastIndexTime = new Date();
 
       // Send completion event
       this.sendIndexUpdate({
         type: 'completed',
-        repository: { id: repoId, path: request.path, name: repoName },
+        repository: { id: 'all', path: 'multiple', name: 'All Repositories' },
         stats: {
-          documentsIndexed: indexed,
-          documentsFailed: failed,
-          duration
-        }
+          documentsIndexed: documentsIndexed,
+          documentsFailed: documentsFailed,
+          duration,
+        },
       });
 
       return {
-        success: true,
-        documentsIndexed: indexed,
-        documentsFailed: failed,
-        duration,
-        failures: failures.length > 0 ? failures : undefined
+        totalIndexed: documentsIndexed,
+        totalFailed: documentsFailed,
+        results: [
+          {
+            name: 'All Alexandria Repositories',
+            success: true,
+            documentsIndexed: documentsIndexed,
+          },
+        ],
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[DocumentIndexingService] Indexing failed:', error);
 
-      // Send error event
       this.sendIndexUpdate({
         type: 'failed',
-        repository: { id: repoId, path: request.path, name: repoName },
-        error: errorMessage
+        repository: { id: 'all', path: 'multiple', name: 'All Repositories' },
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
 
       return {
-        success: false,
-        documentsIndexed: 0,
-        documentsFailed: 0,
-        duration: Date.now() - startTime,
-        error: errorMessage
+        totalIndexed: 0,
+        totalFailed: 1,
+        results: [
+          {
+            name: 'All Alexandria Repositories',
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        ],
       };
-    } finally {
-      this.isIndexing = false;
-      this.currentIndexingRepo = null;
     }
   }
 
   /**
-   * Convert IndexableDocument to SearchableDocument
+   * Backward compatibility wrapper - redirects to indexAlexandriaRepositories
    */
-  private async convertToSearchableDocument(
-    doc: IndexableDocument,
-    repoId: string
-  ): Promise<SearchableDocument> {
-    // Read file content
-    const content = await fs.readFile(doc.path, 'utf-8');
-
-    return {
-      id: `${repoId}:${doc.relativePath}`,
-      type: 'document',
-      fileUri: `file://${doc.path}`,
-      fileName: path.basename(doc.path),
-      filePath: doc.path,
-      content,
-      title: doc.metadata?.title,
-      metadata: {
-        wordCount: doc.metadata?.wordCount,
-        hasCode: content.includes('```'),
-        codeLanguages: this.extractCodeLanguages(content),
-        hasMermaid: content.includes('```mermaid'),
-        hasTables: content.includes('|'),
-        hasImages: content.includes('!['),
-        hasLinks: content.includes('['),
-        linkCount: (content.match(/\[.*?\]\(.*?\)/g) || []).length,
-        ...doc.metadata?.custom
-      },
-      tags: doc.metadata?.tags,
-      indexedAt: new Date().toISOString()
-    };
+  public async indexMultipleRepositories(
+    repositories: Array<{ path: string; name?: string }>,
+  ): Promise<{
+    totalIndexed: number;
+    totalFailed: number;
+    results: Array<{
+      name: string;
+      success: boolean;
+      documentsIndexed?: number;
+      error?: string;
+    }>;
+  }> {
+    console.log(
+      `[DocumentIndexingService] indexMultipleRepositories called - redirecting to indexAlexandriaRepositories`,
+    );
+    return await this.indexAlexandriaRepositories(repositories);
   }
 
   /**
-   * Get glob patterns for specific formats
+   * Refresh the index by re-indexing all Alexandria repositories
    */
-  private getPatternsForFormats(formats: string[]): string[] {
-    const patterns: string[] = [];
-    for (const format of formats) {
-      switch (format) {
-        case 'markdown':
-          patterns.push('**/*.md');
-          break;
-        case 'mdx':
-          patterns.push('**/*.mdx');
-          break;
-        default:
-          patterns.push(`**/*.${format}`);
-      }
+  public async refreshIndex(): Promise<void> {
+    if (this.alexandriaRepositories.length === 0) {
+      console.warn('[DocumentIndexingService] No repositories to refresh');
+      return;
     }
-    return patterns.length > 0 ? patterns : ['**/*.md', '**/*.mdx'];
+
+    console.log(
+      '[DocumentIndexingService] Refreshing index for all Alexandria repositories',
+    );
+    await this.indexAlexandriaRepositories(this.alexandriaRepositories);
   }
+
+  // Removed setRepositories - repositories are now passed directly to indexAlexandriaRepositories
+
+  // Removed indexRepository - we only index all Alexandria repositories together
+
+  // Removed convertToSearchableDocument - no longer needed
+
+  // Removed getPatternsForFormats - no longer needed
 
   /**
    * Extract code languages from markdown content
@@ -426,7 +380,9 @@ export class DocumentIndexingService {
   /**
    * Search for documents
    */
-  public async searchDocuments(request: SearchDocumentsRequest): Promise<SearchDocumentsResponse> {
+  public async searchDocuments(
+    request: SearchDocumentsRequest,
+  ): Promise<SearchDocumentsResponse> {
     if (!this.searchEngine) {
       throw new Error('Service not initialized');
     }
@@ -437,36 +393,55 @@ export class DocumentIndexingService {
       // Perform search
       const searchOptions: SearchOptions = {
         ...request.options,
-        limit: request.options?.limit || 100
+        limit: request.options?.limit || 100,
       };
 
-      const results = await this.searchEngine.search(request.query, searchOptions);
+      const results = await this.searchEngine.search(
+        request.query,
+        searchOptions,
+      );
+
+      console.log(
+        `[DocumentIndexingService] Search for "${request.query}" returned ${results.length} results`,
+      );
+      if (results.length > 0) {
+        console.log(
+          `[DocumentIndexingService] First few results:`,
+          results.slice(0, 3).map((r) => ({
+            path: r.filePath,
+            score: r.score,
+            title: r.title,
+          })),
+        );
+      }
 
       // Apply additional filters
       let filtered = results;
 
       // Apply repository filter if specified
       if (request.repositories && request.repositories.length > 0) {
-        filtered = filtered.filter(result => {
+        filtered = filtered.filter((result) => {
           const [repoId] = result.id.split(':');
           return request.repositories!.includes(repoId);
         });
       }
 
       if (request.filters?.minScore) {
-        filtered = filtered.filter(r => r.score >= request.filters!.minScore!);
+        filtered = filtered.filter(
+          (r) => r.score >= request.filters!.minScore!,
+        );
       }
 
       if (request.filters?.tags) {
-        filtered = filtered.filter(r =>
-          r.tags?.some(tag => request.filters!.tags!.includes(tag))
+        filtered = filtered.filter((r) =>
+          r.tags?.some((tag) => request.filters!.tags!.includes(tag)),
         );
       }
 
       return {
         results: filtered,
         total: filtered.length,
-        duration: Date.now() - startTime
+        duration: Date.now() - startTime,
       };
     } catch (error) {
       console.error('[DocumentIndexingService] Search error:', error);
@@ -477,7 +452,9 @@ export class DocumentIndexingService {
   /**
    * Get a specific document
    */
-  public async getDocument(request: GetDocumentRequest): Promise<GetDocumentResponse> {
+  public async getDocument(
+    request: GetDocumentRequest,
+  ): Promise<GetDocumentResponse> {
     if (!this.searchEngine) {
       throw new Error('Service not initialized');
     }
@@ -486,30 +463,23 @@ export class DocumentIndexingService {
     // We'll need to search for the specific document by ID
     try {
       const results = await this.searchEngine.search(`id:${request.id}`, {
-        limit: 1
+        limit: 1,
       });
 
       if (results.length > 0) {
         return {
-          document: {
-            id: results[0].id,
-            content: results[0].content,
-            title: results[0].title,
-            path: results[0].path,
-            metadata: results[0].metadata,
-            type: results[0].type
-          }
+          document: results[0], // Return the full SearchResult directly
         };
       }
 
       return {
         document: null,
-        error: `Document not found: ${request.id}`
+        error: `Document not found: ${request.id}`,
       };
     } catch (error) {
       return {
         document: null,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -517,151 +487,68 @@ export class DocumentIndexingService {
   /**
    * Get index status
    */
-  public getStatus(): GetIndexStatusResponse {
+  public async getStatus(): Promise<GetIndexStatusResponse> {
+    let totalDocuments = 0;
 
-    const repositories: RepositoryIndexStatus[] = Array.from(this.repositories.values()).map(repo => ({
-      id: repo.id,
-      path: repo.path,
-      name: repo.name,
-      documentCount: repo.documentCount,
-      lastIndexed: repo.lastIndexed,
-      watching: !!repo.watcher,
-      status: repo.status,
-      error: repo.error
-    }));
+    // Get document count from search engine if available
+    if (this.searchEngine) {
+      try {
+        const stats = await this.searchEngine.getStats();
+        totalDocuments = stats?.totalDocuments || 0;
+      } catch (error) {
+        console.error('[DocumentIndexingService] Failed to get stats:', error);
+      }
+    }
 
-    const totalDocuments = repositories.reduce((sum, r) => sum + r.documentCount, 0);
+    // If we don't have repositories cached, load them from Alexandria
+    if (this.alexandriaRepositories.length === 0) {
+      try {
+        const entries = await this.alexandriaRegistry.getAllEntries();
+        this.alexandriaRepositories = entries
+          .map((entry) => ({
+            path: entry.localClones?.[0]?.path || entry.location || '',
+            name: entry.name,
+          }))
+          .filter((repo) => repo.path); // Filter out entries without valid paths
+      } catch (error) {
+        console.error(
+          '[DocumentIndexingService] Failed to load Alexandria repositories:',
+          error,
+        );
+      }
+    }
+
+    // Create simple repository status entries from alexandriaRepositories
+    const repositoryStatuses: RepositoryIndexStatus[] =
+      this.alexandriaRepositories.map((repo) => ({
+        id: repo.path,
+        name: repo.name,
+        path: repo.path,
+        indexed: true,
+        documentCount: 0, // We don't track per-repo counts anymore
+        lastIndexed: this.lastIndexTime?.toISOString(),
+      }));
 
     return {
       initialized: this.isInitialized,
       isIndexing: this.isIndexing,
-      repositories,
+      repositories: repositoryStatuses,
       totalDocuments,
-      indexSize: 0, // TODO: Calculate actual index size
-      lastUpdate: repositories.length > 0
-        ? repositories.reduce((latest, r) =>
-            r.lastIndexed > latest ? r.lastIndexed : latest,
-            repositories[0].lastIndexed
-          )
-        : undefined,
-      progress: this.isIndexing && this.indexingProgress
-        ? {
-            current: this.indexingProgress.processed,
-            total: this.indexingProgress.total,
-            currentFile: this.indexingProgress.currentFile
-          }
-        : undefined
+      indexSize: 0, // TODO: Calculate actual index size if needed
+      lastUpdate: this.lastIndexTime,
+      progress: undefined, // Progress is sent via events
     };
   }
 
-  /**
-   * Setup file watcher for a repository
-   */
-  private async setupWatcher(repoId: string, repoPath: string): Promise<void> {
-    // Remove existing watcher if any
-    const repo = this.repositories.get(repoId);
-    if (repo?.watcher) {
-      await repo.watcher.close();
-    }
+  // Removed setupWatcher - file watching not needed for batch indexing
 
-    const patterns = this.scanner.getWatchPatterns(repoPath);
-    const watcher = chokidar.watch(patterns, {
-      cwd: repoPath,
-      ignored: ['**/node_modules/**', '**/.git/**'],
-      persistent: true,
-      ignoreInitial: true
-    });
+  // Removed handleFileChange - file watching not needed
 
-    watcher.on('change', async (filePath) => {
-      await this.handleFileChange(repoId, path.join(repoPath, filePath), 'modified');
-    });
+  // Removed removeRepository - we always index all repositories together
 
-    watcher.on('add', async (filePath) => {
-      await this.handleFileChange(repoId, path.join(repoPath, filePath), 'added');
-    });
+  // Removed removeRepositoryDocuments - not needed
 
-    watcher.on('unlink', async (filePath) => {
-      await this.handleFileChange(repoId, path.join(repoPath, filePath), 'deleted');
-    });
-
-    // Update repository info
-    const repoInfo = this.repositories.get(repoId);
-    if (repoInfo) {
-      repoInfo.watcher = watcher;
-      this.repositories.set(repoId, repoInfo);
-    }
-  }
-
-  /**
-   * Handle file change event
-   */
-  private async handleFileChange(
-    repoId: string,
-    filePath: string,
-    type: 'added' | 'modified' | 'deleted'
-  ): Promise<void> {
-
-    // Send document changed event
-    const event: DocumentChangedEvent = {
-      type,
-      document: {
-        id: `${repoId}:${path.relative(this.repositories.get(repoId)!.path, filePath)}`,
-        path: filePath,
-        repository: repoId
-      },
-      timestamp: new Date()
-    };
-
-    this.sendDocumentChanged(event);
-
-    // Re-index the document
-    if (type === 'deleted') {
-      await this.removeDocument(event.document.id);
-    } else {
-      // Re-index the single document
-      // TODO: Implement single document indexing
-    }
-  }
-
-  /**
-   * Remove a repository and its documents
-   */
-  public async removeRepository(id: string): Promise<void> {
-    const repo = this.repositories.get(id);
-    if (!repo) return;
-
-    // Close watcher
-    if (repo.watcher) {
-      await repo.watcher.close();
-    }
-
-    // Remove documents from index
-    await this.removeRepositoryDocuments(id);
-
-    // Remove from map
-    this.repositories.delete(id);
-
-    // Persist changes
-    if (this.config.persistIndex && this.searchEngine) {
-      await this.searchEngine.saveIndex();
-    }
-  }
-
-  /**
-   * Remove all documents from a repository
-   */
-  private async removeRepositoryDocuments(repoId: string): Promise<void> {
-    // TODO: Implement batch document removal
-  }
-
-  /**
-   * Remove a single document
-   */
-  private async removeDocument(docId: string): Promise<void> {
-    if (!this.searchEngine) return;
-
-    // TODO: Implement document removal in search engine
-  }
+  // Removed removeDocument - not needed
 
   /**
    * Clear entire index
@@ -669,16 +556,11 @@ export class DocumentIndexingService {
   public async clearIndex(): Promise<void> {
     if (!this.searchEngine) return;
 
-    // Clear all repositories
-    for (const repo of this.repositories.values()) {
-      if (repo.watcher) {
-        await repo.watcher.close();
-      }
-    }
-    this.repositories.clear();
-
     // Clear search engine
     await this.searchEngine.clearIndex();
+
+    // Clear Alexandria repositories list
+    this.alexandriaRepositories = [];
 
     // Persist empty index
     if (this.config.persistIndex) {
@@ -692,7 +574,7 @@ export class DocumentIndexingService {
   private sendIndexUpdate(event: IndexUpdateEvent): void {
     // Send to all renderer windows
     const { BrowserWindow } = require('electron');
-    BrowserWindow.getAllWindows().forEach(window => {
+    BrowserWindow.getAllWindows().forEach((window: any) => {
       window.webContents.send(DocumentSearchChannel.INDEX_UPDATE, event);
     });
   }
@@ -702,7 +584,7 @@ export class DocumentIndexingService {
    */
   private sendDocumentChanged(event: DocumentChangedEvent): void {
     const { BrowserWindow } = require('electron');
-    BrowserWindow.getAllWindows().forEach(window => {
+    BrowserWindow.getAllWindows().forEach((window: any) => {
       window.webContents.send(DocumentSearchChannel.DOCUMENT_CHANGED, event);
     });
   }
@@ -712,7 +594,7 @@ export class DocumentIndexingService {
    */
   private sendIndexError(event: IndexErrorEvent): void {
     const { BrowserWindow } = require('electron');
-    BrowserWindow.getAllWindows().forEach(window => {
+    BrowserWindow.getAllWindows().forEach((window: any) => {
       window.webContents.send(DocumentSearchChannel.INDEX_ERROR, event);
     });
   }
@@ -721,13 +603,7 @@ export class DocumentIndexingService {
    * Cleanup on shutdown
    */
   async shutdown(): Promise<void> {
-
-    // Close all watchers
-    for (const repo of this.repositories.values()) {
-      if (repo.watcher) {
-        await repo.watcher.close();
-      }
-    }
+    // No watchers to close anymore
 
     // Save index
     if (this.config.persistIndex && this.searchEngine) {

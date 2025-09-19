@@ -1,13 +1,13 @@
 /**
  * IPC wrapper for test coverage collection service
  * This runs in the renderer process and communicates with the main process
- * 
+ *
  * DEPRECATED: This file is now a compatibility layer.
  * New code should use TestCoverageService from '../main-process-api/TestCoverageService'
  */
 
 import { TestCoverageService } from '../main-process-api/TestCoverageService';
-import type { 
+import type {
   TestCoverageResult,
   PackageCoverage,
   FileCoverage,
@@ -16,7 +16,8 @@ import type {
 
 export type { TestCoverageResult, PackageCoverage, FileCoverage };
 
-export interface CoverageCollectionOptionsCompat extends CoverageCollectionOptions {
+export interface CoverageCollectionOptionsCompat
+  extends CoverageCollectionOptions {
   useCache?: boolean;
 }
 
@@ -28,11 +29,11 @@ class TestCoverageServiceIPC {
   async collectCoverage(
     rootPath: string,
     packages: Array<{ name: string; path: string }>,
-    options: CoverageCollectionOptionsCompat = {}
+    options: CoverageCollectionOptionsCompat = {},
   ): Promise<TestCoverageResult> {
     return TestCoverageService.collectCoverage(rootPath, packages, options);
   }
-  
+
   /**
    * Cancel coverage collection for a specific package
    * @deprecated Use TestCoverageService.cancelCoverage instead
@@ -40,7 +41,7 @@ class TestCoverageServiceIPC {
   async cancelCoverage(packageName: string): Promise<void> {
     return TestCoverageService.cancelCoverage(packageName);
   }
-  
+
   /**
    * Cancel all running coverage collections
    * @deprecated Use TestCoverageService.cancelAllCoverage instead
@@ -48,7 +49,7 @@ class TestCoverageServiceIPC {
   async cancelAllCoverage(): Promise<void> {
     return TestCoverageService.cancelAllCoverage();
   }
-  
+
   /**
    * Clear the cache
    * @deprecated Use TestCoverageService.clearCache instead
@@ -56,15 +57,18 @@ class TestCoverageServiceIPC {
   clearCache(): void {
     TestCoverageService.clearCache();
   }
-  
+
   /**
    * Get coverage summary for a file path
    * @deprecated Use TestCoverageService.getCoverageForFile instead
    */
-  getCoverageForFile(result: TestCoverageResult, filePath: string): FileCoverage | null {
+  getCoverageForFile(
+    result: TestCoverageResult,
+    filePath: string,
+  ): FileCoverage | null {
     return TestCoverageService.getCoverageForFile(result, filePath);
   }
-  
+
   /**
    * Get coverage class for percentage (for styling)
    * @deprecated Use TestCoverageService.getCoverageClass instead
@@ -72,7 +76,7 @@ class TestCoverageServiceIPC {
   getCoverageClass(percentage: number): 'high' | 'medium' | 'low' {
     return TestCoverageService.getCoverageClass(percentage);
   }
-  
+
   /**
    * Format coverage percentage for display
    * @deprecated Use TestCoverageService.formatCoverage instead

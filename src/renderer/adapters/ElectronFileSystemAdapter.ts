@@ -1,4 +1,4 @@
-import { FileSystemAdapter } from "@principal-ai/codebase-composition";
+import { FileSystemAdapter } from '@principal-ai/codebase-composition';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 
 /**
@@ -84,42 +84,53 @@ export class ElectronFileSystemAdapter implements FileSystemAdapter {
    */
   async buildFilteredFileTree(
     directoryPath: string,
-    patterns?: string[],  // These params are from the core interface but we don't use them
-    sourceDirectory?: string
+    patterns?: string[], // These params are from the core interface but we don't use them
+    sourceDirectory?: string,
   ): Promise<{
     paths: string[];
-    stats?: Map<string, {
-      size: number;
-      isDirectory: boolean;
-      lastModified: Date;
-    }>;
+    stats?: Map<
+      string,
+      {
+        size: number;
+        isDirectory: boolean;
+        lastModified: Date;
+      }
+    >;
   }> {
     try {
       // Call main process via IPC with globby options
       const result = await FileSystemService.buildFilteredFileTree(
         directoryPath,
         {
-          gitignore: true,  // Always use gitignore
-          ignorePatterns: patterns,  // Pass patterns if provided
-          includeStats: false  // We don't need stats during initial tree load
-        }
+          gitignore: true, // Always use gitignore
+          ignorePatterns: patterns, // Pass patterns if provided
+          includeStats: false, // We don't need stats during initial tree load
+        },
       );
-      
+
       // Convert stats array to Map if provided
-      const stats = result.stats 
-        ? new Map(result.stats.map(s => [s.path, {
-            size: s.size,
-            isDirectory: s.isDirectory,
-            lastModified: new Date(s.lastModified)
-          }]))
+      const stats = result.stats
+        ? new Map(
+            result.stats.map((s) => [
+              s.path,
+              {
+                size: s.size,
+                isDirectory: s.isDirectory,
+                lastModified: new Date(s.lastModified),
+              },
+            ]),
+          )
         : undefined;
-      
+
       return {
         paths: result.paths,
-        stats
+        stats,
       };
     } catch (error) {
-      console.error('[ElectronFileSystemAdapter] Error building file tree:', error);
+      console.error(
+        '[ElectronFileSystemAdapter] Error building file tree:',
+        error,
+      );
       return { paths: [] };
     }
   }

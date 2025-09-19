@@ -1,5 +1,11 @@
-import { loadLocalFileSystemTree, loadGitHubFileSystemTree } from './loadFileSystemTree';
-import { FileSystemModule, FilesystemService } from "@principal-ai/codebase-composition";
+import {
+  loadLocalFileSystemTree,
+  loadGitHubFileSystemTree,
+} from './loadFileSystemTree';
+import {
+  FileSystemModule,
+  FilesystemService,
+} from '@principal-ai/codebase-composition';
 import { ElectronPlatformAdapters } from '../adapters';
 import { GitHubWebAdapters } from '../adapters/GitHubWebAdapters';
 
@@ -25,16 +31,16 @@ describe('loadFileSystemTree', () => {
             {
               name: 'index.ts',
               type: 'file' as const,
-              children: []
-            }
-          ]
+              children: [],
+            },
+          ],
         },
         {
           name: 'package.json',
           type: 'file' as const,
-          children: []
-        }
-      ]
+          children: [],
+        },
+      ],
     };
 
     it('should load file tree from local filesystem', async () => {
@@ -42,36 +48,38 @@ describe('loadFileSystemTree', () => {
         fileSystem: {},
         config: {},
         git: {},
-        shell: {}
+        shell: {},
       };
 
-      (ElectronPlatformAdapters as jest.Mock).mockImplementation(() => mockAdapters);
+      (ElectronPlatformAdapters as jest.Mock).mockImplementation(
+        () => mockAdapters,
+      );
 
       const mockLoadFileSystemTree = jest.fn().mockResolvedValue({
         fileSystemTree: mockFileTree,
-        filterLayers: []
+        filterLayers: [],
       });
 
       (FileSystemModule as jest.Mock).mockImplementation(() => ({
-        loadFileSystemTree: mockLoadFileSystemTree
+        loadFileSystemTree: mockLoadFileSystemTree,
       }));
 
       const result = await loadLocalFileSystemTree({
         localPath: '/path/to/repo',
         owner: 'test-owner',
         repo: 'test-repo',
-        includeVCS: true
+        includeVCS: true,
       });
 
       expect(result.fileTree).toEqual(mockFileTree);
       expect(result.stats).toEqual({
         fileCount: 2,
-        directoryCount: 2
+        directoryCount: 2,
       });
       expect(FileSystemModule).toHaveBeenCalledWith(
         expect.objectContaining({
-          directoryPath: '/path/to/repo'
-        })
+          directoryPath: '/path/to/repo',
+        }),
       );
     });
 
@@ -80,10 +88,12 @@ describe('loadFileSystemTree', () => {
         fileSystem: {},
         config: {},
         git: {},
-        shell: {}
+        shell: {},
       };
 
-      (ElectronPlatformAdapters as jest.Mock).mockImplementation(() => mockAdapters);
+      (ElectronPlatformAdapters as jest.Mock).mockImplementation(
+        () => mockAdapters,
+      );
 
       let capturedConfig: any;
       (FileSystemModule as jest.Mock).mockImplementation((config) => {
@@ -91,8 +101,8 @@ describe('loadFileSystemTree', () => {
         return {
           loadFileSystemTree: jest.fn().mockResolvedValue({
             fileSystemTree: mockFileTree,
-            filterLayers: []
-          })
+            filterLayers: [],
+          }),
         };
       });
 
@@ -100,7 +110,7 @@ describe('loadFileSystemTree', () => {
         localPath: '/path/to/repo',
         owner: 'test-owner',
         repo: 'test-repo',
-        includeVCS: true
+        includeVCS: true,
       });
 
       expect(capturedConfig.versionControlLayerFactory).toBeDefined();
@@ -111,21 +121,23 @@ describe('loadFileSystemTree', () => {
         fileSystem: {},
         config: {},
         git: {},
-        shell: {}
+        shell: {},
       }));
 
       (FileSystemModule as jest.Mock).mockImplementation(() => ({
         loadFileSystemTree: jest.fn().mockResolvedValue({
           fileSystemTree: null,
-          filterLayers: []
-        })
+          filterLayers: [],
+        }),
       }));
 
-      await expect(loadLocalFileSystemTree({
-        localPath: '/path/to/repo',
-        owner: 'test-owner',
-        repo: 'test-repo'
-      })).rejects.toThrow('Failed to load filesystem tree from /path/to/repo');
+      await expect(
+        loadLocalFileSystemTree({
+          localPath: '/path/to/repo',
+          owner: 'test-owner',
+          repo: 'test-repo',
+        }),
+      ).rejects.toThrow('Failed to load filesystem tree from /path/to/repo');
     });
 
     it('should calculate correct statistics', async () => {
@@ -142,34 +154,34 @@ describe('loadFileSystemTree', () => {
                 type: 'directory' as const,
                 children: [
                   { name: 'file1.ts', type: 'file' as const, children: [] },
-                  { name: 'file2.ts', type: 'file' as const, children: [] }
-                ]
+                  { name: 'file2.ts', type: 'file' as const, children: [] },
+                ],
               },
-              { name: 'file3.ts', type: 'file' as const, children: [] }
-            ]
+              { name: 'file3.ts', type: 'file' as const, children: [] },
+            ],
           },
-          { name: 'file4.ts', type: 'file' as const, children: [] }
-        ]
+          { name: 'file4.ts', type: 'file' as const, children: [] },
+        ],
       };
 
       (ElectronPlatformAdapters as jest.Mock).mockImplementation(() => ({
         fileSystem: {},
         config: {},
         git: {},
-        shell: {}
+        shell: {},
       }));
 
       (FileSystemModule as jest.Mock).mockImplementation(() => ({
         loadFileSystemTree: jest.fn().mockResolvedValue({
           fileSystemTree: complexTree,
-          filterLayers: []
-        })
+          filterLayers: [],
+        }),
       }));
 
       const result = await loadLocalFileSystemTree({
         localPath: '/path',
         owner: 'owner',
-        repo: 'repo'
+        repo: 'repo',
       });
 
       expect(result.stats.fileCount).toBe(4);
@@ -185,45 +197,51 @@ describe('loadFileSystemTree', () => {
         {
           name: 'README.md',
           type: 'file' as const,
-          children: []
-        }
-      ]
+          children: [],
+        },
+      ],
     };
 
     it('should load file tree from GitHub', async () => {
       const mockAdapters = {
         fileSystem: {
           readDirectory: jest.fn().mockResolvedValue(['README.md']),
-          getStats: jest.fn().mockResolvedValue({ isDirectory: false, isFile: true })
+          getStats: jest
+            .fn()
+            .mockResolvedValue({ isDirectory: false, isFile: true }),
         },
         config: {},
         git: {},
-        github: {}
+        github: {},
       };
 
       (GitHubWebAdapters as jest.Mock).mockImplementation(() => mockAdapters);
 
       const mockLoadFileSystemTree = jest.fn().mockResolvedValue({
         fileSystemTree: mockGitHubTree,
-        filterLayers: []
+        filterLayers: [],
       });
 
       (FileSystemModule as jest.Mock).mockImplementation(() => ({
-        loadFileSystemTree: mockLoadFileSystemTree
+        loadFileSystemTree: mockLoadFileSystemTree,
       }));
 
       const result = await loadGitHubFileSystemTree({
         owner: 'test-owner',
         repo: 'test-repo',
-        branch: 'main'
+        branch: 'main',
       });
 
       expect(result.fileTree).toEqual(mockGitHubTree);
       expect(result.stats).toEqual({
         fileCount: 1,
-        directoryCount: 1
+        directoryCount: 1,
       });
-      expect(GitHubWebAdapters).toHaveBeenCalledWith('test-owner', 'test-repo', 'main');
+      expect(GitHubWebAdapters).toHaveBeenCalledWith(
+        'test-owner',
+        'test-repo',
+        'main',
+      );
     });
 
     it('should handle GitHub API errors gracefully', async () => {
@@ -231,11 +249,13 @@ describe('loadFileSystemTree', () => {
         throw new Error('GitHub API rate limit exceeded');
       });
 
-      await expect(loadGitHubFileSystemTree({
-        owner: 'test-owner',
-        repo: 'test-repo',
-        branch: 'main'
-      })).rejects.toThrow('GitHub API rate limit exceeded');
+      await expect(
+        loadGitHubFileSystemTree({
+          owner: 'test-owner',
+          repo: 'test-repo',
+          branch: 'main',
+        }),
+      ).rejects.toThrow('GitHub API rate limit exceeded');
     });
 
     it('should cache adapter instances for same repository', async () => {
@@ -243,7 +263,7 @@ describe('loadFileSystemTree', () => {
         fileSystem: {},
         config: {},
         git: {},
-        github: {}
+        github: {},
       };
 
       (GitHubWebAdapters as jest.Mock).mockImplementation(() => mockAdapters);
@@ -251,21 +271,21 @@ describe('loadFileSystemTree', () => {
       (FileSystemModule as jest.Mock).mockImplementation(() => ({
         loadFileSystemTree: jest.fn().mockResolvedValue({
           fileSystemTree: mockGitHubTree,
-          filterLayers: []
-        })
+          filterLayers: [],
+        }),
       }));
 
       // Load twice for the same repo
       await loadGitHubFileSystemTree({
         owner: 'test-owner',
         repo: 'test-repo',
-        branch: 'main'
+        branch: 'main',
       });
 
       await loadGitHubFileSystemTree({
         owner: 'test-owner',
         repo: 'test-repo',
-        branch: 'develop'
+        branch: 'develop',
       });
 
       // Should create adapters twice (once for each branch)
@@ -278,32 +298,34 @@ describe('loadFileSystemTree', () => {
       const mockTree = {
         name: 'root',
         type: 'directory' as const,
-        children: []
+        children: [],
       };
 
       (ElectronPlatformAdapters as jest.Mock).mockImplementation(() => ({
         fileSystem: {},
         config: {},
         git: {},
-        shell: {}
+        shell: {},
       }));
 
       (FileSystemModule as jest.Mock).mockImplementation(() => ({
         loadFileSystemTree: jest.fn().mockResolvedValue({
           fileSystemTree: mockTree,
-          filterLayers: []
-        })
+          filterLayers: [],
+        }),
       }));
 
       // Use the legacy TreeLoadOptions interface
-      const { loadFileSystemTree: loadTree } = await import('./loadFileSystemTree');
-      
+      const { loadFileSystemTree: loadTree } = await import(
+        './loadFileSystemTree'
+      );
+
       const result = await loadTree({
         type: 'local',
         localPath: '/path/to/repo',
         owner: 'owner',
         repo: 'repo',
-        includeVCS: false
+        includeVCS: false,
       });
 
       expect(result.fileTree).toEqual(mockTree);
@@ -313,30 +335,32 @@ describe('loadFileSystemTree', () => {
       const mockTree = {
         name: 'repo',
         type: 'directory' as const,
-        children: []
+        children: [],
       };
 
       (GitHubWebAdapters as jest.Mock).mockImplementation(() => ({
         fileSystem: {},
         config: {},
         git: {},
-        github: {}
+        github: {},
       }));
 
       (FileSystemModule as jest.Mock).mockImplementation(() => ({
         loadFileSystemTree: jest.fn().mockResolvedValue({
           fileSystemTree: mockTree,
-          filterLayers: []
-        })
+          filterLayers: [],
+        }),
       }));
 
-      const { loadFileSystemTree: loadTree } = await import('./loadFileSystemTree');
-      
+      const { loadFileSystemTree: loadTree } = await import(
+        './loadFileSystemTree'
+      );
+
       const result = await loadTree({
         type: 'github',
         owner: 'owner',
         repo: 'repo',
-        branch: 'main'
+        branch: 'main',
       });
 
       expect(result.fileTree).toEqual(mockTree);

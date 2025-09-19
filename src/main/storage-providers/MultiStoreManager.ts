@@ -11,21 +11,25 @@ import {
   StaticNamespaces,
   StorageProviderType,
 } from './types';
-import { StorageNamespaceConfig, StorageStats, NamespaceCategory } from '../../shared/main-process-api-interfaces/StoreAPI';
+import {
+  StorageNamespaceConfig,
+  StorageStats,
+  NamespaceCategory,
+} from '../../shared/main-process-api-interfaces/StoreAPI';
 import { ElectronStoreLocalStorageProvider } from './providers/ElectronStoreLocalStorageProvider';
 import { S3RemoteStorageProvider } from './providers/S3RemoteStorageProvider';
 // Define SupportedLLMProvider enum locally since ai.types was removed
 enum SupportedLLMProvider {
   OPENROUTER = 'openrouter',
   OLLAMA = 'ollama',
-  OPENAI = 'openai'
+  OPENAI = 'openai',
 }
-import { AGENT_INFO, SupportedAgent } from "@principal-ai/agent-monitoring";
+import { AGENT_INFO, SupportedAgent } from '@principal-ai/agent-monitoring';
 import { StorageNamespaces } from './all-namespaces';
 
 /**
  * Multi-Store Manager
- * 
+ *
  * Manages multiple storage providers and provides a unified API for accessing
  * different storage namespaces. Supports routing operations to different backends
  * based on namespace configuration.
@@ -33,7 +37,8 @@ import { StorageNamespaces } from './all-namespaces';
 export class MultiStoreManager extends EventEmitter {
   private storageProviders: Map<string, StorageProvider> = new Map();
   private namespaceProviders: Map<string, StorageProvider> = new Map(); // Namespace-specific providers
-  private namespaces: Map<StorageNamespaces, StorageNamespaceConfig> = new Map();
+  private namespaces: Map<StorageNamespaces, StorageNamespaceConfig> =
+    new Map();
   private isInitialized = false;
 
   constructor() {
@@ -42,7 +47,7 @@ export class MultiStoreManager extends EventEmitter {
 
   /**
    * Initialize the multi-store manager with configuration
-   * 
+   *
    * @param config Optional configuration containing:
    *   - storageProviders: Custom storage provider implementations (defaults to electron-store and S3)
    *   - namespaces: DYNAMIC namespaces to add (agent-specific, runtime-discovered, etc.)
@@ -60,7 +65,7 @@ export class MultiStoreManager extends EventEmitter {
 
       // Step 2: Set up all static namespaces from StorageNamespaces enum
       this.setupDefaultNamespaces();
-      
+
       // Step 3: Validate that ALL static namespaces are registered
       const missingStaticNamespaces: string[] = [];
       for (const staticNamespace of Object.values(StaticNamespaces)) {
@@ -68,26 +73,29 @@ export class MultiStoreManager extends EventEmitter {
           missingStaticNamespaces.push(staticNamespace);
         }
       }
-      
+
       if (missingStaticNamespaces.length > 0) {
         throw new Error(
           `Missing required static namespaces in setupDefaultNamespaces(): ${missingStaticNamespaces.join(', ')}. ` +
-          `All namespaces from StorageNamespaces enum must be initialized.`
+            `All namespaces from StorageNamespaces enum must be initialized.`,
         );
       }
-      
+
       // Step 4: Add dynamic namespaces (agent-specific, runtime configs, etc.)
       if (config?.namespaces && config.namespaces.length > 0) {
         for (const namespace of config.namespaces) {
           if (!namespace.name) {
-            console.error('MultiStoreManager: Dynamic namespace missing name:', namespace);
+            console.error(
+              'MultiStoreManager: Dynamic namespace missing name:',
+              namespace,
+            );
             continue;
           }
           // Add dynamic namespace (will override if a static one exists with same name)
           this.namespaces.set(namespace.name, namespace);
         }
       }
-      
+
       // Step 5: Initialize all storage backends
       await this.initializeBackends();
 
@@ -101,7 +109,10 @@ export class MultiStoreManager extends EventEmitter {
   /**
    * Register a storage backend
    */
-  public async registerStorageProvider(name: string, storageProvider: StorageProvider): Promise<void> {
+  public async registerStorageProvider(
+    name: string,
+    storageProvider: StorageProvider,
+  ): Promise<void> {
     if (this.storageProviders.has(name)) {
       throw new Error(`Storage provider '${name}' is already registered`);
     }
@@ -119,7 +130,9 @@ export class MultiStoreManager extends EventEmitter {
    */
   public registerNamespace(namespace: StorageNamespaceConfig): void {
     if (!this.storageProviders.has(namespace.storageProvider)) {
-      throw new Error(`Storage provider '${namespace.storageProvider}' not found for namespace '${namespace.name}'`);
+      throw new Error(
+        `Storage provider '${namespace.storageProvider}' not found for namespace '${namespace.name}'`,
+      );
     }
 
     this.namespaces.set(namespace.name, namespace);
@@ -138,28 +151,38 @@ export class MultiStoreManager extends EventEmitter {
    * Get a value from a specific namespace
    */
   public async get<T = any>(
-    key: string, 
-    namespace: StorageNamespaces, 
-    defaultValue?: T
+    key: string,
+    namespace: StorageNamespaces,
+    defaultValue?: T,
   ): Promise<StorageResult<T>> {
     try {
       const storageProvider = this.getStorageProviderForNamespace(namespace);
-      console.log(`MultiStoreManager.get: Getting key '${key}' from namespace '${namespace}'`);
+      console.log(
+        `MultiStoreManager.get: Getting key '${key}' from namespace '${namespace}'`,
+      );
       const data = await storageProvider.get<T>(key, defaultValue);
-      
+
       return {
         success: true,
         data,
         storageProvider: storageProvider.name,
-        namespace: namespace
+        namespace: namespace,
       };
     } catch (error) {
-      this.emitEvent('error', namespace, undefined, key, undefined, undefined, error as Error);
+      this.emitEvent(
+        'error',
+        namespace,
+        undefined,
+        key,
+        undefined,
+        undefined,
+        error as Error,
+      );
       return {
         success: false,
         error: error as Error,
         storageProvider: this.getNamespaceConfig(namespace)?.storageProvider,
-        namespace: namespace
+        namespace: namespace,
       };
     }
   }
@@ -168,30 +191,45 @@ export class MultiStoreManager extends EventEmitter {
    * Set a value in a specific namespace
    */
   public async set<T = any>(
-    key: string, 
-    value: T, 
-    namespace: StorageNamespaces
+    key: string,
+    value: T,
+    namespace: StorageNamespaces,
   ): Promise<StorageResult<void>> {
     try {
       const storageProvider = this.getStorageProviderForNamespace(namespace);
       const oldValue = await storageProvider.get(key);
-      
+
       await storageProvider.set(key, value);
-      
-      this.emitEvent('set', namespace, storageProvider.name, key, value, oldValue);
-      
+
+      this.emitEvent(
+        'set',
+        namespace,
+        storageProvider.name,
+        key,
+        value,
+        oldValue,
+      );
+
       return {
         success: true,
         storageProvider: storageProvider.name,
-        namespace: namespace
+        namespace: namespace,
       };
     } catch (error) {
-      this.emitEvent('error', namespace, undefined, key, value, undefined, error as Error);
+      this.emitEvent(
+        'error',
+        namespace,
+        undefined,
+        key,
+        value,
+        undefined,
+        error as Error,
+      );
       return {
         success: false,
         error: error as Error,
         storageProvider: this.getNamespaceConfig(namespace)?.storageProvider,
-        namespace: namespace
+        namespace: namespace,
       };
     }
   }
@@ -199,27 +237,45 @@ export class MultiStoreManager extends EventEmitter {
   /**
    * Delete a key from a specific namespace
    */
-  public async delete(key: string, namespace: StorageNamespaces): Promise<StorageResult<void>> {
+  public async delete(
+    key: string,
+    namespace: StorageNamespaces,
+  ): Promise<StorageResult<void>> {
     try {
       const storageProvider = this.getStorageProviderForNamespace(namespace);
       const oldValue = await storageProvider.get(key);
-      
+
       await storageProvider.delete(key);
-      
-      this.emitEvent('delete', namespace, storageProvider.name, key, undefined, oldValue);
-      
+
+      this.emitEvent(
+        'delete',
+        namespace,
+        storageProvider.name,
+        key,
+        undefined,
+        oldValue,
+      );
+
       return {
         success: true,
         storageProvider: storageProvider.name,
-        namespace: namespace
+        namespace: namespace,
       };
     } catch (error) {
-      this.emitEvent('error', namespace, undefined, key, undefined, undefined, error as Error);
+      this.emitEvent(
+        'error',
+        namespace,
+        undefined,
+        key,
+        undefined,
+        undefined,
+        error as Error,
+      );
       return {
         success: false,
         error: error as Error,
         storageProvider: this.getNamespaceConfig(namespace)?.storageProvider,
-        namespace: namespace
+        namespace: namespace,
       };
     }
   }
@@ -227,16 +283,19 @@ export class MultiStoreManager extends EventEmitter {
   /**
    * Check if a key exists in a specific namespace
    */
-  public async has(key: string, namespace: StorageNamespaces): Promise<StorageResult<boolean>> {
+  public async has(
+    key: string,
+    namespace: StorageNamespaces,
+  ): Promise<StorageResult<boolean>> {
     try {
       const storageProvider = this.getStorageProviderForNamespace(namespace);
       const exists = await storageProvider.has(key);
-      
+
       return {
         success: true,
         data: exists,
         storageProvider: storageProvider.name,
-        namespace: namespace
+        namespace: namespace,
       };
     } catch (error) {
       return {
@@ -244,7 +303,7 @@ export class MultiStoreManager extends EventEmitter {
         data: false,
         error: error as Error,
         storageProvider: this.getNamespaceConfig(namespace)?.storageProvider,
-        namespace: namespace
+        namespace: namespace,
       };
     }
   }
@@ -252,25 +311,35 @@ export class MultiStoreManager extends EventEmitter {
   /**
    * Clear all data in a specific namespace
    */
-  public async clear(namespace: StorageNamespaces): Promise<StorageResult<void>> {
+  public async clear(
+    namespace: StorageNamespaces,
+  ): Promise<StorageResult<void>> {
     try {
       const storageProvider = this.getStorageProviderForNamespace(namespace);
       await storageProvider.clear();
-      
+
       this.emitEvent('clear', namespace, storageProvider.name);
-      
+
       return {
         success: true,
         storageProvider: storageProvider.name,
-        namespace: namespace
+        namespace: namespace,
       };
     } catch (error) {
-      this.emitEvent('error', namespace, undefined, undefined, undefined, undefined, error as Error);
+      this.emitEvent(
+        'error',
+        namespace,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        error as Error,
+      );
       return {
         success: false,
         error: error as Error,
         storageProvider: this.getNamespaceConfig(namespace)?.storageProvider,
-        namespace: namespace
+        namespace: namespace,
       };
     }
   }
@@ -280,20 +349,22 @@ export class MultiStoreManager extends EventEmitter {
    */
   public async getMultiple<T = any>(
     keys: string[],
-    namespace: StorageNamespaces
+    namespace: StorageNamespaces,
   ): Promise<StorageResult<Map<string, T>>> {
     try {
       const storageProvider = this.getStorageProviderForNamespace(namespace);
-      console.log(`MultiStoreManager.getMultiple: Getting ${keys.length} keys from namespace '${namespace}'`);
-      
+      console.log(
+        `MultiStoreManager.getMultiple: Getting ${keys.length} keys from namespace '${namespace}'`,
+      );
+
       const results = new Map<string, T>();
-      
+
       // Batch fetch all values - most providers can optimize this internally
       // Split into chunks to avoid overwhelming the system
       const CHUNK_SIZE = 100;
       for (let i = 0; i < keys.length; i += CHUNK_SIZE) {
         const chunk = keys.slice(i, Math.min(i + CHUNK_SIZE, keys.length));
-        
+
         const promises = chunk.map(async (key) => {
           try {
             const value = await storageProvider.get<T>(key);
@@ -305,22 +376,26 @@ export class MultiStoreManager extends EventEmitter {
             console.warn(`Failed to get key '${key}':`, error);
           }
         });
-        
+
         await Promise.all(promises);
-        
+
         // Log progress for large batches
         if (keys.length > CHUNK_SIZE * 2) {
-          console.log(`MultiStoreManager.getMultiple: Processed ${Math.min(i + CHUNK_SIZE, keys.length)}/${keys.length} keys`);
+          console.log(
+            `MultiStoreManager.getMultiple: Processed ${Math.min(i + CHUNK_SIZE, keys.length)}/${keys.length} keys`,
+          );
         }
       }
-      
-      console.log(`MultiStoreManager.getMultiple: Retrieved ${results.size} of ${keys.length} keys`);
-      
+
+      console.log(
+        `MultiStoreManager.getMultiple: Retrieved ${results.size} of ${keys.length} keys`,
+      );
+
       return {
         success: true,
         data: results,
         storageProvider: storageProvider.name,
-        namespace: namespace
+        namespace: namespace,
       };
     } catch (error) {
       return {
@@ -328,7 +403,7 @@ export class MultiStoreManager extends EventEmitter {
         data: new Map(),
         error: error as Error,
         storageProvider: this.getNamespaceConfig(namespace)?.storageProvider,
-        namespace: namespace
+        namespace: namespace,
       };
     }
   }
@@ -338,15 +413,17 @@ export class MultiStoreManager extends EventEmitter {
    */
   public async deleteMultiple(
     keys: string[],
-    namespace: StorageNamespaces
+    namespace: StorageNamespaces,
   ): Promise<StorageResult<{ deleted: string[]; failed: string[] }>> {
     try {
       const storageProvider = this.getStorageProviderForNamespace(namespace);
-      console.log(`MultiStoreManager.deleteMultiple: Deleting ${keys.length} keys from namespace '${namespace}'`);
-      
+      console.log(
+        `MultiStoreManager.deleteMultiple: Deleting ${keys.length} keys from namespace '${namespace}'`,
+      );
+
       const deleted: string[] = [];
       const failed: string[] = [];
-      
+
       // Batch delete all keys - most providers can optimize this internally
       const promises = keys.map(async (key) => {
         try {
@@ -357,16 +434,18 @@ export class MultiStoreManager extends EventEmitter {
           failed.push(key);
         }
       });
-      
+
       await Promise.all(promises);
-      
-      console.log(`MultiStoreManager.deleteMultiple: Deleted ${deleted.length} keys, ${failed.length} failed`);
-      
+
+      console.log(
+        `MultiStoreManager.deleteMultiple: Deleted ${deleted.length} keys, ${failed.length} failed`,
+      );
+
       return {
         success: true,
         data: { deleted, failed },
         storageProvider: storageProvider.name,
-        namespace: namespace
+        namespace: namespace,
       };
     } catch (error) {
       return {
@@ -374,7 +453,7 @@ export class MultiStoreManager extends EventEmitter {
         data: { deleted: [], failed: keys },
         error: error as Error,
         storageProvider: this.getNamespaceConfig(namespace)?.storageProvider,
-        namespace: namespace
+        namespace: namespace,
       };
     }
   }
@@ -382,23 +461,32 @@ export class MultiStoreManager extends EventEmitter {
   /**
    * Get all keys from a specific namespace
    */
-  public async keys(namespace: StorageNamespaces): Promise<StorageResult<string[]>> {
+  public async keys(
+    namespace: StorageNamespaces,
+  ): Promise<StorageResult<string[]>> {
     try {
       const storageProvider = this.getStorageProviderForNamespace(namespace);
-      console.log(`MultiStoreManager.keys: Getting keys for namespace '${namespace}'`);
+      console.log(
+        `MultiStoreManager.keys: Getting keys for namespace '${namespace}'`,
+      );
       const keys = await storageProvider.keys();
       // Only log actual keys for small sets to avoid console spam
       if (keys.length > 10) {
-        console.log(`MultiStoreManager.keys: Retrieved ${keys.length} keys for '${namespace}'`);
+        console.log(
+          `MultiStoreManager.keys: Retrieved ${keys.length} keys for '${namespace}'`,
+        );
       } else {
-        console.log(`MultiStoreManager.keys: Keys retrieved successfully for '${namespace}':`, keys);
+        console.log(
+          `MultiStoreManager.keys: Keys retrieved successfully for '${namespace}':`,
+          keys,
+        );
       }
-      
+
       return {
         success: true,
         data: keys,
         storageProvider: storageProvider.name,
-        namespace: namespace
+        namespace: namespace,
       };
     } catch (error) {
       return {
@@ -406,7 +494,7 @@ export class MultiStoreManager extends EventEmitter {
         data: [],
         error: error as Error,
         storageProvider: this.getNamespaceConfig(namespace)?.storageProvider,
-        namespace: namespace
+        namespace: namespace,
       };
     }
   }
@@ -414,29 +502,40 @@ export class MultiStoreManager extends EventEmitter {
   /**
    * Get statistics for a specific namespace
    */
-  public async getStats(namespace: StorageNamespaces): Promise<StorageResult<StorageStats>> {
+  public async getStats(
+    namespace: StorageNamespaces,
+  ): Promise<StorageResult<StorageStats>> {
     try {
-      console.log(`MultiStoreManager.getStats: Getting stats for namespace '${namespace}'`);
-      
+      console.log(
+        `MultiStoreManager.getStats: Getting stats for namespace '${namespace}'`,
+      );
+
       const storageProvider = this.getStorageProviderForNamespace(namespace);
-      console.log(`MultiStoreManager.getStats: Got provider '${storageProvider.name}', isAvailable: ${storageProvider.isAvailable}`);
-      
+      console.log(
+        `MultiStoreManager.getStats: Got provider '${storageProvider.name}', isAvailable: ${storageProvider.isAvailable}`,
+      );
+
       const stats = await storageProvider.getStats();
-      console.log(`MultiStoreManager.getStats: Stats retrieved successfully for '${namespace}'`);
-      
+      console.log(
+        `MultiStoreManager.getStats: Stats retrieved successfully for '${namespace}'`,
+      );
+
       return {
         success: true,
         data: stats,
         storageProvider: storageProvider.name,
-        namespace: namespace
+        namespace: namespace,
       };
     } catch (error) {
-      console.error(`MultiStoreManager.getStats: Error getting stats for namespace '${namespace}':`, error);
+      console.error(
+        `MultiStoreManager.getStats: Error getting stats for namespace '${namespace}':`,
+        error,
+      );
       return {
         success: false,
         error: error as Error,
         storageProvider: this.getNamespaceConfig(namespace)?.storageProvider,
-        namespace: namespace
+        namespace: namespace,
       };
     }
   }
@@ -445,14 +544,16 @@ export class MultiStoreManager extends EventEmitter {
    * Watch for changes in a specific namespace
    */
   public watch(
-    key: string, 
-    callback: StorageEventCallback, 
-    namespace: StorageNamespaces
+    key: string,
+    callback: StorageEventCallback,
+    namespace: StorageNamespaces,
   ): () => void {
     const storageProvider = this.getStorageProviderForNamespace(namespace);
-    
+
     if (!storageProvider.watch) {
-      console.warn(`Storage provider '${storageProvider.name}' does not support watching`);
+      console.warn(
+        `Storage provider '${storageProvider.name}' does not support watching`,
+      );
       return () => {}; // Return no-op unsubscribe
     }
 
@@ -464,7 +565,7 @@ export class MultiStoreManager extends EventEmitter {
         key,
         value: newValue,
         oldValue,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
       callback(event);
     });
@@ -479,31 +580,36 @@ export class MultiStoreManager extends EventEmitter {
       migratedKeys: [],
       failedKeys: [],
       totalProcessed: 0,
-      errors: []
+      errors: [],
     };
 
     try {
-      const sourceStorageProvider = this.getStorageProviderForNamespace(options.fromNamespace);
-      const targetStorageProvider = this.getStorageProviderForNamespace(options.toNamespace);
+      const sourceStorageProvider = this.getStorageProviderForNamespace(
+        options.fromNamespace,
+      );
+      const targetStorageProvider = this.getStorageProviderForNamespace(
+        options.toNamespace,
+      );
 
       // Get keys to migrate
-      const keysToMigrate = options.keys || await sourceStorageProvider.keys();
+      const keysToMigrate =
+        options.keys || (await sourceStorageProvider.keys());
       const batchSize = options.batchSize || 10;
 
       // Process in batches
       for (let i = 0; i < keysToMigrate.length; i += batchSize) {
         const batch = keysToMigrate.slice(i, i + batchSize);
-        
+
         for (const key of batch) {
           try {
             const value = await sourceStorageProvider.get(key);
             if (value !== undefined) {
               await targetStorageProvider.set(key, value);
-              
+
               if (options.deleteSource) {
                 await sourceStorageProvider.delete(key);
               }
-              
+
               result.migratedKeys.push(key);
             }
             result.totalProcessed++;
@@ -540,7 +646,9 @@ export class MultiStoreManager extends EventEmitter {
    * Get the storage provider for a specific namespace
    * This properly handles both dedicated and shared providers
    */
-  public getProviderForNamespace(namespace: StorageNamespaces): StorageProvider {
+  public getProviderForNamespace(
+    namespace: StorageNamespaces,
+  ): StorageProvider {
     return this.getStorageProviderForNamespace(namespace);
   }
 
@@ -551,25 +659,28 @@ export class MultiStoreManager extends EventEmitter {
     return new Map(this.namespaces);
   }
 
-
   /**
    * Close all backends and clean up
    */
   public async close(): Promise<void> {
     try {
       // Close all shared providers
-      const sharedClosePromises = Array.from(this.storageProviders.values()).map(storageProvider => storageProvider.close());
-      
+      const sharedClosePromises = Array.from(
+        this.storageProviders.values(),
+      ).map((storageProvider) => storageProvider.close());
+
       // Close all namespace-specific providers
-      const namespaceClosePromises = Array.from(this.namespaceProviders.values()).map(storageProvider => storageProvider.close());
-      
+      const namespaceClosePromises = Array.from(
+        this.namespaceProviders.values(),
+      ).map((storageProvider) => storageProvider.close());
+
       await Promise.all([...sharedClosePromises, ...namespaceClosePromises]);
-      
+
       this.storageProviders.clear();
       this.namespaceProviders.clear();
       this.namespaces.clear();
       this.isInitialized = false;
-      
+
       this.emit('closed');
     } catch (error) {
       throw new Error(`Failed to close MultiStoreManager: ${error}`);
@@ -579,9 +690,11 @@ export class MultiStoreManager extends EventEmitter {
   /**
    * Get the backend for a specific namespace
    */
-  private getStorageProviderForNamespace(namespace: StorageNamespaces): StorageProvider {
+  private getStorageProviderForNamespace(
+    namespace: StorageNamespaces,
+  ): StorageProvider {
     const namespaceConfig = this.namespaces.get(namespace);
-    
+
     if (!namespaceConfig) {
       throw new Error(`Namespace '${namespace}' not found`);
     }
@@ -591,23 +704,33 @@ export class MultiStoreManager extends EventEmitter {
     if (dedicatedProvider) {
       // For dedicated providers that aren't initialized yet, initialize them on-demand
       if (!dedicatedProvider.isAvailable) {
-        console.warn(`Dedicated storage provider for namespace '${namespace}' not yet initialized, initializing now...`);
+        console.warn(
+          `Dedicated storage provider for namespace '${namespace}' not yet initialized, initializing now...`,
+        );
         // Try to initialize it synchronously if possible, otherwise throw error
         // Since initialize is async, we can't do it here synchronously
         // Instead, we should ensure all providers are initialized during startup
-        throw new Error(`Dedicated storage provider for namespace '${namespace}' is not available. This usually means initialization failed or is still in progress.`);
+        throw new Error(
+          `Dedicated storage provider for namespace '${namespace}' is not available. This usually means initialization failed or is still in progress.`,
+        );
       }
       return dedicatedProvider;
     }
 
     // Otherwise use the shared provider
-    const storageProvider = this.storageProviders.get(namespaceConfig.storageProvider);
+    const storageProvider = this.storageProviders.get(
+      namespaceConfig.storageProvider,
+    );
     if (!storageProvider) {
-      throw new Error(`Storage provider '${namespaceConfig.storageProvider}' not found`);
+      throw new Error(
+        `Storage provider '${namespaceConfig.storageProvider}' not found`,
+      );
     }
 
     if (!storageProvider.isAvailable) {
-      throw new Error(`Storage provider '${namespaceConfig.storageProvider}' is not available`);
+      throw new Error(
+        `Storage provider '${namespaceConfig.storageProvider}' is not available`,
+      );
     }
 
     return storageProvider;
@@ -616,7 +739,9 @@ export class MultiStoreManager extends EventEmitter {
   /**
    * Get namespace configuration
    */
-  private getNamespaceConfig(namespace: StorageNamespaces): StorageNamespaceConfig | undefined {
+  private getNamespaceConfig(
+    namespace: StorageNamespaces,
+  ): StorageNamespaceConfig | undefined {
     return this.namespaces.get(namespace);
   }
 
@@ -625,8 +750,12 @@ export class MultiStoreManager extends EventEmitter {
    */
   private async registerDefaultBackends(): Promise<void> {
     // Register electron-store backend
-    const electronStoreLocalStorageProvider = new ElectronStoreLocalStorageProvider('default-electron-store');
-    this.storageProviders.set(StorageProviderType.ELECTRON_STORE, electronStoreLocalStorageProvider);
+    const electronStoreLocalStorageProvider =
+      new ElectronStoreLocalStorageProvider('default-electron-store');
+    this.storageProviders.set(
+      StorageProviderType.ELECTRON_STORE,
+      electronStoreLocalStorageProvider,
+    );
 
     // Register S3 backend (stub)
     const s3StorageProvider = new S3RemoteStorageProvider('default-s3');
@@ -639,7 +768,6 @@ export class MultiStoreManager extends EventEmitter {
    * Dynamic namespaces (like agent-specific ones) are added separately via config
    */
   private setupDefaultNamespaces(): void {
-    
     const defaultNamespaces: StorageNamespaceConfig[] = [
       {
         name: StaticNamespaces.USER_PREFERENCES,
@@ -649,9 +777,9 @@ export class MultiStoreManager extends EventEmitter {
         config: {
           path: 'user-preferences',
           defaults: {
-            autoCommitOnStop: false
-          }
-        }
+            autoCommitOnStop: false,
+          },
+        },
       },
       {
         name: StaticNamespaces.REPOSITORIES,
@@ -660,9 +788,9 @@ export class MultiStoreManager extends EventEmitter {
         config: {
           path: 'repositories',
           defaults: {
-            repositories: []
-          }
-        }
+            repositories: [],
+          },
+        },
       },
       {
         name: StaticNamespaces.AI_CONFIGURATION,
@@ -683,9 +811,9 @@ export class MultiStoreManager extends EventEmitter {
               },
               conversations: [],
               activeConversationId: null,
-            }
-          }
-        }
+            },
+          },
+        },
       },
       {
         name: StaticNamespaces.LLM_MODELS,
@@ -693,24 +821,24 @@ export class MultiStoreManager extends EventEmitter {
         category: NamespaceCategory.CORE,
         config: {
           path: 'llm-models',
-          defaults: {}
-        }
+          defaults: {},
+        },
       },
       {
         name: StaticNamespaces.CACHE,
         storageProvider: StorageProviderType.ELECTRON_STORE,
         category: NamespaceCategory.CACHE,
         config: {
-          path: 'cache'
-        }
+          path: 'cache',
+        },
       },
       {
         name: StaticNamespaces.TEMP,
         storageProvider: StorageProviderType.ELECTRON_STORE,
         category: NamespaceCategory.CACHE,
         config: {
-          path: 'temp'
-        }
+          path: 'temp',
+        },
       },
       {
         name: StaticNamespaces.AGENT_SESSIONS,
@@ -719,8 +847,8 @@ export class MultiStoreManager extends EventEmitter {
         isPrimary: true,
         config: {
           path: 'agent-sessions',
-          defaults: {}
-        }
+          defaults: {},
+        },
       },
       {
         name: StaticNamespaces.SESSION_SUMMARIES,
@@ -728,8 +856,8 @@ export class MultiStoreManager extends EventEmitter {
         category: NamespaceCategory.CORE,
         config: {
           path: 'session-summaries',
-          defaults: {}
-        }
+          defaults: {},
+        },
       },
       {
         name: StaticNamespaces.ARCHIVE_CONFIGURATION,
@@ -737,8 +865,8 @@ export class MultiStoreManager extends EventEmitter {
         category: NamespaceCategory.CORE,
         config: {
           path: 'archive-configuration',
-          defaults: {}
-        }
+          defaults: {},
+        },
       },
       {
         name: StaticNamespaces.GLOBAL_SESSION_REGISTRY,
@@ -747,8 +875,8 @@ export class MultiStoreManager extends EventEmitter {
         isPrimary: true,
         config: {
           path: 'global-session-registry',
-          defaults: {}
-        }
+          defaults: {},
+        },
       },
       {
         name: StaticNamespaces.AGENT_EVENT_INDEXES,
@@ -759,9 +887,9 @@ export class MultiStoreManager extends EventEmitter {
           defaults: {
             [AGENT_INFO[SupportedAgent.CLAUDE].storageEventsNamespace]: [],
             [AGENT_INFO[SupportedAgent.OPENCODE].storageEventsNamespace]: [],
-            [AGENT_INFO[SupportedAgent.CLINE].storageEventsNamespace]: []
-          }
-        }
+            [AGENT_INFO[SupportedAgent.CLINE].storageEventsNamespace]: [],
+          },
+        },
       },
       {
         name: StaticNamespaces.MCP_BRIDGE_DATA,
@@ -769,8 +897,8 @@ export class MultiStoreManager extends EventEmitter {
         category: NamespaceCategory.CORE,
         config: {
           path: 'mcp-bridge-data',
-          defaults: {}
-        }
+          defaults: {},
+        },
       },
       {
         name: StaticNamespaces.DOCKER_CONTAINERS,
@@ -778,8 +906,8 @@ export class MultiStoreManager extends EventEmitter {
         category: NamespaceCategory.CORE,
         config: {
           path: 'docker-containers',
-          defaults: {}
-        }
+          defaults: {},
+        },
       },
       {
         name: StaticNamespaces.DOCKER_SESSIONS,
@@ -787,8 +915,8 @@ export class MultiStoreManager extends EventEmitter {
         category: NamespaceCategory.CORE,
         config: {
           path: 'docker-sessions',
-          defaults: {}
-        }
+          defaults: {},
+        },
       },
       {
         name: StaticNamespaces.SECRETS_METADATA,
@@ -796,12 +924,12 @@ export class MultiStoreManager extends EventEmitter {
         category: NamespaceCategory.CORE,
         config: {
           path: 'secrets-metadata',
-          defaults: {}
-        }
-      }
+          defaults: {},
+        },
+      },
     ];
 
-    // Note: Dynamic namespaces (like agent-specific event stores) are added 
+    // Note: Dynamic namespaces (like agent-specific event stores) are added
     // during initialization via the config parameter
 
     for (const namespace of defaultNamespaces) {
@@ -818,17 +946,23 @@ export class MultiStoreManager extends EventEmitter {
     // Each namespace gets its own storage provider instance
     for (const [namespaceName, namespace] of this.namespaces) {
       if (namespace.storageProvider === StorageProviderType.ELECTRON_STORE) {
-        console.log(`MultiStoreManager: Creating ElectronStore for namespace '${namespaceName}'`);
-        
+        console.log(
+          `MultiStoreManager: Creating ElectronStore for namespace '${namespaceName}'`,
+        );
+
         // Create a dedicated ElectronStore instance for this namespace
-        const dedicatedProvider = new ElectronStoreLocalStorageProvider(`${namespaceName}-store`);
+        const dedicatedProvider = new ElectronStoreLocalStorageProvider(
+          `${namespaceName}-store`,
+        );
         this.namespaceProviders.set(namespaceName, dedicatedProvider);
-        
+
         // Initialize it with the namespace-specific config
         initPromises.push(dedicatedProvider.initialize(namespace.config));
       } else {
         // For non-electron-store providers, use shared instances
-        const storageProvider = this.storageProviders.get(namespace.storageProvider);
+        const storageProvider = this.storageProviders.get(
+          namespace.storageProvider,
+        );
         if (storageProvider && !storageProvider.isAvailable) {
           initPromises.push(storageProvider.initialize(namespace.config));
         }
@@ -848,7 +982,7 @@ export class MultiStoreManager extends EventEmitter {
     key?: string,
     value?: any,
     oldValue?: any,
-    error?: Error
+    error?: Error,
   ): void {
     const event: StorageEvent = {
       type,
@@ -858,7 +992,7 @@ export class MultiStoreManager extends EventEmitter {
       value,
       oldValue,
       timestamp: Date.now(),
-      error
+      error,
     };
 
     this.emit('storage-event', event);

@@ -23,7 +23,7 @@ export class DockerService {
       return null;
     }
   }
-  
+
   /**
    * Check if Knip Docker image exists
    */
@@ -36,7 +36,7 @@ export class DockerService {
       return false;
     }
   }
-  
+
   /**
    * Pull a Docker image
    */
@@ -49,20 +49,23 @@ export class DockerService {
       return false;
     }
   }
-  
+
   /**
    * Run Knip analysis in Docker
    */
   static async runKnip(projectPath: string, options?: any): Promise<any> {
     try {
-      const response = await window.mainProcess.docker.runKnip(projectPath, options);
+      const response = await window.mainProcess.docker.runKnip(
+        projectPath,
+        options,
+      );
       return response.success ? response.data : null;
     } catch (error) {
       console.error('[DockerService] Failed to run Knip in Docker:', error);
       return null;
     }
   }
-  
+
   /**
    * Create custom Knip image
    */
@@ -75,20 +78,21 @@ export class DockerService {
       return false;
     }
   }
-  
+
   /**
    * Start Knip container
    */
   static async startKnipContainer(projectPath: string): Promise<string | null> {
     try {
-      const response = await window.mainProcess.docker.startKnipContainer(projectPath);
+      const response =
+        await window.mainProcess.docker.startKnipContainer(projectPath);
       return response.success && response.data ? response.data : null;
     } catch (error) {
       console.error('[DockerService] Failed to start Knip container:', error);
       return null;
     }
   }
-  
+
   /**
    * Execute command in Knip container
    */
@@ -101,7 +105,7 @@ export class DockerService {
       return null;
     }
   }
-  
+
   /**
    * Stop Knip container
    */
@@ -114,7 +118,7 @@ export class DockerService {
       return false;
     }
   }
-  
+
   /**
    * Get Docker installation instructions
    */
@@ -123,17 +127,20 @@ export class DockerService {
       const response = await window.mainProcess.docker.getInstallInstructions();
       return response.success && response.data ? response.data : null;
     } catch (error) {
-      console.error('[DockerService] Failed to get install instructions:', error);
+      console.error(
+        '[DockerService] Failed to get install instructions:',
+        error,
+      );
       return null;
     }
   }
-  
+
   /**
    * Listen for Docker pull progress events
    * @returns Unsubscribe function
    */
   static onPullProgress(
-    callback: (data: { imageName: string; message: string }) => void
+    callback: (data: { imageName: string; message: string }) => void,
   ): () => void {
     return window.mainProcess.docker.onPullProgress(callback);
   }

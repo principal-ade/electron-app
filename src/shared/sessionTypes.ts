@@ -332,7 +332,8 @@ export function createSessionEvents(
         timestamp: toolCall.timestamp,
         toolName: toolCall.toolName,
         toolType,
-        filePath: (toolCall.parameters?.file_path || toolCall.parameters?.path) as string | undefined,
+        filePath: (toolCall.parameters?.file_path ||
+          toolCall.parameters?.path) as string | undefined,
         normalizedPath: toolCall.normalizedPath,
         fileName: toolCall.normalizedPath?.split('/').pop(),
         metadata: {
@@ -527,9 +528,9 @@ export function groupRelatedEvents(
 }
 
 // Helper function for tool descriptions
-function getToolDescription(toolCall: { 
-  toolName?: string; 
-  normalizedPath?: string; 
+function getToolDescription(toolCall: {
+  toolName?: string;
+  normalizedPath?: string;
   metadata?: Record<string, unknown>;
   parameters?: Record<string, unknown>;
 }): string {

@@ -28,12 +28,18 @@ export const shellAPI = {
     ipcRenderer.invoke(ShellAPIEvent.RUN_BASH_COMMAND, params),
 
   // Open a local directory or files in the specified editor
-  openInEditor: async (params: { editor: EditorId; dir?: string; files?: string[] }) =>
-    ipcRenderer.invoke(ShellAPIEvent.OPEN_IN_EDITOR, params),
+  openInEditor: async (params: {
+    editor: EditorId;
+    dir?: string;
+    files?: string[];
+  }) => ipcRenderer.invoke(ShellAPIEvent.OPEN_IN_EDITOR, params),
 
   // Open a terminal in the specified directory
-  openInTerminal: async (params: { terminal: TerminalId; dir: string; command?: string }) =>
-    ipcRenderer.invoke(ShellAPIEvent.OPEN_IN_TERMINAL, params),
+  openInTerminal: async (params: {
+    terminal: TerminalId;
+    dir: string;
+    command?: string;
+  }) => ipcRenderer.invoke(ShellAPIEvent.OPEN_IN_TERMINAL, params),
 
   // Move file to trash
   moveToTrash: async (filePath: string) =>

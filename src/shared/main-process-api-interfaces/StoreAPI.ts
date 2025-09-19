@@ -1,4 +1,4 @@
-import { StorageNamespaces } from "../types/namespaces.types";
+import { StorageNamespaces } from '../types/namespaces.types';
 
 /**
  * Configuration for storage providers
@@ -33,9 +33,9 @@ export interface StorageStats {
  * Namespace categories for organization
  */
 export enum NamespaceCategory {
-  CORE = 'core',           // Core application data (preferences, repositories, etc.)
+  CORE = 'core', // Core application data (preferences, repositories, etc.)
   AGENT_SESSION_EVENTS = 'agent-session-events', // Agent provider event storage
-  CACHE = 'cache'          // Temporary/cache data
+  CACHE = 'cache', // Temporary/cache data
 }
 /**
  * Storage namespace configuration
@@ -78,10 +78,13 @@ export interface SessionStorageMetrics {
     sessionCount: number;
     totalSize: number;
   };
-  rawEvents: Record<string, {
-    eventCount: number;
-    totalSize: number;
-  }>;
+  rawEvents: Record<
+    string,
+    {
+      eventCount: number;
+      totalSize: number;
+    }
+  >;
 }
 
 export interface CleanupOptions {
@@ -103,52 +106,65 @@ export enum StoreEvents {
   HAS = 'store:has',
   CLEAR = 'store:clear',
   KEYS = 'store:keys',
-  
+
   // Namespace management
   LIST_NAMESPACES = 'store:list-namespaces',
   GET_FILE_PATH = 'store:get-file-path',
   GET_NAMESPACE_FILE_PATH = 'store:get-namespace-file-path',
   GET_STATS = 'store:get-stats',
   GET_NAMESPACE_STATS = 'store:get-namespace-stats',
-  
+
   // Session and fallback management
   SCAN_HOOK_FALLBACK_FILES = 'store:scan-hook-fallback-files',
   GET_SESSION_STORAGE_METRICS = 'store:get-session-storage-metrics',
   CLEANUP_SESSION_STORAGE = 'store:cleanup-session-storage',
-  
+
   // Watch events
   WATCH = 'store:watch',
   UNWATCH = 'store:unwatch',
   STORAGE_CHANGED = 'store:storage-changed',
-  
+
   // Migration
   MIGRATE = 'store:migrate',
 }
 
 export interface StoreAPI {
   // Core CRUD operations with optional namespace
-  get: <T = unknown>(key: string, namespace?: StorageNamespaces, defaultValue?: T) => Promise<T>;
-  set: <T = unknown>(key: string, value: T, namespace?: StorageNamespaces) => Promise<void>;
+  get: <T = unknown>(
+    key: string,
+    namespace?: StorageNamespaces,
+    defaultValue?: T,
+  ) => Promise<T>;
+  set: <T = unknown>(
+    key: string,
+    value: T,
+    namespace?: StorageNamespaces,
+  ) => Promise<void>;
   delete: (key: string, namespace?: StorageNamespaces) => Promise<void>;
   has: (key: string, namespace?: StorageNamespaces) => Promise<boolean>;
   clear: (namespace?: StorageNamespaces) => Promise<void>;
   keys: (namespace?: StorageNamespaces) => Promise<string[]>;
-  
+
   // Namespace management
   listNamespaces: () => Promise<StorageNamespaceConfig[]>;
   getFilePath: (namespace?: StorageNamespaces) => Promise<string>;
   getNamespaceFilePath: (namespace: StorageNamespaces) => Promise<string>;
   getStats: (namespace?: StorageNamespaces) => Promise<StorageStats>;
   getNamespaceStats: (namespace: StorageNamespaces) => Promise<StorageStats>;
-  
+
   // Session and fallback management
   scanHookFallbackFiles: () => Promise<HookFallbackFile[]>;
   getSessionStorageMetrics: () => Promise<SessionStorageMetrics>;
   cleanupSessionStorage: (options: CleanupOptions) => Promise<CleanupResult>;
-  
+
   // Watch for changes
   watch: (key: string, namespace?: StorageNamespaces) => Promise<() => void>;
   onStorageChanged: (
-    callback: (event: { namespace: StorageNamespaces; key: string; value: unknown; oldValue: unknown }) => void
+    callback: (event: {
+      namespace: StorageNamespaces;
+      key: string;
+      value: unknown;
+      oldValue: unknown;
+    }) => void,
   ) => () => void;
 }

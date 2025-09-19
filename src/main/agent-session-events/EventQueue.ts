@@ -1,6 +1,6 @@
 /**
  * EventQueue - Serializes operations per key to prevent race conditions
- * 
+ *
  * This class ensures that operations for the same key (e.g., session ID)
  * are executed sequentially, preventing concurrent writes that could lead
  * to data loss or corruption.
@@ -17,17 +17,20 @@ export class EventQueue {
   async enqueue<T>(key: string, operation: () => Promise<T>): Promise<T> {
     // Get the current queue for this key (or Promise.resolve() if none exists)
     const currentQueue = this.queues.get(key) || Promise.resolve();
-    
+
     // Increment pending count for this key
     const currentCount = this.pendingCounts.get(key) || 0;
     this.pendingCounts.set(key, currentCount + 1);
-    
+
     // Create new queue entry that waits for the current queue, then executes
     const newQueue = currentQueue
       .then(() => operation())
       .catch((error) => {
         // Log error but don't stop the queue
-        console.error(`[EventQueue] Error in queued operation for key ${key}:`, error);
+        console.error(
+          `[EventQueue] Error in queued operation for key ${key}:`,
+          error,
+        );
         throw error;
       })
       .finally(() => {
@@ -41,10 +44,10 @@ export class EventQueue {
           this.pendingCounts.set(key, count - 1);
         }
       });
-    
+
     // Update the queue for this key
     this.queues.set(key, newQueue);
-    
+
     // Wait for this operation to complete
     return newQueue;
   }
@@ -98,15 +101,20 @@ export class EventQueue {
     totalPending: number;
     queueDetails: Array<{ key: string; pending: number }>;
   } {
-    const queueDetails = Array.from(this.pendingCounts.entries()).map(([key, count]) => ({
-      key,
-      pending: count
-    }));
+    const queueDetails = Array.from(this.pendingCounts.entries()).map(
+      ([key, count]) => ({
+        key,
+        pending: count,
+      }),
+    );
 
     return {
       activeQueues: this.queues.size,
-      totalPending: Array.from(this.pendingCounts.values()).reduce((sum, count) => sum + count, 0),
-      queueDetails
+      totalPending: Array.from(this.pendingCounts.values()).reduce(
+        (sum, count) => sum + count,
+        0,
+      ),
+      queueDetails,
     };
   }
 }

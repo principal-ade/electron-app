@@ -1,6 +1,6 @@
 import { ipcRenderer, IpcRendererEvent } from 'electron';
 
-import { SupportedAgent } from "@principal-ai/agent-monitoring";
+import { SupportedAgent } from '@principal-ai/agent-monitoring';
 
 import {
   AgentInstallationAPI,
@@ -14,8 +14,12 @@ import {
 export const agentInstallationAPI: AgentInstallationAPI = {
   onInstallProgress: (
     agentType: SupportedAgent,
-    callback: (progress: AgentInstallProgress) => void): () => void => {
-    const subscription = (_event: IpcRendererEvent, data: AgentInstallProgress) => {
+    callback: (progress: AgentInstallProgress) => void,
+  ): (() => void) => {
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: AgentInstallProgress,
+    ) => {
       if (data.agentType !== agentType) {
         return;
       }
@@ -23,11 +27,20 @@ export const agentInstallationAPI: AgentInstallationAPI = {
     };
     ipcRenderer.on(AgentInstallationEvents.INSTALL_PROGRESS, subscription);
     return () => {
-      ipcRenderer.removeListener(AgentInstallationEvents.INSTALL_PROGRESS, subscription);
+      ipcRenderer.removeListener(
+        AgentInstallationEvents.INSTALL_PROGRESS,
+        subscription,
+      );
     };
   },
-  onInstallComplete: (agentType: SupportedAgent, callback: (status: any) => void) => {
-    const subscription = (_event: IpcRendererEvent, data: AgentInstallStatus) => {
+  onInstallComplete: (
+    agentType: SupportedAgent,
+    callback: (status: any) => void,
+  ) => {
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: AgentInstallStatus,
+    ) => {
       if (data.agentType !== agentType) {
         return;
       }
@@ -35,11 +48,20 @@ export const agentInstallationAPI: AgentInstallationAPI = {
     };
     ipcRenderer.on(AgentInstallationEvents.INSTALL_COMPLETE, subscription);
     return () => {
-      ipcRenderer.removeListener(AgentInstallationEvents.INSTALL_COMPLETE, subscription);
+      ipcRenderer.removeListener(
+        AgentInstallationEvents.INSTALL_COMPLETE,
+        subscription,
+      );
     };
   },
-  onInstallError: (agentType: SupportedAgent, callback: (error: string) => void) => {
-    const subscription = (_event: IpcRendererEvent, data: { agentType: SupportedAgent; error: string }) => {
+  onInstallError: (
+    agentType: SupportedAgent,
+    callback: (error: string) => void,
+  ) => {
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: { agentType: SupportedAgent; error: string },
+    ) => {
       if (data.agentType !== agentType) {
         return;
       }
@@ -47,17 +69,28 @@ export const agentInstallationAPI: AgentInstallationAPI = {
     };
     ipcRenderer.on(AgentInstallationEvents.INSTALL_ERROR, subscription);
     return () => {
-      ipcRenderer.removeListener(AgentInstallationEvents.INSTALL_ERROR, subscription);
+      ipcRenderer.removeListener(
+        AgentInstallationEvents.INSTALL_ERROR,
+        subscription,
+      );
     };
   },
-  checkInstallation: (agentType: SupportedAgent): Promise<AgentInstallStatus> => {
-    return ipcRenderer.invoke(AgentInstallationEvents.CHECK_INSTALLATION, agentType);
+  checkInstallation: (
+    agentType: SupportedAgent,
+  ): Promise<AgentInstallStatus> => {
+    return ipcRenderer.invoke(
+      AgentInstallationEvents.CHECK_INSTALLATION,
+      agentType,
+    );
   },
   install: (agentType: SupportedAgent): Promise<void> => {
     return ipcRenderer.invoke(AgentInstallationEvents.INSTALL, agentType);
   },
   onUninstallComplete: (agentType: SupportedAgent, callback: () => void) => {
-    const subscription = (_event: IpcRendererEvent, data: AgentInstallStatus) => {
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: AgentInstallStatus,
+    ) => {
       if (data.agentType !== agentType) {
         return;
       }
@@ -65,22 +98,36 @@ export const agentInstallationAPI: AgentInstallationAPI = {
     };
     ipcRenderer.on(AgentInstallationEvents.UNINSTALL_COMPLETE, subscription);
     return () => {
-      ipcRenderer.removeListener(AgentInstallationEvents.UNINSTALL_COMPLETE, subscription);
+      ipcRenderer.removeListener(
+        AgentInstallationEvents.UNINSTALL_COMPLETE,
+        subscription,
+      );
     };
   },
   uninstall: (agentType: SupportedAgent): Promise<void> => {
     return ipcRenderer.invoke(AgentInstallationEvents.UNINSTALL, agentType);
   },
   checkForUpdates: (agentType: SupportedAgent): Promise<AgentUpdateStatus> => {
-    return ipcRenderer.invoke(AgentInstallationEvents.CHECK_FOR_UPDATES, agentType);
+    return ipcRenderer.invoke(
+      AgentInstallationEvents.CHECK_FOR_UPDATES,
+      agentType,
+    );
   },
-  getAvailableVersions: (agentType: SupportedAgent): Promise<AgentVersion[]> => {
-    return ipcRenderer.invoke(AgentInstallationEvents.GET_AVAILABLE_VERSIONS, agentType);
+  getAvailableVersions: (
+    agentType: SupportedAgent,
+  ): Promise<AgentVersion[]> => {
+    return ipcRenderer.invoke(
+      AgentInstallationEvents.GET_AVAILABLE_VERSIONS,
+      agentType,
+    );
   },
   getLatestVersion: (agentType: SupportedAgent): Promise<AgentVersion> => {
-    return ipcRenderer.invoke(AgentInstallationEvents.GET_LATEST_VERSION, agentType);
+    return ipcRenderer.invoke(
+      AgentInstallationEvents.GET_LATEST_VERSION,
+      agentType,
+    );
   },
   update: (agentType: SupportedAgent): Promise<void> => {
     return ipcRenderer.invoke(AgentInstallationEvents.UPDATE, agentType);
   },
-};  
+};

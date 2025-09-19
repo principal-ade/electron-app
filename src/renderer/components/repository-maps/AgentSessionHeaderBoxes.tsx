@@ -1,9 +1,6 @@
 import React, { useState, useRef, useMemo } from 'react';
 import { useTheme } from 'themed-markdown';
-import { 
-  Activity,
-  Plus,
-} from 'lucide-react';
+import { Activity, Plus } from 'lucide-react';
 import { EnhancedUIAgentSessionData } from '../../types/session.types';
 
 interface AgentSessionHeaderBoxesProps {
@@ -16,7 +13,9 @@ interface AgentSessionHeaderBoxesProps {
   onStartNewSession?: () => void;
 }
 
-export const AgentSessionHeaderBoxes: React.FC<AgentSessionHeaderBoxesProps> = ({
+export const AgentSessionHeaderBoxes: React.FC<
+  AgentSessionHeaderBoxesProps
+> = ({
   repositoryPath,
   localClonePaths = [],
   onSessionSelect,
@@ -50,7 +49,7 @@ export const AgentSessionHeaderBoxes: React.FC<AgentSessionHeaderBoxesProps> = (
   const getAgentColor = (sessionId: string): string => {
     const colors = [
       '#F02C03',
-      '#FF950C', 
+      '#FF950C',
       '#FEDC03',
       '#7CDA01',
       '#0D8DFF',
@@ -70,69 +69,70 @@ export const AgentSessionHeaderBoxes: React.FC<AgentSessionHeaderBoxesProps> = (
     console.log('[AgentSessionHeaderBoxes] Filtering sessions for clone:', {
       repositoryPath,
       totalSessions: agentSessions.length,
-      sessions: agentSessions.map(s => ({
+      sessions: agentSessions.map((s) => ({
         id: s.sessionId.substring(0, 8),
         workingDirectory: s.workingDirectory,
-        status: s.status
-      }))
+        status: s.status,
+      })),
     });
-    
-    const filtered = agentSessions.filter(session => {
+
+    const filtered = agentSessions.filter((session) => {
       // Must be from the selected repository path (if specified)
-      const isFromSelectedPath = !repositoryPath || session.workingDirectory === repositoryPath;
+      const isFromSelectedPath =
+        !repositoryPath || session.workingDirectory === repositoryPath;
       return isFromSelectedPath;
     });
-    
+
     console.log('[AgentSessionHeaderBoxes] Filtered sessions:', {
       filteredCount: filtered.length,
-      filtered: filtered.map(s => ({
+      filtered: filtered.map((s) => ({
         id: s.sessionId.substring(0, 8),
         workingDirectory: s.workingDirectory,
-        status: s.status
-      }))
+        status: s.status,
+      })),
     });
-    
+
     return filtered;
   }, [agentSessions, repositoryPath]);
 
   // Commented out complex sizing logic for now
   // useEffect(() => {
   //   if (!containerRef.current?.parentElement) return;
-  //   
+  //
   //   const updateLayout = () => {
   //     const parent = containerRef.current?.parentElement;
   //     if (!parent) return;
-  //     
+  //
   //     // Try multiple ways to get parent height
   //     const parentHeight = parent.clientHeight || parent.offsetHeight || 44;
   //     const parentWidth = parent.clientWidth || parent.offsetWidth || 400;
-  //     
+  //
   //     // Only update if we have a valid height
   //     if (parentHeight > 0) {
   //       setContainerHeight(parentHeight);
   //     }
-  //     
+  //
   //     // Calculate how many boxes can fit at full height
   //     const gap = 8;
   //     const fullHeight = parentHeight;
   //     const halfHeight = Math.floor(parentHeight / 2) - (gap / 2);
   //     const availableWidth = parentWidth - 32; // Account for padding/margins
-  //     
+  //
   //     // At full height
   //     const boxesPerRowFull = Math.floor(availableWidth / (fullHeight + gap));
   //     const canFitFullHeight = sessions.length <= boxesPerRowFull;
-  //     
+  //
   //     // At half height (2 rows)
   //     const boxesPerRowHalf = Math.floor(availableWidth / (halfHeight + gap));
   //     const canFitHalfHeight = sessions.length <= boxesPerRowHalf * 2;
-  //     
+  //
   //     // Use full height if all fit, otherwise use half height for 2 rows
   //     setUseHalfHeight(!canFitFullHeight && canFitHalfHeight);
   //   };
-  //   
+  //
   //   // Initial update with small delay to ensure parent is rendered
   //   setTimeout(updateLayout, 0);
-  //   
+  //
   //   // Set up ResizeObserver to watch for parent size changes
   //   let resizeObserver: ResizeObserver | null = null;
   //   if (typeof ResizeObserver !== 'undefined') {
@@ -144,7 +144,7 @@ export const AgentSessionHeaderBoxes: React.FC<AgentSessionHeaderBoxesProps> = (
   //     // Fallback for older browsers
   //     window.addEventListener('resize', updateLayout);
   //   }
-  //   
+  //
   //   return () => {
   //     if (resizeObserver) {
   //       resizeObserver.disconnect();
@@ -158,7 +158,7 @@ export const AgentSessionHeaderBoxes: React.FC<AgentSessionHeaderBoxesProps> = (
   const boxHeight = '36px'; // 75% of typical 48px container height
 
   return (
-    <div 
+    <div
       ref={containerRef}
       style={{
         display: 'flex',
@@ -213,13 +213,15 @@ export const AgentSessionHeaderBoxes: React.FC<AgentSessionHeaderBoxesProps> = (
             />
 
             {/* Icon */}
-            <div style={{ 
-              position: 'relative', 
-              zIndex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
+            <div
+              style={{
+                position: 'relative',
+                zIndex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               <Activity size={16} color={sessionColor} />
             </div>
 
@@ -234,13 +236,14 @@ export const AgentSessionHeaderBoxes: React.FC<AgentSessionHeaderBoxesProps> = (
                 borderRadius: '50%',
                 backgroundColor: session.statusColor,
                 boxShadow: `0 0 8px ${session.statusColor}80`,
-                animation: session.status === 'active' ? 'pulse 2s infinite' : 'none',
+                animation:
+                  session.status === 'active' ? 'pulse 2s infinite' : 'none',
               }}
             />
           </button>
         );
       })}
-      
+
       {/* Add New Session box - show at the end */}
       <button
         onClick={onStartNewSession}
@@ -263,13 +266,14 @@ export const AgentSessionHeaderBoxes: React.FC<AgentSessionHeaderBoxesProps> = (
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.borderColor = theme.colors.border;
-          e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+          e.currentTarget.style.backgroundColor =
+            theme.colors.backgroundTertiary;
         }}
         title="Start new agent session"
       >
         <Plus size={18} color={theme.colors.textSecondary} />
       </button>
-      
+
       {/* Add CSS animation */}
       <style>{`
         @keyframes pulse {

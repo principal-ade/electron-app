@@ -1,13 +1,13 @@
 import { ipcRenderer } from 'electron';
-import { 
-  SystemInfo, 
-  SystemEvents, 
-  SystemAPI, 
+import {
+  SystemInfo,
+  SystemEvents,
+  SystemAPI,
   CommandOptions,
   CommandResult,
   DialogOptions,
   DialogResult,
-  UpdateCheckResult
+  UpdateCheckResult,
 } from '../../shared/main-process-api-interfaces/SystemAPI';
 
 export const systemAPI: SystemAPI = {
@@ -15,7 +15,7 @@ export const systemAPI: SystemAPI = {
   getPlatform: async (): Promise<string> => {
     return ipcRenderer.invoke(SystemEvents.GET_PLATFORM);
   },
-  
+
   getSystemInfo: async (): Promise<SystemInfo | null> => {
     return ipcRenderer.invoke(SystemEvents.GET_SYSTEM_INFO);
   },
@@ -39,8 +39,13 @@ export const systemAPI: SystemAPI = {
 
   // Event listeners
   onUpdateCheckComplete: (callback: (result: UpdateCheckResult) => void) => {
-    const subscription = (_event: any, result: UpdateCheckResult) => callback(result);
+    const subscription = (_event: any, result: UpdateCheckResult) =>
+      callback(result);
     ipcRenderer.on(SystemEvents.UPDATE_CHECK_COMPLETE, subscription);
-    return () => ipcRenderer.removeListener(SystemEvents.UPDATE_CHECK_COMPLETE, subscription);
+    return () =>
+      ipcRenderer.removeListener(
+        SystemEvents.UPDATE_CHECK_COMPLETE,
+        subscription,
+      );
   },
 };

@@ -1,4 +1,4 @@
-import { UserPreferences } from "../../shared/types/userPreferences.types";
+import { UserPreferences } from '../../shared/types/userPreferences.types';
 
 export enum UserPreferencesAPIEvents {
   GET_PREFERENCES = 'userPreferences:getPreferences',

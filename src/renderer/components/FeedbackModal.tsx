@@ -19,7 +19,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
   componentInfo,
 }) => {
   const [feedbackText, setFeedbackText] = useState('');
-  const [feedbackType, setFeedbackType] = useState<'bug' | 'feature' | 'improvement'>('bug');
+  const [feedbackType, setFeedbackType] = useState<
+    'bug' | 'feature' | 'improvement'
+  >('bug');
 
   if (!isOpen) return null;
 
@@ -61,9 +63,18 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
                 Component Information
               </h3>
               <div className="bg-gray-100 dark:bg-gray-900 p-4 rounded-md space-y-2 text-sm font-mono">
-                <p><span className="text-gray-500">Component:</span> {componentInfo.componentName}</p>
-                <p><span className="text-gray-500">Path:</span> {componentInfo.componentPath}</p>
-                <p><span className="text-gray-500">Element:</span> {componentInfo.elementInfo}</p>
+                <p>
+                  <span className="text-gray-500">Component:</span>{' '}
+                  {componentInfo.componentName}
+                </p>
+                <p>
+                  <span className="text-gray-500">Path:</span>{' '}
+                  {componentInfo.componentPath}
+                </p>
+                <p>
+                  <span className="text-gray-500">Element:</span>{' '}
+                  {componentInfo.elementInfo}
+                </p>
               </div>
             </div>
 

@@ -4,10 +4,9 @@ import { TestCoverageAPI } from '../../shared/main-process-api-interfaces/TestCo
 export const testCoverageAPI: TestCoverageAPI = {
   collectCoverage: (rootPath, packages, options) =>
     ipcRenderer.invoke('collect-test-coverage', rootPath, packages, options),
-    
+
   cancelCoverage: (packageName) =>
     ipcRenderer.invoke('cancel-test-coverage', packageName),
-    
-  cancelAllCoverage: () =>
-    ipcRenderer.invoke('cancel-all-test-coverage'),
+
+  cancelAllCoverage: () => ipcRenderer.invoke('cancel-all-test-coverage'),
 };

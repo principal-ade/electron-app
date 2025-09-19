@@ -1,20 +1,20 @@
-import { 
-  McpServer, 
-  McpTool, 
-  McpToolCallParams, 
+import {
+  McpServer,
+  McpTool,
+  McpToolCallParams,
   McpToolResult,
   McpMessage,
   McpConfig,
   ClaudeCliStatus,
   AppInfo,
   GetAppInfoError,
-  type GetAppInfoResult
+  type GetAppInfoResult,
 } from '../../shared/main-process-api-interfaces/McpToolsAPI';
 
 /**
  * Service layer for MCP Tools functionality
  * ALL window.mainProcess.mcpTools calls MUST be encapsulated here
- * 
+ *
  * This service provides a clean interface for MCP server management,
  * tool discovery and execution, and configuration management.
  */
@@ -22,7 +22,9 @@ export class McpToolsService {
   /**
    * Get application information
    */
-  static async getAppInfo(params?: { detailed?: boolean }): Promise<AppInfo | GetAppInfoError> {
+  static async getAppInfo(params?: {
+    detailed?: boolean;
+  }): Promise<AppInfo | GetAppInfoError> {
     return window.mainProcess.mcpTools.getAppInfo(params);
   }
 
@@ -122,7 +124,9 @@ export class McpToolsService {
    * Subscribe to server discovery events
    * @returns Unsubscribe function
    */
-  static onServersDiscovered(callback: (servers: McpServer[]) => void): () => void {
+  static onServersDiscovered(
+    callback: (servers: McpServer[]) => void,
+  ): () => void {
     return window.mainProcess.mcpTools.onServersDiscovered(callback);
   }
 
@@ -146,7 +150,9 @@ export class McpToolsService {
    * Subscribe to markdown slide display events
    * @returns void (no unsubscribe needed for this legacy event)
    */
-  static onDisplayMarkdownSlides(callback: (data: { presentationTitle: string; markdown: string }) => void): void {
+  static onDisplayMarkdownSlides(
+    callback: (data: { presentationTitle: string; markdown: string }) => void,
+  ): void {
     return window.mainProcess.mcpTools.onDisplayMarkdownSlides(callback);
   }
 }

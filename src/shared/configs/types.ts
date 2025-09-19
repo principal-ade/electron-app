@@ -41,7 +41,10 @@ export interface ConfigFetchAdapter {
    * @param source - Where to fetch from (GitHub, local, URL, etc.)
    * @returns The raw config content as a string
    */
-  fetchConfig(fileName: string, source: ConfigSource): Promise<ConfigFetchResult>;
+  fetchConfig(
+    fileName: string,
+    source: ConfigSource,
+  ): Promise<ConfigFetchResult>;
 
   /**
    * Check if a config exists at the source

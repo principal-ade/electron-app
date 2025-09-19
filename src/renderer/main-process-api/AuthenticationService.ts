@@ -3,13 +3,13 @@
  * ALL window.mainProcess.authentication calls MUST be encapsulated here
  */
 
-import { 
-  AuthUser, 
-  AuthResult, 
-  AuthStatus, 
+import {
+  AuthUser,
+  AuthResult,
+  AuthStatus,
   AuthState,
   TokenResult,
-  TokenWithMetadata 
+  TokenWithMetadata,
 } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 
 export class AuthenticationService {
@@ -44,7 +44,10 @@ export class AuthenticationService {
   /**
    * Save GitHub authentication token
    */
-  static async saveGitHubAuth(token: string, authUser: AuthUser): Promise<{ success: boolean; error?: string }> {
+  static async saveGitHubAuth(
+    token: string,
+    authUser: AuthUser,
+  ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.authentication.saveGitHubAuth(token, authUser);
   }
 
@@ -58,7 +61,10 @@ export class AuthenticationService {
   /**
    * Clear GitHub authentication
    */
-  static async clearGitHubAuth(): Promise<{ success: boolean; error?: string }> {
+  static async clearGitHubAuth(): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
     return window.mainProcess.authentication.clearGitHubAuth();
   }
 
@@ -72,7 +78,11 @@ export class AuthenticationService {
   /**
    * Set a secure token
    */
-  static async saveToken(key: string, value: string, metadata?: any): Promise<{ success: boolean; error?: string }> {
+  static async saveToken(
+    key: string,
+    value: string,
+    metadata?: any,
+  ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.authentication.saveToken(key, value, metadata);
   }
 
@@ -86,14 +96,18 @@ export class AuthenticationService {
   /**
    * Delete a secure token
    */
-  static async deleteToken(key: string): Promise<{ success: boolean; error?: string }> {
+  static async deleteToken(
+    key: string,
+  ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.authentication.deleteToken(key);
   }
 
   /**
    * Migrate tokens from localStorage
    */
-  static async migrateFromLocalStorage(tokens: any[]): Promise<{ success: boolean; error?: string }> {
+  static async migrateFromLocalStorage(
+    tokens: any[],
+  ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.authentication.migrateFromLocalStorage(tokens);
   }
 

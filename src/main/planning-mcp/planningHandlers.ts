@@ -16,13 +16,12 @@ interface SlideDocument {
 
 // Simple IPC handlers for planning operations
 export function registerPlanningHandlers() {
-  
   // Load or create planning document
   ipcMain.handle('planning:load-document', async (event, filePath: string) => {
     try {
       let content = '';
       let exists = false;
-      
+
       try {
         content = await fs.readFile(filePath, 'utf-8');
         exists = true;
@@ -30,9 +29,11 @@ export function registerPlanningHandlers() {
         // File doesn't exist, return null to let renderer create default
         return null;
       }
-      
-      const slides = content.split(/\n---\n/).filter(slide => slide.trim().length > 0);
-      
+
+      const slides = content
+        .split(/\n---\n/)
+        .filter((slide) => slide.trim().length > 0);
+
       return {
         filePath,
         content,
@@ -41,29 +42,32 @@ export function registerPlanningHandlers() {
         metadata: {
           title: path.basename(filePath, '.md'),
           lastModified: exists ? new Date() : undefined,
-          totalSlides: slides.length
-        }
+          totalSlides: slides.length,
+        },
       } as SlideDocument;
     } catch (error) {
       console.error('[Planning] Error loading document:', error);
       throw error;
     }
   });
-  
+
   // Save planning document
-  ipcMain.handle('planning:save-document', async (event, filePath: string, content: string) => {
-    try {
-      // Ensure directory exists
-      const dir = path.dirname(filePath);
-      await fs.mkdir(dir, { recursive: true });
-      
-      // Save to file
-      await fs.writeFile(filePath, content, 'utf-8');
-      
-      return { success: true };
-    } catch (error) {
-      console.error('[Planning] Error saving document:', error);
-      return { success: false, error: (error as Error).message };
-    }
-  });
+  ipcMain.handle(
+    'planning:save-document',
+    async (event, filePath: string, content: string) => {
+      try {
+        // Ensure directory exists
+        const dir = path.dirname(filePath);
+        await fs.mkdir(dir, { recursive: true });
+
+        // Save to file
+        await fs.writeFile(filePath, content, 'utf-8');
+
+        return { success: true };
+      } catch (error) {
+        console.error('[Planning] Error saving document:', error);
+        return { success: false, error: (error as Error).message };
+      }
+    },
+  );
 }

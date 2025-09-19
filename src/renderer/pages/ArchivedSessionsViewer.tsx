@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { AnimatedResizableLayout } from "@a24z/panels";
-import "@a24z/panels/style.css";
+import { AnimatedResizableLayout } from '@a24z/panels';
+import '@a24z/panels/style.css';
 import { useTheme } from 'themed-markdown';
 import { Sparkles, X } from 'lucide-react';
 import { ArchivedAgentSessionsPanel } from '../components/repository-maps/ArchivedAgentSessionsPanel';
@@ -34,8 +34,9 @@ export const ArchivedSessionsViewer: React.FC<ArchivedSessionsViewerProps> = ({
     directory: string;
   } | null>(null);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false); // Collapsed if opened with initial session
-  const [currentRepositoryPath, setCurrentRepositoryPath] = useState<string>(initialDirectory || '');
-  
+  const [currentRepositoryPath, setCurrentRepositoryPath] = useState<string>(
+    initialDirectory || '',
+  );
 
   // Load initial session if provided
   React.useEffect(() => {
@@ -208,8 +209,14 @@ export const ArchivedSessionsViewer: React.FC<ArchivedSessionsViewerProps> = ({
         <AnimatedResizableLayout
           leftPanel={
             <ArchivedAgentSessionsPanel
-              repositoryPath={currentRepositoryPath || selectedSession?.directory || ''}
-              repositoryName={currentRepositoryPath ? currentRepositoryPath.split('/').pop() || 'Repository' : 'All Archives'}
+              repositoryPath={
+                currentRepositoryPath || selectedSession?.directory || ''
+              }
+              repositoryName={
+                currentRepositoryPath
+                  ? currentRepositoryPath.split('/').pop() || 'Repository'
+                  : 'All Archives'
+              }
               onSessionSelect={(session, directory) => {
                 handleSessionSelect(session as any, directory);
                 // Update repository path when a session is selected
@@ -326,35 +333,59 @@ export const ArchivedSessionsViewer: React.FC<ArchivedSessionsViewerProps> = ({
               <div className="flex-1 overflow-y-auto space-y-4">
                 {/* Summary Stats */}
                 <div className="grid grid-cols-4 gap-4">
-                  <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.background }}>
+                  <div
+                    className="rounded-lg p-4"
+                    style={{ backgroundColor: theme.colors.background }}
+                  >
                     <div className="text-3xl font-bold text-white">
                       {knipAnalysis.unusedFiles?.length || 0}
                     </div>
-                    <div className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
+                    <div
+                      className="text-sm mt-1"
+                      style={{ color: theme.colors.textSecondary }}
+                    >
                       Unused Files
                     </div>
                   </div>
-                  <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.background }}>
+                  <div
+                    className="rounded-lg p-4"
+                    style={{ backgroundColor: theme.colors.background }}
+                  >
                     <div className="text-3xl font-bold text-white">
                       {knipAnalysis.unusedExports?.length || 0}
                     </div>
-                    <div className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
+                    <div
+                      className="text-sm mt-1"
+                      style={{ color: theme.colors.textSecondary }}
+                    >
                       Unused Exports
                     </div>
                   </div>
-                  <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.background }}>
+                  <div
+                    className="rounded-lg p-4"
+                    style={{ backgroundColor: theme.colors.background }}
+                  >
                     <div className="text-3xl font-bold text-white">
                       {knipAnalysis.unusedDependencies?.length || 0}
                     </div>
-                    <div className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
+                    <div
+                      className="text-sm mt-1"
+                      style={{ color: theme.colors.textSecondary }}
+                    >
                       Unused Dependencies
                     </div>
                   </div>
-                  <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.background }}>
+                  <div
+                    className="rounded-lg p-4"
+                    style={{ backgroundColor: theme.colors.background }}
+                  >
                     <div className="text-3xl font-bold text-white">
                       {knipAnalysis.unresolvedImports?.length || 0}
                     </div>
-                    <div className="text-sm mt-1" style={{ color: theme.colors.textSecondary }}>
+                    <div
+                      className="text-sm mt-1"
+                      style={{ color: theme.colors.textSecondary }}
+                    >
                       Unresolved Imports
                     </div>
                   </div>
@@ -362,7 +393,10 @@ export const ArchivedSessionsViewer: React.FC<ArchivedSessionsViewerProps> = ({
 
                 {/* Detailed Results */}
                 {knipAnalysis.unusedFiles?.length > 0 && (
-                  <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.background }}>
+                  <div
+                    className="rounded-lg p-4"
+                    style={{ backgroundColor: theme.colors.background }}
+                  >
                     <h4 className="font-medium text-white mb-3">
                       Unused Files
                     </h4>
@@ -374,7 +408,7 @@ export const ArchivedSessionsViewer: React.FC<ArchivedSessionsViewerProps> = ({
                             className="text-sm font-mono rounded px-3 py-1 truncate"
                             style={{
                               color: theme.colors.textTertiary,
-                              backgroundColor: theme.colors.surface
+                              backgroundColor: theme.colors.surface,
                             }}
                             title={file}
                           >
@@ -387,18 +421,31 @@ export const ArchivedSessionsViewer: React.FC<ArchivedSessionsViewerProps> = ({
                 )}
 
                 {knipAnalysis.unusedExports?.length > 0 && (
-                  <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.background }}>
+                  <div
+                    className="rounded-lg p-4"
+                    style={{ backgroundColor: theme.colors.background }}
+                  >
                     <h4 className="font-medium text-white mb-3">
                       Unused Exports
                     </h4>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {knipAnalysis.unusedExports.map(
                         (item: any, idx: number) => (
-                          <div key={idx} className="rounded p-2" style={{ backgroundColor: theme.colors.surface }}>
-                            <p className="text-sm font-mono" style={{ color: theme.colors.textTertiary }}>
+                          <div
+                            key={idx}
+                            className="rounded p-2"
+                            style={{ backgroundColor: theme.colors.surface }}
+                          >
+                            <p
+                              className="text-sm font-mono"
+                              style={{ color: theme.colors.textTertiary }}
+                            >
                               {item.file}
                             </p>
-                            <p className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                            <p
+                              className="text-xs"
+                              style={{ color: theme.colors.textSecondary }}
+                            >
                               Export: {item.export}
                             </p>
                           </div>
@@ -409,7 +456,10 @@ export const ArchivedSessionsViewer: React.FC<ArchivedSessionsViewerProps> = ({
                 )}
 
                 {knipAnalysis.unusedDependencies?.length > 0 && (
-                  <div className="rounded-lg p-4" style={{ backgroundColor: theme.colors.background }}>
+                  <div
+                    className="rounded-lg p-4"
+                    style={{ backgroundColor: theme.colors.background }}
+                  >
                     <h4 className="font-medium text-white mb-3">
                       Unused Dependencies
                     </h4>
@@ -433,7 +483,10 @@ export const ArchivedSessionsViewer: React.FC<ArchivedSessionsViewerProps> = ({
                   !knipAnalysis.unusedExports?.length &&
                   !knipAnalysis.unusedDependencies?.length &&
                   !knipAnalysis.unresolvedImports?.length && (
-                    <div className="text-center py-8" style={{ color: theme.colors.textSecondary }}>
+                    <div
+                      className="text-center py-8"
+                      style={{ color: theme.colors.textSecondary }}
+                    >
                       <p className="text-lg mb-2 flex items-center justify-center gap-2">
                         <Sparkles size={16} /> No tech debt found!
                       </p>
@@ -451,10 +504,12 @@ export const ArchivedSessionsViewer: React.FC<ArchivedSessionsViewerProps> = ({
                 className="px-4 py-2 text-white rounded-md transition-colors"
                 style={{ backgroundColor: theme.colors.backgroundHover }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundHover;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundHover;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundHover;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundHover;
                 }}
               >
                 Close

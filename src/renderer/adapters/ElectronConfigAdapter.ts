@@ -1,18 +1,21 @@
-import { ConfigFetchAdapter, ConfigFetchResult } from "../../shared/configs";
-import type { ConfigSource } from "../../shared/configs";
-import { GithubService } from "../main-process-api/GithubService";
+import { ConfigFetchAdapter, ConfigFetchResult } from '../../shared/configs';
+import type { ConfigSource } from '../../shared/configs';
+import { GithubService } from '../main-process-api/GithubService';
 
 export class ElectronConfigAdapter implements ConfigFetchAdapter {
-  async fetchConfig(fileName: string, source: ConfigSource): Promise<ConfigFetchResult> {
+  async fetchConfig(
+    fileName: string,
+    source: ConfigSource,
+  ): Promise<ConfigFetchResult> {
     let content: string;
-    
+
     try {
       if (source.type === 'github') {
         const result = await GithubService.fetchConfigFromGitHub(
-          source.owner, 
-          source.repo, 
-          source.branch || 'main', 
-          fileName
+          source.owner,
+          source.repo,
+          source.branch || 'main',
+          fileName,
         );
         if (!result || !result.content) {
           throw new Error(`Config not found: ${fileName}`);
@@ -32,7 +35,7 @@ export class ElectronConfigAdapter implements ConfigFetchAdapter {
         content,
         source,
         timestamp: Date.now(),
-        cached: false
+        cached: false,
       };
     } catch (error) {
       throw new Error(`Failed to fetch config ${fileName}: ${error.message}`);
@@ -65,7 +68,12 @@ export class ElectronConfigAdapter implements ConfigFetchAdapter {
     path: string,
   ): Promise<{ content: string } | null> {
     try {
-      const result = await this.fetchConfig(path, { type: 'github', owner, repo, branch });
+      const result = await this.fetchConfig(path, {
+        type: 'github',
+        owner,
+        repo,
+        branch,
+      });
       return { content: result.content };
     } catch {
       return null;

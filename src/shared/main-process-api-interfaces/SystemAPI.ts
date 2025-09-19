@@ -26,7 +26,12 @@ export interface CommandResult {
 }
 
 export interface DialogOptions {
-  properties?: ('openFile' | 'openDirectory' | 'multiSelections' | 'createDirectory')[];
+  properties?: (
+    | 'openFile'
+    | 'openDirectory'
+    | 'multiSelections'
+    | 'createDirectory'
+  )[];
   title?: string;
   defaultPath?: string;
   buttonLabel?: string;
@@ -59,13 +64,15 @@ export interface SystemAPI {
   // Existing methods
   getPlatform: () => Promise<string>;
   getSystemInfo: () => Promise<SystemInfo | null>;
-  
+
   // New methods for migration
   executeCommand: (options: CommandOptions) => Promise<CommandResult>;
   openDialog: (options: DialogOptions) => Promise<DialogResult>;
   checkForUpdateManually: () => Promise<UpdateCheckResult>;
   restartApp: () => Promise<void>;
-  
+
   // Event listeners
-  onUpdateCheckComplete: (callback: (result: UpdateCheckResult) => void) => () => void;
+  onUpdateCheckComplete: (
+    callback: (result: UpdateCheckResult) => void,
+  ) => () => void;
 }

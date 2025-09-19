@@ -46,7 +46,12 @@ export interface TerminalAPI {
   focusWindow: (windowId: number) => Promise<void>;
   onData: (callback: (data: TerminalData) => void) => () => void;
   onExit: (callback: (exit: TerminalExit) => void) => () => void;
-  onWindowReady: (callback: (data: { terminalId: string; agentSessionId?: string; windowId: number }) => void) => () => void;
+  onWindowReady: (
+    callback: (data: {
+      terminalId: string;
+      agentSessionId?: string;
+      windowId: number;
+    }) => void,
+  ) => () => void;
   refresh: (sessionId: string) => Promise<boolean>;
 }
-

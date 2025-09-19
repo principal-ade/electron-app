@@ -7,7 +7,9 @@ interface CustomThemeProviderProps {
   children: React.ReactNode;
 }
 
-export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({ children }) => {
+export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
+  children,
+}) => {
   const [selectedTheme, setSelectedTheme] = useState<any>(undefined);
   const [colorMode, setColorMode] = useState<'light' | 'dark'>('dark');
   const [isLoading, setIsLoading] = useState(true);
@@ -16,30 +18,39 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({ childr
     // Load initial theme preferences
     const loadInitialTheme = async () => {
       await ThemeService.loadPreferences();
-      
+
       const themeName = ThemeService.getCurrentThemeName();
       const theme = getThemeByName(themeName);
       const mode = ThemeService.getCurrentColorMode();
-      
+
       if (theme) {
         setSelectedTheme(theme);
       }
       setColorMode(mode);
       setIsLoading(false);
-      
-      console.log('[CustomThemeProvider] Initial theme loaded:', themeName, mode);
+
+      console.log(
+        '[CustomThemeProvider] Initial theme loaded:',
+        themeName,
+        mode,
+      );
     };
 
     loadInitialTheme();
 
     // Subscribe to theme changes for live switching
-    const unsubscribe = ThemeService.onThemeChange((event: ThemeChangeEvent) => {
-      console.log('[CustomThemeProvider] Theme change event received:', event.themeName);
-      setSelectedTheme(event.theme);
-      if (event.colorMode) {
-        setColorMode(event.colorMode);
-      }
-    });
+    const unsubscribe = ThemeService.onThemeChange(
+      (event: ThemeChangeEvent) => {
+        console.log(
+          '[CustomThemeProvider] Theme change event received:',
+          event.themeName,
+        );
+        setSelectedTheme(event.theme);
+        if (event.colorMode) {
+          setColorMode(event.colorMode);
+        }
+      },
+    );
 
     return () => {
       unsubscribe();

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from 'themed-markdown';
-import { FileTree } from "@principal-ai/repository-abstraction";
+import { FileTree } from '@principal-ai/repository-abstraction';
 import { FileText, Sparkles, Search, ExternalLink } from 'lucide-react';
 import {
   localSearchService,
@@ -1399,8 +1399,8 @@ export const LocalSearchPanel: React.FC<LocalSearchPanelProps> = ({
                       ?.map((match) => match.lineNumber)
                       .filter(Boolean);
                     // Use relativePath for remote repositories, path for local
-            const pathToUse = result.relativePath || result.path;
-            onFileSelect(pathToUse, lineNumbers, searchQuery);
+                    const pathToUse = result.relativePath || result.path;
+                    onFileSelect(pathToUse, lineNumbers, searchQuery);
                   }}
                   onContextMenu={(e) => handleContextMenu(e, result.path)}
                   onMouseEnter={() => {
@@ -1478,22 +1478,31 @@ export const LocalSearchPanel: React.FC<LocalSearchPanelProps> = ({
                             <button
                               className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-70 hover:!opacity-100 transition-all"
                               style={{
-                                backgroundColor: theme.colors.backgroundSecondary || theme.colors.background,
+                                backgroundColor:
+                                  theme.colors.backgroundSecondary ||
+                                  theme.colors.background,
                                 border: `1px solid ${theme.colors.border}`,
                                 color: theme.colors.textSecondary,
-                                opacity: isSelected || isCurrentFile ? 0.7 : undefined,
+                                opacity:
+                                  isSelected || isCurrentFile ? 0.7 : undefined,
                               }}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.opacity = '1';
                                 e.currentTarget.style.backgroundColor = `${theme.colors.primary}20`;
-                                e.currentTarget.style.borderColor = theme.colors.primary;
-                                e.currentTarget.style.color = theme.colors.primary;
+                                e.currentTarget.style.borderColor =
+                                  theme.colors.primary;
+                                e.currentTarget.style.color =
+                                  theme.colors.primary;
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.opacity = '';
-                                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary || theme.colors.background;
-                                e.currentTarget.style.borderColor = theme.colors.border;
-                                e.currentTarget.style.color = theme.colors.textSecondary;
+                                e.currentTarget.style.backgroundColor =
+                                  theme.colors.backgroundSecondary ||
+                                  theme.colors.background;
+                                e.currentTarget.style.borderColor =
+                                  theme.colors.border;
+                                e.currentTarget.style.color =
+                                  theme.colors.textSecondary;
                               }}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1557,37 +1566,37 @@ export const LocalSearchPanel: React.FC<LocalSearchPanelProps> = ({
                                 : 'Copy full path'
                             }
                           >
-                          {copiedPath === result.path ? (
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          ) : (
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <rect
-                                x="9"
-                                y="9"
-                                width="13"
-                                height="13"
-                                rx="2"
-                                ry="2"
-                              />
-                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                            </svg>
-                          )}
+                            {copiedPath === result.path ? (
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            ) : (
+                              <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <rect
+                                  x="9"
+                                  y="9"
+                                  width="13"
+                                  height="13"
+                                  rx="2"
+                                  ry="2"
+                                />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                              </svg>
+                            )}
                           </button>
                         </div>
                       </div>

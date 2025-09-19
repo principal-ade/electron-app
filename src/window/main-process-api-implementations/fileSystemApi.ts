@@ -1,5 +1,8 @@
 import { ipcRenderer, IpcRendererEvent } from 'electron';
-import { FileSystemAPI, FileSystemAPIEvent } from '../../shared/main-process-api-interfaces/FileSystemAPI';
+import {
+  FileSystemAPI,
+  FileSystemAPIEvent,
+} from '../../shared/main-process-api-interfaces/FileSystemAPI';
 
 export const fileSystemAPI: FileSystemAPI = {
   selectFile: async () => {
@@ -83,20 +86,25 @@ export const fileSystemAPI: FileSystemAPI = {
     );
     return result;
   },
-  onFileChange: (callback: (event: {
-    type: string;
-    path: string;
-    extension?: string;
-    stats?: unknown;
-    isCurrentFile?: boolean;
-  }) => void) => {
-    const subscription = (_event: IpcRendererEvent, data: {
+  onFileChange: (
+    callback: (event: {
       type: string;
       path: string;
       extension?: string;
       stats?: unknown;
       isCurrentFile?: boolean;
-    }) => {
+    }) => void,
+  ) => {
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: {
+        type: string;
+        path: string;
+        extension?: string;
+        stats?: unknown;
+        isCurrentFile?: boolean;
+      },
+    ) => {
       callback(data);
     };
     ipcRenderer.on('file-change', subscription);
@@ -137,16 +145,19 @@ export const fileSystemAPI: FileSystemAPI = {
       initial?: boolean;
     }) => void,
   ) => {
-    const subscription = (_event: IpcRendererEvent, data: {
-      repoPath: string;
-      changedFiles: {
-        path: string;
-        status: 'added' | 'modified' | 'deleted' | 'renamed';
-        lastModified?: Date;
-      }[];
-      timestamp: string;
-      initial?: boolean;
-    }) => {
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: {
+        repoPath: string;
+        changedFiles: {
+          path: string;
+          status: 'added' | 'modified' | 'deleted' | 'renamed';
+          lastModified?: Date;
+        }[];
+        timestamp: string;
+        initial?: boolean;
+      },
+    ) => {
       callback(data);
     };
     ipcRenderer.on('git-status-change', subscription);
@@ -165,16 +176,16 @@ export const fileSystemAPI: FileSystemAPI = {
   },
   buildFilteredFileTree: async (
     directoryPath: string,
-    options?: { 
+    options?: {
       gitignore?: boolean;
       ignorePatterns?: string[];
       includeStats?: boolean;
-    }
+    },
   ) => {
     return ipcRenderer.invoke(
       FileSystemAPIEvent.BUILD_FILTERED_FILE_TREE,
       directoryPath,
-      options
+      options,
     );
   },
 };

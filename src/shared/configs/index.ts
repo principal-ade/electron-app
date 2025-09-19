@@ -5,7 +5,11 @@
  */
 
 // Export types
-export type { ConfigSource, ConfigFetchResult, ConfigFetchAdapter } from './types';
+export type {
+  ConfigSource,
+  ConfigFetchResult,
+  ConfigFetchAdapter,
+} from './types';
 
 // Export gitignore patterns
 export { universalGitignorePatterns } from './gitignorePatterns';

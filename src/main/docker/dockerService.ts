@@ -43,7 +43,7 @@ export interface KnipDockerConfig {
 export class DockerService {
   private static instance: DockerService;
   private dockerPath: string | null = null;
-  
+
   private readonly DEFAULT_KNIP_IMAGE = 'node:18-alpine';
   private readonly CUSTOM_KNIP_IMAGE = 'specktor/knip:latest';
   private readonly DEFAULT_CONTAINER_NAME = 'specktor-knip-analyzer';
@@ -68,7 +68,7 @@ export class DockerService {
       console.log('[DockerService] Finding Docker executable...');
       const dockerPath = await EnvironmentConfig.findExecutable('docker');
       console.log('[DockerService] Docker path:', dockerPath);
-      
+
       if (!dockerPath) {
         console.log('[DockerService] Docker not found in PATH');
         return {
@@ -79,7 +79,7 @@ export class DockerService {
           error: 'Docker is not installed',
         };
       }
-      
+
       this.dockerPath = dockerPath;
 
       // Get Docker version
@@ -88,16 +88,22 @@ export class DockerService {
         console.log('[DockerService] Getting Docker version...');
         const versionCommand = `"${dockerPath}" --version`;
         console.log('[DockerService] Running command:', versionCommand);
-        
+
         // Add timeout to prevent hanging
         const versionPromise = execAsync(versionCommand);
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Docker version check timed out')), 5000)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Docker version check timed out')),
+            5000,
+          ),
         );
-        
-        const { stdout: versionOutput } = await Promise.race([versionPromise, timeoutPromise]) as { stdout: string; };
+
+        const { stdout: versionOutput } = (await Promise.race([
+          versionPromise,
+          timeoutPromise,
+        ])) as { stdout: string };
         console.log('[DockerService] Docker version output:', versionOutput);
-        
+
         const versionMatch = versionOutput.match(/Docker version ([\d.]+)/);
         if (versionMatch) {
           version = versionMatch[1];
@@ -113,22 +119,34 @@ export class DockerService {
         console.log('[DockerService] Checking if Docker daemon is running...');
         const infoCommand = `"${dockerPath}" info --format json`;
         console.log('[DockerService] Running command:', infoCommand);
-        
+
         // Add timeout to prevent hanging
         const infoPromise = execAsync(infoCommand);
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Docker info check timed out')), 5000)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('Docker info check timed out')),
+            5000,
+          ),
         );
-        
-        const { stdout: infoOutput } = await Promise.race([infoPromise, timeoutPromise]) as { stdout: string; };
+
+        const { stdout: infoOutput } = (await Promise.race([
+          infoPromise,
+          timeoutPromise,
+        ])) as { stdout: string };
         console.log('[DockerService] Docker info output received, parsing...');
-        
+
         const info = JSON.parse(infoOutput);
         running = true;
         serverVersion = info.ServerVersion || 'unknown';
-        console.log('[DockerService] Docker daemon is running, version:', serverVersion);
+        console.log(
+          '[DockerService] Docker daemon is running, version:',
+          serverVersion,
+        );
       } catch (error) {
-        console.log('[DockerService] Docker daemon is not running or not accessible:', error);
+        console.log(
+          '[DockerService] Docker daemon is not running or not accessible:',
+          error,
+        );
         return {
           installed: true,
           running: false,
@@ -143,11 +161,15 @@ export class DockerService {
       console.log('[DockerService] Getting Docker images...');
       const images = await this.getDockerImages();
       console.log('[DockerService] Found', images.length, 'Docker images');
-      
+
       // Get Docker containers
       console.log('[DockerService] Getting Docker containers...');
       const containers = await this.getDockerContainers();
-      console.log('[DockerService] Found', containers.length, 'Docker containers');
+      console.log(
+        '[DockerService] Found',
+        containers.length,
+        'Docker containers',
+      );
 
       const result = {
         installed: true,
@@ -157,7 +179,7 @@ export class DockerService {
         images,
         containers,
       };
-      
+
       console.log('[DockerService] Docker status check complete:', result);
       return result;
     } catch (error) {
@@ -177,25 +199,28 @@ export class DockerService {
    */
   private async getDockerImages(): Promise<DockerImage[]> {
     if (!this.dockerPath) return [];
-    
+
     try {
       console.log('[DockerService] Executing docker images command...');
-      
+
       // Add timeout
       const imagesPromise = execAsync(
-        `"${this.dockerPath}" images --format "{{.Repository}}|{{.Tag}}|{{.ID}}|{{.CreatedSince}}|{{.Size}}"`
+        `"${this.dockerPath}" images --format "{{.Repository}}|{{.Tag}}|{{.ID}}|{{.CreatedSince}}|{{.Size}}"`,
       );
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Docker images command timed out')), 5000)
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Docker images command timed out')),
+          5000,
+        ),
       );
-      
+
       const { stdout } = await Promise.race([imagesPromise, timeoutPromise]);
-      
+
       return stdout
         .trim()
         .split('\n')
-        .filter(line => line.length > 0)
-        .map(line => {
+        .filter((line) => line.length > 0)
+        .map((line) => {
           const [repository, tag, imageId, created, size] = line.split('|');
           return { repository, tag, imageId, created, size };
         });
@@ -210,26 +235,33 @@ export class DockerService {
    */
   private async getDockerContainers(): Promise<DockerContainer[]> {
     if (!this.dockerPath) return [];
-    
+
     try {
       console.log('[DockerService] Executing docker ps command...');
-      
+
       // Add timeout
       const containersPromise = execAsync(
-        `"${this.dockerPath}" ps -a --format "{{.ID}}|{{.Image}}|{{.Command}}|{{.CreatedAt}}|{{.Status}}|{{.Ports}}|{{.Names}}"`
+        `"${this.dockerPath}" ps -a --format "{{.ID}}|{{.Image}}|{{.Command}}|{{.CreatedAt}}|{{.Status}}|{{.Ports}}|{{.Names}}"`,
       );
-      const timeoutPromise = new Promise<never>((_, reject) => 
-        setTimeout(() => reject(new Error('Docker ps command timed out')), 5000)
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Docker ps command timed out')),
+          5000,
+        ),
       );
-      
-      const { stdout } = await Promise.race([containersPromise, timeoutPromise]);
-      
+
+      const { stdout } = await Promise.race([
+        containersPromise,
+        timeoutPromise,
+      ]);
+
       return stdout
         .trim()
         .split('\n')
-        .filter(line => line.length > 0)
-        .map(line => {
-          const [containerId, image, command, created, status, ports, names] = line.split('|');
+        .filter((line) => line.length > 0)
+        .map((line) => {
+          const [containerId, image, command, created, status, ports, names] =
+            line.split('|');
           return {
             containerId,
             image,
@@ -250,29 +282,32 @@ export class DockerService {
   /**
    * Pull a Docker image
    */
-  async pullDockerImage(imageName: string, progressCallback?: (message: string) => void): Promise<boolean> {
+  async pullDockerImage(
+    imageName: string,
+    progressCallback?: (message: string) => void,
+  ): Promise<boolean> {
     if (!this.dockerPath) {
       throw new Error('Docker is not installed');
     }
 
     try {
       progressCallback?.(`Pulling Docker image: ${imageName}`);
-      
+
       const child = exec(`"${this.dockerPath}" pull ${imageName}`);
-      
+
       return new Promise((resolve, reject) => {
         let output = '';
-        
+
         child.stdout?.on('data', (data) => {
           output += data;
           progressCallback?.(data.toString());
         });
-        
+
         child.stderr?.on('data', (data) => {
           output += data;
           progressCallback?.(data.toString());
         });
-        
+
         child.on('close', (code) => {
           if (code === 0) {
             progressCallback?.(`Successfully pulled ${imageName}`);
@@ -294,31 +329,31 @@ export class DockerService {
   async hasKnipImage(): Promise<boolean> {
     const status = await this.checkDockerStatus();
     if (!status.installed || !status.running) return false;
-    
+
     // Check for custom Knip image first
     const hasCustomImage = status.images.some(
-      img => img.repository === 'specktor/knip' && img.tag === 'latest'
+      (img) => img.repository === 'specktor/knip' && img.tag === 'latest',
     );
-    
+
     if (hasCustomImage) {
       return true;
     }
-    
+
     // Fall back to checking for Node image
     return status.images.some(
-      img => img.repository === 'node' && img.tag.includes('18-alpine')
+      (img) => img.repository === 'node' && img.tag.includes('18-alpine'),
     );
   }
-  
+
   /**
    * Check if we have the custom Knip image
    */
   async hasCustomKnipImage(): Promise<boolean> {
     const status = await this.checkDockerStatus();
     if (!status.installed || !status.running) return false;
-    
+
     return status.images.some(
-      img => img.repository === 'specktor/knip' && img.tag === 'latest'
+      (img) => img.repository === 'specktor/knip' && img.tag === 'latest',
     );
   }
 
@@ -331,8 +366,8 @@ export class DockerService {
       fix?: boolean;
       reporter?: 'json' | 'compact' | 'markdown';
       config?: string;
-    }
-  ): Promise<{ stdout: string; stderr: string; }> {
+    },
+  ): Promise<{ stdout: string; stderr: string }> {
     if (!this.dockerPath) {
       throw new Error('Docker is not installed');
     }
@@ -368,27 +403,29 @@ export class DockerService {
     const dockerArgs = [
       'run',
       '--rm', // Remove container after execution
-      '-v', `"${projectPath}:/project"`, // Mount project directory
-      '-w', '/project', // Set working directory
+      '-v',
+      `"${projectPath}:/project"`, // Mount project directory
+      '-w',
+      '/project', // Set working directory
       imageToUse,
     ];
 
     // Build Knip command
     const knipArgs = [];
-    
+
     // Check if knip.json exists in the project directory
     const fs = require('fs');
     const path = require('path');
     const knipConfigPath = path.join(projectPath, 'knip.json');
     const hasKnipConfig = fs.existsSync(knipConfigPath);
-    
+
     if (hasKnipConfig) {
       console.log('[Docker] Found knip.json config file');
       knipArgs.push('--config', 'knip.json');
     } else {
       console.log('[Docker] No knip.json found, using default config');
     }
-    
+
     if (options?.reporter) {
       knipArgs.push('--reporter', options.reporter);
     }
@@ -412,25 +449,28 @@ export class DockerService {
       dockerArgs.push(...knipArgs);
       command = `"${this.dockerPath}" ${dockerArgs.join(' ')}`;
     }
-    
+
     try {
       const { stdout, stderr } = await execAsync(command);
-      
+
       console.log('[Docker] Knip command executed');
       console.log('[Docker] Command was:', command);
       console.log('[Docker] stdout length:', stdout?.length || 0);
       console.log('[Docker] stderr length:', stderr?.length || 0);
-      
+
       if (stderr) {
         console.log('[Docker] Knip stderr:', stderr);
       }
-      
+
       if (stdout && stdout.length < 2000) {
         console.log('[Docker] Knip stdout:', stdout);
       } else if (stdout) {
-        console.log('[Docker] Knip stdout (first 1000 chars):', stdout.substring(0, 1000));
+        console.log(
+          '[Docker] Knip stdout (first 1000 chars):',
+          stdout.substring(0, 1000),
+        );
       }
-      
+
       // Parse JSON output if using JSON reporter
       if (options?.reporter === 'json') {
         try {
@@ -439,16 +479,23 @@ export class DockerService {
           return { stdout, stderr };
         }
       }
-      
+
       return { stdout, stderr };
     } catch (error: unknown) {
       // Even if the command "fails" (exit code 1), it might still have useful output
-      const errorObj = error as { stdout?: string; stderr?: string; message?: string; };
+      const errorObj = error as {
+        stdout?: string;
+        stderr?: string;
+        message?: string;
+      };
       if (errorObj.stdout && options?.reporter === 'json') {
         try {
           return JSON.parse(errorObj.stdout);
         } catch {
-          return { stdout: errorObj.stdout || '', stderr: errorObj.stderr || '' };
+          return {
+            stdout: errorObj.stdout || '',
+            stderr: errorObj.stderr || '',
+          };
         }
       }
       throw error;
@@ -458,7 +505,9 @@ export class DockerService {
   /**
    * Create a custom Knip Docker image with pre-installed dependencies
    */
-  async createCustomKnipImage(baseImage: string = 'node:18-alpine'): Promise<boolean> {
+  async createCustomKnipImage(
+    baseImage: string = 'node:18-alpine',
+  ): Promise<boolean> {
     if (!this.dockerPath) {
       throw new Error('Docker is not installed');
     }
@@ -484,21 +533,21 @@ ENTRYPOINT ["knip"]
     const tmpDir = require('os').tmpdir();
     const dockerfilePath = require('path').join(tmpDir, 'Dockerfile.knip');
     const fs = require('fs').promises;
-    
+
     try {
       await fs.writeFile(dockerfilePath, dockerfileContent);
-      
+
       // Build the Docker image
       const { stdout, stderr } = await execAsync(
-        `"${this.dockerPath}" build -t specktor/knip:latest -f "${dockerfilePath}" "${tmpDir}"`
+        `"${this.dockerPath}" build -t specktor/knip:latest -f "${dockerfilePath}" "${tmpDir}"`,
       );
-      
+
       console.log('Docker build output:', stdout);
       if (stderr) console.error('Docker build stderr:', stderr);
-      
+
       // Clean up
       await fs.unlink(dockerfilePath);
-      
+
       return true;
     } catch (error) {
       console.error('Failed to create custom Knip image:', error);
@@ -518,7 +567,7 @@ ENTRYPOINT ["knip"]
     await this.stopKnipContainer();
 
     const command = `"${this.dockerPath}" run -d --name ${this.DEFAULT_CONTAINER_NAME} -v "${projectPath}:/project" -w /project ${this.DEFAULT_KNIP_IMAGE} tail -f /dev/null`;
-    
+
     try {
       const { stdout } = await execAsync(command);
       return stdout.trim(); // Returns container ID
@@ -531,19 +580,29 @@ ENTRYPOINT ["knip"]
   /**
    * Execute Knip command in running container
    */
-  async execInKnipContainer(command: string): Promise<{ stdout?: string; stderr?: string; error?: string; }> {
+  async execInKnipContainer(
+    command: string,
+  ): Promise<{ stdout?: string; stderr?: string; error?: string }> {
     if (!this.dockerPath) {
       throw new Error('Docker is not installed');
     }
 
     const execCommand = `"${this.dockerPath}" exec ${this.DEFAULT_CONTAINER_NAME} ${command}`;
-    
+
     try {
       const { stdout, stderr } = await execAsync(execCommand);
       return { stdout, stderr };
     } catch (error: unknown) {
-      const errorObj = error as { stdout?: string; stderr?: string; message?: string; };
-      return { stdout: errorObj.stdout, stderr: errorObj.stderr, error: errorObj.message };
+      const errorObj = error as {
+        stdout?: string;
+        stderr?: string;
+        message?: string;
+      };
+      return {
+        stdout: errorObj.stdout,
+        stderr: errorObj.stderr,
+        error: errorObj.message,
+      };
     }
   }
 
@@ -554,7 +613,9 @@ ENTRYPOINT ["knip"]
     if (!this.dockerPath) return;
 
     try {
-      await execAsync(`"${this.dockerPath}" stop ${this.DEFAULT_CONTAINER_NAME}`);
+      await execAsync(
+        `"${this.dockerPath}" stop ${this.DEFAULT_CONTAINER_NAME}`,
+      );
       await execAsync(`"${this.dockerPath}" rm ${this.DEFAULT_CONTAINER_NAME}`);
     } catch {
       // Container might not exist, ignore error
@@ -566,7 +627,7 @@ ENTRYPOINT ["knip"]
    */
   getInstallInstructions(): string {
     const platform = process.platform;
-    
+
     switch (platform) {
       case 'darwin':
         return `
@@ -583,7 +644,7 @@ ENTRYPOINT ["knip"]
 brew install --cask docker
 \`\`\`
         `;
-      
+
       case 'win32':
         return `
 # Installing Docker on Windows
@@ -595,7 +656,7 @@ brew install --cask docker
 4. Enable WSL 2 backend if prompted
 5. Verify installation: docker --version
         `;
-      
+
       case 'linux':
         return `
 # Installing Docker on Linux
@@ -622,7 +683,7 @@ sudo usermod -aG docker $USER
 
 Then log out and back in for changes to take effect.
         `;
-      
+
       default:
         return 'Please visit https://docs.docker.com/get-docker/ for installation instructions.';
     }

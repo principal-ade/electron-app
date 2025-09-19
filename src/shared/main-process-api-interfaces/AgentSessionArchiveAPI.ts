@@ -22,7 +22,10 @@ export interface AgentSessionArchiveAPI {
   /**
    * Manually archive a session
    */
-  archiveSession: (sessionId: string, options?: ArchiveSessionOptions) => Promise<void>;
+  archiveSession: (
+    sessionId: string,
+    options?: ArchiveSessionOptions,
+  ) => Promise<void>;
 
   /**
    * Archive all inactive sessions

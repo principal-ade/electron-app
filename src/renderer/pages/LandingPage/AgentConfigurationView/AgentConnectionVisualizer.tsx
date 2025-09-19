@@ -1,7 +1,10 @@
 import React from 'react';
 import { Bot, Database, Brain } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
-import { getAgentInfo, type SupportedAgent } from "@principal-ai/agent-monitoring";
+import {
+  getAgentInfo,
+  type SupportedAgent,
+} from '@principal-ai/agent-monitoring';
 import { WindowService } from '../../../main-process-api/WindowService';
 
 interface AgentConnectionVisualizerProps {
@@ -18,7 +21,9 @@ export const AgentConnectionVisualizer: React.FC<
   const { theme } = useTheme();
   const agentConfig = getAgentInfo(agentType);
   const [isHoveringSpecktor, setIsHoveringSpecktor] = React.useState(false);
-  const [selectedComponent, setSelectedComponent] = React.useState<'agent' | 'specktor' | 'mcp' | null>(null);
+  const [selectedComponent, setSelectedComponent] = React.useState<
+    'agent' | 'specktor' | 'mcp' | null
+  >(null);
 
   const AgentIcon = Bot;
 
@@ -26,10 +31,19 @@ export const AgentConnectionVisualizer: React.FC<
   const showMCPServer = true;
 
   return (
-    <div className={`relative ${className}`} style={{ height: '100%', width: '100%' }}>
-      <svg width="100%" height="100%" viewBox="0 0 450 260" preserveAspectRatio="xMidYMid meet" className="w-full h-full">
+    <div
+      className={`relative ${className}`}
+      style={{ height: '100%', width: '100%' }}
+    >
+      <svg
+        width="100%"
+        height="100%"
+        viewBox="0 0 450 260"
+        preserveAspectRatio="xMidYMid meet"
+        className="w-full h-full"
+      >
         {/* Agent Circle */}
-        <g 
+        <g
           transform="translate(70, 160)"
           onClick={() => setSelectedComponent('agent')}
           style={{ cursor: 'pointer' }}
@@ -103,7 +117,7 @@ export const AgentConnectionVisualizer: React.FC<
         )}
 
         {/* Specktor Circle (moved to top middle where MCP was) */}
-        <g 
+        <g
           transform="translate(225, 60)"
           onMouseEnter={() => setIsHoveringSpecktor(true)}
           onMouseLeave={() => setIsHoveringSpecktor(false)}
@@ -114,39 +128,56 @@ export const AgentConnectionVisualizer: React.FC<
             cx="0"
             cy="0"
             r="40"
-            fill={isHoveringSpecktor && hasHooks && isInstalled 
-              ? `${theme.colors.primary}20` 
-              : theme.colors.backgroundSecondary}
-            stroke={hasHooks && isInstalled ? theme.colors.primary : theme.colors.border}
-            strokeWidth={isHoveringSpecktor && hasHooks && isInstalled ? "3" : "2"}
+            fill={
+              isHoveringSpecktor && hasHooks && isInstalled
+                ? `${theme.colors.primary}20`
+                : theme.colors.backgroundSecondary
+            }
+            stroke={
+              hasHooks && isInstalled
+                ? theme.colors.primary
+                : theme.colors.border
+            }
+            strokeWidth={
+              isHoveringSpecktor && hasHooks && isInstalled ? '3' : '2'
+            }
             style={{ transition: 'all 0.2s' }}
           />
-          <foreignObject 
-            x="-30" 
-            y="-28" 
-            width="60" 
+          <foreignObject
+            x="-30"
+            y="-28"
+            width="60"
             height="50"
             style={{ pointerEvents: 'none' }}
           >
-            <div className="flex flex-col items-center justify-center w-full h-full" style={{ paddingTop: '4px' }}>
+            <div
+              className="flex flex-col items-center justify-center w-full h-full"
+              style={{ paddingTop: '4px' }}
+            >
               <Database
                 size={isHoveringSpecktor && hasHooks && isInstalled ? 22 : 20}
                 className="transition-all duration-200"
                 style={{
-                  color: hasHooks && isInstalled
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary,
-                  transform: isHoveringSpecktor && hasHooks && isInstalled ? 'translateY(-1px)' : 'translateY(0)',
+                  color:
+                    hasHooks && isInstalled
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary,
+                  transform:
+                    isHoveringSpecktor && hasHooks && isInstalled
+                      ? 'translateY(-1px)'
+                      : 'translateY(0)',
                 }}
               />
-              <span 
+              <span
                 className="text-xs font-medium"
                 style={{
                   marginTop: '2px',
-                  color: hasHooks && isInstalled
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary,
-                  fontWeight: isHoveringSpecktor && hasHooks && isInstalled ? 600 : 500,
+                  color:
+                    hasHooks && isInstalled
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary,
+                  fontWeight:
+                    isHoveringSpecktor && hasHooks && isInstalled ? 600 : 500,
                 }}
               >
                 Specktor
@@ -218,7 +249,11 @@ export const AgentConnectionVisualizer: React.FC<
                 fill="#ef4444"
                 opacity="0.8"
               >
-                <animateMotion dur="4s" repeatCount="indefinite" begin={`${index * 1.3}s`}>
+                <animateMotion
+                  dur="4s"
+                  repeatCount="indefinite"
+                  begin={`${index * 1.3}s`}
+                >
                   <mpath href="#agentToMcpPath" />
                 </animateMotion>
               </circle>
@@ -232,7 +267,11 @@ export const AgentConnectionVisualizer: React.FC<
                 fill={theme.colors.primary}
                 opacity="0.8"
               >
-                <animateMotion dur="4s" repeatCount="indefinite" begin={`${index * 1.3 + 0.65}s`}>
+                <animateMotion
+                  dur="4s"
+                  repeatCount="indefinite"
+                  begin={`${index * 1.3 + 0.65}s`}
+                >
                   <mpath href="#mcpToAgentPath" />
                 </animateMotion>
               </circle>
@@ -258,54 +297,53 @@ export const AgentConnectionVisualizer: React.FC<
 
         {/* MCP Server Circle (moved to right where Specktor was) - shown when hooks are configured */}
         {showMCPServer && (
-          <g 
+          <g
             transform="translate(380, 160)"
             onClick={() => setSelectedComponent('mcp')}
             style={{ cursor: 'pointer' }}
           >
-              <circle
-                cx="0"
-                cy="0"
-                r="40"
-                fill={theme.colors.backgroundSecondary}
-                fillOpacity={hasMCP ? 0.8 : 0.5}
-                stroke={theme.colors.border}
-                strokeWidth="2"
-                strokeDasharray={hasMCP ? '0' : '5,5'}
-                className="transition-all duration-500"
-              />
-              <foreignObject x="-30" y="-22" width="60" height="50">
-                <div className="flex flex-col items-center justify-center w-full h-full">
-                  <Brain
-                    size={18}
+            <circle
+              cx="0"
+              cy="0"
+              r="40"
+              fill={theme.colors.backgroundSecondary}
+              fillOpacity={hasMCP ? 0.8 : 0.5}
+              stroke={theme.colors.border}
+              strokeWidth="2"
+              strokeDasharray={hasMCP ? '0' : '5,5'}
+              className="transition-all duration-500"
+            />
+            <foreignObject x="-30" y="-22" width="60" height="50">
+              <div className="flex flex-col items-center justify-center w-full h-full">
+                <Brain
+                  size={18}
+                  style={{
+                    color: theme.colors.textSecondary,
+                    marginBottom: '2px',
+                  }}
+                />
+                <div className="text-center">
+                  <div
+                    className="text-xs font-medium"
                     style={{
                       color: theme.colors.textSecondary,
-                      marginBottom: '2px'
                     }}
-                  />
-                  <div className="text-center">
-                    <div 
-                      className="text-xs font-medium"
-                      style={{
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      Principal
-                    </div>
-                    <div 
-                      className="text-[10px] font-medium"
-                      style={{
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      MCP
-                    </div>
+                  >
+                    Principal
+                  </div>
+                  <div
+                    className="text-[10px] font-medium"
+                    style={{
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    MCP
                   </div>
                 </div>
-              </foreignObject>
-            </g>
+              </div>
+            </foreignObject>
+          </g>
         )}
-
 
         {/* Status Labels */}
         <g transform="translate(225, 215)">
@@ -318,7 +356,7 @@ export const AgentConnectionVisualizer: React.FC<
               Click on a component to learn more
             </text>
           )}
-          
+
           {selectedComponent === 'agent' && (
             <>
               <text
@@ -335,11 +373,12 @@ export const AgentConnectionVisualizer: React.FC<
                 y="10"
                 style={{ fill: theme.colors.textSecondary }}
               >
-                The {agentConfig.name} agent that processes and responds to your requests
+                The {agentConfig.name} agent that processes and responds to your
+                requests
               </text>
             </>
           )}
-          
+
           {selectedComponent === 'specktor' && (
             <>
               <text
@@ -362,15 +401,15 @@ export const AgentConnectionVisualizer: React.FC<
                 <foreignObject x="-50" y="20" width="100" height="35">
                   <button
                     className="px-3 py-1 text-xs rounded"
-                    style={{ 
+                    style={{
                       backgroundColor: theme.colors.primary,
-                      color: theme.colors.background
+                      color: theme.colors.background,
                     }}
                     onClick={async () => {
                       try {
                         await WindowService.openStoreViewer({
                           agent: agentType,
-                          namespace: 'events'
+                          namespace: 'events',
                         });
                       } catch (error) {
                         console.error('Failed to open store viewer:', error);
@@ -383,7 +422,7 @@ export const AgentConnectionVisualizer: React.FC<
               )}
             </>
           )}
-          
+
           {selectedComponent === 'mcp' && (
             <>
               <text
@@ -404,7 +443,6 @@ export const AgentConnectionVisualizer: React.FC<
               </text>
             </>
           )}
-          
         </g>
       </svg>
     </div>

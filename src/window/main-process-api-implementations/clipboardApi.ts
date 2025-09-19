@@ -1,5 +1,8 @@
 import { ipcRenderer } from 'electron';
-import { ClipboardAPI, ClipboardAPIEvent } from '../../shared/main-process-api-interfaces/ClipboardAPI';
+import {
+  ClipboardAPI,
+  ClipboardAPIEvent,
+} from '../../shared/main-process-api-interfaces/ClipboardAPI';
 
 export const clipboardAPI: ClipboardAPI = {
   writeText: async (text: string) => {

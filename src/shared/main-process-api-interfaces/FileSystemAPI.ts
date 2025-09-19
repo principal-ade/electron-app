@@ -68,7 +68,9 @@ export interface FileSystemAPI {
     title?: string;
     buttonLabel?: string;
     properties?: ('openDirectory' | 'createDirectory' | 'promptToCreate')[];
-  }) => Promise<{ filePaths: string[]; canceled: boolean } | { canceled: true } | null>;
+  }) => Promise<
+    { filePaths: string[]; canceled: boolean } | { canceled: true } | null
+  >;
   watchDirectory: (options: WatchDirectoryOptions) => Promise<boolean>;
   onFileOpened: (
     callback: (data: { content: string; filePath: string }) => void,
@@ -108,11 +110,11 @@ export interface FileSystemAPI {
   } | null>;
   buildFilteredFileTree: (
     directoryPath: string,
-    options?: { 
+    options?: {
       gitignore?: boolean;
       ignorePatterns?: string[];
       includeStats?: boolean;
-    }
+    },
   ) => Promise<{
     paths: string[];
     stats?: SerializedFileStats[];

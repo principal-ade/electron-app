@@ -14,7 +14,10 @@ interface UpdateNotificationProps {
   onUpdateAvailable?: (hasUpdate: boolean) => void;
 }
 
-export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ style, onUpdateAvailable }) => {
+export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
+  style,
+  onUpdateAvailable,
+}) => {
   const { theme } = useTheme();
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
@@ -29,7 +32,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ style, o
 
   useEffect(() => {
     // Get current version
-    AppVersionManagerService.getVersion().then(version => {
+    AppVersionManagerService.getVersion().then((version) => {
       setCurrentVersion(version);
       console.log('[UpdateNotification] Current version:', version);
     });
@@ -41,10 +44,10 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ style, o
       setIsChecking(false);
       setBannerVisible(true);
       setBannerDismissed(false);
-      
+
       // Notify parent component
       onUpdateAvailable?.(true);
-      
+
       // Auto-hide banner after 10 seconds
       setTimeout(() => {
         setBannerVisible(false);
@@ -56,7 +59,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ style, o
       setUpdateAvailable(false);
       setUpdateInfo(null);
       setIsChecking(false);
-      
+
       // Notify parent component
       onUpdateAvailable?.(false);
     };
@@ -83,11 +86,18 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ style, o
     };
 
     // Use the mainProcess API for update events
-    const unsubscribeAvailable = AppVersionManagerService.onUpdateAvailable(handleUpdateAvailable);
-    const unsubscribeNotAvailable = AppVersionManagerService.onUpdateNotAvailable(handleUpdateNotAvailable);
-    const unsubscribeProgress = AppVersionManagerService.onUpdateDownloadProgress(handleDownloadProgress);
-    const unsubscribeDownloaded = AppVersionManagerService.onUpdateDownloaded(handleUpdateDownloaded);
-    const unsubscribeError = AppVersionManagerService.onUpdateError(handleUpdateError);
+    const unsubscribeAvailable = AppVersionManagerService.onUpdateAvailable(
+      handleUpdateAvailable,
+    );
+    const unsubscribeNotAvailable =
+      AppVersionManagerService.onUpdateNotAvailable(handleUpdateNotAvailable);
+    const unsubscribeProgress =
+      AppVersionManagerService.onUpdateDownloadProgress(handleDownloadProgress);
+    const unsubscribeDownloaded = AppVersionManagerService.onUpdateDownloaded(
+      handleUpdateDownloaded,
+    );
+    const unsubscribeError =
+      AppVersionManagerService.onUpdateError(handleUpdateError);
 
     // Check for updates silently on mount
     AppVersionManagerService.checkForUpdateSilently();
@@ -117,10 +127,15 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ style, o
   if (!isChecking && !updateAvailable && !updateDownloaded && !error) {
     return null;
   }
-  
+
   // If update is available but banner is hidden and not dismissed manually, show nothing
   // (the dot notification will be shown in the parent component)
-  if (updateAvailable && !bannerVisible && !bannerDismissed && !updateDownloaded) {
+  if (
+    updateAvailable &&
+    !bannerVisible &&
+    !bannerDismissed &&
+    !updateDownloaded
+  ) {
     return null;
   }
 
@@ -138,13 +153,15 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ style, o
         alignItems: 'center',
         gap: '8px',
         padding: '6px 12px',
-        background: updateAvailable || updateDownloaded 
-          ? theme.colors.primary
-          : theme.colors.backgroundSecondary,
+        background:
+          updateAvailable || updateDownloaded
+            ? theme.colors.primary
+            : theme.colors.backgroundSecondary,
         borderRadius: '6px',
-        color: updateAvailable || updateDownloaded
-          ? 'white'
-          : theme.colors.textSecondary,
+        color:
+          updateAvailable || updateDownloaded
+            ? 'white'
+            : theme.colors.textSecondary,
         fontSize: '13px',
         fontWeight: 500,
         border: `1px solid ${updateAvailable || updateDownloaded ? theme.colors.primary : theme.colors.border}`,
@@ -154,32 +171,23 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ style, o
       }}
     >
       <Sparkles size={14} />
-      
+
       <div style={{ flex: 1 }}>
         {updateDownloaded ? (
-          <span>
-            Update v{updateInfo?.version} is ready to install!
-          </span>
+          <span>Update v{updateInfo?.version} is ready to install!</span>
         ) : isDownloading ? (
           <span>
-            Downloading update... {downloadProgress !== null ? `${downloadProgress}%` : ''}
+            Downloading update...{' '}
+            {downloadProgress !== null ? `${downloadProgress}%` : ''}
           </span>
         ) : updateAvailable ? (
-          <span>
-            New version v{updateInfo?.version} available
-          </span>
+          <span>New version v{updateInfo?.version} available</span>
         ) : isChecking ? (
-          <span>
-            Checking for updates... (Current: v{currentVersion})
-          </span>
+          <span>Checking for updates... (Current: v{currentVersion})</span>
         ) : error ? (
-          <span>
-            {error}
-          </span>
+          <span>{error}</span>
         ) : (
-          <span>
-            No updates available (Current: v{currentVersion})
-          </span>
+          <span>No updates available (Current: v{currentVersion})</span>
         )}
         {error && !isChecking && (
           <div style={{ fontSize: '12px', opacity: 0.9, marginTop: '2px' }}>
@@ -305,7 +313,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({ style, o
           Retry
         </button>
       ) : null}
-      
+
       {/* Dismiss button for manual dismissal */}
       {(updateAvailable || updateDownloaded) && (
         <button

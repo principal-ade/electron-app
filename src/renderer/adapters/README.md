@@ -35,6 +35,7 @@ const githubAdapters = new GitHubWebAdapters('owner', 'repo', 'main');
 Both aggregate classes conform to `PlatformAdapters`, so they can be passed directly into shared workspace services.
 
 ## Notes
+
 - The GitHub adapters are read-only (no file writes, moves, or deletes).
 - The GitHub Git adapter doesn’t support live watching; it only reports static repo info.
-- Prefer importing from the barrel: `import { GitHubWebAdapters } from './adapters'`. 
+- Prefer importing from the barrel: `import { GitHubWebAdapters } from './adapters'`.

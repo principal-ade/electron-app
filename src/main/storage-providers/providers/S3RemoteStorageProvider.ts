@@ -1,8 +1,8 @@
-import { 
-  StorageProvider, 
-  StorageProviderType 
-} from '../types';
-import { StorageProviderConfig, StorageStats } from '../../../shared/main-process-api-interfaces/StoreAPI';
+import { StorageProvider, StorageProviderType } from '../types';
+import {
+  StorageProviderConfig,
+  StorageStats,
+} from '../../../shared/main-process-api-interfaces/StoreAPI';
 
 /**
  * S3 Backend Configuration
@@ -18,7 +18,7 @@ export interface S3ProviderConfig extends StorageProviderConfig {
 
 /**
  * S3 Storage Backend Implementation (Stub)
- * 
+ *
  * This backend will use AWS S3 or S3-compatible storage for remote persistence.
  * Currently a stub implementation - to be completed in future iterations.
  */
@@ -44,14 +44,21 @@ export class S3RemoteStorageProvider implements StorageProvider {
     }
 
     const s3Config = config as S3ProviderConfig;
-    
+
     // Validate required S3 configuration
-    if (!s3Config.region || !s3Config.bucket || !s3Config.accessKeyId || !s3Config.secretAccessKey) {
-      throw new Error('S3Backend requires region, bucket, accessKeyId, and secretAccessKey');
+    if (
+      !s3Config.region ||
+      !s3Config.bucket ||
+      !s3Config.accessKeyId ||
+      !s3Config.secretAccessKey
+    ) {
+      throw new Error(
+        'S3Backend requires region, bucket, accessKeyId, and secretAccessKey',
+      );
     }
 
     this.config = s3Config;
-    
+
     // TODO: Initialize AWS SDK or S3 client
     // const s3Client = new S3Client({
     //   region: s3Config.region,
@@ -63,14 +70,17 @@ export class S3RemoteStorageProvider implements StorageProvider {
     // });
 
     // TODO: Test connection and validate bucket access
-    
+
     this.isInitialized = true;
   }
 
   /**
    * Get a value by key
    */
-  public async get<T = any>(key: string, defaultValue?: T): Promise<T | undefined> {
+  public async get<T = any>(
+    key: string,
+    defaultValue?: T,
+  ): Promise<T | undefined> {
     if (!this.isAvailable) {
       throw new Error('S3Backend not initialized');
     }
@@ -105,7 +115,7 @@ export class S3RemoteStorageProvider implements StorageProvider {
     // TODO: Implement S3 PutObject operation
     // const s3Key = this.buildS3Key(key);
     // const body = JSON.stringify(value);
-    // 
+    //
     // await s3Client.send(new PutObjectCommand({
     //   Bucket: this.config!.bucket,
     //   Key: s3Key,
@@ -126,7 +136,7 @@ export class S3RemoteStorageProvider implements StorageProvider {
 
     // TODO: Implement S3 DeleteObject operation
     // const s3Key = this.buildS3Key(key);
-    // 
+    //
     // await s3Client.send(new DeleteObjectCommand({
     //   Bucket: this.config!.bucket,
     //   Key: s3Key,
@@ -145,7 +155,7 @@ export class S3RemoteStorageProvider implements StorageProvider {
 
     // TODO: Implement S3 HeadObject operation
     // const s3Key = this.buildS3Key(key);
-    // 
+    //
     // try {
     //   await s3Client.send(new HeadObjectCommand({
     //     Bucket: this.config!.bucket,
@@ -172,16 +182,16 @@ export class S3RemoteStorageProvider implements StorageProvider {
 
     // TODO: Implement batch delete operation
     // const prefix = this.config!.prefix || '';
-    // 
+    //
     // // List all objects with the prefix
     // const listResponse = await s3Client.send(new ListObjectsV2Command({
     //   Bucket: this.config!.bucket,
     //   Prefix: prefix,
     // }));
-    // 
+    //
     // if (listResponse.Contents && listResponse.Contents.length > 0) {
     //   const objectsToDelete = listResponse.Contents.map(obj => ({ Key: obj.Key! }));
-    //   
+    //
     //   await s3Client.send(new DeleteObjectsCommand({
     //     Bucket: this.config!.bucket,
     //     Delete: {
@@ -204,7 +214,7 @@ export class S3RemoteStorageProvider implements StorageProvider {
     // TODO: Implement S3 ListObjectsV2 operation
     // const prefix = this.config!.prefix || '';
     // const keys: string[] = [];
-    // 
+    //
     // let continuationToken: string | undefined;
     // do {
     //   const response = await s3Client.send(new ListObjectsV2Command({
@@ -212,22 +222,22 @@ export class S3RemoteStorageProvider implements StorageProvider {
     //     Prefix: prefix,
     //     ContinuationToken: continuationToken,
     //   }));
-    // 
+    //
     //   if (response.Contents) {
     //     for (const obj of response.Contents) {
     //       if (obj.Key) {
     //         // Remove prefix to get the logical key
-    //         const logicalKey = obj.Key.startsWith(prefix) 
+    //         const logicalKey = obj.Key.startsWith(prefix)
     //           ? obj.Key.substring(prefix.length)
     //           : obj.Key;
     //         keys.push(logicalKey);
     //       }
     //     }
     //   }
-    // 
+    //
     //   continuationToken = response.NextContinuationToken;
     // } while (continuationToken);
-    // 
+    //
     // return keys;
 
     throw new Error('S3Backend not yet implemented - this is a stub');
@@ -244,10 +254,10 @@ export class S3RemoteStorageProvider implements StorageProvider {
     // TODO: Implement stats calculation
     // const keys = await this.keys();
     // let totalSize = 0;
-    // 
+    //
     // // Note: This could be expensive for large datasets
     // // In a real implementation, you might want to cache this or use CloudWatch metrics
-    // 
+    //
     // return {
     //   totalKeys: keys.length,
     //   sizeBytes: totalSize,
@@ -265,7 +275,7 @@ export class S3RemoteStorageProvider implements StorageProvider {
         status: 'stub-implementation',
         bucket: this.config?.bucket,
         region: this.config?.region,
-      }
+      },
     };
   }
 
@@ -280,15 +290,20 @@ export class S3RemoteStorageProvider implements StorageProvider {
   /**
    * Watch for changes (not typically supported by S3)
    */
-  public watch?(key: string, callback: (newValue: any, oldValue: any) => void): () => void {
+  public watch?(
+    key: string,
+    callback: (newValue: any, oldValue: any) => void,
+  ): () => void {
     // S3 doesn't natively support change notifications
     // This could be implemented using:
     // 1. S3 Event Notifications + SQS/SNS
     // 2. CloudWatch Events
     // 3. Polling mechanism
-    
-    console.warn('S3Backend watch functionality not implemented - S3 does not natively support real-time change notifications');
-    
+
+    console.warn(
+      'S3Backend watch functionality not implemented - S3 does not natively support real-time change notifications',
+    );
+
     return () => {
       // No-op unsubscribe function
     };
@@ -306,8 +321,8 @@ export class S3RemoteStorageProvider implements StorageProvider {
    * Create a new S3Backend with specific configuration
    */
   public static async create(
-    name: string, 
-    config: S3ProviderConfig
+    name: string,
+    config: S3ProviderConfig,
   ): Promise<S3RemoteStorageProvider> {
     const storageProvider = new S3RemoteStorageProvider(name);
     await storageProvider.initialize(config);
@@ -317,11 +332,11 @@ export class S3RemoteStorageProvider implements StorageProvider {
 
 /**
  * Future implementation notes:
- * 
+ *
  * Dependencies to add when implementing:
  * - @aws-sdk/client-s3
  * - @aws-sdk/credential-providers (if needed)
- * 
+ *
  * Features to consider:
  * - Connection pooling
  * - Retry logic with exponential backoff

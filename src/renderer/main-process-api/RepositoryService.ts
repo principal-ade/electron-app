@@ -3,15 +3,15 @@ import type { Repository } from '../../shared/types/repository.types';
 
 /**
  * RepositoryService - Renderer process interface for repository management
- * 
+ *
  * IMPORTANT ARCHITECTURAL NOTE:
- * All API calls (GitHub, GitLab, etc.) MUST be made from the main process, 
+ * All API calls (GitHub, GitLab, etc.) MUST be made from the main process,
  * never directly from the renderer. This ensures:
  * - Better security (API keys/tokens stay in main process)
  * - Rate limiting control
  * - Consistent error handling
  * - Potential caching at the main process level
- * 
+ *
  * Use IPC through this service class to communicate with the main process.
  */
 export class RepositoryService {
@@ -23,7 +23,9 @@ export class RepositoryService {
     return [];
   }
 
-  static async getRepository(remoteUrl: string): Promise<Repository | undefined> {
+  static async getRepository(
+    remoteUrl: string,
+  ): Promise<Repository | undefined> {
     if (window.mainProcess?.repository?.getRepository) {
       return window.mainProcess.repository.getRepository(remoteUrl);
     }
@@ -49,7 +51,7 @@ export class RepositoryService {
 
   static async updateRepository(
     remoteUrl: string,
-    updates: Partial<Omit<Repository, 'remoteUrl' | 'owner' | 'name'>>
+    updates: Partial<Omit<Repository, 'remoteUrl' | 'owner' | 'name'>>,
   ): Promise<Repository | undefined> {
     if (window.mainProcess?.repository?.updateRepository) {
       return window.mainProcess.repository.updateRepository(remoteUrl, updates);
@@ -81,7 +83,10 @@ export class RepositoryService {
     return [];
   }
 
-  static async addLocalClone(remoteUrl: string, localPath: string): Promise<Repository | undefined> {
+  static async addLocalClone(
+    remoteUrl: string,
+    localPath: string,
+  ): Promise<Repository | undefined> {
     if (window.mainProcess?.repository?.addLocalClone) {
       return window.mainProcess.repository.addLocalClone(remoteUrl, localPath);
     }
@@ -89,22 +94,36 @@ export class RepositoryService {
     return undefined;
   }
 
-  static async removeLocalClone(remoteUrl: string, localPath: string): Promise<boolean> {
+  static async removeLocalClone(
+    remoteUrl: string,
+    localPath: string,
+  ): Promise<boolean> {
     if (window.mainProcess?.repository?.removeLocalClone) {
-      return window.mainProcess.repository.removeLocalClone(remoteUrl, localPath);
+      return window.mainProcess.repository.removeLocalClone(
+        remoteUrl,
+        localPath,
+      );
     }
     console.warn('repository.removeLocalClone not available');
     return false;
   }
 
-  static async updateLocalCloneAccess(remoteUrl: string, localPath: string): Promise<void> {
+  static async updateLocalCloneAccess(
+    remoteUrl: string,
+    localPath: string,
+  ): Promise<void> {
     if (window.mainProcess?.repository?.updateLocalCloneAccess) {
-      return window.mainProcess.repository.updateLocalCloneAccess(remoteUrl, localPath);
+      return window.mainProcess.repository.updateLocalCloneAccess(
+        remoteUrl,
+        localPath,
+      );
     }
     console.warn('repository.updateLocalCloneAccess not available');
   }
 
-  static async getRepositoryByLocalPath(localPath: string): Promise<Repository | undefined> {
+  static async getRepositoryByLocalPath(
+    localPath: string,
+  ): Promise<Repository | undefined> {
     if (window.mainProcess?.repository?.getRepositoryByLocalPath) {
       return window.mainProcess.repository.getRepositoryByLocalPath(localPath);
     }
@@ -120,18 +139,26 @@ export class RepositoryService {
     return [];
   }
 
-  static async refreshRepositoryMetadata(remoteUrl: string): Promise<Repository | undefined> {
+  static async refreshRepositoryMetadata(
+    remoteUrl: string,
+  ): Promise<Repository | undefined> {
     if (window.mainProcess?.repository?.refreshRepositoryMetadata) {
       return window.mainProcess.repository.refreshRepositoryMetadata(remoteUrl);
     }
     console.warn('repository.refreshRepositoryMetadata not available');
     return undefined;
   }
-  static async openInEditor(params: { editor: EditorId; dir: string }): Promise<{ success: boolean; error?: string }> {
+  static async openInEditor(params: {
+    editor: EditorId;
+    dir: string;
+  }): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.shell.openInEditor(params);
   }
 
-  static async setRepositoryAvatar(remoteUrl: string, avatarBlob: Blob): Promise<{ success: boolean; avatarPath?: string; error?: string }> {
+  static async setRepositoryAvatar(
+    remoteUrl: string,
+    avatarBlob: Blob,
+  ): Promise<{ success: boolean; avatarPath?: string; error?: string }> {
     if (window.mainProcess?.repository?.setRepositoryAvatar) {
       // Convert blob to base64 for IPC transfer
       const reader = new FileReader();
@@ -139,13 +166,20 @@ export class RepositoryService {
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(avatarBlob);
       });
-      return window.mainProcess.repository.setRepositoryAvatar(remoteUrl, base64);
+      return window.mainProcess.repository.setRepositoryAvatar(
+        remoteUrl,
+        base64,
+      );
     }
     console.warn('repository.setRepositoryAvatar not available');
     return { success: false, error: 'setRepositoryAvatar not available' };
   }
 
-  static async setCloneAvatar(remoteUrl: string, clonePath: string, avatarBlob: Blob): Promise<{ success: boolean; avatarPath?: string; error?: string }> {
+  static async setCloneAvatar(
+    remoteUrl: string,
+    clonePath: string,
+    avatarBlob: Blob,
+  ): Promise<{ success: boolean; avatarPath?: string; error?: string }> {
     if (window.mainProcess?.repository?.setCloneAvatar) {
       // Convert blob to base64 for IPC transfer
       const reader = new FileReader();
@@ -153,13 +187,19 @@ export class RepositoryService {
         reader.onloadend = () => resolve(reader.result as string);
         reader.readAsDataURL(avatarBlob);
       });
-      return window.mainProcess.repository.setCloneAvatar(remoteUrl, clonePath, base64);
+      return window.mainProcess.repository.setCloneAvatar(
+        remoteUrl,
+        clonePath,
+        base64,
+      );
     }
     console.warn('repository.setCloneAvatar not available');
     return { success: false, error: 'setCloneAvatar not available' };
   }
 
-  static async removeRepositoryAvatar(remoteUrl: string): Promise<{ success: boolean; error?: string }> {
+  static async removeRepositoryAvatar(
+    remoteUrl: string,
+  ): Promise<{ success: boolean; error?: string }> {
     if (window.mainProcess?.repository?.removeRepositoryAvatar) {
       return window.mainProcess.repository.removeRepositoryAvatar(remoteUrl);
     }
@@ -167,9 +207,15 @@ export class RepositoryService {
     return { success: false, error: 'removeRepositoryAvatar not available' };
   }
 
-  static async removeCloneAvatar(remoteUrl: string, clonePath: string): Promise<{ success: boolean; error?: string }> {
+  static async removeCloneAvatar(
+    remoteUrl: string,
+    clonePath: string,
+  ): Promise<{ success: boolean; error?: string }> {
     if (window.mainProcess?.repository?.removeCloneAvatar) {
-      return window.mainProcess.repository.removeCloneAvatar(remoteUrl, clonePath);
+      return window.mainProcess.repository.removeCloneAvatar(
+        remoteUrl,
+        clonePath,
+      );
     }
     console.warn('repository.removeCloneAvatar not available');
     return { success: false, error: 'removeCloneAvatar not available' };
@@ -190,13 +236,13 @@ export class RepositoryService {
    * @returns Promise with search results
    */
   static async searchGitHubRepositories(
-    query: string, 
-    options?: { 
-      sort?: 'stars' | 'forks' | 'updated'; 
+    query: string,
+    options?: {
+      sort?: 'stars' | 'forks' | 'updated';
       order?: 'asc' | 'desc';
       perPage?: number;
-    }
-  ): Promise<{ 
+    },
+  ): Promise<{
     items: Array<{
       id: number;
       full_name: string;
@@ -209,9 +255,12 @@ export class RepositoryService {
     total_count: number;
   }> {
     if (window.mainProcess?.repository?.searchGitHubRepositories) {
-      return window.mainProcess.repository.searchGitHubRepositories(query, options);
+      return window.mainProcess.repository.searchGitHubRepositories(
+        query,
+        options,
+      );
     }
     console.warn('repository.searchGitHubRepositories not available');
     return { items: [], total_count: 0 };
   }
-};
+}

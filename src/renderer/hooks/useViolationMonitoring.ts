@@ -3,13 +3,13 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FileTree } from "@principal-ai/repository-abstraction";
-import { HighlightLayer, LayerItem } from "@principal-ai/code-city-react";
+import { FileTree } from '@principal-ai/repository-abstraction';
+import { HighlightLayer, LayerItem } from '@principal-ai/code-city-react';
 import { FileTreeSource } from '../types/file-tree-source';
-import { 
-  violationMonitoringService, 
+import {
+  violationMonitoringService,
   ViolationMonitoringResult,
-  MonitoringOptions 
+  MonitoringOptions,
 } from '../services/ViolationMonitoringServiceIPC';
 
 interface UseViolationMonitoringOptions {
@@ -38,7 +38,7 @@ interface UseViolationMonitoringResult {
 export function useViolationMonitoring(
   source: FileTreeSource | null,
   packageLayers: any[] | null, // PackageLayer[] from core
-  options: UseViolationMonitoringOptions = {}
+  options: UseViolationMonitoringOptions = {},
 ): UseViolationMonitoringResult {
   const {
     enabled = true,
@@ -46,55 +46,66 @@ export function useViolationMonitoring(
     includeEslint = true,
     autoRefresh = false,
     refreshInterval = 60000, // 1 minute default
-    useCache = true
+    useCache = true,
   } = options;
-  
-  const [violationResult, setViolationResult] = useState<ViolationMonitoringResult | null>(null);
+
+  const [violationResult, setViolationResult] =
+    useState<ViolationMonitoringResult | null>(null);
   const [isMonitoring, setIsMonitoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tsEnabled, setTsEnabled] = useState(includeTypescript);
   const [eslintEnabled, setEslintEnabled] = useState(includeEslint);
-  
+
   // Monitor violations
   const monitor = useCallback(async () => {
-    if (!enabled || !source || !packageLayers || packageLayers.length === 0 || source.type !== 'local') {
+    if (
+      !enabled ||
+      !source ||
+      !packageLayers ||
+      packageLayers.length === 0 ||
+      source.type !== 'local'
+    ) {
       // Silently skip if conditions not met
       setViolationResult(null);
       return;
     }
-    
+
     console.log('[useViolationMonitoring] Starting violation monitoring for:', {
       sourceLocation: source?.location,
-      packageCount: packageLayers?.length
+      packageCount: packageLayers?.length,
     });
-    
+
     setIsMonitoring(true);
     setError(null);
-    
+
     try {
       const monitoringOptions: MonitoringOptions = {
         includeTypescript: tsEnabled,
         includeEslint: eslintEnabled,
         useCache,
-        maxFilesToProcess: 500 // Limit for performance
+        maxFilesToProcess: 500, // Limit for performance
       };
-      
+
       const result = await violationMonitoringService.monitorViolations(
         source,
         packageLayers,
-        monitoringOptions
+        monitoringOptions,
       );
-      
+
       setViolationResult(result);
-      console.log(`[ViolationMonitoring] Found ${result.totalViolations} violations in ${result.totalPackages} packages`);
+      console.log(
+        `[ViolationMonitoring] Found ${result.totalViolations} violations in ${result.totalPackages} packages`,
+      );
     } catch (err) {
       console.error('[ViolationMonitoring] Error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to monitor violations');
+      setError(
+        err instanceof Error ? err.message : 'Failed to monitor violations',
+      );
     } finally {
       setIsMonitoring(false);
     }
   }, [enabled, source, packageLayers, tsEnabled, eslintEnabled, useCache]);
-  
+
   // Auto-refresh only (no initial monitoring unless explicitly enabled)
   useEffect(() => {
     // Only set up auto-refresh if explicitly enabled and already has results
@@ -108,46 +119,55 @@ export function useViolationMonitoring(
         }
       };
     }
-    
+
     return () => {
       // Cancel any ongoing monitoring when unmounting
       if (source) {
         violationMonitoringService.cancelMonitoring(source.id);
       }
     };
-  }, [enabled, source, packageLayers, autoRefresh, refreshInterval, monitor, violationResult]);
-  
+  }, [
+    enabled,
+    source,
+    packageLayers,
+    autoRefresh,
+    refreshInterval,
+    monitor,
+    violationResult,
+  ]);
+
   // Convert result to highlight layer
   const violationLayer = useMemo((): HighlightLayer | null => {
     if (!violationResult || violationResult.totalViolations === 0) {
       return null;
     }
-    
+
     const items: LayerItem[] = [];
-    
+
     // Convert file violations from all packages to layer items
     for (const pkg of violationResult.packages) {
       for (const [relativePath, fileViolations] of pkg.fileViolations) {
         // Determine color based on severity
         let color: string;
         let opacity: number;
-        
+
         if (fileViolations.errorCount > 0) {
           color = '#ef4444'; // red
-          opacity = Math.min(0.3 + (fileViolations.errorCount * 0.05), 0.6);
+          opacity = Math.min(0.3 + fileViolations.errorCount * 0.05, 0.6);
         } else if (fileViolations.warningCount > 0) {
           color = '#f59e0b'; // amber
-          opacity = Math.min(0.2 + (fileViolations.warningCount * 0.03), 0.4);
+          opacity = Math.min(0.2 + fileViolations.warningCount * 0.03, 0.4);
         } else {
           color = '#3b82f6'; // blue
           opacity = 0.2;
         }
-        
+
         // Include package path in the file path if it's not the root package
-        const fullPath = pkg.packagePath && pkg.packagePath !== '.' && pkg.packagePath !== ''
-          ? `${pkg.packagePath}/${relativePath}`
-          : relativePath;
-        
+        const fullPath =
+          pkg.packagePath && pkg.packagePath !== '.' && pkg.packagePath !== ''
+            ? `${pkg.packagePath}/${relativePath}`
+            : relativePath;
+
         items.push({
           path: fullPath,
           type: 'file',
@@ -155,12 +175,12 @@ export function useViolationMonitoring(
           coverOptions: {
             opacity,
             backgroundColor: color,
-            borderRadius: 2
-          }
+            borderRadius: 2,
+          },
         });
       }
     }
-    
+
     return {
       id: 'violations',
       name: `Code Violations (${violationResult.totalErrors}E/${violationResult.totalWarnings}W in ${violationResult.totalPackages} packages)`,
@@ -170,25 +190,25 @@ export function useViolationMonitoring(
       borderWidth: 2,
       priority: 100, // High priority to show on top
       items,
-      dynamic: true // Mark as dynamic since violations change frequently
+      dynamic: true, // Mark as dynamic since violations change frequently
     };
   }, [violationResult]);
-  
+
   // Toggle functions
   const toggleTypeScript = useCallback(() => {
-    setTsEnabled(prev => !prev);
+    setTsEnabled((prev) => !prev);
     if (source) {
       violationMonitoringService.clearCache(source.id);
     }
   }, [source]);
-  
+
   const toggleESLint = useCallback(() => {
-    setEslintEnabled(prev => !prev);
+    setEslintEnabled((prev) => !prev);
     if (source) {
       violationMonitoringService.clearCache(source.id);
     }
   }, [source]);
-  
+
   // Refresh function
   const refresh = useCallback(() => {
     if (source) {
@@ -196,13 +216,19 @@ export function useViolationMonitoring(
     }
     monitor();
   }, [source, monitor]);
-  
+
   // Get summary for a specific file
-  const getSummaryForFile = useCallback((filePath: string): string | null => {
-    if (!violationResult) return null;
-    return violationMonitoringService.getFileSummary(violationResult, filePath);
-  }, [violationResult]);
-  
+  const getSummaryForFile = useCallback(
+    (filePath: string): string | null => {
+      if (!violationResult) return null;
+      return violationMonitoringService.getFileSummary(
+        violationResult,
+        filePath,
+      );
+    },
+    [violationResult],
+  );
+
   return {
     violationResult,
     violationLayer,
@@ -211,6 +237,6 @@ export function useViolationMonitoring(
     refresh,
     toggleTypeScript,
     toggleESLint,
-    getSummaryForFile
+    getSummaryForFile,
   };
 }

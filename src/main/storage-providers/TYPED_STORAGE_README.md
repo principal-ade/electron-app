@@ -7,6 +7,7 @@ This document describes the new type-safe storage system that provides compile-t
 ## Problem Solved
 
 Previously, the storage system used generic `any` types for all namespace operations, which led to:
+
 - No compile-time type checking
 - Runtime errors from type mismatches
 - Difficulty understanding what data belongs in each namespace
@@ -17,16 +18,19 @@ Previously, the storage system used generic `any` types for all namespace operat
 The new typed storage system provides:
 
 ### 1. **Namespace-Specific Type Definitions** (`typed-namespaces.ts`)
+
 - Each namespace has a strongly-typed data structure
 - Clear definition of what data belongs in each namespace
 - Type-safe namespace registry
 
 ### 2. **Type-Safe Storage Interface** (`typed-storage-interface.ts`)
+
 - Extended interfaces with namespace-specific typing
 - Validation helpers for runtime type checking
 - Namespace-specific operations with proper typing
 
 ### 3. **Typed MultiStore Wrapper** (`typed-multistore-wrapper.ts`)
+
 - Wraps the existing MultiStoreManager with type safety
 - Provides compile-time type checking for all operations
 - Backward compatible with existing code
@@ -34,15 +38,21 @@ The new typed storage system provides:
 ## Key Features
 
 ### Type Safety
+
 ```typescript
 // ✅ Correct - types match
-await setTyped('prefs', { autoCommitOnStop: true }, StorageNamespaces.USER_PREFERENCES);
+await setTyped(
+  'prefs',
+  { autoCommitOnStop: true },
+  StorageNamespaces.USER_PREFERENCES,
+);
 
 // ❌ TypeScript Error - wrong type for namespace
 await setTyped('prefs', ['array'], StorageNamespaces.USER_PREFERENCES);
 ```
 
 ### IntelliSense Support
+
 ```typescript
 const prefs = await getTyped('settings', StorageNamespaces.USER_PREFERENCES);
 // prefs is typed as UserPreferences | undefined
@@ -50,6 +60,7 @@ const prefs = await getTyped('settings', StorageNamespaces.USER_PREFERENCES);
 ```
 
 ### Namespace Categories
+
 - **CORE**: Essential application data (preferences, repositories, AI config)
 - **AGENT_SESSION_EVENTS**: Agent session and event data
 - **CACHE**: Temporary/cache data that can be cleared
@@ -58,6 +69,7 @@ const prefs = await getTyped('settings', StorageNamespaces.USER_PREFERENCES);
 ## Usage Examples
 
 ### Simple Type-Safe Operations
+
 ```typescript
 import { getTyped, setTyped, StorageNamespaces } from './storage-providers';
 
@@ -71,6 +83,7 @@ const savedRepos = await getTyped('repos', StorageNamespaces.REPOSITORIES);
 ```
 
 ### Namespace-Specific Operations
+
 ```typescript
 import { getNamespace, StorageNamespaces } from './storage-providers';
 
@@ -83,6 +96,7 @@ const all = await repoOps.getAll(); // Returns Record<string, Repository[]>
 ```
 
 ### Advanced Features
+
 ```typescript
 const typedStore = await getTypedStorageManager();
 
@@ -96,27 +110,28 @@ await typedStore.batchSet(StorageNamespaces.REPOSITORIES, items);
 await typedStore.migrate(
   StorageNamespaces.CACHE,
   StorageNamespaces.TEMP,
-  (data) => ({ ...data, migrated: true })
+  (data) => ({ ...data, migrated: true }),
 );
 ```
 
 ## Namespace Data Types
 
-| Namespace | Data Type | Description |
-|-----------|-----------|-------------|
-| USER_PREFERENCES | `UserPreferences` | User settings and preferences |
-| REPOSITORIES | `Repository[]` | Repository configurations |
-| SESSIONS | `Record<string, AgentSessionRecord>` | Agent session records (deprecated) |
-| AI_CONFIGURATION | `AIConfiguration` | AI provider settings |
-| LLM_MODELS | `LLMConfiguration` | LLM model configurations |
-| CACHE | `Record<string, any>` | General cache storage |
-| TEMP | `Record<string, any>` | Temporary storage |
-| AGENT_SESSIONS | `ProcessedSessionData` | Agent session data with flat event list |
-| REPOSITORY_NOTES | `RepositoryNote` | Notes associated with repositories |
+| Namespace        | Data Type                            | Description                             |
+| ---------------- | ------------------------------------ | --------------------------------------- |
+| USER_PREFERENCES | `UserPreferences`                    | User settings and preferences           |
+| REPOSITORIES     | `Repository[]`                       | Repository configurations               |
+| SESSIONS         | `Record<string, AgentSessionRecord>` | Agent session records (deprecated)      |
+| AI_CONFIGURATION | `AIConfiguration`                    | AI provider settings                    |
+| LLM_MODELS       | `LLMConfiguration`                   | LLM model configurations                |
+| CACHE            | `Record<string, any>`                | General cache storage                   |
+| TEMP             | `Record<string, any>`                | Temporary storage                       |
+| AGENT_SESSIONS   | `ProcessedSessionData`               | Agent session data with flat event list |
+| REPOSITORY_NOTES | `RepositoryNote`                     | Notes associated with repositories      |
 
 ## Migration Guide
 
 ### From Legacy Store
+
 ```typescript
 // Old way
 legacyStore.set('repositories', repos);
@@ -127,6 +142,7 @@ await setTyped('repos', repos, StorageNamespaces.REPOSITORIES);
 ```
 
 ### From Untyped MultiStoreManager
+
 ```typescript
 // Old way
 await manager.get('key', 'repositories');

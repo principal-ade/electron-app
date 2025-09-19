@@ -1,6 +1,9 @@
 import React, { useEffect, useState, createContext, useContext } from 'react';
 import { FeedbackModal } from './components/FeedbackModal';
-import { detectReactComponent, enableComponentNameDisplay } from './utils/componentDetection';
+import {
+  detectReactComponent,
+  enableComponentNameDisplay,
+} from './utils/componentDetection';
 import { FeedbackService } from './main-process-api/FeedbackService';
 
 interface FeedbackContextValue {
@@ -21,7 +24,9 @@ interface GlobalFeedbackProviderProps {
   children: React.ReactNode;
 }
 
-export const GlobalFeedbackProvider: React.FC<GlobalFeedbackProviderProps> = ({ children }) => {
+export const GlobalFeedbackProvider: React.FC<GlobalFeedbackProviderProps> = ({
+  children,
+}) => {
   const [modalState, setModalState] = useState({
     isOpen: false,
     componentInfo: {
@@ -34,18 +39,18 @@ export const GlobalFeedbackProvider: React.FC<GlobalFeedbackProviderProps> = ({ 
   useEffect(() => {
     // Enable component name display in development
     enableComponentNameDisplay();
-    
+
     // Global context menu handler
     const handleContextMenu = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      
+
       // Use enhanced component detection
       const componentInfo = detectReactComponent(target);
       let elementInfo = '';
       if (target.className.split) {
         elementInfo = `${target.tagName.toLowerCase()}.${target.className.split(' ').join('.')}`;
       }
-      
+
       // Send to main process with component detection
       FeedbackService.showContextMenu({
         x: e.clientX,
@@ -84,7 +89,7 @@ export const GlobalFeedbackProvider: React.FC<GlobalFeedbackProviderProps> = ({ 
   }, []);
 
   const closeModal = () => {
-    setModalState(prev => ({ ...prev, isOpen: false }));
+    setModalState((prev) => ({ ...prev, isOpen: false }));
   };
 
   const showFeedback = (componentInfo: any) => {

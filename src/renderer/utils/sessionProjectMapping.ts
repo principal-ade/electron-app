@@ -1,5 +1,8 @@
-import type { PackageLayer, PackageCommand } from "@principal-ai/codebase-composition";
-import { FileOperation } from "../main-process-api/AgentSessionService";
+import type {
+  PackageLayer,
+  PackageCommand,
+} from '@principal-ai/codebase-composition';
+import { FileOperation } from '../main-process-api/AgentSessionService';
 
 /**
  * Represents a project/package that was touched by an agent session
@@ -33,7 +36,7 @@ export interface TouchedProject {
 export function mapFileOperationsToProjects(
   fileOperations: Map<string, FileOperation>,
   packageLayers: PackageLayer[] | null | undefined,
-  repositoryPath?: string
+  repositoryPath?: string,
 ): TouchedProject[] {
   if (!packageLayers || packageLayers.length === 0) {
     return [];
@@ -45,15 +48,19 @@ export function mapFileOperationsToProjects(
   for (const [filePath, fileOp] of fileOperations) {
     // Get the normalized path for matching (prefer relativePath)
     let normalizedPath = fileOp.relativePath || fileOp.path;
-    
+
     // Strip repository path if file path is absolute and contains repo path
-    if (repositoryPath && normalizedPath.startsWith('/') && normalizedPath.startsWith(repositoryPath)) {
+    if (
+      repositoryPath &&
+      normalizedPath.startsWith('/') &&
+      normalizedPath.startsWith(repositoryPath)
+    ) {
       normalizedPath = normalizedPath.substring(repositoryPath.length);
       if (normalizedPath.startsWith('/')) {
         normalizedPath = normalizedPath.substring(1);
       }
     }
-    
+
     // Ensure no leading slash for consistent matching
     if (normalizedPath.startsWith('/')) {
       normalizedPath = normalizedPath.substring(1);
@@ -61,10 +68,12 @@ export function mapFileOperationsToProjects(
 
     // Find which package this file belongs to
     const matchingPackage = findPackageForFile(normalizedPath, packageLayers);
-    
+
     if (matchingPackage) {
-      const packagePath = normalizePackagePath(matchingPackage.packageData.path);
-      
+      const packagePath = normalizePackagePath(
+        matchingPackage.packageData.path,
+      );
+
       if (!touchedProjects.has(packagePath)) {
         touchedProjects.set(packagePath, {
           name: matchingPackage.packageData.name,
@@ -75,7 +84,8 @@ export function mapFileOperationsToProjects(
           fileCount: 0,
           hasWrites: false,
           // Include first 5 available commands from the package
-          availableCommands: matchingPackage.packageData.availableCommands?.slice(0, 5)
+          availableCommands:
+            matchingPackage.packageData.availableCommands?.slice(0, 5),
         });
       }
 
@@ -102,7 +112,10 @@ export function mapFileOperationsToProjects(
  * @param packageLayers - Array of package layers
  * @returns Matching package or null
  */
-function findPackageForFile(filePath: string, packageLayers: PackageLayer[]): PackageLayer | null {
+function findPackageForFile(
+  filePath: string,
+  packageLayers: PackageLayer[],
+): PackageLayer | null {
   // Sort packages by path depth (deepest first) for most specific match
   const sortedPackages = [...packageLayers].sort((a, b) => {
     const aDepth = a.packageData.path.split('/').length;
@@ -112,7 +125,7 @@ function findPackageForFile(filePath: string, packageLayers: PackageLayer[]): Pa
 
   for (const pkg of sortedPackages) {
     const packagePath = normalizePackagePath(pkg.packageData.path);
-    
+
     // Check if file is within this package directory
     if (isFileInPackage(filePath, packagePath)) {
       return pkg;
@@ -129,7 +142,9 @@ function findPackageForFile(filePath: string, packageLayers: PackageLayer[]): Pa
  */
 function normalizePackagePath(packagePath: string): string {
   // Remove leading slash and ensure no trailing slash
-  let normalized = packagePath.startsWith('/') ? packagePath.substring(1) : packagePath;
+  let normalized = packagePath.startsWith('/')
+    ? packagePath.substring(1)
+    : packagePath;
   return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
 }
 
@@ -158,10 +173,10 @@ function isFileInPackage(filePath: string, packagePath: string): boolean {
   // Check for package manifest files in this directory
   const packageManifests = [
     'package.json',
-    'Cargo.toml', 
+    'Cargo.toml',
     'go.mod',
     'setup.py',
-    'pyproject.toml'
+    'pyproject.toml',
   ];
 
   for (const manifest of packageManifests) {
@@ -180,8 +195,13 @@ function isFileInPackage(filePath: string, packagePath: string): boolean {
  */
 export function getTouchedProjectsSummary(touchedProjects: TouchedProject[]) {
   const totalProjects = touchedProjects.length;
-  const totalFiles = touchedProjects.reduce((sum, proj) => sum + proj.fileCount, 0);
-  const projectsWithWrites = touchedProjects.filter(proj => proj.hasWrites).length;
+  const totalFiles = touchedProjects.reduce(
+    (sum, proj) => sum + proj.fileCount,
+    0,
+  );
+  const projectsWithWrites = touchedProjects.filter(
+    (proj) => proj.hasWrites,
+  ).length;
   const projectsReadOnly = totalProjects - projectsWithWrites;
 
   return {
@@ -189,6 +209,6 @@ export function getTouchedProjectsSummary(touchedProjects: TouchedProject[]) {
     totalFiles,
     projectsWithWrites,
     projectsReadOnly,
-    hasActivity: totalProjects > 0
+    hasActivity: totalProjects > 0,
   };
 }

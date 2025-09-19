@@ -15,7 +15,7 @@ import {
   IndexUpdateEvent,
   DocumentChangedEvent,
   IndexErrorEvent,
-  RepositoryIndexStatus
+  RepositoryIndexStatus,
 } from '../../../shared/ipc/DocumentSearchIPC';
 
 /**
@@ -33,7 +33,8 @@ class DocumentSearchHandlerService {
    */
   public static getInstance(): DocumentSearchHandlerService {
     if (!DocumentSearchHandlerService.instance) {
-      DocumentSearchHandlerService.instance = new DocumentSearchHandlerService();
+      DocumentSearchHandlerService.instance =
+        new DocumentSearchHandlerService();
     }
     return DocumentSearchHandlerService.instance;
   }
@@ -75,33 +76,74 @@ class DocumentSearchHandlerService {
     }
 
     // Initialize search service
-    ipcMain.handle(DocumentSearchChannel.INITIALIZE, async (_event, request?: InitializeSearchRequest) => {
-      const service = this.getIndexingService();
-      await service.initialize(request?.config);
-      return { success: true };
-    });
+    ipcMain.handle(
+      DocumentSearchChannel.INITIALIZE,
+      async (_event, request?: InitializeSearchRequest) => {
+        const service = this.getIndexingService();
+        await service.initialize(request?.config);
+        return { success: true };
+      },
+    );
 
-    // Index a repository
-    ipcMain.handle(DocumentSearchChannel.INDEX_REPOSITORY, async (_event, request: IndexRepositoryRequest) => {
-      console.log('[DocumentSearchHandlers] INDEX_REPOSITORY handler called with:', request);
-      const service = this.getIndexingService();
-      const result = await service.indexRepository(request);
-      console.log('[DocumentSearchHandlers] Returning result:', result);
-      return result;
-    });
+    // Index a repository - deprecated, redirect to batch indexing
+    ipcMain.handle(
+      DocumentSearchChannel.INDEX_REPOSITORY,
+      async (_event, request: IndexRepositoryRequest) => {
+        console.log(
+          '[DocumentSearchHandlers] INDEX_REPOSITORY handler called - redirecting to batch indexing',
+        );
+        const service = this.getIndexingService();
+        // Redirect to Alexandria indexing with single repository
+        const result = await service.indexAlexandriaRepositories([
+          {
+            path: request.path,
+            name: request.name,
+          },
+        ]);
+        console.log('[DocumentSearchHandlers] Returning result:', result);
+        return result;
+      },
+    );
 
-    // Remove a repository from index
-    ipcMain.handle(DocumentSearchChannel.REMOVE_REPOSITORY, async (_event, id: string) => {
-      const service = this.getIndexingService();
-      await service.removeRepository(id);
-      return { success: true };
-    });
+    // Index multiple repositories at once (batch operation)
+    ipcMain.handle(
+      DocumentSearchChannel.INDEX_MULTIPLE,
+      async (_event, repositories: Array<{ path: string; name?: string }>) => {
+        console.log(
+          '[DocumentSearchHandlers] INDEX_MULTIPLE handler called with:',
+          repositories.length,
+          'repositories',
+        );
+        const service = this.getIndexingService();
+        const result = await service.indexAlexandriaRepositories(repositories);
+        console.log(
+          '[DocumentSearchHandlers] Batch indexing complete:',
+          result,
+        );
+        return result;
+      },
+    );
+
+    // Remove a repository from index - deprecated
+    ipcMain.handle(
+      DocumentSearchChannel.REMOVE_REPOSITORY,
+      async (_event, _id: string) => {
+        console.log(
+          '[DocumentSearchHandlers] REMOVE_REPOSITORY is deprecated - repositories are managed as a group',
+        );
+        // Just return success, individual repository removal is no longer supported
+        return { success: true };
+      },
+    );
 
     // Search documents
-    ipcMain.handle(DocumentSearchChannel.SEARCH, async (_event, request: SearchDocumentsRequest) => {
-      const service = this.getIndexingService();
-      return await service.searchDocuments(request);
-    });
+    ipcMain.handle(
+      DocumentSearchChannel.SEARCH,
+      async (_event, request: SearchDocumentsRequest) => {
+        const service = this.getIndexingService();
+        return await service.searchDocuments(request);
+      },
+    );
 
     // Get index status
     ipcMain.handle(DocumentSearchChannel.GET_STATUS, async () => {
@@ -110,17 +152,24 @@ class DocumentSearchHandlerService {
     });
 
     // Get specific document
-    ipcMain.handle(DocumentSearchChannel.GET_DOCUMENT, async (_event, request: GetDocumentRequest) => {
-      const service = this.getIndexingService();
-      return await service.getDocument(request);
-    });
+    ipcMain.handle(
+      DocumentSearchChannel.GET_DOCUMENT,
+      async (_event, request: GetDocumentRequest) => {
+        const service = this.getIndexingService();
+        return await service.getDocument(request);
+      },
+    );
 
     // Refresh index for a repository
-    ipcMain.handle(DocumentSearchChannel.REFRESH_INDEX, async (_event, repositoryId?: string) => {
-      const service = this.getIndexingService();
-      await service.refreshIndex(repositoryId);
-      return { success: true };
-    });
+    ipcMain.handle(
+      DocumentSearchChannel.REFRESH_INDEX,
+      async (_event, repositoryId?: string) => {
+        const service = this.getIndexingService();
+        // Always refresh all repositories (ignore individual repository ID)
+        await service.refreshIndex();
+        return { success: true };
+      },
+    );
 
     // Clear entire index
     ipcMain.handle(DocumentSearchChannel.CLEAR_INDEX, async () => {
@@ -137,7 +186,7 @@ class DocumentSearchHandlerService {
    * Send an index update event to all renderer processes
    */
   public sendIndexUpdateEvent(event: IndexUpdateEvent): void {
-    BrowserWindow.getAllWindows().forEach(window => {
+    BrowserWindow.getAllWindows().forEach((window) => {
       window.webContents.send(DocumentSearchChannel.INDEX_UPDATE, event);
     });
   }
@@ -146,7 +195,7 @@ class DocumentSearchHandlerService {
    * Send a document changed event to all renderer processes
    */
   public sendDocumentChangedEvent(event: DocumentChangedEvent): void {
-    BrowserWindow.getAllWindows().forEach(window => {
+    BrowserWindow.getAllWindows().forEach((window) => {
       window.webContents.send(DocumentSearchChannel.DOCUMENT_CHANGED, event);
     });
   }
@@ -155,7 +204,7 @@ class DocumentSearchHandlerService {
    * Send an index error event to all renderer processes
    */
   public sendIndexErrorEvent(event: IndexErrorEvent): void {
-    BrowserWindow.getAllWindows().forEach(window => {
+    BrowserWindow.getAllWindows().forEach((window) => {
       window.webContents.send(DocumentSearchChannel.INDEX_ERROR, event);
     });
   }
@@ -164,7 +213,7 @@ class DocumentSearchHandlerService {
    * Send search ready event to all renderer processes
    */
   public sendSearchReadyEvent(): void {
-    BrowserWindow.getAllWindows().forEach(window => {
+    BrowserWindow.getAllWindows().forEach((window) => {
       window.webContents.send(DocumentSearchChannel.SEARCH_READY);
     });
   }
@@ -173,7 +222,7 @@ class DocumentSearchHandlerService {
    * Send repository indexed event to all renderer processes
    */
   public sendRepositoryIndexedEvent(repo: RepositoryIndexStatus): void {
-    BrowserWindow.getAllWindows().forEach(window => {
+    BrowserWindow.getAllWindows().forEach((window) => {
       window.webContents.send(DocumentSearchChannel.REPOSITORY_INDEXED, repo);
     });
   }
@@ -188,6 +237,7 @@ class DocumentSearchHandlerService {
     if (this.handlersRegistered) {
       ipcMain.removeHandler(DocumentSearchChannel.INITIALIZE);
       ipcMain.removeHandler(DocumentSearchChannel.INDEX_REPOSITORY);
+      ipcMain.removeHandler(DocumentSearchChannel.INDEX_MULTIPLE);
       ipcMain.removeHandler(DocumentSearchChannel.REMOVE_REPOSITORY);
       ipcMain.removeHandler(DocumentSearchChannel.SEARCH);
       ipcMain.removeHandler(DocumentSearchChannel.GET_STATUS);

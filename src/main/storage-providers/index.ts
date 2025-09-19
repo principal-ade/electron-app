@@ -1,6 +1,6 @@
 /**
  * Storage Abstraction Layer
- * 
+ *
  * This module provides a multi-store storage abstraction that supports
  * multiple backends (electron-store, S3, etc.) with namespace routing.
  */
@@ -14,26 +14,23 @@ export type {
   StorageEventType,
   StorageEventCallback,
   MigrationOptions,
-  MigrationResult
+  MigrationResult,
 } from './types';
 
-
-export {
-  StorageProviderType,
-} from './types';
+export { StorageProviderType } from './types';
 
 // Export typed namespace definitions
 export type {
   NamespaceDataTypes,
   NamespaceData,
-  NamespaceKey
+  NamespaceKey,
 } from './typed-namespaces';
 
 export {
   TypedNamespaceRegistry,
   TypedStorageProvider,
   createTypedStorageProvider,
-  isValidNamespace
+  isValidNamespace,
 } from './typed-namespaces';
 
 // Export typed storage interfaces
@@ -41,18 +38,18 @@ export type {
   TypedStorageProvider as ITypedStorageProvider,
   TypedStorageResult,
   NamespaceOperations,
-  TypedMultiStoreManager
+  TypedMultiStoreManager,
 } from './typed-storage-interface';
 
 export {
   createNamespaceOperations,
-  NamespaceDataValidator
+  NamespaceDataValidator,
 } from './typed-storage-interface';
 
 // Export typed multistore wrapper
 export {
   TypedMultiStoreWrapper,
-  createTypedMultiStore
+  createTypedMultiStore,
 } from './typed-multistore-wrapper';
 
 // Export all namespaces type system
@@ -62,20 +59,25 @@ export type {
   isValidNamespace as isValidAllNamespace,
   getAllNamespaces,
   isStaticNamespace,
-  isAgentEventNamespace
+  isAgentEventNamespace,
 } from './all-namespaces';
-
 
 // Export backends
 export { ElectronStoreLocalStorageProvider } from './providers/ElectronStoreLocalStorageProvider';
-export { S3RemoteStorageProvider, type S3ProviderConfig } from './providers/S3RemoteStorageProvider';
+export {
+  S3RemoteStorageProvider,
+  type S3ProviderConfig,
+} from './providers/S3RemoteStorageProvider';
 
 // Export main manager
 export { MultiStoreManager } from './MultiStoreManager';
 
 // Create and export a singleton instance for convenient usage
 import { MultiStoreManager } from './MultiStoreManager';
-import { TypedMultiStoreWrapper, createTypedMultiStore } from './typed-multistore-wrapper';
+import {
+  TypedMultiStoreWrapper,
+  createTypedMultiStore,
+} from './typed-multistore-wrapper';
 import { NamespaceOperations } from './typed-storage-interface';
 import { NamespaceData } from './typed-namespaces';
 import { StorageNamespaces } from './all-namespaces';
@@ -89,7 +91,9 @@ let globalTypedManager: TypedMultiStoreWrapper | null = null;
  * Internal function to get or create the underlying storage manager
  * This should ONLY be called from getTypedStorageManager
  */
-async function getOrCreateStorageManager(config?: Partial<MultiStoreConfig>): Promise<MultiStoreManager> {
+async function getOrCreateStorageManager(
+  config?: Partial<MultiStoreConfig>,
+): Promise<MultiStoreManager> {
   const manager = new MultiStoreManager();
   await manager.initialize(config);
   return manager;
@@ -99,7 +103,9 @@ async function getOrCreateStorageManager(config?: Partial<MultiStoreConfig>): Pr
  * Create a new storage manager instance
  * Use this if you need multiple isolated storage managers
  */
-export async function createStorageManager(config?: Partial<MultiStoreConfig>): Promise<MultiStoreManager> {
+export async function createStorageManager(
+  config?: Partial<MultiStoreConfig>,
+): Promise<MultiStoreManager> {
   const manager = new MultiStoreManager();
   await manager.initialize(config);
   return manager;
@@ -112,7 +118,8 @@ export async function createStorageManager(config?: Partial<MultiStoreConfig>): 
 export async function resetTypedStorageManager(): Promise<void> {
   if (globalTypedManager) {
     // Get the underlying manager and close it
-    const manager = (globalTypedManager as any).multiStoreManager as MultiStoreManager;
+    const manager = (globalTypedManager as any)
+      .multiStoreManager as MultiStoreManager;
     if (manager) {
       await manager.close();
     }
@@ -124,11 +131,13 @@ export async function resetTypedStorageManager(): Promise<void> {
  * Initialize the global typed storage manager with configuration
  * This is the PRIMARY way to initialize storage - call this from initialization.ts
  */
-export async function initializeTypedStorageManager(config?: Partial<MultiStoreConfig>): Promise<void> {
+export async function initializeTypedStorageManager(
+  config?: Partial<MultiStoreConfig>,
+): Promise<void> {
   if (globalTypedManager) {
     return; // Already initialized
   }
-  
+
   const manager = await getOrCreateStorageManager(config);
   globalTypedManager = createTypedMultiStore(manager);
 }
@@ -137,7 +146,9 @@ export async function initializeTypedStorageManager(config?: Partial<MultiStoreC
  * Get the global typed storage manager instance
  * IMPORTANT: initializeTypedStorageManager MUST be called first
  */
-export async function getTypedStorageManager(config?: Partial<MultiStoreConfig>): Promise<TypedMultiStoreWrapper> {
+export async function getTypedStorageManager(
+  config?: Partial<MultiStoreConfig>,
+): Promise<TypedMultiStoreWrapper> {
   if (!globalTypedManager) {
     if (config) {
       // If config is provided, do initialization
@@ -145,15 +156,15 @@ export async function getTypedStorageManager(config?: Partial<MultiStoreConfig>)
     } else {
       // No config means this is being called before initialization - this is an error
       throw new Error(
-        'TypedStorageManager not initialized! Call initializeTypedStorageManager() first from initialization.ts'
+        'TypedStorageManager not initialized! Call initializeTypedStorageManager() first from initialization.ts',
       );
     }
   }
-  
+
   if (!globalTypedManager) {
     throw new Error('Failed to initialize TypedStorageManager');
   }
-  
+
   return globalTypedManager;
 }
 
@@ -163,7 +174,7 @@ export async function getTypedStorageManager(config?: Partial<MultiStoreConfig>)
 export async function getTyped<K extends StorageNamespaces>(
   key: string,
   namespace: K,
-  defaultValue?: NamespaceData<K>
+  defaultValue?: NamespaceData<K>,
 ): Promise<NamespaceData<K> | undefined> {
   const manager = await getTypedStorageManager();
   const result = await manager.get(key, namespace, defaultValue);
@@ -179,7 +190,7 @@ export async function getTyped<K extends StorageNamespaces>(
 export async function setTyped<K extends StorageNamespaces>(
   key: string,
   value: NamespaceData<K>,
-  namespace: K
+  namespace: K,
 ): Promise<void> {
   const manager = await getTypedStorageManager();
   const result = await manager.set(key, value, namespace);
@@ -192,7 +203,7 @@ export async function setTyped<K extends StorageNamespaces>(
  * Get namespace-specific operations with type safety
  */
 export async function getNamespace<K extends StorageNamespaces>(
-  namespace: K
+  namespace: K,
 ): Promise<NamespaceOperations<K>> {
   const manager = await getTypedStorageManager();
   return manager.namespace(namespace);

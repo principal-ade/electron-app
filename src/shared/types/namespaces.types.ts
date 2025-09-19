@@ -1,6 +1,6 @@
 /**
  * Storage Namespace Types
- * 
+ *
  * This file contains the namespace type definitions that are shared between
  * the main and renderer processes.
  */
@@ -22,11 +22,11 @@ export enum StaticNamespaces {
   ARCHIVE_CONFIGURATION = 'archive-configuration',
   AGENT_EVENT_INDEXES = 'agent-event-indexes',
   MCP_BRIDGE_DATA = 'mcp-bridge-data',
-  
+
   // Docker Management
   DOCKER_CONTAINERS = 'docker-containers',
   DOCKER_SESSIONS = 'docker-sessions',
-  
+
   // Secrets Management
   SECRETS_METADATA = 'secrets-metadata',
 }
@@ -50,20 +50,30 @@ export type StorageNamespaces = StaticNamespaces | AgentEventNamespaces;
 /**
  * Type guard to check if a string is a valid static namespace
  */
-export function isStaticNamespace(namespace: string): namespace is StaticNamespaces {
-  return Object.values(StaticNamespaces).includes(namespace as StaticNamespaces);
+export function isStaticNamespace(
+  namespace: string,
+): namespace is StaticNamespaces {
+  return Object.values(StaticNamespaces).includes(
+    namespace as StaticNamespaces,
+  );
 }
 
 /**
  * Type guard to check if a string is a valid agent event namespace
  */
-export function isAgentEventNamespace(namespace: string): namespace is AgentEventNamespaces {
-  return Object.values(AgentEventNamespaces).includes(namespace as AgentEventNamespaces);
+export function isAgentEventNamespace(
+  namespace: string,
+): namespace is AgentEventNamespaces {
+  return Object.values(AgentEventNamespaces).includes(
+    namespace as AgentEventNamespaces,
+  );
 }
 
 /**
  * Type guard to check if a string is any valid namespace
  */
-export function isValidNamespace(namespace: string): namespace is StorageNamespaces {
+export function isValidNamespace(
+  namespace: string,
+): namespace is StorageNamespaces {
   return isStaticNamespace(namespace) || isAgentEventNamespace(namespace);
 }

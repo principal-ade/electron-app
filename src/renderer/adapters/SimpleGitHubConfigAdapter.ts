@@ -3,11 +3,14 @@
  * Replaces SharedLibConfigAdapter for GitHub-only usage
  */
 
-import { ConfigFetchAdapter, ConfigFetchResult } from "../../shared/configs";
-import { ConfigSource } from "../../shared/configs";
+import { ConfigFetchAdapter, ConfigFetchResult } from '../../shared/configs';
+import { ConfigSource } from '../../shared/configs';
 
 export class SimpleGitHubConfigAdapter implements ConfigFetchAdapter {
-  async fetchConfig(fileName: string, source: ConfigSource): Promise<ConfigFetchResult> {
+  async fetchConfig(
+    fileName: string,
+    source: ConfigSource,
+  ): Promise<ConfigFetchResult> {
     if (source.type !== 'github') {
       throw new Error('SimpleGitHubConfigAdapter only supports GitHub sources');
     }
@@ -22,11 +25,13 @@ export class SimpleGitHubConfigAdapter implements ConfigFetchAdapter {
     try {
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`Failed to fetch from GitHub: ${response.status} ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch from GitHub: ${response.status} ${response.statusText}`,
+        );
       }
-      
+
       const content = await response.text();
-      
+
       // Validate JSON
       try {
         JSON.parse(content);

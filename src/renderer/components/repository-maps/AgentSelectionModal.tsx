@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, Bot, Terminal, Download } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
-import { SupportedAgent, getAgentInfo } from "@principal-ai/agent-monitoring";
-import { AgentConfigurationService, AgentInstallationStatus } from '../../main-process-api/AgentConfigurationService';
+import { SupportedAgent, getAgentInfo } from '@principal-ai/agent-monitoring';
+import {
+  AgentConfigurationService,
+  AgentInstallationStatus,
+} from '../../main-process-api/AgentConfigurationService';
 import { ShellService } from '../../main-process-api/ShellService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { DEFAULT_TERMINAL } from '../../../shared/types/terminal.types';
@@ -22,22 +25,26 @@ export const AgentSelectionModal: React.FC<AgentSelectionModalProps> = ({
   repositoryName,
 }) => {
   const { theme } = useTheme();
-  const [agentStatus, setAgentStatus] = useState<Record<SupportedAgent, AgentInstallationStatus>>({} as any);
+  const [agentStatus, setAgentStatus] = useState<
+    Record<SupportedAgent, AgentInstallationStatus>
+  >({} as any);
   const [isLaunching, setIsLaunching] = useState(false);
-  const [preferredTerminal, setPreferredTerminal] = useState<string>(DEFAULT_TERMINAL);
+  const [preferredTerminal, setPreferredTerminal] =
+    useState<string>(DEFAULT_TERMINAL);
 
   // Load agent installation status
   useEffect(() => {
     if (isOpen) {
       const loadAgentStatus = async () => {
         try {
-          const status = await AgentConfigurationService.checkAgentInstallations();
+          const status =
+            await AgentConfigurationService.checkAgentInstallations();
           setAgentStatus(status);
         } catch (error) {
           console.error('Failed to check agent installations:', error);
         }
       };
-      
+
       const loadPreferences = async () => {
         try {
           const prefs = await UserPreferencesService.getPreferences();
@@ -46,7 +53,7 @@ export const AgentSelectionModal: React.FC<AgentSelectionModalProps> = ({
           console.error('Failed to load preferences:', error);
         }
       };
-      
+
       loadAgentStatus();
       loadPreferences();
     }
@@ -54,21 +61,24 @@ export const AgentSelectionModal: React.FC<AgentSelectionModalProps> = ({
 
   const handleLaunchAgent = async (agent: SupportedAgent) => {
     if (sources.length === 0 || isLaunching) return;
-    
+
     setIsLaunching(true);
-    
+
     try {
-      const localSource = sources.find(s => s.type === 'local');
+      const localSource = sources.find((s) => s.type === 'local');
       if (!localSource) {
         console.error('No local source found');
         return;
       }
-      
+
       const agentInfo = getAgentInfo(agent);
-      const agentCommand = agentInfo.installation.binaryName || `principal-${agent}`;
-      
-      console.log(`Launching ${agent} with command: ${agentCommand} in ${localSource.location}`);
-      
+      const agentCommand =
+        agentInfo.installation.binaryName || `principal-${agent}`;
+
+      console.log(
+        `Launching ${agent} with command: ${agentCommand} in ${localSource.location}`,
+      );
+
       const result = await ShellService.openInTerminal({
         terminal: preferredTerminal,
         dir: localSource.location,
@@ -93,12 +103,12 @@ export const AgentSelectionModal: React.FC<AgentSelectionModalProps> = ({
   if (!isOpen) return null;
 
   // Get installed agents
-  const installedAgents = Object.values(SupportedAgent).filter(agent => 
-    agentStatus[agent]?.isInstalled
+  const installedAgents = Object.values(SupportedAgent).filter(
+    (agent) => agentStatus[agent]?.isInstalled,
   );
 
   return (
-    <div 
+    <div
       onClick={onClose}
       style={{
         position: 'fixed',
@@ -110,10 +120,10 @@ export const AgentSelectionModal: React.FC<AgentSelectionModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 3000
+        zIndex: 3000,
       }}
     >
-      <div 
+      <div
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: theme.colors.backgroundSecondary,
@@ -122,22 +132,26 @@ export const AgentSelectionModal: React.FC<AgentSelectionModalProps> = ({
           padding: '24px',
           maxWidth: '500px',
           width: '90%',
-          boxShadow: theme.shadows[1] || theme.shadows[0]
+          boxShadow: theme.shadows[1] || theme.shadows[0],
         }}
       >
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          marginBottom: '24px'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '24px',
+          }}
+        >
           <Bot size={20} color={theme.colors.primary} />
-          <h3 style={{
-            margin: 0,
-            fontSize: '18px',
-            fontWeight: 600,
-            color: theme.colors.text
-          }}>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: '18px',
+              fontWeight: 600,
+              color: theme.colors.text,
+            }}
+          >
             Select Agent
           </h3>
           <button
@@ -148,7 +162,7 @@ export const AgentSelectionModal: React.FC<AgentSelectionModalProps> = ({
               border: 'none',
               color: theme.colors.textSecondary,
               cursor: 'pointer',
-              padding: '4px'
+              padding: '4px',
             }}
           >
             <X size={20} />
@@ -156,17 +170,22 @@ export const AgentSelectionModal: React.FC<AgentSelectionModalProps> = ({
         </div>
 
         {installedAgents.length === 0 ? (
-          <div style={{
-            padding: '40px 20px',
-            textAlign: 'center',
-            color: theme.colors.textSecondary
-          }}>
+          <div
+            style={{
+              padding: '40px 20px',
+              textAlign: 'center',
+              color: theme.colors.textSecondary,
+            }}
+          >
             <p style={{ margin: '0 0 20px 0', fontSize: '14px' }}>
               No agents installed
             </p>
             <button
               onClick={() => {
-                window.open('https://github.com/principle-md/principal-claude', '_blank');
+                window.open(
+                  'https://github.com/principle-md/principal-claude',
+                  '_blank',
+                );
               }}
               style={{
                 padding: '10px 20px',
@@ -179,7 +198,7 @@ export const AgentSelectionModal: React.FC<AgentSelectionModalProps> = ({
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px'
+                gap: '8px',
               }}
             >
               <Download size={16} />
@@ -187,14 +206,19 @@ export const AgentSelectionModal: React.FC<AgentSelectionModalProps> = ({
             </button>
           </div>
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: installedAgents.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: '12px'
-          }}>
-            {installedAgents.map(agent => {
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns:
+                installedAgents.length === 1
+                  ? '1fr'
+                  : 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '12px',
+            }}
+          >
+            {installedAgents.map((agent) => {
               const agentInfo = getAgentInfo(agent);
-              
+
               return (
                 <button
                   key={agent}
@@ -211,39 +235,45 @@ export const AgentSelectionModal: React.FC<AgentSelectionModalProps> = ({
                     borderRadius: '12px',
                     cursor: isLaunching ? 'wait' : 'pointer',
                     transition: 'all 0.2s',
-                    opacity: isLaunching ? 0.6 : 1
+                    opacity: isLaunching ? 0.6 : 1,
                   }}
                   onMouseEnter={(e) => {
                     if (!isLaunching) {
-                      e.currentTarget.style.backgroundColor = theme.colors.primary + '22';
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.primary + '22';
                       e.currentTarget.style.borderColor = theme.colors.primary;
                       e.currentTarget.style.transform = 'translateY(-2px)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
                     e.currentTarget.style.borderColor = theme.colors.border;
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '10px',
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: theme.colors.primary
-                  }}>
+                  <div
+                    style={{
+                      width: '48px',
+                      height: '48px',
+                      borderRadius: '10px',
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: theme.colors.primary,
+                    }}
+                  >
                     <Terminal size={24} />
                   </div>
-                  
-                  <div style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
-                    color: theme.colors.text
-                  }}>
+
+                  <div
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: theme.colors.text,
+                    }}
+                  >
                     {agentInfo.name}
                   </div>
                 </button>

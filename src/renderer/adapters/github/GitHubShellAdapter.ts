@@ -1,9 +1,10 @@
-import { ShellAdapter } from "@principal-ai/codebase-composition";
+import { ShellAdapter } from '@principal-ai/codebase-composition';
 
 export class GitHubShellAdapter implements ShellAdapter {
   async openExternal(url: string): Promise<void> {
     try {
-      const maybeMain = (typeof window !== 'undefined') ? (window as any).mainProcess : undefined;
+      const maybeMain =
+        typeof window !== 'undefined' ? (window as any).mainProcess : undefined;
       if (maybeMain?.shell?.openExternal) {
         await maybeMain.shell.openExternal(url);
         return;
@@ -20,4 +21,4 @@ export class GitHubShellAdapter implements ShellAdapter {
       console.error('[GitHubShellAdapter] Failed to open external URL:', error);
     }
   }
-} 
+}

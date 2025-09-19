@@ -5,11 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import {
-  Excalidraw,
-  MainMenu,
-  exportToBlob,
-} from '@excalidraw/excalidraw';
+import { Excalidraw, MainMenu, exportToBlob } from '@excalidraw/excalidraw';
 import { AppState as ExcalidrawAppState } from '@excalidraw/excalidraw/types';
 import '@excalidraw/excalidraw/index.css';
 import { useTheme } from 'themed-markdown';
@@ -24,7 +20,10 @@ import { LibraryItem } from '@excalidraw/excalidraw/types';
 import { OrderedExcalidrawElement } from '@excalidraw/excalidraw/element/types';
 
 interface ExcalidrawWrapperProps {
-  onChange?: (elements: readonly  OrderedExcalidrawElement[], appState: ExcalidrawAppState) => void;
+  onChange?: (
+    elements: readonly OrderedExcalidrawElement[],
+    appState: ExcalidrawAppState,
+  ) => void;
   initialData?: ExcalidrawDiagramData;
   onClose?: () => void;
   libraryItems?: LibraryItem[];
@@ -51,9 +50,9 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
   onSave,
   showSaveToRepository,
   onSaveToRepository,
-  showSaveButton = true,  // Default to true for backward compatibility
-  showNewDiagramButton = true,  // Default to true for backward compatibility
-  showNameEditor = true,  // Default to true for backward compatibility
+  showSaveButton = true, // Default to true for backward compatibility
+  showNewDiagramButton = true, // Default to true for backward compatibility
+  showNameEditor = true, // Default to true for backward compatibility
 }) => {
   const { theme } = useTheme();
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
@@ -61,9 +60,9 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [currentDiagramId, setCurrentDiagramId] = useState(diagramId);
   const currentDiagramIdRef = useRef(diagramId);
-  const [currentLibraryItems, setCurrentLibraryItems] = useState< readonly LibraryItem[]>(
-    libraryItems || initialData?.libraryItems || [],
-  );
+  const [currentLibraryItems, setCurrentLibraryItems] = useState<
+    readonly LibraryItem[]
+  >(libraryItems || initialData?.libraryItems || []);
   const [currentDiagramName, setCurrentDiagramName] = useState(diagramName);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState(diagramName);
@@ -475,12 +474,12 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
         theme={'dark'}
         UIOptions={{
           canvasActions: {
-            saveAsImage: false,  // Hide "Save as image" button
-            saveToActiveFile: false,  // Hide "Save" button
-            loadScene: false,  // Hide "Load" button (prevents loading new diagrams)
+            saveAsImage: false, // Hide "Save as image" button
+            saveToActiveFile: false, // Hide "Save" button
+            loadScene: false, // Hide "Load" button (prevents loading new diagrams)
             export: {
-              saveFileToDisk: true,  // Keep ability to export to disk
-              onExportToBackend: false,  // Remove backend export options
+              saveFileToDisk: true, // Keep ability to export to disk
+              onExportToBackend: false, // Remove backend export options
             },
           },
         }}
@@ -542,25 +541,25 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
             {showSaveButton && (
               <button
                 onClick={handleManualSave}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '6px 12px',
-                border: 'none',
-                borderRadius: '8px',
-                backgroundColor: theme.colors.primary,
-                color: 'white',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 500,
-                transition: 'all 0.2s',
-                position: 'relative',
-              }}
-              title="Save (Cmd/Ctrl+S)"
-            >
-              Save
-            </button>
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '6px 12px',
+                  border: 'none',
+                  borderRadius: '8px',
+                  backgroundColor: theme.colors.primary,
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  position: 'relative',
+                }}
+                title="Save (Cmd/Ctrl+S)"
+              >
+                Save
+              </button>
             )}
             {showSaveToRepository && onSaveToRepository && (
               <button
@@ -589,9 +588,14 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
                 }}
                 title="Save a copy to repository as .excalidraw file"
               >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V2zm10-1H4a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V2a1 1 0 00-1-1z"/>
-                  <path d="M5 3.5a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0 2a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0 2a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0 2a.5.5 0 01.5-.5h2a.5.5 0 010 1h-2a.5.5 0 01-.5-.5z"/>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 16 16"
+                  fill="currentColor"
+                >
+                  <path d="M2 2a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V2zm10-1H4a1 1 0 00-1 1v12a1 1 0 001 1h8a1 1 0 001-1V2a1 1 0 00-1-1z" />
+                  <path d="M5 3.5a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0 2a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0 2a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0 2a.5.5 0 01.5-.5h2a.5.5 0 010 1h-2a.5.5 0 01-.5-.5z" />
                 </svg>
                 Save to Repository
               </button>

@@ -1,12 +1,24 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { BookOpen, GitBranch, Layers, Search, FileText, Brain, Book, PanelLeft, PanelLeftClose, Clock, Scale } from 'lucide-react';
+import {
+  BookOpen,
+  GitBranch,
+  Layers,
+  Search,
+  FileText,
+  Brain,
+  Book,
+  PanelLeft,
+  PanelLeftClose,
+  Clock,
+  Scale,
+} from 'lucide-react';
 import { useTheme } from 'themed-markdown';
-import type { CityData, HighlightLayer } from "@principal-ai/code-city-react";
-import type { FileTree } from "@principal-ai/repository-abstraction";
-import { PackageLayer } from "@principal-ai/codebase-composition";
+import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
+import type { FileTree } from '@principal-ai/repository-abstraction';
+import { PackageLayer } from '@principal-ai/codebase-composition';
 import { ThemedMarkdownSlide } from '../../components/markdown/ThemedMarkdownSlide';
 import { CityMapManager } from './shared/CityMapManager';
-import { DocumentationPanel } from './shared/DocumentationPanel';
+import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { MarkdownDocumentViewer } from './shared/MarkdownDocumentViewer';
 import { ExcalidrawWrapper } from '../../components/shared/ExcalidrawWrapper';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
@@ -23,10 +35,16 @@ import { FileTreeSourceService } from '../../services/FileTreeSourceService';
 import { FileTreeCacheService } from '../../services/FileTreeCacheService';
 // import { SourceSelectionService } from '../../services/SourceSelectionService'; // TODO: Re-enable when needed
 import { FileTreeSource, FileTreeStats } from '../../types/file-tree-source';
-import { RepositoryViewSkeleton, TabConfig } from './shared/RepositoryViewSkeleton';
+import {
+  RepositoryViewSkeleton,
+  TabConfig,
+} from './shared/RepositoryViewSkeleton';
 import type { ToolbarItem } from './shared/RepositoryToolbar';
 import { RepoSourceArchitecturePanelSimple } from './shared/RepoSourceArchitecturePanelSimple';
-import { NullContentProvider, GitHubContentProvider } from '../../services/ContentProviders';
+import {
+  NullContentProvider,
+  GitHubContentProvider,
+} from '../../services/ContentProviders';
 import { RemoteFileViewerModal } from './shared/RemoteFileViewerModal';
 import { HelpModal } from './shared/HelpModal';
 import { useGitChanges } from '../../contexts/GitChangesContext';
@@ -39,7 +57,7 @@ interface RepositoryExplorationViewProps {
     defaultBranch: string;
   };
   searchQuery?: string;
-  
+
   // Shared tree data from parent
   fileTree?: FileTree | null;
   cityData?: CityData | null;
@@ -48,18 +66,20 @@ interface RepositoryExplorationViewProps {
   cacheService?: FileTreeCacheService;
   cityDataCache?: unknown;
   treeStats?: FileTreeStats | null;
-  
+
   // a24z notes from parent (already loaded)
   a24zNotes?: A24zNote[];
-  
+
   // File color highlight layers from parent
   fileColorHighlightLayers?: HighlightLayer[];
-  
+
   // Callbacks
   onFileTreeLoaded?: (fileTree: FileTree | null) => void;
 }
 
-export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps> = ({
+export const RepositoryExplorationView: React.FC<
+  RepositoryExplorationViewProps
+> = ({
   repository,
   remoteData,
   searchQuery,
@@ -77,23 +97,34 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
   const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<string>('readme');
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
-  
+
   // Services - use shared if provided, otherwise create local
-  const fileTreeSourceService = useMemo(() => sharedFileTreeService || new FileTreeSourceService(), [sharedFileTreeService]);
-  const cacheService = useMemo(() => sharedCacheService || new FileTreeCacheService(), [sharedCacheService]);
-  
+  const fileTreeSourceService = useMemo(
+    () => sharedFileTreeService || new FileTreeSourceService(),
+    [sharedFileTreeService],
+  );
+  const cacheService = useMemo(
+    () => sharedCacheService || new FileTreeCacheService(),
+    [sharedCacheService],
+  );
+
   // Data loading state
   const [loading, setLoading] = useState(!sharedFileTree);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Sources state
   const [fileTreeSources, setFileTreeSources] = useState<FileTreeSource[]>([]);
-  const [activeFileTreeSource, setActiveFileTreeSource] = useState<FileTreeSource | null>(sharedActiveSource || null);
-  
+  const [activeFileTreeSource, setActiveFileTreeSource] =
+    useState<FileTreeSource | null>(sharedActiveSource || null);
+
   // Repository data - use shared if provided
-  const [treeStats, setTreeStats] = useState<FileTreeStats | null>(sharedTreeStats || null);
-  const [fileTree, setFileTree] = useState<FileTree | null>(sharedFileTree || null);
-  
+  const [treeStats, setTreeStats] = useState<FileTreeStats | null>(
+    sharedTreeStats || null,
+  );
+  const [fileTree, setFileTree] = useState<FileTree | null>(
+    sharedFileTree || null,
+  );
+
   // Update local state when shared data changes
   useEffect(() => {
     if (sharedFileTree !== undefined) {
@@ -101,205 +132,264 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       setLoading(false);
     }
   }, [sharedFileTree]);
-  
+
   useEffect(() => {
     if (sharedActiveSource !== undefined) {
       setActiveFileTreeSource(sharedActiveSource);
     }
   }, [sharedActiveSource]);
-  
+
   useEffect(() => {
     if (sharedTreeStats !== undefined) {
       setTreeStats(sharedTreeStats);
     }
   }, [sharedTreeStats]);
-  
+
   // README state
   const [readmeContent, setReadmeContent] = useState<string | null>(null);
   const [loadingReadme, setLoadingReadme] = useState(false);
-  
+
   // CHANGELOG state
   const [changelogContent, setChangelogContent] = useState<string | null>(null);
   const [loadingChangelog, setLoadingChangelog] = useState(false);
-  
+
   // LICENSE state
   const [licenseContent, setLicenseContent] = useState<string | null>(null);
   const [loadingLicense, setLoadingLicense] = useState(false);
-  
+
   // Notes state
-  const [tribalKnowledgeNotes, setTribalKnowledgeNotes] = useState<RepositoryNote[]>([]);
-  const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
-  const [noteHighlightLayers, setNoteHighlightLayers] = useState<HighlightLayer[]>([]);
-  
+  const [tribalKnowledgeNotes, setTribalKnowledgeNotes] = useState<
+    RepositoryNote[]
+  >([]);
+  const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [noteHighlightLayers, setNoteHighlightLayers] = useState<
+    HighlightLayer[]
+  >([]);
+
   // a24z memory state - notes come from props, only manage the layer locally
   const a24zNotes = a24zNotesProp; // Use the prop instead of local state
-  const [a24zHighlightLayer, setA24zHighlightLayer] = useState<HighlightLayer | null>(null);
+  const [a24zHighlightLayer, setA24zHighlightLayer] =
+    useState<HighlightLayer | null>(null);
   const [showA24zLayer, setShowA24zLayer] = useState(true);
-  
+
   // Search state
   const [selectedFile] = useState<string | null>(null); // setSelectedFile will be used when file selection is implemented
   const [searchResults, setSearchResults] = useState<string[]>([]);
-  const [searchHighlightLayer, setSearchHighlightLayer] = useState<HighlightLayer | null>(null);
-  const [selectedFileLayer, setSelectedFileLayer] = useState<HighlightLayer | null>(null);
+  const [searchHighlightLayer, setSearchHighlightLayer] =
+    useState<HighlightLayer | null>(null);
+  const [selectedFileLayer, setSelectedFileLayer] =
+    useState<HighlightLayer | null>(null);
   const [hoveredSearchResult] = useState<string | null>(null); // setHoveredSearchResult will be used when hover is implemented
-  const [hoveredSearchLayer, setHoveredSearchLayer] = useState<HighlightLayer | null>(null);
-  
+  const [hoveredSearchLayer, setHoveredSearchLayer] =
+    useState<HighlightLayer | null>(null);
+
   // File viewer modal state
   const [showFileViewer, setShowFileViewer] = useState(false);
   const [viewerFilePath, setViewerFilePath] = useState<string | null>(null);
-  const [viewerRelativePath, setViewerRelativePath] = useState<string | null>(null);
-  
+  const [viewerRelativePath, setViewerRelativePath] = useState<string | null>(
+    null,
+  );
+
   // Help modal state
   const [showHelpModal, setShowHelpModal] = useState(false);
-  
+
   // Multi-file editor state
   const [openedFiles, setOpenedFiles] = useState<Set<string>>(new Set());
-  
+
   // Package data state
-  const [packageLayers, setPackageLayers] = useState<PackageLayer[] | null>(null);
-  
+  const [packageLayers, setPackageLayers] = useState<PackageLayer[] | null>(
+    null,
+  );
+
   // Toolbar state
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
-  
+
   // Package highlight state
-  const [highlightedPackages, setHighlightedPackages] = useState<Set<string>>(new Set());
-  const [packageHighlightLayers, setPackageHighlightLayers] = useState<HighlightLayer[]>([]);
-  
+  const [highlightedPackages, setHighlightedPackages] = useState<Set<string>>(
+    new Set(),
+  );
+  const [packageHighlightLayers, setPackageHighlightLayers] = useState<
+    HighlightLayer[]
+  >([]);
+
   // Dependency analysis highlight state
-  const [analyzingPackagePath, setAnalyzingPackagePath] = useState<string | null>(null);
-  const [dependencyAnalysisHighlightLayer, setDependencyAnalysisHighlightLayer] = useState<HighlightLayer[]>([]);
-  
+  const [analyzingPackagePath, setAnalyzingPackagePath] = useState<
+    string | null
+  >(null);
+  const [
+    dependencyAnalysisHighlightLayer,
+    setDependencyAnalysisHighlightLayer,
+  ] = useState<HighlightLayer[]>([]);
+
   // Documentation state
   const [selectedDocPath, setSelectedDocPath] = useState<string | null>(null);
-  const [selectedDocType, setSelectedDocType] = useState<'markdown' | 'excalidraw'>('markdown');
+  const [selectedDocType, setSelectedDocType] = useState<
+    'markdown' | 'excalidraw'
+  >('markdown');
   const [docContent, setDocContent] = useState<string | null>(null);
   const [loadingDoc, setLoadingDoc] = useState(false);
-  const [docViewMode, setDocViewMode] = useState<'slides' | 'document'>('document');
-  const [preferredDocViewMode, setPreferredDocViewMode] = useState<'slides' | 'document'>('document');
+  const [docViewMode, setDocViewMode] = useState<'slides' | 'document'>(
+    'document',
+  );
+  const [preferredDocViewMode, setPreferredDocViewMode] = useState<
+    'slides' | 'document'
+  >('document');
   const [currentSlide, setCurrentSlide] = useState(0);
-  
+
   // Git changes from context
-  const { getGitHighlightLayers, checkGitStatus, getGitState, toggleGitChanges, initializeLocalSource, setGitChangesVisible } = useGitChanges();
-  const [gitHighlightLayers, setGitHighlightLayers] = useState<HighlightLayer[]>([]);
-  
+  const {
+    getGitHighlightLayers,
+    checkGitStatus,
+    getGitState,
+    toggleGitChanges,
+    initializeLocalSource,
+    setGitChangesVisible,
+  } = useGitChanges();
+  const [gitHighlightLayers, setGitHighlightLayers] = useState<
+    HighlightLayer[]
+  >([]);
+
   // Auto-initialize git state for local sources (loads HEAD tree)
   useEffect(() => {
     if (activeFileTreeSource?.type === 'local') {
-      console.log('[RepositoryExploration] Auto-initializing git state for local source:', activeFileTreeSource.id);
+      console.log(
+        '[RepositoryExploration] Auto-initializing git state for local source:',
+        activeFileTreeSource.id,
+      );
       initializeLocalSource(activeFileTreeSource);
     }
   }, [activeFileTreeSource, initializeLocalSource]);
-  
+
   // Check git status and get layers when source changes
   useEffect(() => {
     if (activeFileTreeSource && activeFileTreeSource.type === 'local') {
       // Check git status for this source
       checkGitStatus(activeFileTreeSource).then(() => {
         // Get highlight layers
-        const layers = getGitHighlightLayers(activeFileTreeSource.id, fileTree as FileTree | undefined);
+        const layers = getGitHighlightLayers(
+          activeFileTreeSource.id,
+          fileTree as FileTree | undefined,
+        );
         setGitHighlightLayers(layers);
       });
     } else {
       setGitHighlightLayers([]);
     }
   }, [activeFileTreeSource, fileTree, checkGitStatus, getGitHighlightLayers]);
-  
+
   // Handle file click to open in multi-tab viewer
-  const handleFileClick = useCallback((filePath: string) => {
-    
-    // Add file to opened files set
-    setOpenedFiles(prev => new Set(prev).add(filePath));
-    
-    // Open multi-file editor window
-    const openMultiFileEditor = async () => {
-      try {
-        // Prepare file info for the multi-file editor
-        const files = [{
-          path: filePath,
-          relativePath: filePath,
-          lastModified: Date.now()
-        }];
-        
-        // Include any previously opened files
-        openedFiles.forEach(openedFile => {
-          if (openedFile !== filePath) {
-            files.push({
-              path: openedFile,
-              relativePath: openedFile,
-              lastModified: Date.now()
-            });
-          }
-        });
-        
-        // Pass remote repository information for the multi-file editor
-        const branch = activeFileTreeSource?.metadata?.currentBranch || remoteData.defaultBranch;
-        
-        await WindowService.openMultiFileEditor({
-          sessionId: `explore-${remoteData.owner}-${remoteData.repo}`,
-          sessionName: `Explore ${remoteData.owner}/${remoteData.repo}`,
-          files,
-          repositoryPath: remoteData.owner + '/' + remoteData.repo,
-          // Add remote repository info so the editor knows to use remote content provider
-          isRemote: true,
-          remoteInfo: {
-            owner: remoteData.owner,
-            repo: remoteData.repo,
-            branch
-          }
-        });
-      } catch (error) {
-        console.error('[RepositoryExplorationView] Failed to open multi-file editor:', error);
-      }
-    };
-    
-    openMultiFileEditor();
-  }, [remoteData, openedFiles, activeFileTreeSource]);
+  const handleFileClick = useCallback(
+    (filePath: string) => {
+      // Add file to opened files set
+      setOpenedFiles((prev) => new Set(prev).add(filePath));
+
+      // Open multi-file editor window
+      const openMultiFileEditor = async () => {
+        try {
+          // Prepare file info for the multi-file editor
+          const files = [
+            {
+              path: filePath,
+              relativePath: filePath,
+              lastModified: Date.now(),
+            },
+          ];
+
+          // Include any previously opened files
+          openedFiles.forEach((openedFile) => {
+            if (openedFile !== filePath) {
+              files.push({
+                path: openedFile,
+                relativePath: openedFile,
+                lastModified: Date.now(),
+              });
+            }
+          });
+
+          // Pass remote repository information for the multi-file editor
+          const branch =
+            activeFileTreeSource?.metadata?.currentBranch ||
+            remoteData.defaultBranch;
+
+          await WindowService.openMultiFileEditor({
+            sessionId: `explore-${remoteData.owner}-${remoteData.repo}`,
+            sessionName: `Explore ${remoteData.owner}/${remoteData.repo}`,
+            files,
+            repositoryPath: remoteData.owner + '/' + remoteData.repo,
+            // Add remote repository info so the editor knows to use remote content provider
+            isRemote: true,
+            remoteInfo: {
+              owner: remoteData.owner,
+              repo: remoteData.repo,
+              branch,
+            },
+          });
+        } catch (error) {
+          console.error(
+            '[RepositoryExplorationView] Failed to open multi-file editor:',
+            error,
+          );
+        }
+      };
+
+      openMultiFileEditor();
+    },
+    [remoteData, openedFiles, activeFileTreeSource],
+  );
 
   // Right pane mode: for remote exploration we default to city and do not show terminal toggle
-  const [rightPaneMode] = useState<RightPaneMode>('city');
-  
+  const [rightPaneMode, setRightPaneMode] = useState<RightPaneMode>('city');
+
   // Create content provider for remote repositories
-  const _contentProvider = useMemo(() => { // Will be used for content fetching
+  const _contentProvider = useMemo(() => {
+    // Will be used for content fetching
     // For search, we should NOT use GitHubContentProvider for content search
     // as it would make API calls for every file. Use NullContentProvider for search,
     // but we'll create a separate provider for viewing individual files
     return new NullContentProvider();
   }, []);
-  
+
   // Handle dependency analysis highlighting
-  const handlePackageAnalysisStart = useCallback((packagePath: string, packageName: string) => {
-    if (!fileTree) return;
-    
-    setAnalyzingPackagePath(packagePath);
-    
-    // Clear selection highlights when analysis starts
-    setPackageHighlightLayers([]);
-    
-    // Create highlight layer for the package being analyzed
-    const highlightLayer: HighlightLayer = {
-      id: 'dependency-analysis',
-      name: `Analyzing ${packageName}`,
-      color: '#0ea5e9', // Bright blue color for analysis
-      opacity: 0.9,
-      items: [
-        { path: packagePath, type: 'directory' as const }, // Highlight the entire package directory
-        { path: packagePath + '/package.json', type: 'file' as const } // Also highlight the package.json file
-      ],
-      enabled: true,
-      priority: 10
-    };
-    
-    setDependencyAnalysisHighlightLayer([highlightLayer]);
-  }, [fileTree]);
+  const handlePackageAnalysisStart = useCallback(
+    (packagePath: string, packageName: string) => {
+      if (!fileTree) return;
+
+      setAnalyzingPackagePath(packagePath);
+
+      // Clear selection highlights when analysis starts
+      setPackageHighlightLayers([]);
+
+      // Create highlight layer for the package being analyzed
+      const highlightLayer: HighlightLayer = {
+        id: 'dependency-analysis',
+        name: `Analyzing ${packageName}`,
+        color: '#0ea5e9', // Bright blue color for analysis
+        opacity: 0.9,
+        items: [
+          { path: packagePath, type: 'directory' as const }, // Highlight the entire package directory
+          { path: packagePath + '/package.json', type: 'file' as const }, // Also highlight the package.json file
+        ],
+        enabled: true,
+        priority: 10,
+      };
+
+      setDependencyAnalysisHighlightLayer([highlightLayer]);
+    },
+    [fileTree],
+  );
 
   const handlePackageAnalysisEnd = useCallback(() => {
     const prevAnalyzingPath = analyzingPackagePath;
     setAnalyzingPackagePath(null);
     setDependencyAnalysisHighlightLayer([]);
-    
+
     // If there was a package being analyzed, restore its selection highlight
     if (prevAnalyzingPath && fileTree && packageLayers) {
-      const packageData = packageLayers.find(pkg => pkg.packageData.path === prevAnalyzingPath);
+      const packageData = packageLayers.find(
+        (pkg) => pkg.packageData.path === prevAnalyzingPath,
+      );
       if (packageData) {
         const highlightLayer: HighlightLayer = {
           id: 'package-selection',
@@ -308,10 +398,13 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
           opacity: 0.9,
           items: [
             { path: prevAnalyzingPath, type: 'directory' as const }, // Highlight the entire package directory
-            { path: prevAnalyzingPath + '/package.json', type: 'file' as const } // Also highlight the package.json file
+            {
+              path: prevAnalyzingPath + '/package.json',
+              type: 'file' as const,
+            }, // Also highlight the package.json file
           ],
           enabled: true,
-          priority: 5
+          priority: 5,
         };
         setPackageHighlightLayers([highlightLayer]);
       }
@@ -319,28 +412,31 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
   }, [analyzingPackagePath, fileTree, packageLayers]);
 
   // Handle package selection highlighting
-  const handlePackageSelected = useCallback((packagePath: string, packageName: string) => {
-    if (!fileTree) return;
-    
-    // Don't show selection highlight if we're currently analyzing this package
-    if (analyzingPackagePath === packagePath) return;
-    
-    // Create highlight layer for the selected package
-    const highlightLayer: HighlightLayer = {
-      id: 'package-selection',
-      name: `Selected ${packageName}`,
-      color: '#22c55e', // Bright green color for selection
-      opacity: 0.9,
-      items: [
-        { path: packagePath, type: 'directory' as const }, // Highlight the entire package directory
-        { path: packagePath + '/package.json', type: 'file' as const } // Also highlight the package.json file
-      ],
-      enabled: true,
-      priority: 5
-    };
-    
-    setPackageHighlightLayers([highlightLayer]);
-  }, [fileTree, analyzingPackagePath]);
+  const handlePackageSelected = useCallback(
+    (packagePath: string, packageName: string) => {
+      if (!fileTree) return;
+
+      // Don't show selection highlight if we're currently analyzing this package
+      if (analyzingPackagePath === packagePath) return;
+
+      // Create highlight layer for the selected package
+      const highlightLayer: HighlightLayer = {
+        id: 'package-selection',
+        name: `Selected ${packageName}`,
+        color: '#22c55e', // Bright green color for selection
+        opacity: 0.9,
+        items: [
+          { path: packagePath, type: 'directory' as const }, // Highlight the entire package directory
+          { path: packagePath + '/package.json', type: 'file' as const }, // Also highlight the package.json file
+        ],
+        enabled: true,
+        priority: 5,
+      };
+
+      setPackageHighlightLayers([highlightLayer]);
+    },
+    [fileTree, analyzingPackagePath],
+  );
 
   const handlePackageDeselected = useCallback(() => {
     // Only clear selection highlights if we're not currently analyzing
@@ -350,27 +446,32 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
   }, [analyzingPackagePath]);
 
   // Simple file tree search without indexing for better performance
-  const performSimpleSearch = useCallback((query: string): string[] => {
-    if (!fileTree || !query.trim()) return [];
-    
-    const lowerQuery = query.toLowerCase();
-    const results: string[] = [];
-    
-    // Search through all files
-    for (const file of fileTree.allFiles || []) {
-      // Check if filename or path contains the query
-      if (file.name.toLowerCase().includes(lowerQuery) || 
-          file.relativePath.toLowerCase().includes(lowerQuery)) {
-        results.push(file.relativePath);
-        
-        // Limit results for performance
-        if (results.length >= 100) break;
+  const performSimpleSearch = useCallback(
+    (query: string): string[] => {
+      if (!fileTree || !query.trim()) return [];
+
+      const lowerQuery = query.toLowerCase();
+      const results: string[] = [];
+
+      // Search through all files
+      for (const file of fileTree.allFiles || []) {
+        // Check if filename or path contains the query
+        if (
+          file.name.toLowerCase().includes(lowerQuery) ||
+          file.relativePath.toLowerCase().includes(lowerQuery)
+        ) {
+          results.push(file.relativePath);
+
+          // Limit results for performance
+          if (results.length >= 100) break;
+        }
       }
-    }
-    
-    return results;
-  }, [fileTree]);
-  
+
+      return results;
+    },
+    [fileTree],
+  );
+
   // Handle search from header
   useEffect(() => {
     if (!searchQuery) {
@@ -378,11 +479,11 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       setSearchHighlightLayer(null);
       return;
     }
-    
+
     // Perform simple search for instant feedback
     const results = performSimpleSearch(searchQuery);
     setSearchResults(results);
-    
+
     // Create highlight layer for search results
     if (results.length > 0) {
       const layer: HighlightLayer = {
@@ -390,73 +491,96 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
         name: 'Search Results',
         color: '#FFD700',
         opacity: 0.6,
-        items: results.map(f => ({ path: f, type: 'file' as const })),
+        items: results.map((f) => ({ path: f, type: 'file' as const })),
         enabled: true,
-        priority: 15
+        priority: 15,
       };
       setSearchHighlightLayer(layer);
     } else {
       setSearchHighlightLayer(null);
     }
-    
-    console.info('[ExploreView] Search results for "' + searchQuery + '":', results.length, 'files found');
+
+    console.info(
+      '[ExploreView] Search results for "' + searchQuery + '":',
+      results.length,
+      'files found',
+    );
   }, [searchQuery, performSimpleSearch]);
-  
+
   // Separate provider for viewing individual files (not for search)
   const fileViewerContentProvider = useMemo(() => {
     return new GitHubContentProvider(
       remoteData.owner,
       remoteData.repo,
-      activeFileTreeSource?.metadata?.currentBranch || remoteData.defaultBranch
+      activeFileTreeSource?.metadata?.currentBranch || remoteData.defaultBranch,
     );
-  }, [remoteData.owner, remoteData.repo, remoteData.defaultBranch, activeFileTreeSource?.metadata?.currentBranch]);
-  
+  }, [
+    remoteData.owner,
+    remoteData.repo,
+    remoteData.defaultBranch,
+    activeFileTreeSource?.metadata?.currentBranch,
+  ]);
+
   // Initialize sources only if not using shared service
   useEffect(() => {
     if (sharedFileTreeService || sharedActiveSource) {
       // Skip initialization if using shared data
       return;
     }
-    
-    const initialSources = fileTreeSourceService.initializeFromRepository(repository);
-    
+
+    const initialSources =
+      fileTreeSourceService.initializeFromRepository(repository);
+
     // Filter to only remote sources for exploration view
     // Local clones should be explored through LocalDevelopmentView
-    const remoteSources = initialSources.filter(source => 
-      source.type === 'remote'
+    const remoteSources = initialSources.filter(
+      (source) => source.type === 'remote',
     );
-    
-    
+
     setFileTreeSources(remoteSources);
-    
+
     // Set the first remote source as active (should be the default branch)
-    const defaultRemoteSource = remoteSources.find(s => s.isDefault) || remoteSources[0];
+    const defaultRemoteSource =
+      remoteSources.find((s) => s.isDefault) || remoteSources[0];
     if (defaultRemoteSource) {
       fileTreeSourceService.setActiveSource(defaultRemoteSource.id);
       setActiveFileTreeSource(defaultRemoteSource);
     }
-  }, [repository, fileTreeSourceService, sharedFileTreeService, sharedActiveSource]);
-  
+  }, [
+    repository,
+    fileTreeSourceService,
+    sharedFileTreeService,
+    sharedActiveSource,
+  ]);
+
   // Create adapters for active source - use appropriate provider based on source type
   const adapters = useMemo(() => {
     if (!activeFileTreeSource) return null;
-    
+
     // For local sources, use Electron adapters to read local files
     if (activeFileTreeSource.type === 'local') {
       return new ElectronPlatformAdapters();
     }
-    
+
     // For remote sources, use GitHub adapters
-    const branch = activeFileTreeSource.metadata?.currentBranch || remoteData.defaultBranch;
+    const branch =
+      activeFileTreeSource.metadata?.currentBranch || remoteData.defaultBranch;
     return new GitHubWebAdapters(remoteData.owner, remoteData.repo, branch);
-  }, [activeFileTreeSource, remoteData.owner, remoteData.repo, remoteData.defaultBranch]);
+  }, [
+    activeFileTreeSource,
+    remoteData.owner,
+    remoteData.repo,
+    remoteData.defaultBranch,
+  ]);
 
   // RepositoryExplorationView should never load its own tree - always use the one from RepositoryManager
   useEffect(() => {
     if (!sharedFileTree) {
       setLoading(false);
       setError('File tree not provided by RepositoryManager');
-      console.error('[RepositoryExploration] No file tree provided by RepositoryManager');
+      console.error(
+        '[RepositoryExploration] No file tree provided by RepositoryManager',
+      );
     } else {
       setLoading(false);
       setError(null);
@@ -466,7 +590,7 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       }
     }
   }, [sharedFileTree, onFileTreeLoaded]);
-  
+
   // Fetch README content
   useEffect(() => {
     const fetchReadme = async () => {
@@ -478,9 +602,15 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       if (activeFileTreeSource?.type === 'local') {
         try {
           const localBasePath = activeFileTreeSource.location;
-          const readmeFiles = ['README.md', 'readme.md', 'README.MD', 'README.txt', 'readme.txt'];
+          const readmeFiles = [
+            'README.md',
+            'readme.md',
+            'README.MD',
+            'README.txt',
+            'readme.txt',
+          ];
           let content = null;
-          
+
           for (const filename of readmeFiles) {
             const fullPath = `${localBasePath}/${filename}`;
             const result = await adapters?.fileSystem.readFile(fullPath);
@@ -489,13 +619,15 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
               break;
             }
           }
-          
+
           setReadmeContent(content);
           setLoadingReadme(false);
           return;
         } catch (error) {
           console.error('Error reading local README:', error);
-          setReadmeContent('# Error loading README\n\nFailed to load the local README file.');
+          setReadmeContent(
+            '# Error loading README\n\nFailed to load the local README file.',
+          );
           setLoadingReadme(false);
         }
         return;
@@ -505,7 +637,9 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       if (!adapters) {
         return;
       }
-      const activeRef = activeFileTreeSource?.metadata?.currentBranch || remoteData.defaultBranch;
+      const activeRef =
+        activeFileTreeSource?.metadata?.currentBranch ||
+        remoteData.defaultBranch;
 
       setLoadingReadme(true);
       try {
@@ -515,7 +649,7 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
           if (fileTree) {
             // Use the correct FileTree API - allFiles is an array of FileInfo objects
             if (fileTree.allFiles) {
-              const readmeFile = fileTree.allFiles.find(file => {
+              const readmeFile = fileTree.allFiles.find((file) => {
                 // Check if it's a root-level file (no directory separator)
                 if (file.relativePath.includes('/')) return false;
                 // Check if it matches README pattern
@@ -534,10 +668,18 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
             // No fileTree available
           }
         } catch (err) {
-          console.warn('[Exploration] README: fileTree discovery threw error', err);
+          console.warn(
+            '[Exploration] README: fileTree discovery threw error',
+            err,
+          );
         }
 
-        const readmeVariants = ['README.md', 'readme.md', 'Readme.md', 'README.MD'];
+        const readmeVariants = [
+          'README.md',
+          'readme.md',
+          'Readme.md',
+          'README.MD',
+        ];
         let content = null as string | null;
 
         // Prefer discoveredPath if available
@@ -564,11 +706,14 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
         }
 
         if (!content) {
-          console.warn('[Exploration] README: not found in repo root for any variant', {
-            owner: remoteData.owner,
-            repo: remoteData.repo,
-            ref: activeRef,
-          });
+          console.warn(
+            '[Exploration] README: not found in repo root for any variant',
+            {
+              owner: remoteData.owner,
+              repo: remoteData.repo,
+              ref: activeRef,
+            },
+          );
         }
 
         // If not found, leave readmeContent null so the UI shows the file tree list for verification
@@ -579,21 +724,32 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
         }
       } catch (error) {
         console.error('Failed to fetch README:', error);
-        setReadmeContent('# Error loading README\n\nFailed to load the README file.');
+        setReadmeContent(
+          '# Error loading README\n\nFailed to load the README file.',
+        );
       } finally {
         setLoadingReadme(false);
       }
     };
 
     fetchReadme();
-  }, [adapters, activeFileTreeSource, remoteData.owner, remoteData.repo, remoteData.defaultBranch, fileTree]);
+  }, [
+    adapters,
+    activeFileTreeSource,
+    remoteData.owner,
+    remoteData.repo,
+    remoteData.defaultBranch,
+    fileTree,
+  ]);
 
   // Fetch repository notes
   useEffect(() => {
     const fetchNotes = async () => {
       if (!repository.remoteUrl) return;
       try {
-        const notes = await RepositoryNotesService.getNotesForRepository(repository.remoteUrl);
+        const notes = await RepositoryNotesService.getNotesForRepository(
+          repository.remoteUrl,
+        );
         setTribalKnowledgeNotes(notes);
       } catch (error) {
         console.error('Failed to fetch repository notes:', error);
@@ -601,18 +757,22 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
     };
     fetchNotes();
   }, [repository.remoteUrl]);
-  
+
   // a24z notes are now loaded in RepositoryManager and passed as props
-  
+
   // Create a24z highlight layer from anchors
   useEffect(() => {
     if (!showA24zLayer || a24zNotes.length === 0) {
       setA24zHighlightLayer(null);
       return;
     }
-    
-    console.info('[ExploreView] Processing a24z notes for highlight layer:', a24zNotes.length, 'notes');
-    
+
+    console.info(
+      '[ExploreView] Processing a24z notes for highlight layer:',
+      a24zNotes.length,
+      'notes',
+    );
+
     // Collect all unique file paths from anchors
     const filePaths = new Set<string>();
     for (const note of a24zNotes) {
@@ -620,28 +780,33 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
         id: note.id,
         anchors: note.anchors,
         type: note.type,
-        tags: note.tags
+        tags: note.tags,
       });
-      
+
       if (note.anchors && Array.isArray(note.anchors)) {
         for (const anchor of note.anchors) {
           if (anchor && typeof anchor === 'string') {
             // Remove leading slash if present
-            const cleanPath = anchor.startsWith('/') ? anchor.substring(1) : anchor;
+            const cleanPath = anchor.startsWith('/')
+              ? anchor.substring(1)
+              : anchor;
             filePaths.add(cleanPath);
             console.info('[ExploreView] Added anchor path:', cleanPath);
           }
         }
       }
     }
-    
-    console.info('[ExploreView] Total unique file paths from a24z notes:', filePaths.size);
-    
+
+    console.info(
+      '[ExploreView] Total unique file paths from a24z notes:',
+      filePaths.size,
+    );
+
     if (filePaths.size === 0) {
       setA24zHighlightLayer(null);
       return;
     }
-    
+
     // Create highlight layer
     const layer: HighlightLayer = {
       id: 'a24z-memory',
@@ -649,17 +814,20 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       enabled: true,
       color: '#9333ea', // Purple color for a24z
       priority: 15, // Lower priority than search/selection
-      items: Array.from(filePaths).map(path => ({
+      items: Array.from(filePaths).map((path) => ({
         path,
         type: 'file' as const,
-        renderStrategy: 'border' as const // Use border to not interfere with other highlights
-      }))
+        renderStrategy: 'border' as const, // Use border to not interfere with other highlights
+      })),
     };
-    
-    console.info('[ExploreView] Created a24z highlight layer with', layer.items.length, 'items');
+
+    console.info(
+      '[ExploreView] Created a24z highlight layer with',
+      layer.items.length,
+      'items',
+    );
     setA24zHighlightLayer(layer);
   }, [a24zNotes, showA24zLayer]);
-  
 
   // Create search highlight layer
   useEffect(() => {
@@ -667,30 +835,29 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       setSearchHighlightLayer(null);
       return;
     }
-    
+
     const layer: HighlightLayer = {
       id: 'search-results',
       name: `Search Results (${searchResults.length})`,
       enabled: true,
       color: '#3b82f6', // Blue for search results
       priority: 25, // Higher than most layers
-      items: searchResults.map(path => ({
+      items: searchResults.map((path) => ({
         path,
-        type: 'file' as const
-      }))
+        type: 'file' as const,
+      })),
     };
-    
-    
+
     setSearchHighlightLayer(layer);
   }, [searchResults]);
-  
+
   // Create hover highlight layer for search results
   useEffect(() => {
     if (!hoveredSearchResult) {
       setHoveredSearchLayer(null);
       return;
     }
-    
+
     const layer: HighlightLayer = {
       id: 'hovered-search-result',
       name: 'Hovered Result',
@@ -698,72 +865,78 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       color: '#fbbf24', // Amber/yellow for hover
       priority: 40, // Higher priority than other layers
       borderWidth: 3, // Thicker border for visibility
-      items: [{
-        path: hoveredSearchResult,
-        type: 'file' as const,
-        renderStrategy: 'fill' // Just outline for hover
-      }]
+      items: [
+        {
+          path: hoveredSearchResult,
+          type: 'file' as const,
+          renderStrategy: 'fill', // Just outline for hover
+        },
+      ],
     };
-    
+
     setHoveredSearchLayer(layer);
   }, [hoveredSearchResult]);
-  
+
   // Create selected file fill layer
   useEffect(() => {
     if (!selectedFile) {
       setSelectedFileLayer(null);
       return;
     }
-    
+
     // Extract relative path from the selected file
     // The selectedFile might be an absolute path, so we need to convert it
     let relativePath = selectedFile;
     if (selectedFile.includes('/')) {
       // If it's an absolute path, try to find the relative part
       const parts = selectedFile.split('/');
-      const repoNameIndex = parts.findIndex(part => part === repository.name);
+      const repoNameIndex = parts.findIndex((part) => part === repository.name);
       if (repoNameIndex !== -1 && repoNameIndex < parts.length - 1) {
         relativePath = parts.slice(repoNameIndex + 1).join('/');
       } else {
         // Fallback: just use the last part after the last slash
-        relativePath = selectedFile.substring(selectedFile.lastIndexOf('/') + 1);
+        relativePath = selectedFile.substring(
+          selectedFile.lastIndexOf('/') + 1,
+        );
       }
     }
-    
+
     const layer: HighlightLayer = {
       id: 'selected-file',
       name: 'Selected File',
       enabled: true,
       color: '#10b981', // Green for selected file
       priority: 30, // Higher priority than search results
-      items: [{
-        path: relativePath,
-        type: 'file' as const,
-        renderStrategy: 'fill' // Fill the building instead of just outline
-      }]
+      items: [
+        {
+          path: relativePath,
+          type: 'file' as const,
+          renderStrategy: 'fill', // Fill the building instead of just outline
+        },
+      ],
     };
-    
+
     setSelectedFileLayer(layer);
   }, [selectedFile, repository.name]);
-  
+
   // Create note highlight layers
   useEffect(() => {
     if (selectedNoteIds.size === 0) {
       setNoteHighlightLayers([]);
       return;
     }
-    
+
     const layers: HighlightLayer[] = [];
     const colors = ['#8b5cf6', '#ec4899', '#06b6d4', '#10b981', '#f59e0b'];
     let colorIndex = 0;
-    
+
     for (const noteId of selectedNoteIds) {
-      const note = tribalKnowledgeNotes.find(n => n.id === noteId);
+      const note = tribalKnowledgeNotes.find((n) => n.id === noteId);
       if (!note) continue;
-      
+
       const color = colors[colorIndex % colors.length];
       colorIndex++;
-      
+
       const items: Array<{ path: string; type: 'file' | 'directory' }> = [];
       if (note.relativePath) {
         items.push({ path: note.relativePath, type: 'directory' as const });
@@ -773,7 +946,7 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
           items.push({ path: anchor, type: 'file' as const });
         }
       }
-      
+
       if (items.length > 0) {
         layers.push({
           id: `note-${noteId}`,
@@ -781,85 +954,88 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
           enabled: true,
           color,
           priority: 20 + colorIndex,
-          items
+          items,
         });
       }
     }
-    
+
     setNoteHighlightLayers(layers);
   }, [selectedNoteIds, tribalKnowledgeNotes]);
-  
+
   // Create package highlight layers
   useEffect(() => {
     if (highlightedPackages.size === 0) {
       setPackageHighlightLayers([]);
       return;
     }
-    
+
     if (!packageLayers) {
       setPackageHighlightLayers([]);
       return;
     }
-    
+
     const layers: HighlightLayer[] = [];
     const colors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899']; // Green, Blue, Orange, Purple, Pink
     let colorIndex = 0;
-    
+
     for (const packageId of highlightedPackages) {
       // Find the package data
-      const pkg = packageLayers.find(p => p.id === packageId);
+      const pkg = packageLayers.find((p) => p.id === packageId);
       if (!pkg) continue;
-      
-      const items: Array<{ path: string; type: 'file' | 'directory'; renderStrategy?: 'fill' | 'border' }> = [];
-      
-      
+
+      const items: Array<{
+        path: string;
+        type: 'file' | 'directory';
+        renderStrategy?: 'fill' | 'border';
+      }> = [];
+
       // Handle root package - check for various root indicators including "package.json" itself
-      const isRootPackage = !pkg.packageData.path || 
-                           pkg.packageData.path === '.' || 
-                           pkg.packageData.path === 'root' ||
-                           pkg.packageData.path === '' ||
-                           pkg.packageData.path === 'package.json';
-      
-      
+      const isRootPackage =
+        !pkg.packageData.path ||
+        pkg.packageData.path === '.' ||
+        pkg.packageData.path === 'root' ||
+        pkg.packageData.path === '' ||
+        pkg.packageData.path === 'package.json';
+
       if (isRootPackage) {
         // For root packages, highlight both the root directory and package.json file
         items.push({
           path: '',
           type: 'directory' as const,
-          renderStrategy: 'fill'
+          renderStrategy: 'fill',
         });
         items.push({
           path: 'package.json',
           type: 'file' as const,
-          renderStrategy: 'fill'
+          renderStrategy: 'fill',
         });
       } else {
         // For non-root packages, highlight both the directory and package.json
         items.push({
           path: pkg.packageData.path,
           type: 'directory' as const,
-          renderStrategy: 'fill'
+          renderStrategy: 'fill',
         });
         items.push({
           path: `${pkg.packageData.path}/package.json`,
           type: 'file' as const,
-          renderStrategy: 'fill'
+          renderStrategy: 'fill',
         });
       }
-      
+
       const layer: HighlightLayer = {
         id: `package-highlight-${packageId}`,
         name: `Package: ${pkg.packageData.name}`,
         enabled: true,
         color: colors[colorIndex % colors.length],
         priority: 35 + colorIndex, // Slightly different priorities to ensure all show
-        items
+        items,
       };
-      
+
       layers.push(layer);
       colorIndex++;
     }
-    
+
     setPackageHighlightLayers(layers);
   }, [highlightedPackages, packageLayers]);
 
@@ -871,63 +1047,76 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       setActiveFileTreeSource(source);
     }
   };
-  
-  
+
   // Handle documentation selection
-  const handleDocumentSelect = useCallback(async (filePath: string, type: 'markdown' | 'excalidraw') => {
-    setSelectedDocPath(filePath);
-    setSelectedDocType(type);
-    setLoadingDoc(true);
-    // Use the preferred view mode when opening a new document
-    setDocViewMode(preferredDocViewMode);
-    setCurrentSlide(0); // Reset to first slide
-    
-    try {
-      // For local sources, read from filesystem
-      if (activeFileTreeSource?.type === 'local') {
-        // Build full path for local files
-        const fullPath = filePath.startsWith('/') 
-          ? filePath 
-          : `${activeFileTreeSource.location}/${filePath}`.replace(/\/+/g, '/');
-        
-        const result = await FileSystemService.readFile(fullPath);
-        if (result?.content) {
-          setDocContent(result.content);
-        } else {
-          setDocContent(null);
+  const handleDocumentSelect = useCallback(
+    async (filePath: string, type: 'markdown' | 'excalidraw') => {
+      setSelectedDocPath(filePath);
+      setSelectedDocType(type);
+      setLoadingDoc(true);
+      // Use the preferred view mode when opening a new document
+      setDocViewMode(preferredDocViewMode);
+      setCurrentSlide(0); // Reset to first slide
+
+      try {
+        // For local sources, read from filesystem
+        if (activeFileTreeSource?.type === 'local') {
+          // Build full path for local files
+          const fullPath = filePath.startsWith('/')
+            ? filePath
+            : `${activeFileTreeSource.location}/${filePath}`.replace(
+                /\/+/g,
+                '/',
+              );
+
+          const result = await FileSystemService.readFile(fullPath);
+          if (result?.content) {
+            setDocContent(result.content);
+          } else {
+            setDocContent(null);
+          }
+        } else if (activeFileTreeSource?.type === 'remote') {
+          // For remote sources, use GitHub API
+          const relativePath = filePath.startsWith('/')
+            ? filePath.substring(1)
+            : filePath;
+          const content =
+            await fileViewerContentProvider.readFileContent(relativePath);
+          if (content) {
+            setDocContent(content);
+          } else {
+            setDocContent(null);
+          }
         }
-      } else if (activeFileTreeSource?.type === 'remote') {
-        // For remote sources, use GitHub API
-        const relativePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
-        const content = await fileViewerContentProvider.readFileContent(relativePath);
-        if (content) {
-          setDocContent(content);
-        } else {
-          setDocContent(null);
-        }
+      } catch (error) {
+        console.error('Failed to load document:', error);
+        setDocContent(null);
+      } finally {
+        setLoadingDoc(false);
       }
-    } catch (error) {
-      console.error('Failed to load document:', error);
-      setDocContent(null);
-    } finally {
-      setLoadingDoc(false);
-    }
-  }, [activeFileTreeSource, fileViewerContentProvider, preferredDocViewMode]);
+    },
+    [activeFileTreeSource, fileViewerContentProvider, preferredDocViewMode],
+  );
 
   // Handle package highlighting (toggle)
   const handleHighlightPackage = (packagePath: string, packageName: string) => {
-    
     // Find the package by path and name to get its ID
-    const pkg = packageLayers?.find(p => 
-      p.packageData.path === packagePath && p.packageData.name === packageName
+    const pkg = packageLayers?.find(
+      (p) =>
+        p.packageData.path === packagePath &&
+        p.packageData.name === packageName,
     );
-    
+
     if (!pkg) {
-      console.warn('[RepositoryExplorationView] Could not find package:', packageName, packagePath);
+      console.warn(
+        '[RepositoryExplorationView] Could not find package:',
+        packageName,
+        packagePath,
+      );
       return;
     }
-    
-    setHighlightedPackages(prev => {
+
+    setHighlightedPackages((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(pkg.id)) {
         newSet.delete(pkg.id);
@@ -938,32 +1127,12 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
     });
   };
 
-  // Check if docs folder exists
-  const hasDocsFolder = useMemo(() => {
-    if (!fileTree) return false;
-    
-    // Check if there's a docs directory at the root
-    if (fileTree.allDirectories) {
-      const hasDocsDir = fileTree.allDirectories.some(dir => 
-        dir.relativePath === 'docs' || dir.name === 'docs'
-      );
-      if (hasDocsDir) return true;
-    }
-    
-    // Also check if there are any files in the docs/ directory
-    const hasDocsFiles = fileTree.allFiles.some(file => 
-      file.relativePath.startsWith('docs/') && !file.relativePath.includes('.a24z')
-    );
-    
-    return hasDocsFiles;
-  }, [fileTree]);
-
   // Check if CHANGELOG.md exists at root
   const hasChangelog = useMemo(() => {
     if (!fileTree) return false;
-    
+
     // Check for CHANGELOG.md at root (case-insensitive)
-    return fileTree.allFiles.some(file => {
+    return fileTree.allFiles.some((file) => {
       const fileName = file.name.toLowerCase();
       const isAtRoot = !file.relativePath.includes('/');
       return isAtRoot && fileName === 'changelog.md';
@@ -973,22 +1142,23 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
   // Check if LICENSE file exists at root
   const hasLicense = useMemo(() => {
     if (!fileTree) return false;
-    
+
     // Check for LICENSE files at root (various formats)
-    return fileTree.allFiles.some(file => {
+    return fileTree.allFiles.some((file) => {
       const fileName = file.name.toLowerCase();
       const isAtRoot = !file.relativePath.includes('/');
       // Match LICENSE, LICENSE.txt, LICENSE.md, LICENCE (UK spelling), COPYING, etc.
-      return isAtRoot && (
-        fileName === 'license' ||
-        fileName === 'license.txt' ||
-        fileName === 'license.md' ||
-        fileName === 'licence' ||
-        fileName === 'licence.txt' ||
-        fileName === 'licence.md' ||
-        fileName === 'copying' ||
-        fileName === 'copying.txt' ||
-        fileName.startsWith('license.')  // LICENSE.MIT, LICENSE.Apache, etc.
+      return (
+        isAtRoot &&
+        (fileName === 'license' ||
+          fileName === 'license.txt' ||
+          fileName === 'license.md' ||
+          fileName === 'licence' ||
+          fileName === 'licence.txt' ||
+          fileName === 'licence.md' ||
+          fileName === 'copying' ||
+          fileName === 'copying.txt' ||
+          fileName.startsWith('license.')) // LICENSE.MIT, LICENSE.Apache, etc.
       );
     });
   }, [fileTree]);
@@ -1007,9 +1177,14 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
         // For local sources, read CHANGELOG from the actual local file system
         if (activeFileTreeSource?.type === 'local') {
           const localBasePath = activeFileTreeSource.location;
-          const changelogFiles = ['CHANGELOG.md', 'changelog.md', 'Changelog.md', 'CHANGELOG.MD'];
+          const changelogFiles = [
+            'CHANGELOG.md',
+            'changelog.md',
+            'Changelog.md',
+            'CHANGELOG.MD',
+          ];
           let content = null;
-          
+
           for (const filename of changelogFiles) {
             const fullPath = `${localBasePath}/${filename}`;
             const result = await adapters?.fileSystem.readFile(fullPath);
@@ -1018,7 +1193,7 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
               break;
             }
           }
-          
+
           setChangelogContent(content);
           setLoadingChangelog(false);
           return;
@@ -1029,7 +1204,12 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
           return;
         }
 
-        const changelogVariants = ['CHANGELOG.md', 'changelog.md', 'Changelog.md', 'CHANGELOG.MD'];
+        const changelogVariants = [
+          'CHANGELOG.md',
+          'changelog.md',
+          'Changelog.md',
+          'CHANGELOG.MD',
+        ];
         let content = null;
 
         for (const variant of changelogVariants) {
@@ -1047,14 +1227,23 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
         }
       } catch (error) {
         console.error('Failed to fetch CHANGELOG:', error);
-        setChangelogContent('# Error loading CHANGELOG\n\nFailed to load the CHANGELOG file.');
+        setChangelogContent(
+          '# Error loading CHANGELOG\n\nFailed to load the CHANGELOG file.',
+        );
       } finally {
         setLoadingChangelog(false);
       }
     };
 
     fetchChangelog();
-  }, [adapters, activeFileTreeSource, remoteData.owner, remoteData.repo, fileTree, hasChangelog]);
+  }, [
+    adapters,
+    activeFileTreeSource,
+    remoteData.owner,
+    remoteData.repo,
+    fileTree,
+    hasChangelog,
+  ]);
 
   // Fetch LICENSE content
   useEffect(() => {
@@ -1072,14 +1261,24 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
           const localBasePath = activeFileTreeSource.location;
           // Try various LICENSE file formats
           const licenseFiles = [
-            'LICENSE', 'LICENSE.txt', 'LICENSE.md',
-            'LICENCE', 'LICENCE.txt', 'LICENCE.md',  // UK spelling
-            'license', 'license.txt', 'license.md',
-            'COPYING', 'COPYING.txt', 'copying',
-            'LICENSE.MIT', 'LICENSE.Apache', 'LICENSE.BSD'  // Specific license types
+            'LICENSE',
+            'LICENSE.txt',
+            'LICENSE.md',
+            'LICENCE',
+            'LICENCE.txt',
+            'LICENCE.md', // UK spelling
+            'license',
+            'license.txt',
+            'license.md',
+            'COPYING',
+            'COPYING.txt',
+            'copying',
+            'LICENSE.MIT',
+            'LICENSE.Apache',
+            'LICENSE.BSD', // Specific license types
           ];
           let content = null;
-          
+
           for (const filename of licenseFiles) {
             const fullPath = `${localBasePath}/${filename}`;
             const result = await adapters?.fileSystem.readFile(fullPath);
@@ -1092,7 +1291,7 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
               break;
             }
           }
-          
+
           setLicenseContent(content);
           setLoadingLicense(false);
           return;
@@ -1104,10 +1303,17 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
         }
 
         const licenseVariants = [
-          'LICENSE', 'LICENSE.txt', 'LICENSE.md',
-          'LICENCE', 'LICENCE.txt', 'LICENCE.md',
-          'license', 'license.txt', 'license.md',
-          'COPYING', 'COPYING.txt'
+          'LICENSE',
+          'LICENSE.txt',
+          'LICENSE.md',
+          'LICENCE',
+          'LICENCE.txt',
+          'LICENCE.md',
+          'license',
+          'license.txt',
+          'license.md',
+          'COPYING',
+          'COPYING.txt',
         ];
         let content = null;
 
@@ -1130,14 +1336,23 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
         }
       } catch (error) {
         console.error('Failed to fetch LICENSE:', error);
-        setLicenseContent('# Error loading LICENSE\n\nFailed to load the LICENSE file.');
+        setLicenseContent(
+          '# Error loading LICENSE\n\nFailed to load the LICENSE file.',
+        );
       } finally {
         setLoadingLicense(false);
       }
     };
 
     fetchLicense();
-  }, [adapters, activeFileTreeSource, remoteData.owner, remoteData.repo, fileTree, hasLicense]);
+  }, [
+    adapters,
+    activeFileTreeSource,
+    remoteData.owner,
+    remoteData.repo,
+    fileTree,
+    hasLicense,
+  ]);
 
   // Create tabs configuration
   const tabs: TabConfig[] = [
@@ -1147,64 +1362,79 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       icon: <BookOpen size={14} />,
       visible: true,
       content: (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+        >
           {loadingReadme ? (
-            <div style={{ 
-              padding: '32px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '200px',
-            }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                backgroundColor: `${theme.colors.primary}15`,
+            <div
+              style={{
+                padding: '32px',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '16px',
-                animation: 'gentlePulse 2s ease-in-out infinite',
-              }}>
+                minHeight: '200px',
+              }}
+            >
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  backgroundColor: `${theme.colors.primary}15`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                  animation: 'gentlePulse 2s ease-in-out infinite',
+                }}
+              >
                 <BookOpen size={24} color={theme.colors.primary} />
               </div>
-              
-              <h3 style={{
-                fontSize: '15px',
-                fontWeight: 600,
-                color: theme.colors.text,
-                marginBottom: '8px',
-              }}>
+
+              <h3
+                style={{
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  marginBottom: '8px',
+                }}
+              >
                 Loading README
               </h3>
-              
-              <p style={{
-                fontSize: '13px',
-                color: theme.colors.textSecondary,
-                marginBottom: '20px',
-              }}>
+
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  marginBottom: '20px',
+                }}
+              >
                 Fetching repository documentation...
               </p>
-              
-              <div style={{
-                display: 'flex',
-                gap: '6px',
-              }}>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '6px',
+                }}
+              >
                 {[...Array(3)].map((_, i) => (
-                  <div key={`loading-dot-${i}`} style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: theme.colors.primary,
-                    opacity: 0.3,
-                    animation: 'bounce 1.4s ease-in-out infinite',
-                    animationDelay: `${i * 0.2}s`,
-                  }} />
+                  <div
+                    key={`loading-dot-${i}`}
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: theme.colors.primary,
+                      opacity: 0.3,
+                      animation: 'bounce 1.4s ease-in-out infinite',
+                      animationDelay: `${i * 0.2}s`,
+                    }}
+                  />
                 ))}
               </div>
-              
+
               <style>{`
                 @keyframes gentlePulse {
                   0%, 100% { 
@@ -1230,7 +1460,10 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
               `}</style>
             </div>
           ) : readmeContent ? (
-            <div id="readme-container" style={{ height: '100%', overflow: 'auto' }}>
+            <div
+              id="readme-container"
+              style={{ height: '100%', overflow: 'auto' }}
+            >
               <ThemedMarkdownSlide
                 content={readmeContent}
                 slideIdPrefix="readme"
@@ -1243,76 +1476,126 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
                     const elementId = href.substring(1);
                     setTimeout(() => {
                       const element = document.getElementById(elementId);
-                      element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      element?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start',
+                      });
                     }, 100);
-                  } else if (href.startsWith('http://') || href.startsWith('https://')) {
+                  } else if (
+                    href.startsWith('http://') ||
+                    href.startsWith('https://')
+                  ) {
                     window.open(href, '_blank');
                   }
                 }}
               />
             </div>
           ) : (
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 24,
-            }}>
-              <div style={{
-                width: '100%',
-                maxWidth: 720,
-                border: `1px dashed ${theme.colors.border}`,
-                borderRadius: 12,
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 padding: 24,
-                background: theme.colors.background,
-              }}>
-                <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 12 }}>
-                  <div style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 8,
-                    background: theme.colors.primary + '22',
+              }}
+            >
+              <div
+                style={{
+                  width: '100%',
+                  maxWidth: 720,
+                  border: `1px dashed ${theme.colors.border}`,
+                  borderRadius: 12,
+                  padding: 24,
+                  background: theme.colors.background,
+                }}
+              >
+                <div
+                  style={{
                     display: 'flex',
+                    gap: 16,
                     alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
+                    marginBottom: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 8,
+                      background: theme.colors.primary + '22',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
                     <BookOpen size={22} color={theme.colors.primary} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: theme.colors.text }}>
+                    <div
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 700,
+                        color: theme.colors.text,
+                      }}
+                    >
                       No README found at repository root
                     </div>
-                    <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>
-                      Add a README.md to the root of {remoteData.owner}/{remoteData.repo} on branch {activeFileTreeSource?.metadata?.currentBranch || remoteData.defaultBranch} and it will render here automatically.
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      Add a README.md to the root of {remoteData.owner}/
+                      {remoteData.repo} on branch{' '}
+                      {activeFileTreeSource?.metadata?.currentBranch ||
+                        remoteData.defaultBranch}{' '}
+                      and it will render here automatically.
                     </div>
                   </div>
                 </div>
 
-                <div style={{
-                  marginTop: 12,
-                  padding: '12px 14px',
-                  borderRadius: 8,
-                  background: theme.colors.backgroundSecondary || theme.colors.background,
-                  border: `1px solid ${theme.colors.border}`,
-                }}>
-                  <div style={{ fontSize: 13, color: theme.colors.textSecondary, marginBottom: 8 }}>
-                    We look for a README file at the repository root using these common names:
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: '12px 14px',
+                    borderRadius: 8,
+                    background:
+                      theme.colors.backgroundSecondary ||
+                      theme.colors.background,
+                    border: `1px solid ${theme.colors.border}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: theme.colors.textSecondary,
+                      marginBottom: 8,
+                    }}
+                  >
+                    We look for a README file at the repository root using these
+                    common names:
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {['README.md', 'readme.md', 'Readme.md', 'README.MD'].map((name) => (
-                      <div key={name} style={{
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                        padding: '6px 10px',
-                        borderRadius: 6,
-                        border: `1px solid ${theme.colors.border}`,
-                        background: theme.colors.background,
-                        color: theme.colors.text,
-                      }}>
-                        {name}
-                      </div>
-                    ))}
+                    {['README.md', 'readme.md', 'Readme.md', 'README.MD'].map(
+                      (name) => (
+                        <div
+                          key={name}
+                          style={{
+                            fontFamily: 'monospace',
+                            fontSize: 12,
+                            padding: '6px 10px',
+                            borderRadius: 6,
+                            border: `1px solid ${theme.colors.border}`,
+                            background: theme.colors.background,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {name}
+                        </div>
+                      ),
+                    )}
                   </div>
                 </div>
 
@@ -1338,7 +1621,8 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
                   <button
                     onClick={() => {
                       // Simple refresh: re-trigger the README effect by toggling active source
-                      if (activeFileTreeSource) setActiveFileTreeSource({ ...activeFileTreeSource });
+                      if (activeFileTreeSource)
+                        setActiveFileTreeSource({ ...activeFileTreeSource });
                     }}
                     style={{
                       padding: '8px 12px',
@@ -1358,7 +1642,7 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
             </div>
           )}
         </div>
-      )
+      ),
     },
     {
       id: 'changelog',
@@ -1366,66 +1650,84 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       icon: <Clock size={14} />,
       visible: hasChangelog,
       content: (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+        >
           {loadingChangelog ? (
-            <div style={{ 
-              padding: '32px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '200px',
-            }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                backgroundColor: `${theme.colors.primary}15`,
+            <div
+              style={{
+                padding: '32px',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '16px',
-                animation: 'gentlePulse 2s ease-in-out infinite',
-              }}>
+                minHeight: '200px',
+              }}
+            >
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  backgroundColor: `${theme.colors.primary}15`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                  animation: 'gentlePulse 2s ease-in-out infinite',
+                }}
+              >
                 <Clock size={24} color={theme.colors.primary} />
               </div>
-              
-              <h3 style={{
-                fontSize: '15px',
-                fontWeight: 600,
-                color: theme.colors.text,
-                marginBottom: '8px',
-              }}>
+
+              <h3
+                style={{
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  marginBottom: '8px',
+                }}
+              >
                 Loading Changelog
               </h3>
-              
-              <p style={{
-                fontSize: '13px',
-                color: theme.colors.textSecondary,
-                marginBottom: '20px',
-              }}>
+
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  marginBottom: '20px',
+                }}
+              >
                 Fetching version history...
               </p>
-              
-              <div style={{
-                display: 'flex',
-                gap: '6px',
-              }}>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '6px',
+                }}
+              >
                 {[...Array(3)].map((_, i) => (
-                  <div key={`loading-dot-${i}`} style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: theme.colors.primary,
-                    opacity: 0.3,
-                    animation: 'bounce 1.4s ease-in-out infinite',
-                    animationDelay: `${i * 0.2}s`,
-                  }} />
+                  <div
+                    key={`loading-dot-${i}`}
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: theme.colors.primary,
+                      opacity: 0.3,
+                      animation: 'bounce 1.4s ease-in-out infinite',
+                      animationDelay: `${i * 0.2}s`,
+                    }}
+                  />
                 ))}
               </div>
             </div>
           ) : changelogContent ? (
-            <div id="changelog-container" style={{ height: '100%', overflow: 'auto' }}>
+            <div
+              id="changelog-container"
+              style={{ height: '100%', overflow: 'auto' }}
+            >
               <ThemedMarkdownSlide
                 content={changelogContent}
                 slideIdPrefix="changelog"
@@ -1435,49 +1737,58 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
               />
             </div>
           ) : (
-            <div style={{ 
-              padding: '40px 20px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-            }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '12px',
-                backgroundColor: theme.colors.backgroundTertiary,
+            <div
+              style={{
+                padding: '40px 20px',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '16px',
-              }}>
+                height: '100%',
+              }}
+            >
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '12px',
+                  backgroundColor: theme.colors.backgroundTertiary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                }}
+              >
                 <Clock size={32} color={theme.colors.textTertiary} />
               </div>
-              
-              <h3 style={{
-                fontSize: '16px',
-                fontWeight: 600,
-                color: theme.colors.text,
-                marginBottom: '8px',
-              }}>
+
+              <h3
+                style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  marginBottom: '8px',
+                }}
+              >
                 No Changelog Found
               </h3>
-              
-              <p style={{
-                fontSize: '13px',
-                color: theme.colors.textSecondary,
-                textAlign: 'center',
-                maxWidth: '400px',
-                lineHeight: 1.5,
-              }}>
-                Add a CHANGELOG.md to the root of {remoteData.owner}/{remoteData.repo} to display version history here.
+
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  textAlign: 'center',
+                  maxWidth: '400px',
+                  lineHeight: 1.5,
+                }}
+              >
+                Add a CHANGELOG.md to the root of {remoteData.owner}/
+                {remoteData.repo} to display version history here.
               </p>
             </div>
           )}
         </div>
-      )
+      ),
     },
     {
       id: 'license',
@@ -1485,70 +1796,88 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
       icon: <Scale size={14} />,
       visible: hasLicense,
       content: (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div
+          style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
+        >
           {loadingLicense ? (
-            <div style={{ 
-              padding: '32px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '200px',
-            }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '12px',
-                backgroundColor: `${theme.colors.primary}15`,
+            <div
+              style={{
+                padding: '32px',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '16px',
-                animation: 'gentlePulse 2s ease-in-out infinite',
-              }}>
+                minHeight: '200px',
+              }}
+            >
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '12px',
+                  backgroundColor: `${theme.colors.primary}15`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                  animation: 'gentlePulse 2s ease-in-out infinite',
+                }}
+              >
                 <Scale size={24} color={theme.colors.primary} />
               </div>
-              
-              <h3 style={{
-                fontSize: '15px',
-                fontWeight: 600,
-                color: theme.colors.text,
-                marginBottom: '8px',
-              }}>
+
+              <h3
+                style={{
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  marginBottom: '8px',
+                }}
+              >
                 Loading License
               </h3>
-              
-              <p style={{
-                fontSize: '13px',
-                color: theme.colors.textSecondary,
-                marginBottom: '20px',
-              }}>
+
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  marginBottom: '20px',
+                }}
+              >
                 Fetching license information...
               </p>
-              
-              <div style={{
-                display: 'flex',
-                gap: '6px',
-              }}>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '6px',
+                }}
+              >
                 {[...Array(3)].map((_, i) => (
-                  <div key={`loading-dot-${i}`} style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: theme.colors.primary,
-                    opacity: 0.3,
-                    animation: 'bounce 1.4s ease-in-out infinite',
-                    animationDelay: `${i * 0.2}s`,
-                  }} />
+                  <div
+                    key={`loading-dot-${i}`}
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: theme.colors.primary,
+                      opacity: 0.3,
+                      animation: 'bounce 1.4s ease-in-out infinite',
+                      animationDelay: `${i * 0.2}s`,
+                    }}
+                  />
                 ))}
               </div>
             </div>
           ) : licenseContent ? (
-            <div id="license-container" style={{ 
-              height: '100%', 
-              overflow: 'auto',
-              backgroundColor: theme.colors.backgroundLight,
-            }}>
+            <div
+              id="license-container"
+              style={{
+                height: '100%',
+                overflow: 'auto',
+                backgroundColor: theme.colors.backgroundLight,
+              }}
+            >
               <ThemedMarkdownSlide
                 content={licenseContent}
                 slideIdPrefix="license"
@@ -1558,49 +1887,58 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
               />
             </div>
           ) : (
-            <div style={{ 
-              padding: '40px 20px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-            }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '12px',
-                backgroundColor: theme.colors.backgroundTertiary,
+            <div
+              style={{
+                padding: '40px 20px',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '16px',
-              }}>
+                height: '100%',
+              }}
+            >
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '12px',
+                  backgroundColor: theme.colors.backgroundTertiary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                }}
+              >
                 <Scale size={32} color={theme.colors.textTertiary} />
               </div>
-              
-              <h3 style={{
-                fontSize: '16px',
-                fontWeight: 600,
-                color: theme.colors.text,
-                marginBottom: '8px',
-              }}>
+
+              <h3
+                style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  marginBottom: '8px',
+                }}
+              >
                 No License Found
               </h3>
-              
-              <p style={{
-                fontSize: '13px',
-                color: theme.colors.textSecondary,
-                textAlign: 'center',
-                maxWidth: '400px',
-                lineHeight: 1.5,
-              }}>
-                Add a LICENSE file to the root of {remoteData.owner}/{remoteData.repo} to display licensing information here.
+
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  textAlign: 'center',
+                  maxWidth: '400px',
+                  lineHeight: 1.5,
+                }}
+              >
+                Add a LICENSE file to the root of {remoteData.owner}/
+                {remoteData.repo} to display licensing information here.
               </p>
             </div>
           )}
         </div>
-      )
+      ),
     },
     {
       id: 'layers',
@@ -1621,43 +1959,53 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
           onPackageDeselected={handlePackageDeselected}
         />
       ) : (
-        <div style={{ 
-          padding: '20px', 
-          textAlign: 'center', 
-          color: theme.colors.textSecondary 
-        }}>
+        <div
+          style={{
+            padding: '20px',
+            textAlign: 'center',
+            color: theme.colors.textSecondary,
+          }}
+        >
           No source selected
         </div>
-      )
+      ),
     },
     {
       id: 'docs',
       label: 'Docs',
       icon: <Book size={14} />,
-      visible: hasDocsFolder,
+      visible: true, // Always show, will display message if not registered
       content: (
-        <DocumentationPanel
-          fileTree={fileTree}
+        <AlexandriaDocsPanel
+          repositoryPath={
+            activeFileTreeSource?.location ||
+            repository.localClones[0]?.path ||
+            ''
+          }
           onDocumentSelect={handleDocumentSelect}
           selectedDocument={selectedDocPath ?? undefined}
         />
-      )
-    }
+      ),
+    },
   ];
 
   // Get git state for source badges
-  const gitState = activeFileTreeSource?.type === 'local' ? getGitState(activeFileTreeSource.id) : undefined;
-  
+  const gitState =
+    activeFileTreeSource?.type === 'local'
+      ? getGitState(activeFileTreeSource.id)
+      : undefined;
+
   // Create toolbar items
   const toolbarItems = useMemo<ToolbarItem[]>(() => {
     const items: ToolbarItem[] = [];
-    
+
     // Git changes tool (for local sources)
     if (activeFileTreeSource?.type === 'local' && gitState) {
-      const changeCount = (gitState.gitStatus?.modified?.length || 0) + 
-                         (gitState.gitStatus?.created?.length || 0) + 
-                         (gitState.gitStatus?.deleted?.length || 0);
-      
+      const changeCount =
+        (gitState.gitStatus?.modified?.length || 0) +
+        (gitState.gitStatus?.created?.length || 0) +
+        (gitState.gitStatus?.deleted?.length || 0);
+
       items.push({
         id: 'git-changes',
         label: gitState.hasNoCommits ? 'No commits yet' : `Git Changes`,
@@ -1672,12 +2020,12 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
             setGitChangesVisible(activeFileTreeSource.id, !gitState.enabled);
           }
         },
-        tooltip: gitState.hasNoCommits 
-          ? 'Repository has no commits yet' 
-          : `${gitState.enabled ? 'Hide' : 'Show'} git changes (${changeCount} changes)`
+        tooltip: gitState.hasNoCommits
+          ? 'Repository has no commits yet'
+          : `${gitState.enabled ? 'Hide' : 'Show'} git changes (${changeCount} changes)`,
       });
     }
-    
+
     // a24z memory tool (for local sources)
     if (activeFileTreeSource?.type === 'local' && a24zNotes.length > 0) {
       items.push({
@@ -1689,10 +2037,10 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
         color: '#9333ea',
         active: showA24zLayer,
         onClick: () => setShowA24zLayer(!showA24zLayer),
-        tooltip: `${showA24zLayer ? 'Hide' : 'Show'} a24z memory coverage (${a24zNotes.length} notes)`
+        tooltip: `${showA24zLayer ? 'Hide' : 'Show'} a24z memory coverage (${a24zNotes.length} notes)`,
       });
     }
-    
+
     // Search results
     if (searchResults.length > 0) {
       items.push({
@@ -1707,10 +2055,10 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
           setSearchResults([]);
           setSearchHighlightLayer(null);
         },
-        tooltip: `Clear search results (${searchResults.length} files)`
+        tooltip: `Clear search results (${searchResults.length} files)`,
       });
     }
-    
+
     // Tribal knowledge notes
     if (selectedNoteIds.size > 0) {
       items.push({
@@ -1724,10 +2072,10 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
         onClick: () => {
           setSelectedNoteIds(new Set());
         },
-        tooltip: `Clear selected notes (${selectedNoteIds.size} selected)`
+        tooltip: `Clear selected notes (${selectedNoteIds.size} selected)`,
       });
     }
-    
+
     // Package highlights
     if (highlightedPackages.size > 0) {
       items.push({
@@ -1741,27 +2089,39 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
         onClick: () => {
           setHighlightedPackages(new Set());
         },
-        tooltip: `Clear package highlights (${highlightedPackages.size} highlighted)`
+        tooltip: `Clear package highlights (${highlightedPackages.size} highlighted)`,
       });
     }
-    
+
     return items;
-  }, [searchResults.length, selectedNoteIds.size, highlightedPackages.size, gitState, activeFileTreeSource, setGitChangesVisible, a24zNotes.length, showA24zLayer]);
-  
+  }, [
+    searchResults.length,
+    selectedNoteIds.size,
+    highlightedPackages.size,
+    gitState,
+    activeFileTreeSource,
+    setGitChangesVisible,
+    a24zNotes.length,
+    showA24zLayer,
+  ]);
 
   // Error handling
   if (error) {
     return (
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        padding: '40px',
-        color: theme.colors.textSecondary 
-      }}>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px',
+          color: theme.colors.textSecondary,
+        }}
+      >
         <div style={{ textAlign: 'center' }}>
-          <h3 style={{ color: theme.colors.text, marginBottom: '8px' }}>Failed to Load Repository</h3>
+          <h3 style={{ color: theme.colors.text, marginBottom: '8px' }}>
+            Failed to Load Repository
+          </h3>
           <p>{error}</p>
         </div>
       </div>
@@ -1769,231 +2129,278 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
   }
 
   // Create custom right panel content for document viewing
-  const documentRightPanel = selectedDocPath && docContent && activeTab === 'docs' ? (
-    <div style={{ 
-      width: '100%',
-      height: '100%',
-      backgroundColor: theme.colors.background,
-      overflow: 'hidden',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {/* Document header with collapse button */}
-      <div style={{
-        padding: '12px 16px',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '8px',
-        backgroundColor: theme.colors.backgroundLight
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* Collapse button */}
-          <button
-            onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: '4px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '4px',
-              color: theme.colors.textSecondary,
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-            title={leftPanelCollapsed ? 'Show panel' : 'Hide panel'}
-          >
-            {leftPanelCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
-          </button>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span style={{ 
-              fontSize: '13px', 
-              fontWeight: 600,
-              color: theme.colors.text
-            }}>
-              {selectedDocPath.split('/').pop()}
-            </span>
-            <span style={{
-              fontSize: '11px',
-              color: theme.colors.textSecondary
-            }}>
-              {selectedDocPath}
-            </span>
-          </div>
-        </div>
-        
-        {/* View mode switcher for markdown files */}
-        {selectedDocType === 'markdown' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <button
-              onClick={() => {
-                setDocViewMode('document');
-                setPreferredDocViewMode('document');
-              }}
-              style={{
-                padding: '4px 8px',
-                borderRadius: '4px',
-                border: 'none',
-                background: docViewMode === 'document' ? theme.colors.primary : 'transparent',
-                color: docViewMode === 'document' ? '#fff' : theme.colors.textSecondary,
-                cursor: 'pointer',
-                fontSize: 11,
-                fontWeight: 500,
-                transition: 'all 0.15s ease'
-              }}
-              title="View as document"
-            >
-              Document
-            </button>
-            <button
-              onClick={() => {
-                setDocViewMode('slides');
-                setPreferredDocViewMode('slides');
-              }}
-              style={{
-                padding: '4px 8px',
-                borderRadius: '4px',
-                border: 'none',
-                background: docViewMode === 'slides' ? theme.colors.primary : 'transparent',
-                color: docViewMode === 'slides' ? '#fff' : theme.colors.textSecondary,
-                cursor: 'pointer',
-                fontSize: 11,
-                fontWeight: 500,
-                transition: 'all 0.15s ease'
-              }}
-              title="View as slides"
-            >
-              Slides
-            </button>
-          </div>
-        )}
-      </div>
-      
-      {/* Document content */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        {loadingDoc ? (
-          <div style={{
+  const documentRightPanel =
+    selectedDocPath && docContent && activeTab === 'docs' ? (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          backgroundColor: theme.colors.background,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        {/* Document header with collapse button */}
+        <div
+          style={{
+            padding: '12px 16px',
+            borderBottom: `1px solid ${theme.colors.border}`,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            color: theme.colors.textSecondary
-          }}>
-            Loading document...
+            justifyContent: 'space-between',
+            gap: '8px',
+            backgroundColor: theme.colors.backgroundLight,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Collapse button */}
+            <button
+              onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '4px',
+                color: theme.colors.textSecondary,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              title={leftPanelCollapsed ? 'Show panel' : 'Hide panel'}
+            >
+              {leftPanelCollapsed ? (
+                <PanelLeft size={16} />
+              ) : (
+                <PanelLeftClose size={16} />
+              )}
+            </button>
+
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
+            >
+              <span
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                }}
+              >
+                {selectedDocPath.split('/').pop()}
+              </span>
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {selectedDocPath}
+              </span>
+            </div>
           </div>
-        ) : selectedDocType === 'excalidraw' ? (
-          <ExcalidrawWrapper
-            initialData={(() => {
-              try {
-                return JSON.parse(docContent);
-              } catch {
-                return { elements: [], appState: {}, files: {} };
-              }
-            })()}
-            onChange={() => {}}
-          />
-        ) : (
-          <MarkdownDocumentViewer
-            viewMode={docViewMode}
-            showEditor={false}
-            content={docContent}
-            slides={docContent.split('\n\n---\n\n')}
-            currentSlide={currentSlide}
-            theme={theme}
-            showSegmented={true}
-            onContentChange={() => {}}
-            onSlideNavigate={setCurrentSlide}
-            onCheckboxChange={() => {}}
-          />
-        )}
+
+          {/* View mode switcher for markdown files */}
+          {selectedDocType === 'markdown' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                onClick={() => {
+                  setDocViewMode('document');
+                  setPreferredDocViewMode('document');
+                }}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background:
+                    docViewMode === 'document'
+                      ? theme.colors.primary
+                      : 'transparent',
+                  color:
+                    docViewMode === 'document'
+                      ? '#fff'
+                      : theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  fontWeight: 500,
+                  transition: 'all 0.15s ease',
+                }}
+                title="View as document"
+              >
+                Document
+              </button>
+              <button
+                onClick={() => {
+                  setDocViewMode('slides');
+                  setPreferredDocViewMode('slides');
+                }}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background:
+                    docViewMode === 'slides'
+                      ? theme.colors.primary
+                      : 'transparent',
+                  color:
+                    docViewMode === 'slides'
+                      ? '#fff'
+                      : theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  fontWeight: 500,
+                  transition: 'all 0.15s ease',
+                }}
+                title="View as slides"
+              >
+                Slides
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Document content */}
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          {loadingDoc ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '100%',
+                color: theme.colors.textSecondary,
+              }}
+            >
+              Loading document...
+            </div>
+          ) : selectedDocType === 'excalidraw' ? (
+            <ExcalidrawWrapper
+              initialData={(() => {
+                try {
+                  return JSON.parse(docContent);
+                } catch {
+                  return { elements: [], appState: {}, files: {} };
+                }
+              })()}
+              onChange={() => {}}
+            />
+          ) : (
+            <MarkdownDocumentViewer
+              viewMode={docViewMode}
+              showEditor={false}
+              content={docContent}
+              slides={docContent.split('\n\n---\n\n')}
+              currentSlide={currentSlide}
+              theme={theme}
+              showSegmented={true}
+              onContentChange={() => {}}
+              onSlideNavigate={setCurrentSlide}
+              onCheckboxChange={() => {}}
+            />
+          )}
+        </div>
       </div>
-    </div>
-  ) : null;
+    ) : null;
 
   // Check if we should show document view instead of city
-  const showDocumentView = activeTab === 'docs' && selectedDocPath && docContent;
+  const showDocumentView =
+    activeTab === 'docs' && selectedDocPath && docContent;
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <CityMapManager
-          fileTree={fileTree}
-          activeSource={activeFileTreeSource}
-          gitEnabled={gitState?.enabled}
-          headTree={gitState?.headTree}
-          hasNoCommits={gitState?.hasNoCommits}
-          viewMode="explore"
-          showWorkingTree={gitState?.enabled}
-          showHeadTree={gitState?.headTree !== undefined}
-          onToggleWorkingTree={(_show) => {
-            if (activeFileTreeSource?.type === 'local') {
-              // TODO: Update git state for working tree toggle
-            }
-          }}
-          onToggleHeadTree={(_show) => {
-            if (activeFileTreeSource?.type === 'local') {
-              // TODO: Update git state for head tree toggle
-            }
-          }}
-          renderCustomBadges={() => (
-            <>
-              {fileTreeSources.length > 1 && (
-                <button
-                  onClick={() => {
-                    // TODO: Open source selector modal
-                    console.info('Open source selector');
-                  }}
+        fileTree={fileTree}
+        activeSource={activeFileTreeSource}
+        gitEnabled={gitState?.enabled}
+        headTree={gitState?.headTree}
+        hasNoCommits={gitState?.hasNoCommits}
+        viewMode="explore"
+        showWorkingTree={gitState?.enabled}
+        showHeadTree={gitState?.headTree !== undefined}
+        onToggleWorkingTree={(_show) => {
+          if (activeFileTreeSource?.type === 'local') {
+            // TODO: Update git state for working tree toggle
+          }
+        }}
+        onToggleHeadTree={(_show) => {
+          if (activeFileTreeSource?.type === 'local') {
+            // TODO: Update git state for head tree toggle
+          }
+        }}
+        renderCustomBadges={() => (
+          <>
+            {fileTreeSources.length > 1 && (
+              <button
+                onClick={() => {
+                  // TODO: Open source selector modal
+                  console.info('Open source selector');
+                }}
+                style={{
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.textSecondary,
+                  fontSize: 11,
+                  cursor: 'pointer',
+                }}
+              >
+                {fileTreeSources.length} sources
+              </button>
+            )}
+          </>
+        )}
+      >
+        {({ cityData: managedCityData, sourceBadges, isBuilding }) => {
+          // When docs tab is active and left panel is collapsed, render in full width mode
+          if (
+            activeTab === 'docs' &&
+            leftPanelCollapsed &&
+            selectedDocPath &&
+            docContent
+          ) {
+            return (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  padding: '16px',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <div
                   style={{
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    border: `1px solid ${theme.colors.border}`,
-                    backgroundColor: theme.colors.background,
-                    color: theme.colors.textSecondary,
-                    fontSize: 11,
-                    cursor: 'pointer'
-                  }}
-                >
-                  {fileTreeSources.length} sources
-                </button>
-              )}
-            </>
-          )}
-        >
-          {({ cityData: managedCityData, sourceBadges, isBuilding }) => {
-            // When docs tab is active and left panel is collapsed, render in full width mode
-            if (activeTab === 'docs' && leftPanelCollapsed && selectedDocPath && docContent) {
-              return (
-                <div style={{ 
-                  width: '100%', 
-                  height: '100%', 
-                  padding: '16px', 
-                  boxSizing: 'border-box' 
-                }}>
-                  <div style={{
                     width: '100%',
                     height: '100%',
                     borderRadius: '8px',
                     border: `1px solid ${theme.colors.border}`,
-                    overflow: 'hidden'
-                  }}>
-                    {documentRightPanel}
-                  </div>
+                    overflow: 'hidden',
+                  }}
+                >
+                  {documentRightPanel}
                 </div>
-              );
-            }
-            
-            // Otherwise use the standard skeleton with resizable layout
-            return (
-              <RepositoryViewSkeleton
+              </div>
+            );
+          }
+
+          // Otherwise use the standard skeleton with resizable layout
+          return (
+            <RepositoryViewSkeleton
               tabs={tabs}
               activeTab={activeTab}
               onTabChange={(tabId) => {
@@ -2006,18 +2413,22 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
               }}
               cityData={showDocumentView ? null : managedCityData}
               onFileClick={handleFileClick}
-              highlightLayers={showDocumentView ? [] : [
-                ...fileColorHighlightLayers,  // Add file colors as base layer
-                ...noteHighlightLayers,
-                ...(a24zHighlightLayer ? [a24zHighlightLayer] : []),
-                ...(searchHighlightLayer ? [searchHighlightLayer] : []),
-                ...(hoveredSearchLayer ? [hoveredSearchLayer] : []),
-                ...(selectedFileLayer ? [selectedFileLayer] : []),
-                ...dependencyAnalysisHighlightLayer,
-                ...packageHighlightLayers,
-                ...gitHighlightLayers
-              ]}
-              loading={showDocumentView ? false : (loading || isBuilding)}
+              highlightLayers={
+                showDocumentView
+                  ? []
+                  : [
+                      ...fileColorHighlightLayers, // Add file colors as base layer
+                      ...noteHighlightLayers,
+                      ...(a24zHighlightLayer ? [a24zHighlightLayer] : []),
+                      ...(searchHighlightLayer ? [searchHighlightLayer] : []),
+                      ...(hoveredSearchLayer ? [hoveredSearchLayer] : []),
+                      ...(selectedFileLayer ? [selectedFileLayer] : []),
+                      ...dependencyAnalysisHighlightLayer,
+                      ...packageHighlightLayers,
+                      ...gitHighlightLayers,
+                    ]
+              }
+              loading={showDocumentView ? false : loading || isBuilding}
               treeStats={showDocumentView ? null : treeStats}
               sourceBadges={showDocumentView ? null : sourceBadges}
               activeSource={activeFileTreeSource}
@@ -2025,24 +2436,25 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
               cityHeaderExtra={undefined}
               loadingMessage="Loading repository structure"
               emptyMessage="Select a branch to explore"
-              rightPaneMode={rightPaneMode}
+              rightPaneMode={showDocumentView ? 'document' : rightPaneMode}
               onRightPaneModeChange={(mode) => {
+                setRightPaneMode(mode);
                 if (mode === 'city') {
                   // Clear document selection when switching back to map
                   setSelectedDocPath(null);
                   setDocContent(null);
                 }
               }}
-              showViewSwitcher={true}  // Show switcher to allow going back to map
+              showViewSwitcher={true} // Show switcher to allow going back to map
               // No terminalDirectory passed for remote view
               toolbarItems={showDocumentView ? [] : toolbarItems}
               toolbarExpanded={toolbarExpanded}
               onToolbarExpandedChange={setToolbarExpanded}
               documentContent={documentRightPanel}
             />
-            );
-          }}
-        </CityMapManager>
+          );
+        }}
+      </CityMapManager>
       {/* File Viewer Modal */}
       {showFileViewer && viewerFilePath && viewerRelativePath && (
         <RemoteFileViewerModal
@@ -2057,16 +2469,18 @@ export const RepositoryExplorationView: React.FC<RepositoryExplorationViewProps>
           repository={{
             owner: remoteData.owner,
             repo: remoteData.repo,
-            branch: activeFileTreeSource?.metadata?.currentBranch || remoteData.defaultBranch
+            branch:
+              activeFileTreeSource?.metadata?.currentBranch ||
+              remoteData.defaultBranch,
           }}
         />
       )}
-      
+
       {/* Help Modal */}
-      <HelpModal 
-        isOpen={showHelpModal} 
-        onClose={() => setShowHelpModal(false)} 
-        mode="explore" 
+      <HelpModal
+        isOpen={showHelpModal}
+        onClose={() => setShowHelpModal(false)}
+        mode="explore"
       />
     </div>
   );

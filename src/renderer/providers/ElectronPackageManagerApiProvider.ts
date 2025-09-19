@@ -7,7 +7,7 @@ import {
   LicenseCheckResult,
   BatchCheckOptions,
   DependencyCheckProgress,
-} from "@principal-ai/codebase-composition";
+} from '@principal-ai/codebase-composition';
 import { PackageManagerService } from '../main-process-api/PackageManagerService';
 
 /**
@@ -55,12 +55,11 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
       );
 
       // Call the main process to check versions
-      const allResultsPromise =
-        PackageManagerService.invokeCheckVersions({
-          packages,
-          packageManager,
-          options,
-        });
+      const allResultsPromise = PackageManagerService.invokeCheckVersions({
+        packages,
+        packageManager,
+        options,
+      });
 
       // Yield results as they come in via progress updates
       let lastYieldedIndex = 0;
@@ -129,16 +128,15 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
       const progressUpdates: VulnerabilityCheckResult[] = [];
       let progressResolver: (() => void) | null = null;
 
-      const cleanup =
-        PackageManagerService.onVulnerabilityCheckProgress(
-          (data: any) => {
-            progressUpdates.push(data.result);
-            if (progressResolver) {
-              progressResolver();
-              progressResolver = null;
-            }
-          },
-        );
+      const cleanup = PackageManagerService.onVulnerabilityCheckProgress(
+        (data: any) => {
+          progressUpdates.push(data.result);
+          if (progressResolver) {
+            progressResolver();
+            progressResolver = null;
+          }
+        },
+      );
 
       // Call the main process to check vulnerabilities
       const allResultsPromise =
@@ -228,12 +226,11 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
       );
 
       // Call the main process to check licenses
-      const allResultsPromise =
-        PackageManagerService.invokeCheckLicenses({
-          packages,
-          packageManager,
-          options,
-        });
+      const allResultsPromise = PackageManagerService.invokeCheckLicenses({
+        packages,
+        packageManager,
+        options,
+      });
 
       // Yield results as they come in via progress updates
       let lastYieldedIndex = 0;

@@ -7,7 +7,6 @@ import {
   GitSyncRoomTokenResponse,
 } from '../../shared/main-process-api-interfaces/GitSyncAPI';
 
-
 /**
  * Service layer for Git-sync functionality
  * ALL window.mainProcess.gitSync calls MUST be encapsulated here
@@ -16,14 +15,16 @@ export class GitSyncService {
   /**
    * Connect to git-sync server for a repository
    */
-  static async connect(config: GitSyncConfig): Promise<GitSyncConnectionResult> {
+  static async connect(
+    config: GitSyncConfig,
+  ): Promise<GitSyncConnectionResult> {
     try {
       return await window.mainProcess.gitSync.connect(config);
     } catch (error) {
       console.error('[GitSyncService] Failed to connect:', error);
       return {
         success: false,
-        error: 'Failed to connect to git-sync server'
+        error: 'Failed to connect to git-sync server',
       };
     }
   }
@@ -31,14 +32,16 @@ export class GitSyncService {
   /**
    * Disconnect from git-sync server
    */
-  static async disconnect(connectionId: string): Promise<{ success: boolean; message?: string }> {
+  static async disconnect(
+    connectionId: string,
+  ): Promise<{ success: boolean; message?: string }> {
     try {
       return await window.mainProcess.gitSync.disconnect(connectionId);
     } catch (error) {
       console.error('[GitSyncService] Failed to disconnect:', error);
       return {
         success: false,
-        message: 'Failed to disconnect from git-sync server'
+        message: 'Failed to disconnect from git-sync server',
       };
     }
   }
@@ -58,14 +61,16 @@ export class GitSyncService {
   /**
    * Send a message through the git-sync connection
    */
-  static async sendMessage(message: GitSyncMessage): Promise<{ success: boolean; error?: string }> {
+  static async sendMessage(
+    message: GitSyncMessage,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       return await window.mainProcess.gitSync.sendMessage(message);
     } catch (error) {
       console.error('[GitSyncService] Failed to send message:', error);
       return {
         success: false,
-        error: 'Failed to send message'
+        error: 'Failed to send message',
       };
     }
   }
@@ -73,14 +78,16 @@ export class GitSyncService {
   /**
    * Get a room token for git-sync collaboration
    */
-  static async getRoomToken(request: GitSyncRoomTokenRequest): Promise<GitSyncRoomTokenResponse> {
+  static async getRoomToken(
+    request: GitSyncRoomTokenRequest,
+  ): Promise<GitSyncRoomTokenResponse> {
     try {
       return await window.mainProcess.gitSync.getRoomToken(request);
     } catch (error) {
       console.error('[GitSyncService] Failed to get room token:', error);
       return {
         success: false,
-        error: 'Failed to get room token'
+        error: 'Failed to get room token',
       };
     }
   }
@@ -100,7 +107,10 @@ export class GitSyncService {
   /**
    * Check if user has access to a repository
    */
-  static async checkRepoAccess(repoUrl: string, token: string): Promise<boolean> {
+  static async checkRepoAccess(
+    repoUrl: string,
+    token: string,
+  ): Promise<boolean> {
     try {
       return await window.mainProcess.gitSync.checkRepoAccess(repoUrl, token);
     } catch (error) {
@@ -113,7 +123,9 @@ export class GitSyncService {
    * Subscribe to git-sync messages
    * @returns Unsubscribe function
    */
-  static onMessage(callback: (connectionKey: string, message: any) => void): () => void {
+  static onMessage(
+    callback: (connectionKey: string, message: any) => void,
+  ): () => void {
     try {
       return window.mainProcess.gitSync.onMessage(callback);
     } catch (error) {

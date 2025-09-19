@@ -4,12 +4,12 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('gitSync', {
   // Authentication
   authenticate: () => ipcRenderer.invoke('git-sync:authenticate'),
-  
+
   // Server configuration
   getServerUrl: () => ipcRenderer.invoke('git-sync:get-server-url'),
-  
+
   // Repository access
-  checkRepoAccess: (repoUrl: string, token: string) => 
+  checkRepoAccess: (repoUrl: string, token: string) =>
     ipcRenderer.invoke('git-sync:check-repo-access', repoUrl, token),
 });
 

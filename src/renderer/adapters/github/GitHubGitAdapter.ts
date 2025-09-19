@@ -1,4 +1,4 @@
-import { GitAdapter } from "@principal-ai/codebase-composition";
+import { GitAdapter } from '@principal-ai/codebase-composition';
 
 // Define the return type locally since it was imported from workspace
 type GitRepositoryInfo = {
@@ -32,13 +32,15 @@ export class GitHubGitAdapter implements GitAdapter {
     // No-op for remote GitHub repos
   }
 
-  onGitStatusChange(_callback: (data: {
-    changedFiles: Array<{
-      path: string;
-      status: 'added' | 'modified' | 'deleted' | 'renamed';
-      lastModified?: Date;
-    }>;
-  }) => void): () => void {
+  onGitStatusChange(
+    _callback: (data: {
+      changedFiles: Array<{
+        path: string;
+        status: 'added' | 'modified' | 'deleted' | 'renamed';
+        lastModified?: Date;
+      }>;
+    }) => void,
+  ): () => void {
     return () => {};
   }
-} 
+}

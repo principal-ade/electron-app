@@ -3,7 +3,8 @@ import { gitClientFactory } from '../utils/gitClientFactory';
 import type { GitInfo } from '../../shared/types/git.types';
 
 export class GitService {
-  private gitInfoCache: Map<string, { info: GitInfo; timestamp: number }> = new Map();
+  private gitInfoCache: Map<string, { info: GitInfo; timestamp: number }> =
+    new Map();
   private cacheTimeout = 5 * 60 * 1000; // 5 minutes
   private branchService = new GitBranchService();
 
@@ -12,7 +13,7 @@ export class GitService {
    */
   async getGitInfo(directory: string): Promise<GitInfo | null> {
     console.log(`[GitService] Getting git info for directory: "${directory}"`);
-    
+
     // Check cache
     const cached = this.gitInfoCache.get(directory);
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
@@ -22,13 +23,19 @@ export class GitService {
 
     try {
       // Get git root using simple-git
-      console.log(`[GitService] Finding git root for directory: "${directory}"`);
+      console.log(
+        `[GitService] Finding git root for directory: "${directory}"`,
+      );
       const root = await gitClientFactory.findGitRoot(directory);
       if (!root) {
-        console.log(`[GitService] No git root found for directory: "${directory}"`);
+        console.log(
+          `[GitService] No git root found for directory: "${directory}"`,
+        );
         return null;
       }
-      console.log(`[GitService] Found git root: "${root}" for directory: "${directory}"`);
+      console.log(
+        `[GitService] Found git root: "${root}" for directory: "${directory}"`,
+      );
 
       // Get comprehensive branch information
       const branchInfo = await this.branchService.getBranchInfo(root);
@@ -39,7 +46,10 @@ export class GitService {
       let repo: string | undefined;
 
       try {
-        const remoteOut = await gitClientFactory.getConfig(root, 'remote.origin.url');
+        const remoteOut = await gitClientFactory.getConfig(
+          root,
+          'remote.origin.url',
+        );
         if (remoteOut) {
           remoteUrl = this.normalizeGitUrl(remoteOut);
         }
@@ -76,12 +86,12 @@ export class GitService {
         availableBranches: branchInfo?.availableBranches,
         owner,
         repo,
-        headCommit
+        headCommit,
       };
 
       // Cache the result
       this.gitInfoCache.set(directory, { info, timestamp: Date.now() });
-      
+
       return info;
     } catch (error) {
       // Not a git repository
@@ -97,9 +107,11 @@ export class GitService {
   private normalizeGitUrl(url: string): string {
     // Convert SSH URLs to HTTPS
     if (url.startsWith('git@github.com:')) {
-      return url.replace('git@github.com:', 'https://github.com/').replace(/\.git$/, '');
+      return url
+        .replace('git@github.com:', 'https://github.com/')
+        .replace(/\.git$/, '');
     }
-    
+
     // Remove .git suffix
     return url.replace(/\.git$/, '');
   }

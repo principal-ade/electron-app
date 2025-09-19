@@ -4,8 +4,16 @@
  */
 
 // Valid JSON types that can be sent in request body
-export type JSONValue = string | number | boolean | null | JSONObject | JSONArray;
-export interface JSONObject { [key: string]: JSONValue; }
+export type JSONValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JSONObject
+  | JSONArray;
+export interface JSONObject {
+  [key: string]: JSONValue;
+}
 export interface JSONArray extends Array<JSONValue> {}
 
 export interface ApiProxyAPI {

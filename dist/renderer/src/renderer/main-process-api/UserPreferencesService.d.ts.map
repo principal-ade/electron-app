@@ -1,1 +1,0 @@
-{"version":3,"file":"UserPreferencesService.d.ts","sourceRoot":"","sources":["../../../../../src/renderer/main-process-api/UserPreferencesService.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,eAAe,EAAE,MAAM,0CAA0C,CAAC;AAI3E,qBAAa,sBAAsB;WACpB,cAAc,IAAI,OAAO,CAAC,eAAe,CAAC;WAgB1C,iBAAiB,CAC5B,OAAO,EAAE,OAAO,CAAC,eAAe,CAAC,GAChC,OAAO,CAAC,IAAI,CAAC;CASjB"}

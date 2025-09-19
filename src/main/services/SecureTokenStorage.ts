@@ -36,14 +36,14 @@ export class SecureTokenStorage {
     try {
       // Encrypt the token
       const encryptedToken = safeStorage.encryptString(token);
-      
+
       // Store with metadata
       const data = {
         token: encryptedToken.toString('base64'),
         metadata: metadata || {},
-        savedAt: Date.now()
+        savedAt: Date.now(),
       };
-      
+
       this.cache.set(key, data);
       await this.saveToDisk();
     } catch (error) {
@@ -75,7 +75,9 @@ export class SecureTokenStorage {
   /**
    * Get token with metadata
    */
-  async getTokenWithMetadata(key: string): Promise<{ token: string; metadata: any } | null> {
+  async getTokenWithMetadata(
+    key: string,
+  ): Promise<{ token: string; metadata: any } | null> {
     try {
       const data = this.cache.get(key);
       if (!data) {
@@ -87,7 +89,7 @@ export class SecureTokenStorage {
 
       return {
         token: decrypted,
-        metadata: data.metadata
+        metadata: data.metadata,
       };
     } catch (error) {
       console.error('Failed to retrieve token with metadata:', error);
@@ -150,7 +152,9 @@ export class SecureTokenStorage {
   /**
    * Migrate from localStorage (one-time migration)
    */
-  async migrateFromLocalStorage(entries: { key: string; value: any }[]): Promise<void> {
+  async migrateFromLocalStorage(
+    entries: { key: string; value: any }[],
+  ): Promise<void> {
     for (const entry of entries) {
       try {
         if (entry.value.token) {
@@ -168,5 +172,5 @@ export class SecureTokenStorage {
 export const TOKEN_KEYS = {
   ORBIT_AUTH: 'orbit_auth',
   GIT_SYNC_AUTH: 'git-sync-auth',
-  GITHUB_TOKEN: 'github_token'
+  GITHUB_TOKEN: 'github_token',
 } as const;

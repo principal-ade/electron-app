@@ -5,33 +5,37 @@
 
 export const ValidationTool = {
   ESLint: 'eslint',
-  TypeScript: 'typescript', 
+  TypeScript: 'typescript',
   Knip: 'knip',
-  Jest: 'jest'
+  Jest: 'jest',
 } as const;
-export type ValidationTool = typeof ValidationTool[keyof typeof ValidationTool];
+export type ValidationTool =
+  (typeof ValidationTool)[keyof typeof ValidationTool];
 
 export const ValidationCategory = {
   CodeQuality: 'code-quality',
-  TypeSafety: 'type-safety', 
+  TypeSafety: 'type-safety',
   UnusedCode: 'unused-code',
-  Testing: 'testing'
+  Testing: 'testing',
 } as const;
-export type ValidationCategory = typeof ValidationCategory[keyof typeof ValidationCategory];
+export type ValidationCategory =
+  (typeof ValidationCategory)[keyof typeof ValidationCategory];
 
 export const ValidationSeverity = {
   Error: 'error',
   Warning: 'warning',
-  Info: 'info'
+  Info: 'info',
 } as const;
-export type ValidationSeverity = typeof ValidationSeverity[keyof typeof ValidationSeverity];
+export type ValidationSeverity =
+  (typeof ValidationSeverity)[keyof typeof ValidationSeverity];
 
 export const ValidationStatus = {
   Success: 'success',
   Warning: 'warning',
-  Error: 'error'
+  Error: 'error',
 } as const;
-export type ValidationStatus = typeof ValidationStatus[keyof typeof ValidationStatus];
+export type ValidationStatus =
+  (typeof ValidationStatus)[keyof typeof ValidationStatus];
 
 export interface ValidationIssue {
   file: string;
@@ -95,7 +99,7 @@ export interface ValidationRunner {
   run(
     packagePath: string,
     packageName: string,
-    options?: any
+    options?: any,
   ): Promise<ValidationResult>;
 
   isAvailable(packagePath: string): Promise<boolean>;

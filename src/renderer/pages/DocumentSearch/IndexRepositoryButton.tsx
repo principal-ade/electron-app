@@ -7,7 +7,9 @@ interface IndexRepositoryButtonProps {
   onIndexed?: () => void;
 }
 
-export const IndexRepositoryButton: React.FC<IndexRepositoryButtonProps> = ({ onIndexed }) => {
+export const IndexRepositoryButton: React.FC<IndexRepositoryButtonProps> = ({
+  onIndexed,
+}) => {
   const { theme } = useTheme();
   const [isIndexing, setIsIndexing] = useState(false);
   const [lastResult, setLastResult] = useState<string | null>(null);
@@ -18,46 +20,76 @@ export const IndexRepositoryButton: React.FC<IndexRepositoryButtonProps> = ({ on
       setIsIndexing(true);
       setLastResult(null);
 
+      // Clear the existing index first to avoid stale data
+      console.log('[IndexRepositoryButton] Clearing existing index...');
+      await documentSearchService.clearIndex();
+
       // Get all Alexandria repositories and re-index them
-      const { AlexandriaService } = await import('../../main-process-api/AlexandriaService');
+      const { AlexandriaService } = await import(
+        '../../main-process-api/AlexandriaService'
+      );
       const repositories = await AlexandriaService.getRepositories();
 
-      console.log(`[IndexRepositoryButton] Found ${repositories.length} Alexandria repositories to index`);
+      console.log(
+        `[IndexRepositoryButton] Found ${repositories.length} Alexandria repositories to index`,
+      );
+      console.log(
+        '[IndexRepositoryButton] Repositories:',
+        repositories.map((r) => ({ name: r.name, path: r.path })),
+      );
 
-      let totalIndexed = 0;
-      let totalDuration = 0;
-      let failedRepos: string[] = [];
+      // Prepare repositories for batch indexing
+      const reposToIndex = repositories
+        .filter((r) => r.path) // Only repos with valid paths
+        .map((r) => ({ path: r.path, name: r.name }));
 
-      for (const repo of repositories) {
-        if (repo.path) {
-          console.log(`[IndexRepositoryButton] Indexing ${repo.name} at ${repo.path}`);
-          try {
-            const result = await documentSearchService.indexRepository(repo.path, repo.name);
-            if (result.success) {
-              totalIndexed += result.documentsIndexed || 0;
-              totalDuration += result.duration || 0;
-            } else {
-              failedRepos.push(repo.name);
-            }
-          } catch (error) {
-            console.error(`[IndexRepositoryButton] Failed to index ${repo.name}:`, error);
-            failedRepos.push(repo.name);
-          }
-        }
+      if (reposToIndex.length === 0) {
+        console.log(
+          '[IndexRepositoryButton] No valid repositories found to index',
+        );
+        setLastResult('No repositories configured');
+        return;
       }
 
-      console.log(`[IndexRepositoryButton] Indexing complete. Total documents: ${totalIndexed}`);
+      // Use the new batch indexing method
+      console.log(
+        `[IndexRepositoryButton] Starting batch indexing of ${reposToIndex.length} repositories`,
+      );
+      const startTime = Date.now();
 
-      if (failedRepos.length === 0) {
-        setLastResult(`Indexed ${totalIndexed} documents from ${repositories.length} repos in ${(totalDuration / 1000).toFixed(1)}s`);
+      try {
+        const result =
+          await documentSearchService.indexMultipleRepositories(reposToIndex);
+        const duration = Date.now() - startTime;
+
+        console.log(`[IndexRepositoryButton] Batch indexing complete:`, result);
+
+        if (result.totalFailed === 0) {
+          setLastResult(
+            `Indexed ${result.totalIndexed} documents from ${reposToIndex.length} repos in ${(duration / 1000).toFixed(1)}s`,
+          );
+        } else {
+          const failedNames = result.results
+            .filter((r) => !r.success)
+            .map((r) => r.name)
+            .join(', ');
+          setLastResult(
+            `Indexed ${result.totalIndexed} docs. Failed: ${failedNames}`,
+          );
+        }
+
         onIndexed?.();
-      } else {
-        setLastResult(`Indexed ${totalIndexed} docs. Failed: ${failedRepos.join(', ')}`);
-        onIndexed?.();
+      } catch (error) {
+        console.error('[IndexRepositoryButton] Batch indexing failed:', error);
+        setLastResult(
+          `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
       }
     } catch (error) {
       console.error('Failed to index repository:', error);
-      setLastResult(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setLastResult(
+        `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     } finally {
       setIsIndexing(false);
     }
@@ -70,11 +102,15 @@ export const IndexRepositoryButton: React.FC<IndexRepositoryButtonProps> = ({ on
         disabled={isIndexing}
         className="px-3 py-2 rounded border transition-colors flex items-center gap-2"
         style={{
-          backgroundColor: isIndexing ? theme.colors.backgroundSecondary : theme.colors.primary,
+          backgroundColor: isIndexing
+            ? theme.colors.backgroundSecondary
+            : theme.colors.primary,
           borderColor: theme.colors.border,
-          color: isIndexing ? theme.colors.textSecondary : theme.colors.background,
+          color: isIndexing
+            ? theme.colors.textSecondary
+            : theme.colors.background,
           opacity: isIndexing ? 0.6 : 1,
-          cursor: isIndexing ? 'not-allowed' : 'pointer'
+          cursor: isIndexing ? 'not-allowed' : 'pointer',
         }}
       >
         {isIndexing ? (
@@ -89,9 +125,10 @@ export const IndexRepositoryButton: React.FC<IndexRepositoryButtonProps> = ({ on
         <span
           className="text-sm"
           style={{
-            color: lastResult.startsWith('Error') || lastResult.startsWith('Failed')
-              ? theme.colors.danger
-              : theme.colors.success
+            color:
+              lastResult.startsWith('Error') || lastResult.startsWith('Failed')
+                ? theme.colors.danger
+                : theme.colors.success,
           }}
         >
           {lastResult}

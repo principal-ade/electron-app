@@ -1,4 +1,4 @@
-import { SupportedAgent, AgentSettings } from "@principal-ai/agent-monitoring";
+import { SupportedAgent, AgentSettings } from '@principal-ai/agent-monitoring';
 
 export interface AgentSetupStatus {
   isInstalled: boolean;
@@ -27,43 +27,43 @@ export interface AgentConfigAPI {
     status?: AgentSetupStatus;
     error?: string;
   }>;
-  
+
   addHooksToAgent: (
     agentType: SupportedAgent,
   ) => Promise<{ success: boolean; hookCount?: number; error?: string }>;
-  
+
   removeHooksFromAgent: (
     agentType: SupportedAgent,
   ) => Promise<{ success: boolean; hookCount?: number; error?: string }>;
-  
+
   readAgentSettings: (agentType: SupportedAgent) => Promise<{
     success: boolean;
     settings?: AgentSettings;
     path?: string;
     error?: string;
   }>;
-  
+
   updateAgentSettings: (
     agentType: SupportedAgent,
-    settings: AgentSettings
+    settings: AgentSettings,
   ) => Promise<{ success: boolean; error?: string }>;
-  
+
   getAgentHooksFilePath: (agentType: SupportedAgent) => Promise<{
     success: boolean;
     filePath: string;
     error?: string;
   }>;
-  
+
   getAgentMCPFilePath: (agentType: SupportedAgent) => Promise<{
     success: boolean;
     filePath: string;
     error?: string;
   }>;
-  
+
   // MCP Configuration Methods
   addMCPToAgent: (
     agentType: SupportedAgent,
-    serverName?: string
+    serverName?: string,
   ) => Promise<{
     success: boolean;
     status?: {
@@ -72,10 +72,10 @@ export interface AgentConfigAPI {
     };
     error?: string;
   }>;
-  
+
   removeMCPFromAgent: (
     agentType: SupportedAgent,
-    serverName?: string
+    serverName?: string,
   ) => Promise<{
     success: boolean;
     status?: {
@@ -84,10 +84,10 @@ export interface AgentConfigAPI {
     };
     error?: string;
   }>;
-  
+
   getAgentMCPStatus: (
     agentType: SupportedAgent,
-    serverName?: string
+    serverName?: string,
   ) => Promise<{
     success: boolean;
     status?: {

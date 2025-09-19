@@ -1,1 +1,0 @@
-{"version":3,"file":"violationsApi.d.ts","sourceRoot":"","sources":["../../../../../src/window/main-process-api-implementations/violationsApi.ts"],"names":[],"mappings":"AACA,OAAO,EAEL,WAAW,EACX,0BAA0B,EAC1B,eAAe,EAChB,MAAM,wDAAwD,CAAC;AAEhE,eAAO,MAAM,aAAa;0BAEV,MAAM,YACR,WAAW,EAAE,WACd,0BAA0B,KAClC,OAAO,CAAC,eAAe,CAAC;8BAIK,MAAM,KAAG,OAAO,CAAC,IAAI,CAAC;CAGvD,CAAC"}

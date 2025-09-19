@@ -1,17 +1,21 @@
-import { 
+import {
   PackageInfo,
   ViolationCollectionOptions,
-  ViolationResult
+  ViolationResult,
 } from '../../shared/main-process-api-interfaces/ViolationsAPI';
 
 class ViolationsServiceImpl {
   async collect(
     sourcePath: string,
     packages: PackageInfo[],
-    options: ViolationCollectionOptions = {}
+    options: ViolationCollectionOptions = {},
   ): Promise<ViolationResult> {
     try {
-      return await window.mainProcess.violations.collect(sourcePath, packages, options);
+      return await window.mainProcess.violations.collect(
+        sourcePath,
+        packages,
+        options,
+      );
     } catch (error) {
       console.error('[ViolationsService] Failed to collect violations:', error);
       throw error;

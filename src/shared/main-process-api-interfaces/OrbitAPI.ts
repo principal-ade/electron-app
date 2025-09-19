@@ -85,10 +85,18 @@ export interface OrbitAPI {
   /**
    * Send a signal to another peer
    */
-  sendSignal(from: string, to: string, type: string, data: unknown): Promise<{ success: boolean; error?: string }>;
+  sendSignal(
+    from: string,
+    to: string,
+    type: string,
+    data: unknown,
+  ): Promise<{ success: boolean; error?: string }>;
 
   /**
    * Leave a signaling room
    */
-  leaveRoom(peerId: string, repoUrl: string): Promise<{ success: boolean; error?: string }>;
+  leaveRoom(
+    peerId: string,
+    repoUrl: string,
+  ): Promise<{ success: boolean; error?: string }>;
 }

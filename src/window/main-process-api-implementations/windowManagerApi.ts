@@ -1,5 +1,8 @@
 import { ipcRenderer } from 'electron';
-import { WindowManagerAPI, WindowManagerAPIEvent } from '../../shared/main-process-api-interfaces/WindowManagerAPI';
+import {
+  WindowManagerAPI,
+  WindowManagerAPIEvent,
+} from '../../shared/main-process-api-interfaces/WindowManagerAPI';
 
 export const windowManagerAPI: WindowManagerAPI = {
   setFullScreen: (flag: boolean) => {

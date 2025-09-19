@@ -1,8 +1,8 @@
 import { ipcRenderer } from 'electron';
-import { 
+import {
   PackageManagerAPI,
   PackageManagerAPIEvent,
-  CheckVersionsParams
+  CheckVersionsParams,
 } from '../../shared/main-process-api-interfaces/PackageManagerAPI';
 
 export const packageManagerApi: PackageManagerAPI = {
@@ -11,7 +11,10 @@ export const packageManagerApi: PackageManagerAPI = {
   },
 
   checkVulnerabilities: (params: CheckVersionsParams) => {
-    return ipcRenderer.invoke(PackageManagerAPIEvent.CHECK_VULNERABILITIES, params);
+    return ipcRenderer.invoke(
+      PackageManagerAPIEvent.CHECK_VULNERABILITIES,
+      params,
+    );
   },
 
   checkLicenses: (params: CheckVersionsParams) => {
@@ -22,15 +25,24 @@ export const packageManagerApi: PackageManagerAPI = {
     const handler = (_event: any, data: any) => callback(data);
     ipcRenderer.on(PackageManagerAPIEvent.VERSION_CHECK_PROGRESS, handler);
     return () => {
-      ipcRenderer.removeListener(PackageManagerAPIEvent.VERSION_CHECK_PROGRESS, handler);
+      ipcRenderer.removeListener(
+        PackageManagerAPIEvent.VERSION_CHECK_PROGRESS,
+        handler,
+      );
     };
   },
 
   onVulnerabilityCheckProgress: (callback: (data: any) => void) => {
     const handler = (_event: any, data: any) => callback(data);
-    ipcRenderer.on(PackageManagerAPIEvent.VULNERABILITY_CHECK_PROGRESS, handler);
+    ipcRenderer.on(
+      PackageManagerAPIEvent.VULNERABILITY_CHECK_PROGRESS,
+      handler,
+    );
     return () => {
-      ipcRenderer.removeListener(PackageManagerAPIEvent.VULNERABILITY_CHECK_PROGRESS, handler);
+      ipcRenderer.removeListener(
+        PackageManagerAPIEvent.VULNERABILITY_CHECK_PROGRESS,
+        handler,
+      );
     };
   },
 
@@ -38,13 +50,22 @@ export const packageManagerApi: PackageManagerAPI = {
     const handler = (_event: any, data: any) => callback(data);
     ipcRenderer.on(PackageManagerAPIEvent.LICENSE_CHECK_PROGRESS, handler);
     return () => {
-      ipcRenderer.removeListener(PackageManagerAPIEvent.LICENSE_CHECK_PROGRESS, handler);
+      ipcRenderer.removeListener(
+        PackageManagerAPIEvent.LICENSE_CHECK_PROGRESS,
+        handler,
+      );
     };
   },
 
   removeAllListeners: () => {
-    ipcRenderer.removeAllListeners(PackageManagerAPIEvent.VERSION_CHECK_PROGRESS);
-    ipcRenderer.removeAllListeners(PackageManagerAPIEvent.VULNERABILITY_CHECK_PROGRESS);
-    ipcRenderer.removeAllListeners(PackageManagerAPIEvent.LICENSE_CHECK_PROGRESS);
+    ipcRenderer.removeAllListeners(
+      PackageManagerAPIEvent.VERSION_CHECK_PROGRESS,
+    );
+    ipcRenderer.removeAllListeners(
+      PackageManagerAPIEvent.VULNERABILITY_CHECK_PROGRESS,
+    );
+    ipcRenderer.removeAllListeners(
+      PackageManagerAPIEvent.LICENSE_CHECK_PROGRESS,
+    );
   },
 };

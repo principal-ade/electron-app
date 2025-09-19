@@ -21,14 +21,15 @@ export const WizardStep: React.FC<WizardStepProps> = ({
   dataTour,
 }) => {
   const { theme } = useTheme();
-  
+
   return (
     <div className="text-center" data-tour={dataTour}>
       <div className="mb-6">
         <div
           className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
           style={{
-            backgroundColor: iconBackgroundColor || theme.colors.backgroundSecondary,
+            backgroundColor:
+              iconBackgroundColor || theme.colors.backgroundSecondary,
           }}
         >
           {icon}
@@ -43,7 +44,14 @@ export const WizardStep: React.FC<WizardStepProps> = ({
           {description}
         </p>
       </div>
-      <div style={{ minHeight: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div
+        style={{
+          minHeight: '40px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
         {children}
       </div>
     </div>

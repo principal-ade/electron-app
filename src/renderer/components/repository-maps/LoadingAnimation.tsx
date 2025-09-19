@@ -6,9 +6,12 @@ interface LoadingAnimationProps {
   fileCount?: number;
 }
 
-export const LoadingAnimation: React.FC<LoadingAnimationProps> = ({ message, fileCount }) => {
+export const LoadingAnimation: React.FC<LoadingAnimationProps> = ({
+  message,
+  fileCount,
+}) => {
   const { theme } = useTheme();
-  
+
   // Generate a 4x4 grid of squares with deterministic sizes based on position
   const squares = Array.from({ length: 16 }, (_, i) => {
     const row = Math.floor(i / 4);
@@ -19,33 +22,39 @@ export const LoadingAnimation: React.FC<LoadingAnimationProps> = ({ message, fil
     const delay = (row + col) * 0.1; // Diagonal wave effect
     return { id: i, size, delay, row, col };
   });
-  
+
   return (
-    <div style={{ 
-      flex: 1, 
-      display: 'flex', 
-      flexDirection: 'column',
-      alignItems: 'center', 
-      justifyContent: 'center',
-      backgroundColor: theme.colors.backgroundSecondary,
-      padding: '40px'
-    }}>
-      {/* Centered container for all content */}
-      <div style={{
+    <div
+      style={{
+        flex: 1,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '32px'
-      }}>
+        justifyContent: 'center',
+        backgroundColor: theme.colors.backgroundSecondary,
+        padding: '40px',
+      }}
+    >
+      {/* Centered container for all content */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '32px',
+        }}
+      >
         {/* Map-like grid of shimmering squares */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 80px)',
-          gridTemplateRows: 'repeat(4, 80px)',
-          gap: '12px',
-          placeItems: 'center'
-        }}>
-          {squares.map(square => (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 80px)',
+            gridTemplateRows: 'repeat(4, 80px)',
+            gap: '12px',
+            placeItems: 'center',
+          }}
+        >
+          {squares.map((square) => (
             <div
               key={square.id}
               className={`shimmer-square shimmer-square-${square.id}`}
@@ -61,33 +70,37 @@ export const LoadingAnimation: React.FC<LoadingAnimationProps> = ({ message, fil
                 )`,
                 backgroundSize: '200% 100%',
                 animation: `shimmer 1.5s ease-in-out ${square.delay}s infinite`,
-                opacity: 0.8
+                opacity: 0.8,
               }}
             />
           ))}
         </div>
-        
+
         {/* Loading text */}
         <div style={{ textAlign: 'center' }}>
-          <p style={{ 
-            color: theme.colors.text, 
-            marginBottom: '8px', 
-            fontWeight: 500,
-            fontSize: '16px'
-          }}>
+          <p
+            style={{
+              color: theme.colors.text,
+              marginBottom: '8px',
+              fontWeight: 500,
+              fontSize: '16px',
+            }}
+          >
             {message}
           </p>
           {fileCount !== undefined && (
-            <p style={{ 
-              color: theme.colors.textSecondary, 
-              fontSize: '14px'
-            }}>
+            <p
+              style={{
+                color: theme.colors.textSecondary,
+                fontSize: '14px',
+              }}
+            >
               Processing {fileCount.toLocaleString()} files...
             </p>
           )}
         </div>
       </div>
-      
+
       <style>{`
         @keyframes shimmer {
           0% {

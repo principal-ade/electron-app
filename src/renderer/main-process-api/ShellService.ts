@@ -10,42 +10,46 @@ export class ShellService {
   /**
    * Open a URL in the default browser
    */
-  static async openExternal(url: string): Promise<{ success: boolean; error?: string }> {
+  static async openExternal(
+    url: string,
+  ): Promise<{ success: boolean; error?: string }> {
     console.log(`[ShellService] Opening external URL: ${url}`);
-    
+
     try {
       const result = await window.mainProcess.shell.openExternal(url);
-      
+
       if (!result.success) {
-        console.warn(`[ShellService] Failed to open URL via shell: ${result.error}`);
-        
+        console.warn(
+          `[ShellService] Failed to open URL via shell: ${result.error}`,
+        );
+
         // Fallback to window.open for web compatibility
         if (typeof window !== 'undefined') {
           window.open(url, '_blank');
           return { success: true };
         }
       }
-      
+
       return result;
     } catch (error) {
       console.error('[ShellService] Error opening external URL:', error);
-      
+
       // Try fallback
       if (typeof window !== 'undefined') {
         try {
           window.open(url, '_blank');
           return { success: true };
         } catch (fallbackError) {
-          return { 
-            success: false, 
-            error: `Failed to open URL: ${error}` 
+          return {
+            success: false,
+            error: `Failed to open URL: ${error}`,
           };
         }
       }
-      
-      return { 
-        success: false, 
-        error: `Failed to open URL: ${error}` 
+
+      return {
+        success: false,
+        error: `Failed to open URL: ${error}`,
       };
     }
   }
@@ -55,7 +59,7 @@ export class ShellService {
    */
   static async runCommand(
     command: string,
-    options?: { cwd?: string; timeout?: number }
+    options?: { cwd?: string; timeout?: number },
   ): Promise<{
     success: boolean;
     output?: string;
@@ -135,10 +139,15 @@ export class ShellService {
    * Open a path in the default editor (simplified version)
    * This is a convenience method that uses VS Code as the default editor
    */
-  static async openInDefaultEditor(path: string): Promise<{ success: boolean; error?: string }> {
+  static async openInDefaultEditor(
+    path: string,
+  ): Promise<{ success: boolean; error?: string }> {
     console.log(`[ShellService] Opening in default editor: ${path}`);
     // Try VS Code first, then Cursor as fallback
-    const result = await this.openInEditor({ editor: 'vscode' as EditorId, dir: path });
+    const result = await this.openInEditor({
+      editor: 'vscode' as EditorId,
+      dir: path,
+    });
     if (!result.success) {
       // Try Cursor as fallback
       return this.openInEditor({ editor: 'cursor' as EditorId, dir: path });

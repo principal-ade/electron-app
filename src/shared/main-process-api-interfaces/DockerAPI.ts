@@ -61,49 +61,51 @@ export interface DockerAPI {
    * Check Docker installation and status
    */
   checkStatus(): Promise<DockerResponse<DockerStatus>>;
-  
+
   /**
    * Check if a specific Docker image exists
    */
   hasKnipImage(): Promise<DockerImageCheckResponse>;
-  
+
   /**
    * Pull a Docker image
    */
   pullImage(imageName: string): Promise<DockerPullResponse>;
-  
+
   /**
    * Run Knip analysis in Docker
    */
   runKnip(projectPath: string, options?: any): Promise<DockerResponse>;
-  
+
   /**
    * Create custom Knip image
    */
   createKnipImage(): Promise<DockerResponse<boolean>>;
-  
+
   /**
    * Start Knip container
    */
   startKnipContainer(projectPath: string): Promise<DockerResponse<string>>;
-  
+
   /**
    * Execute command in Knip container
    */
   execInContainer(command: string): Promise<DockerResponse>;
-  
+
   /**
    * Stop Knip container
    */
   stopKnipContainer(): Promise<DockerResponse>;
-  
+
   /**
    * Get Docker installation instructions
    */
   getInstallInstructions(): Promise<DockerResponse<DockerInstallInstructions>>;
-  
+
   /**
    * Listen for Docker pull progress events
    */
-  onPullProgress(callback: (data: { imageName: string; message: string }) => void): () => void;
+  onPullProgress(
+    callback: (data: { imageName: string; message: string }) => void,
+  ): () => void;
 }

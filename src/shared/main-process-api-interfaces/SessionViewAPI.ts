@@ -39,12 +39,17 @@ export interface SessionViewAPI {
    * @param segmentId - The specific segment ID to retrieve
    * @returns Promise resolving to session segment result
    */
-  getSegment(sessionId: string, segmentId: string): Promise<SessionViewResult<SessionSegment>>;
+  getSegment(
+    sessionId: string,
+    segmentId: string,
+  ): Promise<SessionViewResult<SessionSegment>>;
 
   /**
    * Get session statistics
    * @param sessionId - The session ID to get statistics for
    * @returns Promise resolving to session statistics result
    */
-  getStatistics(sessionId: string): Promise<SessionViewResult<SessionStatistics>>;
+  getStatistics(
+    sessionId: string,
+  ): Promise<SessionViewResult<SessionStatistics>>;
 }

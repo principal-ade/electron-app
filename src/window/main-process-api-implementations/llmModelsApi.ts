@@ -1,5 +1,5 @@
 import { ipcRenderer } from 'electron';
-import { 
+import {
   LLMModelsAPI,
   LLMModelsAPIEvent,
   GetProviderModelsRequest,
@@ -7,12 +7,11 @@ import {
   UpdateModelRequest,
   DeleteModelRequest,
   ImportModelsRequest,
-  LLMConfiguration
+  LLMConfiguration,
 } from '../../shared/main-process-api-interfaces/LLMModelsAPI';
 
 export const llmModelsAPI: LLMModelsAPI = {
-  getAllModels: () => 
-    ipcRenderer.invoke(LLMModelsAPIEvent.GET_ALL),
+  getAllModels: () => ipcRenderer.invoke(LLMModelsAPIEvent.GET_ALL),
 
   getProviderModels: (request: GetProviderModelsRequest) =>
     ipcRenderer.invoke(LLMModelsAPIEvent.GET_PROVIDER_MODELS, request),
@@ -35,6 +34,5 @@ export const llmModelsAPI: LLMModelsAPI = {
   importModels: (request: ImportModelsRequest) =>
     ipcRenderer.invoke(LLMModelsAPIEvent.IMPORT_MODELS, request),
 
-  exportModels: () =>
-    ipcRenderer.invoke(LLMModelsAPIEvent.EXPORT_MODELS),
+  exportModels: () => ipcRenderer.invoke(LLMModelsAPIEvent.EXPORT_MODELS),
 };

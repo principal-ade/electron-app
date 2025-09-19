@@ -8,7 +8,6 @@ interface PackageFilterProps {
   packages?: string[]; // Simple array of package names if needed
 }
 
-
 export const PackageFilter: React.FC<PackageFilterProps> = ({
   directory,
   selectedPackages,

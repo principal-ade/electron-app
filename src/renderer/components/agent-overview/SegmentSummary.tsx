@@ -169,9 +169,9 @@ const SegmentSummaryComponent: React.FC<SegmentSummaryProps> = ({
         keyPoints: ['Session summary service has been removed'],
         provider: SupportedLLMProvider.OLLAMA,
         modelUsed: 'N/A',
-        generatedAt: Date.now()
+        generatedAt: Date.now(),
       };
-      
+
       // Original call was: sessionSummaryService.generateSessionSummary(...)
       // Now using placeholder implementation
       setSummary(result);
@@ -224,7 +224,9 @@ const SegmentSummaryComponent: React.FC<SegmentSummaryProps> = ({
           </div>
         </div>
       ) : summary ? (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div
+          style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+        >
           <div
             style={{
               padding: '8px 16px',
@@ -256,10 +258,12 @@ const SegmentSummaryComponent: React.FC<SegmentSummaryProps> = ({
                 transition: 'all 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundHover;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundHover;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
               }}
             >
               <Sparkles size={14} />

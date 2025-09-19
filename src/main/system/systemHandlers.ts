@@ -3,13 +3,13 @@ import * as os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { electronCLI } from '../electron-cli-bridge';
-import { 
-  SystemEvents, 
-  CommandOptions, 
-  CommandResult, 
-  DialogOptions, 
+import {
+  SystemEvents,
+  CommandOptions,
+  CommandResult,
+  DialogOptions,
   DialogResult,
-  UpdateCheckResult
+  UpdateCheckResult,
 } from '../../shared/main-process-api-interfaces/SystemAPI';
 import { applicationWindows } from '../window/modernWindowManager';
 
@@ -106,96 +106,110 @@ export function registerSystemHandlers() {
   });
 
   // Execute command handler (replaces execute-command)
-  ipcMain.handle(SystemEvents.EXECUTE_COMMAND, async (_, options: CommandOptions): Promise<CommandResult> => {
-    try {
-      // Ensure CLI is initialized
-      await electronCLI.initialize();
-      
-      // Execute command using electron-cli-bridge
-      const result = await electronCLI.execute(options.command, options.args || [], {
-        cwd: options.cwd,
-        env: Object.fromEntries(
-          Object.entries({ ...process.env, ...(options.env || {}) })
-            .filter(([_, v]) => v !== undefined)
-        ) as Record<string, string>,
-        timeout: options.timeout
-      });
-      
-      return {
-        success: result.success,
-        stdout: result.stdout.trim(),
-        stderr: result.stderr.trim(),
-        code: result.exitCode
-      };
-    } catch (error) {
-      return {
-        success: false,
-        stdout: '',
-        stderr: error instanceof Error ? error.message : String(error),
-        code: -1,
-        error: error instanceof Error ? error.message : String(error)
-      };
-    }
-  });
+  ipcMain.handle(
+    SystemEvents.EXECUTE_COMMAND,
+    async (_, options: CommandOptions): Promise<CommandResult> => {
+      try {
+        // Ensure CLI is initialized
+        await electronCLI.initialize();
+
+        // Execute command using electron-cli-bridge
+        const result = await electronCLI.execute(
+          options.command,
+          options.args || [],
+          {
+            cwd: options.cwd,
+            env: Object.fromEntries(
+              Object.entries({ ...process.env, ...(options.env || {}) }).filter(
+                ([_, v]) => v !== undefined,
+              ),
+            ) as Record<string, string>,
+            timeout: options.timeout,
+          },
+        );
+
+        return {
+          success: result.success,
+          stdout: result.stdout.trim(),
+          stderr: result.stderr.trim(),
+          code: result.exitCode,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          stdout: '',
+          stderr: error instanceof Error ? error.message : String(error),
+          code: -1,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   // Open dialog handler (replaces dialog:open)
-  ipcMain.handle(SystemEvents.OPEN_DIALOG, async (_, options: DialogOptions): Promise<DialogResult> => {
-    const windows = Array.from(applicationWindows.values());
-    const mainWindow = windows[0]?.window;
-    
-    if (!mainWindow) {
-      return { canceled: true, filePaths: [] };
-    }
-
-    try {
-      const result = await dialog.showOpenDialog(mainWindow, {
-        properties: options.properties || ['openFile'],
-        title: options.title,
-        defaultPath: options.defaultPath,
-        buttonLabel: options.buttonLabel,
-        filters: options.filters
-      });
-
-      return {
-        canceled: result.canceled,
-        filePaths: result.filePaths
-      };
-    } catch (error) {
-      console.error('Error opening dialog:', error);
-      return { canceled: true, filePaths: [] };
-    }
-  });
-
-  // Check for update manually handler (replaces check-for-update-manually)
-  ipcMain.handle(SystemEvents.CHECK_FOR_UPDATE_MANUALLY, async (): Promise<UpdateCheckResult> => {
-    try {
-      // TODO: Implement actual update checking logic
-      // This is a placeholder implementation
-      console.log('Checking for updates manually...');
-      
-      // Emit the completion event for backward compatibility
+  ipcMain.handle(
+    SystemEvents.OPEN_DIALOG,
+    async (_, options: DialogOptions): Promise<DialogResult> => {
       const windows = Array.from(applicationWindows.values());
       const mainWindow = windows[0]?.window;
-      if (mainWindow) {
-        mainWindow.webContents.send('update-check-complete', {
-          success: true,
-          updateAvailable: false
-        });
+
+      if (!mainWindow) {
+        return { canceled: true, filePaths: [] };
       }
-      
-      return {
-        success: true,
-        updateAvailable: false
-      };
-    } catch (error) {
-      console.error('Error checking for updates:', error);
-      return {
-        success: false,
-        updateAvailable: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      };
-    }
-  });
+
+      try {
+        const result = await dialog.showOpenDialog(mainWindow, {
+          properties: options.properties || ['openFile'],
+          title: options.title,
+          defaultPath: options.defaultPath,
+          buttonLabel: options.buttonLabel,
+          filters: options.filters,
+        });
+
+        return {
+          canceled: result.canceled,
+          filePaths: result.filePaths,
+        };
+      } catch (error) {
+        console.error('Error opening dialog:', error);
+        return { canceled: true, filePaths: [] };
+      }
+    },
+  );
+
+  // Check for update manually handler (replaces check-for-update-manually)
+  ipcMain.handle(
+    SystemEvents.CHECK_FOR_UPDATE_MANUALLY,
+    async (): Promise<UpdateCheckResult> => {
+      try {
+        // TODO: Implement actual update checking logic
+        // This is a placeholder implementation
+        console.log('Checking for updates manually...');
+
+        // Emit the completion event for backward compatibility
+        const windows = Array.from(applicationWindows.values());
+        const mainWindow = windows[0]?.window;
+        if (mainWindow) {
+          mainWindow.webContents.send('update-check-complete', {
+            success: true,
+            updateAvailable: false,
+          });
+        }
+
+        return {
+          success: true,
+          updateAvailable: false,
+        };
+      } catch (error) {
+        console.error('Error checking for updates:', error);
+        return {
+          success: false,
+          updateAvailable: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+  );
 
   // Restart app handler (replaces restart-app)
   ipcMain.handle(SystemEvents.RESTART_APP, async (): Promise<void> => {

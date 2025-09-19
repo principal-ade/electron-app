@@ -45,28 +45,44 @@ export class AgentSessionService {
   }
 
   // Helper to get global sessions from storage
-  async getGlobalSessions(): Promise<{ sessions: Record<string, AgentSessionRecord>; activeSessionsByDirectory: Record<string, string> }> {
+  async getGlobalSessions(): Promise<{
+    sessions: Record<string, AgentSessionRecord>;
+    activeSessionsByDirectory: Record<string, string>;
+  }> {
     const storageManager = await this.getStorageManager();
-    const result = await storageManager.get('globalAgentSessions', StaticNamespaces.GLOBAL_SESSION_REGISTRY);
+    const result = await storageManager.get(
+      'globalAgentSessions',
+      StaticNamespaces.GLOBAL_SESSION_REGISTRY,
+    );
     if (result.success && result.data) {
       return result.data;
     }
     return {
       sessions: {},
-      activeSessionsByDirectory: {}
+      activeSessionsByDirectory: {},
     };
   }
 
   // Helper to save global sessions to storage
-  async saveGlobalSessions(globalSessions: { sessions: Record<string, AgentSessionRecord>; activeSessionsByDirectory: Record<string, string> }): Promise<void> {
+  async saveGlobalSessions(globalSessions: {
+    sessions: Record<string, AgentSessionRecord>;
+    activeSessionsByDirectory: Record<string, string>;
+  }): Promise<void> {
     const storageManager = await this.getStorageManager();
-    await storageManager.set('globalAgentSessions', globalSessions, StaticNamespaces.GLOBAL_SESSION_REGISTRY);
+    await storageManager.set(
+      'globalAgentSessions',
+      globalSessions,
+      StaticNamespaces.GLOBAL_SESSION_REGISTRY,
+    );
   }
 
   // Get user preferences
   async getUserPreferences() {
     const storageManager = await this.getStorageManager();
-    const result = await storageManager.get('userPreferences', StaticNamespaces.USER_PREFERENCES);
+    const result = await storageManager.get(
+      'userPreferences',
+      StaticNamespaces.USER_PREFERENCES,
+    );
     const prefs = result.success ? result.data : undefined;
     return {
       autoCommitOnStop: prefs?.autoCommitOnStop ?? true, // Default to true
@@ -76,9 +92,16 @@ export class AgentSessionService {
   // Update user preferences
   async updateUserPreferences(preferences: { autoCommitOnStop?: boolean }) {
     const storageManager = await this.getStorageManager();
-    const result = await storageManager.get('userPreferences', StaticNamespaces.USER_PREFERENCES);
+    const result = await storageManager.get(
+      'userPreferences',
+      StaticNamespaces.USER_PREFERENCES,
+    );
     const currentPrefs = result.success && result.data ? result.data : {};
-    await storageManager.set('userPreferences', { ...currentPrefs, ...preferences }, StaticNamespaces.USER_PREFERENCES);
+    await storageManager.set(
+      'userPreferences',
+      { ...currentPrefs, ...preferences },
+      StaticNamespaces.USER_PREFERENCES,
+    );
   }
 
   // Extract file path from tool parameters
@@ -521,7 +544,10 @@ export class AgentSessionService {
   }
 
   // Delete a session
-  async deleteSession(directory: string, sessionId: string): Promise<{ success: boolean; error?: string }> {
+  async deleteSession(
+    directory: string,
+    sessionId: string,
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const globalSessions = await this.getGlobalSessions();
 
@@ -540,13 +566,16 @@ export class AgentSessionService {
 
       await this.saveGlobalSessions(globalSessions);
       this.notifyWindows('agent-session-deleted', { directory, sessionId });
-      
+
       return { success: true };
     } catch (error) {
       console.error('[AgentSessionService] Error deleting session:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred while deleting session' 
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error occurred while deleting session',
       };
     }
   }
@@ -695,7 +724,10 @@ export class AgentSessionService {
             fileWriteCount: Object.keys(session.fileWrites || {}).length,
             toolCallCount: session.toolCalls?.length || 0,
             webAccessCount: session.webAccesses?.length || 0,
-            customName: typeof session.metadata?.customName === 'string' ? session.metadata.customName : undefined,
+            customName:
+              typeof session.metadata?.customName === 'string'
+                ? session.metadata.customName
+                : undefined,
             repositories: session.repositories?.map((repo) => ({
               root: repo.root,
               rootDisplay: repo.rootDisplay,

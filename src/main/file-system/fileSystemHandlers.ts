@@ -4,7 +4,7 @@ import { dialog, ipcMain, BrowserWindow, app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { globby } from 'globby';
-import { universalGitignorePatterns as universalPatternsConfig } from "../../shared/configs";
+import { universalGitignorePatterns as universalPatternsConfig } from '../../shared/configs';
 
 import { FileSystemAPIEvent } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import type { IModernApplicationWindow } from '../window/types';
@@ -54,7 +54,7 @@ export class ElectronFileSystemAdapter {
     if (!filePath || !fs.existsSync(filePath)) {
       return null;
     }
-    
+
     try {
       const content = fs.readFileSync(filePath, 'utf8');
       return { content, filePath };
@@ -105,20 +105,23 @@ export class ElectronFileSystemAdapter {
       );
       return null;
     }
-    console.log('[File System] Select directory dialog requested with options:', options);
-    
+    console.log(
+      '[File System] Select directory dialog requested with options:',
+      options,
+    );
+
     const dialogOptions: any = {
       properties: options?.properties || ['openDirectory'],
       title: options?.title || 'Select a directory with markdown files',
     };
-    
+
     if (options?.buttonLabel) {
       dialogOptions.buttonLabel = options.buttonLabel;
     }
-    
+
     const { canceled, filePaths } = await dialog.showOpenDialog(
       this.mainWindow,
-      dialogOptions
+      dialogOptions,
     );
 
     if (canceled || filePaths.length === 0) {
@@ -132,7 +135,6 @@ export class ElectronFileSystemAdapter {
     );
     return { filePaths: [this.rootPath], canceled: false };
   }
-
 
   async writeFile(filePath: string, content: string) {
     if (!this.mainWindow) {
@@ -157,7 +159,11 @@ export class ElectronFileSystemAdapter {
       return { success: true, filePath };
     } catch (error) {
       console.error('[File System] Error writing file:', error);
-      return { success: false, filePath, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        filePath,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -211,19 +217,21 @@ export class ElectronFileSystemAdapter {
 
       const processDirectory = (currentPath: string) => {
         const entries = fs.readdirSync(currentPath);
-        
+
         for (const entry of entries) {
           const fullPath = path.join(currentPath, entry);
           try {
             const stats = fs.statSync(fullPath);
-            
+
             if (stats.isDirectory()) {
               totalDirectories++;
               // Skip certain directories to avoid excessive scanning
-              if (!entry.startsWith('.') && 
-                  entry !== 'node_modules' && 
-                  entry !== 'dist' && 
-                  entry !== 'build') {
+              if (
+                !entry.startsWith('.') &&
+                entry !== 'node_modules' &&
+                entry !== 'dist' &&
+                entry !== 'build'
+              ) {
                 processDirectory(fullPath);
               }
             } else {
@@ -387,7 +395,6 @@ export class ElectronFileSystemAdapter {
       return false;
     }
   }
-
 
   private createFileWatcher(
     filePath: string,
@@ -700,8 +707,6 @@ export class ElectronFileSystemAdapter {
       return false;
     }
   }
-
-
 
   private findFilesWithExtensions(
     dirPath: string,
@@ -1018,10 +1023,10 @@ export class ElectronFileSystemAdapter {
   async buildFilteredFileTree(
     directoryPath: string,
     options?: {
-      gitignore?: boolean;        // Enable .gitignore parsing (default: true)
-      ignorePatterns?: string[];  // Additional patterns to ignore
-      includeStats?: boolean;     // Include file stats (default: false)
-    }
+      gitignore?: boolean; // Enable .gitignore parsing (default: true)
+      ignorePatterns?: string[]; // Additional patterns to ignore
+      includeStats?: boolean; // Include file stats (default: false)
+    },
   ): Promise<{
     paths: string[];
     stats?: Array<{
@@ -1032,45 +1037,48 @@ export class ElectronFileSystemAdapter {
     }>;
   }> {
     try {
-      
       // Default options
       const gitignore = options?.gitignore !== false; // Default to true
       const includeStats = options?.includeStats || false;
-      
+
       // Extract universal patterns from the config
       const universalPatterns = Object.values(universalPatternsConfig.patterns)
         .flatMap((category: any) => category.directories || [])
-        .map(dir => `**/${dir}/**`);
-      
+        .map((dir) => `**/${dir}/**`);
+
       // Combine with any additional patterns
       const ignorePatterns = [
-        '.git',           // Always exclude .git
-        '**/.git/**',     // Exclude .git at any level
+        '.git', // Always exclude .git
+        '**/.git/**', // Exclude .git at any level
         ...universalPatterns,
-        ...(options?.ignorePatterns || [])
+        ...(options?.ignorePatterns || []),
       ];
-      
-      console.log(`[File System] Using globby with gitignore=${gitignore}, ${ignorePatterns.length} ignore patterns`);
-      
+
+      console.log(
+        `[File System] Using globby with gitignore=${gitignore}, ${ignorePatterns.length} ignore patterns`,
+      );
+
       // Use globby to get all files and directories
       const paths = await globby('**/*', {
         cwd: directoryPath,
         gitignore: gitignore,
         ignore: ignorePatterns,
-        onlyFiles: false,     // Include directories
+        onlyFiles: false, // Include directories
         markDirectories: true, // Add trailing slash to directories
-        dot: true,            // Include dotfiles (except .git which is ignored)
-        followSymbolicLinks: false
+        dot: true, // Include dotfiles (except .git which is ignored)
+        followSymbolicLinks: false,
       });
-      
+
       // Optionally gather stats
-      let stats: Array<{
-        path: string;
-        size: number;
-        isDirectory: boolean;
-        lastModified: Date;
-      }> | undefined;
-      
+      let stats:
+        | Array<{
+            path: string;
+            size: number;
+            isDirectory: boolean;
+            lastModified: Date;
+          }>
+        | undefined;
+
       if (includeStats) {
         stats = [];
         for (const relativePath of paths) {
@@ -1081,7 +1089,7 @@ export class ElectronFileSystemAdapter {
               path: relativePath,
               size: stat.size,
               isDirectory: stat.isDirectory(),
-              lastModified: stat.mtime
+              lastModified: stat.mtime,
             });
           } catch (error) {
             // Skip files we can't stat
@@ -1089,13 +1097,16 @@ export class ElectronFileSystemAdapter {
           }
         }
       }
-      
-      return { 
+
+      return {
         paths,
-        stats
+        stats,
       };
     } catch (error) {
-      console.error(`[File System] Error building filtered file tree for ${directoryPath}:`, error);
+      console.error(
+        `[File System] Error building filtered file tree for ${directoryPath}:`,
+        error,
+      );
       return { paths: [] };
     }
   }
@@ -1124,22 +1135,25 @@ export function registerFileSystemIpcHandlers(
     return appWindow.fileSystemAdapter.selectFile();
   });
 
-  ipcMain.handle(FileSystemAPIEvent.SELECT_DIRECTORY, async (event, options) => {
-    const senderWindow = BrowserWindow.fromWebContents(event.sender);
-    if (!senderWindow) {
-      console.error('SELECT_DIRECTORY: No sender window');
-      return null;
-    }
-    const appWindow = appWindows.get(senderWindow.id);
-    if (!appWindow || !appWindow.fileSystemAdapter) {
-      console.error(
-        'SELECT_DIRECTORY: No AppWindow or Adapter for ID ',
-        senderWindow.id,
-      );
-      return null;
-    }
-    return appWindow.fileSystemAdapter.selectDirectory(options);
-  });
+  ipcMain.handle(
+    FileSystemAPIEvent.SELECT_DIRECTORY,
+    async (event, options) => {
+      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!senderWindow) {
+        console.error('SELECT_DIRECTORY: No sender window');
+        return null;
+      }
+      const appWindow = appWindows.get(senderWindow.id);
+      if (!appWindow || !appWindow.fileSystemAdapter) {
+        console.error(
+          'SELECT_DIRECTORY: No AppWindow or Adapter for ID ',
+          senderWindow.id,
+        );
+        return null;
+      }
+      return appWindow.fileSystemAdapter.selectDirectory(options);
+    },
+  );
 
   ipcMain.handle(
     FileSystemAPIEvent.READ_FILE,
@@ -1561,11 +1575,15 @@ export function registerFileSystemIpcHandlers(
   // Handler for buildFilteredFileTree
   ipcMain.handle(
     FileSystemAPIEvent.BUILD_FILTERED_FILE_TREE,
-    async (event, directoryPath: string, options?: { 
-      gitignore?: boolean;
-      ignorePatterns?: string[];
-      includeStats?: boolean;
-    }) => {
+    async (
+      event,
+      directoryPath: string,
+      options?: {
+        gitignore?: boolean;
+        ignorePatterns?: string[];
+        includeStats?: boolean;
+      },
+    ) => {
       const senderWindow = BrowserWindow.fromWebContents(event.sender);
       if (!senderWindow) {
         console.error(
@@ -1581,7 +1599,10 @@ export function registerFileSystemIpcHandlers(
         );
         return { paths: [] };
       }
-      return appWindow.fileSystemAdapter.buildFilteredFileTree(directoryPath, options);
+      return appWindow.fileSystemAdapter.buildFilteredFileTree(
+        directoryPath,
+        options,
+      );
     },
   );
 

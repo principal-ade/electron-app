@@ -7,7 +7,7 @@ import type {
   RepositorySecrets,
   SecretMetadata,
   SecretStoreRequest,
-  SecretOperationResult
+  SecretOperationResult,
 } from '../../shared/main-process-api-interfaces/SecretsAPI';
 
 export class SecretsService {
@@ -21,7 +21,9 @@ export class SecretsService {
   /**
    * Store a secret
    */
-  static async store(request: SecretStoreRequest): Promise<SecretOperationResult> {
+  static async store(
+    request: SecretStoreRequest,
+  ): Promise<SecretOperationResult> {
     return window.mainProcess.secrets.store(request);
   }
 
@@ -49,7 +51,9 @@ export class SecretsService {
   /**
    * Update existing secrets (merge with existing)
    */
-  static async update(request: SecretStoreRequest): Promise<SecretOperationResult> {
+  static async update(
+    request: SecretStoreRequest,
+  ): Promise<SecretOperationResult> {
     return window.mainProcess.secrets.update(request);
   }
 }

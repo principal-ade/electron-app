@@ -11,7 +11,9 @@ export const orbitAPI = {
   /**
    * Exchange OAuth code for access token
    */
-  authenticate: async (code: string): Promise<{
+  authenticate: async (
+    code: string,
+  ): Promise<{
     success: boolean;
     user?: {
       githubHandle: string;
@@ -28,7 +30,9 @@ export const orbitAPI = {
   /**
    * Check user status with token
    */
-  checkStatus: async (token: string): Promise<{
+  checkStatus: async (
+    token: string,
+  ): Promise<{
     status: string;
     githubHandle?: string;
     email?: string;
@@ -40,7 +44,10 @@ export const orbitAPI = {
   /**
    * Join a signaling room for collaboration
    */
-  joinRoom: async (token: string, repoUrl: string): Promise<{
+  joinRoom: async (
+    token: string,
+    repoUrl: string,
+  ): Promise<{
     success: boolean;
     peerId?: string;
     githubHandle?: string;
@@ -53,7 +60,10 @@ export const orbitAPI = {
   /**
    * Poll for new signals and peer updates
    */
-  pollSignals: async (peerId: string, repoUrl: string): Promise<{
+  pollSignals: async (
+    peerId: string,
+    repoUrl: string,
+  ): Promise<{
     success: boolean;
     signals?: Array<{ from: string; to?: string; type: string; data: any }>;
     peers?: Array<{ peerId: string; githubHandle: string }>;
@@ -65,7 +75,12 @@ export const orbitAPI = {
   /**
    * Send a signal to another peer
    */
-  sendSignal: async (from: string, to: string, type: string, data: any): Promise<{
+  sendSignal: async (
+    from: string,
+    to: string,
+    type: string,
+    data: any,
+  ): Promise<{
     success: boolean;
     error?: string;
   }> => {
@@ -75,7 +90,10 @@ export const orbitAPI = {
   /**
    * Leave a signaling room
    */
-  leaveRoom: async (peerId: string, repoUrl: string): Promise<{
+  leaveRoom: async (
+    peerId: string,
+    repoUrl: string,
+  ): Promise<{
     success: boolean;
     error?: string;
   }> => {

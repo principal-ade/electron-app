@@ -44,7 +44,7 @@ export class ElectronMCPIntegration {
         timestamp: Date.now(),
       };
     });
-    
+
     // Handle requests for server health
     ipcMain.handle('get-mcp-health', async () => {
       return this.getMCPServerHealth();
@@ -109,13 +109,15 @@ export class ElectronMCPIntegration {
       if (this.mcpProcess === null) {
         this.restartAttempts = 0;
       }
-      
+
       // Path to the compiled MCP server
       const isDev = process.env.NODE_ENV === 'development';
-      const serverPath = EnvironmentConfig.getAssetsPath(APP_BRANDING.MCP_SERVER_FILENAME);
+      const serverPath = EnvironmentConfig.getAssetsPath(
+        APP_BRANDING.MCP_SERVER_FILENAME,
+      );
 
       console.log('Starting MCP server at:', serverPath);
-      
+
       // Verify the server file exists
       if (!require('fs').existsSync(serverPath)) {
         throw new Error(`MCP server file not found at: ${serverPath}`);
@@ -124,10 +126,15 @@ export class ElectronMCPIntegration {
       // In production, use the bundled Node.js if available (for sandboxed environments)
       let command = 'node';
       const args = [serverPath];
-      
+
       if (!isDev && process.platform === 'darwin') {
         // On macOS in production, check if we have a bundled node
-        const bundledNode = path.join(process.resourcesPath, '..', 'MacOS', 'node');
+        const bundledNode = path.join(
+          process.resourcesPath,
+          '..',
+          'MacOS',
+          'node',
+        );
         if (require('fs').existsSync(bundledNode)) {
           command = bundledNode;
           console.log('Using bundled Node.js:', command);
@@ -154,10 +161,12 @@ export class ElectronMCPIntegration {
           execSync(`"${command}" --version`, { stdio: 'ignore' });
         }
       } catch (error) {
-        console.error(`Node.js command '${command}' is not executable. Falling back to system node.`);
+        console.error(
+          `Node.js command '${command}' is not executable. Falling back to system node.`,
+        );
         command = 'node'; // Fallback to system node
       }
-      
+
       this.mcpProcess = spawn(command, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
         cwd: isDev ? path.join(__dirname, '../..') : process.resourcesPath, // CWD is electron-react/ in dev, resources path in prod
@@ -168,10 +177,12 @@ export class ElectronMCPIntegration {
           MCP_HTTP_BRIDGE_PORT: process.env.MCP_HTTP_BRIDGE_PORT || '3042',
         },
         // In production on macOS, we might need special spawn options for sandboxed environments
-        ...(process.platform === 'darwin' && !isDev ? {
-          detached: false,
-          shell: false,
-        } : {}),
+        ...(process.platform === 'darwin' && !isDev
+          ? {
+              detached: false,
+              shell: false,
+            }
+          : {}),
       });
 
       this.mcpProcess.stdout?.on('data', (data: Buffer) => {
@@ -262,7 +273,7 @@ export class ElectronMCPIntegration {
       this.mcpProcess.on('exit', (code, signal) => {
         console.log(`MCP Server exited with code ${code} and signal ${signal}`);
         this.mcpProcess = null;
-        
+
         // Stop health monitoring
         this.stopHealthMonitoring();
 
@@ -273,22 +284,32 @@ export class ElectronMCPIntegration {
             timestamp: Date.now(),
           });
         });
-        
+
         // Auto-restart if it crashed unexpectedly (not killed intentionally)
-        if (code !== 0 && signal !== 'SIGTERM' && signal !== 'SIGKILL' && this.restartAttempts < this.maxRestartAttempts) {
+        if (
+          code !== 0 &&
+          signal !== 'SIGTERM' &&
+          signal !== 'SIGKILL' &&
+          this.restartAttempts < this.maxRestartAttempts
+        ) {
           this.restartAttempts++;
-          console.log(`MCP Server crashed. Attempting restart (${this.restartAttempts}/${this.maxRestartAttempts})...`);
+          console.log(
+            `MCP Server crashed. Attempting restart (${this.restartAttempts}/${this.maxRestartAttempts})...`,
+          );
           setTimeout(() => {
             this.startMCPServer().catch((error) => {
               console.error('Failed to restart MCP server:', error);
             });
           }, 2000); // Wait 2 seconds before restart
         } else if (this.restartAttempts >= this.maxRestartAttempts) {
-          console.error('MCP Server crashed too many times. Not attempting further restarts.');
+          console.error(
+            'MCP Server crashed too many times. Not attempting further restarts.',
+          );
           // Notify user of critical failure
           BrowserWindow.getAllWindows().forEach((window) => {
             window.webContents.send('mcp-server-critical-failure', {
-              message: 'MCP Server has crashed multiple times and will not be restarted automatically.',
+              message:
+                'MCP Server has crashed multiple times and will not be restarted automatically.',
               attempts: this.restartAttempts,
               timestamp: Date.now(),
             });
@@ -300,7 +321,7 @@ export class ElectronMCPIntegration {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       console.log('MCP Server started with PID:', this.mcpProcess.pid);
-      
+
       // Start health monitoring
       this.startHealthMonitoring();
     } catch (error) {
@@ -427,13 +448,13 @@ export class ElectronMCPIntegration {
   stopMCPServer(): void {
     if (this.mcpProcess && !this.mcpProcess.killed) {
       console.log('Stopping MCP server...');
-      
+
       // Reset restart attempts since this is an intentional stop
       this.restartAttempts = 0;
-      
+
       // Stop health monitoring
       this.stopHealthMonitoring();
-      
+
       this.mcpProcess.kill('SIGTERM');
 
       // Force kill after 5 seconds if it doesn't terminate gracefully
@@ -471,7 +492,7 @@ export class ElectronMCPIntegration {
   private startHealthMonitoring(): void {
     // Clear any existing interval
     this.stopHealthMonitoring();
-    
+
     // Check health every 30 seconds
     this.healthCheckInterval = setInterval(() => {
       if (this.mcpProcess && !this.mcpProcess.killed) {
@@ -480,7 +501,7 @@ export class ElectronMCPIntegration {
           // Check if process is still alive
           process.kill(this.mcpProcess.pid!, 0);
           this.lastHealthCheck = Date.now();
-          
+
           // Also check if the process is responsive by sending a test message
           if (this.mcpProcess.stdin && !this.mcpProcess.stdin.destroyed) {
             this.mcpProcess.stdin.write('\n'); // Send newline as a ping
@@ -493,7 +514,10 @@ export class ElectronMCPIntegration {
             this.stopMCPServer();
             setTimeout(() => {
               this.startMCPServer().catch((err) => {
-                console.error('Failed to restart MCP server during health check:', err);
+                console.error(
+                  'Failed to restart MCP server during health check:',
+                  err,
+                );
               });
             }, 1000);
           }
@@ -501,18 +525,26 @@ export class ElectronMCPIntegration {
       }
     }, 30000); // 30 seconds
   }
-  
+
   private stopHealthMonitoring(): void {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
       this.healthCheckInterval = null;
     }
   }
-  
-  getMCPServerHealth(): { healthy: boolean; lastCheck: number; uptime: number; restartCount: number } {
+
+  getMCPServerHealth(): {
+    healthy: boolean;
+    lastCheck: number;
+    uptime: number;
+    restartCount: number;
+  } {
     const healthy = this.mcpProcess !== null && !this.mcpProcess.killed;
-    const uptime = healthy && this.mcpProcess ? Date.now() - (this.mcpProcess as any).startTime : 0;
-    
+    const uptime =
+      healthy && this.mcpProcess
+        ? Date.now() - (this.mcpProcess as any).startTime
+        : 0;
+
     return {
       healthy,
       lastCheck: this.lastHealthCheck,
@@ -525,7 +557,7 @@ export class ElectronMCPIntegration {
   async shutdown(): Promise<void> {
     return new Promise((resolve) => {
       this.stopHealthMonitoring();
-      
+
       if (this.mcpProcess && !this.mcpProcess.killed) {
         this.mcpProcess.on('exit', () => resolve());
         this.stopMCPServer();

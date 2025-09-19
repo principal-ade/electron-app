@@ -77,12 +77,17 @@ export interface PlanningAPI {
    * @param callback - Function to handle agent document requests
    * @returns Cleanup function to remove the listener
    */
-  onAgentDocumentRequest(callback: (data: AgentDocumentRequest) => void): () => void;
+  onAgentDocumentRequest(
+    callback: (data: AgentDocumentRequest) => void,
+  ): () => void;
 
   /**
    * Send response to agent document request
    * @param requestId - The request ID to respond to
    * @param response - The response data
    */
-  sendAgentDocumentResponse(requestId: string, response: AgentDocumentResponse): Promise<void>;
+  sendAgentDocumentResponse(
+    requestId: string,
+    response: AgentDocumentResponse,
+  ): Promise<void>;
 }

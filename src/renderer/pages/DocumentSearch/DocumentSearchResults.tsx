@@ -16,7 +16,7 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
   selectedDocument,
   onDocumentSelect,
   isSearching,
-  searchQuery
+  searchQuery,
 }) => {
   const { theme } = useTheme();
 
@@ -46,14 +46,14 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
             backgroundColor: `${theme.colors.primary}30`,
             color: theme.colors.text,
             padding: '0 2px',
-            borderRadius: '2px'
+            borderRadius: '2px',
           }}
         >
           {part}
         </mark>
       ) : (
         part
-      )
+      ),
     );
   };
 
@@ -61,13 +61,20 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   };
 
+  // TODO: Repository information will come from document metadata once
+  // @a24z/markdown-search supports metadata in indexing (see MARKDOWN_SEARCH_FEATURE_REQUEST.md)
+  // For now, we don't display repository info in search results
+
   const renderBreadcrumb = (doc: SearchResult) => {
     if (!doc.breadcrumb || doc.breadcrumb.length === 0) return null;
 
     return (
-      <div className="flex items-center gap-1 text-xs mb-1" style={{
-        color: theme.colors.textSecondary
-      }}>
+      <div
+        className="flex items-center gap-1 text-xs mb-1"
+        style={{
+          color: theme.colors.textSecondary,
+        }}
+      >
         <Folder size={12} />
         {doc.breadcrumb.slice(-3).map((segment, i) => (
           <React.Fragment key={i}>
@@ -102,20 +109,16 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
             className="mx-auto mb-3"
             style={{
               color: theme.colors.textSecondary,
-              opacity: 0.3
+              opacity: 0.3,
             }}
           />
-          <p
-            className="text-sm"
-            style={{ color: theme.colors.textSecondary }}
-          >
+          <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
             No results found for "{searchQuery}"
           </p>
         </div>
       </div>
     );
   }
-
 
   return (
     <div className="h-full overflow-y-auto">
@@ -129,7 +132,7 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
             backgroundColor:
               selectedDocument?.id === result.id
                 ? `${theme.colors.primary}15`
-                : 'transparent'
+                : 'transparent',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = `${theme.colors.primary}10`;
@@ -146,10 +149,7 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
 
           {/* Title and Icon */}
           <div className="flex items-start gap-2 mb-1">
-            <div
-              className="mt-0.5"
-              style={{ color: theme.colors.primary }}
-            >
+            <div className="mt-0.5" style={{ color: theme.colors.primary }}>
               {getDocumentIcon(result.type)}
             </div>
             <div className="flex-1">
@@ -157,7 +157,9 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
                 className="font-medium text-sm"
                 style={{ color: theme.colors.text }}
               >
-                {result.title ? highlightMatch(result.title, searchQuery) : result.fileName}
+                {result.title
+                  ? highlightMatch(result.title, searchQuery)
+                  : result.fileName}
               </h3>
             </div>
             {/* Score Badge */}
@@ -165,7 +167,7 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
               className="text-xs px-2 py-1 rounded"
               style={{
                 backgroundColor: `${theme.colors.primary}20`,
-                color: theme.colors.primary
+                color: theme.colors.primary,
               }}
             >
               {Math.round(result.score)}%
@@ -181,7 +183,7 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
                   className="text-xs"
                   style={{
                     color: theme.colors.textSecondary,
-                    lineHeight: 1.5
+                    lineHeight: 1.5,
                   }}
                 >
                   {match.field === 'content' && (
@@ -193,7 +195,7 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
                         style={{
                           backgroundColor: `${theme.colors.primary}30`,
                           padding: '0 2px',
-                          borderRadius: '2px'
+                          borderRadius: '2px',
                         }}
                       >
                         {match.matchedText}
@@ -206,7 +208,8 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
                   )}
                   {match.field === 'title' && (
                     <div>
-                      Found in title: {highlightMatch(match.matchedText, searchQuery)}
+                      Found in title:{' '}
+                      {highlightMatch(match.matchedText, searchQuery)}
                     </div>
                   )}
                   {match.field === 'metadata' && (
@@ -221,7 +224,7 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
                   className="text-xs"
                   style={{
                     color: theme.colors.primary,
-                    opacity: 0.8
+                    opacity: 0.8,
                   }}
                 >
                   +{result.matches.length - 2} more matches
@@ -240,7 +243,7 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
                   style={{
                     backgroundColor: `${theme.colors.backgroundSecondary}`,
                     color: theme.colors.textSecondary,
-                    border: `1px solid ${theme.colors.border}`
+                    border: `1px solid ${theme.colors.border}`,
                   }}
                 >
                   {tag}

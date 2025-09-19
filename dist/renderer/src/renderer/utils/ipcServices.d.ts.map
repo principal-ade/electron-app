@@ -1,1 +1,0 @@
-{"version":3,"file":"ipcServices.d.ts","sourceRoot":"","sources":["../../../../../src/renderer/utils/ipcServices.ts"],"names":[],"mappings":"AAGA,OAAO,EAAE,KAAK,EAAE,MAAM,qBAAqB,CAAC;AAC5C,OAAO,EAAE,cAAc,EAAE,MAAM,8BAA8B,CAAC;AAC9D,OAAO,EAAE,UAAU,EAAE,MAAM,0BAA0B,CAAC;AACtD,OAAO,EAAE,GAAG,EAAE,MAAM,mBAAmB,CAAC;AACxC,OAAO,EAAE,qBAAqB,EAAE,iBAAiB,EAAE,MAAM,qBAAqB,CAAC"}

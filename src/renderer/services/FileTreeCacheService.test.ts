@@ -1,7 +1,10 @@
 import { FileTreeCacheService } from './FileTreeCacheService';
-import { loadLocalFileSystemTree, loadGitHubFileSystemTree } from '../utils/loadFileSystemTree';
+import {
+  loadLocalFileSystemTree,
+  loadGitHubFileSystemTree,
+} from '../utils/loadFileSystemTree';
 import { createFileTreeSource } from '../types/file-tree-source';
-import type { FileTree } from "@principal-ai/repository-abstraction";
+import type { FileTree } from '@principal-ai/repository-abstraction';
 
 // Mock dependencies
 jest.mock('../utils/loadFileSystemTree');
@@ -19,18 +22,18 @@ const localStorageMock = (() => {
     }),
     clear: jest.fn(() => {
       store = {};
-    })
+    }),
   };
 })();
 
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
-  writable: true
+  writable: true,
 });
 
 describe('FileTreeCacheService', () => {
   let service: FileTreeCacheService;
-  
+
   beforeEach(() => {
     jest.clearAllMocks();
     localStorageMock.clear();
@@ -45,17 +48,17 @@ describe('FileTreeCacheService', () => {
         {
           name: 'file1.ts',
           type: 'file',
-          children: []
-        }
-      ]
+          children: [],
+        },
+      ],
     };
 
     const mockTreeResult = {
       fileTree: mockTree,
       stats: {
         fileCount: 1,
-        directoryCount: 0
-      }
+        directoryCount: 0,
+      },
     };
 
     it('should load local file tree for local source', async () => {
@@ -64,7 +67,7 @@ describe('FileTreeCacheService', () => {
         'owner',
         'repo',
         'https://github.com/owner/repo.git',
-        'main'
+        'main',
       );
 
       (loadLocalFileSystemTree as jest.Mock).mockResolvedValue(mockTreeResult);
@@ -75,12 +78,12 @@ describe('FileTreeCacheService', () => {
         localPath: '/path/to/repo',
         owner: 'owner',
         repo: 'repo',
-        includeVCS: true
+        includeVCS: true,
       });
       expect(result).toEqual({
         source: localSource,
         tree: mockTree,
-        stats: mockTreeResult.stats
+        stats: mockTreeResult.stats,
       });
     });
 
@@ -89,7 +92,7 @@ describe('FileTreeCacheService', () => {
         'owner',
         'repo',
         'https://github.com/owner/repo.git',
-        'main'
+        'main',
       );
 
       (loadGitHubFileSystemTree as jest.Mock).mockResolvedValue(mockTreeResult);
@@ -99,12 +102,12 @@ describe('FileTreeCacheService', () => {
       expect(loadGitHubFileSystemTree).toHaveBeenCalledWith({
         owner: 'owner',
         repo: 'repo',
-        branch: 'main'
+        branch: 'main',
       });
       expect(result).toEqual({
         source: remoteSource,
         tree: mockTree,
-        stats: mockTreeResult.stats
+        stats: mockTreeResult.stats,
       });
     });
 
@@ -114,7 +117,7 @@ describe('FileTreeCacheService', () => {
         'owner',
         'repo',
         'https://github.com/owner/repo.git',
-        'main'
+        'main',
       );
 
       const cachedTree = {
@@ -123,15 +126,15 @@ describe('FileTreeCacheService', () => {
         stats: {
           fileCount: 1,
           directoryCount: 0,
-          loadedAt: Date.now()
+          loadedAt: Date.now(),
         },
         size: 1000,
-        expiresAt: Date.now() + 3600000 // 1 hour from now
+        expiresAt: Date.now() + 3600000, // 1 hour from now
       };
 
       localStorageMock.setItem(
         `filetree_cache_${localSource.id}`,
-        JSON.stringify(cachedTree)
+        JSON.stringify(cachedTree),
       );
 
       const result = await service.loadFileTree(localSource);
@@ -140,7 +143,7 @@ describe('FileTreeCacheService', () => {
       expect(result).toEqual({
         source: localSource,
         tree: mockTree,
-        stats: cachedTree.stats
+        stats: cachedTree.stats,
       });
     });
 
@@ -150,7 +153,7 @@ describe('FileTreeCacheService', () => {
         'owner',
         'repo',
         'https://github.com/owner/repo.git',
-        'main'
+        'main',
       );
 
       const expiredCache = {
@@ -159,15 +162,15 @@ describe('FileTreeCacheService', () => {
         stats: {
           fileCount: 1,
           directoryCount: 0,
-          loadedAt: Date.now() - 7200000 // 2 hours ago
+          loadedAt: Date.now() - 7200000, // 2 hours ago
         },
         size: 1000,
-        expiresAt: Date.now() - 3600000 // Expired 1 hour ago
+        expiresAt: Date.now() - 3600000, // Expired 1 hour ago
       };
 
       localStorageMock.setItem(
         `filetree_cache_${localSource.id}`,
-        JSON.stringify(expiredCache)
+        JSON.stringify(expiredCache),
       );
 
       (loadLocalFileSystemTree as jest.Mock).mockResolvedValue(mockTreeResult);
@@ -175,7 +178,9 @@ describe('FileTreeCacheService', () => {
       const result = await service.loadFileTree(localSource);
 
       expect(loadLocalFileSystemTree).toHaveBeenCalled();
-      expect(result?.stats.loadedAt).toBeGreaterThan(expiredCache.stats.loadedAt);
+      expect(result?.stats.loadedAt).toBeGreaterThan(
+        expiredCache.stats.loadedAt,
+      );
     });
   });
 
@@ -184,7 +189,7 @@ describe('FileTreeCacheService', () => {
       const sourceId = 'test-source-id';
       const analysis = {
         packageLayers: [{ name: 'package1', path: '/' }],
-        frameworkLayers: [{ name: 'react' }]
+        frameworkLayers: [{ name: 'react' }],
       };
 
       service.setAnalysis(sourceId, analysis);
@@ -197,13 +202,13 @@ describe('FileTreeCacheService', () => {
     it('should invalidate source cache', () => {
       const sourceId = 'test-source-id';
       const analysis = {
-        packageLayers: [{ name: 'package1', path: '/' }]
+        packageLayers: [{ name: 'package1', path: '/' }],
       };
 
       // Set both tree cache and analysis cache
       localStorageMock.setItem(
         `filetree_cache_${sourceId}`,
-        JSON.stringify({ tree: {}, stats: {} })
+        JSON.stringify({ tree: {}, stats: {} }),
       );
       service.setAnalysis(sourceId, analysis);
 
@@ -211,7 +216,9 @@ describe('FileTreeCacheService', () => {
       service.invalidateSource(sourceId);
 
       // Check both are cleared
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith(`filetree_cache_${sourceId}`);
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith(
+        `filetree_cache_${sourceId}`,
+      );
       expect(service.getAnalysis(sourceId)).toBeNull();
     });
 
@@ -221,31 +228,47 @@ describe('FileTreeCacheService', () => {
 
       localStorageMock.setItem(`filetree_cache_${source1}`, '{}');
       localStorageMock.setItem(`filetree_cache_${source2}`, '{}');
-      localStorageMock.setItem('filetree_cache_index', JSON.stringify([source1, source2]));
+      localStorageMock.setItem(
+        'filetree_cache_index',
+        JSON.stringify([source1, source2]),
+      );
 
       service.clearCache();
 
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith(`filetree_cache_${source1}`);
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith(`filetree_cache_${source2}`);
-      expect(localStorageMock.setItem).toHaveBeenCalledWith('filetree_cache_index', '[]');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith(
+        `filetree_cache_${source1}`,
+      );
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith(
+        `filetree_cache_${source2}`,
+      );
+      expect(localStorageMock.setItem).toHaveBeenCalledWith(
+        'filetree_cache_index',
+        '[]',
+      );
     });
   });
 
   describe('prefetching', () => {
     it('should prefetch trees for multiple sources', async () => {
       const sources = [
-        createFileTreeSource.localWorkingCopy('/path1', 'owner1', 'repo1', 'url1', 'main'),
-        createFileTreeSource.remoteBranch('owner2', 'repo2', 'url2', 'develop')
+        createFileTreeSource.localWorkingCopy(
+          '/path1',
+          'owner1',
+          'repo1',
+          'url1',
+          'main',
+        ),
+        createFileTreeSource.remoteBranch('owner2', 'repo2', 'url2', 'develop'),
       ];
 
       (loadLocalFileSystemTree as jest.Mock).mockResolvedValue({
         fileTree: { name: 'root1', type: 'directory', children: [] },
-        stats: { fileCount: 1, directoryCount: 0 }
+        stats: { fileCount: 1, directoryCount: 0 },
       });
 
       (loadGitHubFileSystemTree as jest.Mock).mockResolvedValue({
         fileTree: { name: 'root2', type: 'directory', children: [] },
-        stats: { fileCount: 2, directoryCount: 1 }
+        stats: { fileCount: 2, directoryCount: 1 },
       });
 
       await service.prefetchTrees(sources);
@@ -259,7 +282,7 @@ describe('FileTreeCacheService', () => {
         '/temp/path',
         'temp-owner',
         'temp-repo',
-        'temp-url'
+        'temp-url',
       );
 
       await service.prefetchTrees([tempSource]);
@@ -276,13 +299,16 @@ describe('FileTreeCacheService', () => {
 
       localStorageMock.setItem(
         `filetree_cache_${source1}`,
-        JSON.stringify({ size: 1000 })
+        JSON.stringify({ size: 1000 }),
       );
       localStorageMock.setItem(
         `filetree_cache_${source2}`,
-        JSON.stringify({ size: 2000 })
+        JSON.stringify({ size: 2000 }),
       );
-      localStorageMock.setItem('filetree_cache_index', JSON.stringify([source1, source2]));
+      localStorageMock.setItem(
+        'filetree_cache_index',
+        JSON.stringify([source1, source2]),
+      );
 
       const stats = service.getCacheStats();
 
@@ -299,17 +325,20 @@ describe('FileTreeCacheService', () => {
         `filetree_cache_${source1}`,
         JSON.stringify({
           source: { id: source1 },
-          stats: { loadedAt: now - 1000 }
-        })
+          stats: { loadedAt: now - 1000 },
+        }),
       );
       localStorageMock.setItem(
         `filetree_cache_${source2}`,
         JSON.stringify({
           source: { id: source2 },
-          stats: { loadedAt: now }
-        })
+          stats: { loadedAt: now },
+        }),
       );
-      localStorageMock.setItem('filetree_cache_index', JSON.stringify([source1, source2]));
+      localStorageMock.setItem(
+        'filetree_cache_index',
+        JSON.stringify([source1, source2]),
+      );
 
       const entries = service.getCacheEntries();
 

@@ -128,7 +128,7 @@ export class GitRepositoryService {
 
       // Use simple-git through GitClientFactory
       const gitRoot = await gitClientFactory.findGitRoot(startDir);
-      
+
       if (gitRoot) {
         console.log(
           `🔍 GIT-DEBUG: findGitRoot - input: "${filePath}" -> startDir: "${startDir}" -> gitRoot: "${gitRoot}"`,
@@ -138,7 +138,7 @@ export class GitRepositoryService {
           `🔍 GIT-DEBUG: findGitRoot - NO git repo found for: "${filePath}"`,
         );
       }
-      
+
       return gitRoot;
     } catch (_error) {
       // Not in a git repository
@@ -416,7 +416,6 @@ export class GitRepositoryService {
     this.packageCache.clear();
   }
 
-
   /**
    * Check if a directory is a git repository
    */
@@ -428,7 +427,7 @@ export class GitRepositoryService {
       if (!stats) {
         return false;
       }
-      
+
       // Verify it's actually a git repository by running a git command
       // Use simple-git through GitClientFactory
       return await gitClientFactory.isGitRepository(directory);
@@ -454,7 +453,7 @@ export class GitRepositoryService {
    */
   async stageFiles(directory: string, files: string[]): Promise<void> {
     if (files.length === 0) return;
-    
+
     const git = await gitClientFactory.getClient(directory);
     try {
       // Stage the files using simple-git
@@ -470,11 +469,11 @@ export class GitRepositoryService {
    */
   async createCommit(directory: string, message: string): Promise<string> {
     const git = await gitClientFactory.getClient(directory);
-    
+
     try {
       // Create the commit using simple-git
       const commitResult = await git.commit(message);
-      
+
       // simple-git returns the commit hash in the commit result
       if (commitResult.commit) {
         // Extract just the short hash if it's in format "hash (message)"
@@ -484,13 +483,13 @@ export class GitRepositoryService {
         }
         return commitResult.commit;
       }
-      
+
       // Fallback: get the latest commit hash using GitClientFactory
       const currentCommit = await gitClientFactory.getCurrentCommit(directory);
       if (currentCommit) {
         return currentCommit;
       }
-      
+
       throw new Error('Failed to get commit hash after commit');
     } catch (error) {
       console.error('[GitRepositoryService] Failed to create commit:', error);
@@ -532,28 +531,32 @@ export class GitRepositoryService {
     try {
       // Use simple-git to get status information
       const status = await gitClientFactory.getGitStatus(directory);
-      
+
       // Process staged, unstaged, and untracked files
-      status.staged.forEach(filePath => {
+      status.staged.forEach((filePath) => {
         created.push(filePath);
       });
-      
-      status.unstaged.forEach(filePath => {
+
+      status.unstaged.forEach((filePath) => {
         modified.push(filePath);
       });
-      
-      status.untracked.forEach(filePath => {
+
+      status.untracked.forEach((filePath) => {
         created.push(filePath);
       });
 
       // For more detailed analysis, we still need to use git client directly
       // since simple-git doesn't provide porcelain format parsing
       const git = await gitClientFactory.getClient(directory);
-      
+
       try {
         // Get detailed status using porcelain format for renames detection
-        const statusResult = await git.raw(['status', '--porcelain=v1', ...(files ? ['--', ...files] : [])]);
-        
+        const statusResult = await git.raw([
+          'status',
+          '--porcelain=v1',
+          ...(files ? ['--', ...files] : []),
+        ]);
+
         statusResult
           .split('\n')
           .filter((line: string) => line.trim())
@@ -580,8 +583,12 @@ export class GitRepositoryService {
 
       // Get diff stats for additions/deletions count
       try {
-        const diffResult = await git.raw(['diff', '--numstat', ...(files ? ['--', ...files] : [])]);
-        
+        const diffResult = await git.raw([
+          'diff',
+          '--numstat',
+          ...(files ? ['--', ...files] : []),
+        ]);
+
         diffResult
           .split('\n')
           .filter((line: string) => line.trim())
@@ -605,8 +612,13 @@ export class GitRepositoryService {
           });
 
         // Also check staged changes
-        const stagedDiffResult = await git.raw(['diff', '--cached', '--numstat', ...(files ? ['--', ...files] : [])]);
-        
+        const stagedDiffResult = await git.raw([
+          'diff',
+          '--cached',
+          '--numstat',
+          ...(files ? ['--', ...files] : []),
+        ]);
+
         stagedDiffResult
           .split('\n')
           .filter((line: string) => line.trim())

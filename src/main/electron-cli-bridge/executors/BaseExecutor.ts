@@ -19,7 +19,7 @@ export abstract class BaseExecutor {
   protected async execute(
     command: string,
     args: string[] = [],
-    options: ExecuteOptions = {}
+    options: ExecuteOptions = {},
   ): Promise<ExecuteResult> {
     return this.bridge.execute(command, args, options);
   }
@@ -30,8 +30,8 @@ export abstract class BaseExecutor {
   protected parseLines(output: string): string[] {
     return output
       .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
   }
 
   /**

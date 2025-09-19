@@ -19,9 +19,8 @@ export enum AppVersionManagerAPIEvent {
   ON_UPDATE_DOWNLOADED = 'update-downloaded',
 }
 
-
 export const appVersionManagerApi: AppVersionManagerAPI = {
-  getVersion: async (): Promise<string> => 
+  getVersion: async (): Promise<string> =>
     ipcRenderer.invoke(AppVersionManagerAPIEvent.GET_VERSION),
 
   isDevMode: async (): Promise<boolean> =>
@@ -40,7 +39,10 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
     const handler = (_event: any, info: any) => callback(info);
     ipcRenderer.on(AppVersionManagerAPIEvent.ON_UPDATE_AVAILABLE, handler);
     return () => {
-      ipcRenderer.removeListener(AppVersionManagerAPIEvent.ON_UPDATE_AVAILABLE, handler);
+      ipcRenderer.removeListener(
+        AppVersionManagerAPIEvent.ON_UPDATE_AVAILABLE,
+        handler,
+      );
     };
   },
 
@@ -48,7 +50,10 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
     const handler = (_event: any, info: any) => callback(info);
     ipcRenderer.on(AppVersionManagerAPIEvent.ON_UPDATE_NOT_AVAILABLE, handler);
     return () => {
-      ipcRenderer.removeListener(AppVersionManagerAPIEvent.ON_UPDATE_NOT_AVAILABLE, handler);
+      ipcRenderer.removeListener(
+        AppVersionManagerAPIEvent.ON_UPDATE_NOT_AVAILABLE,
+        handler,
+      );
     };
   },
 
@@ -56,7 +61,10 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
     const handler = (_event: any, error: any) => callback(error);
     ipcRenderer.on(AppVersionManagerAPIEvent.ON_UPDATE_ERROR, handler);
     return () => {
-      ipcRenderer.removeListener(AppVersionManagerAPIEvent.ON_UPDATE_ERROR, handler);
+      ipcRenderer.removeListener(
+        AppVersionManagerAPIEvent.ON_UPDATE_ERROR,
+        handler,
+      );
     };
   },
 
@@ -64,17 +72,30 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
     const handler = (_event: any) => callback();
     ipcRenderer.on(AppVersionManagerAPIEvent.ON_UPDATE_CHECK_COMPLETE, handler);
     return () => {
-      ipcRenderer.removeListener(AppVersionManagerAPIEvent.ON_UPDATE_CHECK_COMPLETE, handler);
+      ipcRenderer.removeListener(
+        AppVersionManagerAPIEvent.ON_UPDATE_CHECK_COMPLETE,
+        handler,
+      );
     };
   },
 
   removeUpdateListeners: (): void => {
-    ipcRenderer.removeAllListeners(AppVersionManagerAPIEvent.ON_UPDATE_AVAILABLE);
-    ipcRenderer.removeAllListeners(AppVersionManagerAPIEvent.ON_UPDATE_NOT_AVAILABLE);
+    ipcRenderer.removeAllListeners(
+      AppVersionManagerAPIEvent.ON_UPDATE_AVAILABLE,
+    );
+    ipcRenderer.removeAllListeners(
+      AppVersionManagerAPIEvent.ON_UPDATE_NOT_AVAILABLE,
+    );
     ipcRenderer.removeAllListeners(AppVersionManagerAPIEvent.ON_UPDATE_ERROR);
-    ipcRenderer.removeAllListeners(AppVersionManagerAPIEvent.ON_UPDATE_CHECK_COMPLETE);
-    ipcRenderer.removeAllListeners(AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOAD_PROGRESS);
-    ipcRenderer.removeAllListeners(AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOADED);
+    ipcRenderer.removeAllListeners(
+      AppVersionManagerAPIEvent.ON_UPDATE_CHECK_COMPLETE,
+    );
+    ipcRenderer.removeAllListeners(
+      AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOAD_PROGRESS,
+    );
+    ipcRenderer.removeAllListeners(
+      AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOADED,
+    );
   },
 
   downloadUpdate: (): void => {
@@ -85,11 +106,19 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
     ipcRenderer.send(AppVersionManagerAPIEvent.INSTALL_UPDATE);
   },
 
-  onUpdateDownloadProgress: (callback: (progress: any) => void): (() => void) => {
+  onUpdateDownloadProgress: (
+    callback: (progress: any) => void,
+  ): (() => void) => {
     const handler = (_event: any, progress: any) => callback(progress);
-    ipcRenderer.on(AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOAD_PROGRESS, handler);
+    ipcRenderer.on(
+      AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOAD_PROGRESS,
+      handler,
+    );
     return () => {
-      ipcRenderer.removeListener(AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOAD_PROGRESS, handler);
+      ipcRenderer.removeListener(
+        AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOAD_PROGRESS,
+        handler,
+      );
     };
   },
 
@@ -97,7 +126,10 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
     const handler = (_event: any, info: any) => callback(info);
     ipcRenderer.on(AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOADED, handler);
     return () => {
-      ipcRenderer.removeListener(AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOADED, handler);
+      ipcRenderer.removeListener(
+        AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOADED,
+        handler,
+      );
     };
   },
 

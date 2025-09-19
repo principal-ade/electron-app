@@ -3,7 +3,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import fetch from 'node-fetch';
 import { electronCLI, ExecuteResult } from '../electron-cli-bridge';
-import { GitHubAPIEvent, ConfigFetchRequest, ConfigFetchResponse, GitHubConfigRequest } from '../../shared/main-process-api-interfaces/GitHubAPI';
+import {
+  GitHubAPIEvent,
+  ConfigFetchRequest,
+  ConfigFetchResponse,
+  GitHubConfigRequest,
+} from '../../shared/main-process-api-interfaces/GitHubAPI';
 import type { IModernApplicationWindow } from '../window/types';
 
 export interface GitRepositoryInfo {
@@ -46,7 +51,6 @@ export interface AuthStatus {
 }
 
 export class GitHubAdapter {
-
   private cache: Map<string, any> = new Map();
 
   // Git repository detection
@@ -386,7 +390,12 @@ export class GitHubAdapter {
     ref?: string,
   ): Promise<string | null> {
     try {
-      console.debug('[GitHub:getFileContent] request', { owner, repo, path, ref });
+      console.debug('[GitHub:getFileContent] request', {
+        owner,
+        repo,
+        path,
+        ref,
+      });
       // Remote-first: try gh CLI without relying on local cwd
       const refSuffix = ref ? `?ref=${encodeURIComponent(ref)}` : '';
       const ghResult = await this.executeCommand([
@@ -398,10 +407,15 @@ export class GitHubAdapter {
       ]);
 
       if (ghResult.success && ghResult.stdout) {
-        console.debug('[GitHub:getFileContent] gh api success', { bytes: ghResult.stdout.length });
+        console.debug('[GitHub:getFileContent] gh api success', {
+          bytes: ghResult.stdout.length,
+        });
         return ghResult.stdout;
       }
-      console.warn('[GitHub:getFileContent] gh api failed, stderr:', ghResult.stderr);
+      console.warn(
+        '[GitHub:getFileContent] gh api failed, stderr:',
+        ghResult.stderr,
+      );
 
       // HTTPS fallback if gh not installed or fails
       try {
@@ -412,7 +426,7 @@ export class GitHubAdapter {
           method: 'GET',
           headers: {
             'User-Agent': 'Principle-MD',
-            'Accept': 'application/vnd.github.v3.raw',
+            Accept: 'application/vnd.github.v3.raw',
           },
         };
 
@@ -423,18 +437,33 @@ export class GitHubAdapter {
               data += chunk;
             });
             res.on('end', () => {
-              if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
-                console.debug('[GitHub:getFileContent] https success', { bytes: data.length, status: res.statusCode });
+              if (
+                res.statusCode &&
+                res.statusCode >= 200 &&
+                res.statusCode < 300
+              ) {
+                console.debug('[GitHub:getFileContent] https success', {
+                  bytes: data.length,
+                  status: res.statusCode,
+                });
                 resolve(data);
               } else {
-                console.error('[GitHub:getFileContent] https failed', { status: res.statusCode });
-                console.error('[GitHub:getFileContent] Full URL attempted:', `https://api.github.com${options.path}`);
+                console.error('[GitHub:getFileContent] https failed', {
+                  status: res.statusCode,
+                });
+                console.error(
+                  '[GitHub:getFileContent] Full URL attempted:',
+                  `https://api.github.com${options.path}`,
+                );
                 resolve(null);
               }
             });
           });
           req.on('error', (error: any) => {
-            console.error('[GitHub:getFileContent] https error:', error.message);
+            console.error(
+              '[GitHub:getFileContent] https error:',
+              error.message,
+            );
             resolve(null);
           });
           req.end();
@@ -462,7 +491,10 @@ export class GitHubAdapter {
   ): Promise<string | null> {
     try {
       // Verify this cwd matches the expected remote
-      const remoteResult = await this.executeCommand(['git', 'remote', 'get-url', 'origin'], { cwd });
+      const remoteResult = await this.executeCommand(
+        ['git', 'remote', 'get-url', 'origin'],
+        { cwd },
+      );
       if (remoteResult.success) {
         const remoteUrl = remoteResult.stdout.trim();
         if (remoteUrl.includes(`${owner}/${repo}`)) {
@@ -498,8 +530,13 @@ export class GitHubAdapter {
     }>
   > {
     try {
-      const defaultBranch = ref || (await this.getRepoDefaultBranch(owner, repo)) || 'main';
-      console.debug('[GitHub:getMarkdownDocuments] request', { owner, repo, ref: defaultBranch });
+      const defaultBranch =
+        ref || (await this.getRepoDefaultBranch(owner, repo)) || 'main';
+      console.debug('[GitHub:getMarkdownDocuments] request', {
+        owner,
+        repo,
+        ref: defaultBranch,
+      });
 
       const trackedFiles = new Map<string, { path: string; size?: number }>();
 
@@ -527,17 +564,28 @@ export class GitHubAdapter {
           .filter(Boolean) as Array<{ path: string; size?: number }>;
         for (const file of files) trackedFiles.set(file.path, file);
       } else {
-        console.warn('[GitHub:getMarkdownDocuments] gh tree failed, falling back to HTTPS', { stderr: listResult.stderr });
-        const treeResult = await this.getTreeForPublicRepo(owner, repo, defaultBranch);
+        console.warn(
+          '[GitHub:getMarkdownDocuments] gh tree failed, falling back to HTTPS',
+          { stderr: listResult.stderr },
+        );
+        const treeResult = await this.getTreeForPublicRepo(
+          owner,
+          repo,
+          defaultBranch,
+        );
         if (treeResult.success && treeResult.data?.tree) {
-          console.debug('[GitHub:getMarkdownDocuments] https tree success', { entries: treeResult.data.tree.length });
+          console.debug('[GitHub:getMarkdownDocuments] https tree success', {
+            entries: treeResult.data.tree.length,
+          });
           for (const item of treeResult.data.tree) {
             if (item.type === 'blob' && /\.(md|markdown)$/.test(item.path)) {
               trackedFiles.set(item.path, { path: item.path, size: item.size });
             }
           }
         } else {
-          console.warn('[GitHub:getMarkdownDocuments] https tree failed', { error: treeResult.error });
+          console.warn('[GitHub:getMarkdownDocuments] https tree failed', {
+            error: treeResult.error,
+          });
         }
       }
 
@@ -579,7 +627,10 @@ export class GitHubAdapter {
                 if (info?.date) gitLastModified = new Date(info.date);
               } catch {}
             } else {
-              console.warn('[GitHub:getMarkdownDocuments] gh commits failed for file, falling back to HTTPS', { file: file.path, stderr: commitResult.stderr });
+              console.warn(
+                '[GitHub:getMarkdownDocuments] gh commits failed for file, falling back to HTTPS',
+                { file: file.path, stderr: commitResult.stderr },
+              );
             }
 
             if (!gitLastModified) {
@@ -596,7 +647,11 @@ export class GitHubAdapter {
                   let data = '';
                   res.on('data', (chunk: any) => (data += chunk));
                   res.on('end', () => {
-                    if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+                    if (
+                      res.statusCode &&
+                      res.statusCode >= 200 &&
+                      res.statusCode < 300
+                    ) {
                       try {
                         const arr = JSON.parse(data);
                         resolve(Array.isArray(arr) ? arr[0] : null);
@@ -620,14 +675,26 @@ export class GitHubAdapter {
             const mostRecentDate = gitLastModified || new Date();
             return { ...file, lastModified: mostRecentDate, gitLastModified };
           } catch (error) {
-            console.error('[GitHub:getMarkdownDocuments] commit info error', { file: file.path, error });
-            return { ...file, lastModified: file.lastModified || new Date(), gitLastModified: undefined };
+            console.error('[GitHub:getMarkdownDocuments] commit info error', {
+              file: file.path,
+              error,
+            });
+            return {
+              ...file,
+              lastModified: file.lastModified || new Date(),
+              gitLastModified: undefined,
+            };
           }
         }),
       );
 
-      const sorted = documentsWithDates.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
-      console.debug('[GitHub:getMarkdownDocuments] result count', sorted.length);
+      const sorted = documentsWithDates.sort(
+        (a, b) => b.lastModified.getTime() - a.lastModified.getTime(),
+      );
+      console.debug(
+        '[GitHub:getMarkdownDocuments] result count',
+        sorted.length,
+      );
 
       return sorted.map((doc) => ({
         ...doc,
@@ -658,8 +725,14 @@ export class GitHubAdapter {
   > {
     try {
       const pathMod = require('path');
-      const verifiedRemote = await this.executeCommand(['git', 'remote', 'get-url', 'origin'], { cwd });
-      if (!verifiedRemote.success || !verifiedRemote.stdout.includes(`${owner}/${repo}`)) {
+      const verifiedRemote = await this.executeCommand(
+        ['git', 'remote', 'get-url', 'origin'],
+        { cwd },
+      );
+      if (
+        !verifiedRemote.success ||
+        !verifiedRemote.stdout.includes(`${owner}/${repo}`)
+      ) {
         return this.getMarkdownDocuments(owner, repo, ref);
       }
 
@@ -671,13 +744,22 @@ export class GitHubAdapter {
       const findResult = await this.executeCommand([
         'find',
         cwd,
-        '(', '-name', '*.md', '-o', '-name', '*.markdown', ')',
-        '-type', 'f',
+        '(',
+        '-name',
+        '*.md',
+        '-o',
+        '-name',
+        '*.markdown',
+        ')',
+        '-type',
+        'f',
       ]);
 
       const localFiles: Array<any> = [];
       if (findResult.success) {
-        for (const filePath of findResult.stdout.split('\n').filter((l: string) => l.trim())) {
+        for (const filePath of findResult.stdout
+          .split('\n')
+          .filter((l: string) => l.trim())) {
           const relativePath = filePath.replace(`${cwd}/`, '');
           if (relativePath.includes('.git/')) continue;
           try {
@@ -700,8 +782,15 @@ export class GitHubAdapter {
         if (remote && remote.lastModified) {
           try {
             const remoteDate = new Date(remote.lastModified as any);
-            const lastModified = local.lastModified > remoteDate ? local.lastModified : remoteDate;
-            merged.push({ ...local, lastModified, gitLastModified: remote.gitLastModified ? new Date(remote.gitLastModified as any) : undefined });
+            const lastModified =
+              local.lastModified > remoteDate ? local.lastModified : remoteDate;
+            merged.push({
+              ...local,
+              lastModified,
+              gitLastModified: remote.gitLastModified
+                ? new Date(remote.gitLastModified as any)
+                : undefined,
+            });
           } catch {
             merged.push(local);
           }
@@ -718,18 +807,24 @@ export class GitHubAdapter {
             name: remote.name,
             size: remote.size,
             lastModified: new Date(remote.lastModified as any),
-            gitLastModified: remote.gitLastModified ? new Date(remote.gitLastModified as any) : undefined,
+            gitLastModified: remote.gitLastModified
+              ? new Date(remote.gitLastModified as any)
+              : undefined,
             isTracked: true,
           });
         }
       }
 
       // Sort and serialize
-      merged.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
+      merged.sort(
+        (a, b) => b.lastModified.getTime() - a.lastModified.getTime(),
+      );
       return merged.map((doc) => ({
         ...doc,
         lastModified: doc.lastModified.toISOString(),
-        gitLastModified: doc.gitLastModified ? doc.gitLastModified.toISOString() : undefined,
+        gitLastModified: doc.gitLastModified
+          ? doc.gitLastModified.toISOString()
+          : undefined,
       }));
     } catch (error) {
       console.error('[GitHub] Error in getMarkdownDocumentsLocalFirst:', error);
@@ -737,7 +832,10 @@ export class GitHubAdapter {
     }
   }
 
-  async getRepoDefaultBranch(owner: string, repo: string): Promise<string | null> {
+  async getRepoDefaultBranch(
+    owner: string,
+    repo: string,
+  ): Promise<string | null> {
     return new Promise((resolve) => {
       const https = require('https');
       const options = {
@@ -783,9 +881,9 @@ export class GitHubAdapter {
     try {
       // Ensure CLI is initialized
       await electronCLI.initialize();
-      
+
       const [command, ...commandArgs] = args;
-      
+
       // Execute command using electron-cli-bridge
       const result = await electronCLI.execute(command, commandArgs, {
         cwd: options.cwd || process.cwd(),
@@ -795,7 +893,7 @@ export class GitHubAdapter {
           PATH: process.env.PATH || '/usr/local/bin:/usr/bin:/bin',
         },
       });
-      
+
       return {
         success: result.success,
         stdout: result.stdout.trim(),
@@ -817,7 +915,9 @@ export class GitHubAdapter {
     repo: string,
     ref: string,
   ): Promise<{ success: boolean; data?: any; error?: string }> {
-    console.log(`[GitHub] Making public API call for ${owner}/${repo} on branch ${ref}`);
+    console.log(
+      `[GitHub] Making public API call for ${owner}/${repo} on branch ${ref}`,
+    );
     const https = require('https');
     const options = {
       hostname: 'api.github.com',
@@ -839,7 +939,10 @@ export class GitHubAdapter {
             try {
               resolve({ success: true, data: JSON.parse(data) });
             } catch (e: any) {
-              resolve({ success: false, error: `Failed to parse response: ${e.message}` });
+              resolve({
+                success: false,
+                error: `Failed to parse response: ${e.message}`,
+              });
             }
           } else {
             const errorMessage = `Request failed with status code ${res.statusCode}`;
@@ -862,89 +965,97 @@ export class GitHubAdapter {
     });
   }
 
-  
   // Create a new GitHub issue
   async createIssue(owner: string, repo: string, issue: any): Promise<any> {
     console.log(`[GitHub] Creating issue for ${owner}/${repo}`, issue);
-    
+
     try {
       // Try using gh CLI which handles authentication
       const issueData = {
         title: issue.title,
         body: issue.body || '',
         labels: issue.labels?.join(',') || '',
-        assignees: issue.assignees?.join(',') || ''
+        assignees: issue.assignees?.join(',') || '',
       };
-      
+
       // Build gh command args
       const args = [
         'gh',
         'issue',
         'create',
-        '--repo', `${owner}/${repo}`,
-        '--title', issueData.title
+        '--repo',
+        `${owner}/${repo}`,
+        '--title',
+        issueData.title,
       ];
-      
+
       if (issueData.body) {
         args.push('--body', issueData.body);
       }
-      
+
       if (issueData.labels) {
         args.push('--label', issueData.labels);
       }
-      
+
       if (issueData.assignees) {
         args.push('--assignee', issueData.assignees);
       }
-      
+
       const result = await this.executeCommand(args);
-      
+
       if (result.success && result.stdout) {
         // Extract issue URL from output
-        const urlMatch = result.stdout.match(/https:\/\/github\.com\/[^\/]+\/[^\/]+\/issues\/\d+/);
+        const urlMatch = result.stdout.match(
+          /https:\/\/github\.com\/[^\/]+\/[^\/]+\/issues\/\d+/,
+        );
         const numberMatch = result.stdout.match(/\/issues\/(\d+)/);
-        
+
         if (urlMatch && numberMatch) {
           // Fetch the created issue details
           const issueNumber = numberMatch[1];
           const fetchResult = await this.executeCommand([
             'gh',
             'api',
-            `/repos/${owner}/${repo}/issues/${issueNumber}`
+            `/repos/${owner}/${repo}/issues/${issueNumber}`,
           ]);
-          
+
           if (fetchResult.success && fetchResult.stdout) {
             const createdIssue = JSON.parse(fetchResult.stdout);
             return {
               success: true,
-              issue: createdIssue
+              issue: createdIssue,
             };
           }
         }
-        
+
         return {
           success: true,
           issue: {
             html_url: urlMatch ? urlMatch[0] : null,
-            title: issue.title
-          }
+            title: issue.title,
+          },
         };
-      } else if (result.stderr?.includes('authentication') || result.stderr?.includes('401')) {
+      } else if (
+        result.stderr?.includes('authentication') ||
+        result.stderr?.includes('401')
+      ) {
         return {
           success: false,
-          error: 'GitHub CLI authentication required. Please run "gh auth login" in your terminal.'
+          error:
+            'GitHub CLI authentication required. Please run "gh auth login" in your terminal.',
         };
       } else {
         return {
           success: false,
-          error: result.stderr || 'Failed to create issue'
+          error: result.stderr || 'Failed to create issue',
         };
       }
     } catch (error) {
       console.error('[GitHub] Error creating issue:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to create issue'
+        error:
+          error instanceof Error ? error.message : 'Failed to create issue',
       };
     }
   }
@@ -952,25 +1063,29 @@ export class GitHubAdapter {
   // Fetch GitHub issues
   async getIssues(owner: string, repo: string): Promise<any[]> {
     console.log(`[GitHub] Fetching issues for ${owner}/${repo}`);
-    
+
     // First, try using gh CLI which handles authentication for private repos
     try {
       const ghResult = await this.executeCommand([
         'gh',
         'api',
         `/repos/${owner}/${repo}/issues`,
-        '--method', 'GET',
-        '--field', 'state=all',
-        '--field', 'per_page=100',
-        '--jq', '.[] | select(.pull_request == null)'
+        '--method',
+        'GET',
+        '--field',
+        'state=all',
+        '--field',
+        'per_page=100',
+        '--jq',
+        '.[] | select(.pull_request == null)',
       ]);
 
       if (ghResult.success && ghResult.stdout.trim()) {
         // Parse the JSON Lines output (one JSON object per line)
         const issues = ghResult.stdout
           .split('\n')
-          .filter(line => line.trim())
-          .map(line => {
+          .filter((line) => line.trim())
+          .map((line) => {
             try {
               return JSON.parse(line);
             } catch {
@@ -979,55 +1094,73 @@ export class GitHubAdapter {
             }
           })
           .filter(Boolean);
-        
-        console.log(`[GitHub] Successfully fetched ${issues.length} issues via gh CLI`);
+
+        console.log(
+          `[GitHub] Successfully fetched ${issues.length} issues via gh CLI`,
+        );
         return issues;
-      } else if (ghResult.stderr?.includes('authentication') || ghResult.stderr?.includes('401')) {
+      } else if (
+        ghResult.stderr?.includes('authentication') ||
+        ghResult.stderr?.includes('401')
+      ) {
         // gh CLI is not authenticated
-        console.log('[GitHub] gh CLI not authenticated, user needs to run: gh auth login');
-        
+        console.log(
+          '[GitHub] gh CLI not authenticated, user needs to run: gh auth login',
+        );
+
         // Return a special error object that the UI can detect
-        return [{
-          error: 'authentication_required',
-          message: 'GitHub CLI authentication required. Please run "gh auth login" in your terminal to authenticate.',
-          requiresAuth: true
-        }];
+        return [
+          {
+            error: 'authentication_required',
+            message:
+              'GitHub CLI authentication required. Please run "gh auth login" in your terminal to authenticate.',
+            requiresAuth: true,
+          },
+        ];
       } else {
-        console.warn('[GitHub] gh CLI failed, falling back to HTTPS API', { stderr: ghResult.stderr });
+        console.warn('[GitHub] gh CLI failed, falling back to HTTPS API', {
+          stderr: ghResult.stderr,
+        });
       }
     } catch (error) {
       console.warn('[GitHub] gh CLI error, falling back to HTTPS API:', error);
     }
 
     // Fallback to HTTPS API for public repos
-    console.log('[GitHub] Attempting to fetch issues via HTTPS API (public repos only)');
+    console.log(
+      '[GitHub] Attempting to fetch issues via HTTPS API (public repos only)',
+    );
     const https = require('https');
-    
+
     return new Promise((resolve) => {
       const options = {
         hostname: 'api.github.com',
         path: `/repos/${owner}/${repo}/issues?state=all&per_page=100`,
         method: 'GET',
         headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'Principal-AI'
-        }
+          Accept: 'application/vnd.github.v3+json',
+          'User-Agent': 'Principal-AI',
+        },
       };
 
       const req = https.request(options, (res: any) => {
         let data = '';
-        
+
         res.on('data', (chunk: any) => {
           data += chunk;
         });
-        
+
         res.on('end', () => {
           if (res.statusCode === 200) {
             try {
               const issues = JSON.parse(data);
               // Filter out pull requests (they have pull_request property)
-              const issuesOnly = issues.filter((issue: any) => !issue.pull_request);
-              console.log(`[GitHub] Found ${issuesOnly.length} issues via HTTPS`);
+              const issuesOnly = issues.filter(
+                (issue: any) => !issue.pull_request,
+              );
+              console.log(
+                `[GitHub] Found ${issuesOnly.length} issues via HTTPS`,
+              );
               resolve(issuesOnly);
             } catch (error) {
               console.error('[GitHub] Failed to parse issues response:', error);
@@ -1036,19 +1169,25 @@ export class GitHubAdapter {
           } else if (res.statusCode === 404) {
             // Repository not found or is private
             console.log('[GitHub] Repository is private or not found (404)');
-            resolve([{
-              error: 'private_repo',
-              message: 'This repository is private. Please authenticate with GitHub CLI by running "gh auth login" in your terminal.',
-              requiresAuth: true
-            }]);
+            resolve([
+              {
+                error: 'private_repo',
+                message:
+                  'This repository is private. Please authenticate with GitHub CLI by running "gh auth login" in your terminal.',
+                requiresAuth: true,
+              },
+            ]);
           } else if (res.statusCode === 403) {
             // Rate limited
             console.log('[GitHub] API rate limit exceeded');
-            resolve([{
-              error: 'rate_limit',
-              message: 'GitHub API rate limit exceeded. Please authenticate with GitHub CLI by running "gh auth login" to increase your rate limit.',
-              requiresAuth: true
-            }]);
+            resolve([
+              {
+                error: 'rate_limit',
+                message:
+                  'GitHub API rate limit exceeded. Please authenticate with GitHub CLI by running "gh auth login" to increase your rate limit.',
+                requiresAuth: true,
+              },
+            ]);
           } else {
             console.error(`[GitHub] Failed to fetch issues: ${res.statusCode}`);
             resolve([]);
@@ -1180,9 +1319,13 @@ export function registerGitHubIpcHandlers(
       try {
         let treeRef = ref;
         if (!treeRef) {
-          treeRef = await adapter.getRepoDefaultBranch(owner, repo) || undefined;
+          treeRef =
+            (await adapter.getRepoDefaultBranch(owner, repo)) || undefined;
           if (!treeRef) {
-            return { success: false, error: 'Could not determine default branch' };
+            return {
+              success: false,
+              error: 'Could not determine default branch',
+            };
           }
           console.log(`[GitHub] Using default branch: ${treeRef}`);
         }
@@ -1194,7 +1337,9 @@ export function registerGitHubIpcHandlers(
         }
 
         // Fallback: use git CLI (Option C: no checkout) with SSH preferred
-        console.warn(`[GitHub] Public API failed (likely private). Falling back to git CLI (no checkout) for ${owner}/${repo}@${treeRef}`);
+        console.warn(
+          `[GitHub] Public API failed (likely private). Falling back to git CLI (no checkout) for ${owner}/${repo}@${treeRef}`,
+        );
         const os = require('os');
         const path = require('path');
         const fs = require('fs');
@@ -1203,17 +1348,34 @@ export function registerGitHubIpcHandlers(
         const tmpRoot = path.join(os.tmpdir(), 'principle-md-remote-cache');
         if (!fs.existsSync(tmpRoot)) fs.mkdirSync(tmpRoot, { recursive: true });
         const targetDir = path.join(tmpRoot, `${owner}__${repo}`);
-        if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+        if (!fs.existsSync(targetDir))
+          fs.mkdirSync(targetDir, { recursive: true });
 
-        const run = (cmd: string, args: string[], cwd: string, extraEnv: Record<string,string> = {}): Promise<{ code: number, stdout: string, stderr: string }> => {
+        const run = (
+          cmd: string,
+          args: string[],
+          cwd: string,
+          extraEnv: Record<string, string> = {},
+        ): Promise<{ code: number; stdout: string; stderr: string }> => {
           return new Promise((resolve) => {
-            const env = { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_ASKPASS: 'echo', SSH_ASKPASS: 'echo', ...extraEnv };
+            const env = {
+              ...process.env,
+              GIT_TERMINAL_PROMPT: '0',
+              GIT_ASKPASS: 'echo',
+              SSH_ASKPASS: 'echo',
+              ...extraEnv,
+            };
             const cp = spawn(cmd, args, { cwd, env });
-            let stdout = ''; let stderr = '';
-            cp.stdout.on('data', (d: Buffer) => stdout += d.toString());
-            cp.stderr.on('data', (d: Buffer) => stderr += d.toString());
-            cp.on('close', (code: number) => resolve({ code: code ?? 1, stdout, stderr }));
-            cp.on('error', (err: Error) => resolve({ code: 1, stdout: '', stderr: err.message }));
+            let stdout = '';
+            let stderr = '';
+            cp.stdout.on('data', (d: Buffer) => (stdout += d.toString()));
+            cp.stderr.on('data', (d: Buffer) => (stderr += d.toString()));
+            cp.on('close', (code: number) =>
+              resolve({ code: code ?? 1, stdout, stderr }),
+            );
+            cp.on('error', (err: Error) =>
+              resolve({ code: 1, stdout: '', stderr: err.message }),
+            );
           });
         };
 
@@ -1227,18 +1389,43 @@ export function registerGitHubIpcHandlers(
           console.log(`[GitHub] Initializing git repo in ${targetDir}`);
           const initRes = await run('git', ['init'], targetDir);
           if (initRes.code !== 0) {
-            console.error(`[GitHub] git init failed in ${targetDir}:`, initRes.stderr);
-            return { success: false, error: `git init failed: ${initRes.stderr || initRes.stdout}` };
+            console.error(
+              `[GitHub] git init failed in ${targetDir}:`,
+              initRes.stderr,
+            );
+            return {
+              success: false,
+              error: `git init failed: ${initRes.stderr || initRes.stdout}`,
+            };
           }
         }
 
         // Pick remote by checking auth via ls-remote (SSH first)
         let chosenRemote = remoteSsh;
-        let canUseSsh = (await run('git', ['ls-remote', '--exit-code', '--heads', remoteSsh], targetDir)).code === 0;
+        let canUseSsh =
+          (
+            await run(
+              'git',
+              ['ls-remote', '--exit-code', '--heads', remoteSsh],
+              targetDir,
+            )
+          ).code === 0;
         if (!canUseSsh) {
-          const httpsOk = (await run('git', ['ls-remote', '--exit-code', '--heads', remoteHttps], targetDir)).code === 0;
-          if (httpsOk) chosenRemote = remoteHttps; else {
-            return { success: false, error: 'No non-interactive git access available (SSH/HTTPS failed)' };
+          const httpsOk =
+            (
+              await run(
+                'git',
+                ['ls-remote', '--exit-code', '--heads', remoteHttps],
+                targetDir,
+              )
+            ).code === 0;
+          if (httpsOk) chosenRemote = remoteHttps;
+          else {
+            return {
+              success: false,
+              error:
+                'No non-interactive git access available (SSH/HTTPS failed)',
+            };
           }
         }
 
@@ -1247,28 +1434,59 @@ export function registerGitHubIpcHandlers(
         const remoteListRes = await run('git', ['remote'], targetDir);
         if (remoteListRes.stdout.includes('origin')) {
           // Origin exists, update it
-          const setUrlRes = await run('git', ['remote', 'set-url', 'origin', chosenRemote], targetDir);
+          const setUrlRes = await run(
+            'git',
+            ['remote', 'set-url', 'origin', chosenRemote],
+            targetDir,
+          );
           if (setUrlRes.code !== 0) {
-            console.error(`[GitHub] git remote set-url failed:`, setUrlRes.stderr);
-            return { success: false, error: `git remote set-url failed: ${setUrlRes.stderr || setUrlRes.stdout}` };
+            console.error(
+              `[GitHub] git remote set-url failed:`,
+              setUrlRes.stderr,
+            );
+            return {
+              success: false,
+              error: `git remote set-url failed: ${setUrlRes.stderr || setUrlRes.stdout}`,
+            };
           }
         } else {
           // Origin doesn't exist, add it
-          const addRes = await run('git', ['remote', 'add', 'origin', chosenRemote], targetDir);
+          const addRes = await run(
+            'git',
+            ['remote', 'add', 'origin', chosenRemote],
+            targetDir,
+          );
           if (addRes.code !== 0) {
             console.error(`[GitHub] git remote add failed:`, addRes.stderr);
-            return { success: false, error: `git remote add failed: ${addRes.stderr || addRes.stdout}` };
+            return {
+              success: false,
+              error: `git remote add failed: ${addRes.stderr || addRes.stdout}`,
+            };
           }
         }
-        const fetchRes = await run('git', ['fetch', '--depth', '1', 'origin', treeRef!], targetDir);
+        const fetchRes = await run(
+          'git',
+          ['fetch', '--depth', '1', 'origin', treeRef!],
+          targetDir,
+        );
         if (fetchRes.code !== 0) {
-          return { success: false, error: `git fetch failed: ${fetchRes.stderr || fetchRes.stdout}` };
+          return {
+            success: false,
+            error: `git fetch failed: ${fetchRes.stderr || fetchRes.stdout}`,
+          };
         }
 
         // List tree without checkout; use FETCH_HEAD
-        const lsRes = await run('git', ['ls-tree', '-lr', '--full-tree', 'FETCH_HEAD'], targetDir);
+        const lsRes = await run(
+          'git',
+          ['ls-tree', '-lr', '--full-tree', 'FETCH_HEAD'],
+          targetDir,
+        );
         if (lsRes.code !== 0) {
-          return { success: false, error: `git ls-tree failed: ${lsRes.stderr || lsRes.stdout}` };
+          return {
+            success: false,
+            error: `git ls-tree failed: ${lsRes.stderr || lsRes.stdout}`,
+          };
         }
 
         // Parse ls-tree output: lines like "100644 blob <sha> <size>\tpath"
@@ -1295,17 +1513,23 @@ export function registerGitHubIpcHandlers(
         }
 
         const entries: any[] = [];
-        dirSet.forEach(d => entries.push({ path: d, type: 'tree' }));
-        fileEntries.forEach(f => entries.push({ path: f.path, type: 'blob', size: f.size }));
+        dirSet.forEach((d) => entries.push({ path: d, type: 'tree' }));
+        fileEntries.forEach((f) =>
+          entries.push({ path: f.path, type: 'blob', size: f.size }),
+        );
 
-        console.log(`[GitHub] Git CLI no-checkout built ${entries.length} entries`);
+        console.log(
+          `[GitHub] Git CLI no-checkout built ${entries.length} entries`,
+        );
         return { success: true, data: { tree: entries } };
-
       } catch (error) {
         console.error('[GitHub] Error in getTree:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'An unknown error occurred',
+          error:
+            error instanceof Error
+              ? error.message
+              : 'An unknown error occurred',
         };
       }
     },

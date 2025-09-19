@@ -1,21 +1,18 @@
 import { MultiStoreManager } from './MultiStoreManager';
-import { 
-  StaticNamespaces,
-  StorageResult
-} from './types';
-import { 
-  NamespaceData,
-  isValidNamespace
-} from './typed-namespaces';
+import { StaticNamespaces, StorageResult } from './types';
+import { NamespaceData, isValidNamespace } from './typed-namespaces';
 import {
   TypedMultiStoreManager,
   TypedStorageResult,
   NamespaceOperations,
   createNamespaceOperations,
-  NamespaceDataValidator
+  NamespaceDataValidator,
 } from './typed-storage-interface';
 import { StorageNamespaces, isStaticNamespace } from './all-namespaces';
-import { StorageNamespaceConfig, StorageStats } from '../../shared/main-process-api-interfaces/StoreAPI';
+import {
+  StorageNamespaceConfig,
+  StorageStats,
+} from '../../shared/main-process-api-interfaces/StoreAPI';
 
 /**
  * Type-safe wrapper around MultiStoreManager
@@ -25,9 +22,7 @@ import { StorageNamespaceConfig, StorageStats } from '../../shared/main-process-
 export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
   private namespaceCache: Map<string, NamespaceOperations<any>>;
 
-  constructor(
-    private multiStoreManager: MultiStoreManager
-  ) {
+  constructor(private multiStoreManager: MultiStoreManager) {
     this.namespaceCache = new Map();
   }
 
@@ -41,11 +36,14 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
       const namespaces = this.multiStoreManager.getNamespaces();
       const config = namespaces.get(namespace);
       if (!config) {
-        throw new Error(`Namespace ${namespace} is not registered in MultiStoreManager`);
+        throw new Error(
+          `Namespace ${namespace} is not registered in MultiStoreManager`,
+        );
       }
 
       // Use the proper method that handles both dedicated and shared providers
-      const provider = this.multiStoreManager.getProviderForNamespace(namespace);
+      const provider =
+        this.multiStoreManager.getProviderForNamespace(namespace);
 
       const operations = createNamespaceOperations(namespace, provider);
       this.namespaceCache.set(namespace, operations);
@@ -61,28 +59,40 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
   async get<K extends StorageNamespaces>(
     key: string,
     namespace: K,
-    defaultValue?: NamespaceData<K>
+    defaultValue?: NamespaceData<K>,
   ): Promise<TypedStorageResult<K>> {
     try {
-      const result = await this.multiStoreManager.get(key, namespace, defaultValue);
-      
+      const result = await this.multiStoreManager.get(
+        key,
+        namespace,
+        defaultValue,
+      );
+
       // Only validate if it's a static namespace
-      if (result.success && result.data !== undefined && isStaticNamespace(namespace)) {
-        if (!NamespaceDataValidator.validateNamespaceData(namespace, result.data)) {
-          console.warn(`Data validation failed for namespace ${namespace}, key ${key}`);
+      if (
+        result.success &&
+        result.data !== undefined &&
+        isStaticNamespace(namespace)
+      ) {
+        if (
+          !NamespaceDataValidator.validateNamespaceData(namespace, result.data)
+        ) {
+          console.warn(
+            `Data validation failed for namespace ${namespace}, key ${key}`,
+          );
         }
       }
 
       return {
         ...result,
         namespace,
-        data: result.data as NamespaceData<K>
+        data: result.data as NamespaceData<K>,
       };
     } catch (error) {
       return {
         success: false,
         error: error as Error,
-        namespace
+        namespace,
       };
     }
   }
@@ -94,28 +104,35 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
   async set<K extends StorageNamespaces>(
     key: string,
     value: NamespaceData<K>,
-    namespace: K
+    namespace: K,
   ): Promise<TypedStorageResult<K>> {
     try {
       // Only validate if it's a static namespace
       if (isStaticNamespace(namespace)) {
-        if (!NamespaceDataValidator.validateNamespaceData(namespace as StaticNamespaces, value)) {
-          console.warn(`Data validation failed for namespace ${namespace}, key ${key}`);
+        if (
+          !NamespaceDataValidator.validateNamespaceData(
+            namespace as StaticNamespaces,
+            value,
+          )
+        ) {
+          console.warn(
+            `Data validation failed for namespace ${namespace}, key ${key}`,
+          );
         }
       }
 
       const result = await this.multiStoreManager.set(key, value, namespace);
-      
+
       return {
         ...result,
         namespace,
-        data: value
+        data: value,
       };
     } catch (error) {
       return {
         success: false,
         error: error as Error,
-        namespace
+        namespace,
       };
     }
   }
@@ -126,21 +143,21 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
    */
   async delete<K extends StorageNamespaces>(
     key: string,
-    namespace: K
+    namespace: K,
   ): Promise<TypedStorageResult<K>> {
     try {
       const result = await this.multiStoreManager.delete(key, namespace);
-      
+
       return {
         success: true,
         data: undefined,
-        namespace
+        namespace,
       };
     } catch (error) {
       return {
         success: false,
         error: error as Error,
-        namespace
+        namespace,
       };
     }
   }
@@ -151,7 +168,7 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
    */
   async has<K extends StorageNamespaces>(
     key: string,
-    namespace: K
+    namespace: K,
   ): Promise<boolean> {
     const result = await this.multiStoreManager.has(key, namespace);
     return result.success && result.data === true;
@@ -161,11 +178,9 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
    * Get all keys in a namespace
    * Supports all known namespaces
    */
-  async keys<K extends StorageNamespaces>(
-    namespace: K
-  ): Promise<string[]> {
+  async keys<K extends StorageNamespaces>(namespace: K): Promise<string[]> {
     const result = await this.multiStoreManager.keys(namespace);
-    return result.success ? (result.data || []) : [];
+    return result.success ? result.data || [] : [];
   }
 
   /**
@@ -173,12 +188,14 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
    * Supports all known namespaces
    */
   async clearNamespace<K extends StorageNamespaces>(
-    namespace: K
+    namespace: K,
   ): Promise<void> {
     const namespaces = this.multiStoreManager.getNamespaces();
     const config = namespaces.get(namespace);
     if (!config) {
-      throw new Error(`Namespace ${namespace} is not registered in MultiStoreManager`);
+      throw new Error(
+        `Namespace ${namespace} is not registered in MultiStoreManager`,
+      );
     }
 
     await this.multiStoreManager.clear(namespace);
@@ -187,9 +204,7 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
   /**
    * Alias for clearNamespace to match MultiStoreManager API
    */
-  async clear<K extends StorageNamespaces>(
-    namespace: K
-  ): Promise<void> {
+  async clear<K extends StorageNamespaces>(namespace: K): Promise<void> {
     return this.clearNamespace(namespace);
   }
 
@@ -198,12 +213,15 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
    * Supports all known namespaces
    */
   async getNamespaceStats<K extends StorageNamespaces>(
-    namespace: K
+    namespace: K,
   ): Promise<StorageStats> {
     // Use the multiStoreManager's getStats method which properly handles namespace providers
     const result = await this.multiStoreManager.getStats(namespace);
     if (!result.success) {
-      throw result.error || new Error(`Failed to get stats for namespace ${namespace}`);
+      throw (
+        result.error ||
+        new Error(`Failed to get stats for namespace ${namespace}`)
+      );
     }
     return result.data!;
   }
@@ -214,13 +232,13 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
   async migrate<From extends StorageNamespaces, To extends StorageNamespaces>(
     fromNamespace: From,
     toNamespace: To,
-    transformer?: (data: NamespaceData<From>) => NamespaceData<To>
+    transformer?: (data: NamespaceData<From>) => NamespaceData<To>,
   ): Promise<void> {
     const fromOps = this.namespace(fromNamespace);
     const toOps = this.namespace(toNamespace);
 
     const allData = await fromOps.getAll();
-    
+
     for (const [key, value] of Object.entries(allData)) {
       const transformedValue = transformer ? transformer(value) : value;
       await toOps.set(key, transformedValue as NamespaceData<To>);
@@ -232,50 +250,53 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
    */
   async batchGet<K extends StorageNamespaces>(
     namespace: K,
-    keys: string[]
+    keys: string[],
   ): Promise<Map<string, NamespaceData<K>>> {
     // Use the new optimized getMultiple method
     const result = await this.multiStoreManager.getMultiple(keys, namespace);
     if (!result.success) {
-      throw result.error || new Error(`Failed to batch get from namespace ${namespace}`);
+      throw (
+        result.error ||
+        new Error(`Failed to batch get from namespace ${namespace}`)
+      );
     }
     return result.data as Map<string, NamespaceData<K>>;
   }
-  
+
   /**
    * Get multiple values with the new optimized method
    */
   async getMultiple<K extends StorageNamespaces>(
     keys: string[],
-    namespace: K
+    namespace: K,
   ): Promise<StorageResult<Map<string, NamespaceData<K>>>> {
     const result = await this.multiStoreManager.getMultiple(keys, namespace);
     return {
       ...result,
-      data: result.data as Map<string, NamespaceData<K>>
+      data: result.data as Map<string, NamespaceData<K>>,
     };
   }
 
   async batchSet<K extends StorageNamespaces>(
     namespace: K,
-    items: Map<string, NamespaceData<K>>
+    items: Map<string, NamespaceData<K>>,
   ): Promise<void> {
     const operations = this.namespace(namespace);
 
     // Parallelize the set operations
     const promises = Array.from(items.entries()).map(([key, value]) =>
-      operations.set(key, value)
+      operations.set(key, value),
     );
 
     await Promise.all(promises);
   }
-  
+
   /**
    * Delete multiple keys with the new optimized method
    */
   async deleteMultiple<K extends StorageNamespaces>(
     keys: string[],
-    namespace: K
+    namespace: K,
   ): Promise<StorageResult<{ deleted: string[]; failed: string[] }>> {
     return await this.multiStoreManager.deleteMultiple(keys, namespace);
   }
@@ -293,30 +314,31 @@ export class TypedMultiStoreWrapper implements TypedMultiStoreManager {
   getNamespaces(): Map<StorageNamespaces, StorageNamespaceConfig> {
     return this.multiStoreManager.getNamespaces();
   }
-
 }
 
 /**
  * Factory function to create a typed multi-store wrapper
  */
-export function createTypedMultiStore(multiStoreManager: MultiStoreManager): TypedMultiStoreWrapper {
+export function createTypedMultiStore(
+  multiStoreManager: MultiStoreManager,
+): TypedMultiStoreWrapper {
   return new TypedMultiStoreWrapper(multiStoreManager);
 }
 
 /**
  * Usage example showing type safety
- * 
+ *
  * @example
  * ```typescript
  * const typedStore = createTypedMultiStore(multiStoreManager);
- * 
+ *
  * // Type-safe operations
  * const userPrefs = await typedStore.get('settings', StorageNamespaces.USER_PREFERENCES);
  * // userPrefs.data is typed as UserPreferences
- * 
+ *
  * await typedStore.set('repos', repositories, StorageNamespaces.REPOSITORIES);
  * // repositories must be of type Repository[]
- * 
+ *
  * // Namespace-specific operations
  * const repoOps = typedStore.namespace(StorageNamespaces.REPOSITORIES);
  * const allRepos = await repoOps.getAll();

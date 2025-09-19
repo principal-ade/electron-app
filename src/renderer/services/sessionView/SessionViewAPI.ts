@@ -1,8 +1,14 @@
 import { SessionViewService } from '../../main-process-api/SessionViewService';
 
 // Re-export types from shared interfaces for backward compatibility
-export type { SessionStatistics, SessionViewResult } from '../../../shared/main-process-api-interfaces/SessionViewAPI';
-export type { SessionView, SessionSegment } from '../../../shared/sessionViewTypes';
+export type {
+  SessionStatistics,
+  SessionViewResult,
+} from '../../../shared/main-process-api-interfaces/SessionViewAPI';
+export type {
+  SessionView,
+  SessionSegment,
+} from '../../../shared/sessionViewTypes';
 
 /**
  * Session View API for renderer process
@@ -16,7 +22,7 @@ export class SessionViewAPI {
   static async getSessionView(sessionId: string) {
     return SessionViewService.getSessionView(sessionId);
   }
-  
+
   /**
    * Get details for a specific segment
    * @deprecated Use SessionViewService.getSegment instead
@@ -24,7 +30,7 @@ export class SessionViewAPI {
   static async getSegment(sessionId: string, segmentId: string) {
     return SessionViewService.getSegment(sessionId, segmentId);
   }
-  
+
   /**
    * Get session statistics
    * @deprecated Use SessionViewService.getStatistics instead

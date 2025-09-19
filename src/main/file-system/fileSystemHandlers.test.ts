@@ -12,7 +12,7 @@ jest.mock('fs');
 
 describe('FileSystemHandlerService', () => {
   let service: FileSystemHandlerService;
-  
+
   beforeEach(() => {
     service = new FileSystemHandlerService();
   });
@@ -31,18 +31,20 @@ describe('FileSystemHandlerService', () => {
           '/test/package.json',
           '/test/node_modules/package/file.js', // This should be filtered out
           '/test/dist/build.js', // This should be filtered out
-          '/test/.git/config' // This should be filtered out
-        ])
+          '/test/.git/config', // This should be filtered out
+        ]),
       };
 
       const mockIgnore = {
         add: jest.fn(),
         ignores: jest.fn((path: string) => {
           // Simulate gitignore behavior
-          return path.includes('node_modules') || 
-                 path.includes('dist/') || 
-                 path.includes('.git');
-        })
+          return (
+            path.includes('node_modules') ||
+            path.includes('dist/') ||
+            path.includes('.git')
+          );
+        }),
       };
 
       // Mock imports
@@ -54,8 +56,9 @@ describe('FileSystemHandlerService', () => {
       // Mock fs.promises.stat
       const mockStat = jest.fn().mockImplementation((filePath: string) => ({
         size: 1024,
-        isDirectory: () => filePath.includes('node_modules') || filePath.includes('src'),
-        mtime: new Date('2023-01-01')
+        isDirectory: () =>
+          filePath.includes('node_modules') || filePath.includes('src'),
+        mtime: new Date('2023-01-01'),
       }));
       (fs.promises as any).stat = mockStat;
 
@@ -68,7 +71,7 @@ describe('FileSystemHandlerService', () => {
 
       // The filter function should have been used
       const filterFn = mockFdir.filter.mock.calls[0][0];
-      
+
       // Test the filter function directly
       expect(filterFn('/test/src/file.js')).toBe(true); // Should include
       expect(filterFn('/test/node_modules/package/file.js')).toBe(false); // Should exclude
@@ -83,15 +86,14 @@ describe('FileSystemHandlerService', () => {
         withFullPaths: jest.fn().mockReturnThis(),
         filter: jest.fn().mockReturnThis(),
         crawl: jest.fn().mockReturnThis(),
-        withPromise: jest.fn().mockResolvedValue([
-          '/test/src/file.js',
-          '/test/package.json'
-        ])
+        withPromise: jest
+          .fn()
+          .mockResolvedValue(['/test/src/file.js', '/test/package.json']),
       };
 
       const mockIgnore = {
         add: jest.fn(),
-        ignores: jest.fn().mockReturnValue(false) // Don't ignore anything for this test
+        ignores: jest.fn().mockReturnValue(false), // Don't ignore anything for this test
       };
 
       const { fdir } = require('fdir');
@@ -103,7 +105,7 @@ describe('FileSystemHandlerService', () => {
       const mockStat = jest.fn().mockImplementation((filePath: string) => ({
         size: 1024,
         isDirectory: () => false,
-        mtime: new Date('2023-01-01')
+        mtime: new Date('2023-01-01'),
       }));
       (fs.promises as any).stat = mockStat;
 
@@ -123,15 +125,14 @@ describe('FileSystemHandlerService', () => {
         withFullPaths: jest.fn().mockReturnThis(),
         filter: jest.fn().mockReturnThis(),
         crawl: jest.fn().mockReturnThis(),
-        withPromise: jest.fn().mockResolvedValue([
-          '/test/src/file.js',
-          '/test/docs/readme.md'
-        ])
+        withPromise: jest
+          .fn()
+          .mockResolvedValue(['/test/src/file.js', '/test/docs/readme.md']),
       };
 
       const mockIgnore = {
         add: jest.fn(),
-        ignores: jest.fn().mockReturnValue(false)
+        ignores: jest.fn().mockReturnValue(false),
       };
 
       const { fdir } = require('fdir');
@@ -142,12 +143,16 @@ describe('FileSystemHandlerService', () => {
       const mockStat = jest.fn().mockImplementation(() => ({
         size: 1024,
         isDirectory: () => false,
-        mtime: new Date('2023-01-01')
+        mtime: new Date('2023-01-01'),
       }));
       (fs.promises as any).stat = mockStat;
 
       const patterns = ['docs/'];
-      const result = await service.buildFilteredFileTree('/test', patterns, 'src');
+      const result = await service.buildFilteredFileTree(
+        '/test',
+        patterns,
+        'src',
+      );
 
       // Get the filter function that was passed to fdir
       const filterFn = mockFdir.filter.mock.calls[0][0];
@@ -168,8 +173,8 @@ describe('FileSystemHandlerService', () => {
         withPromise: jest.fn().mockResolvedValue([
           '/test/good-file.js',
           '.alexandria/', // This will cause a stat error (relative path)
-          '/test/another-good-file.js'
-        ])
+          '/test/another-good-file.js',
+        ]),
       };
 
       const { fdir } = require('fdir');
@@ -185,7 +190,7 @@ describe('FileSystemHandlerService', () => {
         return {
           size: 1024,
           isDirectory: () => false,
-          mtime: new Date('2023-01-01')
+          mtime: new Date('2023-01-01'),
         };
       });
       (fs.promises as any).stat = mockStat;
@@ -206,7 +211,9 @@ describe('FileSystemHandlerService', () => {
         withFullPaths: jest.fn().mockReturnThis(),
         filter: jest.fn().mockReturnThis(),
         crawl: jest.fn().mockReturnThis(),
-        withPromise: jest.fn().mockRejectedValue(new Error('Permission denied'))
+        withPromise: jest
+          .fn()
+          .mockRejectedValue(new Error('Permission denied')),
       };
 
       const { fdir } = require('fdir');
@@ -226,10 +233,9 @@ describe('FileSystemHandlerService', () => {
         withFullPaths: jest.fn().mockReturnThis(),
         filter: jest.fn().mockReturnThis(),
         crawl: jest.fn().mockReturnThis(),
-        withPromise: jest.fn().mockResolvedValue([
-          '/test/src',
-          '/test/file.js'
-        ])
+        withPromise: jest
+          .fn()
+          .mockResolvedValue(['/test/src', '/test/file.js']),
       };
 
       const { fdir } = require('fdir');
@@ -239,7 +245,7 @@ describe('FileSystemHandlerService', () => {
       const mockStat = jest.fn().mockImplementation((filePath: string) => ({
         size: filePath.includes('src') ? 0 : 1024,
         isDirectory: () => filePath.includes('src'),
-        mtime: new Date('2023-01-01')
+        mtime: new Date('2023-01-01'),
       }));
       (fs.promises as any).stat = mockStat;
 

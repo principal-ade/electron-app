@@ -1,4 +1,8 @@
-import { TerminalData, TerminalExit, TerminalInfo } from "../../shared/main-process-api-interfaces/TerminalService";
+import {
+  TerminalData,
+  TerminalExit,
+  TerminalInfo,
+} from '../../shared/main-process-api-interfaces/TerminalService';
 
 export class TerminalService {
   static async list(): Promise<TerminalInfo[]> {
@@ -8,12 +12,15 @@ export class TerminalService {
   static async create(dir: string): Promise<string> {
     return window.mainProcess.terminal.create(dir);
   }
-  
+
   static async getOrCreate(dir: string): Promise<string> {
     return window.mainProcess.terminal.getOrCreate(dir);
   }
-  
-  static async createWithCommand(dir: string, command: string): Promise<string> {
+
+  static async createWithCommand(
+    dir: string,
+    command: string,
+  ): Promise<string> {
     return window.mainProcess.terminal.createWithCommand(dir, command);
   }
 
@@ -25,18 +32,22 @@ export class TerminalService {
     return window.mainProcess.terminal.write(id, data);
   }
 
-  static async onData(callback: (data: TerminalData) => void): Promise<() => void> {
+  static async onData(
+    callback: (data: TerminalData) => void,
+  ): Promise<() => void> {
     return window.mainProcess.terminal.onData(callback);
   }
 
-  static async onExit(callback: (exit: TerminalExit) => void): Promise<() => void> {
+  static async onExit(
+    callback: (exit: TerminalExit) => void,
+  ): Promise<() => void> {
     return window.mainProcess.terminal.onExit(callback);
   }
 
   static async popOut(id: string): Promise<{ windowId: number }> {
     return window.mainProcess.terminal.popOut(id);
   }
-  
+
   static async focusWindow(windowId: number): Promise<void> {
     return window.mainProcess.terminal.focusWindow(windowId);
   }
@@ -49,7 +60,9 @@ export class TerminalService {
     return window.mainProcess.terminal.refresh(id);
   }
 
-  static onWindowReady(callback: (data: { terminalId?: string; agentSessionId?: string }) => void): () => void {
+  static onWindowReady(
+    callback: (data: { terminalId?: string; agentSessionId?: string }) => void,
+  ): () => void {
     return window.mainProcess.terminal.onWindowReady?.(callback) || (() => {});
   }
 }

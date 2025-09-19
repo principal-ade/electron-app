@@ -1,1 +1,0 @@
-{"version":3,"file":"SecureTokenIPC.d.ts","sourceRoot":"","sources":["../../../../../src/main/services/SecureTokenIPC.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,kBAAkB,EAAc,MAAM,sBAAsB,CAAC;AAItE;;;GAGG;AACH,qBAAa,cAAc;IACzB,OAAO,CAAC,OAAO,CAAmC;;IAQ3C,UAAU,IAAI,kBAAkB;IAOvC,OAAO,CAAC,aAAa;CA+FtB;AAcD,wBAAgB,2BAA2B,IAAI,IAAI,CA+FlD;AAGD,eAAO,MAAM,cAAc,gBAIzB,CAAC"}

@@ -1,1 +1,0 @@
-{"version":3,"file":"CollaborationPanel.d.ts","sourceRoot":"","sources":["../../../../../src/renderer/components/CollaborationPanel.tsx"],"names":[],"mappings":"AAAA,OAAO,KAAsC,MAAM,OAAO,CAAC;AAM3D,UAAU,uBAAuB;IAC/B,OAAO,CAAC,EAAE,MAAM,CAAC;IACjB,OAAO,CAAC,EAAE,MAAM,IAAI,CAAC;CACtB;AAUD,eAAO,MAAM,kBAAkB,EAAE,KAAK,CAAC,EAAE,CAAC,uBAAuB,CAsYhE,CAAC"}

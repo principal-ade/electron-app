@@ -56,5 +56,7 @@ export interface FeedbackAPI {
    * @param feedbackData - The feedback data to submit
    * @returns Promise resolving to submission result
    */
-  submitFeedback(feedbackData: FeedbackSubmissionData): Promise<FeedbackSubmissionResult>;
+  submitFeedback(
+    feedbackData: FeedbackSubmissionData,
+  ): Promise<FeedbackSubmissionResult>;
 }

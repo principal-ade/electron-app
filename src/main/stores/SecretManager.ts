@@ -1,6 +1,6 @@
 /**
  * SecretManager - Secure management of repository secrets and environment variables
- * 
+ *
  * Features:
  * - Encrypts secrets at rest using Electron's safeStorage
  * - Just-in-time creation/destruction of .env files
@@ -112,7 +112,9 @@ export class SecretManager {
     const entries = Array.from(this.locks.entries());
     for (const [repoId, lock] of entries) {
       if (now - lock.timestamp > staleTimeout) {
-        this.logAudit('warn', `Removing stale lock for ${repoId}`, { lockId: lock.lockId });
+        this.logAudit('warn', `Removing stale lock for ${repoId}`, {
+          lockId: lock.lockId,
+        });
         this.locks.delete(repoId);
       }
     }
@@ -126,11 +128,13 @@ export class SecretManager {
         await fsPromises.access(envPath);
         const stats = await fs.promises.stat(envPath);
         const ageMs = Date.now() - stats.mtimeMs;
-        
+
         // Remove env files older than 2 minutes
         if (ageMs > 2 * 60 * 1000) {
           await this.removeEnvFile(envPath);
-          this.logAudit('info', 'Cleaned up orphaned env file', { path: envPath });
+          this.logAudit('info', 'Cleaned up orphaned env file', {
+            path: envPath,
+          });
         }
       } catch {
         // File doesn't exist, remove from tracking
@@ -153,13 +157,13 @@ export class SecretManager {
   public async storeSecrets(
     repoId: string,
     repoPath: string,
-    secrets: RepositorySecrets
+    secrets: RepositorySecrets,
   ): Promise<SecretOperationResult> {
     try {
       if (!safeStorage.isEncryptionAvailable()) {
-        return { 
-          success: false, 
-          error: 'Encryption not available on this system' 
+        return {
+          success: false,
+          error: 'Encryption not available on this system',
         };
       }
 
@@ -188,16 +192,20 @@ export class SecretManager {
       // Store to disk
       const storageKey = this.getStorageKey(repoId);
       const storagePath = path.join(this.secretsDir, `${storageKey}.enc`);
-      
+
       const stored: StoredSecret = {
         encrypted,
         metadata,
       };
 
-      await fsPromises.writeFile(storagePath, JSON.stringify({
-        ...stored,
-        encrypted: encrypted.toString('base64'),
-      }), { mode: 0o600 });
+      await fsPromises.writeFile(
+        storagePath,
+        JSON.stringify({
+          ...stored,
+          encrypted: encrypted.toString('base64'),
+        }),
+        { mode: 0o600 },
+      );
 
       // Update memory cache
       this.memoryCache.set(repoId, secrets);
@@ -207,14 +215,21 @@ export class SecretManager {
       await storageManager.set(
         storageKey,
         metadata,
-        StaticNamespaces.SECRETS_METADATA
+        StaticNamespaces.SECRETS_METADATA,
       );
 
-      this.logAudit('info', `Stored ${metadata.secretCount} secrets for repository`, { repoId });
+      this.logAudit(
+        'info',
+        `Stored ${metadata.secretCount} secrets for repository`,
+        { repoId },
+      );
 
       return { success: true, metadata };
     } catch (error: any) {
-      this.logAudit('error', 'Failed to store secrets', { repoId, error: error.message });
+      this.logAudit('error', 'Failed to store secrets', {
+        repoId,
+        error: error.message,
+      });
       return { success: false, error: error.message };
     }
   }
@@ -236,7 +251,7 @@ export class SecretManager {
       try {
         const fileContent = await fsPromises.readFile(storagePath, 'utf-8');
         const stored = JSON.parse(fileContent);
-        
+
         const encrypted = Buffer.from(stored.encrypted, 'base64');
         const decrypted = safeStorage.decryptString(encrypted);
         const secrets = JSON.parse(decrypted);
@@ -249,7 +264,10 @@ export class SecretManager {
         return null;
       }
     } catch (error: any) {
-      this.logAudit('error', 'Failed to retrieve secrets', { repoId, error: error.message });
+      this.logAudit('error', 'Failed to retrieve secrets', {
+        repoId,
+        error: error.message,
+      });
       return null;
     }
   }
@@ -276,14 +294,17 @@ export class SecretManager {
       const storageManager = await getTypedStorageManagerInstance();
       await storageManager.delete(
         storageKey,
-        StaticNamespaces.SECRETS_METADATA
+        StaticNamespaces.SECRETS_METADATA,
       );
 
       this.logAudit('info', 'Deleted secrets for repository', { repoId });
 
       return { success: true };
     } catch (error: any) {
-      this.logAudit('error', 'Failed to delete secrets', { repoId, error: error.message });
+      this.logAudit('error', 'Failed to delete secrets', {
+        repoId,
+        error: error.message,
+      });
       return { success: false, error: error.message };
     }
   }
@@ -295,18 +316,18 @@ export class SecretManager {
     repoId: string,
     workDir: string,
     callback: () => Promise<T>,
-    options: EnvFileOptions = {}
+    options: EnvFileOptions = {},
   ): Promise<T> {
     const envPath = path.join(workDir, '.env');
     const lockId = crypto.randomBytes(16).toString('hex');
-    
+
     // Acquire lock
     await this.acquireLock(repoId, lockId);
 
     try {
       // Get secrets
       const secrets = await this.getSecrets(repoId);
-      
+
       if (secrets && Object.keys(secrets).length > 0) {
         // Create .env file
         await this.createEnvFile(envPath, secrets, options);
@@ -331,7 +352,7 @@ export class SecretManager {
   private async createEnvFile(
     envPath: string,
     secrets: RepositorySecrets,
-    options: EnvFileOptions = {}
+    options: EnvFileOptions = {},
   ): Promise<void> {
     const mode = options.mode || 0o600;
     const encoding = options.encoding || 'utf-8';
@@ -360,7 +381,10 @@ export class SecretManager {
       this.logAudit('info', 'Removed temporary .env file', { path: envPath });
     } catch (error: any) {
       if (error.code !== 'ENOENT') {
-        this.logAudit('warn', 'Failed to remove .env file', { path: envPath, error: error.message });
+        this.logAudit('warn', 'Failed to remove .env file', {
+          path: envPath,
+          error: error.message,
+        });
       }
     }
   }
@@ -377,7 +401,7 @@ export class SecretManager {
       if (Date.now() - startTime > maxWaitTime) {
         throw new Error(`Timeout acquiring lock for repository ${repoId}`);
       }
-      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      await new Promise((resolve) => setTimeout(resolve, checkInterval));
     }
 
     this.locks.set(repoId, {
@@ -438,17 +462,21 @@ export class SecretManager {
   /**
    * Log audit events without exposing sensitive data
    */
-  private logAudit(level: 'info' | 'warn' | 'error', message: string, meta: any = {}): void {
+  private logAudit(
+    level: 'info' | 'warn' | 'error',
+    message: string,
+    meta: any = {},
+  ): void {
     if (!this.auditLog) return;
 
     // Never log actual secret values
     const sanitizedMeta = { ...meta };
     delete sanitizedMeta.secrets;
     delete sanitizedMeta.value;
-    
+
     const timestamp = new Date().toISOString();
     const logMessage = `[SecretManager] [${timestamp}] [${level.toUpperCase()}] ${message}`;
-    
+
     console.log(logMessage, sanitizedMeta);
   }
 
@@ -459,18 +487,23 @@ export class SecretManager {
     try {
       const storageManager = await getTypedStorageManagerInstance();
       const keys = await storageManager.keys(StaticNamespaces.SECRETS_METADATA);
-      
+
       const metadata: SecretMetadata[] = [];
       for (const key of keys) {
-        const result = await storageManager.get(key, StaticNamespaces.SECRETS_METADATA);
+        const result = await storageManager.get(
+          key,
+          StaticNamespaces.SECRETS_METADATA,
+        );
         if (result.success && result.data) {
           metadata.push(result.data as SecretMetadata);
         }
       }
-      
+
       return metadata;
     } catch (error: any) {
-      this.logAudit('error', 'Failed to get metadata', { error: error.message });
+      this.logAudit('error', 'Failed to get metadata', {
+        error: error.message,
+      });
       return [];
     }
   }

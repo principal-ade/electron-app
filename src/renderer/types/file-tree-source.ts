@@ -1,8 +1,8 @@
-import { FileTree } from "@principal-ai/repository-abstraction";
+import { FileTree } from '@principal-ai/repository-abstraction';
 
 /**
  * File Tree Source Model
- * 
+ *
  * Simplified source model for managing multiple file trees from different sources.
  * Focuses on the primary use cases: local clones and remote branches (mainly GitHub).
  */
@@ -22,40 +22,40 @@ export type ProviderType = 'github' | 'gitlab' | 'generic' | 'local';
  */
 export interface FileTreeSource {
   // Identity
-  id: string;                     // Simple unique ID (e.g., "local-/path/to/repo" or "github-owner-repo-main")
-  type: SourceType;               // 'local' or 'remote'
-  
+  id: string; // Simple unique ID (e.g., "local-/path/to/repo" or "github-owner-repo-main")
+  type: SourceType; // 'local' or 'remote'
+
   // Repository identity (aligns with Repository type)
-  owner: string;                  // Repository owner/organization
-  name: string;                   // Repository name  
-  remoteUrl: string;              // The remote URL (for both local clones and remote sources)
-  
+  owner: string; // Repository owner/organization
+  name: string; // Repository name
+  remoteUrl: string; // The remote URL (for both local clones and remote sources)
+
   // Source location
-  location: string;               // Path for local, branch/tag/commit for remote
-  locationType: LocationType;    // How to interpret the location
-  
+  location: string; // Path for local, branch/tag/commit for remote
+  locationType: LocationType; // How to interpret the location
+
   // Display & UI
-  label: string;                  // Human-friendly display name
-  color?: string;                 // Optional color for UI differentiation
-  icon?: string;                  // Optional icon identifier
-  
+  label: string; // Human-friendly display name
+  color?: string; // Optional color for UI differentiation
+  icon?: string; // Optional icon identifier
+
   // State & metadata
-  isTemporary?: boolean;          // True for unsaved/experimental sources
-  isDefault?: boolean;            // True for the default source in a set
-  lastAccessed?: number;          // Timestamp of last access
-  createdAt?: number;             // When this source was created
-  
+  isTemporary?: boolean; // True for unsaved/experimental sources
+  isDefault?: boolean; // True for the default source in a set
+  lastAccessed?: number; // Timestamp of last access
+  createdAt?: number; // When this source was created
+
   // Provider info (optional, mainly for remotes)
-  provider?: ProviderType;        // Which provider (github, gitlab, etc.)
-  apiUrl?: string;                // API endpoint for remote sources
-  
+  provider?: ProviderType; // Which provider (github, gitlab, etc.)
+  apiUrl?: string; // API endpoint for remote sources
+
   // Additional metadata
   metadata?: {
-    currentBranch?: string;       // For local working copies
-    commitSha?: string;           // Specific commit if locked to one
-    isDirty?: boolean;            // For local sources with uncommitted changes
-    subdir?: string;              // If focusing on a subdirectory (monorepo support)
-    [key: string]: any;           // Extensible for future needs
+    currentBranch?: string; // For local working copies
+    commitSha?: string; // Specific commit if locked to one
+    isDirty?: boolean; // For local sources with uncommitted changes
+    subdir?: string; // If focusing on a subdirectory (monorepo support)
+    [key: string]: any; // Extensible for future needs
   };
 }
 
@@ -69,9 +69,9 @@ export interface FileTreeStats {
  * Extended source with loaded tree data
  */
 export interface LoadedFileTreeSource extends FileTreeSource {
-  tree: FileTree;                     // The loaded FileSystemTree
+  tree: FileTree; // The loaded FileSystemTree
   treeStats: FileTreeStats;
-  filterLayers?: any[];               // Filter layers that were applied
+  filterLayers?: any[]; // Filter layers that were applied
 }
 
 /**
@@ -86,7 +86,7 @@ export const createFileTreeSource = {
     owner: string,
     repo: string,
     remoteUrl: string,
-    currentBranch?: string
+    currentBranch?: string,
   ): FileTreeSource {
     return {
       id: `local-${path}`,
@@ -112,7 +112,7 @@ export const createFileTreeSource = {
     repo: string,
     remoteUrl: string,
     branch: string,
-    provider: ProviderType = 'github'
+    provider: ProviderType = 'github',
   ): FileTreeSource {
     return {
       id: `${provider}-${owner}-${repo}-${branch}`,
@@ -136,7 +136,7 @@ export const createFileTreeSource = {
     repo: string,
     remoteUrl: string,
     tag: string,
-    provider: ProviderType = 'github'
+    provider: ProviderType = 'github',
   ): FileTreeSource {
     return {
       id: `${provider}-${owner}-${repo}-tag-${tag}`,
@@ -160,7 +160,7 @@ export const createFileTreeSource = {
     repo: string,
     remoteUrl: string,
     commitSha: string,
-    provider: ProviderType = 'github'
+    provider: ProviderType = 'github',
   ): FileTreeSource {
     const shortSha = commitSha.substring(0, 7);
     return {
@@ -186,7 +186,7 @@ export const createFileTreeSource = {
   temporary(
     baseSource: FileTreeSource,
     location: string,
-    locationType: LocationType
+    locationType: LocationType,
   ): FileTreeSource {
     return {
       ...baseSource,
@@ -203,22 +203,31 @@ export const createFileTreeSource = {
 /**
  * Type guards
  */
-export const isLocalSource = (source: FileTreeSource): boolean => source.type === 'local';
-export const isRemoteSource = (source: FileTreeSource): boolean => source.type === 'remote';
-export const isTemporarySource = (source: FileTreeSource): boolean => source.isTemporary === true;
-export const isGitHubSource = (source: FileTreeSource): boolean => source.provider === 'github';
+export const isLocalSource = (source: FileTreeSource): boolean =>
+  source.type === 'local';
+export const isRemoteSource = (source: FileTreeSource): boolean =>
+  source.type === 'remote';
+export const isTemporarySource = (source: FileTreeSource): boolean =>
+  source.isTemporary === true;
+export const isGitHubSource = (source: FileTreeSource): boolean =>
+  source.provider === 'github';
 
 /**
  * Utility functions
  */
 export function getSourceDisplayName(source: FileTreeSource): string {
   if (source.label) return source.label;
-  
+
   const prefix = source.type === 'local' ? 'Local: ' : '';
-  const suffix = source.locationType === 'branch' ? `@${source.location}` : 
-                 source.locationType === 'tag' ? `@${source.location}` :
-                 source.locationType === 'commit' ? `@${source.location.substring(0, 7)}` : '';
-  
+  const suffix =
+    source.locationType === 'branch'
+      ? `@${source.location}`
+      : source.locationType === 'tag'
+        ? `@${source.location}`
+        : source.locationType === 'commit'
+          ? `@${source.location.substring(0, 7)}`
+          : '';
+
   return `${prefix}${source.name}${suffix}`;
 }
 
@@ -246,7 +255,10 @@ export function getSourceCacheTTL(source: FileTreeSource): number {
 /**
  * Source comparison for sorting
  */
-export function compareFileTreeSources(a: FileTreeSource, b: FileTreeSource): number {
+export function compareFileTreeSources(
+  a: FileTreeSource,
+  b: FileTreeSource,
+): number {
   // Sort order: default first, then local, then remote, then by label
   if (a.isDefault && !b.isDefault) return -1;
   if (!a.isDefault && b.isDefault) return 1;

@@ -1,6 +1,11 @@
 import { ipcRenderer } from 'electron';
-import { type GitHubAPI, GitHubAPIEvent, ConfigFetchRequest, GitHubConfigRequest, CreateIssueRequest } from '../../shared/main-process-api-interfaces/GitHubAPI';
-
+import {
+  type GitHubAPI,
+  GitHubAPIEvent,
+  ConfigFetchRequest,
+  GitHubConfigRequest,
+  CreateIssueRequest,
+} from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export const githubAPI: GitHubAPI = {
   detectRepository: async (path: string) => {
@@ -27,7 +32,12 @@ export const githubAPI: GitHubAPI = {
     );
   },
 
-  getFileContent: async (owner: string, repo: string, path: string, ref?: string) => {
+  getFileContent: async (
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+  ) => {
     return ipcRenderer.invoke(
       GitHubAPIEvent.GET_FILE_CONTENT,
       owner,
@@ -48,7 +58,11 @@ export const githubAPI: GitHubAPI = {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_ISSUES, owner, repo);
   },
 
-  createIssue: async (owner: string, repo: string, issue: CreateIssueRequest) => {
+  createIssue: async (
+    owner: string,
+    repo: string,
+    issue: CreateIssueRequest,
+  ) => {
     return ipcRenderer.invoke(GitHubAPIEvent.CREATE_ISSUE, owner, repo, issue);
   },
 

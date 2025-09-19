@@ -2,13 +2,13 @@ import { EventEmitter } from 'events';
 
 export interface GitSyncConfig {
   serverUrl: string;
-  githubToken: string;  // GitHub token for OAuth server
+  githubToken: string; // GitHub token for OAuth server
   repoUrl: string;
   repoPath: string;
   branch: string;
   userId: string;
   agentId: string;
-  proxyMode?: boolean;  // If true, use IPC proxy instead of direct WebSocket
+  proxyMode?: boolean; // If true, use IPC proxy instead of direct WebSocket
 }
 
 export interface RoomTokenInfo {
@@ -49,14 +49,22 @@ export interface LockInfo {
 }
 
 export interface SyncEvent {
-  type: 'file_change' | 'commit' | 'lock_acquired' | 'lock_released' | 'branch_change';
+  type:
+    | 'file_change'
+    | 'commit'
+    | 'lock_acquired'
+    | 'lock_released'
+    | 'branch_change';
   agentId: string;
   timestamp: number;
   data: any;
 }
 
 export interface CrossBranchWarning {
-  type: 'same_file_different_branch' | 'merge_conflict_potential' | 'branch_divergence';
+  type:
+    | 'same_file_different_branch'
+    | 'merge_conflict_potential'
+    | 'branch_divergence';
   severity: 'info' | 'warning' | 'critical';
   message: string;
   suggestedAction?: string;
@@ -96,7 +104,7 @@ export class GitSyncClient extends EventEmitter {
       branch: config.branch,
       activeLocks: [],
       queuedLocks: 0,
-      peers: []
+      peers: [],
     };
   }
 
@@ -129,7 +137,7 @@ export class GitSyncClient extends EventEmitter {
         } else if (wsUrl.startsWith('http://')) {
           wsUrl = wsUrl.replace('http://', 'ws://');
         }
-        
+
         // Create WebSocket - will authenticate via message after connection
         this.ws = new WebSocket(`${wsUrl}/ws`);
 
@@ -137,16 +145,16 @@ export class GitSyncClient extends EventEmitter {
           console.log('Connected to git-sync server');
           this.status.connected = true;
           this.isReconnecting = false;
-          
+
           // Authenticate immediately
           this.authenticate();
-          
+
           // Start ping interval
           this.startPingInterval();
-          
+
           // Process queued messages
           this.processMessageQueue();
-          
+
           this.emit('connected');
           resolve();
         };
@@ -172,7 +180,7 @@ export class GitSyncClient extends EventEmitter {
           this.status.authenticated = false;
           this.stopPingInterval();
           this.emit('disconnected');
-          
+
           // Auto-reconnect if not manually disconnected
           if (!this.isReconnecting) {
             this.scheduleReconnect();
@@ -193,12 +201,14 @@ export class GitSyncClient extends EventEmitter {
       console.log(`Getting room token for repository: ${repository}`);
 
       // Import GitSyncService dynamically to avoid circular imports
-      const { GitSyncService } = await import('../../main-process-api/GitSyncService');
-      
+      const { GitSyncService } = await import(
+        '../../main-process-api/GitSyncService'
+      );
+
       const result = await GitSyncService.getRoomToken({
         repositoryId: repository,
         branch: this.config.branch,
-        isOwner: true // TODO: Determine this properly
+        isOwner: true, // TODO: Determine this properly
       });
 
       if (!result.success) {
@@ -210,10 +220,12 @@ export class GitSyncClient extends EventEmitter {
         permissions: { canWrite: true, canRead: true }, // Default permissions
         repository,
         branch: this.config.branch,
-        expiresIn: 3600 // 1 hour default
+        expiresIn: 3600, // 1 hour default
       };
 
-      console.log(`Room token obtained for ${this.roomToken.repository} (${this.roomToken.permissions.canWrite ? 'write' : 'read'} access)`);
+      console.log(
+        `Room token obtained for ${this.roomToken.repository} (${this.roomToken.permissions.canWrite ? 'write' : 'read'} access)`,
+      );
     } catch (error: any) {
       console.error('Failed to get room token:', error);
       throw error;
@@ -232,14 +244,13 @@ export class GitSyncClient extends EventEmitter {
       // Use room token JWT for authentication
       this.send({
         type: 'auth',
-        token: this.roomToken.access_token,  // JWT room token from OAuth server
+        token: this.roomToken.access_token, // JWT room token from OAuth server
         repoId: this.extractRepoId(this.config.repoUrl),
         agentId: this.config.agentId,
         userId: this.config.userId,
         branch: this.config.branch,
-        watchingBranches: ['main', 'master', this.config.branch]
+        watchingBranches: ['main', 'master', this.config.branch],
       });
-      
     } catch (error) {
       this.emit('error', error);
     }
@@ -254,7 +265,7 @@ export class GitSyncClient extends EventEmitter {
       repoId: this.status.repoId,
       branch: this.config.branch,
       agentId: this.config.agentId,
-      userId: this.config.userId
+      userId: this.config.userId,
     });
   }
 
@@ -269,26 +280,29 @@ export class GitSyncClient extends EventEmitter {
   }> {
     return new Promise((resolve) => {
       const requestId = this.generateRequestId();
-      
+
       const handler = (message: any) => {
-        if (message.type === 'lock_response' && message.requestId === requestId) {
+        if (
+          message.type === 'lock_response' &&
+          message.requestId === requestId
+        ) {
           this.removeListener('lock_response', handler);
-          
+
           if (message.success && message.lock) {
             this.status.activeLocks.push(message.lock);
           }
-          
+
           resolve({
             success: message.success,
             lock: message.lock,
             error: message.error,
-            warnings: message.warnings
+            warnings: message.warnings,
           });
         }
       };
-      
+
       this.on('lock_response', handler);
-      
+
       this.send({
         type: 'acquire_lock',
         requestId,
@@ -297,15 +311,15 @@ export class GitSyncClient extends EventEmitter {
         branch: this.config.branch,
         exclusive: request.exclusive ?? true,
         duration: request.duration,
-        metadata: request.metadata
+        metadata: request.metadata,
       });
-      
+
       // Timeout after 10 seconds
       setTimeout(() => {
         this.removeListener('lock_response', handler);
         resolve({
           success: false,
-          error: 'Lock request timed out'
+          error: 'Lock request timed out',
         });
       }, 10000);
     });
@@ -317,26 +331,31 @@ export class GitSyncClient extends EventEmitter {
   async releaseLock(lockId: string): Promise<boolean> {
     return new Promise((resolve) => {
       const requestId = this.generateRequestId();
-      
+
       const handler = (message: any) => {
-        if (message.type === 'lock_released' && message.requestId === requestId) {
+        if (
+          message.type === 'lock_released' &&
+          message.requestId === requestId
+        ) {
           this.removeListener('lock_released', handler);
-          
+
           // Remove from active locks
-          this.status.activeLocks = this.status.activeLocks.filter(l => l.id !== lockId);
-          
+          this.status.activeLocks = this.status.activeLocks.filter(
+            (l) => l.id !== lockId,
+          );
+
           resolve(message.success);
         }
       };
-      
+
       this.on('lock_released', handler);
-      
+
       this.send({
         type: 'release_lock',
         requestId,
-        lockId
+        lockId,
       });
-      
+
       // Timeout after 5 seconds
       setTimeout(() => {
         this.removeListener('lock_released', handler);
@@ -354,46 +373,52 @@ export class GitSyncClient extends EventEmitter {
       event: {
         ...event,
         agentId: this.config.agentId,
-        timestamp: Date.now()
-      }
+        timestamp: Date.now(),
+      },
     });
   }
 
   /**
    * Check if a merge is safe
    */
-  async checkMergeSafety(toBranch: string, files: string[]): Promise<{
+  async checkMergeSafety(
+    toBranch: string,
+    files: string[],
+  ): Promise<{
     safe: boolean;
     blockingLocks: LockInfo[];
     warnings: CrossBranchWarning[];
   }> {
     return new Promise((resolve) => {
       const requestId = this.generateRequestId();
-      
+
       const handler = (message: any) => {
-        if (message.type === 'merge_safety_response' && message.requestId === requestId) {
+        if (
+          message.type === 'merge_safety_response' &&
+          message.requestId === requestId
+        ) {
           this.removeListener('merge_safety_response', handler);
           resolve(message);
         }
       };
-      
+
       this.on('merge_safety_response', handler);
-      
+
       this.send({
         type: 'check_merge_safety',
         requestId,
         fromBranch: this.config.branch,
         toBranch,
-        files
+        files,
       });
-      
+
       // Timeout after 5 seconds
       setTimeout(() => {
         this.removeListener('merge_safety_response', handler);
         resolve({
           safe: true,
           blockingLocks: [],
-          warnings: []
+          warnings: [],
         });
       }, 5000);
     });
@@ -409,42 +434,45 @@ export class GitSyncClient extends EventEmitter {
   }> {
     return new Promise((resolve) => {
       const requestId = this.generateRequestId();
-      
+
       const handler = (message: any) => {
-        if (message.type === 'branch_switched' && message.requestId === requestId) {
+        if (
+          message.type === 'branch_switched' &&
+          message.requestId === requestId
+        ) {
           this.removeListener('branch_switched', handler);
-          
+
           // Update our branch
           this.config.branch = newBranch;
           this.status.branch = newBranch;
-          
+
           // Clear active locks
           this.status.activeLocks = [];
-          
+
           resolve({
             success: true,
             released: message.released,
-            warnings: message.warnings
+            warnings: message.warnings,
           });
         }
       };
-      
+
       this.on('branch_switched', handler);
-      
+
       this.send({
         type: 'switch_branch',
         requestId,
         fromBranch: this.config.branch,
-        toBranch: newBranch
+        toBranch: newBranch,
       });
-      
+
       // Timeout after 5 seconds
       setTimeout(() => {
         this.removeListener('branch_switched', handler);
         resolve({
           success: false,
           released: 0,
-          warnings: []
+          warnings: [],
         });
       }, 5000);
     });
@@ -462,19 +490,19 @@ export class GitSyncClient extends EventEmitter {
    */
   disconnect(): void {
     this.isReconnecting = false;
-    
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
-    
+
     this.stopPingInterval();
-    
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
-    
+
     this.status.connected = false;
     this.status.authenticated = false;
     this.emit('disconnected');
@@ -489,16 +517,19 @@ export class GitSyncClient extends EventEmitter {
       case 'auth_success':
         if (message.success || message.type === 'auth_success') {
           this.status.authenticated = true;
-          
+
           // Handle initial peers list if provided
           if (message.peers && Array.isArray(message.peers)) {
             this.status.peers = message.peers;
           }
-          
+
           this.registerForSync();
           this.emit('authenticated');
         } else {
-          this.emit('error', new Error(message.error || 'Authentication failed'));
+          this.emit(
+            'error',
+            new Error(message.error || 'Authentication failed'),
+          );
         }
         break;
 
@@ -517,9 +548,13 @@ export class GitSyncClient extends EventEmitter {
         break;
 
       case 'lock_released':
-        const releasedLock = this.status.activeLocks.find(l => l.id === message.lockId);
+        const releasedLock = this.status.activeLocks.find(
+          (l) => l.id === message.lockId,
+        );
         if (releasedLock) {
-          this.status.activeLocks = this.status.activeLocks.filter(l => l.id !== message.lockId);
+          this.status.activeLocks = this.status.activeLocks.filter(
+            (l) => l.id !== message.lockId,
+          );
           this.emit('lock_released_event', releasedLock);
         }
         break;
@@ -535,7 +570,7 @@ export class GitSyncClient extends EventEmitter {
 
       case 'peer_left':
         this.status.peers = this.status.peers.filter(
-          p => p.agentId !== message.agentId
+          (p) => p.agentId !== message.agentId,
         );
         this.emit('peer_left', message.agentId);
         break;
@@ -552,7 +587,10 @@ export class GitSyncClient extends EventEmitter {
         break;
 
       case 'auth_error':
-        console.error('Authentication failed:', message.message || 'Invalid token');
+        console.error(
+          'Authentication failed:',
+          message.message || 'Invalid token',
+        );
         this.status.isAuthenticated = false;
         this.emit('auth_error', message.message || 'Authentication failed');
         this.disconnect();
@@ -590,11 +628,11 @@ export class GitSyncClient extends EventEmitter {
    */
   private scheduleReconnect(): void {
     if (this.isReconnecting) return;
-    
+
     this.isReconnecting = true;
     this.reconnectTimer = setTimeout(() => {
       console.log('Attempting to reconnect...');
-      this.connect().catch(error => {
+      this.connect().catch((error) => {
         console.error('Reconnection failed:', error);
         this.scheduleReconnect();
       });

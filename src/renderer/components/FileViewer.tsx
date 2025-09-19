@@ -28,7 +28,7 @@ if (typeof window !== 'undefined') {
         return './ts.worker.js';
       }
       return './editor.worker.js';
-    }
+    },
   };
 }
 
@@ -203,7 +203,7 @@ export const FileViewer: React.FC<FileViewerProps> = ({
         console.log('Loading file:', filePath);
 
         let content: string | null = null;
-        
+
         // Use custom content loader if provided
         if (contentLoader) {
           content = await contentLoader();
@@ -484,39 +484,42 @@ export const FileViewer: React.FC<FileViewerProps> = ({
     setTimeout(() => {
       // Re-apply the theme after editor is fully mounted
       monaco.editor.setTheme('custom-theme');
-      
+
       // Force a layout update to trigger rendering
       editor.layout();
-      
+
       // Force tokenization of the entire model
       const model = editor.getModel();
       if (model) {
         // Get the tokenization support for the model's language
         const languageId = model.getLanguageId();
-        
+
         // Force tokenization by simulating a scroll through the entire document
         const lineCount = model.getLineCount();
         const viewportHeight = 50; // Approximate visible lines
-        
+
         // Tokenize in chunks to ensure all lines are processed
         for (let i = 1; i <= lineCount; i += viewportHeight) {
           const endLine = Math.min(i + viewportHeight - 1, lineCount);
           try {
             // This forces Monaco to tokenize these lines
-            monaco.editor.tokenize(model.getValueInRange({
-              startLineNumber: i,
-              startColumn: 1,
-              endLineNumber: endLine,
-              endColumn: model.getLineMaxColumn(endLine)
-            }), languageId);
+            monaco.editor.tokenize(
+              model.getValueInRange({
+                startLineNumber: i,
+                startColumn: 1,
+                endLineNumber: endLine,
+                endColumn: model.getLineMaxColumn(endLine),
+              }),
+              languageId,
+            );
           } catch (e) {
             // Ignore tokenization errors
           }
         }
-        
+
         // Force a visual update
         editor.render(true);
-        
+
         // Trigger a view update
         editor.changeViewZones((changeAccessor: any) => {
           // This forces Monaco to recalculate and re-render
@@ -873,9 +876,15 @@ export const FileViewer: React.FC<FileViewerProps> = ({
                 const elementId = href.substring(1);
                 setTimeout(() => {
                   const element = document.getElementById(elementId);
-                  element?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  element?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                  });
                 }, 100);
-              } else if (href.startsWith('http://') || href.startsWith('https://')) {
+              } else if (
+                href.startsWith('http://') ||
+                href.startsWith('https://')
+              ) {
                 window.open(href, '_blank');
               }
             }}
@@ -977,7 +986,7 @@ export const FileViewer: React.FC<FileViewerProps> = ({
           try {
             // Define and set theme BEFORE editor mounts to ensure proper syntax highlighting
             const isDarkTheme = getMonacoTheme() === 'vs-dark';
-            
+
             // Define a more complete theme to ensure syntax highlighting works
             monaco.editor.defineTheme('custom-theme', {
               base: isDarkTheme ? 'vs-dark' : 'vs',
@@ -990,16 +999,23 @@ export const FileViewer: React.FC<FileViewerProps> = ({
                 { token: 'number', foreground: 'B5CEA8' },
               ],
               colors: {
-                'editor.background': theme.colors?.background || (isDarkTheme ? '#1a1a1a' : '#ffffff'),
-                'editor.foreground': theme.colors?.text || (isDarkTheme ? '#d4d4d4' : '#000000'),
-                'editor.lineHighlightBackground': isDarkTheme ? '#2a2a2a' : '#f0f0f0',
-                'editorLineNumber.foreground': isDarkTheme ? '#858585' : '#999999',
-              }
+                'editor.background':
+                  theme.colors?.background ||
+                  (isDarkTheme ? '#1a1a1a' : '#ffffff'),
+                'editor.foreground':
+                  theme.colors?.text || (isDarkTheme ? '#d4d4d4' : '#000000'),
+                'editor.lineHighlightBackground': isDarkTheme
+                  ? '#2a2a2a'
+                  : '#f0f0f0',
+                'editorLineNumber.foreground': isDarkTheme
+                  ? '#858585'
+                  : '#999999',
+              },
             });
-            
+
             // Set the theme immediately
             monaco.editor.setTheme('custom-theme');
-            
+
             // Configure TypeScript diagnostics - disable all errors
             monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(
               {
@@ -1187,7 +1203,11 @@ export const FileViewer: React.FC<FileViewerProps> = ({
             onClick={handleCopyPath}
             className="p-1 rounded hover:bg-gray-700 transition-colors"
             title="Copy file path to clipboard"
-            style={{ color: copiedPath ? theme.colors?.success || '#4ade80' : theme.colors?.textSecondary || '#999' }}
+            style={{
+              color: copiedPath
+                ? theme.colors?.success || '#4ade80'
+                : theme.colors?.textSecondary || '#999',
+            }}
           >
             {copiedPath ? <Check size={16} /> : <Copy size={16} />}
           </button>

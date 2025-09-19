@@ -1,4 +1,7 @@
-import { AgentSessionAPIEvents, AgentSessionAPI } from '../../shared/main-process-api-interfaces/AgentSessionAPI';
+import {
+  AgentSessionAPIEvents,
+  AgentSessionAPI,
+} from '../../shared/main-process-api-interfaces/AgentSessionAPI';
 import { ipcRenderer } from 'electron';
 
 /**
@@ -9,104 +12,150 @@ export const agentSessionApi: AgentSessionAPI = {
   /**
    * Get active sessions (fast, from live storage)
    */
-  getActiveSessions: () => ipcRenderer.invoke(AgentSessionAPIEvents.GET_ACTIVE_SESSIONS),
+  getActiveSessions: () =>
+    ipcRenderer.invoke(AgentSessionAPIEvents.GET_ACTIVE_SESSIONS),
 
   /**
    * Get archived sessions (potentially slower, from file storage)
    */
-  getArchivedSessions: () => ipcRenderer.invoke(AgentSessionAPIEvents.GET_ARCHIVED_SESSIONS),
+  getArchivedSessions: () =>
+    ipcRenderer.invoke(AgentSessionAPIEvents.GET_ARCHIVED_SESSIONS),
 
   /**
    * Get sessions for a specific directory
    */
-  getSessionsForDirectory: (directory: string) => ipcRenderer.invoke(AgentSessionAPIEvents.GET_SESSIONS_FOR_DIRECTORY, directory),
+  getSessionsForDirectory: (directory: string) =>
+    ipcRenderer.invoke(
+      AgentSessionAPIEvents.GET_SESSIONS_FOR_DIRECTORY,
+      directory,
+    ),
 
   /**
    * Get a specific session by ID
    */
-  getSession: (sessionId: string, directory: string) => ipcRenderer.invoke(AgentSessionAPIEvents.GET_SESSION, sessionId, directory),
+  getSession: (sessionId: string, directory: string) =>
+    ipcRenderer.invoke(AgentSessionAPIEvents.GET_SESSION, sessionId, directory),
 
   /**
    * Get normalized events for a session
    */
-  getSessionEvents: (sessionId: string) => ipcRenderer.invoke(AgentSessionAPIEvents.GET_SESSION_EVENTS, sessionId),
+  getSessionEvents: (sessionId: string) =>
+    ipcRenderer.invoke(AgentSessionAPIEvents.GET_SESSION_EVENTS, sessionId),
 
   /**
    * Delete a session
    */
-  deleteSession: (sessionId: string, directory: string) => ipcRenderer.invoke(AgentSessionAPIEvents.DELETE_SESSION, sessionId, directory),
+  deleteSession: (sessionId: string, directory: string) =>
+    ipcRenderer.invoke(
+      AgentSessionAPIEvents.DELETE_SESSION,
+      sessionId,
+      directory,
+    ),
 
   /**
    * Clear all sessions for a directory
    */
-  clearSessionsForDirectory: (directory: string) => ipcRenderer.invoke(AgentSessionAPIEvents.CLEAR_DIRECTORY_SESSIONS, directory),
+  clearSessionsForDirectory: (directory: string) =>
+    ipcRenderer.invoke(
+      AgentSessionAPIEvents.CLEAR_DIRECTORY_SESSIONS,
+      directory,
+    ),
 
   /**
    * Update session metadata (e.g., custom name)
    */
-  updateSessionMetadata: (sessionId: string, directory: string, metadata: { customName?: string }) => 
-    ipcRenderer.invoke(AgentSessionAPIEvents.UPDATE_SESSION_METADATA, sessionId, directory, metadata),
+  updateSessionMetadata: (
+    sessionId: string,
+    directory: string,
+    metadata: { customName?: string },
+  ) =>
+    ipcRenderer.invoke(
+      AgentSessionAPIEvents.UPDATE_SESSION_METADATA,
+      sessionId,
+      directory,
+      metadata,
+    ),
 
   /**
    * Listen for session creation
    */
-  onSessionCreated: (callback: (data: { sessionId: string; directory: string }) => void) => {
+  onSessionCreated: (
+    callback: (data: { sessionId: string; directory: string }) => void,
+  ) => {
     const handler = (_: any, data: any) => callback(data);
     ipcRenderer.on(AgentSessionAPIEvents.SESSION_CREATED, handler);
     return () => {
-      ipcRenderer.removeListener(AgentSessionAPIEvents.SESSION_CREATED, handler);
+      ipcRenderer.removeListener(
+        AgentSessionAPIEvents.SESSION_CREATED,
+        handler,
+      );
     };
   },
 
   /**
    * Listen for session updates
    */
-  onSessionUpdated: (callback: (data: { sessionId: string; directory: string }) => void) => {
+  onSessionUpdated: (
+    callback: (data: { sessionId: string; directory: string }) => void,
+  ) => {
     const handler = (_: any, data: any) => callback(data);
     ipcRenderer.on(AgentSessionAPIEvents.SESSION_UPDATED, handler);
     return () => {
-      ipcRenderer.removeListener(AgentSessionAPIEvents.SESSION_UPDATED, handler);
+      ipcRenderer.removeListener(
+        AgentSessionAPIEvents.SESSION_UPDATED,
+        handler,
+      );
     };
   },
 
   /**
    * Listen for session deletions
    */
-  onSessionDeleted: (callback: (data: { sessionId: string; directory: string }) => void) => {
+  onSessionDeleted: (
+    callback: (data: { sessionId: string; directory: string }) => void,
+  ) => {
     const handler = (_: any, data: any) => callback(data);
     ipcRenderer.on(AgentSessionAPIEvents.SESSION_DELETED, handler);
     return () => {
-      ipcRenderer.removeListener(AgentSessionAPIEvents.SESSION_DELETED, handler);
+      ipcRenderer.removeListener(
+        AgentSessionAPIEvents.SESSION_DELETED,
+        handler,
+      );
     };
   },
 
   /**
    * Listen for session archival
    */
-  onSessionArchived: (callback: (data: { sessionId: string; directory: string }) => void) => {
+  onSessionArchived: (
+    callback: (data: { sessionId: string; directory: string }) => void,
+  ) => {
     const handler = (_: any, data: any) => callback(data);
     ipcRenderer.on(AgentSessionAPIEvents.SESSION_ARCHIVED, handler);
     return () => {
-      ipcRenderer.removeListener(AgentSessionAPIEvents.SESSION_ARCHIVED, handler);
+      ipcRenderer.removeListener(
+        AgentSessionAPIEvents.SESSION_ARCHIVED,
+        handler,
+      );
     };
   },
 
   /**
    * Delete from active storage only (preserve archive)
    */
-  deleteFromActive: (sessionId: string) => 
+  deleteFromActive: (sessionId: string) =>
     ipcRenderer.invoke('sessions:delete-from-active', sessionId),
 
   /**
    * Reprocess events for a session
    */
-  reprocessSession: (sessionId: string) => 
+  reprocessSession: (sessionId: string) =>
     ipcRenderer.invoke('sessions:reprocess', sessionId),
 
   /**
    * Get raw session events (from agent-session-events API)
    */
-  getRawSessionEvents: (sessionId: string) => 
+  getRawSessionEvents: (sessionId: string) =>
     ipcRenderer.invoke('sessions:get-raw-events', sessionId),
 
   /**
@@ -130,4 +179,4 @@ export const agentSessionApi: AgentSessionAPI = {
       ipcRenderer.removeListener('agent-session:processed-event', handler);
     };
   },
-}
+};

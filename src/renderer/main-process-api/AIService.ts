@@ -1,10 +1,10 @@
 /**
  * AI Service - Mock implementation for deprecated window.electron.ai
- * 
+ *
  * This service provides placeholder methods for AI functionality that was previously
  * available through window.electron.ai. All methods throw errors indicating they
  * are not yet implemented.
- * 
+ *
  * TODO: Implement these methods when AI functionality is re-enabled
  */
 
@@ -33,7 +33,7 @@ export class AIService {
   }): Promise<any> {
     throw new Error(
       'AIService.analyzePackageScripts is not yet implemented. ' +
-      'This functionality needs to be reimplemented in the main process.'
+        'This functionality needs to be reimplemented in the main process.',
     );
   }
 
@@ -44,7 +44,7 @@ export class AIService {
   async checkOllamaStatus(): Promise<OllamaStatus> {
     throw new Error(
       'AIService.checkOllamaStatus is not yet implemented. ' +
-      'Consider using DockerService or SystemService to check Ollama status.'
+        'Consider using DockerService or SystemService to check Ollama status.',
     );
   }
 
@@ -55,7 +55,7 @@ export class AIService {
   async getProviderConfig(provider: string): Promise<any> {
     throw new Error(
       'AIService.getProviderConfig is not yet implemented. ' +
-      'Consider using LLMModelsService.getConfiguration() instead.'
+        'Consider using LLMModelsService.getConfiguration() instead.',
     );
   }
 
@@ -69,7 +69,7 @@ export class AIService {
   }): Promise<void> {
     throw new Error(
       'AIService.pullOllamaModel is not yet implemented. ' +
-      'This functionality needs to be reimplemented using Docker or shell commands.'
+        'This functionality needs to be reimplemented using Docker or shell commands.',
     );
   }
 
@@ -80,7 +80,7 @@ export class AIService {
   onPullOllamaProgress(callback: (progress: PullProgress) => void): () => void {
     console.error(
       'AIService.onPullOllamaProgress is not yet implemented. ' +
-      'Progress tracking needs to be reimplemented.'
+        'Progress tracking needs to be reimplemented.',
     );
     // Return a no-op unsubscribe function
     return () => {};

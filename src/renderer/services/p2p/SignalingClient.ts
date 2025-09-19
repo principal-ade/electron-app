@@ -30,18 +30,18 @@ export class SignalingClient {
   connect(token: string, repoUrl: string) {
     this.token = token;
     this.repoUrl = repoUrl;
-    
+
     if (this.ws) {
       this.disconnect();
     }
 
     try {
       this.ws = new WebSocket(this.serverUrl);
-      
+
       this.ws.onopen = () => {
         console.log('Connected to signaling server');
         this.reconnectAttempts = 0;
-        
+
         // Send join message
         this.send({
           type: 'join',
@@ -81,7 +81,7 @@ export class SignalingClient {
       case 'joined':
         console.log('Joined room successfully', message);
         this.callbacks.onConnected?.(message.peerId, message.githubHandle);
-        
+
         // Handle existing peers
         if (message.peers && Array.isArray(message.peers)) {
           message.peers.forEach((peer: any) => {
@@ -109,14 +109,18 @@ export class SignalingClient {
       case 'error':
         console.error('Signaling error:', message.message);
         this.callbacks.onError?.(message.message);
-        
+
         // Handle specific errors
         if (message.status === 'waitlisted') {
-          this.callbacks.onError?.('You are on the waitlist. Please wait for approval.');
+          this.callbacks.onError?.(
+            'You are on the waitlist. Please wait for approval.',
+          );
         } else if (message.status === 'denied') {
           this.callbacks.onError?.('Your access has been denied.');
         } else if (message.message === 'No access to repository') {
-          this.callbacks.onError?.('You do not have access to this repository.');
+          this.callbacks.onError?.(
+            'You do not have access to this repository.',
+          );
         }
         break;
 
@@ -126,10 +130,13 @@ export class SignalingClient {
   }
 
   sendSignal(to: string, signal: any) {
-    const type = signal.type === 'offer' ? 'offer' : 
-                 signal.type === 'answer' ? 'answer' : 
-                 'ice-candidate';
-    
+    const type =
+      signal.type === 'offer'
+        ? 'offer'
+        : signal.type === 'answer'
+          ? 'answer'
+          : 'ice-candidate';
+
     this.send({
       type,
       to,
@@ -159,8 +166,10 @@ export class SignalingClient {
     const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 10000);
     this.reconnectAttempts++;
 
-    console.log(`Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`);
-    
+    console.log(
+      `Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`,
+    );
+
     this.reconnectTimeout = setTimeout(() => {
       if (this.token && this.repoUrl) {
         this.connect(this.token, this.repoUrl);
@@ -173,13 +182,13 @@ export class SignalingClient {
       clearTimeout(this.reconnectTimeout);
       this.reconnectTimeout = null;
     }
-    
+
     if (this.ws) {
       this.send({ type: 'leave' });
       this.ws.close();
       this.ws = null;
     }
-    
+
     this.reconnectAttempts = 0;
   }
 

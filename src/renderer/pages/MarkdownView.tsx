@@ -13,7 +13,9 @@ interface MarkdownViewProps {
 
 export const MarkdownView: React.FC<MarkdownViewProps> = ({ filePath }) => {
   const { theme } = useTheme();
-  const [content, setContent] = useState<string>('# Loading...\n\nPlease wait while the file is being loaded.');
+  const [content, setContent] = useState<string>(
+    '# Loading...\n\nPlease wait while the file is being loaded.',
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -23,27 +25,31 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({ filePath }) => {
       try {
         setLoading(true);
         const result = await FileSystemService.readFile(filePath);
-        
+
         // Extract content from the result object
         const fileContent = result?.content;
-        
+
         // Ensure content is a string
         if (typeof fileContent !== 'string') {
-            throw new Error('File content is not a string');
+          throw new Error('File content is not a string');
         }
-        
+
         // Ensure content is not empty
         if (!fileContent || fileContent.trim().length === 0) {
-            setContent('# Empty File\n\nThis file appears to be empty.');
+          setContent('# Empty File\n\nThis file appears to be empty.');
         } else {
           setContent(fileContent);
         }
         setError(null);
       } catch (err) {
         console.error('Error reading markdown file:', err);
-        setError(`Failed to load file: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        setError(
+          `Failed to load file: ${err instanceof Error ? err.message : 'Unknown error'}`,
+        );
         // Set a fallback content to prevent parseMarkdownChunks error
-        setContent('# Error Loading File\n\nAn error occurred while loading the file.');
+        setContent(
+          '# Error Loading File\n\nAn error occurred while loading the file.',
+        );
       } finally {
         setLoading(false);
       }
@@ -59,33 +65,38 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({ filePath }) => {
   }, []);
 
   // Handle saving
-  const handleSave = useCallback(async (newContent: string) => {
-    try {
-      const result = await FileSystemService.writeFile(filePath, newContent);
-      if (result?.success) {
-        setIsDirty(false);
-        // Could show a toast notification here
-      } else {
-        throw new Error(result?.error || 'Failed to save file');
+  const handleSave = useCallback(
+    async (newContent: string) => {
+      try {
+        const result = await FileSystemService.writeFile(filePath, newContent);
+        if (result?.success) {
+          setIsDirty(false);
+          // Could show a toast notification here
+        } else {
+          throw new Error(result?.error || 'Failed to save file');
+        }
+      } catch (err) {
+        console.error('Error saving file:', err);
+        throw err; // Re-throw to let the component handle it
       }
-    } catch (err) {
-      console.error('Error saving file:', err);
-      throw err; // Re-throw to let the component handle it
-    }
-  }, [filePath]);
+    },
+    [filePath],
+  );
 
   if (loading) {
     return (
-      <div style={{
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.colors.background,
-        color: theme.colors.text,
-        fontFamily: theme.fonts.body,
-        fontSize: theme.fontSizes[2]
-      }}>
+      <div
+        style={{
+          height: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.background,
+          color: theme.colors.text,
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[2],
+        }}
+      >
         Loading markdown file...
       </div>
     );
@@ -93,46 +104,52 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({ filePath }) => {
 
   if (error) {
     return (
-      <div style={{
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: theme.colors.background,
-        color: theme.colors.error,
-        fontFamily: theme.fonts.body,
-        fontSize: theme.fontSizes[2],
-        padding: theme.space[4]
-      }}>
+      <div
+        style={{
+          height: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.background,
+          color: theme.colors.error,
+          fontFamily: theme.fonts.body,
+          fontSize: theme.fontSizes[2],
+          padding: theme.space[4],
+        }}
+      >
         {error}
       </div>
     );
   }
 
-
   // Add a safeguard to ensure content is always a string
-  const safeContent = typeof content === 'string' ? content : '# Loading...\n\nPlease wait...';
+  const safeContent =
+    typeof content === 'string' ? content : '# Loading...\n\nPlease wait...';
 
   return (
-    <div style={{
-      height: '100vh',
-      width: '100%',
-      backgroundColor: theme.colors.background,
-      position: 'relative'
-    }}>
+    <div
+      style={{
+        height: '100vh',
+        width: '100%',
+        backgroundColor: theme.colors.background,
+        position: 'relative',
+      }}
+    >
       {/* Unsaved indicator */}
       {isDirty && (
-        <div style={{
-          position: 'absolute',
-          top: theme.space[3],
-          left: theme.space[3],
-          padding: `${theme.space[1]}px ${theme.space[2]}px`,
-          backgroundColor: theme.colors.warning,
-          color: theme.colors.background,
-          borderRadius: theme.radii[1],
-          fontSize: theme.fontSizes[0],
-          zIndex: 20,
-        }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: theme.space[3],
+            left: theme.space[3],
+            padding: `${theme.space[1]}px ${theme.space[2]}px`,
+            backgroundColor: theme.colors.warning,
+            color: theme.colors.background,
+            borderRadius: theme.radii[1],
+            fontSize: theme.fontSizes[0],
+            zIndex: 20,
+          }}
+        >
           Unsaved changes
         </div>
       )}

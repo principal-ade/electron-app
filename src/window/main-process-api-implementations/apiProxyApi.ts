@@ -23,5 +23,5 @@ export const apiProxyApi = {
     body?: any;
   }): Promise<any> => {
     return ipcRenderer.invoke('api:call', options);
-  }
+  },
 };

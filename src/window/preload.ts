@@ -30,6 +30,7 @@ import { githubAPI } from './main-process-api-implementations/githubApi';
 import { storeAPI } from './main-process-api-implementations/storeApi';
 import { repositoryAPI } from './main-process-api-implementations/repositoryApi';
 import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi';
+import { alexandriaDocsAPI } from './main-process-api-implementations/alexandriaDocsApi';
 import { shellAPI } from './main-process-api-implementations/shellApi';
 import { systemAPI } from './main-process-api-implementations/systemApi';
 import { userPromptAPI } from './main-process-api-implementations/userPromptApi';
@@ -90,6 +91,7 @@ const mainProcessExposure: MainProcessAPI = {
   agentInstallation: agentInstallationAPI,
   agentConfig: agentConfigAPI,
   alexandria: alexandriaAPI,
+  alexandriaDocs: alexandriaDocsAPI,
   agentSession: agentSessionApi,
   agentSessionArchive: agentSessionArchiveAPI,
   agentSessionEvents: agentSessionEventsAPI,
@@ -156,8 +158,10 @@ try {
     close: () => ipcRenderer.send('window-close'),
     isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
     onMaximizeChange: (callback: (isMaximized: boolean) => void) => {
-      ipcRenderer.on('window-maximized-changed', (_, isMaximized) => callback(isMaximized));
-    }
+      ipcRenderer.on('window-maximized-changed', (_, isMaximized) =>
+        callback(isMaximized),
+      );
+    },
   });
   console.log('[Preload] ✅ Electron Titlebar API exposed');
 } catch (error) {
@@ -171,21 +175,21 @@ try {
   console.error('[Preload] ❌ Failed to expose appName:', error);
 }
 
-
 // Enhanced debugging for preload issues
 try {
   // Test if contextBridge is working
   const testObj = { test: 'working' };
   contextBridge.exposeInMainWorld('__preloadTest', testObj);
-  
+
   console.log('[Preload] ✅ Context bridge is working');
   console.log('[Preload] ✅ Exposed APIs:', {
     mainProcess: Object.keys(mainProcessExposure),
-    appName: 'Specktor'
+    appName: 'Specktor',
   });
-  console.log('[Preload] 🚀 Preload script executed successfully - APIs exposed to renderer');
+  console.log(
+    '[Preload] 🚀 Preload script executed successfully - APIs exposed to renderer',
+  );
 } catch (error) {
   console.error('[Preload] ❌ Failed to expose APIs:', error);
   console.error('[Preload] Stack trace:', (error as Error).stack);
 }
-

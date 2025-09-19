@@ -11,26 +11,26 @@ interface TerminalCleanupButtonProps {
 
 export const TerminalCleanupButton: React.FC<TerminalCleanupButtonProps> = ({
   currentSessionId,
-  onCleanupComplete
+  onCleanupComplete,
 }) => {
   const { theme } = useTheme();
   const [sessionCount, setSessionCount] = useState<number>(0);
   const [isClearing, setIsClearing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  
+
   // Check session count periodically
   React.useEffect(() => {
     const checkCount = async () => {
       const count = await getTerminalSessionCount();
       setSessionCount(count);
     };
-    
+
     checkCount();
     const interval = setInterval(checkCount, 5000); // Check every 5 seconds
-    
+
     return () => clearInterval(interval);
   }, []);
-  
+
   const handleClearAll = useCallback(async () => {
     setIsClearing(true);
     try {
@@ -41,20 +41,24 @@ export const TerminalCleanupButton: React.FC<TerminalCleanupButtonProps> = ({
           if (currentSessionId && session.id === currentSessionId) {
             continue;
           }
-          
+
           try {
             await TerminalService.destroy(session.id);
             console.log('[TerminalCleanup] Destroyed session:', session.id);
           } catch (err) {
-            console.error('[TerminalCleanup] Failed to destroy session:', session.id, err);
+            console.error(
+              '[TerminalCleanup] Failed to destroy session:',
+              session.id,
+              err,
+            );
           }
         }
       }
-      
+
       // Update count
       const newCount = await getTerminalSessionCount();
       setSessionCount(newCount);
-      
+
       onCleanupComplete?.();
     } catch (err) {
       console.error('[TerminalCleanup] Failed to clear terminals:', err);
@@ -63,14 +67,14 @@ export const TerminalCleanupButton: React.FC<TerminalCleanupButtonProps> = ({
       setShowConfirm(false);
     }
   }, [currentSessionId, onCleanupComplete]);
-  
+
   // Only show button if we're approaching the limit
   if (sessionCount < 7) {
     return null;
   }
-  
+
   const isAtLimit = sessionCount >= 10;
-  
+
   return (
     <div style={{ position: 'relative' }}>
       <button
@@ -81,47 +85,55 @@ export const TerminalCleanupButton: React.FC<TerminalCleanupButtonProps> = ({
           alignItems: 'center',
           gap: '4px',
           padding: '4px 8px',
-          backgroundColor: isAtLimit ? theme.colors.error : theme.colors.warning,
+          backgroundColor: isAtLimit
+            ? theme.colors.error
+            : theme.colors.warning,
           color: '#fff',
           border: 'none',
           borderRadius: '4px',
           fontSize: '11px',
           fontWeight: 600,
           cursor: isClearing ? 'wait' : 'pointer',
-          opacity: isClearing ? 0.7 : 1
+          opacity: isClearing ? 0.7 : 1,
         }}
         title={`${sessionCount}/10 terminal sessions active`}
       >
         {isAtLimit ? <AlertCircle size={12} /> : <Trash2 size={12} />}
         {isClearing ? 'Clearing...' : `Clear Terminals (${sessionCount}/10)`}
       </button>
-      
+
       {showConfirm && !isClearing && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 4px)',
-          right: 0,
-          padding: '12px',
-          backgroundColor: theme.colors.backgroundSecondary,
-          border: `1px solid ${theme.colors.border}`,
-          borderRadius: '6px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          zIndex: 1000,
-          minWidth: '200px'
-        }}>
-          <p style={{
-            fontSize: '12px',
-            color: theme.colors.text,
-            marginBottom: '8px'
-          }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            right: 0,
+            padding: '12px',
+            backgroundColor: theme.colors.backgroundSecondary,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: '6px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            zIndex: 1000,
+            minWidth: '200px',
+          }}
+        >
+          <p
+            style={{
+              fontSize: '12px',
+              color: theme.colors.text,
+              marginBottom: '8px',
+            }}
+          >
             Clear all {sessionCount} terminal sessions?
             {currentSessionId && ' (keeping current)'}
           </p>
-          <div style={{
-            display: 'flex',
-            gap: '8px',
-            justifyContent: 'flex-end'
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+              justifyContent: 'flex-end',
+            }}
+          >
             <button
               onClick={() => setShowConfirm(false)}
               style={{
@@ -131,7 +143,7 @@ export const TerminalCleanupButton: React.FC<TerminalCleanupButtonProps> = ({
                 border: `1px solid ${theme.colors.border}`,
                 borderRadius: '4px',
                 fontSize: '11px',
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Cancel
@@ -146,7 +158,7 @@ export const TerminalCleanupButton: React.FC<TerminalCleanupButtonProps> = ({
                 borderRadius: '4px',
                 fontSize: '11px',
                 fontWeight: 600,
-                cursor: 'pointer'
+                cursor: 'pointer',
               }}
             >
               Clear All

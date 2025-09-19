@@ -34,8 +34,6 @@ export interface GitCommand {
   stderr: string;
 }
 
-
-
 export const gitAPI = {
   getRepositoryInfo: async (
     filePath: string,
@@ -77,11 +75,20 @@ export const gitAPI = {
     return ipcRenderer.invoke(GitEvents.EXECUTE_COMMAND, directory, args);
   },
 
-  cloneRepository: async (remoteUrl: string, targetPath: string): Promise<boolean> => {
-    return ipcRenderer.invoke(GitEvents.CLONE_REPOSITORY, remoteUrl, targetPath);
+  cloneRepository: async (
+    remoteUrl: string,
+    targetPath: string,
+  ): Promise<boolean> => {
+    return ipcRenderer.invoke(
+      GitEvents.CLONE_REPOSITORY,
+      remoteUrl,
+      targetPath,
+    );
   },
 
-  checkAuthMethods: async (remoteUrl: string): Promise<{
+  checkAuthMethods: async (
+    remoteUrl: string,
+  ): Promise<{
     ssh: { available: boolean; reason?: string };
     https: { available: boolean; reason?: string };
     suggestions: string[];
@@ -89,7 +96,9 @@ export const gitAPI = {
     return ipcRenderer.invoke(GitEvents.CHECK_AUTH_METHODS, remoteUrl);
   },
 
-  deleteGitRepository: async (repoPath: string): Promise<{
+  deleteGitRepository: async (
+    repoPath: string,
+  ): Promise<{
     success: boolean;
     error?: string;
     hasUncommittedChanges?: boolean;
@@ -100,7 +109,9 @@ export const gitAPI = {
     return ipcRenderer.invoke(GitEvents.DELETE_GIT_REPOSITORY, repoPath);
   },
 
-  forceDeleteGitRepository: async (repoPath: string): Promise<{
+  forceDeleteGitRepository: async (
+    repoPath: string,
+  ): Promise<{
     success: boolean;
     error?: string;
   }> => {
@@ -111,7 +122,7 @@ export const gitAPI = {
   onStatusUpdate: (callback: (status: any) => void) => {
     const handler = (_event: any, status: any) => callback(status);
     ipcRenderer.on('git:status-update', handler);
-    
+
     // Return cleanup function
     return () => {
       ipcRenderer.removeListener('git:status-update', handler);
@@ -120,27 +131,38 @@ export const gitAPI = {
 
   // Event listeners for repository changes
   onRepositoryUpdated: (callback: (updatedRepo: Repository) => void) => {
-    const handler = (_event: any, updatedRepo: Repository) => callback(updatedRepo);
+    const handler = (_event: any, updatedRepo: Repository) =>
+      callback(updatedRepo);
     ipcRenderer.on('repository:updated', handler);
-    
+
     return () => {
       ipcRenderer.removeListener('repository:updated', handler);
     };
   },
 
-  onRepositoryCloneAdded: (callback: (data: { repository: Repository; clonePath: string }) => void) => {
-    const handler = (_event: any, data: { repository: Repository; clonePath: string }) => callback(data);
+  onRepositoryCloneAdded: (
+    callback: (data: { repository: Repository; clonePath: string }) => void,
+  ) => {
+    const handler = (
+      _event: any,
+      data: { repository: Repository; clonePath: string },
+    ) => callback(data);
     ipcRenderer.on('repository:clone-added', handler);
-    
+
     return () => {
       ipcRenderer.removeListener('repository:clone-added', handler);
     };
   },
 
-  onRepositoryCloneRemoved: (callback: (data: { repository: Repository; clonePath: string }) => void) => {
-    const handler = (_event: any, data: { repository: Repository; clonePath: string }) => callback(data);
+  onRepositoryCloneRemoved: (
+    callback: (data: { repository: Repository; clonePath: string }) => void,
+  ) => {
+    const handler = (
+      _event: any,
+      data: { repository: Repository; clonePath: string },
+    ) => callback(data);
     ipcRenderer.on('repository:clone-removed', handler);
-    
+
     return () => {
       ipcRenderer.removeListener('repository:clone-removed', handler);
     };
@@ -149,7 +171,7 @@ export const gitAPI = {
   onLocalCloneMissing: (callback: (data: { repoPath: string }) => void) => {
     const handler = (_event: any, data: { repoPath: string }) => callback(data);
     ipcRenderer.on('git:local-clone-missing', handler);
-    
+
     return () => {
       ipcRenderer.removeListener('git:local-clone-missing', handler);
     };

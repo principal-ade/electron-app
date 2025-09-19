@@ -7,14 +7,16 @@ import type {
   TypeSchemaAPIResponse,
   TypeSchemaGenerationOptions,
   TypeSchemaResult,
-  TypeSchemaError
+  TypeSchemaError,
 } from '../../shared/main-process-api-interfaces/TypeSchemaAPI';
 
 export class TypeSchemaService {
-  async generateSchemas(options: TypeSchemaGenerationOptions): Promise<TypeSchemaAPIResponse<{
-    schemas: TypeSchemaResult[];
-    errors: TypeSchemaError[];
-  }>> {
+  async generateSchemas(options: TypeSchemaGenerationOptions): Promise<
+    TypeSchemaAPIResponse<{
+      schemas: TypeSchemaResult[];
+      errors: TypeSchemaError[];
+    }>
+  > {
     try {
       return await window.mainProcess.typeSchema.generateSchemas(options);
     } catch (error) {
@@ -35,12 +37,15 @@ export class TypeSchemaService {
     error?: string;
   }> {
     try {
-      return await window.mainProcess.typeSchema.extractTypes(filePath, tsConfigPath);
+      return await window.mainProcess.typeSchema.extractTypes(
+        filePath,
+        tsConfigPath,
+      );
     } catch (error) {
       console.error('[TypeSchemaService] Error extracting types:', error);
-      return { 
-        success: false, 
-        error: `Failed to extract types: ${error}` 
+      return {
+        success: false,
+        error: `Failed to extract types: ${error}`,
       };
     }
   }
@@ -86,7 +91,10 @@ export class TypeSchemaService {
         tsConfigPath,
       );
     } catch (error) {
-      console.error('[TypeSchemaService] Error generating declarations:', error);
+      console.error(
+        '[TypeSchemaService] Error generating declarations:',
+        error,
+      );
       return {
         success: false,
         error: `Failed to generate declarations: ${error}`,

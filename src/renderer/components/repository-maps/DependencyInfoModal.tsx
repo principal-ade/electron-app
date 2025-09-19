@@ -1,5 +1,13 @@
 import React from 'react';
-import { X, Package, Shield, AlertTriangle, TrendingUp, Scale, HelpCircle } from 'lucide-react';
+import {
+  X,
+  Package,
+  Shield,
+  AlertTriangle,
+  TrendingUp,
+  Scale,
+  HelpCircle,
+} from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 
 interface DependencyInfoModalProps {
@@ -7,7 +15,10 @@ interface DependencyInfoModalProps {
   onClose: () => void;
 }
 
-export const DependencyInfoModal: React.FC<DependencyInfoModalProps> = ({ isOpen, onClose }) => {
+export const DependencyInfoModal: React.FC<DependencyInfoModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
   const { theme } = useTheme();
 
   if (!isOpen) return null;
@@ -26,7 +37,7 @@ export const DependencyInfoModal: React.FC<DependencyInfoModalProps> = ({ isOpen
           zIndex: 9998,
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
         }}
         onClick={onClose}
       >
@@ -41,26 +52,31 @@ export const DependencyInfoModal: React.FC<DependencyInfoModalProps> = ({ isOpen
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow:
+              '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
           }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div style={{
-            padding: '20px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <h2 style={{
-              fontSize: '18px',
-              fontWeight: 600,
-              color: theme.colors.text,
+          <div
+            style={{
+              padding: '20px',
+              borderBottom: `1px solid ${theme.colors.border}`,
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
-            }}>
+              justifyContent: 'space-between',
+            }}
+          >
+            <h2
+              style={{
+                fontSize: '18px',
+                fontWeight: 600,
+                color: theme.colors.text,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
               <HelpCircle size={20} />
               Understanding Your Dependencies
             </h2>
@@ -71,7 +87,7 @@ export const DependencyInfoModal: React.FC<DependencyInfoModalProps> = ({ isOpen
                 border: 'none',
                 color: theme.colors.textSecondary,
                 cursor: 'pointer',
-                padding: '4px'
+                padding: '4px',
               }}
             >
               <X size={20} />
@@ -79,11 +95,13 @@ export const DependencyInfoModal: React.FC<DependencyInfoModalProps> = ({ isOpen
           </div>
 
           {/* Content */}
-          <div style={{
-            padding: '20px',
-            overflow: 'auto',
-            flex: 1
-          }}>
+          <div
+            style={{
+              padding: '20px',
+              overflow: 'auto',
+              flex: 1,
+            }}
+          >
             {/* Dependency Types */}
             <Section
               icon={<Package size={18} />}
@@ -226,48 +244,89 @@ export const DependencyInfoModal: React.FC<DependencyInfoModalProps> = ({ isOpen
               title="Priority Order"
               theme={theme}
             >
-              <div style={{
-                fontSize: '13px',
-                lineHeight: '1.8',
-                color: theme.colors.text
-              }}>
+              <div
+                style={{
+                  fontSize: '13px',
+                  lineHeight: '1.8',
+                  color: theme.colors.text,
+                }}
+              >
                 <ol style={{ margin: 0, paddingLeft: '20px' }}>
-                  <li><strong>🔴 Critical/High vulnerabilities</strong> - Fix immediately, especially in production deps</li>
-                  <li><strong>🟠 Deprecated packages</strong> - Replace soon, they won't get security fixes</li>
-                  <li><strong>🟡 Major updates in production</strong> - Review breaking changes carefully</li>
-                  <li><strong>🟡 License issues</strong> - Resolve for legal compliance</li>
-                  <li><strong>🟢 Patch updates</strong> - Safe to update, do regularly</li>
-                  <li><strong>🟢 Dev dependency updates</strong> - Update for better tooling</li>
+                  <li>
+                    <strong>🔴 Critical/High vulnerabilities</strong> - Fix
+                    immediately, especially in production deps
+                  </li>
+                  <li>
+                    <strong>🟠 Deprecated packages</strong> - Replace soon, they
+                    won't get security fixes
+                  </li>
+                  <li>
+                    <strong>🟡 Major updates in production</strong> - Review
+                    breaking changes carefully
+                  </li>
+                  <li>
+                    <strong>🟡 License issues</strong> - Resolve for legal
+                    compliance
+                  </li>
+                  <li>
+                    <strong>🟢 Patch updates</strong> - Safe to update, do
+                    regularly
+                  </li>
+                  <li>
+                    <strong>🟢 Dev dependency updates</strong> - Update for
+                    better tooling
+                  </li>
                 </ol>
               </div>
             </Section>
 
             {/* Quick Actions */}
-            <div style={{
-              marginTop: '24px',
-              padding: '16px',
-              backgroundColor: theme.colors.backgroundLight,
-              borderRadius: '8px',
-              border: `1px solid ${theme.colors.border}`
-            }}>
-              <h4 style={{
-                fontSize: '14px',
-                fontWeight: 600,
-                color: theme.colors.text,
-                marginBottom: '12px'
-              }}>
+            <div
+              style={{
+                marginTop: '24px',
+                padding: '16px',
+                backgroundColor: theme.colors.backgroundLight,
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              <h4
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  marginBottom: '12px',
+                }}
+              >
                 💡 Quick Filter Tips
               </h4>
-              <div style={{
-                fontSize: '12px',
-                lineHeight: '1.8',
-                color: theme.colors.textSecondary
-              }}>
-                <div>• <strong>Critical Security:</strong> Shows packages with critical/high vulnerabilities</div>
-                <div>• <strong>Deprecated Packages:</strong> Shows obsolete packages that need replacement</div>
-                <div>• <strong>Safe Updates:</strong> Shows only patch updates that are safe to install</div>
-                <div>• <strong>License Review:</strong> Shows copyleft/proprietary licenses needing attention</div>
-                <div>• <strong>Production Risk:</strong> Shows production deps with major updates or vulnerabilities</div>
+              <div
+                style={{
+                  fontSize: '12px',
+                  lineHeight: '1.8',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                <div>
+                  • <strong>Critical Security:</strong> Shows packages with
+                  critical/high vulnerabilities
+                </div>
+                <div>
+                  • <strong>Deprecated Packages:</strong> Shows obsolete
+                  packages that need replacement
+                </div>
+                <div>
+                  • <strong>Safe Updates:</strong> Shows only patch updates that
+                  are safe to install
+                </div>
+                <div>
+                  • <strong>License Review:</strong> Shows copyleft/proprietary
+                  licenses needing attention
+                </div>
+                <div>
+                  • <strong>Production Risk:</strong> Shows production deps with
+                  major updates or vulnerabilities
+                </div>
               </div>
             </div>
           </div>
@@ -285,23 +344,27 @@ const Section: React.FC<{
   children: React.ReactNode;
 }> = ({ icon, title, theme, children }) => (
   <div style={{ marginBottom: '24px' }}>
-    <h3 style={{
-      fontSize: '15px',
-      fontWeight: 600,
-      color: theme.colors.text,
-      marginBottom: '12px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
-    }}>
+    <h3
+      style={{
+        fontSize: '15px',
+        fontWeight: 600,
+        color: theme.colors.text,
+        marginBottom: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+      }}
+    >
       {icon}
       {title}
     </h3>
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '8px'
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
       {children}
     </div>
   </div>
@@ -313,41 +376,51 @@ const InfoItem: React.FC<{
   description: string;
   theme: any;
 }> = ({ badge, title, description, theme }) => (
-  <div style={{
-    padding: '10px',
-    backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: '6px',
-    border: `1px solid ${theme.colors.border}`
-  }}>
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      marginBottom: '4px'
-    }}>
-      <span style={{
-        padding: '2px 6px',
-        borderRadius: '4px',
-        fontSize: '11px',
-        fontWeight: 500,
-        backgroundColor: `${badge.color}20`,
-        color: badge.color
-      }}>
+  <div
+    style={{
+      padding: '10px',
+      backgroundColor: theme.colors.backgroundSecondary,
+      borderRadius: '6px',
+      border: `1px solid ${theme.colors.border}`,
+    }}
+  >
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        marginBottom: '4px',
+      }}
+    >
+      <span
+        style={{
+          padding: '2px 6px',
+          borderRadius: '4px',
+          fontSize: '11px',
+          fontWeight: 500,
+          backgroundColor: `${badge.color}20`,
+          color: badge.color,
+        }}
+      >
         {badge.text}
       </span>
-      <span style={{
-        fontSize: '13px',
-        fontWeight: 500,
-        color: theme.colors.text
-      }}>
+      <span
+        style={{
+          fontSize: '13px',
+          fontWeight: 500,
+          color: theme.colors.text,
+        }}
+      >
         {title}
       </span>
     </div>
-    <div style={{
-      fontSize: '12px',
-      color: theme.colors.textSecondary,
-      lineHeight: '1.5'
-    }}>
+    <div
+      style={{
+        fontSize: '12px',
+        color: theme.colors.textSecondary,
+        lineHeight: '1.5',
+      }}
+    >
       {description}
     </div>
   </div>

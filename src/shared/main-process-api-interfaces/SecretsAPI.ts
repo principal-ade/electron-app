@@ -37,11 +37,11 @@ export enum SecretsEvents {
   DELETE = 'secrets:delete',
   EXISTS = 'secrets:exists',
   LIST = 'secrets:list',
-  
+
   // Bulk operations
   UPDATE = 'secrets:update',
   REMOVE_KEYS = 'secrets:remove-keys',
-  
+
   // Maintenance
   CLEAR_CACHE = 'secrets:clear-cache',
 }
@@ -54,37 +54,40 @@ export interface SecretsAPI {
    * Store secrets for a repository
    */
   store: (request: SecretStoreRequest) => Promise<SecretOperationResult>;
-  
+
   /**
    * Get secrets for a repository
    */
   get: (repoId: string) => Promise<RepositorySecrets | null>;
-  
+
   /**
    * Delete all secrets for a repository
    */
   delete: (repoId: string) => Promise<SecretOperationResult>;
-  
+
   /**
    * Check if secrets exist for a repository
    */
   exists: (repoId: string) => Promise<boolean>;
-  
+
   /**
    * List metadata for all stored secrets
    */
   list: () => Promise<SecretMetadata[]>;
-  
+
   /**
    * Update existing secrets (merge with existing)
    */
   update: (request: SecretStoreRequest) => Promise<SecretOperationResult>;
-  
+
   /**
    * Remove specific secret keys from a repository
    */
-  removeKeys: (repoId: string, keys: string[]) => Promise<SecretOperationResult>;
-  
+  removeKeys: (
+    repoId: string,
+    keys: string[],
+  ) => Promise<SecretOperationResult>;
+
   /**
    * Clear all in-memory caches
    */

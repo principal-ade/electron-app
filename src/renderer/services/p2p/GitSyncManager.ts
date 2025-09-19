@@ -1,9 +1,16 @@
 import { PeerManager, PeerData } from './PeerManager';
-import { GitService, GitStatus as GitServiceStatus } from '../../main-process-api/GitService';
+import {
+  GitService,
+  GitStatus as GitServiceStatus,
+} from '../../main-process-api/GitService';
 
 export interface GitSyncData {
   type: 'git-sync';
-  action: 'commit-available' | 'request-sync' | 'sync-complete' | 'conflict-detected';
+  action:
+    | 'commit-available'
+    | 'request-sync'
+    | 'sync-complete'
+    | 'conflict-detected';
   data: {
     repoPath: string;
     branch: string;
@@ -33,7 +40,7 @@ export class GitSyncManager {
 
   constructor(peerManager: PeerManager) {
     this.peerManager = peerManager;
-    
+
     // Listen for git sync messages from peers
     const originalCallback = peerManager['onDataReceived'];
     peerManager.setCallbacks({
@@ -52,13 +59,13 @@ export class GitSyncManager {
    */
   async initializeSync(repoPath: string): Promise<void> {
     this.currentRepoPath = repoPath;
-    
+
     // Get current branch and commit
     const branchInfo = await GitService.getCurrentBranch(repoPath);
     const commitInfo = await GitService.getLatestCommit(repoPath);
-    
+
     this.currentBranch = branchInfo.branch;
-    
+
     // Broadcast our current state to all peers
     this.broadcastSyncState();
   }
@@ -69,10 +76,10 @@ export class GitSyncManager {
   async broadcastSyncState(): Promise<void> {
     const commitInfo = await GitService.getLatestCommit(this.currentRepoPath);
     const status = await GitService.getStatus(this.currentRepoPath);
-    
+
     // Combine staged and unstaged files as modified
     const modifiedFiles = [...new Set([...status.staged, ...status.unstaged])];
-    
+
     const syncData: GitSyncData = {
       type: 'git-sync',
       action: 'commit-available',
@@ -98,15 +105,15 @@ export class GitSyncManager {
       case 'commit-available':
         await this.handleCommitAvailable(peerId, message.data);
         break;
-      
+
       case 'request-sync':
         await this.handleSyncRequest(peerId);
         break;
-      
+
       case 'sync-complete':
         await this.handleSyncComplete(peerId, message.data);
         break;
-      
+
       case 'conflict-detected':
         this.handleConflictDetected(peerId, message.data);
         break;
@@ -116,12 +123,15 @@ export class GitSyncManager {
   /**
    * Handle when a peer announces a new commit
    */
-  private async handleCommitAvailable(peerId: string, data: GitSyncData['data']) {
+  private async handleCommitAvailable(
+    peerId: string,
+    data: GitSyncData['data'],
+  ) {
     const localCommit = await GitService.getLatestCommit(this.currentRepoPath);
-    
+
     // Check if we're behind
     const isBehind = localCommit.hash !== data.commit;
-    
+
     // Update sync status
     const status: SyncStatus = {
       localCommit: localCommit.hash,
@@ -130,10 +140,10 @@ export class GitSyncManager {
       pendingChanges: data.files.length,
       conflicts: [],
     };
-    
+
     this.syncStatus.set(peerId, status);
     this.onSyncUpdate?.(status, peerId);
-    
+
     if (isBehind) {
       // Check for potential conflicts
       const localStatus = await GitService.getStatus(this.currentRepoPath);
@@ -142,15 +152,17 @@ export class GitSyncManager {
         ...localStatus.unstaged,
         ...localStatus.untracked,
       ]);
-      
+
       // Check if any remote files conflict with local changes
-      const conflicts = data.files.filter(file => localChangedFiles.has(file));
-      
+      const conflicts = data.files.filter((file) =>
+        localChangedFiles.has(file),
+      );
+
       if (conflicts.length > 0) {
         status.conflicts = conflicts;
         this.syncStatus.set(peerId, status);
         this.onConflict?.(conflicts);
-        
+
         // Notify peer about conflict
         this.peerManager.sendToPeer(peerId, {
           type: 'git-sync',
@@ -191,54 +203,71 @@ export class GitSyncManager {
     // 1. Push changes to a shared remote
     // 2. Or create a patch/bundle to send
     // For now, we'll signal that sync is ready
-    
+
     await this.broadcastSyncState();
   }
 
   /**
    * Perform the actual sync operation
    */
-  async performSync(peerId: string): Promise<{ success: boolean; message: string }> {
+  async performSync(
+    peerId: string,
+  ): Promise<{ success: boolean; message: string }> {
     const status = this.syncStatus.get(peerId);
     if (!status) {
       return { success: false, message: 'No sync status available' };
     }
 
     if (status.conflicts.length > 0) {
-      return { success: false, message: `Conflicts detected in: ${status.conflicts.join(', ')}` };
+      return {
+        success: false,
+        message: `Conflicts detected in: ${status.conflicts.join(', ')}`,
+      };
     }
 
     try {
       // Ensure we have no uncommitted changes
       const localStatus = await GitService.getStatus(this.currentRepoPath);
-      const hasChanges = localStatus.staged.length > 0 || localStatus.unstaged.length > 0 || localStatus.untracked.length > 0;
-      
+      const hasChanges =
+        localStatus.staged.length > 0 ||
+        localStatus.unstaged.length > 0 ||
+        localStatus.untracked.length > 0;
+
       if (hasChanges) {
         // Auto-commit local changes first
-        const filesToCommit = [...new Set([...localStatus.staged, ...localStatus.unstaged, ...localStatus.untracked])];
+        const filesToCommit = [
+          ...new Set([
+            ...localStatus.staged,
+            ...localStatus.unstaged,
+            ...localStatus.untracked,
+          ]),
+        ];
         await GitService.commitChanges(
           this.currentRepoPath,
           'Auto-commit before sync',
-          filesToCommit
+          filesToCommit,
         );
       }
 
       // In a real implementation, we would:
       // 1. Fetch from remote: git fetch origin
       // 2. Merge or rebase: git merge origin/branch
-      
+
       // For P2P, we could:
       // - Exchange git bundles
       // - Use a shared remote as intermediary
       // - Direct file transfer via WebRTC data channel
-      
+
       // Simplified version: assume shared remote exists
       const fetchResult = await GitService.fetch(this.currentRepoPath);
       if (!fetchResult.success) {
         return { success: false, message: 'Failed to fetch changes' };
       }
 
-      const mergeResult = await GitService.merge(this.currentRepoPath, `origin/${this.currentBranch}`);
+      const mergeResult = await GitService.merge(
+        this.currentRepoPath,
+        `origin/${this.currentBranch}`,
+      );
       if (!mergeResult.success) {
         return { success: false, message: 'Failed to merge changes' };
       }

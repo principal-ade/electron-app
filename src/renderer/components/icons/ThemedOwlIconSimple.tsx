@@ -14,7 +14,7 @@ interface ThemedOwlIconSimpleProps {
 
 /**
  * Simplified Themed Owl Icon
- * 
+ *
  * This component supports two modes:
  * 1. Single Image Mode: Uses pre-colored versions for each theme
  * 2. Layered Mode: Uses CSS filters to colorize specific layers
@@ -23,12 +23,12 @@ export const ThemedOwlIconSimple: React.FC<ThemedOwlIconSimpleProps> = ({
   size = 48,
   className,
   basePath = '/assets/icons',
-  useSingleImage = false
+  useSingleImage = false,
 }) => {
   const { theme } = useTheme();
   const currentThemeName = ThemeService.getCurrentThemeName();
   const iconTheme = iconThemes[currentThemeName] || iconThemes.default;
-  
+
   // Single image mode - use pre-made themed versions
   if (useSingleImage) {
     return (
@@ -40,7 +40,7 @@ export const ThemedOwlIconSimple: React.FC<ThemedOwlIconSimpleProps> = ({
         className={className}
         style={{
           display: 'block',
-          transition: 'opacity 0.3s ease'
+          transition: 'opacity 0.3s ease',
         }}
         onError={(e) => {
           // Fallback to default if themed version doesn't exist
@@ -49,30 +49,36 @@ export const ThemedOwlIconSimple: React.FC<ThemedOwlIconSimpleProps> = ({
       />
     );
   }
-  
+
   // Layered mode with CSS filters
   // Calculate CSS filter to transform colors
   const getColorFilter = (targetColor: string) => {
     // For a more accurate color transformation, we'd need to use SVG filters
     // This is a simplified approach using CSS filters
-    
-    if (targetColor === '#1976D2') { // Default blue
+
+    if (targetColor === '#1976D2') {
+      // Default blue
       return 'none';
-    } else if (targetColor === '#003D82') { // Professional dark blue
+    } else if (targetColor === '#003D82') {
+      // Professional dark blue
       return 'brightness(0.6) sepia(1) hue-rotate(190deg) saturate(5)';
-    } else if (targetColor === '#0891B2') { // Ocean teal
+    } else if (targetColor === '#0891B2') {
+      // Ocean teal
       return 'brightness(0.8) sepia(1) hue-rotate(160deg) saturate(3)';
-    } else if (targetColor === '#EA580C') { // Sunset orange
+    } else if (targetColor === '#EA580C') {
+      // Sunset orange
       return 'brightness(1) sepia(1) hue-rotate(350deg) saturate(5)';
-    } else if (targetColor === '#6B7280') { // Minimal gray
+    } else if (targetColor === '#6B7280') {
+      // Minimal gray
       return 'brightness(0.7) saturate(0)';
-    } else if (targetColor === '#0000FF') { // High contrast blue
+    } else if (targetColor === '#0000FF') {
+      // High contrast blue
       return 'brightness(0.8) sepia(1) hue-rotate(200deg) saturate(10)';
     }
-    
+
     return 'none';
   };
-  
+
   return (
     <div
       className={className}
@@ -80,7 +86,7 @@ export const ThemedOwlIconSimple: React.FC<ThemedOwlIconSimpleProps> = ({
         position: 'relative',
         width: size,
         height: size,
-        display: 'inline-block'
+        display: 'inline-block',
       }}
     >
       {/* Base owl image (body + features) */}
@@ -93,13 +99,14 @@ export const ThemedOwlIconSimple: React.FC<ThemedOwlIconSimpleProps> = ({
           height: '100%',
           zIndex: 1,
           // Adjust brightness for dark/light themes
-          filter: theme.colors.background === '#FFFFFF' 
-            ? 'brightness(1)' 
-            : 'brightness(1.2)',
-          transition: 'filter 0.3s ease'
+          filter:
+            theme.colors.background === '#FFFFFF'
+              ? 'brightness(1)'
+              : 'brightness(1.2)',
+          transition: 'filter 0.3s ease',
         }}
       />
-      
+
       {/* Eyes overlay - this will be colorized */}
       <img
         src={`${basePath}/owl-eyes-color.png`}
@@ -111,10 +118,10 @@ export const ThemedOwlIconSimple: React.FC<ThemedOwlIconSimpleProps> = ({
           zIndex: 2,
           filter: getColorFilter(iconTheme.eyeColor),
           transition: 'filter 0.3s ease',
-          mixBlendMode: 'normal'
+          mixBlendMode: 'normal',
         }}
       />
-      
+
       {/* Optional glow effect for certain themes */}
       {iconTheme.style === 'glow' && (
         <div
@@ -125,11 +132,11 @@ export const ThemedOwlIconSimple: React.FC<ThemedOwlIconSimpleProps> = ({
             zIndex: 3,
             background: `radial-gradient(circle at 50% 35%, ${iconTheme.eyeColor}40 0%, transparent 50%)`,
             pointerEvents: 'none',
-            animation: 'pulse 2s ease-in-out infinite'
+            animation: 'pulse 2s ease-in-out infinite',
           }}
         />
       )}
-      
+
       <style>
         {`
           @keyframes pulse {

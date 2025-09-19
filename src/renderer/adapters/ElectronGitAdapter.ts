@@ -1,6 +1,6 @@
-import { GitAdapter } from "@principal-ai/codebase-composition";
-import { GithubService } from "../main-process-api/GithubService";
-import { FileSystemService } from "../main-process-api/FileSystemService";
+import { GitAdapter } from '@principal-ai/codebase-composition';
+import { GithubService } from '../main-process-api/GithubService';
+import { FileSystemService } from '../main-process-api/FileSystemService';
 
 export class ElectronGitAdapter implements GitAdapter {
   async detectRepository(path: string): Promise<{

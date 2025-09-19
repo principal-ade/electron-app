@@ -66,14 +66,14 @@ export interface TestCoverageAPI {
   collectCoverage(
     rootPath: string,
     packages: Array<{ name: string; path: string }>,
-    options?: CoverageCollectionOptions
+    options?: CoverageCollectionOptions,
   ): Promise<TestCoverageResult>;
-  
+
   /**
    * Cancel coverage collection for a specific package
    */
   cancelCoverage(packageName: string): Promise<boolean>;
-  
+
   /**
    * Cancel all running coverage collections
    */

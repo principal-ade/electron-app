@@ -4,7 +4,13 @@
  */
 
 import { ipcRenderer } from 'electron';
-import type { FeedbackAPI, ContextMenuParams, FeedbackModalData, FeedbackSubmissionData, FeedbackSubmissionResult } from '../../shared/main-process-api-interfaces/FeedbackAPI';
+import type {
+  FeedbackAPI,
+  ContextMenuParams,
+  FeedbackModalData,
+  FeedbackSubmissionData,
+  FeedbackSubmissionResult,
+} from '../../shared/main-process-api-interfaces/FeedbackAPI';
 import { FeedbackEvent } from '../../shared/ipc-events/FeedbackEvents';
 
 /**
@@ -22,14 +28,18 @@ export const feedbackAPI: FeedbackAPI = {
    * Listen for feedback modal show events
    */
   onShowModal: (callback: (data: FeedbackModalData) => void) => {
-    const subscription = (_event: any, data: FeedbackModalData) => callback(data);
+    const subscription = (_event: any, data: FeedbackModalData) =>
+      callback(data);
     ipcRenderer.on(FeedbackEvent.SHOW_MODAL, subscription);
-    return () => ipcRenderer.removeListener(FeedbackEvent.SHOW_MODAL, subscription);
+    return () =>
+      ipcRenderer.removeListener(FeedbackEvent.SHOW_MODAL, subscription);
   },
 
   /**
    * Submit component feedback to the backend
    */
-  submitFeedback: (feedbackData: FeedbackSubmissionData): Promise<FeedbackSubmissionResult> =>
+  submitFeedback: (
+    feedbackData: FeedbackSubmissionData,
+  ): Promise<FeedbackSubmissionResult> =>
     ipcRenderer.invoke(FeedbackEvent.SUBMIT_FEEDBACK, feedbackData),
 };

@@ -1,25 +1,25 @@
 /**
  * AuthenticationAPI implementation for preload script
- * 
+ *
  * This implementation wraps existing IPC channels to provide a unified
  * authentication interface. During migration, it forwards calls to the
  * existing handlers in AuthService, AuthStateManager, and SecureTokenIPC.
  */
 
 import { ipcRenderer } from 'electron';
-import type { 
+import type {
   AuthenticationAPI,
   AuthResult,
   AuthStatus,
   AuthState,
   AuthUser,
   TokenResult,
-  TokenWithMetadata
+  TokenWithMetadata,
 } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 
 export const authenticationAPI: AuthenticationAPI = {
   // ===== OAuth Operations =====
-  
+
   login: async (options?: { forceNew?: boolean }): Promise<AuthResult> => {
     // Forward to existing cli-auth:login handler
     return ipcRenderer.invoke('cli-auth:login', options);
@@ -42,7 +42,10 @@ export const authenticationAPI: AuthenticationAPI = {
 
   // ===== Token Management =====
 
-  saveGitHubAuth: async (token: string, user: AuthUser): Promise<{ success: boolean; error?: string }> => {
+  saveGitHubAuth: async (
+    token: string,
+    user: AuthUser,
+  ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:save-github-auth handler
     return ipcRenderer.invoke('secure-token:save-github-auth', token, user);
   },
@@ -63,7 +66,11 @@ export const authenticationAPI: AuthenticationAPI = {
   },
 
   // Generic token operations
-  saveToken: async (key: string, token: string, metadata?: any): Promise<{ success: boolean; error?: string }> => {
+  saveToken: async (
+    key: string,
+    token: string,
+    metadata?: any,
+  ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:set handler
     return ipcRenderer.invoke('secure-token:set', key, token, metadata);
   },
@@ -73,12 +80,16 @@ export const authenticationAPI: AuthenticationAPI = {
     return ipcRenderer.invoke('secure-token:get', key);
   },
 
-  deleteToken: async (key: string): Promise<{ success: boolean; error?: string }> => {
+  deleteToken: async (
+    key: string,
+  ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:delete handler
     return ipcRenderer.invoke('secure-token:delete', key);
   },
 
-  migrateFromLocalStorage: async (tokens: any[]): Promise<{ success: boolean; error?: string }> => {
+  migrateFromLocalStorage: async (
+    tokens: any[],
+  ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:migrate-from-localstorage handler
     return ipcRenderer.invoke('secure-token:migrate-from-localstorage', tokens);
   },
@@ -93,18 +104,18 @@ export const authenticationAPI: AuthenticationAPI = {
   onAuthStateChanged: (callback: (state: AuthState) => void): (() => void) => {
     // Subscribe to auth state changes
     ipcRenderer.send('auth-state:subscribe');
-    
+
     // Set up listener for state changes
     const listener = (_event: any, state: AuthState) => {
       callback(state);
     };
-    
+
     ipcRenderer.on('auth-state:changed', listener);
-    
+
     // Return cleanup function
     return () => {
       ipcRenderer.send('auth-state:unsubscribe');
       ipcRenderer.removeListener('auth-state:changed', listener);
     };
-  }
+  },
 };

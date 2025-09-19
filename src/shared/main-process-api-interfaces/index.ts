@@ -1,6 +1,7 @@
 import type { A24zAPI } from './A24zAPI';
 import type { AgentConfigAPI } from './AgentConfigAPI';
 import type { AlexandriaAPI } from './AlexandriaAPI';
+import type { AlexandriaDocsAPI } from './AlexandriaDocsAPI';
 import type { AgentInstallationAPI } from './AgentInstallationAPI';
 import type { AgentSessionAPI } from './AgentSessionAPI';
 import type { AgentSessionArchiveAPI } from './AgentSessionArchiveAPI';
@@ -43,16 +44,32 @@ import type { SessionViewAPI } from './SessionViewAPI';
 import type { DocumentSearchAPI } from '../ipc/DocumentSearchIPC';
 
 // Re-export for convenience
-export type { AgentSessionEvent, AgentSessionEventsAPI } from './AgentSessionEventsAPI';
+export type {
+  AgentSessionEvent,
+  AgentSessionEventsAPI,
+} from './AgentSessionEventsAPI';
 export { AgentSessionEventsAPIEvent } from './AgentSessionEventsAPI';
-export type { AgentUpdateAPI, AgentUpdatePreferences, UpdateCheckResult } from './AgentUpdateAPI';
-export type { AuthenticationAPI, AuthUser, AuthResult, AuthStatus, AuthState, TokenResult, TokenWithMetadata } from './AuthenticationAPI';
+export type {
+  AgentUpdateAPI,
+  AgentUpdatePreferences,
+  UpdateCheckResult,
+} from './AgentUpdateAPI';
+export type {
+  AuthenticationAPI,
+  AuthUser,
+  AuthResult,
+  AuthStatus,
+  AuthState,
+  TokenResult,
+  TokenWithMetadata,
+} from './AuthenticationAPI';
 export type { KnipAPI, KnipAnalysisResult } from './KnipAPI';
 
 export interface MainProcessAPI {
   a24z: A24zAPI;
   agentConfig: AgentConfigAPI;
   alexandria: AlexandriaAPI;
+  alexandriaDocs: AlexandriaDocsAPI;
   agentInstallation: AgentInstallationAPI;
   agentSession: AgentSessionAPI;
   agentSessionEvents: AgentSessionEventsAPI;
@@ -98,7 +115,7 @@ export interface MainProcessAPI {
 
 /**
  * Test and Debug API Interface
- * 
+ *
  * IMPORTANT: These are debug/test utilities and should NOT be used in production code.
  * They are only exposed to support development and debugging features.
  */

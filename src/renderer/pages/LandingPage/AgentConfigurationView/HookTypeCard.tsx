@@ -1,5 +1,13 @@
 import React from 'react';
-import { Wrench, StopCircle, Bell, Layers, FileText, Globe, Edit3 } from 'lucide-react';
+import {
+  Wrench,
+  StopCircle,
+  Bell,
+  Layers,
+  FileText,
+  Globe,
+  Edit3,
+} from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 
 interface HookTypeCardProps {
@@ -25,10 +33,10 @@ export const HookTypeCard: React.FC<HookTypeCardProps> = ({
     const iconMap: Record<string, React.ReactNode> = {
       'Post Tool Use': <Wrench size={24} />,
       'Pre Tool Use': <Wrench size={24} />,
-      'Stop': <StopCircle size={24} />,
+      Stop: <StopCircle size={24} />,
       'Session Stop': <StopCircle size={24} />,
       'Subagent Stop': <StopCircle size={24} />,
-      'Notification': <Bell size={24} />,
+      Notification: <Bell size={24} />,
       'Pre Compact': <Layers size={24} />,
       'Tool Call': <Wrench size={24} />,
       'File Read': <FileText size={24} />,
@@ -42,8 +50,8 @@ export const HookTypeCard: React.FC<HookTypeCardProps> = ({
     <button
       onClick={onClick}
       className="rounded-lg p-6 transition-all text-left group relative overflow-hidden"
-      style={{ 
-        backgroundColor: theme.colors.surface, 
+      style={{
+        backgroundColor: theme.colors.surface,
         //'&:hover': { backgroundColor: theme.colors.backgroundHover }
       }}
       onMouseEnter={(e) => {
@@ -73,23 +81,52 @@ export const HookTypeCard: React.FC<HookTypeCardProps> = ({
           <div className="text-right">
             {configured ? (
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.colors.success }} />
-                <span className="text-sm" style={{ color: theme.colors.success }}>Configured</span>
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: theme.colors.success }}
+                />
+                <span
+                  className="text-sm"
+                  style={{ color: theme.colors.success }}
+                >
+                  Configured
+                </span>
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.colors.warning }} />
-                <span className="text-sm" style={{ color: theme.colors.warning }}>Not configured</span>
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: theme.colors.warning }}
+                />
+                <span
+                  className="text-sm"
+                  style={{ color: theme.colors.warning }}
+                >
+                  Not configured
+                </span>
               </div>
             )}
           </div>
         </div>
 
-        <h3 className="text-lg font-semibold mb-1" style={{ color: theme.colors.text }}>{type}</h3>
-        <p className="text-sm mb-3" style={{ color: theme.colors.textSecondary }}>{description || 'Configure hooks for this event'}</p>
+        <h3
+          className="text-lg font-semibold mb-1"
+          style={{ color: theme.colors.text }}
+        >
+          {type}
+        </h3>
+        <p
+          className="text-sm mb-3"
+          style={{ color: theme.colors.textSecondary }}
+        >
+          {description || 'Configure hooks for this event'}
+        </p>
 
         <div className="flex items-center justify-between">
-          <span className="text-sm" style={{ color: theme.colors.textTertiary }}>
+          <span
+            className="text-sm"
+            style={{ color: theme.colors.textTertiary }}
+          >
             {count} hook{count !== 1 ? 's' : ''} configured
           </span>
           <svg

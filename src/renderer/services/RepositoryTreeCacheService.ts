@@ -1,5 +1,5 @@
-import { FilesystemService } from "@principal-ai/codebase-composition";
-import { FileTree } from "@principal-ai/repository-abstraction";
+import { FilesystemService } from '@principal-ai/codebase-composition';
+import { FileTree } from '@principal-ai/repository-abstraction';
 import { ElectronFileSystemAdapter } from '../adapters/ElectronFileSystemAdapter';
 
 interface CacheEntry {

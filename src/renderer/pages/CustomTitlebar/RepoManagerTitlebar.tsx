@@ -26,7 +26,7 @@ export const RepoManagerTitlebar: React.FC<RepoManagerTitlebarProps> = ({
   repositoryOwner,
   repositoryName,
   onSettingsClick,
-  hasUpdateAvailable
+  hasUpdateAvailable,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -47,24 +47,30 @@ export const RepoManagerTitlebar: React.FC<RepoManagerTitlebarProps> = ({
   }
 
   // Get the appropriate background color from theme
-  const backgroundColor = colorMode === 'dark'
-    ? theme.colors.modes?.dark?.backgroundSecondary || theme.colors.backgroundSecondary
-    : theme.colors.backgroundSecondary;
+  const backgroundColor =
+    colorMode === 'dark'
+      ? theme.colors.modes?.dark?.backgroundSecondary ||
+        theme.colors.backgroundSecondary
+      : theme.colors.backgroundSecondary;
 
   // Get the accent color for the title
-  const accentColor = colorMode === 'dark'
-    ? theme.colors.modes?.dark?.accent || theme.colors.accent
-    : theme.colors.accent;
+  const accentColor =
+    colorMode === 'dark'
+      ? theme.colors.modes?.dark?.accent || theme.colors.accent
+      : theme.colors.accent;
 
   // Build the title text
-  const titleText = repositoryOwner && repositoryName
-    ? `${repositoryName} by ${repositoryOwner}`
-    : 'Repository Manager';
+  const titleText =
+    repositoryOwner && repositoryName
+      ? `${repositoryName} by ${repositoryOwner}`
+      : 'Repository Manager';
 
   return (
     <div className="custom-titlebar" style={{ backgroundColor }}>
       <div className="titlebar-drag-region">
-        <div className="titlebar-title" style={{ color: accentColor }}>{titleText}</div>
+        <div className="titlebar-title" style={{ color: accentColor }}>
+          {titleText}
+        </div>
       </div>
 
       {/* Settings button */}
@@ -91,17 +97,22 @@ export const RepoManagerTitlebar: React.FC<RepoManagerTitlebarProps> = ({
             zIndex: 10,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = colorMode === 'dark'
-              ? 'rgba(255, 255, 255, 0.1)'
-              : 'rgba(0, 0, 0, 0.05)';
-            e.currentTarget.style.color = colorMode === 'dark' ? '#d1d5db' : '#374151';
+            e.currentTarget.style.backgroundColor =
+              colorMode === 'dark'
+                ? 'rgba(255, 255, 255, 0.1)'
+                : 'rgba(0, 0, 0, 0.05)';
+            e.currentTarget.style.color =
+              colorMode === 'dark' ? '#d1d5db' : '#374151';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = colorMode === 'dark' ? '#9ca3af' : '#6b7280';
+            e.currentTarget.style.color =
+              colorMode === 'dark' ? '#9ca3af' : '#6b7280';
           }}
           aria-label="Settings"
-          title={hasUpdateAvailable ? "Settings (Update Available)" : "Settings"}
+          title={
+            hasUpdateAvailable ? 'Settings (Update Available)' : 'Settings'
+          }
         >
           <Settings size={18} />
           {hasUpdateAvailable && (
@@ -114,7 +125,7 @@ export const RepoManagerTitlebar: React.FC<RepoManagerTitlebarProps> = ({
                 height: '7px',
                 borderRadius: '50%',
                 backgroundColor: theme.colors.warning || '#fbbf24',
-                boxShadow: `0 0 4px ${(theme.colors.warning || '#fbbf24')}80`,
+                boxShadow: `0 0 4px ${theme.colors.warning || '#fbbf24'}80`,
               }}
             />
           )}
@@ -146,7 +157,13 @@ export const RepoManagerTitlebar: React.FC<RepoManagerTitlebarProps> = ({
               </svg>
             ) : (
               <svg width="12" height="12" viewBox="0 0 12 12">
-                <rect fill="currentColor" width="12" height="12" strokeWidth="1" stroke="currentColor" />
+                <rect
+                  fill="currentColor"
+                  width="12"
+                  height="12"
+                  strokeWidth="1"
+                  stroke="currentColor"
+                />
               </svg>
             )}
           </button>

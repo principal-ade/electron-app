@@ -10,20 +10,20 @@ import {
   ValidationIssue,
   ValidationSeverity,
   getSeverityColor,
-  getCategoryColor
+  getCategoryColor,
 } from '../../types/validation';
 
 // These enums were not in the original types, adding them here
 export enum ValidationViewMode {
   Issues = 'issues',
-  Files = 'files'
+  Files = 'files',
 }
 
 export enum ValidationGroupBy {
   File = 'file',
-  Severity = 'severity', 
+  Severity = 'severity',
   Rule = 'rule',
-  Category = 'category'
+  Category = 'category',
 }
 import {
   AlertCircle,
@@ -35,7 +35,7 @@ import {
   File,
   Filter,
   Search,
-  X
+  X,
 } from 'lucide-react';
 
 interface ValidationResultViewProps {
@@ -51,25 +51,25 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
   viewMode = ValidationViewMode.Issues,
   groupBy = ValidationGroupBy.File,
   onIssueSelect,
-  onFileSelect
+  onFileSelect,
 }) => {
   const { theme } = useTheme();
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState<Set<ValidationSeverity>>(
-    new Set([ValidationSeverity.Error, ValidationSeverity.Warning])
+    new Set([ValidationSeverity.Error, ValidationSeverity.Warning]),
   );
 
   // Filter issues based on search and severity
   const filteredIssues = useMemo(() => {
     if (!result) return [];
-    
-    return result.issues.filter(issue => {
+
+    return result.issues.filter((issue) => {
       // Check severity filter
       if (!severityFilter.has(issue.severity)) {
         return false;
       }
-      
+
       // Check search query
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -80,7 +80,7 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
           issue.category?.toLowerCase().includes(query)
         );
       }
-      
+
       return true;
     });
   }, [result, searchQuery, severityFilter]);
@@ -88,7 +88,7 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
   // Group issues based on groupBy setting
   const groupedIssues = useMemo(() => {
     const groups = new Map<string, ValidationIssue[]>();
-    
+
     for (const issue of filteredIssues) {
       let key: string;
       switch (groupBy) {
@@ -107,17 +107,17 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
         default:
           key = issue.file;
       }
-      
+
       const groupIssues = groups.get(key) || [];
       groupIssues.push(issue);
       groups.set(key, groupIssues);
     }
-    
+
     return groups;
   }, [filteredIssues, groupBy]);
 
   const toggleGroup = (group: string) => {
-    setExpandedGroups(prev => {
+    setExpandedGroups((prev) => {
       const next = new Set(prev);
       if (next.has(group)) {
         next.delete(group);
@@ -143,16 +143,22 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
 
   if (!result) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        padding: '40px',
-        color: theme.colors.textSecondary
-      }}>
-        <CheckCircle size={48} color={theme.colors.textTertiary} style={{ marginBottom: 16 }} />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          padding: '40px',
+          color: theme.colors.textSecondary,
+        }}
+      >
+        <CheckCircle
+          size={48}
+          color={theme.colors.textTertiary}
+          style={{ marginBottom: 16 }}
+        />
         <div style={{ fontSize: 16, fontWeight: 600 }}>
           No validation results yet
         </div>
@@ -166,19 +172,27 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
   // Show success state if no issues
   if (result.issues.length === 0) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        padding: '40px'
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          padding: '40px',
+        }}
+      >
         <CheckCircle size={48} color="#10b981" style={{ marginBottom: 16 }} />
         <div style={{ fontSize: 18, fontWeight: 600, color: '#10b981' }}>
           All checks passed!
         </div>
-        <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 8 }}>
+        <div
+          style={{
+            fontSize: 14,
+            color: theme.colors.textSecondary,
+            marginTop: 8,
+          }}
+        >
           No issues found in {result.scope.filesAnalyzed.total} files
         </div>
       </div>
@@ -186,24 +200,30 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      backgroundColor: theme.colors.background
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        backgroundColor: theme.colors.background,
+      }}
+    >
       {/* Header with summary */}
-      <div style={{
-        padding: '16px',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        backgroundColor: theme.colors.backgroundLight
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 12
-        }}>
+      <div
+        style={{
+          padding: '16px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.backgroundLight,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 12,
+          }}
+        >
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             {result.summary.bySeverity.errors > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -211,7 +231,9 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
                 <span style={{ fontWeight: 600, color: '#ef4444' }}>
                   {result.summary.bySeverity.errors}
                 </span>
-                <span style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+                <span
+                  style={{ color: theme.colors.textSecondary, fontSize: 13 }}
+                >
                   errors
                 </span>
               </div>
@@ -222,7 +244,9 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
                 <span style={{ fontWeight: 600, color: '#f59e0b' }}>
                   {result.summary.bySeverity.warnings}
                 </span>
-                <span style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+                <span
+                  style={{ color: theme.colors.textSecondary, fontSize: 13 }}
+                >
                   warnings
                 </span>
               </div>
@@ -233,30 +257,38 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
                 <span style={{ fontWeight: 600, color: '#3b82f6' }}>
                   {result.summary.bySeverity.info}
                 </span>
-                <span style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+                <span
+                  style={{ color: theme.colors.textSecondary, fontSize: 13 }}
+                >
                   info
                 </span>
               </div>
             )}
           </div>
           <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
-            {result.summary.filesWithIssues} of {result.summary.totalFilesAnalyzed} files
+            {result.summary.filesWithIssues} of{' '}
+            {result.summary.totalFilesAnalyzed} files
           </div>
         </div>
 
         {/* Filters */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{
-            flex: 1,
-            position: 'relative'
-          }}>
-            <Search size={14} style={{
-              position: 'absolute',
-              left: 8,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: theme.colors.textSecondary
-            }} />
+          <div
+            style={{
+              flex: 1,
+              position: 'relative',
+            }}
+          >
+            <Search
+              size={14}
+              style={{
+                position: 'absolute',
+                left: 8,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: theme.colors.textSecondary,
+              }}
+            />
             <input
               type="text"
               placeholder="Search issues..."
@@ -270,17 +302,17 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
                 backgroundColor: theme.colors.background,
                 color: theme.colors.text,
                 fontSize: 13,
-                outline: 'none'
+                outline: 'none',
               }}
             />
           </div>
-          
+
           <div style={{ display: 'flex', gap: 4 }}>
-            {Object.values(ValidationSeverity).map(severity => (
+            {Object.values(ValidationSeverity).map((severity) => (
               <button
                 key={severity}
                 onClick={() => {
-                  setSeverityFilter(prev => {
+                  setSeverityFilter((prev) => {
                     const next = new Set(prev);
                     if (next.has(severity)) {
                       next.delete(severity);
@@ -294,8 +326,8 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
                   padding: '4px 8px',
                   borderRadius: 4,
                   border: `1px solid ${
-                    severityFilter.has(severity) 
-                      ? getSeverityColor(severity) 
+                    severityFilter.has(severity)
+                      ? getSeverityColor(severity)
                       : theme.colors.border
                   }`,
                   backgroundColor: severityFilter.has(severity)
@@ -306,7 +338,7 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
                     : theme.colors.textSecondary,
                   fontSize: 12,
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
                 }}
               >
                 {severity}
@@ -317,11 +349,13 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
       </div>
 
       {/* Issues list */}
-      <div style={{
-        flex: 1,
-        overflow: 'auto',
-        padding: '8px'
-      }}>
+      <div
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: '8px',
+        }}
+      >
         {Array.from(groupedIssues.entries()).map(([group, issues]) => (
           <div
             key={group}
@@ -330,7 +364,7 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
               borderRadius: 8,
               backgroundColor: theme.colors.backgroundLight,
               border: `1px solid ${theme.colors.border}`,
-              overflow: 'hidden'
+              overflow: 'hidden',
             }}
           >
             <div
@@ -342,27 +376,28 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
                 alignItems: 'center',
                 cursor: 'pointer',
                 backgroundColor: theme.colors.backgroundSecondary,
-                borderBottom: expandedGroups.has(group) 
-                  ? `1px solid ${theme.colors.border}` 
-                  : 'none'
+                borderBottom: expandedGroups.has(group)
+                  ? `1px solid ${theme.colors.border}`
+                  : 'none',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {expandedGroups.has(group) 
-                  ? <ChevronDown size={14} /> 
-                  : <ChevronRight size={14} />
-                }
+                {expandedGroups.has(group) ? (
+                  <ChevronDown size={14} />
+                ) : (
+                  <ChevronRight size={14} />
+                )}
                 {groupBy === ValidationGroupBy.File && <File size={14} />}
-                <span style={{ fontWeight: 500, fontSize: 14 }}>
-                  {group}
-                </span>
-                <span style={{ 
-                  color: theme.colors.textSecondary, 
-                  fontSize: 12,
-                  backgroundColor: theme.colors.backgroundTertiary,
-                  padding: '2px 6px',
-                  borderRadius: 4
-                }}>
+                <span style={{ fontWeight: 500, fontSize: 14 }}>{group}</span>
+                <span
+                  style={{
+                    color: theme.colors.textSecondary,
+                    fontSize: 12,
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    padding: '2px 6px',
+                    borderRadius: 4,
+                  }}
+                >
                   {issues.length}
                 </span>
               </div>
@@ -381,64 +416,78 @@ export const ValidationResultView: React.FC<ValidationResultViewProps> = ({
                     }}
                     style={{
                       padding: '8px 12px',
-                      borderBottom: idx < issues.length - 1 
-                        ? `1px solid ${theme.colors.border}` 
-                        : 'none',
+                      borderBottom:
+                        idx < issues.length - 1
+                          ? `1px solid ${theme.colors.border}`
+                          : 'none',
                       cursor: 'pointer',
-                      transition: 'background-color 0.2s'
+                      transition: 'background-color 0.2s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundSecondary;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'start', 
-                      gap: 8 
-                    }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'start',
+                        gap: 8,
+                      }}
+                    >
                       {getSeverityIcon(issue.severity)}
                       <div style={{ flex: 1 }}>
-                        <div style={{ 
-                          display: 'flex', 
-                          gap: 8, 
-                          marginBottom: 4,
-                          alignItems: 'center'
-                        }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 8,
+                            marginBottom: 4,
+                            alignItems: 'center',
+                          }}
+                        >
                           {groupBy !== ValidationGroupBy.File && (
-                            <span style={{ 
-                              fontSize: 11, 
-                              color: theme.colors.textSecondary 
-                            }}>
+                            <span
+                              style={{
+                                fontSize: 11,
+                                color: theme.colors.textSecondary,
+                              }}
+                            >
                               {issue.file}
                             </span>
                           )}
-                          <span style={{ 
-                            fontSize: 11, 
-                            color: theme.colors.textSecondary 
-                          }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: theme.colors.textSecondary,
+                            }}
+                          >
                             Line {issue.line}:{issue.column}
                           </span>
                           {issue.rule && (
-                            <span style={{
-                              fontSize: 10,
-                              padding: '1px 4px',
-                              borderRadius: 3,
-                              backgroundColor: `${getSeverityColor(issue.severity)}20`,
-                              color: getSeverityColor(issue.severity),
-                              fontWeight: 600
-                            }}>
+                            <span
+                              style={{
+                                fontSize: 10,
+                                padding: '1px 4px',
+                                borderRadius: 3,
+                                backgroundColor: `${getSeverityColor(issue.severity)}20`,
+                                color: getSeverityColor(issue.severity),
+                                fontWeight: 600,
+                              }}
+                            >
                               {issue.rule}
                             </span>
                           )}
                         </div>
-                        <div style={{ 
-                          fontSize: 13, 
-                          color: theme.colors.text,
-                          lineHeight: 1.4
-                        }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: theme.colors.text,
+                            lineHeight: 1.4,
+                          }}
+                        >
                           {issue.message}
                         </div>
                       </div>

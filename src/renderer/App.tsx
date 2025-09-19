@@ -7,36 +7,71 @@ import { useTheme } from 'themed-markdown';
 
 import { GlobalFeedbackProvider } from './GlobalFeedbackProvider';
 import { UserPromptProvider } from './components/mcp/UserPromptProvider';
-import { AgentUpdateNotifications } from './components/AgentUpdateNotifications';
 import { CustomThemeProvider } from './providers/CustomThemeProvider';
 import { CustomTitlebar } from './pages/CustomTitlebar/CustomTitlebar';
 import { RepoManagerTitlebar } from './pages/CustomTitlebar/RepoManagerTitlebar';
 import { SettingsModal } from './components/landing-page/SettingsModal';
 
-import { AgentConfigurationService, AgentInstallationStatus } from './main-process-api/AgentConfigurationService';
+import {
+  AgentConfigurationService,
+  AgentInstallationStatus,
+} from './main-process-api/AgentConfigurationService';
 import { AppVersionManagerService } from './main-process-api/AppVersionManagerService';
 
 // Import MarkdownView directly (not lazy loaded)
 import { MarkdownView } from './pages/MarkdownView';
 
 // Lazy load all page components
-const LandingPage = React.lazy(() => import('./pages/LandingPage/LandingPage').then(m => ({ default: m.LandingPage })));
-const ArchivedSessionsViewer = React.lazy(() => import('./pages/ArchivedSessionsViewer').then(m => ({ default: m.ArchivedSessionsViewer })));
-const StandaloneTerminal = React.lazy(() => import('./pages/StandaloneTerminal').then(m => ({ default: m.StandaloneTerminal })));
-const StoreViewer = React.lazy(() => import('./pages/StoreViewer').then(m => ({ default: m.StoreViewer })));
-const RepositoryManager = React.lazy(() => import('./pages/RepoManager/RepositoryManager').then(m => ({ default: m.RepositoryManager })));
-const MultiFileEditorWindow = React.lazy(() => import('./pages/MultiFileEditorWindow').then(m => ({ default: m.MultiFileEditorWindow })));
+const LandingPage = React.lazy(() =>
+  import('./pages/LandingPage/LandingPage').then((m) => ({
+    default: m.LandingPage,
+  })),
+);
+const ArchivedSessionsViewer = React.lazy(() =>
+  import('./pages/ArchivedSessionsViewer').then((m) => ({
+    default: m.ArchivedSessionsViewer,
+  })),
+);
+const StandaloneTerminal = React.lazy(() =>
+  import('./pages/StandaloneTerminal').then((m) => ({
+    default: m.StandaloneTerminal,
+  })),
+);
+const StoreViewer = React.lazy(() =>
+  import('./pages/StoreViewer').then((m) => ({ default: m.StoreViewer })),
+);
+const RepositoryManager = React.lazy(() =>
+  import('./pages/RepoManager/RepositoryManager').then((m) => ({
+    default: m.RepositoryManager,
+  })),
+);
+const MultiFileEditorWindow = React.lazy(() =>
+  import('./pages/MultiFileEditorWindow').then((m) => ({
+    default: m.MultiFileEditorWindow,
+  })),
+);
 
-function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpdate: boolean) => void }) {
+function AppContent({
+  setHasUpdateAvailable,
+}: {
+  setHasUpdateAvailable: (hasUpdate: boolean) => void;
+}) {
   const { theme } = useTheme();
 
   const [currentView, setCurrentView] = React.useState<
-    'landing' | 'ArchivedSessionsViewer' | 'terminal' | 'storeViewer' | 'markdownView' | 'repositoryMaps' | 'multiFileEditor'
+    | 'landing'
+    | 'ArchivedSessionsViewer'
+    | 'terminal'
+    | 'storeViewer'
+    | 'markdownView'
+    | 'repositoryMaps'
+    | 'multiFileEditor'
   >('landing');
   // const [useNewUI, setUseNewUI] = React.useState(false); // No longer needed
   const [windowInitData, setWindowInitData] = React.useState<unknown>(null);
-  const [agentStatus, setAgentStatus] = React.useState<AgentInstallationStatus | undefined>(undefined);
-
+  const [agentStatus, setAgentStatus] = React.useState<
+    AgentInstallationStatus | undefined
+  >(undefined);
 
   // Platform adapters no longer needed for SimplifiedWorkspace
   // const platformAdapters = React.useMemo(
@@ -80,7 +115,10 @@ function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpda
           }
         }
         setCurrentView('markdownView' as unknown as typeof currentView);
-      } else if (hash === '#store-viewer' || hash.startsWith('#store-viewer?')) {
+      } else if (
+        hash === '#store-viewer' ||
+        hash.startsWith('#store-viewer?')
+      ) {
         // Store Viewer route (with or without query parameters)
         setCurrentView('storeViewer');
       } else if (hash.startsWith('#multi-file-editor/')) {
@@ -98,11 +136,11 @@ function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpda
         if (hash.includes('/')) {
           try {
             const hashPart = hash.substring('#repository-maps/'.length);
-            
+
             // Check if there are URL parameters
             const [encodedData, queryString] = hashPart.split('?');
             const data = JSON.parse(decodeURIComponent(encodedData));
-            
+
             // Parse mode from query parameters
             if (queryString) {
               const params = new URLSearchParams(queryString);
@@ -118,7 +156,7 @@ function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpda
         }
         setCurrentView('repositoryMaps');
       } else {
-        AgentConfigurationService.checkAgentInstallations().then(status => {
+        AgentConfigurationService.checkAgentInstallations().then((status) => {
           setAgentStatus(status);
           setCurrentView('landing');
         });
@@ -134,7 +172,6 @@ function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpda
   }, []);
 
   // const goToLanding = () => setCurrentView('landing');
-  
 
   // TODO: This is a temporary solution to get the file system tree for the simplified workspace
   // buildFileSystemTree no longer needed for SimplifiedWorkspace
@@ -163,14 +200,16 @@ function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpda
 
   // Loading component
   const LoadingFallback = () => (
-    <div style={{ 
-      display: 'flex', 
-      justifyContent: 'center', 
-      alignItems: 'center', 
-      height: '100vh',
-      backgroundColor: theme.colors.background,
-      color: theme.colors.text
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        backgroundColor: theme.colors.background,
+        color: theme.colors.text,
+      }}
+    >
       <div>Loading...</div>
     </div>
   );
@@ -179,7 +218,12 @@ function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpda
     return (
       <Suspense fallback={<LoadingFallback />}>
         {/* We need to consume the context inside the provider */}
-        {agentStatus && <LandingPage initialAgentStatus={agentStatus} onUpdateAvailable={setHasUpdateAvailable}/>}
+        {agentStatus && (
+          <LandingPage
+            initialAgentStatus={agentStatus}
+            onUpdateAvailable={setHasUpdateAvailable}
+          />
+        )}
       </Suspense>
     );
   }
@@ -190,7 +234,10 @@ function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpda
       <Suspense fallback={<LoadingFallback />}>
         <MemoryRouter initialEntries={[window.location.hash.substring(1)]}>
           <Routes>
-            <Route path="/terminal/:sessionId" element={<StandaloneTerminal />} />
+            <Route
+              path="/terminal/:sessionId"
+              element={<StandaloneTerminal />}
+            />
           </Routes>
         </MemoryRouter>
       </Suspense>
@@ -208,13 +255,8 @@ function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpda
     );
   }
 
-
   if (currentView === 'markdownView') {
-    return (
-      <MarkdownView
-        filePath={windowInitData?.filePath || ''}
-      />
-    );
+    return <MarkdownView filePath={windowInitData?.filePath || ''} />;
   }
 
   if (currentView === 'storeViewer') {
@@ -224,7 +266,6 @@ function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpda
       </Suspense>
     );
   }
-
 
   if (currentView === 'multiFileEditor') {
     return (
@@ -237,28 +278,31 @@ function AppContent({ setHasUpdateAvailable }: { setHasUpdateAvailable: (hasUpda
   if (currentView === 'repositoryMaps') {
     // Pass windowInitData to the window object so RepositoryManager can access mode
     if (windowInitData) {
-      (window as unknown as { windowInitData: unknown }).windowInitData = windowInitData;
+      (window as unknown as { windowInitData: unknown }).windowInitData =
+        windowInitData;
     }
-    
+
     return (
       <Suspense fallback={<LoadingFallback />}>
-        <RepositoryManager 
+        <RepositoryManager
           repository={windowInitData?.repository}
           onBack={() => window.close()}
         />
       </Suspense>
     );
   }
-  
+
   return null;
 }
-
 
 function App() {
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [hasUpdateAvailable, setHasUpdateAvailable] = React.useState(false);
   const [currentView, setCurrentView] = React.useState<string>('');
-  const [repositoryData, setRepositoryData] = React.useState<{ owner?: string; name?: string } | null>(null);
+  const [repositoryData, setRepositoryData] = React.useState<{
+    owner?: string;
+    name?: string;
+  } | null>(null);
 
   // Add platform class to body for CSS targeting and track current view
   React.useEffect(() => {
@@ -326,11 +370,9 @@ function App() {
             />
           )}
           <AppContent setHasUpdateAvailable={setHasUpdateAvailable} />
-          <AgentUpdateNotifications />
         </UserPromptProvider>
       </GlobalFeedbackProvider>
     </CustomThemeProvider>
   );
 }
 export default App;
-

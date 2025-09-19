@@ -1,4 +1,4 @@
-import { SupportedAgent } from "@principal-ai/agent-monitoring";
+import { SupportedAgent } from '@principal-ai/agent-monitoring';
 
 export interface AgentSessionEvent {
   provider: SupportedAgent;
@@ -60,24 +60,33 @@ export interface AgentSessionEventsAPI {
    * Reprocess all raw events to regenerate processed events
    * @returns Promise with success status
    */
-  reprocessAllEvents: () => Promise<{ success: boolean; processedCount?: number; error?: string }>;
-  
+  reprocessAllEvents: () => Promise<{
+    success: boolean;
+    processedCount?: number;
+    error?: string;
+  }>;
+
   /**
    * Reprocess raw events for a specific session
    * @param sessionId - The session ID to reprocess events for
    * @returns Promise with success status and count
    */
-  reprocessSessionEvents: (sessionId: string) => Promise<{ success: boolean; processedCount?: number; error?: string }>;
-  
+  reprocessSessionEvents: (
+    sessionId: string,
+  ) => Promise<{ success: boolean; processedCount?: number; error?: string }>;
+
   /**
    * Process a specific hook fallback file
    * @param filePath - Path to the fallback file
    * @param cli - The CLI agent name (claude, gemini, opencode)
    * @returns Promise with success status and counts
    */
-  processFallbackFile: (filePath: string, cli: string) => Promise<{ 
-    success: boolean; 
-    processedCount?: number; 
+  processFallbackFile: (
+    filePath: string,
+    cli: string,
+  ) => Promise<{
+    success: boolean;
+    processedCount?: number;
     storedCount?: number;
     error?: string;
   }>;

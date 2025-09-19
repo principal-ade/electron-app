@@ -1,10 +1,14 @@
 /**
  * Storage Provider Interface
- * 
+ *
  * This interface defines a common API for different storage providers
  * including electron-store, S3, and potentially other storage providers.
  */
-import { StorageNamespaceConfig, StorageStats, StorageProviderConfig } from '../../shared/main-process-api-interfaces/StoreAPI';
+import {
+  StorageNamespaceConfig,
+  StorageStats,
+  StorageProviderConfig,
+} from '../../shared/main-process-api-interfaces/StoreAPI';
 import { StaticNamespaces } from '../../shared/types/namespaces.types';
 
 export interface StorageProvider {
@@ -13,7 +17,7 @@ export interface StorageProvider {
 
   /** Description of this storage provider */
   readonly description?: string;
-  
+
   /** Whether this storage provider is currently available/initialized */
   readonly isAvailable: boolean;
 
@@ -75,10 +79,11 @@ export interface StorageProvider {
    * @param callback Function to call when the key changes
    * @returns Unsubscribe function
    */
-  watch?(key: string, callback: (newValue: any, oldValue: any) => void): () => void;
+  watch?(
+    key: string,
+    callback: (newValue: any, oldValue: any) => void,
+  ): () => void;
 }
-
-
 
 /**
  * Multi-store manager configuration
@@ -166,7 +171,7 @@ export enum StorageProviderType {
   ELECTRON_STORE = 'electron-store',
   S3 = 's3',
   MEMORY = 'memory',
-  FILE_SYSTEM = 'filesystem'
+  FILE_SYSTEM = 'filesystem',
 }
 
 // StaticNamespaces enum has been moved to shared/types/namespaces.types.ts

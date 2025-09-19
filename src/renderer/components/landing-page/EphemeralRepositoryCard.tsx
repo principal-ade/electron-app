@@ -1,10 +1,20 @@
 import React from 'react';
 import { useTheme } from 'themed-markdown';
-import { Github, Gitlab, GitFork, FileText, ExternalLink, Plus } from 'lucide-react';
+import {
+  Github,
+  Gitlab,
+  GitFork,
+  FileText,
+  ExternalLink,
+  Plus,
+} from 'lucide-react';
 import type { Repository } from '../../../shared/types/repository.types';
 import { RepositoryAvatar } from '../repository-maps/RepositoryAvatar';
 import { getTagColor } from '../../utils/tagUtils';
-import { getLicenseColor, getLicenseDisplayName } from '../../utils/licenseUtils';
+import {
+  getLicenseColor,
+  getLicenseDisplayName,
+} from '../../utils/licenseUtils';
 
 interface EphemeralRepositoryCardProps {
   repository: Repository;
@@ -13,14 +23,11 @@ interface EphemeralRepositoryCardProps {
   loading?: boolean;
 }
 
-export const EphemeralRepositoryCard: React.FC<EphemeralRepositoryCardProps> = ({
-  repository,
-  onAddLocally,
-  onOpenInGitHub,
-  loading = false,
-}) => {
+export const EphemeralRepositoryCard: React.FC<
+  EphemeralRepositoryCardProps
+> = ({ repository, onAddLocally, onOpenInGitHub, loading = false }) => {
   const { theme } = useTheme();
-  
+
   return (
     <div
       style={{
@@ -39,23 +46,24 @@ export const EphemeralRepositoryCard: React.FC<EphemeralRepositoryCardProps> = (
     >
       {/* License badge */}
       {repository.metadata?.license && (
-        <div style={{
-          position: 'absolute',
-          top: '8px',
-          right: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: '3px 8px',
-          borderRadius: '6px',
-          backgroundColor: `${getLicenseColor(repository.metadata.license.key)}15`,
-          border: `1px solid ${getLicenseColor(repository.metadata.license.key)}40`,
-          fontSize: '11px',
-          fontWeight: 600,
-          color: getLicenseColor(repository.metadata.license.key),
-          zIndex: 1,
-        }}
-        title={repository.metadata.license.name || 'License'}
+        <div
+          style={{
+            position: 'absolute',
+            top: '8px',
+            right: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '3px 8px',
+            borderRadius: '6px',
+            backgroundColor: `${getLicenseColor(repository.metadata.license.key)}15`,
+            border: `1px solid ${getLicenseColor(repository.metadata.license.key)}40`,
+            fontSize: '11px',
+            fontWeight: 600,
+            color: getLicenseColor(repository.metadata.license.key),
+            zIndex: 1,
+          }}
+          title={repository.metadata.license.name || 'License'}
         >
           <FileText size={11} />
           {getLicenseDisplayName(repository.metadata.license)}
@@ -63,12 +71,14 @@ export const EphemeralRepositoryCard: React.FC<EphemeralRepositoryCardProps> = (
       )}
 
       {/* Header with icon and name */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'auto 1fr',
-        gap: '8px',
-        alignItems: 'start',
-      }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'auto 1fr',
+          gap: '8px',
+          alignItems: 'start',
+        }}
+      >
         <div style={{ gridRow: 'span 2' }}>
           <RepositoryAvatar
             repository={repository}
@@ -76,7 +86,7 @@ export const EphemeralRepositoryCard: React.FC<EphemeralRepositoryCardProps> = (
             type="repository"
           />
         </div>
-        
+
         <a
           href={repository.remoteUrl}
           target="_blank"
@@ -109,47 +119,53 @@ export const EphemeralRepositoryCard: React.FC<EphemeralRepositoryCardProps> = (
         >
           {repository.name}
         </a>
-        
-        <p style={{
-          fontSize: '14px',
-          color: theme.colors.textSecondary,
-          margin: '0',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          lineHeight: '1.2',
-        }}>
+
+        <p
+          style={{
+            fontSize: '14px',
+            color: theme.colors.textSecondary,
+            margin: '0',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            lineHeight: '1.2',
+          }}
+        >
           {repository.owner}
         </p>
       </div>
 
       {/* Description if available */}
       {repository.metadata?.description && (
-        <p style={{
-          fontSize: '13px',
-          color: theme.colors.textSecondary,
-          margin: '0',
-          lineHeight: '1.4',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-        }}>
+        <p
+          style={{
+            fontSize: '13px',
+            color: theme.colors.textSecondary,
+            margin: '0',
+            lineHeight: '1.4',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+          }}
+        >
           {repository.metadata.description}
         </p>
       )}
 
       {/* Tags */}
       {repository.tags && repository.tags.length > 0 && (
-        <div style={{
-          display: 'flex',
-          gap: '4px',
-          flexWrap: 'wrap',
-          marginTop: '4px',
-          marginBottom: '4px',
-        }}>
-          {repository.tags.slice(0, 3).map(tag => (
+        <div
+          style={{
+            display: 'flex',
+            gap: '4px',
+            flexWrap: 'wrap',
+            marginTop: '4px',
+            marginBottom: '4px',
+          }}
+        >
+          {repository.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
               style={{
@@ -182,44 +198,48 @@ export const EphemeralRepositoryCard: React.FC<EphemeralRepositoryCardProps> = (
       )}
 
       {/* Stats row */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        fontSize: '12px',
-        color: theme.colors.textSecondary,
-        flex: 1,
-        flexWrap: 'wrap',
-      }}>
-        {/* Parent repository indicator */}
-        <div style={{
+      <div
+        style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '4px',
-          padding: '2px 6px',
-          borderRadius: '10px',
-          backgroundColor: theme.colors.backgroundTertiary,
-          color: theme.colors.primary,
-          border: `1px solid ${theme.colors.primary}30`,
-          fontSize: '11px',
-          fontWeight: 500,
-        }}>
+          gap: '12px',
+          fontSize: '12px',
+          color: theme.colors.textSecondary,
+          flex: 1,
+          flexWrap: 'wrap',
+        }}
+      >
+        {/* Parent repository indicator */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            padding: '2px 6px',
+            borderRadius: '10px',
+            backgroundColor: theme.colors.backgroundTertiary,
+            color: theme.colors.primary,
+            border: `1px solid ${theme.colors.primary}30`,
+            fontSize: '11px',
+            fontWeight: 500,
+          }}
+        >
           <GitFork size={10} />
           <span>PARENT</span>
         </div>
-        
+
         {repository.metadata?.language && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span>{repository.metadata.language}</span>
           </div>
         )}
-        
+
         {repository.metadata?.starCount !== undefined && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             ⭐ {repository.metadata.starCount.toLocaleString()}
           </div>
         )}
-        
+
         {repository.metadata?.forkCount !== undefined && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <GitFork size={12} />
@@ -229,11 +249,13 @@ export const EphemeralRepositoryCard: React.FC<EphemeralRepositoryCardProps> = (
       </div>
 
       {/* Action buttons */}
-      <div style={{
-        display: 'flex',
-        gap: '8px',
-        marginTop: 'auto',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+          marginTop: 'auto',
+        }}
+      >
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -264,7 +286,8 @@ export const EphemeralRepositoryCard: React.FC<EphemeralRepositoryCardProps> = (
             }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundTertiary;
             e.currentTarget.style.borderColor = theme.colors.border;
           }}
         >

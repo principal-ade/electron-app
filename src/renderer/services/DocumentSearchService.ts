@@ -16,7 +16,7 @@ import type {
   IndexUpdateEvent,
   DocumentChangedEvent,
   IndexErrorEvent,
-  SearchFilters
+  SearchFilters,
 } from '../../shared/ipc/DocumentSearchIPC';
 
 import type { SearchResult } from '@a24z/markdown-search';
@@ -25,7 +25,9 @@ import type { SearchResult } from '@a24z/markdown-search';
 const searchAPI = window.mainProcess?.documentSearch;
 
 if (!searchAPI) {
-  console.error('[DocumentSearchService] Search API not available from preload');
+  console.error(
+    '[DocumentSearchService] Search API not available from preload',
+  );
 }
 
 export class DocumentSearchService {
@@ -54,8 +56,8 @@ export class DocumentSearchService {
         config: {
           enableWatching: true,
           autoIndex: true,
-          persistIndex: true
-        }
+          persistIndex: true,
+        },
       });
       this.initialized = true;
       console.log('[DocumentSearchService] Service initialized');
@@ -68,8 +70,16 @@ export class DocumentSearchService {
   /**
    * Index a repository
    */
-  async indexRepository(path: string, name?: string): Promise<IndexRepositoryResponse> {
-    console.log('[DocumentSearchService] indexRepository called with path:', path, 'name:', name);
+  async indexRepository(
+    path: string,
+    name?: string,
+  ): Promise<IndexRepositoryResponse> {
+    console.log(
+      '[DocumentSearchService] indexRepository called with path:',
+      path,
+      'name:',
+      name,
+    );
 
     if (!searchAPI) {
       console.error('[DocumentSearchService] Search API not available!');
@@ -81,14 +91,49 @@ export class DocumentSearchService {
       name: name || path.split('/').pop() || 'Unknown',
       force: false,
       options: {
-        includeDrafts: false
-      }
+        includeDrafts: false,
+      },
     };
 
-    console.log('[DocumentSearchService] Sending indexRepository request:', request);
+    console.log(
+      '[DocumentSearchService] Sending indexRepository request:',
+      request,
+    );
     const response = await searchAPI.indexRepository(request);
     console.log('[DocumentSearchService] Received response:', response);
     return response;
+  }
+
+  /**
+   * Index multiple repositories at once (batch operation)
+   * This is more efficient than calling indexRepository multiple times
+   */
+  async indexMultipleRepositories(
+    repositories: Array<{ path: string; name?: string }>,
+  ): Promise<{
+    totalIndexed: number;
+    totalFailed: number;
+    results: Array<{
+      name: string;
+      success: boolean;
+      documentsIndexed?: number;
+      error?: string;
+    }>;
+  }> {
+    console.log(
+      '[DocumentSearchService] indexMultipleRepositories called with',
+      repositories.length,
+      'repositories',
+    );
+
+    if (!searchAPI) {
+      throw new Error('Search API not available');
+    }
+
+    // Use the typed API method
+    const result = await searchAPI.indexMultipleRepositories(repositories);
+    console.log('[DocumentSearchService] Batch indexing result:', result);
+    return result;
   }
 
   /**
@@ -101,7 +146,7 @@ export class DocumentSearchService {
 
     const request: SearchDocumentsRequest = {
       query,
-      options
+      options,
     };
 
     const response = await searchAPI.search(request);
@@ -117,6 +162,18 @@ export class DocumentSearchService {
     }
 
     return await searchAPI.getStatus();
+  }
+
+  /**
+   * Get a specific document by ID
+   */
+  async getDocument(id: string): Promise<SearchResult | null> {
+    if (!searchAPI) {
+      throw new Error('Search API not available');
+    }
+
+    const response = await searchAPI.getDocument({ id });
+    return response.document || null;
   }
 
   /**
@@ -157,7 +214,9 @@ export class DocumentSearchService {
    */
   onIndexUpdate(callback: (event: IndexUpdateEvent) => void): () => void {
     if (!searchAPI) {
-      console.warn('[DocumentSearchService] Cannot subscribe to events - API not available');
+      console.warn(
+        '[DocumentSearchService] Cannot subscribe to events - API not available',
+      );
       return () => {};
     }
 
@@ -173,9 +232,13 @@ export class DocumentSearchService {
   /**
    * Subscribe to document changes
    */
-  onDocumentChanged(callback: (event: DocumentChangedEvent) => void): () => void {
+  onDocumentChanged(
+    callback: (event: DocumentChangedEvent) => void,
+  ): () => void {
     if (!searchAPI) {
-      console.warn('[DocumentSearchService] Cannot subscribe to events - API not available');
+      console.warn(
+        '[DocumentSearchService] Cannot subscribe to events - API not available',
+      );
       return () => {};
     }
 
@@ -193,7 +256,9 @@ export class DocumentSearchService {
    */
   onIndexError(callback: (event: IndexErrorEvent) => void): () => void {
     if (!searchAPI) {
-      console.warn('[DocumentSearchService] Cannot subscribe to events - API not available');
+      console.warn(
+        '[DocumentSearchService] Cannot subscribe to events - API not available',
+      );
       return () => {};
     }
 
@@ -210,7 +275,7 @@ export class DocumentSearchService {
    * Cleanup all event listeners
    */
   cleanup(): void {
-    this.eventListeners.forEach(unsubscribe => unsubscribe());
+    this.eventListeners.forEach((unsubscribe) => unsubscribe());
     this.eventListeners.clear();
   }
 }

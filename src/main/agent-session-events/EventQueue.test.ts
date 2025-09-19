@@ -13,7 +13,8 @@ describe('EventQueue', () => {
 
   test('should serialize operations for the same key', async () => {
     const results: number[] = [];
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
 
     // Queue multiple operations for the same key
     const promises = [
@@ -31,11 +32,11 @@ describe('EventQueue', () => {
         await delay(10);
         results.push(3);
         return 3;
-      })
+      }),
     ];
 
     const values = await Promise.all(promises);
-    
+
     // Results should be in order despite different delays
     expect(results).toEqual([1, 2, 3]);
     expect(values).toEqual([1, 2, 3]);
@@ -43,7 +44,8 @@ describe('EventQueue', () => {
 
   test('should allow parallel execution for different keys', async () => {
     const startTime = Date.now();
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
 
     // Queue operations for different keys
     const promises = [
@@ -58,7 +60,7 @@ describe('EventQueue', () => {
       queue.enqueue('session3', async () => {
         await delay(100);
         return 'session3';
-      })
+      }),
     ];
 
     const results = await Promise.all(promises);
@@ -70,7 +72,8 @@ describe('EventQueue', () => {
   });
 
   test('should track pending operations correctly', async () => {
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
 
     expect(queue.getPendingCount('session1')).toBe(0);
     expect(queue.hasPendingOperations('session1')).toBe(false);
@@ -106,14 +109,16 @@ describe('EventQueue', () => {
         results.push('op1');
         return 'op1';
       }),
-      queue.enqueue('session1', async () => {
-        results.push('op2-error');
-        throw new Error('Test error');
-      }).catch(err => err.message),
+      queue
+        .enqueue('session1', async () => {
+          results.push('op2-error');
+          throw new Error('Test error');
+        })
+        .catch((err) => err.message),
       queue.enqueue('session1', async () => {
         results.push('op3');
         return 'op3';
-      })
+      }),
     ];
 
     const values = await Promise.all(promises);
@@ -124,7 +129,8 @@ describe('EventQueue', () => {
   });
 
   test('should provide accurate statistics', async () => {
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
 
     // Start operations for multiple sessions
     queue.enqueue('session1', () => delay(100));
@@ -132,7 +138,7 @@ describe('EventQueue', () => {
     queue.enqueue('session2', () => delay(100));
 
     const stats = queue.getStats();
-    
+
     expect(stats.activeQueues).toBe(2);
     expect(stats.totalPending).toBe(3);
     expect(stats.queueDetails).toContainEqual({ key: 'session1', pending: 2 });
@@ -140,7 +146,8 @@ describe('EventQueue', () => {
   });
 
   test('waitForKey should wait for specific key operations', async () => {
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
     let completed = false;
 
     queue.enqueue('session1', async () => {
@@ -154,7 +161,8 @@ describe('EventQueue', () => {
   });
 
   test('waitForAll should wait for all operations', async () => {
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const delay = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms));
     const completed = { session1: false, session2: false };
 
     queue.enqueue('session1', async () => {
@@ -184,13 +192,13 @@ describe('EventQueue - Race Condition Prevention', () => {
   test('demonstrates race condition without queue', async () => {
     // Simulated storage
     let storage: { events: number[] } = { events: [] };
-    
+
     // Simulate concurrent writes without queue (RACE CONDITION)
     const unsafeWrite = async (value: number) => {
       // Read
       const current = storage.events;
       // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 10));
+      await new Promise((resolve) => setTimeout(resolve, Math.random() * 10));
       // Write - may overwrite concurrent changes!
       storage.events = [...current, value];
     };
@@ -201,12 +209,16 @@ describe('EventQueue - Race Condition Prevention', () => {
       unsafeWrite(2),
       unsafeWrite(3),
       unsafeWrite(4),
-      unsafeWrite(5)
+      unsafeWrite(5),
     ]);
 
     // Due to race conditions, we might lose some events
     // This test will likely fail, demonstrating the problem
-    console.log('Without queue - events stored:', storage.events.length, 'Expected: 5');
+    console.log(
+      'Without queue - events stored:',
+      storage.events.length,
+      'Expected: 5',
+    );
     // Often results in fewer than 5 events due to overwrites
   });
 
@@ -214,14 +226,14 @@ describe('EventQueue - Race Condition Prevention', () => {
     const queue = new EventQueue();
     // Simulated storage
     let storage: { events: number[] } = { events: [] };
-    
+
     // Safe write using queue
     const safeWrite = async (value: number) => {
       return queue.enqueue('session1', async () => {
         // Read
         const current = storage.events;
         // Simulate processing delay
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 10));
+        await new Promise((resolve) => setTimeout(resolve, Math.random() * 10));
         // Write - safe because operations are serialized
         storage.events = [...current, value];
       });
@@ -233,12 +245,16 @@ describe('EventQueue - Race Condition Prevention', () => {
       safeWrite(2),
       safeWrite(3),
       safeWrite(4),
-      safeWrite(5)
+      safeWrite(5),
     ]);
 
     // With queue serialization, all events are preserved
     expect(storage.events).toHaveLength(5);
     expect(storage.events).toEqual([1, 2, 3, 4, 5]);
-    console.log('With queue - events stored:', storage.events.length, 'Expected: 5');
+    console.log(
+      'With queue - events stored:',
+      storage.events.length,
+      'Expected: 5',
+    );
   });
 });

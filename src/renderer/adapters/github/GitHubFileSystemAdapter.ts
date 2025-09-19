@@ -1,5 +1,5 @@
-import { FileSystemAdapter } from "@principal-ai/codebase-composition";
-import { GithubService } from "../../main-process-api/GithubService";
+import { FileSystemAdapter } from '@principal-ai/codebase-composition';
+import { GithubService } from '../../main-process-api/GithubService';
 
 export class GitHubFileSystemAdapter implements FileSystemAdapter {
   private treeCache: any[] | null = null;
@@ -13,7 +13,12 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
   async readFile(path: string): Promise<{ content: string } | null> {
     try {
       const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-      const content = await GithubService.getFileContent(this.owner, this.repo, cleanPath, this.branch);
+      const content = await GithubService.getFileContent(
+        this.owner,
+        this.repo,
+        cleanPath,
+        this.branch,
+      );
       if (content !== null && content !== undefined) {
         return { content };
       }
@@ -26,12 +31,21 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
 
   async readDirectory(path: string): Promise<string[]> {
     try {
-      let cleanPath = path === '/' || path === '' ? '' : path.startsWith('/') ? path.slice(1) : path;
+      let cleanPath =
+        path === '/' || path === ''
+          ? ''
+          : path.startsWith('/')
+            ? path.slice(1)
+            : path;
       cleanPath = cleanPath.replace(/\/$/, '');
 
       if (!this.treeCache) {
         try {
-          const result = await GithubService.getTree(this.owner, this.repo, this.branch || 'main');
+          const result = await GithubService.getTree(
+            this.owner,
+            this.repo,
+            this.branch || 'main',
+          );
           if (!result || !result.success || !result.data) {
             const errorMessage = `Failed to fetch tree: ${result?.error || 'Unknown error'}`;
             console.error(`[GitHubFileSystemAdapter] ${errorMessage}`);
@@ -39,7 +53,10 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
           }
           this.treeCache = result.data.tree;
         } catch (error) {
-          console.error('[GitHubFileSystemAdapter] Error fetching tree:', error);
+          console.error(
+            '[GitHubFileSystemAdapter] Error fetching tree:',
+            error,
+          );
           throw error;
         }
       }
@@ -52,7 +69,9 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
         if (cleanPath && !item.path.startsWith(prefix)) {
           continue;
         }
-        const relativePath = cleanPath ? item.path.slice(prefixLength) : item.path;
+        const relativePath = cleanPath
+          ? item.path.slice(prefixLength)
+          : item.path;
         if (relativePath.includes('/')) {
           continue;
         }
@@ -65,7 +84,10 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
 
       return entries;
     } catch (error) {
-      console.error('[GitHubFileSystemAdapter] Error reading directory:', error);
+      console.error(
+        '[GitHubFileSystemAdapter] Error reading directory:',
+        error,
+      );
       throw error;
     }
   }
@@ -79,15 +101,17 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
       await this.readDirectory('');
     }
     if (this.treeCache) {
-      return this.treeCache.some(item =>
-        item.path === cleanPath ||
-        item.path === cleanPath.replace(/\/$/, '')
+      return this.treeCache.some(
+        (item) =>
+          item.path === cleanPath || item.path === cleanPath.replace(/\/$/, ''),
       );
     }
     return false;
   }
 
-  async getStats(path: string): Promise<{ isDirectory: boolean; isFile: boolean; size?: number } | null> {
+  async getStats(
+    path: string,
+  ): Promise<{ isDirectory: boolean; isFile: boolean; size?: number } | null> {
     try {
       const cleanPath = path.startsWith('/') ? path.slice(1) : path;
       if (!cleanPath || cleanPath === '/') {
@@ -97,15 +121,15 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
         await this.readDirectory('');
       }
       if (this.treeCache) {
-        const item = this.treeCache.find((i: any) =>
-          i.path === cleanPath ||
-          i.path === cleanPath.replace(/\/$/, '')
+        const item = this.treeCache.find(
+          (i: any) =>
+            i.path === cleanPath || i.path === cleanPath.replace(/\/$/, ''),
         );
         if (item) {
           return {
             isDirectory: item.type === 'tree',
             isFile: item.type === 'blob',
-            size: item.size
+            size: item.size,
           };
         }
       }
@@ -121,7 +145,9 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
   }
 
   async createDirectory(_path: string): Promise<void> {
-    throw new Error('Creating directories not supported for GitHub repositories');
+    throw new Error(
+      'Creating directories not supported for GitHub repositories',
+    );
   }
 
   async deleteFile(_path: string): Promise<void> {
@@ -129,7 +155,9 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
   }
 
   async deleteDirectory(_path: string): Promise<void> {
-    throw new Error('Deleting directories not supported for GitHub repositories');
+    throw new Error(
+      'Deleting directories not supported for GitHub repositories',
+    );
   }
 
   async copyFile(_source: string, _destination: string): Promise<void> {
@@ -178,28 +206,38 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
   async buildFilteredFileTree(
     directoryPath: string,
     patterns?: string[],
-    sourceDirectory?: string
+    sourceDirectory?: string,
   ): Promise<{
     paths: string[];
-    stats?: Map<string, {
-      size: number;
-      isDirectory: boolean;
-      lastModified: Date;
-    }>;
+    stats?: Map<
+      string,
+      {
+        size: number;
+        isDirectory: boolean;
+        lastModified: Date;
+      }
+    >;
   }> {
     // TODO: Implement pattern filtering if needed for UI preferences
     if (patterns && patterns.length > 0) {
       console.log(
         '[GitHubFileSystemAdapter] Pattern filtering not implemented. Ignoring patterns.',
-        { patterns, sourceDirectory }
+        { patterns, sourceDirectory },
       );
     }
 
     // Ensure we have the tree cached
     if (!this.treeCache) {
-      const result = await GithubService.getTree(this.owner, this.repo, this.branch || 'main');
+      const result = await GithubService.getTree(
+        this.owner,
+        this.repo,
+        this.branch || 'main',
+      );
       if (!result || !result.success || !result.data) {
-        console.error('[GitHubFileSystemAdapter] Failed to fetch tree:', result?.error);
+        console.error(
+          '[GitHubFileSystemAdapter] Failed to fetch tree:',
+          result?.error,
+        );
         return { paths: [] };
       }
       this.treeCache = result.data.tree;
@@ -207,39 +245,46 @@ export class GitHubFileSystemAdapter implements FileSystemAdapter {
 
     // Simply convert the tree to the expected format
     const paths: string[] = [];
-    const stats = new Map<string, {
-      size: number;
-      isDirectory: boolean;
-      lastModified: Date;
-    }>();
+    const stats = new Map<
+      string,
+      {
+        size: number;
+        isDirectory: boolean;
+        lastModified: Date;
+      }
+    >();
 
     // Filter by directory if specified
-    const prefix = directoryPath && directoryPath !== '/' && directoryPath !== '' 
-      ? (directoryPath.startsWith('/') ? directoryPath.slice(1) : directoryPath).replace(/\/$/, '') + '/'
-      : '';
+    const prefix =
+      directoryPath && directoryPath !== '/' && directoryPath !== ''
+        ? (directoryPath.startsWith('/')
+            ? directoryPath.slice(1)
+            : directoryPath
+          ).replace(/\/$/, '') + '/'
+        : '';
 
     for (const item of this.treeCache) {
       let path = item.path;
-      
+
       // Apply directory filter
       if (prefix) {
         if (!path.startsWith(prefix)) continue;
         path = path.slice(prefix.length);
       }
-      
+
       if (!path) continue;
 
       const isDirectory = item.type === 'tree';
       const finalPath = isDirectory ? path + '/' : path;
-      
+
       paths.push(finalPath);
       stats.set(finalPath, {
         size: item.size || 0,
         isDirectory,
-        lastModified: new Date()
+        lastModified: new Date(),
       });
     }
 
     return { paths, stats };
   }
-} 
+}

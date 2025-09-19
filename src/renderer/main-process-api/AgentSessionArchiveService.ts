@@ -7,7 +7,7 @@ import type {
   ArchiveConfiguration,
   ArchivedSessionSummary,
   ArchiveStatistics,
-  ArchiveSessionOptions
+  ArchiveSessionOptions,
 } from '../../shared/main-process-api-interfaces/AgentSessionArchiveAPI';
 import type { SessionState } from '../../shared/event-processing/SessionEventProcessor';
 
@@ -15,8 +15,14 @@ export class AgentSessionArchiveService {
   /**
    * Archive a session
    */
-  static async archiveSession(sessionId: string, options?: ArchiveSessionOptions): Promise<void> {
-    return window.mainProcess.agentSessionArchive.archiveSession(sessionId, options);
+  static async archiveSession(
+    sessionId: string,
+    options?: ArchiveSessionOptions,
+  ): Promise<void> {
+    return window.mainProcess.agentSessionArchive.archiveSession(
+      sessionId,
+      options,
+    );
   }
 
   /**
@@ -29,7 +35,9 @@ export class AgentSessionArchiveService {
   /**
    * Get an archived session
    */
-  static async getArchivedSession(sessionId: string): Promise<SessionState | null> {
+  static async getArchivedSession(
+    sessionId: string,
+  ): Promise<SessionState | null> {
     return window.mainProcess.agentSessionArchive.getArchivedSession(sessionId);
   }
 
@@ -37,7 +45,9 @@ export class AgentSessionArchiveService {
    * Delete an archived session
    */
   static async deleteArchivedSession(sessionId: string): Promise<void> {
-    return window.mainProcess.agentSessionArchive.deleteArchivedSession(sessionId);
+    return window.mainProcess.agentSessionArchive.deleteArchivedSession(
+      sessionId,
+    );
   }
 
   /**
@@ -50,7 +60,9 @@ export class AgentSessionArchiveService {
   /**
    * Update archive configuration
    */
-  static async updateConfiguration(config: Partial<ArchiveConfiguration>): Promise<void> {
+  static async updateConfiguration(
+    config: Partial<ArchiveConfiguration>,
+  ): Promise<void> {
     return window.mainProcess.agentSessionArchive.updateConfiguration(config);
   }
 
@@ -75,11 +87,12 @@ export class AgentSessionArchiveService {
     return window.mainProcess.agentSessionArchive.getStatistics();
   }
 
-
   /**
    * Restore an archived session
    */
   static async restoreArchivedSession(sessionId: string): Promise<void> {
-    return window.mainProcess.agentSessionArchive.restoreArchivedSession(sessionId);
+    return window.mainProcess.agentSessionArchive.restoreArchivedSession(
+      sessionId,
+    );
   }
 }

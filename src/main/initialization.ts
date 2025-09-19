@@ -5,7 +5,10 @@ import { APP_BRANDING } from '../shared/config/appBranding';
 import { initializeStorage } from './stores/initialization';
 import { ElectronMCPIntegration } from './mcp-app-control/mcp-integration';
 import { AgentSessionEventsHttpBridge } from './agent-session-events/AgentSessionEventsHttpBridge';
-import { startPlanningMCPBridge, stopPlanningMCPBridge } from './planning-mcp/PlanningMCPBridge';
+import {
+  startPlanningMCPBridge,
+  stopPlanningMCPBridge,
+} from './planning-mcp/PlanningMCPBridge';
 import { applicationWindows } from './window/modernWindowManager';
 import { agentSessionArchivingService } from './agent-sessions/AgentSessionArchivingService';
 import { agentSessionAutoArchivingService } from './stores/AgentSessionAutoArchivingService';
@@ -33,13 +36,11 @@ import { excalidrawHandlers } from './drawings/excalidrawHandlers';
 import { registerUserPromptHandlers } from './principal-mcp/userPromptHandlers';
 import { registerSessionViewHandlers } from './services/ipc/sessionView/sessionViewHandlers';
 
-import { registerAgentInstallationHandlers } from './agent-management/agentInstallationHandlers';
 import { setupAgentConfigHandlers } from './agent-management/agentConfigHandlers';
-import { registerAgentAutoUpdateHandlers } from './agent-management/agentAutoUpdateHandlers';
-import { AgentAutoUpdateService } from './agent-management/AgentAutoUpdateService';
 import { registerFileSystemIpcHandlers } from './file-system/fileSystemHandlers';
 import { registerRepositoryHandlers } from './stores/RepositoryApiEventHandler';
 import { registerAlexandriaHandlers } from './stores/AlexandriaApiEventHandler';
+import { registerAlexandriaDocsHandlers } from './stores/AlexandriaDocsApiEventHandler';
 import { registerRepositoryNotesHandlers } from './principal-mcp/repositoryNotesHandlers';
 import { registerViolationCollectionHandlers } from './handlers/ViolationCollectionHandlers';
 import { registerTestCoverageHandlers } from './handlers/TestCoverageHandlers';
@@ -54,7 +55,10 @@ import { registerOptimizedDockerHandlers } from './services/ipc/docker/optimized
 import { registerKnipAnalysisHandlers } from './services/ipc/knip/knipAnalysisHandlers';
 import { registerKnipHandlers } from './services/ipc/knip/knipHandlers';
 import { registerPlanningHandlers } from './planning-mcp/planningHandlers';
-import { registerDocumentSearchHandlers, shutdownDocumentSearch } from './services/ipc/documentSearchHandlers';
+import {
+  registerDocumentSearchHandlers,
+  shutdownDocumentSearch,
+} from './services/ipc/documentSearchHandlers';
 
 let mcpIntegration: ElectronMCPIntegration | null = null;
 let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
@@ -71,11 +75,16 @@ const setupMCPScriptPathHandler = () => {
       ? path.join(process.resourcesPath, 'assets')
       : path.join(__dirname, '../../assets');
 
-    const mcpServerPath = path.join(RESOURCES_PATH, APP_BRANDING.MCP_SERVER_FILENAME);
+    const mcpServerPath = path.join(
+      RESOURCES_PATH,
+      APP_BRANDING.MCP_SERVER_FILENAME,
+    );
 
     // Verify file exists and log for debugging
     if (!fs.existsSync(mcpServerPath)) {
-      console.error(`[MCP Server] MCP server file not found at ${mcpServerPath}`);
+      console.error(
+        `[MCP Server] MCP server file not found at ${mcpServerPath}`,
+      );
     }
 
     return mcpServerPath;
@@ -110,27 +119,34 @@ const setupDevModeHandler = () => {
 // Setup knip analysis handler
 const setupKnipAnalysisHandler = () => {
   ipcMain.handle('run-knip-analysis', async (_event, directoryPath: string) => {
-    const { KnipAnalysisService } = await import('./services/knipAnalysisService');
+    const { KnipAnalysisService } = await import(
+      './services/knipAnalysisService'
+    );
     return KnipAnalysisService.runAnalysis(directoryPath);
   });
 };
-
 
 // Setup HTTP bridges
 const setupHttpBridges = async () => {
   // Initialize MCP Integration and HTTP Bridges first
   mcpIntegration = new ElectronMCPIntegration();
-  agentSessionEventsHttpBridge = new AgentSessionEventsHttpBridge(agentEventsBridgePort);
-  
+  agentSessionEventsHttpBridge = new AgentSessionEventsHttpBridge(
+    agentEventsBridgePort,
+  );
+
   // Start agent session events bridge
   await agentSessionEventsHttpBridge
     .start()
-    .catch((err: any) => console.error('Agent Session Events Bridge failed to start:', err));
-  
+    .catch((err: any) =>
+      console.error('Agent Session Events Bridge failed to start:', err),
+    );
+
   // Start Planning MCP Bridge
   try {
     planningMCPBridgePort = await startPlanningMCPBridge();
-    console.log(`[Main Process] Planning MCP Bridge started on port ${planningMCPBridgePort}`);
+    console.log(
+      `[Main Process] Planning MCP Bridge started on port ${planningMCPBridgePort}`,
+    );
   } catch (err) {
     console.error('Planning MCP Bridge failed to start:', err);
   }
@@ -152,64 +168,70 @@ const registerAllIpcHandlers = async () => {
   registerMCPBridgeHandlers();
   registerRepositoryHandlers();
   registerAlexandriaHandlers();
+  registerAlexandriaDocsHandlers();
   registerRepositoryNotesHandlers();
   registerViolationCollectionHandlers();
   registerTestCoverageHandlers();
   registerApiProxyHandlers();
   JWTService.registerHandlers();
-  
+
   // Register execute-command handler for git operations
-  ipcMain.handle('execute-command', async (_, params: {
-    command: string;
-    args: string[];
-    cwd: string;
-  }) => {
-    const { spawn } = require('child_process');
-    
-    return new Promise((resolve) => {
-      const child = spawn(params.command, params.args, {
-        cwd: params.cwd,
-        stdio: ['ignore', 'pipe', 'pipe']
-      });
-      
-      let stdout = '';
-      let stderr = '';
-      
-      child.stdout.on('data', (data: Buffer) => {
-        stdout += data.toString();
-      });
-      
-      child.stderr.on('data', (data: Buffer) => {
-        stderr += data.toString();
-      });
-      
-      child.on('close', (code: number) => {
-        resolve({
-          success: code === 0,
-          stdout: stdout.trim(),
-          stderr: stderr.trim(),
-          code
+  ipcMain.handle(
+    'execute-command',
+    async (
+      _,
+      params: {
+        command: string;
+        args: string[];
+        cwd: string;
+      },
+    ) => {
+      const { spawn } = require('child_process');
+
+      return new Promise((resolve) => {
+        const child = spawn(params.command, params.args, {
+          cwd: params.cwd,
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout.on('data', (data: Buffer) => {
+          stdout += data.toString();
+        });
+
+        child.stderr.on('data', (data: Buffer) => {
+          stderr += data.toString();
+        });
+
+        child.on('close', (code: number) => {
+          resolve({
+            success: code === 0,
+            stdout: stdout.trim(),
+            stderr: stderr.trim(),
+            code,
+          });
+        });
+
+        child.on('error', (error: Error) => {
+          resolve({
+            success: false,
+            stdout: '',
+            stderr: error.message,
+            code: -1,
+          });
         });
       });
-      
-      child.on('error', (error: Error) => {
-        resolve({
-          success: false,
-          stdout: '',
-          stderr: error.message,
-          code: -1
-        });
-      });
-    });
-  });
-  
+    },
+  );
+
   registerGitHubIpcHandlers(applicationWindows);
   registerGitHandlers();
   registerGitWatcherHandlers();
   setupSessionHandlers();
-  registerAgentInstallationHandlers();
+  // Agent installation handlers removed - we only configure hooks now
   setupAgentConfigHandlers();
-  registerAgentAutoUpdateHandlers();
   setupShellHandlers();
   registerArchiveHandlers();
   registerDockerHandlers();
@@ -221,7 +243,7 @@ const registerAllIpcHandlers = async () => {
 
   // LLM Models handlers have been removed
   const typedStore = await getTypedStorageManager();
-  
+
   // Register User Preferences handlers
   const userPreferencesHandler = new UserPreferencesHandler(typedStore);
   userPreferencesHandler.registerHandlers();
@@ -229,7 +251,7 @@ const registerAllIpcHandlers = async () => {
   // Register A24z handlers
   const a24zHandler = new A24zHandler();
   a24zHandler.registerHandlers();
-  
+
   setupTypeSchemaHandlers();
   excalidrawHandlers.registerHandlers();
   setupTypeExtractionHandlers();
@@ -244,7 +266,9 @@ const registerAllIpcHandlers = async () => {
 const setupTerminalManager = () => {
   const terminalManager = getTerminalManager();
   // Clean up any existing terminal sessions on startup to avoid stale PTY processes
-  console.log('[Terminal] Cleaning up any existing terminal sessions on startup...');
+  console.log(
+    '[Terminal] Cleaning up any existing terminal sessions on startup...',
+  );
   terminalManager.destroyAllSessions();
   return terminalManager;
 };
@@ -272,41 +296,41 @@ export const initializeServices = async () => {
   setTimeout(() => {
     setupTerminalManager();
   }, 1000);
-  
+
   // Setup periodic cleanup for old archives
   setupArchiveCleanup();
-  
-  // Initialize agent auto-update service
-  setupAgentAutoUpdate();
+
+  // Agent auto-update removed - agents are installed externally
 };
 
 // Setup periodic cleanup for archived sessions
 const setupArchiveCleanup = () => {
   // Initialize auto-archiving service
-  agentSessionAutoArchivingService.initialize()
-    .catch(err => console.error('[Main] Agent session auto-archiving service initialization failed:', err));
-  
+  agentSessionAutoArchivingService
+    .initialize()
+    .catch((err) =>
+      console.error(
+        '[Main] Agent session auto-archiving service initialization failed:',
+        err,
+      ),
+    );
+
   // Run cleanup on startup
   setTimeout(() => {
-    agentSessionArchivingService.cleanupOldArchives()
-      .catch(err => console.error('[Main] Archive cleanup failed:', err));
+    agentSessionArchivingService
+      .cleanupOldArchives()
+      .catch((err) => console.error('[Main] Archive cleanup failed:', err));
   }, 30000); // 30 seconds after startup
-  
-  // Run cleanup every 24 hours
-  setInterval(() => {
-    agentSessionArchivingService.cleanupOldArchives()
-      .catch(err => console.error('[Main] Archive cleanup failed:', err));
-  }, 24 * 60 * 60 * 1000);
-};
 
-// Setup agent auto-update service
-const setupAgentAutoUpdate = () => {
-  // Initialize the auto-update service after a delay
-  setTimeout(() => {
-    AgentAutoUpdateService.getInstance()
-      .initialize()
-      .catch(err => console.error('[Main] Agent auto-update service initialization failed:', err));
-  }, 5000); // 5 seconds after app starts to not block initialization
+  // Run cleanup every 24 hours
+  setInterval(
+    () => {
+      agentSessionArchivingService
+        .cleanupOldArchives()
+        .catch((err) => console.error('[Main] Archive cleanup failed:', err));
+    },
+    24 * 60 * 60 * 1000,
+  );
 };
 
 // Cleanup function for app shutdown
@@ -324,19 +348,18 @@ export const shutdownServices = async () => {
     await mcpIntegration.shutdown();
     console.log('[Main Process] ElectronMCPIntegration shutdown complete.');
   }
-  
+
   if (agentSessionEventsHttpBridge) {
     await agentSessionEventsHttpBridge.stop();
     console.log('[Main Process] Agent Events HTTP Bridge stopped.');
   }
-  
-  
+
   // Stop Planning MCP Bridge
   stopPlanningMCPBridge();
   console.log('[Main Process] Planning MCP Bridge stopped.');
-  
+
   // Shutdown agent auto-update service
-  AgentAutoUpdateService.getInstance().shutdown();
+  // Auto-update removed - agents are no longer installed by this app
   console.log('[Main Process] Agent auto-update service stopped.');
 
   // Shutdown document search service

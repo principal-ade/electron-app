@@ -8,14 +8,23 @@ loader.config({ monaco });
 
 // Configure workers when in browser
 if (typeof window !== 'undefined') {
-  (window as unknown as { MonacoEnvironment: { getWorkerUrl: (moduleId: string, label: string) => string } }).MonacoEnvironment = {
+  (
+    window as unknown as {
+      MonacoEnvironment: {
+        getWorkerUrl: (moduleId: string, label: string) => string;
+      };
+    }
+  ).MonacoEnvironment = {
     getWorkerUrl: (_moduleId: string, label: string) => {
       if (label === 'json') return './json.worker.js';
-      if (label === 'css' || label === 'scss' || label === 'less') return './css.worker.js';
-      if (label === 'html' || label === 'handlebars' || label === 'razor') return './html.worker.js';
-      if (label === 'typescript' || label === 'javascript') return './ts.worker.js';
+      if (label === 'css' || label === 'scss' || label === 'less')
+        return './css.worker.js';
+      if (label === 'html' || label === 'handlebars' || label === 'razor')
+        return './html.worker.js';
+      if (label === 'typescript' || label === 'javascript')
+        return './ts.worker.js';
       return './editor.worker.js';
-    }
+    },
   };
 }
 
@@ -48,7 +57,13 @@ interface ThemedMonacoProps {
   height?: string | number;
 }
 
-export const ThemedMonaco: React.FC<ThemedMonacoProps> = ({ value, onChange, readOnly = false, language = 'plaintext', height = '100%' }) => {
+export const ThemedMonaco: React.FC<ThemedMonacoProps> = ({
+  value,
+  onChange,
+  readOnly = false,
+  language = 'plaintext',
+  height = '100%',
+}) => {
   const monacoTheme = useMonacoTheme();
   const { theme } = useTheme();
   return (
@@ -68,8 +83,10 @@ export const ThemedMonaco: React.FC<ThemedMonacoProps> = ({ value, onChange, rea
         tabSize: 2,
       }}
       loading={
-        <div style={{ color: theme.colors.textSecondary, padding: 8 }}>Loading editor…</div>
+        <div style={{ color: theme.colors.textSecondary, padding: 8 }}>
+          Loading editor…
+        </div>
       }
     />
   );
-} 
+};

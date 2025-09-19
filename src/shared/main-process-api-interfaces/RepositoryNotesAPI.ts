@@ -1,4 +1,3 @@
-
 import type { GitInfo } from '../types/git.types';
 
 /**
@@ -52,7 +51,9 @@ export interface StoreNoteResponse {
 }
 
 export interface GetNotesForPathResponse {
-  notes: Array<RepositoryNote & { isParentDirectory?: boolean; pathDistance?: number }>;
+  notes: Array<
+    RepositoryNote & { isParentDirectory?: boolean; pathDistance?: number }
+  >;
   repository?: {
     remoteUrl: string;
     owner?: string;
@@ -63,16 +64,23 @@ export interface GetNotesForPathResponse {
 export interface RepositoryNotesAPI {
   // Get all notes for a repository
   getNotesForRepository: (remoteUrl: string) => Promise<RepositoryNote[]>;
-  
+
   // Get notes for a specific path (file or directory)
-  getNotesForPath: (path: string, includeParentNotes?: boolean) => Promise<GetNotesForPathResponse>;
-  
+  getNotesForPath: (
+    path: string,
+    includeParentNotes?: boolean,
+  ) => Promise<GetNotesForPathResponse>;
+
   // Store a new note
   storeNote: (request: StoreNoteRequest) => Promise<StoreNoteResponse>;
-  
+
   // Delete a note
   deleteNote: (remoteUrl: string, noteId: string) => Promise<boolean>;
-  
+
   // Update an existing note
-  updateNote: (remoteUrl: string, noteId: string, updates: Partial<Pick<RepositoryNote, 'note' | 'metadata'>>) => Promise<boolean>;
+  updateNote: (
+    remoteUrl: string,
+    noteId: string,
+    updates: Partial<Pick<RepositoryNote, 'note' | 'metadata'>>,
+  ) => Promise<boolean>;
 }

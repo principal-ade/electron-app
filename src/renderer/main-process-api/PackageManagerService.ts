@@ -3,14 +3,14 @@
  * ALL window.mainProcess.packageManager calls MUST be encapsulated here
  */
 
-import { 
-  PackageVersionInfo, 
-  PackageManager, 
+import {
+  PackageVersionInfo,
+  PackageManager,
   CheckOptions,
   VersionCheckResult,
   VulnerabilityCheckResult,
   LicenseCheckResult,
-  CheckProgressData
+  CheckProgressData,
 } from '../../shared/main-process-api-interfaces/PackageManagerAPI';
 
 export class PackageManagerService {
@@ -20,9 +20,13 @@ export class PackageManagerService {
   static async checkVersions(
     packages: PackageVersionInfo[],
     packageManager: PackageManager,
-    options?: CheckOptions
+    options?: CheckOptions,
   ): Promise<VersionCheckResult[]> {
-    return window.mainProcess.packageManager.checkVersions({ packages, packageManager, options });
+    return window.mainProcess.packageManager.checkVersions({
+      packages,
+      packageManager,
+      options,
+    });
   }
 
   /**
@@ -42,9 +46,13 @@ export class PackageManagerService {
   static async checkVulnerabilities(
     packages: PackageVersionInfo[],
     packageManager: PackageManager,
-    options?: CheckOptions
+    options?: CheckOptions,
   ): Promise<VulnerabilityCheckResult[]> {
-    return window.mainProcess.packageManager.checkVulnerabilities({ packages, packageManager, options });
+    return window.mainProcess.packageManager.checkVulnerabilities({
+      packages,
+      packageManager,
+      options,
+    });
   }
 
   /**
@@ -64,9 +72,13 @@ export class PackageManagerService {
   static async checkLicenses(
     packages: PackageVersionInfo[],
     packageManager: PackageManager,
-    options?: CheckOptions
+    options?: CheckOptions,
   ): Promise<LicenseCheckResult[]> {
-    return window.mainProcess.packageManager.checkLicenses({ packages, packageManager, options });
+    return window.mainProcess.packageManager.checkLicenses({
+      packages,
+      packageManager,
+      options,
+    });
   }
 
   /**
@@ -85,7 +97,7 @@ export class PackageManagerService {
    * @returns Unsubscribe function
    */
   static onVersionCheckProgress(
-    callback: (data: CheckProgressData) => void
+    callback: (data: CheckProgressData) => void,
   ): () => void {
     return window.mainProcess.packageManager.onVersionCheckProgress(callback);
   }
@@ -95,9 +107,11 @@ export class PackageManagerService {
    * @returns Unsubscribe function
    */
   static onVulnerabilityCheckProgress(
-    callback: (data: CheckProgressData) => void
+    callback: (data: CheckProgressData) => void,
   ): () => void {
-    return window.mainProcess.packageManager.onVulnerabilityCheckProgress(callback);
+    return window.mainProcess.packageManager.onVulnerabilityCheckProgress(
+      callback,
+    );
   }
 
   /**
@@ -105,7 +119,7 @@ export class PackageManagerService {
    * @returns Unsubscribe function
    */
   static onLicenseCheckProgress(
-    callback: (data: CheckProgressData) => void
+    callback: (data: CheckProgressData) => void,
   ): () => void {
     return window.mainProcess.packageManager.onLicenseCheckProgress(callback);
   }

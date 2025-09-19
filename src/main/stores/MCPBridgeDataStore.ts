@@ -57,7 +57,11 @@ export class MCPBridgeDataStore {
    * Generate a storage key for a repository URL
    */
   private getRepositoryKey(remoteUrl: string): string {
-    const urlHash = crypto.createHash('sha256').update(remoteUrl).digest('hex').substring(0, 16);
+    const urlHash = crypto
+      .createHash('sha256')
+      .update(remoteUrl)
+      .digest('hex')
+      .substring(0, 16);
     return `mcp_bridge_${urlHash}`;
   }
 
@@ -65,7 +69,11 @@ export class MCPBridgeDataStore {
    * Generate a statistics key for a repository URL
    */
   private getStatisticsKey(remoteUrl: string): string {
-    const urlHash = crypto.createHash('sha256').update(remoteUrl).digest('hex').substring(0, 16);
+    const urlHash = crypto
+      .createHash('sha256')
+      .update(remoteUrl)
+      .digest('hex')
+      .substring(0, 16);
     return `mcp_stats_${urlHash}`;
   }
 
@@ -97,17 +105,20 @@ export class MCPBridgeDataStore {
       const keys = await typedStore.keys(StaticNamespaces.MCP_BRIDGE_DATA);
 
       // Load recent data into memory cache (last 24 hours)
-      const cutoffTime = Date.now() - (24 * 60 * 60 * 1000);
+      const cutoffTime = Date.now() - 24 * 60 * 60 * 1000;
 
       for (const key of keys) {
         if (key.startsWith('mcp_bridge_')) {
-          const result = await typedStore.get(key, StaticNamespaces.MCP_BRIDGE_DATA);
+          const result = await typedStore.get(
+            key,
+            StaticNamespaces.MCP_BRIDGE_DATA,
+          );
           if (result.success && result.data) {
             const entries = result.data as MCPBridgeDataEntry[];
-            
+
             // Filter for recent entries
             const recentEntries = entries.filter(
-              entry => entry.request.timestamp > cutoffTime
+              (entry) => entry.request.timestamp > cutoffTime,
             );
 
             if (recentEntries.length > 0) {
@@ -119,19 +130,26 @@ export class MCPBridgeDataStore {
             }
           }
         } else if (key.startsWith('mcp_stats_')) {
-          const result = await typedStore.get(key, StaticNamespaces.MCP_BRIDGE_DATA);
+          const result = await typedStore.get(
+            key,
+            StaticNamespaces.MCP_BRIDGE_DATA,
+          );
           if (result.success && result.data) {
             const stats = result.data as any;
             // Convert endpointUsage back to Map if it was serialized as object
             if (stats.endpointUsage && !(stats.endpointUsage instanceof Map)) {
-              stats.endpointUsage = new Map(Object.entries(stats.endpointUsage));
+              stats.endpointUsage = new Map(
+                Object.entries(stats.endpointUsage),
+              );
             }
             this.statisticsCache.set(key, stats as MCPBridgeStatistics);
           }
         }
       }
 
-      console.log(`[MCPBridgeDataStore] Initialized with ${this.memoryCache.size} repositories in cache`);
+      console.log(
+        `[MCPBridgeDataStore] Initialized with ${this.memoryCache.size} repositories in cache`,
+      );
     } catch (error) {
       console.error('[MCPBridgeDataStore] Failed to initialize:', error);
     }
@@ -142,8 +160,11 @@ export class MCPBridgeDataStore {
    */
   async storeInteraction(
     request: Omit<MCPBridgeRequest, 'id' | 'timestamp'>,
-    response?: Omit<MCPBridgeResponse, 'id' | 'requestId' | 'timestamp' | 'duration'>,
-    filePath?: string
+    response?: Omit<
+      MCPBridgeResponse,
+      'id' | 'requestId' | 'timestamp' | 'duration'
+    >,
+    filePath?: string,
   ): Promise<void> {
     await this.ensureInitialized();
 
@@ -158,7 +179,10 @@ export class MCPBridgeDataStore {
         const repoInfo = await repositoryCache.getRepositoryForPath(filePath);
         repositoryUrl = repoInfo?.repository?.remoteUrl;
       } catch (error) {
-        console.warn('[MCPBridgeDataStore] Could not determine repository for path:', filePath);
+        console.warn(
+          '[MCPBridgeDataStore] Could not determine repository for path:',
+          filePath,
+        );
       }
     }
 
@@ -168,7 +192,7 @@ export class MCPBridgeDataStore {
       id: requestId,
       timestamp: requestTimestamp,
       repositoryUrl,
-      filePath
+      filePath,
     };
 
     // Create the full response object if provided
@@ -180,7 +204,7 @@ export class MCPBridgeDataStore {
         id: `res_${responseTimestamp}_${Math.random().toString(36).substr(2, 9)}`,
         requestId,
         timestamp: responseTimestamp,
-        duration: responseTimestamp - requestTimestamp
+        duration: responseTimestamp - requestTimestamp,
       };
     }
 
@@ -190,7 +214,7 @@ export class MCPBridgeDataStore {
       response: fullResponse,
       repositoryUrl,
       sessionId: process.env.SESSION_ID,
-      tags: this.extractTags(request.endpoint, request.body)
+      tags: this.extractTags(request.endpoint, request.body),
     };
 
     // Store in memory and persist
@@ -208,17 +232,20 @@ export class MCPBridgeDataStore {
    */
   private async storeForRepository(
     repositoryUrl: string,
-    entry: MCPBridgeDataEntry
+    entry: MCPBridgeDataEntry,
   ): Promise<void> {
     const key = this.getRepositoryKey(repositoryUrl);
 
     // Get existing entries from cache or storage
     let entries = this.memoryCache.get(key) || [];
-    
+
     if (entries.length === 0) {
       // Try to load from storage if not in cache
       const typedStore = await getTypedStorageManagerInstance();
-      const result = await typedStore.get(key, StaticNamespaces.MCP_BRIDGE_DATA);
+      const result = await typedStore.get(
+        key,
+        StaticNamespaces.MCP_BRIDGE_DATA,
+      );
       if (result.success && result.data) {
         entries = result.data as MCPBridgeDataEntry[];
       }
@@ -235,10 +262,17 @@ export class MCPBridgeDataStore {
 
     // Persist to storage
     const typedStore = await getTypedStorageManagerInstance();
-    const result = await typedStore.set(key, entries, StaticNamespaces.MCP_BRIDGE_DATA);
+    const result = await typedStore.set(
+      key,
+      entries,
+      StaticNamespaces.MCP_BRIDGE_DATA,
+    );
 
     if (!result.success) {
-      console.error('[MCPBridgeDataStore] Failed to persist entries:', result.error);
+      console.error(
+        '[MCPBridgeDataStore] Failed to persist entries:',
+        result.error,
+      );
     }
   }
 
@@ -247,7 +281,7 @@ export class MCPBridgeDataStore {
    */
   private async updateStatistics(
     repositoryUrl: string,
-    entry: MCPBridgeDataEntry
+    entry: MCPBridgeDataEntry,
   ): Promise<void> {
     const key = this.getStatisticsKey(repositoryUrl);
 
@@ -258,7 +292,7 @@ export class MCPBridgeDataStore {
       failedRequests: 0,
       averageResponseTime: 0,
       endpointUsage: new Map<string, number>(),
-      lastAccessTime: Date.now()
+      lastAccessTime: Date.now(),
     };
 
     // Update statistics
@@ -280,8 +314,9 @@ export class MCPBridgeDataStore {
       }
 
       // Update average response time
-      const newAverage = 
-        (stats.averageResponseTime * (stats.totalRequests - 1) + entry.response.duration) / 
+      const newAverage =
+        (stats.averageResponseTime * (stats.totalRequests - 1) +
+          entry.response.duration) /
         stats.totalRequests;
       stats.averageResponseTime = newAverage;
     }
@@ -293,7 +328,7 @@ export class MCPBridgeDataStore {
     const typedStore = await getTypedStorageManagerInstance();
     const statsToStore = {
       ...stats,
-      endpointUsage: Object.fromEntries(stats.endpointUsage)
+      endpointUsage: Object.fromEntries(stats.endpointUsage),
     };
     await typedStore.set(key, statsToStore, StaticNamespaces.MCP_BRIDGE_DATA);
   }
@@ -306,7 +341,9 @@ export class MCPBridgeDataStore {
     // Only use tags explicitly provided in the request
     if (Array.isArray(body?.tags)) {
       // Ensure all tags are strings
-      const stringTags = body.tags.filter((tag: any) => typeof tag === 'string') as string[];
+      const stringTags = body.tags.filter(
+        (tag: any) => typeof tag === 'string',
+      ) as string[];
       return [...new Set(stringTags)]; // Remove duplicates
     }
 
@@ -316,11 +353,15 @@ export class MCPBridgeDataStore {
   /**
    * Enforce retention policy on entries
    */
-  private enforceRetentionPolicy(entries: MCPBridgeDataEntry[]): MCPBridgeDataEntry[] {
-    const cutoffTime = Date.now() - (this.retentionDays * 24 * 60 * 60 * 1000);
+  private enforceRetentionPolicy(
+    entries: MCPBridgeDataEntry[],
+  ): MCPBridgeDataEntry[] {
+    const cutoffTime = Date.now() - this.retentionDays * 24 * 60 * 60 * 1000;
 
     // Remove old entries
-    let filtered = entries.filter(entry => entry.request.timestamp > cutoffTime);
+    let filtered = entries.filter(
+      (entry) => entry.request.timestamp > cutoffTime,
+    );
 
     // If still too many, keep only the most recent
     if (filtered.length > this.maxEntriesPerRepository) {
@@ -343,7 +384,7 @@ export class MCPBridgeDataStore {
       endpoint?: string;
       tags?: string[];
       limit?: number;
-    }
+    },
   ): Promise<MCPBridgeDataEntry[]> {
     await this.ensureInitialized();
 
@@ -353,7 +394,10 @@ export class MCPBridgeDataStore {
     if (!entries) {
       // Load from storage
       const typedStore = await getTypedStorageManagerInstance();
-      const result = await typedStore.get(key, StaticNamespaces.MCP_BRIDGE_DATA);
+      const result = await typedStore.get(
+        key,
+        StaticNamespaces.MCP_BRIDGE_DATA,
+      );
       if (result.success && result.data) {
         entries = result.data as MCPBridgeDataEntry[];
         this.memoryCache.set(key, entries);
@@ -366,20 +410,26 @@ export class MCPBridgeDataStore {
     let filtered = [...entries];
 
     if (options?.startTime) {
-      filtered = filtered.filter(e => e.request.timestamp >= options.startTime!);
+      filtered = filtered.filter(
+        (e) => e.request.timestamp >= options.startTime!,
+      );
     }
 
     if (options?.endTime) {
-      filtered = filtered.filter(e => e.request.timestamp <= options.endTime!);
+      filtered = filtered.filter(
+        (e) => e.request.timestamp <= options.endTime!,
+      );
     }
 
     if (options?.endpoint) {
-      filtered = filtered.filter(e => e.request.endpoint === options.endpoint);
+      filtered = filtered.filter(
+        (e) => e.request.endpoint === options.endpoint,
+      );
     }
 
     if (options?.tags && options.tags.length > 0) {
-      filtered = filtered.filter(e => 
-        options.tags!.some(tag => e.tags?.includes(tag))
+      filtered = filtered.filter((e) =>
+        options.tags!.some((tag) => e.tags?.includes(tag)),
       );
     }
 
@@ -397,7 +447,9 @@ export class MCPBridgeDataStore {
   /**
    * Get statistics for a repository
    */
-  async getStatisticsForRepository(repositoryUrl: string): Promise<MCPBridgeStatistics | null> {
+  async getStatisticsForRepository(
+    repositoryUrl: string,
+  ): Promise<MCPBridgeStatistics | null> {
     await this.ensureInitialized();
 
     const key = this.getStatisticsKey(repositoryUrl);
@@ -406,7 +458,10 @@ export class MCPBridgeDataStore {
     if (!stats) {
       // Load from storage
       const typedStore = await getTypedStorageManagerInstance();
-      const result = await typedStore.get(key, StaticNamespaces.MCP_BRIDGE_DATA);
+      const result = await typedStore.get(
+        key,
+        StaticNamespaces.MCP_BRIDGE_DATA,
+      );
       if (result.success && result.data) {
         stats = result.data as MCPBridgeStatistics;
         this.statisticsCache.set(key, stats);
@@ -421,7 +476,7 @@ export class MCPBridgeDataStore {
    */
   async exportForTesting(
     repositoryUrl: string,
-    outputFormat: 'json' | 'jest' | 'mocha' = 'json'
+    outputFormat: 'json' | 'jest' | 'mocha' = 'json',
   ): Promise<string> {
     const interactions = await this.getInteractionsForRepository(repositoryUrl);
 
@@ -449,14 +504,14 @@ export class MCPBridgeDataStore {
       output += `  test('${testName}', async () => {\n`;
       output += `    const request = ${JSON.stringify(interaction.request.body, null, 6).split('\n').join('\n    ')};\n`;
       output += `    const response = await MCPBridge.send('${interaction.request.endpoint}', request);\n`;
-      
+
       if (interaction.response) {
         output += `    expect(response.statusCode).toBe(${interaction.response.statusCode});\n`;
         if (interaction.response.body?.success !== undefined) {
           output += `    expect(response.body.success).toBe(${interaction.response.body.success});\n`;
         }
       }
-      
+
       output += `  });\n\n`;
     }
 
@@ -478,14 +533,14 @@ export class MCPBridgeDataStore {
       output += `  it('${testName}', async function() {\n`;
       output += `    const request = ${JSON.stringify(interaction.request.body, null, 6).split('\n').join('\n    ')};\n`;
       output += `    const response = await MCPBridge.send('${interaction.request.endpoint}', request);\n`;
-      
+
       if (interaction.response) {
         output += `    expect(response.statusCode).to.equal(${interaction.response.statusCode});\n`;
         if (interaction.response.body?.success !== undefined) {
           output += `    expect(response.body.success).to.equal(${interaction.response.body.success});\n`;
         }
       }
-      
+
       output += `  });\n\n`;
     }
 
@@ -511,7 +566,9 @@ export class MCPBridgeDataStore {
     await typedStore.delete(dataKey, StaticNamespaces.MCP_BRIDGE_DATA);
     await typedStore.delete(statsKey, StaticNamespaces.MCP_BRIDGE_DATA);
 
-    console.log(`[MCPBridgeDataStore] Cleared all data for repository: ${repositoryUrl}`);
+    console.log(
+      `[MCPBridgeDataStore] Cleared all data for repository: ${repositoryUrl}`,
+    );
   }
 
   /**
@@ -561,7 +618,7 @@ export class MCPBridgeDataStore {
       totalInteractions,
       oldestEntry,
       newestEntry,
-      topEndpoints
+      topEndpoints,
     };
   }
 }

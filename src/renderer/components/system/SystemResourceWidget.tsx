@@ -26,7 +26,8 @@ interface SystemResourceWidgetProps {
 }
 
 // Shared cache across all widget instances
-let systemInfoCache: { data: SystemInfo | null; timestamp: number } | null = null;
+let systemInfoCache: { data: SystemInfo | null; timestamp: number } | null =
+  null;
 
 export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
   showMemory = true,
@@ -43,27 +44,46 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const checkSystemInfo = React.useCallback(async (forceRefresh = false) => {
-    try {
-      // Check cache first
-      if (!forceRefresh && systemInfoCache && 
-          Date.now() - systemInfoCache.timestamp < cacheTimeout) {
-        setSystemInfo(systemInfoCache.data);
-        onSystemInfoChange?.(systemInfoCache.data!);
-        setIsLoading(false);
-        return;
-      }
-      
-      setIsLoading(true);
-      setError(null);
-      const info = await SystemService.getSystemInfo();
-      if (info) {
-        // Update cache
-        systemInfoCache = { data: info, timestamp: Date.now() };
-        setSystemInfo(info);
-        onSystemInfoChange?.(info);
-      } else {
-        setError('Failed to get system information');
+  const checkSystemInfo = React.useCallback(
+    async (forceRefresh = false) => {
+      try {
+        // Check cache first
+        if (
+          !forceRefresh &&
+          systemInfoCache &&
+          Date.now() - systemInfoCache.timestamp < cacheTimeout
+        ) {
+          setSystemInfo(systemInfoCache.data);
+          onSystemInfoChange?.(systemInfoCache.data!);
+          setIsLoading(false);
+          return;
+        }
+
+        setIsLoading(true);
+        setError(null);
+        const info = await SystemService.getSystemInfo();
+        if (info) {
+          // Update cache
+          systemInfoCache = { data: info, timestamp: Date.now() };
+          setSystemInfo(info);
+          onSystemInfoChange?.(info);
+        } else {
+          setError('Failed to get system information');
+          // Fallback to placeholder data
+          const fallbackInfo: SystemInfo = {
+            totalMemory: 16,
+            freeMemory: 8,
+            totalDisk: 500,
+            freeDisk: 150,
+            platform: 'unknown',
+            arch: 'unknown',
+          };
+          setSystemInfo(fallbackInfo);
+          onSystemInfoChange?.(fallbackInfo);
+        }
+      } catch (err) {
+        console.error('Error checking system info:', err);
+        setError('Error loading system information');
         // Fallback to placeholder data
         const fallbackInfo: SystemInfo = {
           totalMemory: 16,
@@ -75,25 +95,12 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
         };
         setSystemInfo(fallbackInfo);
         onSystemInfoChange?.(fallbackInfo);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error('Error checking system info:', err);
-      setError('Error loading system information');
-      // Fallback to placeholder data
-      const fallbackInfo: SystemInfo = {
-        totalMemory: 16,
-        freeMemory: 8,
-        totalDisk: 500,
-        freeDisk: 150,
-        platform: 'unknown',
-        arch: 'unknown',
-      };
-      setSystemInfo(fallbackInfo);
-      onSystemInfoChange?.(fallbackInfo);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onSystemInfoChange]);
+    },
+    [onSystemInfoChange],
+  );
 
   React.useEffect(() => {
     checkSystemInfo();
@@ -129,12 +136,16 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
 
   const totalAdditionalDiskUsage = additionalDiskUsage.reduce(
     (sum, item) => sum + item.sizeGB,
-    0
+    0,
   );
 
-  const memoryUsagePercent = ((systemInfo.totalMemory - systemInfo.freeMemory) / systemInfo.totalMemory) * 100;
-  const diskUsagePercent = ((systemInfo.totalDisk - systemInfo.freeDisk) / systemInfo.totalDisk) * 100;
-  
+  const memoryUsagePercent =
+    ((systemInfo.totalMemory - systemInfo.freeMemory) /
+      systemInfo.totalMemory) *
+    100;
+  const diskUsagePercent =
+    ((systemInfo.totalDisk - systemInfo.freeDisk) / systemInfo.totalDisk) * 100;
+
   // Warning thresholds
   const memoryWarning = memoryUsagePercent > 80;
   const diskWarning = diskUsagePercent > 90;
@@ -161,7 +172,10 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
               <span style={{ color: theme.colors.text, fontWeight: 500 }}>
                 {systemInfo.freeMemory}GB
               </span>
-              <span style={{ color: theme.colors.textSecondary }}> / {systemInfo.totalMemory}GB RAM</span>
+              <span style={{ color: theme.colors.textSecondary }}>
+                {' '}
+                / {systemInfo.totalMemory}GB RAM
+              </span>
               {memoryWarning && (
                 <AlertTriangle
                   size={12}
@@ -171,7 +185,7 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
             </div>
           </div>
         )}
-        
+
         {showDisk && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <HardDrive size={16} style={{ color: theme.colors.primary }} />
@@ -179,7 +193,10 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
               <span style={{ color: theme.colors.text, fontWeight: 500 }}>
                 {systemInfo.freeDisk}GB
               </span>
-              <span style={{ color: theme.colors.textSecondary }}> / {systemInfo.totalDisk}GB Disk</span>
+              <span style={{ color: theme.colors.textSecondary }}>
+                {' '}
+                / {systemInfo.totalDisk}GB Disk
+              </span>
               {diskWarning && (
                 <AlertTriangle
                   size={12}
@@ -289,7 +306,9 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
               style={{
                 height: '100%',
                 width: `${memoryUsagePercent}%`,
-                backgroundColor: memoryWarning ? theme.colors.warning : theme.colors.primary,
+                backgroundColor: memoryWarning
+                  ? theme.colors.warning
+                  : theme.colors.primary,
                 transition: 'width 0.3s',
               }}
             />
@@ -370,7 +389,7 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
               />
             ))}
           </div>
-          
+
           {/* Legend for disk usage */}
           {additionalDiskUsage.length > 0 && (
             <div
@@ -382,7 +401,9 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
                 flexWrap: 'wrap',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+              >
                 <div
                   style={{
                     width: '10px',
@@ -391,10 +412,15 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
                     backgroundColor: theme.colors.textTertiary,
                   }}
                 />
-                <span style={{ color: theme.colors.textSecondary }}>System</span>
+                <span style={{ color: theme.colors.textSecondary }}>
+                  System
+                </span>
               </div>
               {additionalDiskUsage.map((item, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div
+                  key={i}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
                   <div
                     style={{
                       width: '10px',
@@ -403,7 +429,9 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
                       backgroundColor: item.color || theme.colors.primary,
                     }}
                   />
-                  <span style={{ color: theme.colors.textSecondary }}>{item.label}</span>
+                  <span style={{ color: theme.colors.textSecondary }}>
+                    {item.label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -440,8 +468,13 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
                   color: theme.colors.warning,
                 }}
               >
-                <AlertTriangle size={14} style={{ marginTop: '2px', flexShrink: 0 }} />
-                <span>Low memory available. Consider closing some applications.</span>
+                <AlertTriangle
+                  size={14}
+                  style={{ marginTop: '2px', flexShrink: 0 }}
+                />
+                <span>
+                  Low memory available. Consider closing some applications.
+                </span>
               </div>
             )}
             {diskWarning && (
@@ -454,7 +487,10 @@ export const SystemResourceWidget: React.FC<SystemResourceWidgetProps> = ({
                   color: theme.colors.warning,
                 }}
               >
-                <AlertTriangle size={14} style={{ marginTop: '2px', flexShrink: 0 }} />
+                <AlertTriangle
+                  size={14}
+                  style={{ marginTop: '2px', flexShrink: 0 }}
+                />
                 <span>Low disk space. Consider freeing up some space.</span>
               </div>
             )}
@@ -488,25 +524,30 @@ export const useSystemInfo = (refreshInterval = 0, cacheTimeout = 5000) => {
     const checkInfo = async (forceRefresh = false) => {
       try {
         // Check cache first
-        if (!forceRefresh && systemInfoCache && 
-            Date.now() - systemInfoCache.timestamp < cacheTimeout) {
+        if (
+          !forceRefresh &&
+          systemInfoCache &&
+          Date.now() - systemInfoCache.timestamp < cacheTimeout
+        ) {
           setSystemInfo(systemInfoCache.data);
           setLoading(false);
           return;
         }
-        
+
         setLoading(true);
         const info = await SystemService.getSystemInfo();
-        
+
         // Update cache
         if (info) {
           systemInfoCache = { data: info, timestamp: Date.now() };
         }
-        
+
         setSystemInfo(info);
         setError(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to get system info');
+        setError(
+          err instanceof Error ? err.message : 'Failed to get system info',
+        );
       } finally {
         setLoading(false);
       }

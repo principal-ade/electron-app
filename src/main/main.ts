@@ -11,7 +11,12 @@
 import path from 'path';
 import { app, protocol, ipcMain } from 'electron';
 import log from 'electron-log';
-import { createWindow, applicationWindows, getIsRestarting, handleAppRestart } from './window/modernWindowManager';
+import {
+  createWindow,
+  applicationWindows,
+  getIsRestarting,
+  handleAppRestart,
+} from './window/modernWindowManager';
 // import { registerWindowHandlers } from './services/ipc/window/windowHandlers'; // Replaced by modernWindowHandlers
 import { initializeServices, shutdownServices } from './initialization';
 import { verifyRequiredAssets } from './util';
@@ -24,8 +29,6 @@ log.transports.file.resolvePathFn = () => {
 log.transports.file.level = 'info';
 log.transports.console.level = 'debug';
 
-
-
 // Log app startup
 log.info(`[Main] Starting ${app.getName()} v${app.getVersion()}`);
 log.info(`[Main] Log file: ${log.transports.file.getFile().path}`);
@@ -36,9 +39,15 @@ if (process.env.NODE_ENV === 'development' && !app.isPackaged) {
     // Only load electron-reload in true development mode
     // The __dirname issue is because webpack transforms the module system
     // Use eval to prevent webpack from analyzing this require
-    const electronReloadPath = path.join(__dirname, '../../node_modules/electron-reload');
-    const electronBinaryPath = path.join(__dirname, '../../node_modules/.bin/electron');
-    
+    const electronReloadPath = path.join(
+      __dirname,
+      '../../node_modules/electron-reload',
+    );
+    const electronBinaryPath = path.join(
+      __dirname,
+      '../../node_modules/.bin/electron',
+    );
+
     // Dynamically require to avoid webpack bundling issues
     eval(`require('${electronReloadPath}')`)(__dirname, {
       electron: electronBinaryPath,
@@ -50,7 +59,6 @@ if (process.env.NODE_ENV === 'development' && !app.isPackaged) {
     console.log('This is expected in production builds');
   }
 }
-
 
 // Ensure only one instance of the app runs
 const gotTheLock = app.requestSingleInstanceLock();
@@ -76,12 +84,14 @@ app.commandLine.appendSwitch('disable-site-isolation-trials');
 
 // Apply production constraints in development if requested
 if (process.env.NODE_ENV_PACKAGED_SIMULATION === 'true') {
-  console.log('[Main] Running with production constraints (packaged simulation)');
+  console.log(
+    '[Main] Running with production constraints (packaged simulation)',
+  );
   // NOTE: Sandbox enforcement removed because it breaks secondary windows with adapters
   // The sandbox is now controlled per-window based on their features
   // app.commandLine.appendSwitch('enable-sandbox');
   // app.commandLine.appendSwitch('no-sandbox-fallback');
-  
+
   // Log which constraints are active
   console.log('[Main] Constraints applied:');
   console.log('  - Per-window sandbox control (not globally enforced)');
@@ -90,11 +100,6 @@ if (process.env.NODE_ENV_PACKAGED_SIMULATION === 'true') {
 }
 
 // AppUpdater class moved to ./updater.ts
-
-
-
-
-
 
 // Add a new IPC handler for restarting the app
 ipcMain.on('restart-app', handleAppRestart);
@@ -108,32 +113,62 @@ if (isDebug) {
   app.on('browser-window-created', (_, window) => {
     window.webContents.on('before-input-event', (event, input) => {
       // Toggle DevTools with F12 or Cmd+Alt+I (Mac) / Ctrl+Shift+I (Win/Linux)
-      if (input.key === 'F12' || 
-          (process.platform === 'darwin' && input.meta && input.alt && input.key.toLowerCase() === 'i') ||
-          (process.platform !== 'darwin' && input.control && input.shift && input.key.toLowerCase() === 'i')) {
+      if (
+        input.key === 'F12' ||
+        (process.platform === 'darwin' &&
+          input.meta &&
+          input.alt &&
+          input.key.toLowerCase() === 'i') ||
+        (process.platform !== 'darwin' &&
+          input.control &&
+          input.shift &&
+          input.key.toLowerCase() === 'i')
+      ) {
         window.webContents.toggleDevTools();
         event.preventDefault();
       }
-      
+
       // Reload with F5 or Cmd+R (Mac) / Ctrl+R (Win/Linux)
-      if (input.key === 'F5' || 
-          (process.platform === 'darwin' && input.meta && input.key.toLowerCase() === 'r') ||
-          (process.platform !== 'darwin' && input.control && input.key.toLowerCase() === 'r')) {
+      if (
+        input.key === 'F5' ||
+        (process.platform === 'darwin' &&
+          input.meta &&
+          input.key.toLowerCase() === 'r') ||
+        (process.platform !== 'darwin' &&
+          input.control &&
+          input.key.toLowerCase() === 'r')
+      ) {
         window.webContents.reload();
         event.preventDefault();
       }
-      
+
       // Force reload with Shift+F5 or Cmd+Shift+R (Mac) / Ctrl+Shift+R (Win/Linux)
-      if ((input.shift && input.key === 'F5') ||
-          (process.platform === 'darwin' && input.meta && input.shift && input.key.toLowerCase() === 'r') ||
-          (process.platform !== 'darwin' && input.control && input.shift && input.key.toLowerCase() === 'r')) {
+      if (
+        (input.shift && input.key === 'F5') ||
+        (process.platform === 'darwin' &&
+          input.meta &&
+          input.shift &&
+          input.key.toLowerCase() === 'r') ||
+        (process.platform !== 'darwin' &&
+          input.control &&
+          input.shift &&
+          input.key.toLowerCase() === 'r')
+      ) {
         window.webContents.reloadIgnoringCache();
         event.preventDefault();
       }
-      
+
       // Open DevTools and inspect element with Cmd+Shift+C (Mac) / Ctrl+Shift+C (Win/Linux)
-      if ((process.platform === 'darwin' && input.meta && input.shift && input.key.toLowerCase() === 'c') ||
-          (process.platform !== 'darwin' && input.control && input.shift && input.key.toLowerCase() === 'c')) {
+      if (
+        (process.platform === 'darwin' &&
+          input.meta &&
+          input.shift &&
+          input.key.toLowerCase() === 'c') ||
+        (process.platform !== 'darwin' &&
+          input.control &&
+          input.shift &&
+          input.key.toLowerCase() === 'c')
+      ) {
         window.webContents.inspectElement(0, 0);
         event.preventDefault();
       }
@@ -158,7 +193,6 @@ app.on('will-quit', async (event) => {
   event.preventDefault();
 
   try {
-
     await shutdownServices();
 
     // Close all windows
@@ -188,7 +222,6 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
-
 app
   .whenReady()
   .then(async () => {
@@ -197,15 +230,15 @@ app
     const AuthStateManager = require('./services/AuthStateManager').default;
     const { authService } = require('./services/AuthService');
     const { gitSyncIPC } = require('./services/GitSyncIPC');
-    
+
     // Force initialization
     const authStateManager = AuthStateManager.getInstance();
-    console.log('[Main] Auth services initialized:', { 
-      authService: !!authService, 
-      authStateManager: !!authStateManager, 
-      gitSyncIPC: !!gitSyncIPC 
+    console.log('[Main] Auth services initialized:', {
+      authService: !!authService,
+      authStateManager: !!authStateManager,
+      gitSyncIPC: !!gitSyncIPC,
     });
-    
+
     // Initialize auth state from stored credentials
     await authService.initializeAuthState();
     console.log('[Main] Auth state initialized from stored credentials');
@@ -216,7 +249,9 @@ app
     // Verify all required assets exist before starting
     const assetVerification = verifyRequiredAssets();
     if (!assetVerification.success) {
-      console.error('[Main] Critical: Missing required assets. Hook functionality may be impaired.');
+      console.error(
+        '[Main] Critical: Missing required assets. Hook functionality may be impaired.',
+      );
       console.error('[Main] Missing assets:', assetVerification.missing);
       // Continue startup but log the issues for debugging
     }

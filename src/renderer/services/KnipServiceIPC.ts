@@ -16,7 +16,7 @@ export class KnipServiceIPC {
       console.error('[KnipServiceIPC] Error running analysis:', error);
       return {
         error: `Failed to run Knip analysis: ${error}`,
-        hasIssues: false
+        hasIssues: false,
       };
     }
   }

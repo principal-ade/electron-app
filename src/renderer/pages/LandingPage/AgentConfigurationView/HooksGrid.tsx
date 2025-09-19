@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import { SupportedAgent } from "@principal-ai/agent-monitoring";
+import { SupportedAgent } from '@principal-ai/agent-monitoring';
 import { useTheme } from 'themed-markdown';
 
 import { AgentConfigurationService } from '../../../main-process-api/AgentConfigurationService';
@@ -55,9 +55,15 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
     matcher: string;
     command: string;
   } | null>(null);
-  const [selectedHookType, setSelectedHookType] = useState<HookType | null>(null);
-  const [hoveredElements, setHoveredElements] = useState<{[key: string]: boolean}>({});
-  const [availableHookTypes, setAvailableHookTypes] = useState<readonly HookType[]>([]);
+  const [selectedHookType, setSelectedHookType] = useState<HookType | null>(
+    null,
+  );
+  const [hoveredElements, setHoveredElements] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const [availableHookTypes, setAvailableHookTypes] = useState<
+    readonly HookType[]
+  >([]);
 
   useEffect(() => {
     const types = getAvailableHookTypes(agentType);
@@ -68,11 +74,12 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
   const loadHooks = async (hookTypes?: readonly HookType[]) => {
     setLoading(true);
     const typesToLoad = hookTypes || availableHookTypes;
-    
+
     try {
-      const config = await AgentConfigurationService.readAgentSettings(agentType);
+      const config =
+        await AgentConfigurationService.readAgentSettings(agentType);
       const newHooksData: Record<string, Hook[]> = {};
-      
+
       // Load hooks for all available hook types
       // The main process now normalizes the hooks format for all agents
       if (config?.hooks) {
@@ -89,7 +96,7 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
           newHooksData[hookType] = [];
         }
       }
-      
+
       setHooksData(newHooksData);
     } catch (error) {
       console.error('Failed to load hooks:', error);
@@ -128,14 +135,11 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
    * We parse this JSON structure and filter hooks by their command filepath
    * when removing/updating specific hooks.
    */
-  const saveHooks = async (
-    updatedHooks: Hook[],
-    hookType: HookType,
-  ) => {
+  const saveHooks = async (updatedHooks: Hook[], hookType: HookType) => {
     try {
       const config =
         (await AgentConfigurationService.readAgentSettings(agentType)) || {};
-      
+
       // The main process now handles format conversion for all agents
       if (!config.hooks) config.hooks = {};
       config.hooks[hookType] = updatedHooks;
@@ -145,7 +149,7 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
         config,
       );
       if (success) {
-        setHooksData(prev => ({
+        setHooksData((prev) => ({
           ...prev,
           [hookType]: updatedHooks,
         }));
@@ -240,8 +244,10 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
   // Auto-configure standard hooks
   const autoConfigureHooks = async () => {
     try {
-      const config = await AgentConfigurationService.readAgentSettings(agentType) || {};
-      const hookPaths = await AgentConfigurationService.getAgentHooksFilePath(agentType);
+      const config =
+        (await AgentConfigurationService.readAgentSettings(agentType)) || {};
+      const hookPaths =
+        await AgentConfigurationService.getAgentHooksFilePath(agentType);
 
       // The main process now handles format conversion for all agents
       if (!config.hooks) config.hooks = {};
@@ -280,7 +286,9 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
   if (loading) {
     return (
       <div className="text-center py-8">
-        <div style={{ color: theme.colors.textSecondary }}>Loading hooks...</div>
+        <div style={{ color: theme.colors.textSecondary }}>
+          Loading hooks...
+        </div>
       </div>
     );
   }
@@ -294,15 +302,21 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
       0,
     );
   }
-  
-  const totalHookCount = Object.values(hookCounts).reduce((sum, count) => sum + count, 0);
+
+  const totalHookCount = Object.values(hookCounts).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
 
   // If no hook type selected, show the overview
   if (!selectedHookType) {
-    const gridCols = availableHookTypes.length <= 2 ? 'grid-cols-2' : 
-                     availableHookTypes.length <= 3 ? 'grid-cols-3' : 
-                     'grid-cols-2 lg:grid-cols-3';
-    
+    const gridCols =
+      availableHookTypes.length <= 2
+        ? 'grid-cols-2'
+        : availableHookTypes.length <= 3
+          ? 'grid-cols-3'
+          : 'grid-cols-2 lg:grid-cols-3';
+
     return (
       <div className="space-y-4">
         <div className={`grid ${gridCols} gap-4`}>
@@ -345,9 +359,17 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
       <button
         onClick={() => setSelectedHookType(null)}
         className="flex items-center gap-2 text-sm transition-colors"
-        style={{ color: hoveredElements['back-button'] ? theme.colors.text : theme.colors.textSecondary }}
-        onMouseEnter={() => setHoveredElements(prev => ({ ...prev, 'back-button': true }))}
-        onMouseLeave={() => setHoveredElements(prev => ({ ...prev, 'back-button': false }))}
+        style={{
+          color: hoveredElements['back-button']
+            ? theme.colors.text
+            : theme.colors.textSecondary,
+        }}
+        onMouseEnter={() =>
+          setHoveredElements((prev) => ({ ...prev, 'back-button': true }))
+        }
+        onMouseLeave={() =>
+          setHoveredElements((prev) => ({ ...prev, 'back-button': false }))
+        }
       >
         <svg
           className="w-4 h-4"
@@ -366,7 +388,9 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
       </button>
 
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{getHookTypeDisplayName(selectedHookType)} Hooks</h3>
+        <h3 className="text-lg font-semibold">
+          {getHookTypeDisplayName(selectedHookType)} Hooks
+        </h3>
         {currentHooks.length > 0 && (
           <button
             onClick={async () => {
@@ -378,9 +402,17 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
               }
             }}
             className="px-3 py-1.5 text-xs text-red-400 rounded-md transition-colors flex items-center gap-2"
-            style={{ backgroundColor: hoveredElements['clear-all'] ? 'rgba(220, 38, 38, 0.3)' : 'rgba(220, 38, 38, 0.2)' }}
-            onMouseEnter={() => setHoveredElements(prev => ({ ...prev, 'clear-all': true }))}
-            onMouseLeave={() => setHoveredElements(prev => ({ ...prev, 'clear-all': false }))}
+            style={{
+              backgroundColor: hoveredElements['clear-all']
+                ? 'rgba(220, 38, 38, 0.3)'
+                : 'rgba(220, 38, 38, 0.2)',
+            }}
+            onMouseEnter={() =>
+              setHoveredElements((prev) => ({ ...prev, 'clear-all': true }))
+            }
+            onMouseLeave={() =>
+              setHoveredElements((prev) => ({ ...prev, 'clear-all': false }))
+            }
             title="Remove all hooks"
           >
             <svg
@@ -402,8 +434,14 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
       </div>
 
       {currentHooks.length === 0 && !showAddForm && (
-        <div className="text-center py-16 rounded-lg" style={{ backgroundColor: `${theme.colors.surface}80` }}>
-          <div className="w-16 h-16 mx-auto mb-4 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${theme.colors.backgroundTertiary}80` }}>
+        <div
+          className="text-center py-16 rounded-lg"
+          style={{ backgroundColor: `${theme.colors.surface}80` }}
+        >
+          <div
+            className="w-16 h-16 mx-auto mb-4 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: `${theme.colors.backgroundTertiary}80` }}
+          >
             <svg
               className="w-8 h-8"
               style={{ color: theme.colors.textSecondary }}
@@ -419,13 +457,29 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
               />
             </svg>
           </div>
-          <p className="mb-4" style={{ color: theme.colors.textSecondary }}>No hooks configured yet</p>
+          <p className="mb-4" style={{ color: theme.colors.textSecondary }}>
+            No hooks configured yet
+          </p>
           <button
             onClick={() => setShowAddForm(true)}
             className="px-4 py-2 text-white rounded-md text-sm transition-colors"
-            style={{ backgroundColor: hoveredElements['add-first-hook'] ? theme.colors.textMuted : theme.colors.backgroundTertiary }}
-            onMouseEnter={() => setHoveredElements(prev => ({ ...prev, 'add-first-hook': true }))}
-            onMouseLeave={() => setHoveredElements(prev => ({ ...prev, 'add-first-hook': false }))}
+            style={{
+              backgroundColor: hoveredElements['add-first-hook']
+                ? theme.colors.textMuted
+                : theme.colors.backgroundTertiary,
+            }}
+            onMouseEnter={() =>
+              setHoveredElements((prev) => ({
+                ...prev,
+                'add-first-hook': true,
+              }))
+            }
+            onMouseLeave={() =>
+              setHoveredElements((prev) => ({
+                ...prev,
+                'add-first-hook': false,
+              }))
+            }
           >
             Add Your First Hook
           </button>
@@ -434,8 +488,14 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
 
       {/* Add/Edit form */}
       {(showAddForm || editingHook) && (
-        <div className="rounded-lg p-6 space-y-4" style={{ backgroundColor: theme.colors.surface }}>
-          <h4 className="font-medium text-lg mb-4" style={{ color: theme.colors.text }}>
+        <div
+          className="rounded-lg p-6 space-y-4"
+          style={{ backgroundColor: theme.colors.surface }}
+        >
+          <h4
+            className="font-medium text-lg mb-4"
+            style={{ color: theme.colors.text }}
+          >
             {editingHook ? 'Configure Hook' : 'Add New Hook'}
           </h4>
 
@@ -443,7 +503,10 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
           <div className="space-y-4">
             {hookTypeUsesMatchers(selectedHookType) && (
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textTertiary }}>
+                <label
+                  className="block text-sm font-medium mb-2"
+                  style={{ color: theme.colors.textTertiary }}
+                >
                   Matcher Pattern
                 </label>
                 <input
@@ -461,9 +524,15 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
                   }}
                   className="w-full px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g., * for all tools or specific tool name"
-                  style={{ backgroundColor: theme.colors.background, color: theme.colors.text }}
+                  style={{
+                    backgroundColor: theme.colors.background,
+                    color: theme.colors.text,
+                  }}
                 />
-                <p className="text-xs mt-1" style={{ color: theme.colors.textMuted }}>
+                <p
+                  className="text-xs mt-1"
+                  style={{ color: theme.colors.textMuted }}
+                >
                   Use * to match all tools, or specify tool names like "Edit",
                   "Read", "Bash"
                 </p>
@@ -471,7 +540,10 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-2" style={{ color: theme.colors.textTertiary }}>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: theme.colors.textTertiary }}
+              >
                 Hook Script Path
               </label>
               <input
@@ -486,16 +558,25 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
                 }}
                 className="w-full px-3 py-2 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="e.g., ~/code-city/hooks/my-hook.sh"
-                style={{ backgroundColor: theme.colors.background, color: theme.colors.text }}
+                style={{
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.text,
+                }}
               />
-              <p className="text-xs mt-1" style={{ color: theme.colors.textMuted }}>
+              <p
+                className="text-xs mt-1"
+                style={{ color: theme.colors.textMuted }}
+              >
                 Full path to the executable script that will run when the hook
                 is triggered
               </p>
             </div>
           </div>
 
-          <div className="flex gap-2 justify-end pt-4 border-t" style={{ borderColor: theme.colors.border }}>
+          <div
+            className="flex gap-2 justify-end pt-4 border-t"
+            style={{ borderColor: theme.colors.border }}
+          >
             <button
               onClick={() => {
                 setShowAddForm(false);
@@ -504,16 +585,31 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
                 setNewCommand('');
               }}
               className="px-4 py-2 text-sm text-white rounded transition-colors"
-              style={{ backgroundColor: hoveredElements['cancel-button'] ? theme.colors.textMuted : theme.colors.backgroundTertiary }}
-              onMouseEnter={() => setHoveredElements(prev => ({ ...prev, 'cancel-button': true }))}
-              onMouseLeave={() => setHoveredElements(prev => ({ ...prev, 'cancel-button': false }))}
+              style={{
+                backgroundColor: hoveredElements['cancel-button']
+                  ? theme.colors.textMuted
+                  : theme.colors.backgroundTertiary,
+              }}
+              onMouseEnter={() =>
+                setHoveredElements((prev) => ({
+                  ...prev,
+                  'cancel-button': true,
+                }))
+              }
+              onMouseLeave={() =>
+                setHoveredElements((prev) => ({
+                  ...prev,
+                  'cancel-button': false,
+                }))
+              }
             >
               Cancel
             </button>
             <button
               onClick={() => {
                 if (editingHook) {
-                  const currentHooksList = hooksData[editingHook.hookType] || [];
+                  const currentHooksList =
+                    hooksData[editingHook.hookType] || [];
                   const originalHook = currentHooksList[editingHook.index];
                   handleUpdateHook(
                     originalHook.matcher || '',
@@ -530,17 +626,35 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
               }
               className="px-4 py-2 text-sm text-white rounded transition-colors"
               style={{
-                backgroundColor: (editingHook ? editingHook.command.trim() : newCommand.trim())
-                  ? (hoveredElements['save-button'] ? '#1d4ed8' : '#2563eb')
+                backgroundColor: (
+                  editingHook ? editingHook.command.trim() : newCommand.trim()
+                )
+                  ? hoveredElements['save-button']
+                    ? '#1d4ed8'
+                    : '#2563eb'
                   : theme.colors.backgroundTertiary,
-                cursor: (editingHook ? editingHook.command.trim() : newCommand.trim()) ? 'pointer' : 'not-allowed'
+                cursor: (
+                  editingHook ? editingHook.command.trim() : newCommand.trim()
+                )
+                  ? 'pointer'
+                  : 'not-allowed',
               }}
               onMouseEnter={() => {
-                if (editingHook ? editingHook.command.trim() : newCommand.trim()) {
-                  setHoveredElements(prev => ({ ...prev, 'save-button': true }));
+                if (
+                  editingHook ? editingHook.command.trim() : newCommand.trim()
+                ) {
+                  setHoveredElements((prev) => ({
+                    ...prev,
+                    'save-button': true,
+                  }));
                 }
               }}
-              onMouseLeave={() => setHoveredElements(prev => ({ ...prev, 'save-button': false }))}
+              onMouseLeave={() =>
+                setHoveredElements((prev) => ({
+                  ...prev,
+                  'save-button': false,
+                }))
+              }
             >
               {editingHook ? 'Save Configuration' : 'Add Hook'}
             </button>
@@ -590,15 +704,33 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
                 : 'w-full border-2 border-dashed rounded-lg px-4 py-3 flex items-center justify-center transition-all group'
             }`}
             style={{
-              backgroundColor: hoveredElements['add-hook-button'] ? theme.colors.surface : `${theme.colors.surface}80`,
-              borderColor: hoveredElements['add-hook-button'] ? theme.colors.textMuted : theme.colors.border
+              backgroundColor: hoveredElements['add-hook-button']
+                ? theme.colors.surface
+                : `${theme.colors.surface}80`,
+              borderColor: hoveredElements['add-hook-button']
+                ? theme.colors.textMuted
+                : theme.colors.border,
             }}
-            onMouseEnter={() => setHoveredElements(prev => ({ ...prev, 'add-hook-button': true }))}
-            onMouseLeave={() => setHoveredElements(prev => ({ ...prev, 'add-hook-button': false }))}
+            onMouseEnter={() =>
+              setHoveredElements((prev) => ({
+                ...prev,
+                'add-hook-button': true,
+              }))
+            }
+            onMouseLeave={() =>
+              setHoveredElements((prev) => ({
+                ...prev,
+                'add-hook-button': false,
+              }))
+            }
           >
             <svg
               className={`${layout === 'grid' ? 'w-8 h-8 mb-1' : 'w-5 h-5 mr-2'}`}
-              style={{ color: hoveredElements['add-hook-button'] ? theme.colors.textTertiary : theme.colors.textMuted }}
+              style={{
+                color: hoveredElements['add-hook-button']
+                  ? theme.colors.textTertiary
+                  : theme.colors.textMuted,
+              }}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -612,7 +744,11 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
             </svg>
             <p
               className={`text-${layout === 'grid' ? 'xs' : 'sm'}`}
-              style={{ color: hoveredElements['add-hook-button'] ? theme.colors.textTertiary : theme.colors.textMuted }}
+              style={{
+                color: hoveredElements['add-hook-button']
+                  ? theme.colors.textTertiary
+                  : theme.colors.textMuted,
+              }}
             >
               Add Hook
             </p>
@@ -623,34 +759,58 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
       {/* Info Modal */}
       {infoHook && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="rounded-lg p-6 max-w-md w-full" style={{ backgroundColor: theme.colors.background }}>
+          <div
+            className="rounded-lg p-6 max-w-md w-full"
+            style={{ backgroundColor: theme.colors.background }}
+          >
             <h3 className="text-lg font-semibold mb-4">Hook Details</h3>
 
             <div className="space-y-3 text-sm">
               <div>
-                <span style={{ color: theme.colors.textSecondary }}>Hook Name:</span>
+                <span style={{ color: theme.colors.textSecondary }}>
+                  Hook Name:
+                </span>
                 <span className="ml-2" style={{ color: theme.colors.text }}>
                   {infoHook.command.split('/').pop() || infoHook.command}
                 </span>
               </div>
 
               <div>
-                <span style={{ color: theme.colors.textSecondary }}>Matcher Pattern:</span>
-                <code className="ml-2 px-2 py-0.5 rounded text-xs" style={{ backgroundColor: theme.colors.surface, color: theme.colors.text }}>
+                <span style={{ color: theme.colors.textSecondary }}>
+                  Matcher Pattern:
+                </span>
+                <code
+                  className="ml-2 px-2 py-0.5 rounded text-xs"
+                  style={{
+                    backgroundColor: theme.colors.surface,
+                    color: theme.colors.text,
+                  }}
+                >
                   {infoHook.matcher}
                 </code>
               </div>
 
               <div>
-                <span style={{ color: theme.colors.textSecondary }}>Full Path:</span>
+                <span style={{ color: theme.colors.textSecondary }}>
+                  Full Path:
+                </span>
                 <div className="mt-1">
-                  <code className="px-2 py-1 rounded text-xs break-all block" style={{ backgroundColor: theme.colors.surface, color: theme.colors.text }}>
+                  <code
+                    className="px-2 py-1 rounded text-xs break-all block"
+                    style={{
+                      backgroundColor: theme.colors.surface,
+                      color: theme.colors.text,
+                    }}
+                  >
                     {infoHook.command}
                   </code>
                 </div>
               </div>
 
-              <div className="mt-2 text-xs" style={{ color: theme.colors.textMuted }}>
+              <div
+                className="mt-2 text-xs"
+                style={{ color: theme.colors.textMuted }}
+              >
                 This hook will run when tools matching "{infoHook.matcher}" are
                 used.
               </div>
@@ -659,9 +819,20 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
             <button
               onClick={() => setInfoHook(null)}
               className="mt-6 w-full px-4 py-2 text-white rounded-md transition-colors"
-              style={{ backgroundColor: hoveredElements['close-modal'] ? theme.colors.backgroundTertiary : theme.colors.surface }}
-              onMouseEnter={() => setHoveredElements(prev => ({ ...prev, 'close-modal': true }))}
-              onMouseLeave={() => setHoveredElements(prev => ({ ...prev, 'close-modal': false }))}
+              style={{
+                backgroundColor: hoveredElements['close-modal']
+                  ? theme.colors.backgroundTertiary
+                  : theme.colors.surface,
+              }}
+              onMouseEnter={() =>
+                setHoveredElements((prev) => ({ ...prev, 'close-modal': true }))
+              }
+              onMouseLeave={() =>
+                setHoveredElements((prev) => ({
+                  ...prev,
+                  'close-modal': false,
+                }))
+              }
             >
               Close
             </button>

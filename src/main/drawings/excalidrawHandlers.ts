@@ -36,8 +36,11 @@ class ExcalidrawHandlers {
           const data = await fs.readJson(this.indexPath);
           this.index = new Map(Object.entries(data.diagrams || {}));
         } catch (parseError: any) {
-          console.error('Failed to parse index.json, creating backup and starting fresh:', parseError.message);
-          
+          console.error(
+            'Failed to parse index.json, creating backup and starting fresh:',
+            parseError.message,
+          );
+
           // Backup the corrupted file
           const backupPath = `${this.indexPath}.backup.${Date.now()}`;
           try {
@@ -46,10 +49,10 @@ class ExcalidrawHandlers {
           } catch (backupError) {
             console.error('Failed to backup corrupted index:', backupError);
           }
-          
+
           // Start with a fresh index
           this.index = new Map();
-          
+
           // Try to recover by scanning the directory for existing diagrams
           await this.recoverIndexFromFiles();
         }
@@ -61,11 +64,11 @@ class ExcalidrawHandlers {
       this.index = new Map();
     }
   }
-  
+
   private async recoverIndexFromFiles() {
     try {
       console.log('Attempting to recover index from existing diagram files...');
-      
+
       // Check repo-agnostic directory
       const repoAgnosticDir = path.join(this.storageDir, 'repo-agnostic');
       if (await fs.pathExists(repoAgnosticDir)) {
@@ -76,7 +79,7 @@ class ExcalidrawHandlers {
               const filePath = path.join(repoAgnosticDir, file);
               const data = await fs.readJson(filePath);
               const id = file.replace('.excalidraw', '');
-              
+
               this.index.set(id, {
                 id,
                 name: data.name || 'Recovered Diagram',
@@ -84,7 +87,7 @@ class ExcalidrawHandlers {
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               });
-              
+
               console.log(`Recovered diagram: ${id}`);
             } catch (err) {
               console.error(`Failed to recover ${file}:`, err);
@@ -92,7 +95,7 @@ class ExcalidrawHandlers {
           }
         }
       }
-      
+
       // Check project-specific directories
       const dirs = await fs.readdir(this.storageDir);
       for (const dir of dirs) {
@@ -100,7 +103,7 @@ class ExcalidrawHandlers {
           const projectDir = path.join(this.storageDir, dir);
           try {
             const stat = await fs.stat(projectDir);
-            
+
             if (stat.isDirectory()) {
               const files = await fs.readdir(projectDir);
               for (const file of files) {
@@ -109,7 +112,7 @@ class ExcalidrawHandlers {
                     const filePath = path.join(projectDir, file);
                     const data = await fs.readJson(filePath);
                     const id = file.replace('.excalidraw', '');
-                    
+
                     this.index.set(id, {
                       id,
                       name: data.name || 'Recovered Diagram',
@@ -118,7 +121,7 @@ class ExcalidrawHandlers {
                       createdAt: new Date().toISOString(),
                       updatedAt: new Date().toISOString(),
                     });
-                    
+
                     console.log(`Recovered project diagram: ${id}`);
                   } catch (err) {
                     console.error(`Failed to recover ${file}:`, err);
@@ -131,7 +134,7 @@ class ExcalidrawHandlers {
           }
         }
       }
-      
+
       // Save the recovered index
       if (this.index.size > 0) {
         await this.saveIndex();
@@ -305,11 +308,26 @@ class ExcalidrawHandlers {
   }
 
   registerHandlers() {
-    ipcMain.handle(ExcalidrawAPIEvents.SAVE_DIAGRAM, this.saveDiagram.bind(this));
-    ipcMain.handle(ExcalidrawAPIEvents.LOAD_DIAGRAM, this.loadDiagram.bind(this));
-    ipcMain.handle(ExcalidrawAPIEvents.LIST_DIAGRAMS, this.listDiagrams.bind(this));
-    ipcMain.handle(ExcalidrawAPIEvents.DELETE_DIAGRAM, this.deleteDiagram.bind(this));
-    ipcMain.handle(ExcalidrawAPIEvents.EXPORT_DIAGRAM, this.exportDiagram.bind(this));
+    ipcMain.handle(
+      ExcalidrawAPIEvents.SAVE_DIAGRAM,
+      this.saveDiagram.bind(this),
+    );
+    ipcMain.handle(
+      ExcalidrawAPIEvents.LOAD_DIAGRAM,
+      this.loadDiagram.bind(this),
+    );
+    ipcMain.handle(
+      ExcalidrawAPIEvents.LIST_DIAGRAMS,
+      this.listDiagrams.bind(this),
+    );
+    ipcMain.handle(
+      ExcalidrawAPIEvents.DELETE_DIAGRAM,
+      this.deleteDiagram.bind(this),
+    );
+    ipcMain.handle(
+      ExcalidrawAPIEvents.EXPORT_DIAGRAM,
+      this.exportDiagram.bind(this),
+    );
   }
 }
 

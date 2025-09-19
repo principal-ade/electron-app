@@ -153,9 +153,12 @@ export const DependenciesView: React.FC<DependenciesViewProps> = ({
           // Use grep command to search for patterns in JavaScript/TypeScript files
           const grepCommand = `grep -r --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" --include="*.mjs" --include="*.cjs" -l "${pattern}" . 2>/dev/null || true`;
 
-          const result = await window.mainProcess.shell.runCommand(grepCommand, {
-            cwd: workingDirectory,
-          });
+          const result = await window.mainProcess.shell.runCommand(
+            grepCommand,
+            {
+              cwd: workingDirectory,
+            },
+          );
 
           if (result && result.output) {
             // Parse the output lines as file paths

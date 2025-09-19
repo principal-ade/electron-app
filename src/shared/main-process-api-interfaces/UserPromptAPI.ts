@@ -28,7 +28,7 @@ export enum UserPromptAPIEvents {
   // Request operations
   SHOW_PROMPT = 'user-prompt:show',
   CANCEL_PROMPT = 'user-prompt:cancel',
-  
+
   // Response events
   PROMPT_RESPONSE = 'user-prompt:response',
   PROMPT_CANCELLED = 'user-prompt:cancelled',
@@ -51,7 +51,7 @@ export interface UserPromptAPI {
 
   // Cancel an active prompt
   cancelPrompt: (promptId: string) => Promise<void>;
-  
+
   // Check if a prompt is currently active
   isPromptActive: (promptId: string) => Promise<boolean>;
 }

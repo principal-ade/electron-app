@@ -13,7 +13,7 @@ interface CachedThemedOwlProps {
 
 /**
  * CachedThemedOwl - Efficient themed owl icon that uses pre-generated cached images
- * 
+ *
  * This component:
  * 1. Uses cached themed icons that are generated once when theme switches
  * 2. Falls back to a default icon while the themed version is being generated
@@ -23,16 +23,16 @@ export const CachedThemedOwl: React.FC<CachedThemedOwlProps> = ({
   size = 48,
   className,
   fallbackSrc = '/assets/icons/owl-default.png',
-  showLoading = false
+  showLoading = false,
 }) => {
   const [iconSrc, setIconSrc] = useState<string>(fallbackSrc);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Function to load themed icon
   const loadThemedIcon = async () => {
     const themeName = ThemeService.getCurrentThemeName();
-    
+
     // Try to get cached icon first
     const cached = IconThemeService.getCachedIcon(themeName, size);
     if (cached) {
@@ -40,13 +40,16 @@ export const CachedThemedOwl: React.FC<CachedThemedOwlProps> = ({
       setIsLoading(false);
       return;
     }
-    
+
     // Generate if not cached
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const generatedIcon = await IconThemeService.generateThemedIcon(themeName, size);
+      const generatedIcon = await IconThemeService.generateThemedIcon(
+        themeName,
+        size,
+      );
       if (generatedIcon) {
         setIconSrc(generatedIcon);
       } else {
@@ -60,27 +63,27 @@ export const CachedThemedOwl: React.FC<CachedThemedOwlProps> = ({
       setIsLoading(false);
     }
   };
-  
+
   // Load icon on mount and when size changes
   useEffect(() => {
     loadThemedIcon();
   }, [size]);
-  
+
   // Subscribe to theme changes
   useEffect(() => {
     const unsubscribe = ThemeService.onThemeChange(() => {
       loadThemedIcon();
     });
-    
+
     return () => {
       unsubscribe();
     };
   }, [size]);
-  
+
   // Show loading state if requested
   if (isLoading && showLoading) {
     return (
-      <div 
+      <div
         className={className}
         style={{
           width: size,
@@ -89,7 +92,7 @@ export const CachedThemedOwl: React.FC<CachedThemedOwlProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: '#f0f0f0',
-          borderRadius: '50%'
+          borderRadius: '50%',
         }}
       >
         <div
@@ -99,13 +102,13 @@ export const CachedThemedOwl: React.FC<CachedThemedOwlProps> = ({
             border: '2px solid #ddd',
             borderTopColor: '#333',
             borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
+            animation: 'spin 1s linear infinite',
           }}
         />
       </div>
     );
   }
-  
+
   return (
     <img
       src={iconSrc}
@@ -116,7 +119,7 @@ export const CachedThemedOwl: React.FC<CachedThemedOwlProps> = ({
       style={{
         display: 'block',
         transition: 'opacity 0.3s ease',
-        opacity: isLoading ? 0.5 : 1
+        opacity: isLoading ? 0.5 : 1,
       }}
       onError={() => {
         // Fallback to default on error

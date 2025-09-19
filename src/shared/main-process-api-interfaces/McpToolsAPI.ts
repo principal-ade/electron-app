@@ -58,9 +58,13 @@ export interface ClaudeCliStatus {
 }
 
 export interface McpToolsAPI {
-  getAppInfo: (params?: { detailed?: boolean }) => Promise<AppInfo | GetAppInfoError>;
-  onDisplayMarkdownSlides: (callback: (data: { presentationTitle: string; markdown: string }) => void) => void;
-  
+  getAppInfo: (params?: {
+    detailed?: boolean;
+  }) => Promise<AppInfo | GetAppInfoError>;
+  onDisplayMarkdownSlides: (
+    callback: (data: { presentationTitle: string; markdown: string }) => void,
+  ) => void;
+
   // MCP Server Management
   getServers: () => Promise<McpServer[]>;
   getTools: (serverName: string) => Promise<McpTool[]>;
@@ -69,14 +73,14 @@ export interface McpToolsAPI {
   stopServer: (serverName: string) => Promise<void>;
   restartServer: (serverName: string) => Promise<void>;
   sendMessage: (params: McpMessage) => Promise<any>;
-  
+
   // MCP Configuration
   getConfig: () => Promise<McpConfig>;
   updateConfig: (config: McpConfig) => Promise<void>;
   openConfig: () => Promise<void>;
   checkClaudeCli: () => Promise<ClaudeCliStatus>;
   getResolvedMcpScriptPath: () => Promise<string>;
-  
+
   // MCP Events
   onLog: (callback: (log: any) => void) => () => void;
   onServersDiscovered: (callback: (servers: McpServer[]) => void) => () => void;

@@ -4,8 +4,16 @@ import { promisify } from 'util';
 import * as os from 'os';
 import { ShellAPIEvent } from '../../shared/main-process-api-interfaces/ShellAPI';
 import path from 'path';
-import { DEFAULT_EDITOR, type EditorId, MAC_EDITOR_APP_NAMES } from '../../shared/types/editor.types';
-import { DEFAULT_TERMINAL, type TerminalId, MAC_TERMINAL_APP_NAMES } from '../../shared/types/terminal.types';
+import {
+  DEFAULT_EDITOR,
+  type EditorId,
+  MAC_EDITOR_APP_NAMES,
+} from '../../shared/types/editor.types';
+import {
+  DEFAULT_TERMINAL,
+  type TerminalId,
+  MAC_TERMINAL_APP_NAMES,
+} from '../../shared/types/terminal.types';
 
 const execAsync = promisify(exec);
 
@@ -39,7 +47,7 @@ export function setupShellHandlers() {
         // Determine the shell based on platform
         const isWindows = os.platform() === 'win32';
         const shellPath: string | undefined = isWindows
-          ? (process.env.ComSpec || 'C\\\Windows\\\System32\\\cmd.exe')
+          ? process.env.ComSpec || 'C\\\Windows\\\System32\\\cmd.exe'
           : '/bin/bash';
 
         const { stdout, stderr } = await execAsync(command, {
@@ -192,9 +200,10 @@ export function setupShellHandlers() {
           cwd: params.cwd || process.cwd(),
           encoding: 'utf8',
           maxBuffer: 1024 * 1024 * 10, // 10MB buffer
-          shell: os.platform() === 'win32'
-            ? (process.env.ComSpec || 'C\\\Windows\\\System32\\\cmd.exe')
-            : '/bin/bash',
+          shell:
+            os.platform() === 'win32'
+              ? process.env.ComSpec || 'C\\\Windows\\\System32\\\cmd.exe'
+              : '/bin/bash',
         });
 
         return {
@@ -216,18 +225,15 @@ export function setupShellHandlers() {
   // Open a local directory or files in the specified editor
   ipcMain.handle(
     ShellAPIEvent.OPEN_IN_EDITOR,
-    async (
-      _,
-      params: { editor: EditorId; dir?: string; files?: string[] },
-    ) => {
+    async (_, params: { editor: EditorId; dir?: string; files?: string[] }) => {
       try {
         const editor: EditorId = params?.editor ?? DEFAULT_EDITOR;
-        
+
         // Support both single directory/file and multiple files
         const targets: string[] = [];
         if (params.files && params.files.length > 0) {
           // Multiple files mode
-          targets.push(...params.files.map(f => path.resolve(f)));
+          targets.push(...params.files.map((f) => path.resolve(f)));
         } else if (params.dir) {
           // Single directory/file mode
           targets.push(path.resolve(params.dir));
@@ -238,9 +244,11 @@ export function setupShellHandlers() {
         const platform = os.platform();
 
         if (platform === 'darwin') {
-          const appName = MAC_EDITOR_APP_NAMES[editor] ?? MAC_EDITOR_APP_NAMES[DEFAULT_EDITOR];
+          const appName =
+            MAC_EDITOR_APP_NAMES[editor] ??
+            MAC_EDITOR_APP_NAMES[DEFAULT_EDITOR];
           // macOS open command supports multiple files
-          const quotedTargets = targets.map(t => `"${t}"`).join(' ');
+          const quotedTargets = targets.map((t) => `"${t}"`).join(' ');
           const command = `open -a "${appName}" ${quotedTargets}`;
           await execAsync(command);
           return { success: true };
@@ -248,7 +256,7 @@ export function setupShellHandlers() {
 
         if (platform === 'win32') {
           // Windows commands typically support multiple files
-          const quotedTargets = targets.map(t => `"${t}"`).join(' ');
+          const quotedTargets = targets.map((t) => `"${t}"`).join(' ');
           const editorCommandMap: Record<EditorId, string> = {
             vscode: `code ${quotedTargets}`,
             cursor: `cursor ${quotedTargets}`,
@@ -256,13 +264,14 @@ export function setupShellHandlers() {
             sublime: `subl ${quotedTargets}`,
             intellij: `idea64.exe ${quotedTargets}`,
           };
-          const command = editorCommandMap[editor] ?? editorCommandMap[DEFAULT_EDITOR];
+          const command =
+            editorCommandMap[editor] ?? editorCommandMap[DEFAULT_EDITOR];
           await execAsync(command);
           return { success: true };
         }
 
         // Linux commands typically support multiple files
-        const quotedTargets = targets.map(t => `"${t}"`).join(' ');
+        const quotedTargets = targets.map((t) => `"${t}"`).join(' ');
         const editorCommandMap: Record<EditorId, string> = {
           vscode: `code ${quotedTargets}`,
           cursor: `cursor ${quotedTargets}`,
@@ -270,11 +279,13 @@ export function setupShellHandlers() {
           sublime: `subl ${quotedTargets}`,
           intellij: `idea ${quotedTargets}`,
         };
-        const command = editorCommandMap[editor] ?? editorCommandMap[DEFAULT_EDITOR];
+        const command =
+          editorCommandMap[editor] ?? editorCommandMap[DEFAULT_EDITOR];
         await execAsync(command);
         return { success: true };
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Failed to open editor';
+        const message =
+          error instanceof Error ? error.message : 'Failed to open editor';
         console.error('Error opening editor:', error);
         return { success: false, error: message };
       }
@@ -282,18 +293,15 @@ export function setupShellHandlers() {
   );
 
   // Move file to trash
-  ipcMain.handle(
-    ShellAPIEvent.MOVE_TO_TRASH,
-    async (_, filePath: string) => {
-      try {
-        await shell.trashItem(filePath);
-        return { success: true };
-      } catch (error: any) {
-        console.error('Error moving file to trash:', error);
-        return { success: false, error: error.message };
-      }
-    },
-  );
+  ipcMain.handle(ShellAPIEvent.MOVE_TO_TRASH, async (_, filePath: string) => {
+    try {
+      await shell.trashItem(filePath);
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error moving file to trash:', error);
+      return { success: false, error: error.message };
+    }
+  });
 
   // Open a terminal in the specified directory
   ipcMain.handle(
@@ -308,8 +316,10 @@ export function setupShellHandlers() {
         const platform = os.platform();
 
         if (platform === 'darwin') {
-          const appName = MAC_TERMINAL_APP_NAMES[terminal] ?? MAC_TERMINAL_APP_NAMES[DEFAULT_TERMINAL];
-          
+          const appName =
+            MAC_TERMINAL_APP_NAMES[terminal] ??
+            MAC_TERMINAL_APP_NAMES[DEFAULT_TERMINAL];
+
           // Different terminals require different approaches on macOS
           if (terminal === 'terminal') {
             // macOS Terminal.app
@@ -360,7 +370,9 @@ export function setupShellHandlers() {
           } else if (terminal === 'ghostty') {
             // Ghostty terminal
             if (params.command) {
-              await execAsync(`open -a Ghostty "${dir}" --args -e "${params.command}"`);
+              await execAsync(
+                `open -a Ghostty "${dir}" --args -e "${params.command}"`,
+              );
             } else {
               await execAsync(`open -a Ghostty "${dir}"`);
             }
@@ -368,7 +380,7 @@ export function setupShellHandlers() {
             // Generic approach for other terminals
             await execAsync(`open -a "${appName}" "${dir}"`);
           }
-          
+
           return { success: true };
         }
 
@@ -376,7 +388,7 @@ export function setupShellHandlers() {
           // Windows Terminal or Command Prompt
           if (terminal === 'terminal') {
             // Windows Terminal
-            const command = params.command 
+            const command = params.command
               ? `wt -d "${dir}" cmd /k "${params.command}"`
               : `wt -d "${dir}"`;
             await execAsync(command);
@@ -400,20 +412,23 @@ export function setupShellHandlers() {
           wezterm: 'wezterm',
           ghostty: 'ghostty',
         };
-        
+
         const terminalCmd = terminalCommandMap[terminal] ?? 'gnome-terminal';
-        
+
         if (params.command) {
           // Run terminal with command
-          await execAsync(`${terminalCmd} --working-directory="${dir}" -- bash -c "${params.command}; bash"`);
+          await execAsync(
+            `${terminalCmd} --working-directory="${dir}" -- bash -c "${params.command}; bash"`,
+          );
         } else {
           // Just open terminal in directory
           await execAsync(`${terminalCmd} --working-directory="${dir}"`);
         }
-        
+
         return { success: true };
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Failed to open terminal';
+        const message =
+          error instanceof Error ? error.message : 'Failed to open terminal';
         console.error('Error opening terminal:', error);
         return { success: false, error: message };
       }

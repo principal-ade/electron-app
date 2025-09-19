@@ -9,10 +9,10 @@ import './styles/tailwind.css';
 import './index.css';
 
 // Initialize mermaid and expose to window
-mermaid.initialize({ 
+mermaid.initialize({
   startOnLoad: true,
   theme: 'default',
-  securityLevel: 'loose'
+  securityLevel: 'loose',
 });
 // @ts-expect-error
 window.mermaid = mermaid;
@@ -41,6 +41,6 @@ if (!container) {
       <AppErrorBoundary>
         <App />
       </AppErrorBoundary>
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 }

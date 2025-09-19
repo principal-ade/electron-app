@@ -1,17 +1,13 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
-import {
-  X,
-  Plus,
-  ChevronDown,
-  FolderOpen,
-  Github,
-  Search,
-} from 'lucide-react';
+import { X, Plus, ChevronDown, FolderOpen, Github, Search } from 'lucide-react';
 
 import { SupportedLLMProvider } from '../../../shared/main-process-api-interfaces/LLMModelsAPI';
 import { useTheme } from 'themed-markdown';
 
-import { AgentConfigurationService, AgentInstallationStatus } from '../../main-process-api/AgentConfigurationService';
+import {
+  AgentConfigurationService,
+  AgentInstallationStatus,
+} from '../../main-process-api/AgentConfigurationService';
 import { aiService } from '../../main-process-api/AIService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
@@ -27,20 +23,24 @@ interface LandingPageProps {
   onUpdateAvailable?: (hasUpdate: boolean) => void;
 }
 
-type BottomViewMode =
-  | 'repos';
+type BottomViewMode = 'repos';
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   initialAgentStatus,
   onUpdateAvailable,
 }) => {
   const { theme } = useTheme();
-  const trackingProps = useComponentTracking('LandingPage', 'src/renderer/pages/LandingPage.tsx');
+  const trackingProps = useComponentTracking(
+    'LandingPage',
+    'src/renderer/pages/LandingPage.tsx',
+  );
   const [bottomViewMode] = useState<BottomViewMode>('repos');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  const [, setAgentStatus] = useState<AgentInstallationStatus>(initialAgentStatus);
+  const [, setAgentStatus] =
+    useState<AgentInstallationStatus>(initialAgentStatus);
   const [, setHasUpdateAvailable] = useState(false);
   const [showAddProjectDropdown, setShowAddProjectDropdown] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Setup configuration status
@@ -54,28 +54,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   });
   const [setupLoading, setSetupLoading] = useState(true);
 
-
   const checkSetup = useCallback(async () => {
     try {
       console.info('Checking setup...');
       setSetupLoading(true);
-      
+
       // Check agent installations
-      const agentStatusData = await AgentConfigurationService.checkAgentInstallations();
+      const agentStatusData =
+        await AgentConfigurationService.checkAgentInstallations();
       setAgentStatus(agentStatusData);
-      const agentsInstalled = agentStatusData.claude.isInstalled || agentStatusData.cline.isInstalled || agentStatusData.opencode.isInstalled;
-      const hooksConfigured = (agentStatusData.claude.hookCount || 0) > 0 || (agentStatusData.cline.hookCount || 0) > 0 || (agentStatusData.opencode.hookCount || 0) > 0;
-      
+      const agentsInstalled =
+        agentStatusData.claude.isInstalled ||
+        agentStatusData.cline.isInstalled ||
+        agentStatusData.opencode.isInstalled;
+      const hooksConfigured =
+        (agentStatusData.claude.hookCount || 0) > 0 ||
+        (agentStatusData.cline.hookCount || 0) > 0 ||
+        (agentStatusData.opencode.hookCount || 0) > 0;
+
       // Check LLM configuration
       const [ollamaStatus, openRouterConfig] = await Promise.all([
         aiService.checkOllamaStatus().catch(() => null),
-        aiService.getProviderConfig(SupportedLLMProvider.OPENROUTER).catch(() => null),
+        aiService
+          .getProviderConfig(SupportedLLMProvider.OPENROUTER)
+          .catch(() => null),
       ]);
-      
-      const llmConfigured = 
-        (ollamaStatus?.running && ollamaStatus.models.length > 0) || 
+
+      const llmConfigured =
+        (ollamaStatus?.running && ollamaStatus.models.length > 0) ||
         (openRouterConfig?.enabled && openRouterConfig?.apiKey);
-      
+
       // Check MCP configuration
       let mcpConfigured = false;
       let claudeMCP = false;
@@ -87,14 +95,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         console.error('Failed to check MCP status:', e);
         mcpConfigured = false;
       }
-      
+
       setSetupStatus({
         agentsInstalled,
         hooksConfigured,
         llmConfigured: !!llmConfigured,
         mcpConfigured,
         isOllamaRunning: ollamaStatus?.running || false,
-        hasOpenRouterKey: !!openRouterConfig?.enabled && !!openRouterConfig?.apiKey,
+        hasOpenRouterKey:
+          !!openRouterConfig?.enabled && !!openRouterConfig?.apiKey,
       });
     } catch (error) {
       console.error('Failed to check setup configuration:', error);
@@ -105,17 +114,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Check full setup configuration status
   useEffect(() => {
-
     checkSetup();
   }, [checkSetup]);
-
-
-
 
   // Handle click outside dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setShowAddProjectDropdown(false);
       }
     };
@@ -137,14 +145,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         buttonLabel: 'Select Repository',
         properties: ['openDirectory'],
       });
-      
+
       if (!result || result.canceled) {
         return;
       }
-      
+
       // Handle both possible response formats
-      const selectedPath = result.filePaths?.[0] || result.filePath || result.path;
-      
+      const selectedPath =
+        result.filePaths?.[0] || result.filePath || result.path;
+
       if (selectedPath) {
         const name = selectedPath.split('/').pop() || 'unnamed';
         await AlexandriaService.registerRepository(name, selectedPath);
@@ -171,29 +180,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     <>
       {/* Onboarding Modal */}
       {isOnboardingOpen && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-        }}>
-          <div style={{
-            width: '95%',
-            maxWidth: '1400px',
-            height: '95%',
-            maxHeight: '900px',
-            backgroundColor: theme.colors.background,
-            borderRadius: '16px',
-            overflow: 'hidden',
-            position: 'relative',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-          }}>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              width: '95%',
+              maxWidth: '1400px',
+              height: '95%',
+              maxHeight: '900px',
+              backgroundColor: theme.colors.background,
+              borderRadius: '16px',
+              overflow: 'hidden',
+              position: 'relative',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+            }}
+          >
             {/* Close button */}
             <button
               onClick={() => setIsOnboardingOpen(false)}
@@ -214,16 +227,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 transition: 'all 0.2s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
               }}
             >
               <X size={18} color={theme.colors.textSecondary} />
             </button>
-            
-            <OnboardingFlowV2 
+
+            <OnboardingFlowV2
               onComplete={() => {
                 setIsOnboardingOpen(false);
                 checkSetup(); // Refresh the setup status
@@ -274,10 +289,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 zIndex: 10,
               }}
             >
-              <UpdateNotification onUpdateAvailable={(hasUpdate) => {
-                setHasUpdateAvailable(hasUpdate);
-                onUpdateAvailable?.(hasUpdate);
-              }} />
+              <UpdateNotification
+                onUpdateAvailable={(hasUpdate) => {
+                  setHasUpdateAvailable(hasUpdate);
+                  onUpdateAvailable?.(hasUpdate);
+                }}
+              />
             </div>
 
             {/* Left Section - Brand */}
@@ -288,190 +305,205 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 gap: '16px',
               }}
             >
-            {/* Brand Name removed - now shown in titlebar */}
+              {/* Brand Name removed - now shown in titlebar */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  gap: '4px',
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: '24px',
+                    color: theme.colors.textSecondary,
+                    margin: 0,
+                    fontWeight: 300,
+                  }}
+                >
+                  Codebase Manager
+                </p>
+              </div>
+            </div>
+
+            {/* Right Section - Controls */}
             <div
               style={{
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                gap: '4px',
+                gap: '12px',
+                alignItems: 'center',
               }}
             >
-              <p
-                style={{
-                  fontSize: '24px',
-                  color: theme.colors.textSecondary,
-                  margin: 0,
-                  fontWeight: 300,
-                }}
-              >
-               Codebase Manager
-              </p>
-            </div>
-          </div>
-
-          {/* Right Section - Controls */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '12px',
-              alignItems: 'center',
-            }}
-          >
-            {/* Add Project Dropdown */}
-            <div ref={dropdownRef} style={{ position: 'relative' }}>
+              {/* Search Button */}
               <button
-                onClick={() => setShowAddProjectDropdown(!showAddProjectDropdown)}
+                onClick={() => setShowSearch(!showSearch)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
                   padding: '8px 16px',
                   borderRadius: '8px',
-                  backgroundColor: theme.colors.primary,
-                  color: theme.colors.background,
-                  border: 'none',
+                  backgroundColor: showSearch
+                    ? theme.colors.primary
+                    : 'transparent',
+                  color: showSearch
+                    ? theme.colors.background
+                    : theme.colors.text,
+                  border: `1px solid ${showSearch ? theme.colors.primary : theme.colors.border}`,
                   cursor: 'pointer',
                   fontSize: '14px',
                   fontWeight: 500,
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.9';
+                  if (!showSearch) {
+                    e.currentTarget.style.borderColor = theme.colors.primary;
+                    e.currentTarget.style.color = theme.colors.primary;
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
+                  if (!showSearch) {
+                    e.currentTarget.style.borderColor = theme.colors.border;
+                    e.currentTarget.style.color = theme.colors.text;
+                  }
                 }}
               >
-                <Plus size={16} />
-                Add Project
-                <ChevronDown size={14} style={{
-                  transform: showAddProjectDropdown ? 'rotate(180deg)' : 'rotate(0)',
-                  transition: 'transform 0.2s',
-                }} />
+                <Search size={16} />
+                Search
               </button>
-              
-              {/* Dropdown Menu */}
-              {showAddProjectDropdown && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: '4px',
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '8px',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                  minWidth: '200px',
-                  zIndex: 1000,
-                  overflow: 'hidden',
-                }}>
-                  <button
-                    onClick={() => {
-                      setShowAddProjectDropdown(false);
-                      handleAddLocalRepository();
-                    }}
+
+              {/* Add Project Dropdown */}
+              <div ref={dropdownRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() =>
+                    setShowAddProjectDropdown(!showAddProjectDropdown)
+                  }
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    backgroundColor: theme.colors.primary,
+                    color: theme.colors.background,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  <Plus size={16} />
+                  Add Project
+                  <ChevronDown
+                    size={14}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      width: '100%',
-                      padding: '12px 16px',
-                      backgroundColor: 'transparent',
-                      color: theme.colors.text,
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      textAlign: 'left',
-                      transition: 'background-color 0.2s',
+                      transform: showAddProjectDropdown
+                        ? 'rotate(180deg)'
+                        : 'rotate(0)',
+                      transition: 'transform 0.2s',
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
+                  />
+                </button>
+
+                {/* Dropdown Menu */}
+                {showAddProjectDropdown && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: '4px',
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      minWidth: '200px',
+                      zIndex: 1000,
+                      overflow: 'hidden',
                     }}
                   >
-                    <FolderOpen size={16} />
-                    Local Folder
-                  </button>
-                  
-                  <div style={{
-                    height: '1px',
-                    backgroundColor: theme.colors.border,
-                  }} />
-                  
-                  <button
-                    onClick={() => {
-                      setShowAddProjectDropdown(false);
-                      handleAddGithubLink();
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      width: '100%',
-                      padding: '12px 16px',
-                      backgroundColor: 'transparent',
-                      color: theme.colors.text,
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      textAlign: 'left',
-                      transition: 'background-color 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <Github size={16} />
-                    Paste Link
-                  </button>
-                  
-                  <div style={{
-                    height: '1px',
-                    backgroundColor: theme.colors.border,
-                  }} />
-                  
-                  <button
-                    onClick={() => {
-                      setShowAddProjectDropdown(false);
-                      handleSearchGithub();
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      width: '100%',
-                      padding: '12px 16px',
-                      backgroundColor: 'transparent',
-                      color: theme.colors.text,
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      textAlign: 'left',
-                      transition: 'background-color 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <Search size={16} />
-                    Search GitHub
-                  </button>
-                </div>
-              )}
+                    <button
+                      onClick={() => {
+                        setShowAddProjectDropdown(false);
+                        handleAddLocalRepository();
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        width: '100%',
+                        padding: '12px 16px',
+                        backgroundColor: 'transparent',
+                        color: theme.colors.text,
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        textAlign: 'left',
+                        transition: 'background-color 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.backgroundTertiary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <FolderOpen size={16} />
+                      Local Folder
+                    </button>
+
+                    <div
+                      style={{
+                        height: '1px',
+                        backgroundColor: theme.colors.border,
+                      }}
+                    />
+
+                    <button
+                      onClick={() => {
+                        setShowAddProjectDropdown(false);
+                        handleAddGithubLink();
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        width: '100%',
+                        padding: '12px 16px',
+                        backgroundColor: 'transparent',
+                        color: theme.colors.text,
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        textAlign: 'left',
+                        transition: 'background-color 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.backgroundTertiary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <Github size={16} />
+                      Paste Link
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
           </div>
         </div>
 
@@ -532,46 +564,59 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     border-radius: 8px;
                   }
                 `}</style>
-                
-                <div style={{
-                  width: '100%',
-                  maxWidth: '800px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '24px',
-                }}>
+
+                <div
+                  style={{
+                    width: '100%',
+                    maxWidth: '800px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '24px',
+                  }}
+                >
                   {/* Title shimmer */}
-                  <div className="shimmer-box" style={{ height: '32px', width: '250px' }} />
-                  
+                  <div
+                    className="shimmer-box"
+                    style={{ height: '32px', width: '250px' }}
+                  />
+
                   {/* Subtitle shimmer */}
-                  <div className="shimmer-box" style={{ height: '20px', width: '400px', opacity: 0.7 }} />
-                  
+                  <div
+                    className="shimmer-box"
+                    style={{ height: '20px', width: '400px', opacity: 0.7 }}
+                  />
+
                   {/* Cards grid shimmer */}
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                    gap: '16px',
-                    marginTop: '20px',
-                  }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns:
+                        'repeat(auto-fit, minmax(250px, 1fr))',
+                      gap: '16px',
+                      marginTop: '20px',
+                    }}
+                  >
                     {[1, 2, 3].map((i) => (
                       <div
                         key={i}
                         className="shimmer-box"
                         style={{
                           height: '180px',
-                          opacity: 0.6 - (i * 0.1),
+                          opacity: 0.6 - i * 0.1,
                         }}
                       />
                     ))}
                   </div>
-                  
+
                   {/* Status text */}
-                  <div style={{
-                    textAlign: 'center',
-                    marginTop: '20px',
-                    fontSize: '14px',
-                    color: theme.colors.textSecondary,
-                  }}>
+                  <div
+                    style={{
+                      textAlign: 'center',
+                      marginTop: '20px',
+                      fontSize: '14px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
                     Checking setup status...
                   </div>
                 </div>
@@ -580,13 +625,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             {/* Alexandria Repository View */}
             {bottomViewMode === 'repos' && !setupLoading && (
-              <AlexandriaRepositoryManager />
+              <AlexandriaRepositoryManager
+                showSearch={showSearch}
+                onSearchClose={() => setShowSearch(false)}
+              />
             )}
-
           </div>
         </div>
       </div>
     </>
   );
 };
-

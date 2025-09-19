@@ -1,6 +1,6 @@
 import FlexSearch from 'flexsearch';
-import { FileTree } from "@principal-ai/repository-abstraction";
-import { FileSystemService } from "../main-process-api/FileSystemService";
+import { FileTree } from '@principal-ai/repository-abstraction';
+import { FileSystemService } from '../main-process-api/FileSystemService';
 import { ContentProvider, LocalFileSystemProvider } from './ContentProviders';
 
 export interface FileDocument {
@@ -50,7 +50,7 @@ class LocalSearchService {
   private documentsMap: Map<string, FileDocument> = new Map();
 
   private baseDirectory: string = '';
-  
+
   private contentProvider: ContentProvider;
 
   constructor() {
@@ -98,14 +98,14 @@ class LocalSearchService {
   setContentProvider(provider: ContentProvider): void {
     this.contentProvider = provider;
   }
-  
+
   /**
    * Get current content provider
    */
   getContentProvider(): ContentProvider {
     return this.contentProvider;
   }
-  
+
   /**
    * Check if content search is available
    */
@@ -385,7 +385,8 @@ class LocalSearchService {
           }
 
           // Use content provider to read file
-          const textContent = await this.contentProvider.readFileContent(filePath);
+          const textContent =
+            await this.contentProvider.readFileContent(filePath);
 
           if (!textContent) {
             continue;

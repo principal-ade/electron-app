@@ -11,27 +11,27 @@ import { BrowserWindowConstructorOptions } from 'electron';
  */
 export interface WindowFeatures {
   // Core features
-  menu?: boolean;                    // Include application menu
-  devTools?: boolean;                 // Enable dev tools
-  
+  menu?: boolean; // Include application menu
+  devTools?: boolean; // Enable dev tools
+
   // Adapters (heavy features that add IPC handlers)
-  fileSystemAdapter?: boolean;       // File system operations
-  windowManagerAdapter?: boolean;    // Window management capabilities
-  mcpToolsAdapter?: boolean;         // MCP/AI tools integration
-  githubAdapter?: boolean;          // GitHub integration
-  terminalManager?: boolean;        // Terminal management
-  
+  fileSystemAdapter?: boolean; // File system operations
+  windowManagerAdapter?: boolean; // Window management capabilities
+  mcpToolsAdapter?: boolean; // MCP/AI tools integration
+  githubAdapter?: boolean; // GitHub integration
+  terminalManager?: boolean; // Terminal management
+
   // Security features
-  contentSecurityPolicy?: boolean;  // Apply CSP headers
-  externalLinkHandler?: boolean;    // Handle external link opens
-  
+  contentSecurityPolicy?: boolean; // Apply CSP headers
+  externalLinkHandler?: boolean; // Handle external link opens
+
   // UI behaviors
-  maximizeOnShow?: boolean;         // Maximize window when shown
-  singleton?: boolean;              // Only allow one instance
-  persistState?: boolean;           // Remember size/position
-  
+  maximizeOnShow?: boolean; // Maximize window when shown
+  singleton?: boolean; // Only allow one instance
+  persistState?: boolean; // Remember size/position
+
   // Diagnostics
-  errorHandlers?: boolean;          // Attach error event handlers
+  errorHandlers?: boolean; // Attach error event handlers
 }
 
 /**
@@ -41,15 +41,15 @@ export enum WindowType {
   // Full application windows - need all features
   MAIN_APP = 'main-app',
   REPOSITORY_MAPS = 'repository-maps',
-  
+
   // Content viewers - need basic features + some adapters
   MARKDOWN_VIEWER = 'markdown-viewer',
   SESSION_DETAILS = 'session-details',
   MULTI_FILE_EDITOR = 'multi-file-editor',
-  
+
   // Tool windows - minimal features
   TERMINAL = 'terminal',
-  
+
   // Utility windows - bare minimum
   STORE_VIEWER = 'store-viewer',
 }
@@ -73,7 +73,7 @@ export const WINDOW_TYPE_CONFIGS: Record<WindowType, WindowFeatures> = {
     persistState: true,
     errorHandlers: true,
   },
-  
+
   [WindowType.REPOSITORY_MAPS]: {
     menu: true,
     devTools: true,
@@ -88,7 +88,7 @@ export const WINDOW_TYPE_CONFIGS: Record<WindowType, WindowFeatures> = {
     persistState: true,
     errorHandlers: true,
   },
-  
+
   // Content viewers
   [WindowType.MARKDOWN_VIEWER]: {
     menu: false,
@@ -99,7 +99,7 @@ export const WINDOW_TYPE_CONFIGS: Record<WindowType, WindowFeatures> = {
     singleton: true,
     persistState: true,
   },
-  
+
   [WindowType.SESSION_DETAILS]: {
     menu: false,
     devTools: true,
@@ -109,7 +109,7 @@ export const WINDOW_TYPE_CONFIGS: Record<WindowType, WindowFeatures> = {
     singleton: true,
     persistState: true,
   },
-  
+
   [WindowType.MULTI_FILE_EDITOR]: {
     menu: true,
     devTools: true,
@@ -121,7 +121,7 @@ export const WINDOW_TYPE_CONFIGS: Record<WindowType, WindowFeatures> = {
     persistState: true,
     errorHandlers: true,
   },
-  
+
   // Tool windows
   [WindowType.TERMINAL]: {
     menu: false,
@@ -130,7 +130,7 @@ export const WINDOW_TYPE_CONFIGS: Record<WindowType, WindowFeatures> = {
     singleton: false, // Multiple terminals allowed
     persistState: false,
   },
-  
+
   // Utility windows
   [WindowType.STORE_VIEWER]: {
     menu: false,
@@ -152,7 +152,10 @@ export function getWindowFeatures(type: WindowType): WindowFeatures {
 /**
  * Check if a specific feature is enabled for a window type
  */
-export function isFeatureEnabled(type: WindowType, feature: keyof WindowFeatures): boolean {
+export function isFeatureEnabled(
+  type: WindowType,
+  feature: keyof WindowFeatures,
+): boolean {
   const config = getWindowFeatures(type);
   return config[feature] === true;
 }
@@ -170,7 +173,7 @@ export interface TypedWindowOptions extends BrowserWindowConstructorOptions {
  */
 export function mergeWindowFeatures(
   type?: WindowType,
-  customFeatures?: Partial<WindowFeatures>
+  customFeatures?: Partial<WindowFeatures>,
 ): WindowFeatures {
   const baseFeatures = type ? getWindowFeatures(type) : {};
   return {

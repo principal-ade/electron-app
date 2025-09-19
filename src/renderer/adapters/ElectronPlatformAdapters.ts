@@ -1,5 +1,9 @@
-import { FileSystemAdapter, GitAdapter, ShellAdapter } from "@principal-ai/codebase-composition";
-import { ConfigFetchAdapter } from "../../shared/configs";
+import {
+  FileSystemAdapter,
+  GitAdapter,
+  ShellAdapter,
+} from '@principal-ai/codebase-composition';
+import { ConfigFetchAdapter } from '../../shared/configs';
 
 interface PlatformAdapters {
   fileSystem: FileSystemAdapter;

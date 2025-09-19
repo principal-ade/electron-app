@@ -1,7 +1,7 @@
 /**
  * Secure Authentication Service
  * Uses Electron's secure storage instead of localStorage
- * 
+ *
  * Now uses the unified AuthenticationAPI instead of direct IPC calls.
  */
 
@@ -52,16 +52,19 @@ export class SecureAuthService {
         login: user.githubHandle,
         email: user.email || '',
         name: user.metadata?.name,
-        avatarUrl: user.metadata?.avatarUrl
+        avatarUrl: user.metadata?.avatarUrl,
       };
-      
-      const result = await AuthenticationService.saveGitHubAuth(token, authUser);
-      
+
+      const result = await AuthenticationService.saveGitHubAuth(
+        token,
+        authUser,
+      );
+
       if (result.success) {
         // Clear from localStorage after successful save
         this.clearLocalStorage();
       }
-      
+
       return result.success;
     } catch (error) {
       console.error('Failed to save auth securely:', error);
@@ -76,7 +79,7 @@ export class SecureAuthService {
     try {
       // First try secure storage
       const result = await AuthenticationService.getGitHubAuth();
-      
+
       if (result.authenticated && result.user) {
         // Convert AuthUser back to GitHubUser format for backward compatibility
         const gitHubUser: GitHubUser = {
@@ -84,14 +87,14 @@ export class SecureAuthService {
           email: result.user.email,
           metadata: {
             name: result.user.name,
-            avatarUrl: result.user.avatarUrl
-          }
+            avatarUrl: result.user.avatarUrl,
+          },
         };
-        
+
         return {
           authenticated: true,
           token: result.token,
-          user: gitHubUser
+          user: gitHubUser,
         };
       }
 
@@ -106,7 +109,7 @@ export class SecureAuthService {
             return {
               authenticated: true,
               token: data.token,
-              user: data.user
+              user: data.user,
             };
           }
         } catch (error) {
@@ -153,15 +156,15 @@ export class SecureAuthService {
 
     try {
       const tokensToMigrate = [];
-      
+
       // Check for orbit_auth
       const orbitAuth = localStorage.getItem('orbit_auth');
       if (orbitAuth) {
         try {
           const data = JSON.parse(orbitAuth);
-          tokensToMigrate.push({ 
-            key: 'orbit_auth', 
-            value: data 
+          tokensToMigrate.push({
+            key: 'orbit_auth',
+            value: data,
           });
         } catch (error) {
           console.error('Failed to parse orbit_auth:', error);
@@ -173,9 +176,9 @@ export class SecureAuthService {
       if (gitSyncAuth) {
         try {
           const data = JSON.parse(gitSyncAuth);
-          tokensToMigrate.push({ 
-            key: 'git-sync-auth', 
-            value: data 
+          tokensToMigrate.push({
+            key: 'git-sync-auth',
+            value: data,
           });
         } catch (error) {
           console.error('Failed to parse git-sync-auth:', error);
@@ -183,8 +186,9 @@ export class SecureAuthService {
       }
 
       if (tokensToMigrate.length > 0) {
-        const result = await AuthenticationService.migrateFromLocalStorage(tokensToMigrate);
-        
+        const result =
+          await AuthenticationService.migrateFromLocalStorage(tokensToMigrate);
+
         if (result.success) {
           console.log('Successfully migrated tokens to secure storage');
           this.clearLocalStorage();

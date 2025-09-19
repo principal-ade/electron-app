@@ -1,12 +1,21 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { FileTree } from "@principal-ai/repository-abstraction";
+import React, {
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+} from 'react';
+import { FileTree } from '@principal-ai/repository-abstraction';
 import { useTheme } from 'themed-markdown';
 import { Code, Check, AlertCircle } from 'lucide-react';
 import { LocalSearchPanel } from '../shared/LocalSearchPanel';
 import { FileTreeSource } from '../../types/file-tree-source';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import type { EditorId } from '../../../shared/types/editor.types';
-import { EDITOR_LABELS, DEFAULT_EDITOR } from '../../../shared/types/editor.types';
+import {
+  EDITOR_LABELS,
+  DEFAULT_EDITOR,
+} from '../../../shared/types/editor.types';
 import { ContentProvider } from '../../services/ContentProviders';
 import { localSearchService } from '../../services/LocalSearchService';
 
@@ -14,15 +23,19 @@ interface SearchTabProps {
   // Multiple file trees support
   fileTrees: Map<string, FileTree>;
   activeFileTreeSource: FileTreeSource | null;
-  
+
   // Content provider for search
   contentProvider?: ContentProvider;
-  
+
   // UI options
   showEditorSelector?: boolean; // Hide in explore view
-  
+
   // Callbacks
-  onFileSelect?: (filePath: string, lineNumbers?: number[], searchQuery?: string) => void;
+  onFileSelect?: (
+    filePath: string,
+    lineNumbers?: number[],
+    searchQuery?: string,
+  ) => void;
   selectedFile?: string | null;
   onSearchResultsChange?: (results: string[]) => void; // For highlight layers
   onSearchResultHover?: (filePath: string | null) => void; // For hover highlight
@@ -45,14 +58,14 @@ export const SearchTab: React.FC<SearchTabProps> = ({
   const editorMenuRef = useRef<HTMLDivElement | null>(null);
   const editorButtonRef = useRef<HTMLButtonElement | null>(null);
   const [showContentWarning, setShowContentWarning] = useState(false);
-  
+
   // Set content provider when it changes
   useEffect(() => {
     if (contentProvider) {
       localSearchService.setContentProvider(contentProvider);
     }
   }, [contentProvider]);
-  
+
   // Get the first available tree ID as default
   useEffect(() => {
     if (!selectedTreeId && fileTrees.size > 0) {
@@ -60,7 +73,7 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       setSelectedTreeId(firstTreeId);
     }
   }, [fileTrees, selectedTreeId]);
-  
+
   // Load saved default editor
   useEffect(() => {
     let isMounted = true;
@@ -84,8 +97,10 @@ export const SearchTab: React.FC<SearchTabProps> = ({
     const handleClick = (e: MouseEvent) => {
       const target = e.target as Node;
       const clickedOutside =
-        editorMenuRef.current && !editorMenuRef.current.contains(target) &&
-        editorButtonRef.current && !editorButtonRef.current.contains(target);
+        editorMenuRef.current &&
+        !editorMenuRef.current.contains(target) &&
+        editorButtonRef.current &&
+        !editorButtonRef.current.contains(target);
       if (clickedOutside) setIsEditorMenuOpen(false);
     };
     const handleKey = (e: KeyboardEvent) => {
@@ -98,29 +113,41 @@ export const SearchTab: React.FC<SearchTabProps> = ({
       document.removeEventListener('keydown', handleKey);
     };
   }, [isEditorMenuOpen]);
-  
+
   // Get the selected file tree
   const selectedFileTree = useMemo(() => {
     if (!selectedTreeId) return null;
     return fileTrees.get(selectedTreeId);
   }, [fileTrees, selectedTreeId]);
-  
+
   // Convert FileTree to FileSystemTree format for LocalSearchPanel
   const fileSystemTree = useMemo(() => {
     if (!selectedFileTree) return null;
-    
+
     console.log('[SearchTab] selectedFileTree:', selectedFileTree);
     console.log('[SearchTab] allFiles:', selectedFileTree.allFiles);
-    console.log('[SearchTab] allFiles is array:', Array.isArray(selectedFileTree.allFiles));
-    
+    console.log(
+      '[SearchTab] allFiles is array:',
+      Array.isArray(selectedFileTree.allFiles),
+    );
+
     // Ensure allFiles and allDirectories are arrays
-    const allFiles = Array.isArray(selectedFileTree.allFiles) ? selectedFileTree.allFiles : [];
-    const allDirectories = Array.isArray(selectedFileTree.allDirectories) ? selectedFileTree.allDirectories : [];
-    
+    const allFiles = Array.isArray(selectedFileTree.allFiles)
+      ? selectedFileTree.allFiles
+      : [];
+    const allDirectories = Array.isArray(selectedFileTree.allDirectories)
+      ? selectedFileTree.allDirectories
+      : [];
+
     // LocalSearchPanel expects a FileSystemTree format
     return {
       sha: selectedFileTree.sha || '',
-      root: selectedFileTree.root || { name: 'root', path: '/', relativePath: '/', type: 'directory' as const },
+      root: selectedFileTree.root || {
+        name: 'root',
+        path: '/',
+        relativePath: '/',
+        type: 'directory' as const,
+      },
       allFiles: allFiles,
       allDirectories: allDirectories,
       stats: selectedFileTree.stats || {
@@ -128,66 +155,89 @@ export const SearchTab: React.FC<SearchTabProps> = ({
         totalDirectories: allDirectories.length,
         totalSize: 0,
         maxDepth: 0,
-        buildingTypeDistribution: {}
+        buildingTypeDistribution: {},
       },
       // Legacy properties that LocalSearchPanel might use
       files: allFiles,
       directories: {},
     };
   }, [selectedFileTree, activeFileTreeSource]);
-  
-  const handleFileSelect = useCallback((filePath: string, lineNumbers?: number[], searchQuery?: string) => {
-    console.log('[SearchTab] File selected:', filePath, 'lines:', lineNumbers, 'query:', searchQuery);
-    onFileSelect?.(filePath, lineNumbers, searchQuery);
-  }, [onFileSelect]);
-  
-  const handleOpenInEditor = useCallback(async (filePath: string) => {
-    console.log('[SearchTab] Opening file in editor:', filePath, 'editor:', defaultEditor);
-    try {
-      // Use the shell API to open the file in the selected editor
-      const result = await window.mainProcess?.shell?.openInEditor({
-        editor: defaultEditor,
-        dir: filePath // Note: current API opens directories, we'll need to update for files
+
+  const handleFileSelect = useCallback(
+    (filePath: string, lineNumbers?: number[], searchQuery?: string) => {
+      console.log(
+        '[SearchTab] File selected:',
+        filePath,
+        'lines:',
+        lineNumbers,
+        'query:',
+        searchQuery,
+      );
+      onFileSelect?.(filePath, lineNumbers, searchQuery);
+    },
+    [onFileSelect],
+  );
+
+  const handleOpenInEditor = useCallback(
+    async (filePath: string) => {
+      console.log(
+        '[SearchTab] Opening file in editor:',
+        filePath,
+        'editor:',
+        defaultEditor,
+      );
+      try {
+        // Use the shell API to open the file in the selected editor
+        const result = await window.mainProcess?.shell?.openInEditor({
+          editor: defaultEditor,
+          dir: filePath, // Note: current API opens directories, we'll need to update for files
+        });
+
+        if (!result?.success) {
+          console.error('Failed to open file in editor:', result?.error);
+        }
+      } catch (error) {
+        console.error('Error opening file in editor:', error);
+      }
+    },
+    [defaultEditor],
+  );
+
+  const handleSearchResultsChange = useCallback(
+    (results: any[]) => {
+      console.log('[SearchTab] Search results received:', results);
+      // Convert LocalSearchResult[] to relative paths
+      // Use relativePath property which should be relative to the repository root
+      const paths = results.map((r) => {
+        // Use relativePath if available, otherwise try to extract from path
+        if (r.relativePath) {
+          return r.relativePath;
+        }
+        // Fallback: if path contains the base directory, extract relative part
+        const path = r.path;
+        // Remove leading slash if present
+        return path.startsWith('/') ? path.slice(1) : path;
       });
-      
-      if (!result?.success) {
-        console.error('Failed to open file in editor:', result?.error);
-      }
-    } catch (error) {
-      console.error('Error opening file in editor:', error);
-    }
-  }, [defaultEditor]);
-  
-  const handleSearchResultsChange = useCallback((results: any[]) => {
-    console.log('[SearchTab] Search results received:', results);
-    // Convert LocalSearchResult[] to relative paths
-    // Use relativePath property which should be relative to the repository root
-    const paths = results.map(r => {
-      // Use relativePath if available, otherwise try to extract from path
-      if (r.relativePath) {
-        return r.relativePath;
-      }
-      // Fallback: if path contains the base directory, extract relative part
-      const path = r.path;
-      // Remove leading slash if present
-      return path.startsWith('/') ? path.slice(1) : path;
-    });
-    console.log('[SearchTab] Converted to relative paths:', paths);
-    onSearchResultsChange?.(paths);
-  }, [onSearchResultsChange]);
-  
+      console.log('[SearchTab] Converted to relative paths:', paths);
+      onSearchResultsChange?.(paths);
+    },
+    [onSearchResultsChange],
+  );
+
   if (!fileSystemTree || !activeFileTreeSource) {
     return (
-      <div style={{ 
-        padding: '20px', 
-        textAlign: 'center', 
-        color: theme.colors.textSecondary 
-      }}>
+      <div
+        style={{
+          padding: '20px',
+          textAlign: 'center',
+          color: theme.colors.textSecondary,
+        }}
+      >
         No file tree available for search
       </div>
     );
   }
-  
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Search Panel with integrated tree selector */}
@@ -203,36 +253,46 @@ export const SearchTab: React.FC<SearchTabProps> = ({
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               {/* Content search availability indicator */}
               {contentProvider && !contentProvider.canProvideContent() && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
-                  backgroundColor: `${theme.colors.warning || '#f59e0b'}15`,
-                  border: `1px solid ${theme.colors.warning || '#f59e0b'}40`,
-                  borderRadius: '6px',
-                  fontSize: '11px',
-                  color: theme.colors.warning || '#f59e0b'
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    backgroundColor: `${theme.colors.warning || '#f59e0b'}15`,
+                    border: `1px solid ${theme.colors.warning || '#f59e0b'}40`,
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    color: theme.colors.warning || '#f59e0b',
+                  }}
+                >
                   <AlertCircle size={12} />
-                  <span>File name search only (content search not available)</span>
+                  <span>
+                    File name search only (content search not available)
+                  </span>
                 </div>
               )}
-              
+
               {/* Tree selector when multiple trees available */}
               {fileTrees.size > 1 && (
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ 
-                    fontSize: '12px', 
-                    color: theme.colors.textSecondary,
-                    fontWeight: 500
-                  }}>
+                <div
+                  style={{ display: 'flex', gap: '8px', alignItems: 'center' }}
+                >
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      color: theme.colors.textSecondary,
+                      fontWeight: 500,
+                    }}
+                  >
                     Search in:
                   </span>
                   {Array.from(fileTrees.entries()).map(([id, tree]) => {
                     const isSelected = id === selectedTreeId;
-                    const label = id.includes('HEAD') ? 'HEAD Commit' : 'Working Directory';
-                    
+                    const label = id.includes('HEAD')
+                      ? 'HEAD Commit'
+                      : 'Working Directory';
+
                     return (
                       <button
                         key={id}
@@ -240,19 +300,19 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                         style={{
                           padding: '4px 12px',
                           borderRadius: '6px',
-                          backgroundColor: isSelected 
+                          backgroundColor: isSelected
                             ? `${theme.colors.primary}22`
                             : theme.colors.backgroundTertiary,
-                          border: isSelected 
+                          border: isSelected
                             ? `1px solid ${theme.colors.primary}`
                             : `1px solid ${theme.colors.border}`,
-                          color: isSelected 
-                            ? theme.colors.primary 
+                          color: isSelected
+                            ? theme.colors.primary
                             : theme.colors.textSecondary,
                           fontSize: '12px',
                           fontWeight: isSelected ? 600 : 500,
                           cursor: 'pointer',
-                          transition: 'all 0.2s'
+                          transition: 'all 0.2s',
                         }}
                       >
                         {label}
@@ -261,92 +321,101 @@ export const SearchTab: React.FC<SearchTabProps> = ({
                   })}
                 </div>
               )}
-              
+
               {/* IDE Selector - only show if enabled */}
               {showEditorSelector && (
                 <div style={{ position: 'relative' }}>
                   <button
-                  ref={editorButtonRef}
-                  onClick={() => setIsEditorMenuOpen((v) => !v)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '4px 10px',
-                    backgroundColor: theme.colors.backgroundTertiary,
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: '6px',
-                    color: theme.colors.text,
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                  }}
-                  title="Default editor for opening local files"
-                >
-                  <Code size={12} />
-                  {EDITOR_LABELS[defaultEditor]}
-                </button>
-
-                {isEditorMenuOpen && (
-                  <div
-                    ref={editorMenuRef}
+                    ref={editorButtonRef}
+                    onClick={() => setIsEditorMenuOpen((v) => !v)}
                     style={{
-                      position: 'absolute',
-                      right: 0,
-                      top: 'calc(100% + 8px)',
-                      minWidth: '180px',
-                      backgroundColor: theme.colors.backgroundSecondary,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 10px',
+                      backgroundColor: theme.colors.backgroundTertiary,
                       border: `1px solid ${theme.colors.border}`,
-                      borderRadius: '8px',
-                      boxShadow: theme.shadows?.[0] || '0 2px 8px rgba(0,0,0,0.1)',
-                      padding: '6px',
-                      zIndex: 10,
+                      borderRadius: '6px',
+                      color: theme.colors.text,
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: 500,
                     }}
+                    title="Default editor for opening local files"
                   >
-                    <div style={{
-                      padding: '4px 6px',
-                      fontSize: '11px',
-                      color: theme.colors.textSecondary,
-                      borderBottom: `1px solid ${theme.colors.border}`,
-                      marginBottom: '4px',
-                    }}>
-                      Open files in
+                    <Code size={12} />
+                    {EDITOR_LABELS[defaultEditor]}
+                  </button>
+
+                  {isEditorMenuOpen && (
+                    <div
+                      ref={editorMenuRef}
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: 'calc(100% + 8px)',
+                        minWidth: '180px',
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '8px',
+                        boxShadow:
+                          theme.shadows?.[0] || '0 2px 8px rgba(0,0,0,0.1)',
+                        padding: '6px',
+                        zIndex: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: '4px 6px',
+                          fontSize: '11px',
+                          color: theme.colors.textSecondary,
+                          borderBottom: `1px solid ${theme.colors.border}`,
+                          marginBottom: '4px',
+                        }}
+                      >
+                        Open files in
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {Object.entries(EDITOR_LABELS).map(([id, label]) => {
+                          const isActive = id === defaultEditor;
+                          return (
+                            <button
+                              key={id}
+                              onClick={async () => {
+                                const value = id as EditorId;
+                                setDefaultEditor(value);
+                                await UserPreferencesService.updatePreferences({
+                                  defaultEditor: value,
+                                });
+                                setIsEditorMenuOpen(false);
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '6px',
+                                padding: '6px 8px',
+                                background: isActive
+                                  ? `${theme.colors.primary}15`
+                                  : 'transparent',
+                                color: theme.colors.text,
+                                border: 'none',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                textAlign: 'left',
+                                fontSize: '12px',
+                              }}
+                            >
+                              <span>{label}</span>
+                              {isActive && (
+                                <Check size={12} color={theme.colors.primary} />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      {Object.entries(EDITOR_LABELS).map(([id, label]) => {
-                        const isActive = id === defaultEditor;
-                        return (
-                          <button
-                            key={id}
-                            onClick={async () => {
-                              const value = id as EditorId;
-                              setDefaultEditor(value);
-                              await UserPreferencesService.updatePreferences({ defaultEditor: value });
-                              setIsEditorMenuOpen(false);
-                            }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              gap: '6px',
-                              padding: '6px 8px',
-                              background: isActive ? `${theme.colors.primary}15` : 'transparent',
-                              color: theme.colors.text,
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                              fontSize: '12px',
-                            }}
-                          >
-                            <span>{label}</span>
-                            {isActive && <Check size={12} color={theme.colors.primary} />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                  )}
                 </div>
               )}
             </div>

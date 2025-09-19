@@ -61,25 +61,25 @@ export interface IndexableDocument {
 }
 
 export type DocumentFormat =
-  | 'markdown'     // .md files
-  | 'mdx'         // .mdx files (Markdown with JSX)
-  | 'rst'         // .rst files (reStructuredText)
-  | 'adoc'        // .adoc files (AsciiDoc)
-  | 'txt'         // Plain text files
-  | 'ipynb';      // Jupyter notebooks with markdown cells
+  | 'markdown' // .md files
+  | 'mdx' // .mdx files (Markdown with JSX)
+  | 'rst' // .rst files (reStructuredText)
+  | 'adoc' // .adoc files (AsciiDoc)
+  | 'txt' // Plain text files
+  | 'ipynb'; // Jupyter notebooks with markdown cells
 
 export type DocumentCategory =
-  | 'readme'      // README files at any level
-  | 'docs'        // Files in docs/ directories
-  | 'guide'       // Guides and tutorials
-  | 'api'         // API documentation
-  | 'changelog'   // CHANGELOG files
+  | 'readme' // README files at any level
+  | 'docs' // Files in docs/ directories
+  | 'guide' // Guides and tutorials
+  | 'api' // API documentation
+  | 'changelog' // CHANGELOG files
   | 'contributing' // CONTRIBUTING files
-  | 'planning'    // Planning documents (.principleMD)
-  | 'wiki'        // Wiki pages
-  | 'notes'       // General notes
-  | 'blog'        // Blog posts
-  | 'other';      // Uncategorized
+  | 'planning' // Planning documents (.principleMD)
+  | 'wiki' // Wiki pages
+  | 'notes' // General notes
+  | 'blog' // Blog posts
+  | 'other'; // Uncategorized
 
 export type IndexPriority = 'high' | 'medium' | 'low';
 
@@ -154,7 +154,7 @@ export interface DocumentDiscoveryAPI {
    */
   getIndexableDocuments(
     repoPath: string,
-    options?: DiscoveryOptions
+    options?: DiscoveryOptions,
   ): Promise<IndexableDocument[]>;
 
   /**
@@ -364,7 +364,7 @@ export interface DocumentStaleness {
    */
   getStaleDocuments(
     documents: IndexableDocument[],
-    indexTimestamps: Map<string, Date>
+    indexTimestamps: Map<string, Date>,
   ): IndexableDocument[];
 
   /**
@@ -402,7 +402,7 @@ export const DEFAULT_DISCOVERY_CONFIG: DiscoveryConfig = {
     '**/*.mdx',
     '**/README*',
     '**/CHANGELOG*',
-    '**/CONTRIBUTING*'
+    '**/CONTRIBUTING*',
   ],
   ignore: [
     '**/node_modules/**',
@@ -411,17 +411,12 @@ export const DEFAULT_DISCOVERY_CONFIG: DiscoveryConfig = {
     '**/.git/**',
     '**/coverage/**',
     '**/vendor/**',
-    '**/*.min.md'
+    '**/*.min.md',
   ],
-  priorityPaths: [
-    'README.md',
-    'docs/',
-    '.principleMD/',
-    'documentation/'
-  ],
+  priorityPaths: ['README.md', 'docs/', '.principleMD/', 'documentation/'],
   maxFileSize: 10 * 1024 * 1024, // 10MB
   parseFrontmatter: true,
-  frontmatterFormat: 'yaml'
+  frontmatterFormat: 'yaml',
 };
 
 export const DEFAULT_WATCH_PATTERNS: WatchPattern[] = [
@@ -429,11 +424,11 @@ export const DEFAULT_WATCH_PATTERNS: WatchPattern[] = [
     pattern: '**/*.{md,mdx}',
     events: ['add', 'change', 'unlink'],
     recursive: true,
-    ignore: ['**/node_modules/**', '**/.git/**']
+    ignore: ['**/node_modules/**', '**/.git/**'],
   },
   {
     pattern: '.principleMD/**/*',
     events: ['add', 'change', 'unlink'],
-    recursive: true
-  }
+    recursive: true,
+  },
 ];

@@ -55,22 +55,26 @@ export class GitHubAuth {
     localStorage.setItem('orbit_auth', JSON.stringify({ token, user }));
   }
 
-  async authenticate(): Promise<{ success: boolean; user?: GitHubUser; error?: string }> {
+  async authenticate(): Promise<{
+    success: boolean;
+    user?: GitHubUser;
+    error?: string;
+  }> {
     try {
       // Open GitHub OAuth in browser via main process
       const openResult = await OrbitService.openAuth();
-      
+
       if (!openResult.success) {
         console.warn('Failed to open OAuth URL:', openResult.error);
       }
-      
+
       // Wait for OAuth code via callback (will be set by UI component)
       const code = await this.waitForOAuthCode();
-      
+
       if (!code) {
         return { success: false, error: 'OAuth cancelled' };
       }
-      
+
       return await this.exchangeCodeForToken(code);
     } catch (error) {
       console.error('Authentication error:', error);
@@ -82,14 +86,17 @@ export class GitHubAuth {
     // Wait for the OAuth code to be provided via the callback
     return new Promise((resolve) => {
       this.oauthCodeCallback = resolve;
-      
+
       // Set a timeout in case user never provides code (5 minutes)
-      setTimeout(() => {
-        if (this.oauthCodeCallback === resolve) {
-          this.oauthCodeCallback = null;
-          resolve(null);
-        }
-      }, 5 * 60 * 1000);
+      setTimeout(
+        () => {
+          if (this.oauthCodeCallback === resolve) {
+            this.oauthCodeCallback = null;
+            resolve(null);
+          }
+        },
+        5 * 60 * 1000,
+      );
     });
   }
 
@@ -101,20 +108,25 @@ export class GitHubAuth {
     }
   }
 
-  private async exchangeCodeForToken(code: string): Promise<{ success: boolean; user?: GitHubUser; error?: string }> {
+  private async exchangeCodeForToken(
+    code: string,
+  ): Promise<{ success: boolean; user?: GitHubUser; error?: string }> {
     try {
       // Use IPC to exchange code for token
       const response = await OrbitService.authenticate(code);
-      
+
       if (!response.success) {
-        return { success: false, error: response.error || 'Authentication failed' };
+        return {
+          success: false,
+          error: response.error || 'Authentication failed',
+        };
       }
-      
+
       if (response.user && response.token) {
         this.saveAuth(response.token, response.user);
         return { success: true, user: response.user };
       }
-      
+
       return { success: false, error: 'Invalid response from server' };
     } catch (error) {
       console.error('Token exchange error:', error);
@@ -129,11 +141,11 @@ export class GitHubAuth {
 
     try {
       const response = await OrbitService.checkStatus(this.token);
-      
+
       if (response.status === 'new') {
         return { status: 'new' };
       }
-      
+
       if (response.githubHandle) {
         this.user = {
           githubHandle: response.githubHandle,
@@ -143,7 +155,7 @@ export class GitHubAuth {
         };
         return { status: response.status, user: this.user };
       }
-      
+
       return { status: 'error' };
     } catch (error) {
       console.error('Status check error:', error);

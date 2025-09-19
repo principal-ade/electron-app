@@ -1,4 +1,4 @@
-import type { NormalizedAgentSessionEvent } from "@principal-ai/agent-monitoring";
+import type { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 export interface SessionSegment {
   id: string;
@@ -13,7 +13,12 @@ export interface SessionSegment {
   webAccesses: string[];
 
   // Metadata
-  primaryActivity?: 'file-reading' | 'file-writing' | 'web-research' | 'tool-usage' | 'mixed';
+  primaryActivity?:
+    | 'file-reading'
+    | 'file-writing'
+    | 'web-research'
+    | 'tool-usage'
+    | 'mixed';
   description?: string;
 }
 
@@ -43,4 +48,4 @@ export interface SessionView {
     remoteUrl: string;
     gitRoot: string;
   }>;
-} 
+}

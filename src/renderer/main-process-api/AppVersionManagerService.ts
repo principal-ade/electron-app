@@ -1,4 +1,3 @@
-
 export class AppVersionManagerService {
   static async getVersion(): Promise<string> {
     return await window.mainProcess.appVersionManager.getVersion();
@@ -16,19 +15,19 @@ export class AppVersionManagerService {
     window.mainProcess.appVersionManager.checkForUpdateSilently();
   }
 
-  static onUpdateAvailable(callback: (info: any) => void): (() => void) {
+  static onUpdateAvailable(callback: (info: any) => void): () => void {
     return window.mainProcess.appVersionManager.onUpdateAvailable(callback);
   }
 
-  static onUpdateNotAvailable(callback: (info: any) => void): (() => void) {
+  static onUpdateNotAvailable(callback: (info: any) => void): () => void {
     return window.mainProcess.appVersionManager.onUpdateNotAvailable(callback);
   }
 
-  static onUpdateError(callback: (error: any) => void): (() => void) {
+  static onUpdateError(callback: (error: any) => void): () => void {
     return window.mainProcess.appVersionManager.onUpdateError(callback);
   }
 
-  static onUpdateCheckComplete(callback: () => void): (() => void) {
+  static onUpdateCheckComplete(callback: () => void): () => void {
     return window.mainProcess.appVersionManager.onUpdateCheckComplete(callback);
   }
 
@@ -44,11 +43,15 @@ export class AppVersionManagerService {
     window.mainProcess.appVersionManager.installUpdate();
   }
 
-  static onUpdateDownloadProgress(callback: (progress: any) => void): (() => void) {
-    return window.mainProcess.appVersionManager.onUpdateDownloadProgress(callback);
+  static onUpdateDownloadProgress(
+    callback: (progress: any) => void,
+  ): () => void {
+    return window.mainProcess.appVersionManager.onUpdateDownloadProgress(
+      callback,
+    );
   }
 
-  static onUpdateDownloaded(callback: (info: any) => void): (() => void) {
+  static onUpdateDownloaded(callback: (info: any) => void): () => void {
     return window.mainProcess.appVersionManager.onUpdateDownloaded(callback);
   }
 

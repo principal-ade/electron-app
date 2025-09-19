@@ -36,32 +36,60 @@ export interface RepositoryAPI {
     avatarUrl?: string;
     metadata?: Repository['metadata'];
   }) => Promise<Repository>;
-  updateRepository: (remoteUrl: string, updates: Partial<Omit<Repository, 'remoteUrl' | 'owner' | 'name'>>) => Promise<Repository | undefined>;
+  updateRepository: (
+    remoteUrl: string,
+    updates: Partial<Omit<Repository, 'remoteUrl' | 'owner' | 'name'>>,
+  ) => Promise<Repository | undefined>;
   updateRepositoryAccess: (remoteUrl: string) => Promise<void>;
   removeRepository: (remoteUrl: string) => Promise<boolean>;
   getRecentRepositories: (limit?: number) => Promise<Repository[]>;
-  
+
   // Local clone management
-  addLocalClone: (remoteUrl: string, localPath: string) => Promise<Repository | undefined>;
+  addLocalClone: (
+    remoteUrl: string,
+    localPath: string,
+  ) => Promise<Repository | undefined>;
   removeLocalClone: (remoteUrl: string, localPath: string) => Promise<boolean>;
-  updateLocalCloneAccess: (remoteUrl: string, localPath: string) => Promise<void>;
-  getRepositoryByLocalPath: (localPath: string) => Promise<Repository | undefined>;
+  updateLocalCloneAccess: (
+    remoteUrl: string,
+    localPath: string,
+  ) => Promise<void>;
+  getRepositoryByLocalPath: (
+    localPath: string,
+  ) => Promise<Repository | undefined>;
   getLocalRepositories: () => Promise<Repository[]>;
-  refreshRepositoryMetadata: (remoteUrl: string) => Promise<Repository | undefined>;
-  
+  refreshRepositoryMetadata: (
+    remoteUrl: string,
+  ) => Promise<Repository | undefined>;
+
   // Avatar management
-  setRepositoryAvatar: (remoteUrl: string, imageBase64: string) => Promise<{ success: boolean; avatarPath?: string; error?: string }>;
-  setCloneAvatar: (remoteUrl: string, clonePath: string, imageBase64: string) => Promise<{ success: boolean; avatarPath?: string; error?: string }>;
-  removeRepositoryAvatar: (remoteUrl: string) => Promise<{ success: boolean; error?: string }>;
-  removeCloneAvatar: (remoteUrl: string, clonePath: string) => Promise<{ success: boolean; error?: string }>;
+  setRepositoryAvatar: (
+    remoteUrl: string,
+    imageBase64: string,
+  ) => Promise<{ success: boolean; avatarPath?: string; error?: string }>;
+  setCloneAvatar: (
+    remoteUrl: string,
+    clonePath: string,
+    imageBase64: string,
+  ) => Promise<{ success: boolean; avatarPath?: string; error?: string }>;
+  removeRepositoryAvatar: (
+    remoteUrl: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+  removeCloneAvatar: (
+    remoteUrl: string,
+    clonePath: string,
+  ) => Promise<{ success: boolean; error?: string }>;
   getAvatarUrl: (avatarPath: string) => Promise<string | null>;
-  
+
   // GitHub API
-  searchGitHubRepositories: (query: string, options?: { 
-    sort?: 'stars' | 'forks' | 'updated'; 
-    order?: 'asc' | 'desc';
-    perPage?: number;
-  }) => Promise<{ 
+  searchGitHubRepositories: (
+    query: string,
+    options?: {
+      sort?: 'stars' | 'forks' | 'updated';
+      order?: 'asc' | 'desc';
+      perPage?: number;
+    },
+  ) => Promise<{
     items: Array<{
       id: number;
       full_name: string;

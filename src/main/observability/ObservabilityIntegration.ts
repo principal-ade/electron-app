@@ -10,7 +10,7 @@ import { ObservabilitySDK } from '@a24z/observability-sdk';
 import type {
   RepoNormalizedUniversalAgentSessionEvent,
   NormalizedAgentSessionEvent,
-  SupportedAgent
+  SupportedAgent,
 } from '@principal-ai/agent-monitoring';
 
 interface ObservabilityConfig {
@@ -32,11 +32,14 @@ export class ObservabilityIntegration extends EventEmitter {
   constructor(config: ObservabilityConfig = {}) {
     super();
 
-    const databaseUrl = "postgres://postgres.hdbuazqkffjfnsppeajp:I93y1CFdDngWRgT2@aws-1-us-west-1.pooler.supabase.com:6543/postgres?sslmode=no-verify&supa=base-pooler.x"
-//config.databaseUrl || process.env.OBSERVABILITY_DATABASE_URL || process.env.DATABASE_URL;
+    const databaseUrl =
+      'postgres://postgres.hdbuazqkffjfnsppeajp:I93y1CFdDngWRgT2@aws-1-us-west-1.pooler.supabase.com:6543/postgres?sslmode=no-verify&supa=base-pooler.x';
+    //config.databaseUrl || process.env.OBSERVABILITY_DATABASE_URL || process.env.DATABASE_URL;
 
     if (!databaseUrl) {
-      console.warn('[ObservabilityIntegration] No database URL provided, observability disabled');
+      console.warn(
+        '[ObservabilityIntegration] No database URL provided, observability disabled',
+      );
       this.sdk = null as any;
       return;
     }
@@ -45,9 +48,11 @@ export class ObservabilityIntegration extends EventEmitter {
     const originalConsoleLog = console.log;
     const filteredConsoleLog = (...args: any[]) => {
       // Filter out ObservabilitySDK verbose logs
-      if (typeof args[0] === 'string' &&
-          (args[0].includes('[ObservabilitySDK] Event data:') ||
-           args[0].includes('[ObservabilitySDK] Processing event type:'))) {
+      if (
+        typeof args[0] === 'string' &&
+        (args[0].includes('[ObservabilitySDK] Event data:') ||
+          args[0].includes('[ObservabilitySDK] Processing event type:'))
+      ) {
         return;
       }
       originalConsoleLog.apply(console, args);
@@ -75,7 +80,9 @@ export class ObservabilityIntegration extends EventEmitter {
 
     if (!this.sdk) {
       // No SDK available (no database URL provided)
-      console.log('[ObservabilityIntegration] Skipping initialization - no database URL');
+      console.log(
+        '[ObservabilityIntegration] Skipping initialization - no database URL',
+      );
       return;
     }
 
@@ -94,7 +101,9 @@ export class ObservabilityIntegration extends EventEmitter {
   /**
    * Process a RepoNormalized event from the pipeline
    */
-  async processRepoEvent(event: RepoNormalizedUniversalAgentSessionEvent): Promise<void> {
+  async processRepoEvent(
+    event: RepoNormalizedUniversalAgentSessionEvent,
+  ): Promise<void> {
     if (!this.isInitialized || !this.sdk) {
       return;
     }
@@ -108,18 +117,22 @@ export class ObservabilityIntegration extends EventEmitter {
 
       // Log progress periodically
       if (this.eventCount % 10 === 0) {
-        console.log(`[ObservabilityIntegration] Processed ${this.eventCount} events`);
+        console.log(
+          `[ObservabilityIntegration] Processed ${this.eventCount} events`,
+        );
       }
 
       // Emit for monitoring
       this.emit('event-tracked', event);
     } catch (error) {
       this.errorCount++;
-      console.error('[ObservabilityIntegration] Error processing event:', error);
+      console.error(
+        '[ObservabilityIntegration] Error processing event:',
+        error,
+      );
       this.emit('error', error);
     }
   }
-
 
   /**
    * Flush any pending events
@@ -127,7 +140,9 @@ export class ObservabilityIntegration extends EventEmitter {
   async flush(): Promise<void> {
     // The SDK handles its own batching internally
     // No explicit flush method available
-    console.log('[ObservabilityIntegration] Flush requested (handled internally by SDK)');
+    console.log(
+      '[ObservabilityIntegration] Flush requested (handled internally by SDK)',
+    );
   }
 
   /**
@@ -141,7 +156,9 @@ export class ObservabilityIntegration extends EventEmitter {
     try {
       await this.sdk.close();
       this.isInitialized = false;
-      console.log(`[ObservabilityIntegration] Shutdown complete. Processed ${this.eventCount} tool calls, ${this.errorCount} errors`);
+      console.log(
+        `[ObservabilityIntegration] Shutdown complete. Processed ${this.eventCount} tool calls, ${this.errorCount} errors`,
+      );
       this.emit('shutdown');
     } catch (error) {
       console.error('[ObservabilityIntegration] Error during shutdown:', error);
@@ -157,7 +174,7 @@ export class ObservabilityIntegration extends EventEmitter {
       isInitialized: this.isInitialized,
       eventCount: this.eventCount,
       errorCount: this.errorCount,
-      errorRate: this.eventCount > 0 ? this.errorCount / this.eventCount : 0
+      errorRate: this.eventCount > 0 ? this.errorCount / this.eventCount : 0,
     };
   }
 }
@@ -168,10 +185,11 @@ let observabilityIntegration: ObservabilityIntegration | null = null;
 /**
  * Get or create the singleton observability integration
  */
-export function getObservabilityIntegration(config?: ObservabilityConfig): ObservabilityIntegration {
+export function getObservabilityIntegration(
+  config?: ObservabilityConfig,
+): ObservabilityIntegration {
   if (!observabilityIntegration) {
     observabilityIntegration = new ObservabilityIntegration(config);
   }
   return observabilityIntegration;
 }
-

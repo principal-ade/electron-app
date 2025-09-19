@@ -1,4 +1,7 @@
-import { PackageLayerModule, FileSystemTree } from "@principal-ai/codebase-composition";
+import {
+  PackageLayerModule,
+  FileSystemTree,
+} from '@principal-ai/codebase-composition';
 
 /**
  * Options for loading manifest contents
@@ -21,16 +24,19 @@ interface LoadManifestOptions {
  * @returns Map of file paths to their parsed/raw contents
  */
 export async function loadManifestContents(
-  options: LoadManifestOptions
+  options: LoadManifestOptions,
 ): Promise<Map<string, any>> {
-  const { fileSystemTree, fileSystemAdapter, packageModule, rootPath } = options;
+  const { fileSystemTree, fileSystemAdapter, packageModule, rootPath } =
+    options;
 
   // Create or use provided package module to access its parsers
   const pkgModule = packageModule || new PackageLayerModule();
   const manifestContents = new Map<string, any>();
 
   if (!fileSystemTree.allFiles || fileSystemTree.allFiles.length === 0) {
-    console.warn('[loadManifestContents] No allFiles present on fileSystemTree');
+    console.warn(
+      '[loadManifestContents] No allFiles present on fileSystemTree',
+    );
     return manifestContents;
   }
 
@@ -102,7 +108,9 @@ export async function loadManifestContents(
         manifestContents.set(path, parsed);
       } else {
         // Create fallback manifest data
-        console.warn(`[loadManifestContents] No content for ${path}, creating fallback`);
+        console.warn(
+          `[loadManifestContents] No content for ${path}, creating fallback`,
+        );
         const fallback = createFallbackManifest(path);
         if (fallback !== null && fallback !== undefined) {
           manifestContents.set(path, fallback);
@@ -119,7 +127,11 @@ export async function loadManifestContents(
     }
   }
 
-  console.log('[loadManifestContents] Loaded manifest contents for', manifestContents.size, 'files');
+  console.log(
+    '[loadManifestContents] Loaded manifest contents for',
+    manifestContents.size,
+    'files',
+  );
   return manifestContents;
 }
 
@@ -132,7 +144,10 @@ function parseManifestContent(filePath: string, content: string): any {
     try {
       return JSON.parse(content);
     } catch (parseErr) {
-      console.warn(`[loadManifestContents] Failed to parse JSON for ${filePath}:`, parseErr);
+      console.warn(
+        `[loadManifestContents] Failed to parse JSON for ${filePath}:`,
+        parseErr,
+      );
       return content; // Return raw content as fallback
     }
   }
@@ -140,7 +155,9 @@ function parseManifestContent(filePath: string, content: string): any {
   // TOML files (Cargo.toml, pyproject.toml)
   if (filePath.endsWith('.toml')) {
     // TODO: Add proper TOML parser when available
-    console.log(`[loadManifestContents] TOML parsing not implemented for ${filePath}`);
+    console.log(
+      `[loadManifestContents] TOML parsing not implemented for ${filePath}`,
+    );
 
     // Try to extract basic info with simple regex
     const nameMatch = content.match(/name\s*=\s*"([^"]+)"/);
@@ -150,15 +167,15 @@ function parseManifestContent(filePath: string, content: string): any {
       return {
         package: {
           name: nameMatch?.[1] || 'unknown',
-          version: versionMatch?.[1] || '0.0.0'
-        }
+          version: versionMatch?.[1] || '0.0.0',
+        },
       };
     } else if (filePath.endsWith('pyproject.toml')) {
       return {
         project: {
           name: nameMatch?.[1] || 'unknown',
-          version: versionMatch?.[1] || '0.0.0'
-        }
+          version: versionMatch?.[1] || '0.0.0',
+        },
       };
     }
 
@@ -168,7 +185,9 @@ function parseManifestContent(filePath: string, content: string): any {
   // XML files (pom.xml)
   if (filePath.endsWith('.xml')) {
     // TODO: Add XML parser when needed
-    console.log(`[loadManifestContents] XML parsing not implemented for ${filePath}`);
+    console.log(
+      `[loadManifestContents] XML parsing not implemented for ${filePath}`,
+    );
     return content;
   }
 
@@ -187,7 +206,7 @@ function createFallbackManifest(filePath: string): any {
       name: dirName,
       version: '0.0.0',
       dependencies: {},
-      devDependencies: {}
+      devDependencies: {},
     };
   }
 
@@ -195,8 +214,8 @@ function createFallbackManifest(filePath: string): any {
     return {
       project: {
         name: dirName,
-        version: '0.0.0'
-      }
+        version: '0.0.0',
+      },
     };
   }
 
@@ -204,15 +223,15 @@ function createFallbackManifest(filePath: string): any {
     return {
       package: {
         name: dirName,
-        version: '0.0.0'
-      }
+        version: '0.0.0',
+      },
     };
   }
 
   if (filePath.endsWith('go.mod')) {
     return {
       module: dirName,
-      go: '1.19'
+      go: '1.19',
     };
   }
 
@@ -228,7 +247,7 @@ function createFallbackManifest(filePath: string): any {
     return {
       name: `vendor/${dirName}`,
       version: '0.0.0',
-      require: {}
+      require: {},
     };
   }
 

@@ -1,14 +1,32 @@
 import React, { useState, useMemo } from 'react';
-import { FileText, Edit, Search, List, Globe, Code, ChevronRight, ChevronDown, File, FolderOpen, StopCircle, MessageCircle, Rocket, Flag } from 'lucide-react';
+import {
+  FileText,
+  Edit,
+  Search,
+  List,
+  Globe,
+  Code,
+  ChevronRight,
+  ChevronDown,
+  File,
+  FolderOpen,
+  StopCircle,
+  MessageCircle,
+  Rocket,
+  Flag,
+} from 'lucide-react';
 import { EventSegment } from '../../services/EventSegmenterService';
-import { NormalizedAgentSessionEvent } from "@principal-ai/agent-monitoring";
+import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 interface EventSegmentViewProps {
   segment: EventSegment;
   theme: any;
 }
 
-export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, theme }) => {
+export const EventSegmentView: React.FC<EventSegmentViewProps> = ({
+  segment,
+  theme,
+}) => {
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
   const [showRawEvents, setShowRawEvents] = useState(false);
   const [showPathDiagnostics, setShowPathDiagnostics] = useState(false);
@@ -51,20 +69,23 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
 
   const formatTimestamp = (timestamp: number): string => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString('en-US', { 
+    return date.toLocaleTimeString('en-US', {
       hour12: false,
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      fractionalSecondDigits: 3
+      fractionalSecondDigits: 3,
     });
   };
 
   const getEventColor = (event: NormalizedAgentSessionEvent): string => {
-    if (event.eventType === 'pre-tool-use') return theme.colors?.warning || '#f59e0b';
-    if (event.eventType === 'post-tool-use') return theme.colors?.success || '#10b981';
+    if (event.eventType === 'pre-tool-use')
+      return theme.colors?.warning || '#f59e0b';
+    if (event.eventType === 'post-tool-use')
+      return theme.colors?.success || '#10b981';
     if (event.eventType === 'stop') return theme.colors?.danger || '#ef4444';
-    if (event.eventType === 'notification') return theme.colors?.info || '#3b82f6';
+    if (event.eventType === 'notification')
+      return theme.colors?.info || '#3b82f6';
     return theme.colors?.text?.secondary || '#6b7280';
   };
 
@@ -73,51 +94,66 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
     if (!path.startsWith('/')) {
       return path;
     }
-    
+
     // Try to make it relative to the normalized working directory
     if (normalizedWorkingDir && path.startsWith(normalizedWorkingDir)) {
       const relativePath = path.substring(normalizedWorkingDir.length);
-      return relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
+      return relativePath.startsWith('/')
+        ? relativePath.substring(1)
+        : relativePath;
     }
-    
+
     // If path is short enough, show it as-is
     if (path.length < 60) {
       return path;
     }
-    
+
     const parts = path.split('/');
-    
+
     // Check if it's in a project directory (common patterns)
-    const projectIndicators = ['Developer', 'Projects', 'repos', 'github', 'src', 'workspace'];
+    const projectIndicators = [
+      'Developer',
+      'Projects',
+      'repos',
+      'github',
+      'src',
+      'workspace',
+    ];
     let projectIndex = -1;
-    
+
     for (let i = 0; i < parts.length; i++) {
-      if (projectIndicators.some(indicator => parts[i].toLowerCase().includes(indicator.toLowerCase()))) {
+      if (
+        projectIndicators.some((indicator) =>
+          parts[i].toLowerCase().includes(indicator.toLowerCase()),
+        )
+      ) {
         projectIndex = i;
         break;
       }
     }
-    
+
     // If we found a project directory, show from there
     if (projectIndex >= 0 && projectIndex < parts.length - 3) {
       return `.../${parts.slice(projectIndex + 1).join('/')}`;
     }
-    
+
     // For very long paths, show first part and last 3 parts
     if (parts.length > 6) {
       return `${parts[1]}/.../${parts.slice(-3).join('/')}`;
     }
-    
+
     // Default: show last 4 parts
     if (parts.length > 4) {
       return `.../${parts.slice(-4).join('/')}`;
     }
-    
+
     return path;
   };
 
   // Helper to determine path quality/normalization status
-  const getPathQuality = (event: NormalizedAgentSessionEvent): {
+  const getPathQuality = (
+    event: NormalizedAgentSessionEvent,
+  ): {
     quality: 'normalized' | 'partial' | 'raw' | 'missing';
     indicator: string;
     color: string;
@@ -128,38 +164,41 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
         quality: 'missing',
         indicator: '⚠️',
         color: theme.colors?.warning || '#f59e0b',
-        tooltip: 'No path information available'
+        tooltip: 'No path information available',
       };
     }
-    
+
     const firstFile = event.files[0];
-    
+
     // Check if we have repository context (best case)
     if (firstFile.repository?.relativePath) {
       return {
         quality: 'normalized',
         indicator: '✓',
         color: theme.colors?.success || '#10b981',
-        tooltip: 'Path normalized with repository context'
+        tooltip: 'Path normalized with repository context',
       };
     }
-    
+
     // Check if we have a display path (normalization successful)
-    if (firstFile.displayPath && firstFile.displayPath !== '[path not normalized]') {
+    if (
+      firstFile.displayPath &&
+      firstFile.displayPath !== '[path not normalized]'
+    ) {
       return {
         quality: 'partial',
         indicator: '~',
         color: theme.colors?.info || '#3b82f6',
-        tooltip: 'Path partially normalized'
+        tooltip: 'Path partially normalized',
       };
     }
-    
+
     // We only have raw paths
     return {
       quality: 'raw',
       indicator: '!',
       color: theme.colors?.textSecondary || '#6b7280',
-      tooltip: 'Using raw path (not normalized)'
+      tooltip: 'Using raw path (not normalized)',
     };
   };
 
@@ -176,101 +215,134 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
         const output = event.toolOutput as any;
         const numLines = output?.file?.numLines || output?.numLines;
         const totalLines = output?.file?.totalLines || output?.totalLines;
-        
+
         // Use normalized path from event.files if available
-        const displayPath = event.files?.[0]?.displayPath || 
-                           event.files?.[0]?.repository?.relativePath ||
-                           filePath;
-        
+        const displayPath =
+          event.files?.[0]?.displayPath ||
+          event.files?.[0]?.repository?.relativePath ||
+          filePath;
+
         details.push(
-          <div key="read-operation" style={{
-            padding: '8px',
-            backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: theme.colors.text,
-            marginTop: '8px',
-          }}>
-            <div style={{ fontWeight: 500, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div
+            key="read-operation"
+            style={{
+              padding: '8px',
+              backgroundColor:
+                theme.colors?.backgroundTertiary ||
+                theme.colors?.backgroundSecondary ||
+                '#f3f4f6',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: theme.colors.text,
+              marginTop: '8px',
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 500,
+                marginBottom: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
               📖 File Read
               {pathQuality.quality !== 'normalized' && (
-                <span 
+                <span
                   title={pathQuality.tooltip}
-                  style={{ 
-                    fontSize: '10px', 
+                  style={{
+                    fontSize: '10px',
                     color: pathQuality.color,
-                    cursor: 'help'
+                    cursor: 'help',
                   }}
                 >
                   {pathQuality.indicator}
                 </span>
               )}
             </div>
-            <div style={{ 
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '11px',
-              fontFamily: 'monospace',
-              color: theme.colors.textSecondary,
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '11px',
+                fontFamily: 'monospace',
+                color: theme.colors.textSecondary,
+              }}
+            >
               <File size={10} />
               {formatPath(displayPath, event.normalizedWorkingDirectory)}
             </div>
             {event.eventType === 'post-tool-use' && numLines && (
-              <div style={{ fontSize: '11px', color: theme.colors.textSecondary, marginTop: '4px' }}>
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: theme.colors.textSecondary,
+                  marginTop: '4px',
+                }}
+              >
                 Read {numLines} lines
                 {totalLines && ` of ${totalLines} total`}
                 {offset && ` (starting at line ${offset})`}
                 {limit && ` (limit: ${limit})`}
               </div>
             )}
-          </div>
+          </div>,
         );
       }
     } else if (event.files && event.files.length > 0) {
       // Generic file path display for other tools
       const firstFile = event.files[0];
-      const displayPath = firstFile.displayPath || 
-                         firstFile.repository?.relativePath ||
-                         '[path not normalized]';
+      const displayPath =
+        firstFile.displayPath ||
+        firstFile.repository?.relativePath ||
+        '[path not normalized]';
       details.push(
-        <div key="primary-path" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '12px',
-          color: theme.colors.textSecondary,
-        }}>
+        <div
+          key="primary-path"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '12px',
+            color: theme.colors.textSecondary,
+          }}
+        >
           <File size={12} />
-          <span>{formatPath(displayPath, event.normalizedWorkingDirectory)}</span>
+          <span>
+            {formatPath(displayPath, event.normalizedWorkingDirectory)}
+          </span>
           {pathQuality.quality !== 'normalized' && (
-            <span 
+            <span
               title={pathQuality.tooltip}
-              style={{ 
-                fontSize: '10px', 
+              style={{
+                fontSize: '10px',
                 color: pathQuality.color,
                 cursor: 'help',
-                marginLeft: '4px'
+                marginLeft: '4px',
               }}
             >
               {pathQuality.indicator}
             </span>
           )}
-        </div>
+        </div>,
       );
-      
+
       // Show additional files if present
       if (event.files.length > 1) {
         details.push(
-          <div key="additional-files" style={{
-            fontSize: '11px',
-            color: theme.colors.textSecondary,
-            marginTop: '4px',
-            marginLeft: '20px'
-          }}>
-            +{event.files.length - 1} more file{event.files.length > 2 ? 's' : ''}
-          </div>
+          <div
+            key="additional-files"
+            style={{
+              fontSize: '11px',
+              color: theme.colors.textSecondary,
+              marginTop: '4px',
+              marginLeft: '20px',
+            }}
+          >
+            +{event.files.length - 1} more file
+            {event.files.length > 2 ? 's' : ''}
+          </div>,
         );
       }
     }
@@ -280,19 +352,25 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
       const command = (event.toolInput as any).command;
       if (command) {
         details.push(
-          <div key="bash-command" style={{
-            padding: '8px',
-            backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-            borderRadius: '6px',
-            fontFamily: 'monospace',
-            fontSize: '12px',
-            color: theme.colors.text,
-            marginTop: '8px',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-all',
-          }}>
+          <div
+            key="bash-command"
+            style={{
+              padding: '8px',
+              backgroundColor:
+                theme.colors?.backgroundTertiary ||
+                theme.colors?.backgroundSecondary ||
+                '#f3f4f6',
+              borderRadius: '6px',
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              color: theme.colors.text,
+              marginTop: '8px',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all',
+            }}
+          >
             $ {command}
-          </div>
+          </div>,
         );
       }
     }
@@ -305,28 +383,65 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
         const output = event.toolOutput as any;
         const filenames = output?.filenames || [];
         const numFiles = output?.numFiles || 0;
-        
+
         details.push(
-          <div key="glob-pattern" style={{
-            padding: '8px',
-            backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: theme.colors.text,
-            marginTop: '8px',
-          }}>
-            <div style={{ fontWeight: 500, marginBottom: '4px' }}>🔍 File Pattern Search</div>
+          <div
+            key="glob-pattern"
+            style={{
+              padding: '8px',
+              backgroundColor:
+                theme.colors?.backgroundTertiary ||
+                theme.colors?.backgroundSecondary ||
+                '#f3f4f6',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: theme.colors.text,
+              marginTop: '8px',
+            }}
+          >
+            <div style={{ fontWeight: 500, marginBottom: '4px' }}>
+              🔍 File Pattern Search
+            </div>
             <div style={{ fontFamily: 'monospace' }}>Pattern: {pattern}</div>
-            {path && <div style={{ fontFamily: 'monospace', fontSize: '11px', color: theme.colors.textSecondary }}>Path: {path}</div>}
+            {path && (
+              <div
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                Path: {path}
+              </div>
+            )}
             {event.eventType === 'post-tool-use' && output && (
               <div style={{ marginTop: '4px', fontSize: '11px' }}>
-                <div style={{ color: numFiles > 0 ? theme.colors.success || '#10b981' : theme.colors.textSecondary }}>
-                  Found: {numFiles > 0 ? `${numFiles} file${numFiles > 1 ? 's' : ''}` : 'No matches'}
+                <div
+                  style={{
+                    color:
+                      numFiles > 0
+                        ? theme.colors.success || '#10b981'
+                        : theme.colors.textSecondary,
+                  }}
+                >
+                  Found:{' '}
+                  {numFiles > 0
+                    ? `${numFiles} file${numFiles > 1 ? 's' : ''}`
+                    : 'No matches'}
                 </div>
                 {filenames.length > 0 && (
-                  <div style={{ marginTop: '4px', paddingLeft: '8px', color: theme.colors.textSecondary }}>
+                  <div
+                    style={{
+                      marginTop: '4px',
+                      paddingLeft: '8px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
                     {filenames.slice(0, 3).map((file: string, i: number) => (
-                      <div key={i} style={{ fontSize: '10px', fontFamily: 'monospace' }}>
+                      <div
+                        key={i}
+                        style={{ fontSize: '10px', fontFamily: 'monospace' }}
+                      >
                         • {formatPath(file, event.normalizedWorkingDirectory)}
                       </div>
                     ))}
@@ -339,7 +454,7 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
                 )}
               </div>
             )}
-          </div>
+          </div>,
         );
       }
     }
@@ -355,49 +470,89 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
         const numLines = output?.numLines || 0;
         const numFiles = output?.numFiles || 0;
         const content = output?.content;
-        
+
         details.push(
-          <div key="grep-search" style={{
-            padding: '8px',
-            backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: theme.colors.text,
-            marginTop: '8px',
-          }}>
-            <div style={{ fontWeight: 500, marginBottom: '4px' }}>🔎 Text Search</div>
-            <div style={{ fontFamily: 'monospace', fontSize: '11px' }}>Pattern: {pattern}</div>
-            {glob && <div style={{ fontFamily: 'monospace', fontSize: '11px', color: theme.colors.textSecondary }}>Files: {glob}</div>}
-            {path && <div style={{ fontFamily: 'monospace', fontSize: '11px', color: theme.colors.textSecondary }}>In: {formatPath(path, event.normalizedWorkingDirectory)}</div>}
+          <div
+            key="grep-search"
+            style={{
+              padding: '8px',
+              backgroundColor:
+                theme.colors?.backgroundTertiary ||
+                theme.colors?.backgroundSecondary ||
+                '#f3f4f6',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: theme.colors.text,
+              marginTop: '8px',
+            }}
+          >
+            <div style={{ fontWeight: 500, marginBottom: '4px' }}>
+              🔎 Text Search
+            </div>
+            <div style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+              Pattern: {pattern}
+            </div>
+            {glob && (
+              <div
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                Files: {glob}
+              </div>
+            )}
+            {path && (
+              <div
+                style={{
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                In: {formatPath(path, event.normalizedWorkingDirectory)}
+              </div>
+            )}
             {event.eventType === 'post-tool-use' && output && (
               <div style={{ marginTop: '4px', fontSize: '11px' }}>
-                <div style={{ color: (numLines > 0 || numFiles > 0) ? theme.colors.success || '#10b981' : theme.colors.textSecondary }}>
-                  {outputMode === 'files_with_matches' 
+                <div
+                  style={{
+                    color:
+                      numLines > 0 || numFiles > 0
+                        ? theme.colors.success || '#10b981'
+                        : theme.colors.textSecondary,
+                  }}
+                >
+                  {outputMode === 'files_with_matches'
                     ? `Found in ${numFiles} file${numFiles !== 1 ? 's' : ''}`
-                    : numLines > 0 
+                    : numLines > 0
                       ? `Found ${numLines} match${numLines !== 1 ? 'es' : ''}`
                       : 'No matches found'}
                 </div>
                 {content && outputMode === 'content' && (
-                  <div style={{ 
-                    marginTop: '4px',
-                    padding: '4px',
-                    backgroundColor: theme.colors?.background || '#ffffff',
-                    borderRadius: '4px',
-                    fontFamily: 'monospace',
-                    fontSize: '10px',
-                    color: theme.colors.textSecondary,
-                    maxHeight: '100px',
-                    overflow: 'auto',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-all',
-                  }}>
-                    {content.substring(0, 200)}{content.length > 200 ? '...' : ''}
+                  <div
+                    style={{
+                      marginTop: '4px',
+                      padding: '4px',
+                      backgroundColor: theme.colors?.background || '#ffffff',
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      fontSize: '10px',
+                      color: theme.colors.textSecondary,
+                      maxHeight: '100px',
+                      overflow: 'auto',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    {content.substring(0, 200)}
+                    {content.length > 200 ? '...' : ''}
                   </div>
                 )}
               </div>
             )}
-          </div>
+          </div>,
         );
       }
     }
@@ -407,52 +562,77 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
       const path = (event.toolInput as any).path;
       if (path) {
         details.push(
-          <div key="ls-listing" style={{
-            padding: '8px',
-            backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: theme.colors.text,
-            marginTop: '8px',
-          }}>
-            <div style={{ fontWeight: 500, marginBottom: '4px' }}>📁 Directory Listing</div>
-            <div style={{ fontFamily: 'monospace' }}>{formatPath(path, event.normalizedWorkingDirectory)}</div>
-          </div>
+          <div
+            key="ls-listing"
+            style={{
+              padding: '8px',
+              backgroundColor:
+                theme.colors?.backgroundTertiary ||
+                theme.colors?.backgroundSecondary ||
+                '#f3f4f6',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: theme.colors.text,
+              marginTop: '8px',
+            }}
+          >
+            <div style={{ fontWeight: 500, marginBottom: '4px' }}>
+              📁 Directory Listing
+            </div>
+            <div style={{ fontFamily: 'monospace' }}>
+              {formatPath(path, event.normalizedWorkingDirectory)}
+            </div>
+          </div>,
         );
       }
     }
 
     // Show Edit/Write operations
-    if ((event.toolName === 'Edit' || event.toolName === 'MultiEdit') && event.toolInput) {
+    if (
+      (event.toolName === 'Edit' || event.toolName === 'MultiEdit') &&
+      event.toolInput
+    ) {
       const input = event.toolInput as any;
       details.push(
-        <div key="edit-operation" style={{
-          padding: '8px',
-          backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-          borderRadius: '6px',
-          fontSize: '12px',
-          color: theme.colors.text,
-          marginTop: '8px',
-        }}>
-          <div style={{ fontWeight: 500, marginBottom: '4px' }}>✏️ File Edit</div>
+        <div
+          key="edit-operation"
+          style={{
+            padding: '8px',
+            backgroundColor:
+              theme.colors?.backgroundTertiary ||
+              theme.colors?.backgroundSecondary ||
+              '#f3f4f6',
+            borderRadius: '6px',
+            fontSize: '12px',
+            color: theme.colors.text,
+            marginTop: '8px',
+          }}
+        >
+          <div style={{ fontWeight: 500, marginBottom: '4px' }}>
+            ✏️ File Edit
+          </div>
           {input.old_string && (
-            <div style={{ 
-              fontSize: '11px', 
-              color: theme.colors.textSecondary,
-              marginTop: '4px',
-              maxHeight: '100px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}>
+            <div
+              style={{
+                fontSize: '11px',
+                color: theme.colors.textSecondary,
+                marginTop: '4px',
+                maxHeight: '100px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
               Changed: {input.old_string.substring(0, 50)}...
             </div>
           )}
           {input.edits && Array.isArray(input.edits) && (
-            <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+            <div
+              style={{ fontSize: '11px', color: theme.colors.textSecondary }}
+            >
               {input.edits.length} edits made
             </div>
           )}
-        </div>
+        </div>,
       );
     }
 
@@ -461,19 +641,27 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
       const content = input.content || '';
       const lines = content.split('\n').length;
       details.push(
-        <div key="write-operation" style={{
-          padding: '8px',
-          backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-          borderRadius: '6px',
-          fontSize: '12px',
-          color: theme.colors.text,
-          marginTop: '8px',
-        }}>
-          <div style={{ fontWeight: 500, marginBottom: '4px' }}>📝 File Write</div>
+        <div
+          key="write-operation"
+          style={{
+            padding: '8px',
+            backgroundColor:
+              theme.colors?.backgroundTertiary ||
+              theme.colors?.backgroundSecondary ||
+              '#f3f4f6',
+            borderRadius: '6px',
+            fontSize: '12px',
+            color: theme.colors.text,
+            marginTop: '8px',
+          }}
+        >
+          <div style={{ fontWeight: 500, marginBottom: '4px' }}>
+            📝 File Write
+          </div>
           <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
             Wrote {lines} lines ({content.length} characters)
           </div>
-        </div>
+        </div>,
       );
     }
 
@@ -485,18 +673,24 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
         const pending = todos.filter((t: any) => t.status === 'pending');
 
         details.push(
-          <div key="todos" style={{
-            fontSize: '12px',
-            color: theme.colors.textSecondary,
-            marginTop: '8px',
-          }}>
-            <div>📋 Todos: {completed.length} completed, {inProgress.length} active, {pending.length} pending</div>
+          <div
+            key="todos"
+            style={{
+              fontSize: '12px',
+              color: theme.colors.textSecondary,
+              marginTop: '8px',
+            }}
+          >
+            <div>
+              📋 Todos: {completed.length} completed, {inProgress.length}{' '}
+              active, {pending.length} pending
+            </div>
             {inProgress.length > 0 && (
               <div style={{ marginTop: '4px', paddingLeft: '16px' }}>
                 Active: {inProgress[0].content}
               </div>
             )}
-          </div>
+          </div>,
         );
       }
     }
@@ -506,17 +700,27 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
       const query = (event.toolInput as any).query;
       if (query) {
         details.push(
-          <div key="web-search" style={{
-            padding: '8px',
-            backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: theme.colors.text,
-            marginTop: '8px',
-          }}>
-            <div style={{ fontWeight: 500, marginBottom: '4px' }}>🌐 Web Search</div>
-            <div style={{ fontFamily: 'monospace', fontSize: '11px' }}>Query: {query}</div>
-          </div>
+          <div
+            key="web-search"
+            style={{
+              padding: '8px',
+              backgroundColor:
+                theme.colors?.backgroundTertiary ||
+                theme.colors?.backgroundSecondary ||
+                '#f3f4f6',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: theme.colors.text,
+              marginTop: '8px',
+            }}
+          >
+            <div style={{ fontWeight: 500, marginBottom: '4px' }}>
+              🌐 Web Search
+            </div>
+            <div style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+              Query: {query}
+            </div>
+          </div>,
         );
       }
     }
@@ -525,46 +729,67 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
       const url = (event.toolInput as any).url;
       if (url) {
         details.push(
-          <div key="web-fetch" style={{
-            padding: '8px',
-            backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: theme.colors.text,
-            marginTop: '8px',
-          }}>
-            <div style={{ fontWeight: 500, marginBottom: '4px' }}>🌐 Web Fetch</div>
-            <div style={{ 
-              fontFamily: 'monospace', 
-              fontSize: '11px',
-              wordBreak: 'break-all',
-            }}>
+          <div
+            key="web-fetch"
+            style={{
+              padding: '8px',
+              backgroundColor:
+                theme.colors?.backgroundTertiary ||
+                theme.colors?.backgroundSecondary ||
+                '#f3f4f6',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: theme.colors.text,
+              marginTop: '8px',
+            }}
+          >
+            <div style={{ fontWeight: 500, marginBottom: '4px' }}>
+              🌐 Web Fetch
+            </div>
+            <div
+              style={{
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                wordBreak: 'break-all',
+              }}
+            >
               URL: {url}
             </div>
-          </div>
+          </div>,
         );
       }
     }
 
     // Show output for post-tool events (for Bash commands)
-    if (event.eventType === 'post-tool-use' && event.toolOutput && event.toolName === 'Bash') {
+    if (
+      event.eventType === 'post-tool-use' &&
+      event.toolOutput &&
+      event.toolName === 'Bash'
+    ) {
       const output = event.toolOutput as any;
       if (output.stdout) {
         const preview = output.stdout.substring(0, 200);
         details.push(
-          <div key="output" style={{
-            padding: '8px',
-            backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-            borderRadius: '6px',
-            fontFamily: 'monospace',
-            fontSize: '11px',
-            color: theme.colors.textSecondary,
-            marginTop: '8px',
-            whiteSpace: 'pre-wrap',
-            wordBreak: 'break-all',
-          }}>
-            Output: {preview}{output.stdout.length > 200 ? '...' : ''}
-          </div>
+          <div
+            key="output"
+            style={{
+              padding: '8px',
+              backgroundColor:
+                theme.colors?.backgroundTertiary ||
+                theme.colors?.backgroundSecondary ||
+                '#f3f4f6',
+              borderRadius: '6px',
+              fontFamily: 'monospace',
+              fontSize: '11px',
+              color: theme.colors.textSecondary,
+              marginTop: '8px',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all',
+            }}
+          >
+            Output: {preview}
+            {output.stdout.length > 200 ? '...' : ''}
+          </div>,
         );
       }
     }
@@ -573,16 +798,28 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
     if (event.eventType === 'stop') {
       const stopHookActive = event.raw?.stop_hook_active;
       details.push(
-        <div key="stop-event" style={{
-          padding: '8px',
-          backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-          borderRadius: '6px',
-          fontSize: '12px',
-          color: theme.colors.text,
-          marginTop: '8px',
-          border: `1px solid ${theme.colors?.danger || '#ef4444'}`,
-        }}>
-          <div style={{ fontWeight: 500, marginBottom: '4px', color: theme.colors?.danger || '#ef4444' }}>
+        <div
+          key="stop-event"
+          style={{
+            padding: '8px',
+            backgroundColor:
+              theme.colors?.backgroundTertiary ||
+              theme.colors?.backgroundSecondary ||
+              '#f3f4f6',
+            borderRadius: '6px',
+            fontSize: '12px',
+            color: theme.colors.text,
+            marginTop: '8px',
+            border: `1px solid ${theme.colors?.danger || '#ef4444'}`,
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 500,
+              marginBottom: '4px',
+              color: theme.colors?.danger || '#ef4444',
+            }}
+          >
             🛑 Session Stop
           </div>
           <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
@@ -593,7 +830,7 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
               This marks a pause or end in the AI's processing
             </div>
           </div>
-        </div>
+        </div>,
       );
     }
 
@@ -602,95 +839,148 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
       const message = event.data?.message || event.raw?.message;
       if (message) {
         details.push(
-          <div key="notification-event" style={{
-            padding: '8px',
-            backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-            borderRadius: '6px',
-            fontSize: '12px',
-            color: theme.colors.text,
-            marginTop: '8px',
-            border: `1px solid ${theme.colors?.info || '#3b82f6'}`,
-          }}>
-            <div style={{ fontWeight: 500, marginBottom: '4px', color: theme.colors?.info || '#3b82f6' }}>
+          <div
+            key="notification-event"
+            style={{
+              padding: '8px',
+              backgroundColor:
+                theme.colors?.backgroundTertiary ||
+                theme.colors?.backgroundSecondary ||
+                '#f3f4f6',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: theme.colors.text,
+              marginTop: '8px',
+              border: `1px solid ${theme.colors?.info || '#3b82f6'}`,
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 500,
+                marginBottom: '4px',
+                color: theme.colors?.info || '#3b82f6',
+              }}
+            >
               💬 Notification
             </div>
-            <div style={{ 
-              fontSize: '11px', 
-              color: theme.colors.textSecondary,
-              fontStyle: 'italic',
-            }}>
+            <div
+              style={{
+                fontSize: '11px',
+                color: theme.colors.textSecondary,
+                fontStyle: 'italic',
+              }}
+            >
               "{message}"
             </div>
-          </div>
+          </div>,
         );
       }
     }
 
     // Show subagent events
-    if (event.eventType === 'subagent-start' || event.eventType === 'subagent-stop') {
+    if (
+      event.eventType === 'subagent-start' ||
+      event.eventType === 'subagent-stop'
+    ) {
       const isStart = event.eventType === 'subagent-start';
       const agentData = event.data as any;
       details.push(
-        <div key="subagent-event" style={{
-          padding: '8px',
-          backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-          borderRadius: '6px',
-          fontSize: '12px',
-          color: theme.colors.text,
-          marginTop: '8px',
-          border: `1px solid ${isStart ? theme.colors?.success || '#10b981' : theme.colors?.warning || '#f59e0b'}`,
-        }}>
-          <div style={{ 
-            fontWeight: 500, 
-            marginBottom: '4px', 
-            color: isStart ? theme.colors?.success || '#10b981' : theme.colors?.warning || '#f59e0b'
-          }}>
+        <div
+          key="subagent-event"
+          style={{
+            padding: '8px',
+            backgroundColor:
+              theme.colors?.backgroundTertiary ||
+              theme.colors?.backgroundSecondary ||
+              '#f3f4f6',
+            borderRadius: '6px',
+            fontSize: '12px',
+            color: theme.colors.text,
+            marginTop: '8px',
+            border: `1px solid ${isStart ? theme.colors?.success || '#10b981' : theme.colors?.warning || '#f59e0b'}`,
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 500,
+              marginBottom: '4px',
+              color: isStart
+                ? theme.colors?.success || '#10b981'
+                : theme.colors?.warning || '#f59e0b',
+            }}
+          >
             {isStart ? '🚀 Subagent Started' : '🏁 Subagent Stopped'}
           </div>
           {agentData && (
-            <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+            <div
+              style={{ fontSize: '11px', color: theme.colors.textSecondary }}
+            >
               {agentData.agent_type && <div>Type: {agentData.agent_type}</div>}
-              {agentData.description && <div>Task: {agentData.description}</div>}
+              {agentData.description && (
+                <div>Task: {agentData.description}</div>
+              )}
               {agentData.prompt && (
                 <div style={{ marginTop: '4px', fontStyle: 'italic' }}>
-                  "{agentData.prompt.substring(0, 100)}{agentData.prompt.length > 100 ? '...' : ''}"
+                  "{agentData.prompt.substring(0, 100)}
+                  {agentData.prompt.length > 100 ? '...' : ''}"
                 </div>
               )}
             </div>
           )}
-        </div>
+        </div>,
       );
     }
 
     // Add path diagnostics if enabled and we have path issues
-    if (showPathDiagnostics && event.files && event.files.length > 0 && pathQuality.quality !== 'normalized') {
+    if (
+      showPathDiagnostics &&
+      event.files &&
+      event.files.length > 0 &&
+      pathQuality.quality !== 'normalized'
+    ) {
       details.push(
-        <div key="path-diagnostics" style={{
-          padding: '8px',
-          backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-          borderRadius: '6px',
-          fontSize: '10px',
-          fontFamily: 'monospace',
-          color: theme.colors.textSecondary,
-          marginTop: '8px',
-          border: `1px solid ${pathQuality.color}`,
-        }}>
-          <div style={{ fontWeight: 500, marginBottom: '4px', color: pathQuality.color }}>
+        <div
+          key="path-diagnostics"
+          style={{
+            padding: '8px',
+            backgroundColor:
+              theme.colors?.backgroundTertiary ||
+              theme.colors?.backgroundSecondary ||
+              '#f3f4f6',
+            borderRadius: '6px',
+            fontSize: '10px',
+            fontFamily: 'monospace',
+            color: theme.colors.textSecondary,
+            marginTop: '8px',
+            border: `1px solid ${pathQuality.color}`,
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 500,
+              marginBottom: '4px',
+              color: pathQuality.color,
+            }}
+          >
             🔍 Path Diagnostics ({pathQuality.quality})
           </div>
           <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-            {JSON.stringify({
-              files: event.files.map(f => ({
-                displayPath: f.displayPath,
-                repository: f.repository,
-                context: f.context
-              })),
-              operation: event.operation,
-              normalizedWorkingDir: event.normalizedWorkingDirectory,
-              workingDir: event.workingDirectory
-            }, null, 2)}
+            {JSON.stringify(
+              {
+                files: event.files.map((f) => ({
+                  displayPath: f.displayPath,
+                  repository: f.repository,
+                  context: f.context,
+                })),
+                operation: event.operation,
+                normalizedWorkingDir: event.normalizedWorkingDirectory,
+                workingDir: event.workingDirectory,
+              },
+              null,
+              2,
+            )}
           </div>
-        </div>
+        </div>,
       );
     }
 
@@ -700,8 +990,13 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
   // Calculate path quality statistics for the segment
   const pathStats = useMemo(() => {
     const stats = { normalized: 0, partial: 0, raw: 0, missing: 0, total: 0 };
-    segment.events.forEach(event => {
-      if (event.toolName && ['Read', 'Write', 'Edit', 'MultiEdit', 'Grep', 'Glob', 'LS'].includes(event.toolName)) {
+    segment.events.forEach((event) => {
+      if (
+        event.toolName &&
+        ['Read', 'Write', 'Edit', 'MultiEdit', 'Grep', 'Glob', 'LS'].includes(
+          event.toolName,
+        )
+      ) {
         stats.total++;
         const quality = getPathQuality(event);
         stats[quality.quality]++;
@@ -713,61 +1008,77 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
   return (
     <div style={{ padding: '16px' }}>
       {/* Path Quality Summary (if there are issues) */}
-      {pathStats.total > 0 && (pathStats.raw > 0 || pathStats.missing > 0 || pathStats.partial > 0) && (
-        <div style={{
-          padding: '8px',
-          backgroundColor: theme.colors?.backgroundTertiary || theme.colors?.backgroundSecondary || '#f3f4f6',
-          borderRadius: '8px',
-          marginBottom: '12px',
-          fontSize: '11px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-        }}>
-          <div style={{ fontWeight: 500, color: theme.colors.textSecondary }}>Path Quality:</div>
-          {pathStats.normalized > 0 && (
-            <span style={{ color: theme.colors?.success || '#10b981' }}>
-              ✓ {pathStats.normalized} normalized
-            </span>
-          )}
-          {pathStats.partial > 0 && (
-            <span style={{ color: theme.colors?.info || '#3b82f6' }}>
-              ~ {pathStats.partial} partial
-            </span>
-          )}
-          {pathStats.raw > 0 && (
-            <span style={{ color: theme.colors?.textSecondary || '#6b7280' }}>
-              ! {pathStats.raw} raw
-            </span>
-          )}
-          {pathStats.missing > 0 && (
-            <span style={{ color: theme.colors?.warning || '#f59e0b' }}>
-              ⚠️ {pathStats.missing} missing
-            </span>
-          )}
-        </div>
-      )}
+      {pathStats.total > 0 &&
+        (pathStats.raw > 0 ||
+          pathStats.missing > 0 ||
+          pathStats.partial > 0) && (
+          <div
+            style={{
+              padding: '8px',
+              backgroundColor:
+                theme.colors?.backgroundTertiary ||
+                theme.colors?.backgroundSecondary ||
+                '#f3f4f6',
+              borderRadius: '8px',
+              marginBottom: '12px',
+              fontSize: '11px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+            }}
+          >
+            <div style={{ fontWeight: 500, color: theme.colors.textSecondary }}>
+              Path Quality:
+            </div>
+            {pathStats.normalized > 0 && (
+              <span style={{ color: theme.colors?.success || '#10b981' }}>
+                ✓ {pathStats.normalized} normalized
+              </span>
+            )}
+            {pathStats.partial > 0 && (
+              <span style={{ color: theme.colors?.info || '#3b82f6' }}>
+                ~ {pathStats.partial} partial
+              </span>
+            )}
+            {pathStats.raw > 0 && (
+              <span style={{ color: theme.colors?.textSecondary || '#6b7280' }}>
+                ! {pathStats.raw} raw
+              </span>
+            )}
+            {pathStats.missing > 0 && (
+              <span style={{ color: theme.colors?.warning || '#f59e0b' }}>
+                ⚠️ {pathStats.missing} missing
+              </span>
+            )}
+          </div>
+        )}
 
       {/* Statistics Summary */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '12px',
-        marginBottom: '16px',
-      }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '12px',
+          marginBottom: '16px',
+        }}
+      >
         {/* Tool Usage */}
         {Object.keys(segment.stats.toolCounts).length > 0 && (
-          <div style={{
-            padding: '12px',
-            backgroundColor: theme.colors.backgroundSecondary,
-            borderRadius: '8px',
-          }}>
-            <div style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: theme.colors.textSecondary,
-              marginBottom: '8px',
-            }}>
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: theme.colors.backgroundSecondary,
+              borderRadius: '8px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: theme.colors.textSecondary,
+                marginBottom: '8px',
+              }}
+            >
               Tool Usage
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -786,7 +1097,9 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
                 >
                   {getToolIcon(tool)}
                   <span>{tool}</span>
-                  <span style={{ color: theme.colors.textSecondary }}>×{count}</span>
+                  <span style={{ color: theme.colors.textSecondary }}>
+                    ×{count}
+                  </span>
                 </div>
               ))}
             </div>
@@ -795,17 +1108,21 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
 
         {/* Files Accessed */}
         {segment.stats.filesAccessed.length > 0 && (
-          <div style={{
-            padding: '12px',
-            backgroundColor: theme.colors.backgroundSecondary,
-            borderRadius: '8px',
-          }}>
-            <div style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: theme.colors.textSecondary,
-              marginBottom: '8px',
-            }}>
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: theme.colors.backgroundSecondary,
+              borderRadius: '8px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: theme.colors.textSecondary,
+                marginBottom: '8px',
+              }}
+            >
               Files Accessed ({segment.stats.filesAccessed.length})
             </div>
             <div style={{ fontSize: '12px' }}>
@@ -821,17 +1138,24 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
                   }}
                 >
                   <File size={10} />
-                  <span style={{ 
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
+                  <span
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {file.split('/').pop()}
                   </span>
                 </div>
               ))}
               {segment.stats.filesAccessed.length > 3 && (
-                <div style={{ color: theme.colors.textSecondary, marginTop: '4px' }}>
+                <div
+                  style={{
+                    color: theme.colors.textSecondary,
+                    marginTop: '4px',
+                  }}
+                >
                   +{segment.stats.filesAccessed.length - 3} more files
                 </div>
               )}
@@ -841,17 +1165,21 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
 
         {/* Files Modified */}
         {segment.stats.fileWrites.length > 0 && (
-          <div style={{
-            padding: '12px',
-            backgroundColor: theme.colors.backgroundSecondary,
-            borderRadius: '8px',
-          }}>
-            <div style={{
-              fontSize: '12px',
-              fontWeight: 500,
-              color: theme.colors.textSecondary,
-              marginBottom: '8px',
-            }}>
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: theme.colors.backgroundSecondary,
+              borderRadius: '8px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: theme.colors.textSecondary,
+                marginBottom: '8px',
+              }}
+            >
               Files Modified ({segment.stats.fileWrites.length})
             </div>
             <div style={{ fontSize: '12px' }}>
@@ -867,11 +1195,13 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
                   }}
                 >
                   <Edit size={10} />
-                  <span style={{ 
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
+                  <span
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
                     {file.split('/').pop()}
                   </span>
                 </div>
@@ -882,17 +1212,21 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
       </div>
 
       {/* Event Timeline Toggle */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '12px',
-      }}>
-        <div style={{
-          fontSize: '14px',
-          fontWeight: 500,
-          color: theme.colors.text,
-        }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '12px',
+        }}
+      >
+        <div
+          style={{
+            fontSize: '14px',
+            fontWeight: 500,
+            color: theme.colors.text,
+          }}
+        >
           Event Timeline
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -903,7 +1237,9 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
               fontSize: '12px',
               borderRadius: '6px',
               border: `1px solid ${theme.colors.border}`,
-              backgroundColor: showPathDiagnostics ? theme.colors.warning : 'transparent',
+              backgroundColor: showPathDiagnostics
+                ? theme.colors.warning
+                : 'transparent',
               color: showPathDiagnostics ? '#fff' : theme.colors.text,
               cursor: 'pointer',
             }}
@@ -918,7 +1254,9 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
               fontSize: '12px',
               borderRadius: '6px',
               border: `1px solid ${theme.colors.border}`,
-              backgroundColor: showRawEvents ? theme.colors.primary : 'transparent',
+              backgroundColor: showRawEvents
+                ? theme.colors.primary
+                : 'transparent',
               color: showRawEvents ? '#fff' : theme.colors.text,
               cursor: 'pointer',
             }}
@@ -930,16 +1268,18 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
 
       {/* Event List */}
       {showRawEvents && (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          maxHeight: '400px',
-          overflowY: 'auto',
-          padding: '8px',
-          backgroundColor: theme.colors.backgroundSecondary,
-          borderRadius: '8px',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            maxHeight: '400px',
+            overflowY: 'auto',
+            padding: '8px',
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '8px',
+          }}
+        >
           {segment.events.map((event, index) => (
             <div
               key={index}
@@ -959,48 +1299,68 @@ export const EventSegmentView: React.FC<EventSegmentViewProps> = ({ segment, the
                   cursor: 'pointer',
                 }}
               >
-                {expandedEvents.has(index) ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  flex: 1,
-                }}
-              >
-                  {event.toolName ? getToolIcon(event.toolName) : 
-                   event.eventType === 'stop' ? <StopCircle size={14} /> :
-                   event.eventType === 'notification' ? <MessageCircle size={14} /> :
-                   event.eventType === 'subagent-start' ? <Rocket size={14} /> :
-                   event.eventType === 'subagent-stop' ? <Flag size={14} /> :
-                   null}
-                  <span style={{
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    color: theme.colors.text,
-                  }}>
-                    {event.toolName || 
-                     (event.eventType === 'stop' ? 'Stop' : 
-                      event.eventType === 'notification' ? 'Notification' :
-                      event.eventType === 'subagent-start' ? 'Subagent Start' :
-                      event.eventType === 'subagent-stop' ? 'Subagent Stop' :
-                      event.eventType)}
+                {expandedEvents.has(index) ? (
+                  <ChevronDown size={14} />
+                ) : (
+                  <ChevronRight size={14} />
+                )}
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    flex: 1,
+                  }}
+                >
+                  {event.toolName ? (
+                    getToolIcon(event.toolName)
+                  ) : event.eventType === 'stop' ? (
+                    <StopCircle size={14} />
+                  ) : event.eventType === 'notification' ? (
+                    <MessageCircle size={14} />
+                  ) : event.eventType === 'subagent-start' ? (
+                    <Rocket size={14} />
+                  ) : event.eventType === 'subagent-stop' ? (
+                    <Flag size={14} />
+                  ) : null}
+                  <span
+                    style={{
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      color: theme.colors.text,
+                    }}
+                  >
+                    {event.toolName ||
+                      (event.eventType === 'stop'
+                        ? 'Stop'
+                        : event.eventType === 'notification'
+                          ? 'Notification'
+                          : event.eventType === 'subagent-start'
+                            ? 'Subagent Start'
+                            : event.eventType === 'subagent-stop'
+                              ? 'Subagent Stop'
+                              : event.eventType)}
                   </span>
-                  <span style={{
-                    fontSize: '11px',
-                    color: theme.colors.textSecondary,
-                    marginLeft: 'auto',
-                  }}>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: theme.colors.textSecondary,
+                      marginLeft: 'auto',
+                    }}
+                  >
                     {formatTimestamp(event.timestamp)}
                   </span>
                 </div>
               </div>
 
               {expandedEvents.has(index) && (
-                <div style={{
-                  marginTop: '8px',
-                  paddingLeft: '22px',
-                }}>
+                <div
+                  style={{
+                    marginTop: '8px',
+                    paddingLeft: '22px',
+                  }}
+                >
                   {renderEventDetails(event)}
                 </div>
               )}

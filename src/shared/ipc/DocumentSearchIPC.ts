@@ -9,7 +9,7 @@
 import type {
   SearchResult,
   SearchOptions,
-  DocumentType
+  DocumentType,
 } from '@a24z/markdown-search';
 
 // ============================================================================
@@ -20,6 +20,7 @@ export enum DocumentSearchChannel {
   // Commands (renderer -> main)
   INITIALIZE = 'document-search:initialize',
   INDEX_REPOSITORY = 'document-search:index-repository',
+  INDEX_MULTIPLE = 'document-search:index-multiple',
   REMOVE_REPOSITORY = 'document-search:remove-repository',
   SEARCH = 'document-search:search',
   GET_STATUS = 'document-search:get-status',
@@ -32,7 +33,7 @@ export enum DocumentSearchChannel {
   DOCUMENT_CHANGED = 'document-search:document-changed',
   INDEX_ERROR = 'document-search:index-error',
   SEARCH_READY = 'document-search:search-ready',
-  REPOSITORY_INDEXED = 'document-search:repository-indexed'
+  REPOSITORY_INDEXED = 'document-search:repository-indexed',
 }
 
 // ============================================================================
@@ -170,6 +171,31 @@ export interface IndexRepositoryResponse {
   failures?: Array<{
     path: string;
     error: string;
+  }>;
+}
+
+/**
+ * Response for batch indexing multiple repositories
+ */
+export interface IndexMultipleRepositoriesResponse {
+  /**
+   * Total number of documents indexed across all repositories
+   */
+  totalIndexed: number;
+
+  /**
+   * Total number of repositories that failed
+   */
+  totalFailed: number;
+
+  /**
+   * Results for each repository
+   */
+  results: Array<{
+    name: string;
+    success: boolean;
+    documentsIndexed?: number;
+    error?: string;
   }>;
 }
 
@@ -485,7 +511,12 @@ export interface IndexErrorEvent {
 export interface DocumentSearchAPI {
   // Commands
   initialize(options?: InitializeSearchRequest): Promise<void>;
-  indexRepository(request: IndexRepositoryRequest): Promise<IndexRepositoryResponse>;
+  indexRepository(
+    request: IndexRepositoryRequest,
+  ): Promise<IndexRepositoryResponse>;
+  indexMultipleRepositories(
+    repositories: Array<{ path: string; name?: string }>,
+  ): Promise<IndexMultipleRepositoriesResponse>;
   removeRepository(id: string): Promise<void>;
   search(request: SearchDocumentsRequest): Promise<SearchDocumentsResponse>;
   getStatus(): Promise<GetIndexStatusResponse>;
@@ -495,10 +526,14 @@ export interface DocumentSearchAPI {
 
   // Event listeners
   onIndexUpdate(callback: (event: IndexUpdateEvent) => void): () => void;
-  onDocumentChanged(callback: (event: DocumentChangedEvent) => void): () => void;
+  onDocumentChanged(
+    callback: (event: DocumentChangedEvent) => void,
+  ): () => void;
   onIndexError(callback: (event: IndexErrorEvent) => void): () => void;
   onSearchReady(callback: () => void): () => void;
-  onRepositoryIndexed(callback: (repo: RepositoryIndexStatus) => void): () => void;
+  onRepositoryIndexed(
+    callback: (repo: RepositoryIndexStatus) => void,
+  ): () => void;
 }
 
 // ============================================================================
@@ -515,7 +550,9 @@ export function isIndexUpdateEvent(event: any): event is IndexUpdateEvent {
   );
 }
 
-export function isDocumentChangedEvent(event: any): event is DocumentChangedEvent {
+export function isDocumentChangedEvent(
+  event: any,
+): event is DocumentChangedEvent {
   return (
     event &&
     typeof event.type === 'string' &&

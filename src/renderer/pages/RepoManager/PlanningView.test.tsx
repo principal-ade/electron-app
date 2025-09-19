@@ -1,5 +1,11 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { PlanningView } from './PlanningView';
 import { ExcalidrawStorageService } from '../../main-process-api/ExcalidrawStorageService';
@@ -12,7 +18,7 @@ jest.mock('../../components/shared/ExcalidrawWrapper', () => ({
   ExcalidrawWrapper: jest.fn(({ onSave, onChange, initialData, diagramId }) => {
     return (
       <div data-testid="excalidraw-wrapper">
-        <button 
+        <button
           data-testid="excalidraw-save"
           onClick={() => onSave?.('test-diagram-id')}
         >
@@ -27,38 +33,46 @@ jest.mock('../../components/shared/ExcalidrawWrapper', () => ({
         <div data-testid="excalidraw-diagram-id">{diagramId}</div>
       </div>
     );
-  })
+  }),
 }));
 
 // Mock other components
 jest.mock('../../components/Terminal/TerminalPanel', () => ({
   __esModule: true,
-  default: () => <div data-testid="terminal-panel">Terminal Panel</div>
+  default: () => <div data-testid="terminal-panel">Terminal Panel</div>,
 }));
 
 jest.mock('./shared/DocumentSearchPanel', () => ({
-  DocumentSearchPanel: () => <div data-testid="document-search-panel">Document Search Panel</div>
+  DocumentSearchPanel: () => (
+    <div data-testid="document-search-panel">Document Search Panel</div>
+  ),
 }));
 
 jest.mock('../../components/shared/ThemedMonaco', () => ({
-  ThemedMonaco: () => <div data-testid="themed-monaco">Monaco Editor</div>
+  ThemedMonaco: () => <div data-testid="themed-monaco">Monaco Editor</div>,
 }));
 
 jest.mock('./shared/MarkdownDocumentViewer', () => ({
-  MarkdownDocumentViewer: () => <div data-testid="markdown-viewer">Markdown Viewer</div>
+  MarkdownDocumentViewer: () => (
+    <div data-testid="markdown-viewer">Markdown Viewer</div>
+  ),
 }));
 
 jest.mock('./shared/PlanningEmptyState', () => ({
-  PlanningEmptyState: () => <div data-testid="planning-empty-state">Empty State</div>
+  PlanningEmptyState: () => (
+    <div data-testid="planning-empty-state">Empty State</div>
+  ),
 }));
 
 jest.mock('./shared/PlanningStartOverlay', () => ({
   PlanningStartOverlay: ({ onClose, onDocumentCreated }: any) => (
     <div data-testid="planning-start-overlay">
       <button onClick={() => onClose()}>Close Overlay</button>
-      <button onClick={() => onDocumentCreated('excalidraw')}>Create Excalidraw</button>
+      <button onClick={() => onDocumentCreated('excalidraw')}>
+        Create Excalidraw
+      </button>
     </div>
-  )
+  ),
 }));
 
 // Mock services
@@ -74,10 +88,10 @@ jest.mock('themed-markdown', () => ({
         primary: '#007acc',
         background: '#fff',
         surface: '#f5f5f5',
-        border: '#ddd'
-      }
-    }
-  })
+        border: '#ddd',
+      },
+    },
+  }),
 }));
 
 describe('PlanningView', () => {
@@ -90,37 +104,43 @@ describe('PlanningView', () => {
     metadata: {
       defaultBranch: 'main',
       language: 'TypeScript',
-      stars: 100
-    }
+      stars: 100,
+    },
   };
 
   const mockLocalClone = {
     path: '/test/repo/path',
-    currentBranch: 'main'
+    currentBranch: 'main',
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Mock UserPreferencesService
     (UserPreferencesService.getPreferences as jest.Mock).mockResolvedValue({
-      planningDocumentsDirectory: '.principleMD/planning'
+      planningDocumentsDirectory: '.principleMD/planning',
     });
 
     // Mock FileSystemService
-    (FileSystemService.readFile as jest.Mock).mockResolvedValue('# Test Document');
+    (FileSystemService.readFile as jest.Mock).mockResolvedValue(
+      '# Test Document',
+    );
     (FileSystemService.writeFile as jest.Mock).mockResolvedValue(undefined);
     // FileSystemService.listFiles doesn't exist, might be a different method
     // (FileSystemService.listFiles as jest.Mock).mockResolvedValue([]);
 
     // Mock ExcalidrawStorageService
-    (ExcalidrawStorageService.saveDiagram as jest.Mock).mockResolvedValue('saved-diagram-id');
+    (ExcalidrawStorageService.saveDiagram as jest.Mock).mockResolvedValue(
+      'saved-diagram-id',
+    );
     (ExcalidrawStorageService.loadDiagram as jest.Mock).mockResolvedValue({
       elements: [],
-      appState: {}
+      appState: {},
     });
     (ExcalidrawStorageService.listDiagrams as jest.Mock).mockResolvedValue([]);
-    (ExcalidrawStorageService.deleteDiagram as jest.Mock).mockResolvedValue(undefined);
+    (ExcalidrawStorageService.deleteDiagram as jest.Mock).mockResolvedValue(
+      undefined,
+    );
   });
 
   describe('Excalidraw Save Functionality', () => {
@@ -129,7 +149,7 @@ describe('PlanningView', () => {
         <PlanningView
           repository={mockRepository}
           localClone={mockLocalClone}
-        />
+        />,
       );
 
       // Close the start overlay and create an Excalidraw document
@@ -147,7 +167,7 @@ describe('PlanningView', () => {
         <PlanningView
           repository={mockRepository}
           localClone={mockLocalClone}
-        />
+        />,
       );
 
       // Create an Excalidraw document
@@ -174,13 +194,15 @@ describe('PlanningView', () => {
           expect.any(String),
           expect.any(Object),
           mockLocalClone.path,
-          undefined
+          undefined,
         );
       });
 
       // After save, the diagram ID should be set
       await waitFor(() => {
-        expect(getByTestId('excalidraw-diagram-id').textContent).toBe('test-diagram-id');
+        expect(getByTestId('excalidraw-diagram-id').textContent).toBe(
+          'test-diagram-id',
+        );
       });
 
       // The Excalidraw wrapper should still be visible (not replaced with a new one)
@@ -192,7 +214,7 @@ describe('PlanningView', () => {
         <PlanningView
           repository={mockRepository}
           localClone={mockLocalClone}
-        />
+        />,
       );
 
       // Create an Excalidraw document
@@ -218,7 +240,9 @@ describe('PlanningView', () => {
       expect(wrapperAfterSave).toBe(initialWrapper);
 
       // Verify no new Excalidraw document was created
-      const allWrappers = container.querySelectorAll('[data-testid="excalidraw-wrapper"]');
+      const allWrappers = container.querySelectorAll(
+        '[data-testid="excalidraw-wrapper"]',
+      );
       expect(allWrappers).toHaveLength(1);
     });
 
@@ -227,7 +251,7 @@ describe('PlanningView', () => {
         <PlanningView
           repository={mockRepository}
           localClone={mockLocalClone}
-        />
+        />,
       );
 
       // Create an Excalidraw document
@@ -245,7 +269,9 @@ describe('PlanningView', () => {
 
       // Diagram ID should be updated
       await waitFor(() => {
-        expect(getByTestId('excalidraw-diagram-id').textContent).toBe('test-diagram-id');
+        expect(getByTestId('excalidraw-diagram-id').textContent).toBe(
+          'test-diagram-id',
+        );
       });
 
       // Save again - should use the existing diagram ID
@@ -259,7 +285,7 @@ describe('PlanningView', () => {
           expect.any(String),
           expect.any(Object),
           mockLocalClone.path,
-          'test-diagram-id' // Should pass the existing diagram ID
+          'test-diagram-id', // Should pass the existing diagram ID
         );
       });
     });
@@ -267,14 +293,14 @@ describe('PlanningView', () => {
     it('should handle save errors gracefully', async () => {
       // Mock save to fail
       (ExcalidrawStorageService.saveDiagram as jest.Mock).mockRejectedValue(
-        new Error('Save failed')
+        new Error('Save failed'),
       );
 
       const { getByTestId, getByText } = render(
         <PlanningView
           repository={mockRepository}
           localClone={mockLocalClone}
-        />
+        />,
       );
 
       // Create an Excalidraw document
@@ -294,19 +320,22 @@ describe('PlanningView', () => {
 
       // Document should still be present
       expect(getByTestId('excalidraw-wrapper')).toBeInTheDocument();
-      
+
       // Diagram ID should remain empty since save failed
       expect(getByTestId('excalidraw-diagram-id').textContent).toBe('');
     });
 
     it('should preserve Excalidraw content during save', async () => {
-      const mockElements = { elements: [{ id: 'test-element' }], appState: { zoom: 1 } };
-      
+      const mockElements = {
+        elements: [{ id: 'test-element' }],
+        appState: { zoom: 1 },
+      };
+
       const { getByTestId, getByText } = render(
         <PlanningView
           repository={mockRepository}
           localClone={mockLocalClone}
-        />
+        />,
       );
 
       // Create an Excalidraw document
@@ -338,7 +367,7 @@ describe('PlanningView', () => {
         <PlanningView
           repository={mockRepository}
           localClone={mockLocalClone}
-        />
+        />,
       );
 
       // Create an Excalidraw document
@@ -353,7 +382,9 @@ describe('PlanningView', () => {
 
       // Wait for diagram ID to be set
       await waitFor(() => {
-        expect(getByTestId('excalidraw-diagram-id').textContent).toBe('test-diagram-id');
+        expect(getByTestId('excalidraw-diagram-id').textContent).toBe(
+          'test-diagram-id',
+        );
       });
 
       // The document should remain the same
@@ -368,7 +399,7 @@ describe('PlanningView', () => {
         <PlanningView
           repository={mockRepository}
           localClone={mockLocalClone}
-        />
+        />,
       );
 
       // Create an Excalidraw document
@@ -401,7 +432,7 @@ describe('PlanningView', () => {
         <PlanningView
           repository={mockRepository}
           localClone={mockLocalClone}
-        />
+        />,
       );
 
       // Create and save an Excalidraw document
@@ -414,7 +445,9 @@ describe('PlanningView', () => {
       });
 
       await waitFor(() => {
-        expect(getByTestId('excalidraw-diagram-id').textContent).toBe('test-diagram-id');
+        expect(getByTestId('excalidraw-diagram-id').textContent).toBe(
+          'test-diagram-id',
+        );
       });
 
       // Delete the saved document
@@ -430,7 +463,9 @@ describe('PlanningView', () => {
 
       // Should call delete on the storage service
       await waitFor(() => {
-        expect(ExcalidrawStorageService.deleteDiagram).toHaveBeenCalledWith('test-diagram-id');
+        expect(ExcalidrawStorageService.deleteDiagram).toHaveBeenCalledWith(
+          'test-diagram-id',
+        );
       });
     });
   });
@@ -438,7 +473,7 @@ describe('PlanningView', () => {
   describe('UI State Management', () => {
     it('should notify parent of UI state changes', async () => {
       const onUIStateChange = jest.fn();
-      
+
       render(
         <PlanningView
           repository={mockRepository}
@@ -448,9 +483,9 @@ describe('PlanningView', () => {
             viewMode: 'slides',
             showSegmented: true,
             showEditor: false,
-            activeLeftTab: 'search'
+            activeLeftTab: 'search',
           }}
-        />
+        />,
       );
 
       // Create a document to trigger UI state notification
@@ -463,7 +498,7 @@ describe('PlanningView', () => {
           viewMode: 'slides',
           showSegmented: true,
           showEditor: false,
-          activeLeftTab: 'search'
+          activeLeftTab: 'search',
         });
       });
     });

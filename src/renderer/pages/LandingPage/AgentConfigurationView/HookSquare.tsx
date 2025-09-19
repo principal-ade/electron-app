@@ -47,8 +47,10 @@ export const HookSquare: React.FC<HookSquareProps> = ({
     return (
       <div
         className={`flex items-center justify-between rounded-lg p-4 transition-all ${!enabled ? 'opacity-50' : ''}`}
-        style={{ 
-          backgroundColor: isHovered ? theme.colors.backgroundHover : theme.colors.surface 
+        style={{
+          backgroundColor: isHovered
+            ? theme.colors.backgroundHover
+            : theme.colors.surface,
         }}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -76,16 +78,20 @@ export const HookSquare: React.FC<HookSquareProps> = ({
               {commandName}
             </p>
             <div className="flex items-center gap-2 text-xs">
-              <code 
+              <code
                 className="px-2 py-0.5 rounded font-mono"
-                style={{ 
-                  backgroundColor: theme.colors.background, 
-                  color: theme.colors.textTertiary 
+                style={{
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.textTertiary,
                 }}
               >
                 {matcher}
               </code>
-              <span className="truncate" style={{ color: theme.colors.textSecondary }} title={command}>
+              <span
+                className="truncate"
+                style={{ color: theme.colors.textSecondary }}
+                title={command}
+              >
                 {command}
               </span>
             </div>
@@ -102,8 +108,11 @@ export const HookSquare: React.FC<HookSquareProps> = ({
                 onToggle();
               }}
               className="p-2 rounded transition-colors flex items-center gap-1"
-              style={{ 
-                backgroundColor: hoveredButton === 'toggle' ? theme.colors.background : 'transparent' 
+              style={{
+                backgroundColor:
+                  hoveredButton === 'toggle'
+                    ? theme.colors.background
+                    : 'transparent',
               }}
               onMouseEnter={() => setHoveredButton('toggle')}
               onMouseLeave={() => setHoveredButton(null)}
@@ -112,9 +121,15 @@ export const HookSquare: React.FC<HookSquareProps> = ({
               {enabled ? (
                 <ToggleRight size={20} className="text-green-500" />
               ) : (
-                <ToggleLeft size={20} style={{ color: theme.colors.textSecondary }} />
+                <ToggleLeft
+                  size={20}
+                  style={{ color: theme.colors.textSecondary }}
+                />
               )}
-              <span className="text-xs ml-1" style={{ color: theme.colors.textSecondary }}>
+              <span
+                className="text-xs ml-1"
+                style={{ color: theme.colors.textSecondary }}
+              >
                 {enabled ? 'On' : 'Off'}
               </span>
             </button>
@@ -124,19 +139,30 @@ export const HookSquare: React.FC<HookSquareProps> = ({
           <button
             onClick={onEdit}
             className="p-2 rounded transition-colors flex items-center gap-1"
-            style={{ 
-              backgroundColor: hoveredButton === 'configure' ? theme.colors.background : 'transparent' 
+            style={{
+              backgroundColor:
+                hoveredButton === 'configure'
+                  ? theme.colors.background
+                  : 'transparent',
             }}
             onMouseEnter={() => setHoveredButton('configure')}
             onMouseLeave={() => setHoveredButton(null)}
             title="Configure hook"
           >
             <Settings size={16} style={{ color: theme.colors.textSecondary }} />
-            <span className="text-xs" style={{ color: theme.colors.textSecondary }}>Configure</span>
+            <span
+              className="text-xs"
+              style={{ color: theme.colors.textSecondary }}
+            >
+              Configure
+            </span>
           </button>
 
           {/* Divider */}
-          <div className="w-px h-6 mx-1" style={{ backgroundColor: theme.colors.border }} />
+          <div
+            className="w-px h-6 mx-1"
+            style={{ backgroundColor: theme.colors.border }}
+          />
 
           {/* Remove button */}
           <button
@@ -163,8 +189,10 @@ export const HookSquare: React.FC<HookSquareProps> = ({
   return (
     <div
       className="relative rounded-lg p-4 aspect-square flex flex-col items-center justify-center transition-all group cursor-pointer"
-      style={{ 
-        backgroundColor: showActions ? theme.colors.backgroundHover : theme.colors.surface 
+      style={{
+        backgroundColor: showActions
+          ? theme.colors.backgroundHover
+          : theme.colors.surface,
       }}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
@@ -195,11 +223,11 @@ export const HookSquare: React.FC<HookSquareProps> = ({
       </p>
 
       {/* Matcher */}
-      <code 
+      <code
         className="text-xs px-2 py-1 rounded font-mono"
-        style={{ 
-          backgroundColor: theme.colors.background, 
-          color: theme.colors.textTertiary 
+        style={{
+          backgroundColor: theme.colors.background,
+          color: theme.colors.textTertiary,
         }}
       >
         {matcher}
@@ -214,8 +242,11 @@ export const HookSquare: React.FC<HookSquareProps> = ({
               onEdit();
             }}
             className="p-1 rounded transition-colors"
-            style={{ 
-              backgroundColor: hoveredButton === 'edit' ? theme.colors.surface : `${theme.colors.background}e6` 
+            style={{
+              backgroundColor:
+                hoveredButton === 'edit'
+                  ? theme.colors.surface
+                  : `${theme.colors.background}e6`,
             }}
             onMouseEnter={() => setHoveredButton('edit')}
             onMouseLeave={() => setHoveredButton(null)}
@@ -243,8 +274,11 @@ export const HookSquare: React.FC<HookSquareProps> = ({
               onShowInfo();
             }}
             className="p-1 rounded transition-colors"
-            style={{ 
-              backgroundColor: hoveredButton === 'edit' ? theme.colors.surface : `${theme.colors.background}e6` 
+            style={{
+              backgroundColor:
+                hoveredButton === 'edit'
+                  ? theme.colors.surface
+                  : `${theme.colors.background}e6`,
             }}
             onMouseEnter={() => setHoveredButton('edit')}
             onMouseLeave={() => setHoveredButton(null)}
@@ -272,8 +306,11 @@ export const HookSquare: React.FC<HookSquareProps> = ({
               onRemove();
             }}
             className="p-1 rounded transition-colors"
-            style={{ 
-              backgroundColor: hoveredButton === 'remove' ? 'rgba(220, 38, 38, 0.2)' : `${theme.colors.background}e6` 
+            style={{
+              backgroundColor:
+                hoveredButton === 'remove'
+                  ? 'rgba(220, 38, 38, 0.2)'
+                  : `${theme.colors.background}e6`,
             }}
             onMouseEnter={() => setHoveredButton('remove')}
             onMouseLeave={() => setHoveredButton(null)}

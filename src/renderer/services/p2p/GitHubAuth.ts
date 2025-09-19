@@ -52,25 +52,29 @@ export class GitHubAuth {
     localStorage.setItem('orbit_auth', JSON.stringify({ token, user }));
   }
 
-  async authenticate(): Promise<{ success: boolean; user?: GitHubUser; error?: string }> {
+  async authenticate(): Promise<{
+    success: boolean;
+    user?: GitHubUser;
+    error?: string;
+  }> {
     try {
       // Open GitHub OAuth in browser
       const authUrl = `${this.baseUrl}/api/orbit/auth/github`;
-      
+
       // Use the ShellService to open external URL
       const shellResult = await ShellService.openExternal(authUrl);
-      
+
       if (!shellResult.success) {
         console.warn('Failed to open OAuth URL:', shellResult.error);
       }
-      
+
       // Wait for OAuth code via callback (will be set by UI component)
       const code = await this.waitForOAuthCode();
-      
+
       if (!code) {
         return { success: false, error: 'OAuth cancelled' };
       }
-      
+
       return await this.exchangeCodeForToken(code);
     } catch (error) {
       console.error('Authentication error:', error);
@@ -82,7 +86,7 @@ export class GitHubAuth {
     // Wait for the OAuth code to be provided via the callback
     return new Promise((resolve) => {
       this.oauthCodeCallback = resolve;
-      
+
       // Set a timeout in case user never provides code
       setTimeout(() => {
         if (this.oauthCodeCallback === resolve) {
@@ -101,7 +105,9 @@ export class GitHubAuth {
     }
   }
 
-  private async exchangeCodeForToken(code: string): Promise<{ success: boolean; user?: GitHubUser; error?: string }> {
+  private async exchangeCodeForToken(
+    code: string,
+  ): Promise<{ success: boolean; user?: GitHubUser; error?: string }> {
     try {
       const response = await fetch(`${this.baseUrl}/api/orbit/auth/github`, {
         method: 'POST',
@@ -113,11 +119,14 @@ export class GitHubAuth {
 
       if (!response.ok) {
         const error = await response.json();
-        return { success: false, error: error.error || 'Authentication failed' };
+        return {
+          success: false,
+          error: error.error || 'Authentication failed',
+        };
       }
 
       const data = await response.json();
-      
+
       if (data.success && data.token && data.user) {
         this.saveAuth(data.token, data.user);
         return { success: true, user: data.user };
@@ -138,7 +147,7 @@ export class GitHubAuth {
     try {
       const response = await fetch(`${this.baseUrl}/api/orbit/auth/status`, {
         headers: {
-          'Authorization': `Bearer ${this.token}`,
+          Authorization: `Bearer ${this.token}`,
         },
       });
 
@@ -148,7 +157,7 @@ export class GitHubAuth {
       }
 
       const data = await response.json();
-      
+
       if (data.status === 'new') {
         return { status: 'new' };
       }
@@ -176,17 +185,20 @@ export class GitHubAuth {
       // Parse repo URL
       const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\?#]+)/);
       if (!match) return false;
-      
+
       const [, owner, repo] = match;
       const repoName = repo.replace(/\.git$/, '');
 
       // Check access via GitHub API
-      const response = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
-        headers: {
-          'Authorization': `Bearer ${this.token}`,
-          'Accept': 'application/vnd.github.v3+json',
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repoName}`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.token}`,
+            Accept: 'application/vnd.github.v3+json',
+          },
         },
-      });
+      );
 
       return response.status === 200;
     } catch (error) {

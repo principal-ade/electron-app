@@ -1,6 +1,6 @@
 /**
  * AuthService - Handles OAuth authentication for the Electron app
- * 
+ *
  * Uses Electron's safeStorage for secure credential storage without
  * keychain permission prompts. Communicates with code-city-landing
  * OAuth server for GitHub authentication.
@@ -47,28 +47,36 @@ class AuthService {
       try {
         console.log('\n========================================');
         console.log('[AuthService] CHECK HANDLER INVOKED');
-        console.log('[AuthService] Checking safeStorage for stored credentials...');
+        console.log(
+          '[AuthService] Checking safeStorage for stored credentials...',
+        );
         console.log('========================================\n');
-        
+
         const result = await this.getStoredAuth();
-        
+
         console.log('[AuthService] getStoredAuth returned:', {
           success: result.success,
           hasToken: !!result.token,
           hasUser: !!result.user,
-          error: result.error
+          error: result.error,
         });
-        
+
         if (result.success && result.token && result.user) {
-          console.log('[AuthService] SUCCESS: Found stored credentials for:', result.user?.login);
+          console.log(
+            '[AuthService] SUCCESS: Found stored credentials for:',
+            result.user?.login,
+          );
           // Update AuthStateManager when credentials are successfully retrieved
-          AuthStateManager.getInstance().setAuthenticated(result.user, result.token);
+          AuthStateManager.getInstance().setAuthenticated(
+            result.user,
+            result.token,
+          );
         } else {
           console.log('[AuthService] FAILURE: No stored credentials found');
           // Ensure state is cleared if no credentials found
           AuthStateManager.getInstance().clearAuthentication();
         }
-        
+
         return result;
       } catch (error: any) {
         console.error('[AuthService] CHECK ERROR:', error);
@@ -96,24 +104,29 @@ class AuthService {
     // Login handler - implements OAuth flow
     ipcMain.handle('cli-auth:login', async (event, options = {}) => {
       console.log('[AuthService] Login requested with options:', options);
-      
+
       if (this.isAuthenticating && !options.forceNew) {
         console.log('[AuthService] Authentication already in progress');
         return { success: false, error: 'Authentication already in progress' };
       }
 
       if (options.forceNew && this.currentAuthController) {
-        console.log('[AuthService] Force new auth - canceling existing authentication');
+        console.log(
+          '[AuthService] Force new auth - canceling existing authentication',
+        );
         this.cancelAuthentication();
         // Add a small delay to ensure cleanup
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
       // Check if already authenticated
       if (!options.forceNew) {
         const existingAuth = await this.getStoredAuth();
         if (existingAuth.success) {
-          console.log('[AuthService] Already authenticated as:', existingAuth.user?.login);
+          console.log(
+            '[AuthService] Already authenticated as:',
+            existingAuth.user?.login,
+          );
           return existingAuth;
         }
       }
@@ -135,15 +148,21 @@ class AuthService {
         try {
           console.log('[AuthService] Starting OAuth flow...');
           const result = await authClient.authenticate();
-          
+
           // Store the credentials securely
           await this.storeAuth(result.token, result.user);
-          
-          console.log('[AuthService] Authentication successful for:', result.user.login);
-          
+
+          console.log(
+            '[AuthService] Authentication successful for:',
+            result.user.login,
+          );
+
           // Update AuthStateManager
-          AuthStateManager.getInstance().setAuthenticated(result.user, result.token);
-          
+          AuthStateManager.getInstance().setAuthenticated(
+            result.user,
+            result.token,
+          );
+
           return {
             success: true,
             authenticated: true,
@@ -160,7 +179,7 @@ class AuthService {
           return { success: false, error: 'Authentication canceled' };
         }
         console.error('[AuthService] Authentication error:', error);
-        
+
         // Provide more user-friendly error messages
         let errorMessage = error.message;
         if (error.message.includes('timeout')) {
@@ -168,7 +187,7 @@ class AuthService {
         } else if (error.message.includes('network')) {
           errorMessage = 'Network error. Please check your connection.';
         }
-        
+
         return { success: false, error: errorMessage };
       } finally {
         this.isAuthenticating = false;
@@ -180,10 +199,10 @@ class AuthService {
     ipcMain.handle('cli-auth:logout', async () => {
       try {
         await this.clearStoredAuth();
-        
+
         // Clear AuthStateManager
         AuthStateManager.getInstance().clearAuthentication();
-        
+
         return { success: true };
       } catch (error: any) {
         console.error('[AuthService] Logout error:', error);
@@ -203,11 +222,11 @@ class AuthService {
   private async getStoredAuth(): Promise<AuthResult> {
     try {
       console.log('[AuthService] Reading from safeStorage...');
-      
+
       // Get encrypted token from store
       const encryptedToken = this.store.get('github_token_encrypted') as string;
       const userData = this.store.get('github_user') as any;
-      
+
       if (!encryptedToken || !userData) {
         console.log('[AuthService] No stored credentials found');
         return { success: false, authenticated: false };
@@ -222,28 +241,37 @@ class AuthService {
           console.log('[AuthService] Token decrypted successfully');
         } catch (error) {
           console.error('[AuthService] Failed to decrypt token:', error);
-          return { success: false, authenticated: false, error: 'Failed to decrypt token' };
+          return {
+            success: false,
+            authenticated: false,
+            error: 'Failed to decrypt token',
+          };
         }
       } else {
         // Fallback for development where encryption might not be available
-        console.warn('[AuthService] Encryption not available, using unencrypted token');
+        console.warn(
+          '[AuthService] Encryption not available, using unencrypted token',
+        );
         token = encryptedToken;
       }
 
-      console.log('[AuthService] Successfully retrieved credentials for:', userData.login);
-      
+      console.log(
+        '[AuthService] Successfully retrieved credentials for:',
+        userData.login,
+      );
+
       return {
         success: true,
         authenticated: true,
         token,
-        user: userData
+        user: userData,
       };
     } catch (error: any) {
       console.error('[AuthService] Failed to get stored auth:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         authenticated: false,
-        error: error.message 
+        error: error.message,
       };
     }
   }
@@ -251,7 +279,7 @@ class AuthService {
   private async storeAuth(token: string, user: any): Promise<void> {
     try {
       console.log('[AuthService] Storing credentials for:', user.login);
-      
+
       // Encrypt the token using safeStorage
       let encryptedToken: string;
       if (safeStorage.isEncryptionAvailable()) {
@@ -260,14 +288,16 @@ class AuthService {
         console.log('[AuthService] Token encrypted successfully');
       } else {
         // Fallback for development
-        console.warn('[AuthService] Encryption not available, storing unencrypted');
+        console.warn(
+          '[AuthService] Encryption not available, storing unencrypted',
+        );
         encryptedToken = token;
       }
 
       // Store encrypted token and user data
       this.store.set('github_token_encrypted', encryptedToken);
       this.store.set('github_user', user);
-      
+
       console.log('[AuthService] Credentials stored successfully');
     } catch (error) {
       console.error('[AuthService] Failed to store credentials:', error);
@@ -279,27 +309,31 @@ class AuthService {
     try {
       this.store.delete('github_token_encrypted');
       this.store.delete('github_user');
-      
+
       console.log('[AuthService] Credentials cleared');
     } catch (error) {
       console.error('[AuthService] Failed to clear credentials:', error);
       // Don't throw - clearing non-existent credentials is fine
     }
   }
-  
+
   /**
    * Initialize auth state on startup
    * Only checks if credentials exist without decrypting (to avoid keychain prompt)
    */
   async initializeAuthState(): Promise<void> {
     try {
-      console.log('[AuthService] Checking for existing authentication (without decryption)...');
-      
+      console.log(
+        '[AuthService] Checking for existing authentication (without decryption)...',
+      );
+
       // Only check if credentials exist, don't decrypt yet
       const hasStoredAuth = this.hasStoredAuth();
-      
+
       if (hasStoredAuth) {
-        console.log('[AuthService] Found stored credentials (will decrypt on first use)');
+        console.log(
+          '[AuthService] Found stored credentials (will decrypt on first use)',
+        );
         // Don't update AuthStateManager yet - wait for actual auth check
         // This avoids the keychain prompt on startup
       } else {
@@ -313,7 +347,7 @@ class AuthService {
       AuthStateManager.getInstance().clearAuthentication();
     }
   }
-  
+
   /**
    * Check if stored auth exists without decrypting
    */

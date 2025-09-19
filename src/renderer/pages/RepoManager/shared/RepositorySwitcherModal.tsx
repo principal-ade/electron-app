@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
-import { X, Search, FolderOpen, GitFork, Code2, FolderSearch, NotebookPen, ExternalLink, Replace } from 'lucide-react';
+import {
+  X,
+  Search,
+  FolderOpen,
+  GitFork,
+  Code2,
+  FolderSearch,
+  NotebookPen,
+  ExternalLink,
+  Replace,
+} from 'lucide-react';
 import type { Repository } from '../../../../shared/types/repository.types';
 import { RepositoryService } from '../../../main-process-api/RepositoryService';
 import { RepositoryAvatar } from '../../../components/repository-maps/RepositoryAvatar';
@@ -10,15 +20,16 @@ interface RepositorySwitcherModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentRepository: Repository;
-  onSelectRepository: (repository: Repository, mode: 'explore' | 'develop' | 'planning', openInNewWindow: boolean) => void;
+  onSelectRepository: (
+    repository: Repository,
+    mode: 'explore' | 'develop' | 'planning',
+    openInNewWindow: boolean,
+  ) => void;
 }
 
-export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = ({
-  isOpen,
-  onClose,
-  currentRepository,
-  onSelectRepository,
-}) => {
+export const RepositorySwitcherModal: React.FC<
+  RepositorySwitcherModalProps
+> = ({ isOpen, onClose, currentRepository, onSelectRepository }) => {
   const { theme } = useTheme();
   const [repositories, setRepositories] = useState<Repository[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +48,9 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
       setLoading(true);
       const repos = await RepositoryService.getRepositories();
       // Filter out the current repository
-      const otherRepos = repos.filter(r => r.remoteUrl !== currentRepository.remoteUrl);
+      const otherRepos = repos.filter(
+        (r) => r.remoteUrl !== currentRepository.remoteUrl,
+      );
       setRepositories(otherRepos);
     } catch (error) {
       console.error('Failed to load repositories:', error);
@@ -48,16 +61,20 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
   };
 
   // Filter repositories based on search
-  const filteredRepositories = repositories.filter(repo => {
+  const filteredRepositories = repositories.filter((repo) => {
     const query = searchQuery.toLowerCase();
     return (
       repo.name.toLowerCase().includes(query) ||
       repo.owner.toLowerCase().includes(query) ||
-      repo.tags?.some(tag => tag.toLowerCase().includes(query))
+      repo.tags?.some((tag) => tag.toLowerCase().includes(query))
     );
   });
 
-  const handleSelectRepository = (repo: Repository, mode: 'explore' | 'develop' | 'planning', openInNewWindow: boolean = true) => {
+  const handleSelectRepository = (
+    repo: Repository,
+    mode: 'explore' | 'develop' | 'planning',
+    openInNewWindow: boolean = true,
+  ) => {
     onSelectRepository(repo, mode, openInNewWindow);
     onClose();
   };
@@ -96,28 +113,34 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '24px 24px 16px 24px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '24px 24px 16px 24px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+          }}
+        >
           <div>
-            <h2 style={{
-              fontSize: '20px',
-              fontWeight: 600,
-              color: theme.colors.text,
-              margin: 0,
-            }}>
+            <h2
+              style={{
+                fontSize: '20px',
+                fontWeight: 600,
+                color: theme.colors.text,
+                margin: 0,
+              }}
+            >
               Switch Repository
             </h2>
-            <p style={{
-              fontSize: '14px',
-              color: theme.colors.textSecondary,
-              marginTop: '4px',
-              margin: '4px 0 0 0',
-            }}>
+            <p
+              style={{
+                fontSize: '14px',
+                color: theme.colors.textSecondary,
+                marginTop: '4px',
+                margin: '4px 0 0 0',
+              }}
+            >
               Select a repository to open
             </p>
           </div>
@@ -136,7 +159,8 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
               e.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(e) => {
@@ -149,15 +173,19 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
         </div>
 
         {/* Search Bar */}
-        <div style={{
-          padding: '16px 24px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-        }}>
-          <div style={{
-            position: 'relative',
-          }}>
-            <Search 
-              size={18} 
+        <div
+          style={{
+            padding: '16px 24px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <div
+            style={{
+              position: 'relative',
+            }}
+          >
+            <Search
+              size={18}
               style={{
                 position: 'absolute',
                 left: '12px',
@@ -194,43 +222,53 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
         </div>
 
         {/* Repository List */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '16px',
-        }}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '16px',
+          }}
+        >
           {loading ? (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '200px',
-              color: theme.colors.textSecondary,
-              fontSize: '14px',
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '200px',
+                color: theme.colors.textSecondary,
+                fontSize: '14px',
+              }}
+            >
               Loading repositories...
             </div>
           ) : filteredRepositories.length === 0 ? (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '200px',
-              color: theme.colors.textSecondary,
-              fontSize: '14px',
-              gap: '8px',
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '200px',
+                color: theme.colors.textSecondary,
+                fontSize: '14px',
+                gap: '8px',
+              }}
+            >
               <FolderOpen size={48} style={{ opacity: 0.3 }} />
               <span>
-                {searchQuery ? 'No repositories match your search' : 'No other repositories available'}
+                {searchQuery
+                  ? 'No repositories match your search'
+                  : 'No other repositories available'}
               </span>
             </div>
           ) : (
-            <div style={{
-              display: 'grid',
-              gap: '12px',
-            }}>
+            <div
+              style={{
+                display: 'grid',
+                gap: '12px',
+              }}
+            >
               {filteredRepositories.map((repo, index) => {
                 const hasLocalClones = (repo.localClones?.length ?? 0) > 0;
                 const isHovered = hoveredRepo === repo.remoteUrl;
@@ -239,28 +277,38 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
                   <div
                     key={`${repo.remoteUrl}-${index}`}
                     style={{
-                      backgroundColor: isHovered ? theme.colors.backgroundTertiary : theme.colors.background,
+                      backgroundColor: isHovered
+                        ? theme.colors.backgroundTertiary
+                        : theme.colors.background,
                       border: `2px ${hasLocalClones ? 'solid' : 'dashed'} ${isHovered ? theme.colors.primary : theme.colors.border}`,
                       borderRadius: '12px',
                       padding: '16px',
                       transition: 'all 0.2s',
                       cursor: 'pointer',
-                      transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
-                      boxShadow: isHovered ? '0 4px 12px rgba(0, 0, 0, 0.1)' : 'none',
+                      transform: isHovered
+                        ? 'translateY(-2px)'
+                        : 'translateY(0)',
+                      boxShadow: isHovered
+                        ? '0 4px 12px rgba(0, 0, 0, 0.1)'
+                        : 'none',
                     }}
                     onClick={() => {
                       // Default action: open in explore mode when clicking the card
-                      const defaultMode = hasLocalClones ? 'develop' : 'explore';
+                      const defaultMode = hasLocalClones
+                        ? 'develop'
+                        : 'explore';
                       handleSelectRepository(repo, defaultMode, true);
                     }}
                     onMouseEnter={() => setHoveredRepo(repo.remoteUrl)}
                     onMouseLeave={() => setHoveredRepo(null)}
                   >
-                    <div style={{
-                      display: 'flex',
-                      gap: '16px',
-                      alignItems: 'center',
-                    }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '16px',
+                        alignItems: 'center',
+                      }}
+                    >
                       {/* Repository Avatar */}
                       <RepositoryAvatar
                         repository={repo}
@@ -270,18 +318,22 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
 
                       {/* Repository Info */}
                       <div style={{ flex: 1 }}>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          marginBottom: '4px',
-                        }}>
-                          <h3 style={{
-                            fontSize: '16px',
-                            fontWeight: 600,
-                            color: theme.colors.text,
-                            margin: 0,
-                          }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          <h3
+                            style={{
+                              fontSize: '16px',
+                              fontWeight: 600,
+                              color: theme.colors.text,
+                              margin: 0,
+                            }}
+                          >
                             {repo.name}
                           </h3>
                           {repo.metadata?.license && (
@@ -292,46 +344,56 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
                             />
                           )}
                           {repo.metadata?.isFork && (
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              backgroundColor: '#f59e0b15',
-                              border: '1px solid #f59e0b40',
-                              fontSize: '11px',
-                              fontWeight: 500,
-                              color: '#f59e0b',
-                            }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: '#f59e0b15',
+                                border: '1px solid #f59e0b40',
+                                fontSize: '11px',
+                                fontWeight: 500,
+                                color: '#f59e0b',
+                              }}
+                            >
                               <GitFork size={10} />
                               Fork
                             </div>
                           )}
                         </div>
-                        <p style={{
-                          fontSize: '13px',
-                          color: theme.colors.textSecondary,
-                          margin: '0 0 8px 0',
-                        }}>
+                        <p
+                          style={{
+                            fontSize: '13px',
+                            color: theme.colors.textSecondary,
+                            margin: '0 0 8px 0',
+                          }}
+                        >
                           by {repo.owner}
                         </p>
-                        
+
                         {/* Action Buttons */}
-                        <div style={{
-                          display: 'flex',
-                          gap: '8px',
-                          opacity: isHovered ? 1 : 0,
-                          visibility: isHovered ? 'visible' : 'hidden',
-                          transition: 'opacity 0.2s, visibility 0.2s',
-                        }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '8px',
+                            opacity: isHovered ? 1 : 0,
+                            visibility: isHovered ? 'visible' : 'hidden',
+                            transition: 'opacity 0.2s, visibility 0.2s',
+                          }}
+                        >
                           {hasLocalClones ? (
                             <>
                               {/* Plan button */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleSelectRepository(repo, 'planning', true);
+                                  handleSelectRepository(
+                                    repo,
+                                    'planning',
+                                    true,
+                                  );
                                 }}
                                 style={{
                                   display: 'flex',
@@ -348,12 +410,16 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
                                   transition: 'all 0.2s',
                                 }}
                                 onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = theme.colors.background;
-                                  e.currentTarget.style.borderColor = theme.colors.textSecondary;
+                                  e.currentTarget.style.backgroundColor =
+                                    theme.colors.background;
+                                  e.currentTarget.style.borderColor =
+                                    theme.colors.textSecondary;
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = theme.colors.backgroundLight;
-                                  e.currentTarget.style.borderColor = theme.colors.border;
+                                  e.currentTarget.style.backgroundColor =
+                                    theme.colors.backgroundLight;
+                                  e.currentTarget.style.borderColor =
+                                    theme.colors.border;
                                 }}
                               >
                                 <NotebookPen size={12} />
@@ -403,7 +469,8 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
                                   gap: '6px',
                                   padding: '6px 12px',
                                   borderRadius: '6px',
-                                  backgroundColor: theme.colors.backgroundTertiary,
+                                  backgroundColor:
+                                    theme.colors.backgroundTertiary,
                                   color: theme.colors.text,
                                   border: `1px solid ${theme.colors.border}`,
                                   cursor: 'pointer',
@@ -412,14 +479,20 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
                                   transition: 'all 0.2s',
                                 }}
                                 onMouseEnter={(e) => {
-                                  e.currentTarget.style.backgroundColor = theme.colors.background;
-                                  e.currentTarget.style.borderColor = theme.colors.primary;
-                                  e.currentTarget.style.color = theme.colors.primary;
+                                  e.currentTarget.style.backgroundColor =
+                                    theme.colors.background;
+                                  e.currentTarget.style.borderColor =
+                                    theme.colors.primary;
+                                  e.currentTarget.style.color =
+                                    theme.colors.primary;
                                 }}
                                 onMouseLeave={(e) => {
-                                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                                  e.currentTarget.style.borderColor = theme.colors.border;
-                                  e.currentTarget.style.color = theme.colors.text;
+                                  e.currentTarget.style.backgroundColor =
+                                    theme.colors.backgroundTertiary;
+                                  e.currentTarget.style.borderColor =
+                                    theme.colors.border;
+                                  e.currentTarget.style.color =
+                                    theme.colors.text;
                                 }}
                               >
                                 <FolderSearch size={12} />
@@ -447,12 +520,16 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
                                 transition: 'all 0.2s',
                               }}
                               onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = theme.colors.background;
-                                e.currentTarget.style.borderColor = theme.colors.textSecondary;
+                                e.currentTarget.style.backgroundColor =
+                                  theme.colors.background;
+                                e.currentTarget.style.borderColor =
+                                  theme.colors.textSecondary;
                               }}
                               onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = theme.colors.backgroundLight;
-                                e.currentTarget.style.borderColor = theme.colors.border;
+                                e.currentTarget.style.backgroundColor =
+                                  theme.colors.backgroundLight;
+                                e.currentTarget.style.borderColor =
+                                  theme.colors.border;
                               }}
                             >
                               <FolderSearch size={12} />
@@ -470,20 +547,24 @@ export const RepositorySwitcherModal: React.FC<RepositorySwitcherModalProps> = (
         </div>
 
         {/* Current Repository Indicator */}
-        <div style={{
-          padding: '16px 24px',
-          borderTop: `1px solid ${theme.colors.border}`,
-          backgroundColor: theme.colors.backgroundTertiary,
-          borderBottomLeftRadius: '16px',
-          borderBottomRightRadius: '16px',
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '12px',
-            color: theme.colors.textSecondary,
-          }}>
+        <div
+          style={{
+            padding: '16px 24px',
+            borderTop: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.backgroundTertiary,
+            borderBottomLeftRadius: '16px',
+            borderBottomRightRadius: '16px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '12px',
+              color: theme.colors.textSecondary,
+            }}
+          >
             <span>Currently viewing:</span>
             <strong style={{ color: theme.colors.text }}>
               {currentRepository.name}

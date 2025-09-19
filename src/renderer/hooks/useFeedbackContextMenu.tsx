@@ -13,7 +13,10 @@ interface FeedbackModalState {
   };
 }
 
-export function useFeedbackContextMenu(componentName: string, componentPath: string) {
+export function useFeedbackContextMenu(
+  componentName: string,
+  componentPath: string,
+) {
   const ref = useRef<HTMLElement>(null);
   const [modalState, setModalState] = useState<FeedbackModalState>({
     isOpen: false,
@@ -24,21 +27,24 @@ export function useFeedbackContextMenu(componentName: string, componentPath: str
     },
   });
 
-  const handleContextMenu = useCallback((e: MouseEvent) => {
-    e.preventDefault();
-    
-    const target = e.target as HTMLElement;
-    const elementInfo = `${target.tagName.toLowerCase()}${target.className ? `.${target.className.split(' ').join('.')}` : ''}`;
-    
-    // Send context menu request to main process
-    FeedbackService.showContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      componentName,
-      componentPath,
-      elementInfo,
-    });
-  }, [componentName, componentPath]);
+  const handleContextMenu = useCallback(
+    (e: MouseEvent) => {
+      e.preventDefault();
+
+      const target = e.target as HTMLElement;
+      const elementInfo = `${target.tagName.toLowerCase()}${target.className ? `.${target.className.split(' ').join('.')}` : ''}`;
+
+      // Send context menu request to main process
+      FeedbackService.showContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        componentName,
+        componentPath,
+        elementInfo,
+      });
+    },
+    [componentName, componentPath],
+  );
 
   useEffect(() => {
     const element = ref.current;
@@ -71,7 +77,7 @@ export function useFeedbackContextMenu(componentName: string, componentPath: str
   }, [handleContextMenu]);
 
   const closeModal = () => {
-    setModalState(prev => ({ ...prev, isOpen: false }));
+    setModalState((prev) => ({ ...prev, isOpen: false }));
   };
 
   const FeedbackModalComponent = () => (

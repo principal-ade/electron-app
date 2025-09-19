@@ -22,15 +22,18 @@ export class GitHubAuth {
   private token: string | null = null;
   private user: GitHubUser | null = null;
   private tokenCallback: ((token: string | null) => void) | null = null;
-  
+
   // Cache for status checks to avoid excessive API calls
-  private statusCache: { 
-    status: string; 
-    user?: GitHubUser; 
+  private statusCache: {
+    status: string;
+    user?: GitHubUser;
     timestamp: number;
   } | null = null;
   private readonly CACHE_DURATION = 30000; // 30 seconds
-  private checkStatusPromise: Promise<{ status: string; user?: GitHubUser }> | null = null;
+  private checkStatusPromise: Promise<{
+    status: string;
+    user?: GitHubUser;
+  }> | null = null;
 
   private constructor() {
     this.loadStoredAuth();
@@ -64,29 +67,33 @@ export class GitHubAuth {
     this.statusCache = null;
   }
 
-  async authenticate(): Promise<{ success: boolean; user?: GitHubUser; error?: string }> {
+  async authenticate(): Promise<{
+    success: boolean;
+    user?: GitHubUser;
+    error?: string;
+  }> {
     try {
       // Note: User should manually go to principle-md.com to get token
       // We don't automatically open the browser anymore
-      
+
       // Wait for user to paste the token
       const token = await this.waitForToken();
-      
+
       if (!token) {
         return { success: false, error: 'Authentication cancelled' };
       }
-      
+
       // Save the token and check status
       this.token = token;
-      
+
       // Check user status with the token
       const statusResult = await this.checkStatus();
-      
+
       if (statusResult.user) {
         this.saveAuth(token, statusResult.user);
         return { success: true, user: statusResult.user };
       }
-      
+
       return { success: false, error: 'Failed to verify token' };
     } catch (error) {
       console.error('Authentication error:', error);
@@ -97,14 +104,17 @@ export class GitHubAuth {
   private async waitForToken(): Promise<string | null> {
     return new Promise((resolve) => {
       this.tokenCallback = resolve;
-      
+
       // Set a timeout (5 minutes)
-      setTimeout(() => {
-        if (this.tokenCallback === resolve) {
-          this.tokenCallback = null;
-          resolve(null);
-        }
-      }, 5 * 60 * 1000);
+      setTimeout(
+        () => {
+          if (this.tokenCallback === resolve) {
+            this.tokenCallback = null;
+            resolve(null);
+          }
+        },
+        5 * 60 * 1000,
+      );
     });
   }
 
@@ -117,14 +127,16 @@ export class GitHubAuth {
   }
 
   // Direct token submission (for manual paste flow)
-  async submitToken(token: string): Promise<{ success: boolean; user?: GitHubUser; error?: string }> {
+  async submitToken(
+    token: string,
+  ): Promise<{ success: boolean; user?: GitHubUser; error?: string }> {
     try {
       // Set the token
       this.token = token;
-      
+
       // Check if it's valid
       const status = await this.checkStatus();
-      
+
       if (status.user) {
         // Save to localStorage
         this.saveAuth(token, status.user);
@@ -132,7 +144,10 @@ export class GitHubAuth {
       } else {
         // Clear invalid token
         this.token = null;
-        return { success: false, error: `Invalid token or authentication failed: ${status.status}` };
+        return {
+          success: false,
+          error: `Invalid token or authentication failed: ${status.status}`,
+        };
       }
     } catch (error) {
       this.token = null;
@@ -143,26 +158,31 @@ export class GitHubAuth {
 
   async checkStatus(): Promise<{ status: string; user?: GitHubUser }> {
     // Return cached status if it's still valid
-    if (this.statusCache && Date.now() - this.statusCache.timestamp < this.CACHE_DURATION) {
+    if (
+      this.statusCache &&
+      Date.now() - this.statusCache.timestamp < this.CACHE_DURATION
+    ) {
       console.log('[GitHubAuthDirect] Returning cached status');
       return { status: this.statusCache.status, user: this.statusCache.user };
     }
 
     // If there's already a check in progress, wait for it
     if (this.checkStatusPromise) {
-      console.log('[GitHubAuthDirect] Status check already in progress, waiting...');
+      console.log(
+        '[GitHubAuthDirect] Status check already in progress, waiting...',
+      );
       return this.checkStatusPromise;
     }
 
     // Start a new check
     this.checkStatusPromise = this.performStatusCheck();
-    
+
     try {
       const result = await this.checkStatusPromise;
       // Cache the result
       this.statusCache = {
         ...result,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       };
       return result;
     } finally {
@@ -170,9 +190,15 @@ export class GitHubAuth {
     }
   }
 
-  private async performStatusCheck(): Promise<{ status: string; user?: GitHubUser }> {
-    console.log('[GitHubAuthDirect] Performing actual status check with token:', this.token ? `${this.token.substring(0, 10)}...` : 'NO TOKEN');
-    
+  private async performStatusCheck(): Promise<{
+    status: string;
+    user?: GitHubUser;
+  }> {
+    console.log(
+      '[GitHubAuthDirect] Performing actual status check with token:',
+      this.token ? `${this.token.substring(0, 10)}...` : 'NO TOKEN',
+    );
+
     if (!this.token) {
       console.log('[GitHubAuthDirect] No token available');
       return { status: 'unauthenticated' };
@@ -182,19 +208,24 @@ export class GitHubAuth {
       console.log('[GitHubAuthDirect] Using API proxy to check status...');
       const response = await ApiProxyService.checkStatus(this.token);
       console.log('[GitHubAuthDirect] checkStatus response:', response);
-      
+
       if (!response.success) {
         console.log('[GitHubAuthDirect] API call failed:', response.error);
         return { status: 'unauthenticated' };
       }
-      
+
       if (response.status === 'new') {
         console.log('[GitHubAuthDirect] User is new (not in database)');
         return { status: 'new' };
       }
-      
+
       if (response.githubHandle) {
-        console.log('[GitHubAuthDirect] User authenticated:', response.githubHandle, 'Status:', response.status);
+        console.log(
+          '[GitHubAuthDirect] User authenticated:',
+          response.githubHandle,
+          'Status:',
+          response.status,
+        );
         this.user = {
           githubHandle: response.githubHandle,
           email: response.email,
@@ -203,9 +234,11 @@ export class GitHubAuth {
         };
         return { status: response.status || 'authenticated', user: this.user };
       }
-      
+
       // If we got an error response, the token might be invalid
-      console.log('[GitHubAuthDirect] No githubHandle in response, treating as unauthenticated');
+      console.log(
+        '[GitHubAuthDirect] No githubHandle in response, treating as unauthenticated',
+      );
       this.logout();
       return { status: 'unauthenticated' };
     } catch (error) {
@@ -223,7 +256,7 @@ export class GitHubAuth {
       // Parse repo URL
       const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\?#]+)/);
       if (!match) return false;
-      
+
       const [, owner, repo] = match;
       const repoName = repo.replace(/\.git$/, '');
 

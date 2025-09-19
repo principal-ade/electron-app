@@ -27,14 +27,14 @@ export const TagPill: React.FC<TagPillProps> = ({
   color,
 }) => {
   const { theme } = useTheme();
-  
+
   const pillColor = color || getTagColor(label);
-  
+
   const handleRightClick = (e: React.MouseEvent) => {
     e.preventDefault();
     onRightClick?.(e);
   };
-  
+
   return (
     <button
       onClick={onClick}
@@ -46,10 +46,10 @@ export const TagPill: React.FC<TagPillProps> = ({
         padding: '4px 10px',
         borderRadius: '12px',
         border: `1px solid ${
-          excluded 
-            ? theme.colors.error 
-            : active 
-              ? pillColor 
+          excluded
+            ? theme.colors.error
+            : active
+              ? pillColor
               : theme.colors.border
         }`,
         backgroundColor: excluded
@@ -79,14 +79,15 @@ export const TagPill: React.FC<TagPillProps> = ({
       }}
       onMouseLeave={(e) => {
         if (!active && !excluded) {
-          e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+          e.currentTarget.style.backgroundColor =
+            theme.colors.backgroundSecondary;
           e.currentTarget.style.borderColor = theme.colors.border;
         }
       }}
       title={
-        excluded 
-          ? `Excluding ${label} (${count || 0} hidden)` 
-          : active 
+        excluded
+          ? `Excluding ${label} (${count || 0} hidden)`
+          : active
             ? `Showing only ${label} (${count || 0})`
             : `Click to filter by ${label} (${count || 0})`
       }

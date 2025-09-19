@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'themed-markdown';
-import { UserPromptRequest, UserPromptResponse } from '../../../shared/main-process-api-interfaces/UserPromptAPI';
+import {
+  UserPromptRequest,
+  UserPromptResponse,
+} from '../../../shared/main-process-api-interfaces/UserPromptAPI';
 import { UserPromptService } from '../../main-process-api/UserPromptService';
 
 interface UserPromptModalProps {
@@ -37,7 +40,7 @@ export const UserPromptModal: React.FC<UserPromptModalProps> = ({
     }
 
     setIsSubmitting(true);
-    
+
     const response: UserPromptResponse = {
       id: prompt.id,
       success: true,
@@ -69,12 +72,18 @@ export const UserPromptModal: React.FC<UserPromptModalProps> = ({
     handleCancel();
   }, [handleCancel]);
 
-  const handleSnooze = useCallback((minutes: number = 10) => {
-    if (!prompt) return;
-    // For now, just cancel and let caller re-issue later; store an FYI in console
-    console.log(`[UserPrompt] Snoozed for ${minutes} minutes`, { id: prompt.id, filePath: prompt.filePath });
-    handleCancel();
-  }, [prompt, handleCancel]);
+  const handleSnooze = useCallback(
+    (minutes: number = 10) => {
+      if (!prompt) return;
+      // For now, just cancel and let caller re-issue later; store an FYI in console
+      console.log(`[UserPrompt] Snoozed for ${minutes} minutes`, {
+        id: prompt.id,
+        filePath: prompt.filePath,
+      });
+      handleCancel();
+    },
+    [prompt, handleCancel],
+  );
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && prompt?.type !== 'multiline') {
@@ -146,12 +155,14 @@ export const UserPromptModal: React.FC<UserPromptModalProps> = ({
 
       case 'confirm':
         return (
-          <p style={{
-            margin: '16px 0',
-            fontSize: '14px',
-            color: theme.colors.text,
-            lineHeight: '1.5',
-          }}>
+          <p
+            style={{
+              margin: '16px 0',
+              fontSize: '14px',
+              color: theme.colors.text,
+              lineHeight: '1.5',
+            }}
+          >
             {prompt.message}
           </p>
         );
@@ -216,39 +227,47 @@ export const UserPromptModal: React.FC<UserPromptModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div style={{
-          marginBottom: '16px',
-        }}>
-          <h3 style={{
-            margin: '0 0 6px 0',
-            fontSize: '18px',
-            fontWeight: 600,
-            color: theme.colors.text,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 8,
-          }}>
+        <div
+          style={{
+            marginBottom: '16px',
+          }}
+        >
+          <h3
+            style={{
+              margin: '0 0 6px 0',
+              fontSize: '18px',
+              fontWeight: 600,
+              color: theme.colors.text,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
             <span>{prompt.title || 'Input Required'}</span>
           </h3>
           {/* show path context */}
           {prompt.filePath && (
-            <div style={{
-              marginTop: 4,
-              fontSize: 12,
-              color: theme.colors.textSecondary,
-              wordBreak: 'break-all',
-            }}>
+            <div
+              style={{
+                marginTop: 4,
+                fontSize: 12,
+                color: theme.colors.textSecondary,
+                wordBreak: 'break-all',
+              }}
+            >
               Context: {prompt.filePath}
             </div>
           )}
           {prompt.type !== 'confirm' && (
-            <p style={{
-              margin: '8px 0 0 0',
-              fontSize: '14px',
-              color: theme.colors.textSecondary,
-              lineHeight: '1.5',
-            }}>
+            <p
+              style={{
+                margin: '8px 0 0 0',
+                fontSize: '14px',
+                color: theme.colors.textSecondary,
+                lineHeight: '1.5',
+              }}
+            >
               {prompt.message}
             </p>
           )}
@@ -258,23 +277,27 @@ export const UserPromptModal: React.FC<UserPromptModalProps> = ({
         <div style={{ marginBottom: '20px' }}>
           {renderInput()}
           {prompt.required && !value && prompt.type !== 'confirm' && (
-            <p style={{
-              margin: '8px 0 0 0',
-              fontSize: '12px',
-              color: theme.colors.error || '#ef4444',
-            }}>
+            <p
+              style={{
+                margin: '8px 0 0 0',
+                fontSize: '12px',
+                color: theme.colors.error || '#ef4444',
+              }}
+            >
               This field is required
             </p>
           )}
         </div>
 
         {/* Actions */}
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          justifyContent: 'flex-end',
-          flexWrap: 'wrap',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'flex-end',
+            flexWrap: 'wrap',
+          }}
+        >
           {!prompt.required && (
             <>
               <button
@@ -310,16 +333,27 @@ export const UserPromptModal: React.FC<UserPromptModalProps> = ({
           )}
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || (prompt.required && !value && prompt.type !== 'confirm')}
+            disabled={
+              isSubmitting ||
+              (prompt.required && !value && prompt.type !== 'confirm')
+            }
             style={{
               padding: '8px 16px',
               backgroundColor: theme.colors.primary,
               border: 'none',
               borderRadius: '4px',
               color: '#fff',
-              cursor: isSubmitting || (prompt.required && !value && prompt.type !== 'confirm') ? 'not-allowed' : 'pointer',
+              cursor:
+                isSubmitting ||
+                (prompt.required && !value && prompt.type !== 'confirm')
+                  ? 'not-allowed'
+                  : 'pointer',
               fontSize: '14px',
-              opacity: isSubmitting || (prompt.required && !value && prompt.type !== 'confirm') ? 0.6 : 1,
+              opacity:
+                isSubmitting ||
+                (prompt.required && !value && prompt.type !== 'confirm')
+                  ? 0.6
+                  : 1,
             }}
           >
             {prompt.type === 'confirm' ? 'Confirm' : 'Submit'}
@@ -332,7 +366,9 @@ export const UserPromptModal: React.FC<UserPromptModalProps> = ({
 
 // Hook to manage user prompts globally
 export const useUserPrompts = () => {
-  const [activePrompt, setActivePrompt] = useState<UserPromptRequest | null>(null);
+  const [activePrompt, setActivePrompt] = useState<UserPromptRequest | null>(
+    null,
+  );
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
