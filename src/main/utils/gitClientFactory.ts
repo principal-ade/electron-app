@@ -5,6 +5,8 @@
 
 import { electronCLI } from '../electron-cli-bridge';
 import type { GitExecutor, GitRemote } from '../electron-cli-bridge';
+import { gitLensAdapter } from '../quality-lenses/GitLensAdapter';
+import type { CommitInfo } from '../quality-lenses/GitLensAdapter';
 
 /**
  * Factory for Git operations using electron-cli-bridge
@@ -185,10 +187,19 @@ export class GitClientFactory {
 
   /**
    * Get current commit hash
+   * Now uses GitLens for consistency with other Git operations
    */
   static async getCurrentCommit(directory: string): Promise<string | null> {
-    const git = await this.ensureInitialized();
-    return await git.getCurrentCommit(directory);
+    // Use GitLens adapter instead of electron-cli-bridge
+    return await gitLensAdapter.getCurrentCommit(directory);
+  }
+
+  /**
+   * Get detailed information about the last commit
+   * Includes date, author, message - useful for sorting repositories by last activity
+   */
+  static async getLastCommitInfo(directory: string): Promise<CommitInfo | null> {
+    return await gitLensAdapter.getLastCommitInfo(directory);
   }
 
   /**
