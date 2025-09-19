@@ -8,6 +8,7 @@ import {
   NodeFileSystemAdapter,
 } from '@a24z/core-library';
 import type { AlexandriaEntry } from '@a24z/core-library';
+import { gitClientFactory } from '../utils/gitClientFactory';
 
 export class AlexandriaRegistryService {
   private static instance: AlexandriaRegistryService;
@@ -28,29 +29,112 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Get all repositories with path information
+   * Get all repositories with path information and git commit data
    */
   async getRepositories(): Promise<AlexandriaEntry[]> {
     // Use getAllEntries to get repositories with path information
-    return this.outpostManager.getAllEntries();
+    const entries = this.outpostManager.getAllEntries();
+
+    // Enrich each repository with last commit information
+    const enrichedEntries = await Promise.all(
+      entries.map(async (entry) => {
+        try {
+          // Get last commit info from git
+          const commitInfo = await gitClientFactory.getLastCommitInfo(entry.path);
+
+          // Debug: log commit message to check if it's full or truncated
+          if (commitInfo?.message && entry.name === 'electron-app') {
+            console.log(`[Alexandria] Commit message for ${entry.name}:`, commitInfo.message);
+          }
+
+          if (commitInfo && commitInfo.date) {
+            // Update the github field with last commit date and details
+            const enrichedEntry = {
+              ...entry,
+              github: {
+                ...entry.github,
+                lastCommit: commitInfo.date, // ISO date string from git
+                lastCommitMessage: commitInfo.message,
+                lastCommitAuthor: commitInfo.author,
+                lastCommitHash: commitInfo.shortHash || commitInfo.hash,
+              },
+            };
+            return enrichedEntry;
+          }
+        } catch (error) {
+          // If git info fails, just continue silently
+        }
+
+        // Return original entry if no git info available
+        return entry;
+      })
+    );
+
+    return enrichedEntries;
   }
 
   /**
-   * Get repository by name
+   * Get repository by name with git info
    */
   async getRepository(name: string): Promise<AlexandriaEntry | null> {
     // Get all entries and find by name
     const entries = this.outpostManager.getAllEntries();
-    return entries.find((e) => e.name === name) || null;
+    const entry = entries.find((e) => e.name === name);
+
+    if (!entry) return null;
+
+    // Try to enrich with git info
+    try {
+      const commitInfo = await gitClientFactory.getLastCommitInfo(entry.path);
+      if (commitInfo) {
+        return {
+          ...entry,
+          github: {
+            ...entry.github,
+            lastCommit: commitInfo.date,
+            lastCommitMessage: commitInfo.message,
+            lastCommitAuthor: commitInfo.author,
+            lastCommitHash: commitInfo.shortHash || commitInfo.hash,
+          },
+        };
+      }
+    } catch (error) {
+      // Silently continue if git info fails
+    }
+
+    return entry;
   }
 
   /**
-   * Get repository by local path
+   * Get repository by local path with git info
    */
   async getRepositoryByPath(path: string): Promise<AlexandriaEntry | null> {
     // Get all entries and find by path
     const entries = this.outpostManager.getAllEntries();
-    return entries.find((e) => e.path === path) || null;
+    const entry = entries.find((e) => e.path === path);
+
+    if (!entry) return null;
+
+    // Try to enrich with git info
+    try {
+      const commitInfo = await gitClientFactory.getLastCommitInfo(entry.path);
+      if (commitInfo) {
+        return {
+          ...entry,
+          github: {
+            ...entry.github,
+            lastCommit: commitInfo.date,
+            lastCommitMessage: commitInfo.message,
+            lastCommitAuthor: commitInfo.author,
+            lastCommitHash: commitInfo.shortHash || commitInfo.hash,
+          },
+        };
+      }
+    } catch (error) {
+      // Silently continue if git info fails
+    }
+
+    return entry;
   }
 
   /**
@@ -141,15 +225,36 @@ export class AlexandriaRegistryService {
   }
 
   /**
-   * Refresh repository metadata (re-scan for views)
+   * Refresh repository metadata (re-scan for views and update git info)
    */
   async refreshRepository(name: string): Promise<AlexandriaEntry | null> {
     // Get the repository to find its path
-    const repo = await this.getRepository(name);
+    const entries = this.outpostManager.getAllEntries();
+    const repo = entries.find((e) => e.name === name);
     if (!repo) return null;
 
-    // For now, just return the repo as-is
-    // AlexandriaOutpostManager should handle refreshing internally
+    try {
+      // Get latest commit info from git
+      const commitInfo = await gitClientFactory.getLastCommitInfo(repo.path);
+
+      if (commitInfo) {
+        // Return enriched entry with updated git info
+        return {
+          ...repo,
+          github: {
+            ...repo.github,
+            lastCommit: commitInfo.date,
+            lastCommitMessage: commitInfo.message,
+            lastCommitAuthor: commitInfo.author,
+            lastCommitHash: commitInfo.shortHash || commitInfo.hash,
+          },
+        };
+      }
+    } catch (error) {
+      // Silently continue if git info fails
+    }
+
+    // Return original repo if git info fails
     return repo;
   }
 
