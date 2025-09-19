@@ -165,33 +165,6 @@ export function registerGitHandlers(): void {
     },
   );
 
-  // Stage files
-  ipcMain.handle(
-    GitEvents.STAGE_FILES,
-    async (_event, directory: string, files: string[]) => {
-      try {
-        await gitService.stageFiles(directory, files);
-        return true;
-      } catch (error) {
-        console.error('[Git] Failed to stage files:', error);
-        throw error;
-      }
-    },
-  );
-
-  // Create commit
-  ipcMain.handle(
-    GitEvents.CREATE_COMMIT,
-    async (_event, directory: string, message: string) => {
-      try {
-        return await gitService.createCommit(directory, message);
-      } catch (error) {
-        console.error('[Git] Failed to create commit:', error);
-        throw error;
-      }
-    },
-  );
-
   // Execute git command
   ipcMain.handle(
     GitEvents.EXECUTE_COMMAND,

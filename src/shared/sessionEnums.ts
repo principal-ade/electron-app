@@ -88,12 +88,6 @@ export enum StopTrigger {
 }
 
 // Auto-commit status
-export enum AutoCommitStatus {
-  PENDING = 'pending',
-  SUCCESS = 'success',
-  FAILED = 'failed',
-  SKIPPED = 'skipped',
-}
 
 // Session priority levels
 export enum SessionPriority {

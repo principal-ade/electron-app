@@ -14,7 +14,6 @@ import {
   LastEventType,
   EventActivityType,
   FileOperation,
-  AutoCommitStatus,
   StopTrigger,
   ToolName,
 } from '../../shared/sessionEnums';
@@ -76,33 +75,7 @@ export class AgentSessionService {
     );
   }
 
-  // Get user preferences
-  async getUserPreferences() {
-    const storageManager = await this.getStorageManager();
-    const result = await storageManager.get(
-      'userPreferences',
-      StaticNamespaces.USER_PREFERENCES,
-    );
-    const prefs = result.success ? result.data : undefined;
-    return {
-      autoCommitOnStop: prefs?.autoCommitOnStop ?? true, // Default to true
-    };
-  }
 
-  // Update user preferences
-  async updateUserPreferences(preferences: { autoCommitOnStop?: boolean }) {
-    const storageManager = await this.getStorageManager();
-    const result = await storageManager.get(
-      'userPreferences',
-      StaticNamespaces.USER_PREFERENCES,
-    );
-    const currentPrefs = result.success && result.data ? result.data : {};
-    await storageManager.set(
-      'userPreferences',
-      { ...currentPrefs, ...preferences },
-      StaticNamespaces.USER_PREFERENCES,
-    );
-  }
 
   // Extract file path from tool parameters
   private extractFilePathFromTool(
@@ -916,13 +889,6 @@ export class AgentSessionService {
       trigger,
       reason,
       metadata,
-      autoCommit: {
-        status: AutoCommitStatus.PENDING,
-        filesCommitted: [] as string[],
-        commitHash: undefined,
-        commitMessage: undefined,
-        error: undefined,
-      },
     };
 
     session.stopEvents.push(stopEvent);
@@ -936,62 +902,7 @@ export class AgentSessionService {
     // NOTE: Don't set lastEvent for stop events - use lastEventType/lastStopTime for that
     // lastEvent should only track meaningful file/tool operations
 
-    // Save session first with pending status
     await this.upsertSession(directory, session);
-
-    // Attempt auto-commit if enabled and git info is available
-    // TEMPORARILY DISABLED: Auto-commit functionality is being fixed
-    /*
-    if (session.autoCommitEnabled && session.basicGitInfo?.gitRoot) {
-      try {
-        const commitResult = await this.performAutoCommit(session, stopEvent);
-        
-        // Update the stop event with commit result
-        const updatedSession = await this.getSession(directory, sessionId);
-        if (updatedSession && updatedSession.stopEvents) {
-          const lastStopEvent = updatedSession.stopEvents[updatedSession.stopEvents.length - 1];
-          if (lastStopEvent.timestamp === stopTime) {
-            lastStopEvent.autoCommit = commitResult;
-            await this.upsertSession(directory, updatedSession);
-          }
-        }
-      } catch (error) {
-        console.error('[AgentSessionService] Auto-commit failed:', error);
-        
-        // Update with error status
-        const updatedSession = await this.getSession(directory, sessionId);
-        if (updatedSession && updatedSession.stopEvents) {
-          const lastStopEvent = updatedSession.stopEvents[updatedSession.stopEvents.length - 1];
-          if (lastStopEvent.timestamp === stopTime) {
-            lastStopEvent.autoCommit = {
-              status: AutoCommitStatus.FAILED,
-              error: error instanceof Error ? error.message : 'Unknown error',
-              filesCommitted: [],
-              commitHash: undefined,
-              commitMessage: undefined
-            };
-            await this.upsertSession(directory, updatedSession);
-          }
-        }
-      }
-    } else {
-      // No git info, mark as skipped
-      const updatedSession = await this.getSession(directory, sessionId);
-      if (updatedSession && updatedSession.stopEvents) {
-        const lastStopEvent = updatedSession.stopEvents[updatedSession.stopEvents.length - 1];
-        if (lastStopEvent.timestamp === stopTime) {
-          lastStopEvent.autoCommit = {
-            status: AutoCommitStatus.SKIPPED,
-            error: 'No git repository information available',
-            filesCommitted: [],
-            commitHash: undefined,
-            commitMessage: undefined
-          };
-          await this.upsertSession(directory, updatedSession);
-        }
-      }
-    }
-    */
   }
 
   // Watch for store changes
@@ -1093,21 +1004,6 @@ export class AgentSessionService {
     }
   }
 
-  // Update session auto-commit enabled flag
-  async updateAutoCommitEnabled(
-    directory: string,
-    sessionId: string,
-    enabled: boolean,
-  ): Promise<void> {
-    const session = await this.getSession(directory, sessionId);
-    if (!session) return;
-
-    session.autoCommitEnabled = enabled;
-    await this.upsertSession(directory, session);
-    console.log(
-      `[AgentSessionService] Updated auto-commit enabled for session ${sessionId}: ${enabled}`,
-    );
-  }
 
   // Populate git info for all sessions that don't have it (can be called during migration or maintenance)
   async populateGitInfoForExistingSessions(): Promise<{
@@ -1180,185 +1076,9 @@ export class AgentSessionService {
     return globalSessions.sessions[sessionId] || null;
   }
 
-  // Get all commits for a session
-  async getSessionCommits(sessionId: string): Promise<
-    Array<{
-      timestamp: number;
-      commitHash?: string;
-      commitMessage?: string;
-      filesCommitted?: string[];
-      status: AutoCommitStatus;
-      error?: string;
-    }>
-  > {
-    const session = await this.getSessionById(sessionId);
-    if (!session || !session.stopEvents) {
-      return [];
-    }
 
-    return session.stopEvents
-      .filter((event) => event.autoCommit)
-      .map((event) => ({
-        timestamp: event.timestamp,
-        commitHash: event.autoCommit?.commitHash,
-        commitMessage: event.autoCommit?.commitMessage,
-        filesCommitted: event.autoCommit?.filesCommitted,
-        status: event.autoCommit?.status || AutoCommitStatus.SKIPPED,
-        error: event.autoCommit?.error,
-      }));
-  }
 
-  // Get commit for a specific stop event
-  async getStopEventCommit(
-    sessionId: string,
-    stopTimestamp: number,
-  ): Promise<{
-    commitHash?: string;
-    commitMessage?: string;
-    filesCommitted?: string[];
-    status: AutoCommitStatus;
-    error?: string;
-  } | null> {
-    const session = await this.getSessionById(sessionId);
-    if (!session || !session.stopEvents) {
-      return null;
-    }
 
-    const stopEvent = session.stopEvents.find(
-      (event) => event.timestamp === stopTimestamp,
-    );
-    if (!stopEvent || !stopEvent.autoCommit) {
-      return null;
-    }
-
-    return {
-      commitHash: stopEvent.autoCommit.commitHash,
-      commitMessage: stopEvent.autoCommit.commitMessage,
-      filesCommitted: stopEvent.autoCommit.filesCommitted,
-      status: stopEvent.autoCommit.status,
-      error: stopEvent.autoCommit.error,
-    };
-  }
-
-  // Perform auto-commit for a stop event
-  private async performAutoCommit(
-    session: AgentSessionRecord,
-    stopEvent: any,
-  ): Promise<{
-    status: Exclude<AutoCommitStatus, AutoCommitStatus.PENDING>;
-    commitHash?: string;
-    commitMessage?: string;
-    filesCommitted?: string[];
-    error?: string;
-  }> {
-    if (!session.basicGitInfo?.gitRoot) {
-      return {
-        status: AutoCommitStatus.SKIPPED,
-        error: 'No git repository information',
-      };
-    }
-
-    const { gitRoot } = session.basicGitInfo;
-
-    try {
-      // Get list of files that were written during this session
-      const writtenFiles = Object.keys(session.fileWrites || {});
-
-      if (writtenFiles.length === 0) {
-        return {
-          status: AutoCommitStatus.SKIPPED,
-          error: 'No files were written during this session',
-        };
-      }
-
-      // Check git status to see which files have changes
-      const gitStatus = await this.gitService.getGitStatus(gitRoot);
-
-      // Filter written files to only include those with actual changes
-      const filesToCommit = writtenFiles.filter((file) => {
-        const relativePath = file.startsWith(gitRoot)
-          ? file.substring(gitRoot.length + 1)
-          : file;
-        return (
-          gitStatus.unstaged.includes(relativePath) ||
-          gitStatus.staged.includes(relativePath)
-        );
-      });
-
-      if (filesToCommit.length === 0) {
-        return {
-          status: AutoCommitStatus.SKIPPED,
-          error: 'No written files have uncommitted changes',
-        };
-      }
-
-      // Stage the files
-      const relativeFiles = filesToCommit.map((file) =>
-        file.startsWith(gitRoot) ? file.substring(gitRoot.length + 1) : file,
-      );
-      await this.gitService.stageFiles(gitRoot, relativeFiles);
-
-      // Generate commit message
-      const commitMessage = this.generateCommitMessage(
-        session,
-        filesToCommit,
-        stopEvent,
-      );
-
-      // Create the commit
-      const commitHash = await this.gitService.createCommit(
-        gitRoot,
-        commitMessage,
-      );
-
-      return {
-        status: AutoCommitStatus.SUCCESS,
-        commitHash,
-        commitMessage,
-        filesCommitted: filesToCommit,
-      };
-    } catch (error) {
-      console.error('[AgentSessionService] Error during auto-commit:', error);
-      return {
-        status: AutoCommitStatus.FAILED,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
-  }
-
-  // Generate commit message for auto-commit
-  private generateCommitMessage(
-    session: AgentSessionRecord,
-    files: string[],
-    stopEvent: any,
-  ): string {
-    const fileCount = files.length;
-    const fileList = files
-      .map((f) => path.basename(f))
-      .slice(0, 3)
-      .join(', ');
-    const sessionDuration = Math.round(
-      (stopEvent.timestamp - session.firstAccess) / 1000 / 60,
-    ); // in minutes
-
-    let message = `Auto-commit: ${fileCount} file${fileCount > 1 ? 's' : ''} modified`;
-
-    if (fileCount <= 3) {
-      message = `Auto-commit: Modified ${fileList}`;
-    } else {
-      message = `Auto-commit: Modified ${fileCount} files including ${fileList}`;
-    }
-
-    // Add session metadata
-    message += `\n\nSession: ${session.sessionId}`;
-    message += `\nDuration: ${sessionDuration} minutes`;
-
-    if (stopEvent.reason) {
-      message += `\nStop reason: ${stopEvent.reason}`;
-    }
-
-    return message;
-  }
 
   // Debug methods for git repository detection
   clearGitRepositoryCache(): void {
@@ -1438,174 +1158,6 @@ export class AgentSessionService {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
         cacheInfo: this.getGitRepositoryCacheInfo(),
-      };
-    }
-  }
-
-  // Get uncommitted changes for segments without commits
-  async getUncommittedChangesForSegments(sessionId: string): Promise<{
-    segments: Array<{
-      timestamp: number;
-      hasCommit: boolean;
-    }>;
-    changes: {
-      created: string[];
-      modified: string[];
-      deleted: string[];
-      renamed: Array<{ from: string; to: string }>;
-      stats: { additions: number; deletions: number };
-    } | null;
-    filesFromSegments: string[];
-  }> {
-    const session = await this.getSessionById(sessionId);
-    if (!session || !session.stopEvents || !session.basicGitInfo?.gitRoot) {
-      return { segments: [], changes: null, filesFromSegments: [] };
-    }
-
-    // Get all segments without commits
-    const segmentsWithoutCommits = session.stopEvents.filter(
-      (event) =>
-        !event.autoCommit ||
-        event.autoCommit.status !== AutoCommitStatus.SUCCESS,
-    );
-
-    if (segmentsWithoutCommits.length === 0) {
-      return { segments: [], changes: null, filesFromSegments: [] };
-    }
-
-    // Collect all files written in these segments
-    const filesFromSegments = new Set<string>();
-
-    // For each segment, find files written between this stop and the previous stop
-    for (let i = 0; i < session.stopEvents.length; i++) {
-      const currentStop = session.stopEvents[i];
-
-      // Skip if this segment already has a commit
-      if (currentStop.autoCommit?.status === AutoCommitStatus.SUCCESS) continue;
-
-      const previousStop = i > 0 ? session.stopEvents[i - 1] : null;
-      const startTime = previousStop
-        ? previousStop.timestamp
-        : session.firstAccess;
-      const endTime = currentStop.timestamp;
-
-      // Find files written in this time range
-      Object.entries(session.fileWrites || {}).forEach(([filePath, writes]) => {
-        const hasWriteInRange = writes.some(
-          (write) => write.timestamp >= startTime && write.timestamp <= endTime,
-        );
-        if (hasWriteInRange) {
-          filesFromSegments.add(filePath);
-        }
-      });
-    }
-
-    const filesArray = Array.from(filesFromSegments);
-
-    try {
-      // Get detailed changes for these files
-      const changes = await this.gitService.getDetailedChanges(
-        session.basicGitInfo.gitRoot,
-        filesArray,
-      );
-
-      return {
-        segments: segmentsWithoutCommits.map((s) => ({
-          timestamp: s.timestamp,
-          hasCommit: s.autoCommit?.status === AutoCommitStatus.SUCCESS,
-        })),
-        changes,
-        filesFromSegments: filesArray,
-      };
-    } catch (error) {
-      console.error(
-        '[AgentSessionService] Failed to get uncommitted changes:',
-        error,
-      );
-      return {
-        segments: segmentsWithoutCommits.map((s) => ({
-          timestamp: s.timestamp,
-          hasCommit: false,
-        })),
-        changes: null,
-        filesFromSegments: filesArray,
-      };
-    }
-  }
-
-  // Perform manual commit for multiple segments
-  async performManualCommit(
-    sessionId: string,
-    message: string,
-    segmentTimestamps?: number[],
-  ): Promise<{
-    success: boolean;
-    commitHash?: string;
-    error?: string;
-    updatedSegments?: number[];
-  }> {
-    const session = await this.getSessionById(sessionId);
-    if (!session || !session.basicGitInfo?.gitRoot) {
-      return { success: false, error: 'Session or git info not found' };
-    }
-
-    try {
-      // Get uncommitted changes info
-      const { filesFromSegments, segments } =
-        await this.getUncommittedChangesForSegments(sessionId);
-
-      if (filesFromSegments.length === 0) {
-        return { success: false, error: 'No files to commit' };
-      }
-
-      // Stage the files
-      const relativeFiles = filesFromSegments.map((file) =>
-        file.startsWith(session.basicGitInfo!.gitRoot)
-          ? file.substring(session.basicGitInfo!.gitRoot.length + 1)
-          : file,
-      );
-      await this.gitService.stageFiles(
-        session.basicGitInfo.gitRoot,
-        relativeFiles,
-      );
-
-      // Create the commit
-      const commitHash = await this.gitService.createCommit(
-        session.basicGitInfo.gitRoot,
-        message,
-      );
-
-      // Update all relevant segments with the commit info
-      const timestampsToUpdate =
-        segmentTimestamps || segments.map((s) => s.timestamp);
-
-      if (session.stopEvents) {
-        session.stopEvents.forEach((event) => {
-          if (timestampsToUpdate.includes(event.timestamp)) {
-            event.autoCommit = {
-              status: AutoCommitStatus.SUCCESS,
-              commitHash,
-              commitMessage: message,
-              filesCommitted: filesFromSegments,
-              error: undefined,
-            };
-          }
-        });
-
-        // Save the updated session
-        await this.upsertSession(session.workingDirectory, session);
-      }
-
-      return {
-        success: true,
-        commitHash,
-        updatedSegments: timestampsToUpdate,
-      };
-    } catch (error) {
-      console.error('[AgentSessionService] Manual commit failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }

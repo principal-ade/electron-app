@@ -7,8 +7,6 @@ export enum GitEvents {
   GET_STATUS = 'git:get-status',
   GET_DETAILED_CHANGES = 'git:get-detailed-changes',
   GET_UNCOMMITTED_CHANGES = 'git:get-uncommitted-changes',
-  STAGE_FILES = 'git:stage-files',
-  CREATE_COMMIT = 'git:create-commit',
   EXECUTE_COMMAND = 'git:exec-command',
   CLONE_REPOSITORY = 'git:clone-repository',
   CHECK_AUTH_METHODS = 'git:check-auth-methods',
@@ -46,8 +44,6 @@ export interface GitAPI {
     fileStats: Record<string, { additions: number; deletions: number }>;
   }>;
   getUncommittedChanges: (directory: string) => Promise<string[]>;
-  stageFiles: (directory: string, files: string[]) => Promise<boolean>;
-  createCommit: (directory: string, message: string) => Promise<string>;
   execCommand: (
     directory: string,
     args: string[],

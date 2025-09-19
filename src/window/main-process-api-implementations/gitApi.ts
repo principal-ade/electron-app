@@ -60,14 +60,6 @@ export const gitAPI = {
     return ipcRenderer.invoke(GitEvents.GET_UNCOMMITTED_CHANGES, directory);
   },
 
-  stageFiles: async (directory: string, files: string[]): Promise<boolean> => {
-    return ipcRenderer.invoke(GitEvents.STAGE_FILES, directory, files);
-  },
-
-  createCommit: async (directory: string, message: string): Promise<string> => {
-    return ipcRenderer.invoke(GitEvents.CREATE_COMMIT, directory, message);
-  },
-
   execCommand: async (
     directory: string,
     args: string[],

@@ -90,22 +90,6 @@ export class GitClientFactory {
         return { value };
       },
 
-      add: async (files: string[]) => {
-        return await git.add(_baseDir, files);
-      },
-
-      commit: async (message: string) => {
-        const result = await git.commit(_baseDir, message);
-        // Extract commit hash from output if available
-        if (result.stdout) {
-          const match = result.stdout.match(/\[[\w\s-]+\s+([a-f0-9]+)\]/);
-          if (match) {
-            return { commit: match[1] };
-          }
-        }
-        return { commit: await git.getCurrentCommit(_baseDir) };
-      },
-
       raw: async (args: string[]) => {
         const result = await git.raw(_baseDir, args);
         return result.stdout || '';

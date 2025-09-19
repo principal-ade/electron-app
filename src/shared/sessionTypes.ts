@@ -16,7 +16,6 @@ import {
   LastEventType,
   EventActivityType,
   StopTrigger,
-  AutoCommitStatus,
 } from './sessionEnums';
 
 // Define AgentSessionRecord here for shared use across main and renderer
@@ -29,7 +28,6 @@ export interface AgentSessionRecord {
   lastEventType?: LastEventType;
   lastStopTime?: number;
   reviewedLastStop: boolean;
-  autoCommitEnabled?: boolean;
   metadata?: Record<string, unknown>;
   // Added optional fields referenced in renderer
   commitMessage?: string;
@@ -115,13 +113,6 @@ export interface AgentSessionRecord {
     trigger?: StopTrigger;
     reason?: string;
     metadata?: Record<string, unknown>;
-    autoCommit?: {
-      commitHash?: string;
-      commitMessage?: string;
-      filesCommitted?: string[];
-      error?: string;
-      status: AutoCommitStatus;
-    };
   }>;
   // Simple git info for consistent display
   basicGitInfo?: {

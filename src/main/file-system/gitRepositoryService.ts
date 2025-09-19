@@ -449,55 +449,6 @@ export class GitRepositoryService {
   }
 
   /**
-   * Stage files for commit
-   */
-  async stageFiles(directory: string, files: string[]): Promise<void> {
-    if (files.length === 0) return;
-
-    const git = await gitClientFactory.getClient(directory);
-    try {
-      // Stage the files using simple-git
-      await git.add(files);
-    } catch (error) {
-      console.error('[GitRepositoryService] Failed to stage files:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create a git commit
-   */
-  async createCommit(directory: string, message: string): Promise<string> {
-    const git = await gitClientFactory.getClient(directory);
-
-    try {
-      // Create the commit using simple-git
-      const commitResult = await git.commit(message);
-
-      // simple-git returns the commit hash in the commit result
-      if (commitResult.commit) {
-        // Extract just the short hash if it's in format "hash (message)"
-        const hashMatch = commitResult.commit.match(/^([a-f0-9]+)/);
-        if (hashMatch) {
-          return hashMatch[1];
-        }
-        return commitResult.commit;
-      }
-
-      // Fallback: get the latest commit hash using GitClientFactory
-      const currentCommit = await gitClientFactory.getCurrentCommit(directory);
-      if (currentCommit) {
-        return currentCommit;
-      }
-
-      throw new Error('Failed to get commit hash after commit');
-    } catch (error) {
-      console.error('[GitRepositoryService] Failed to create commit:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Get list of files changed in the current session (not yet committed)
    */
   async getUncommittedChanges(directory: string): Promise<string[]> {
