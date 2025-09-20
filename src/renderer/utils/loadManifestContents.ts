@@ -105,7 +105,10 @@ export async function loadManifestContents(
       if (result && result.content) {
         // Parse based on file type
         const parsed = parseManifestContent(path, result.content);
-        manifestContents.set(path, parsed);
+        // Only add if it's not a config-only file (null indicates skip)
+        if (parsed !== null) {
+          manifestContents.set(path, parsed);
+        }
       } else {
         // Create fallback manifest data
         console.warn(
@@ -136,13 +139,51 @@ export async function loadManifestContents(
 }
 
 /**
+ * Check if a package.json file is an actual package or just configuration
+ * Configuration-only files typically only contain "type" or "private" fields
+ */
+function isActualPackage(parsedContent: any): boolean {
+  if (!parsedContent || typeof parsedContent !== 'object') {
+    return false;
+  }
+
+  // Must have either name or version to be considered a real package
+  const hasPackageIdentity = Boolean(parsedContent.name || parsedContent.version);
+
+  // Check if it has actual package content beyond just configuration
+  const packageKeys = new Set(Object.keys(parsedContent));
+  const configOnlyKeys = new Set(['type', 'private']);
+
+  // Remove config-only keys to see what's left
+  configOnlyKeys.forEach(key => packageKeys.delete(key));
+
+  // If it only had config keys, it's not a real package
+  if (packageKeys.size === 0) {
+    return false;
+  }
+
+  // If it has name/version OR has substantial content, it's a package
+  return hasPackageIdentity || packageKeys.size > 0;
+}
+
+/**
  * Parse manifest content based on file type
  */
 function parseManifestContent(filePath: string, content: string): any {
   // JSON files (package.json, composer.json, etc.)
   if (filePath.endsWith('.json')) {
     try {
-      return JSON.parse(content);
+      const parsed = JSON.parse(content);
+
+      // Special handling for package.json files
+      if (filePath.endsWith('package.json') && !isActualPackage(parsed)) {
+        console.log(
+          `[loadManifestContents] Skipping config-only package.json: ${filePath}`,
+        );
+        return null; // Return null to indicate this should be skipped
+      }
+
+      return parsed;
     } catch (parseErr) {
       console.warn(
         `[loadManifestContents] Failed to parse JSON for ${filePath}:`,
