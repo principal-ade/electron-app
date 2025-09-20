@@ -31,10 +31,10 @@ execSync('node ./.erb/scripts/prepare-shared-lib.js', {
 });
 
 try {
-  // Step 5: Remove pnpm workspace and install with npm
-  console.log('🔄 Converting to npm dependencies...');
+  // Step 5: Clean reinstall for production build
+  console.log('🔄 Performing clean npm install for production build...');
 
-  // Remove node_modules and pnpm lock
+  // Remove node_modules for clean install
   if (fs.existsSync(path.join(projectRoot, 'node_modules'))) {
     // Windows-specific removal
     execSync(`rmdir /s /q "${path.join(projectRoot, 'node_modules')}"`, {

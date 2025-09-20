@@ -9,11 +9,19 @@ export enum AlexandriaDocsAPIEvent {
   GET_DOCUMENTS = 'alexandria-docs:get-documents',
   GET_EXCLUDED_DOCUMENTS = 'alexandria-docs:get-excluded-documents',
   GET_DOCUMENTS_WITH_EXCLUSIONS = 'alexandria-docs:get-documents-with-exclusions',
+  GET_COMPREHENSIVE_DOCUMENTS = 'alexandria-docs:get-comprehensive-documents',
 }
 
 export interface AlexandriaDocsWithExclusions {
   documents: string[];
   excluded: string[];
+}
+
+export interface ComprehensiveDocuments {
+  tracked: string[];
+  untracked: string[];
+  excluded: string[];
+  all: string[];
 }
 
 export interface AlexandriaDocsAPI {
@@ -41,4 +49,13 @@ export interface AlexandriaDocsAPI {
   getDocumentsWithExclusions(
     entry: AlexandriaEntry,
   ): Promise<AlexandriaDocsWithExclusions>;
+
+  /**
+   * Get comprehensive document information including tracked and untracked
+   * @param entry - The Alexandria repository entry
+   * @returns Object with tracked, untracked, excluded, and all document paths
+   */
+  getComprehensiveDocuments(
+    entry: AlexandriaEntry,
+  ): Promise<ComprehensiveDocuments>;
 }

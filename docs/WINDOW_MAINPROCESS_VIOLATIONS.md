@@ -1,58 +1,41 @@
 # Window.mainProcess Violations Analysis
 
 ## Overview
-33 files are violating the architectural rule that `window.mainProcess` should only be called from `/src/renderer/main-process-api/` services.
+~~33~~ **5 files remaining** that violate the architectural rule that `window.mainProcess` should only be called from `/src/renderer/main-process-api/` services.
 
-## Files by Category
+**Update (Sep 2025)**: 28 files have been fixed, reducing violations from 33 to 5.
+- Latest fixes: LandingPage, AlexandriaRepositoryManager, and DependenciesView components
 
-### Adapters (2 files)
-- `adapters/ElectronShellAdapter.ts`
-- `adapters/github/GitHubFileSystemAdapter.ts`
+## Remaining Files with Violations (5 files)
 
-### Components (12 files)
-- `AppErrorBoundary.tsx`
-- `components/agent-overview/SessionDetailsPanel.tsx`
-- `components/agent-session-debug/AgentSessionDebugModal.tsx`
-- `components/DiffViewer.tsx`
-- `components/landing-page/SettingsModal.tsx`
-- `components/repository-maps/AgentSessionArchiveConfigModal.tsx`
-- `components/repository-maps/ArchivedAgentSessionsPanel.tsx`
-- `components/repository-maps/CloneManagementModal.tsx`
-- `components/repository-maps/SyncStatusIndicator.tsx`
-- `components/settings/UpdateSettings.tsx`
-- `components/Terminal/TabbedTerminalPanel.tsx`
-- `components/UpdateNotification.tsx`
+### Components (1 file)
+- `components/agent-session-debug/EventProcessingTestView.tsx` - Uses `window.mainProcess.testDebug`
 
-### Contexts (1 file)
-- `contexts/GitChangesContext.tsx`
+### Services (3 files)
+- `services/GitignoreAnalysisService.ts` - Uses `window.mainProcess.system` (5 calls)
+- `services/storage/CustomLayersStorageService.ts` - Uses `window.mainProcess.store` (3 calls)
+- `services/storage/TodoStorageService.ts` - Uses `window.mainProcess.store` (5 calls)
 
-### Hooks (1 file)
-- `hooks/useAuthState.ts`
+### Utils (1 file)
+- `utils/ipcBridgeDebug.test.ts` - Test file
 
-### Pages (7 files)
-- `pages/LandingPage/AgentConfigurationView/DetailedConfigurationView.tsx`
-- `pages/LandingPage/ProjectsView.tsx`
-- `pages/MultiFileEditorWindow.tsx`
-- `pages/RepoManager/LocalDevelopmentView.tsx`
-- `pages/RepoManager/shared/AgentSessionsTab.tsx`
-- `pages/RepoManager/shared/SecretsModal.tsx`
-- `pages/StoreViewer.tsx`
+## Recommended Service Mappings for Remaining Files
 
-### Services (5 files)
-- `services/ContentProviders.ts`
-- `services/git-sync/GitSyncConnectionManager.ts`
-- `services/p2p/GitHubAuthDirect.ts`
-- `services/p2p/GitHubAuthIPC.ts`
-- `services/SecureAuthService.ts`
+### Files needing migration:
+1. **TodoStorageService.ts** & **CustomLayersStorageService.ts**
+   - Should use: `StoreService` (already exists)
+   - Priority: HIGH - Core storage functionality
 
-### Utils (3 files)
-- `utils/ipcServices/shell.ts`
-- `utils/loadFileSystemTree.ts`
-- `utils/terminalUtils.ts`
+2. **GitignoreAnalysisService.ts**
+   - Should use: `SystemService` (already exists)
+   - Priority: MEDIUM - Important for gitignore features
 
-## APIs Being Used (Need Investigation)
+3. **EventProcessingTestView.tsx**
+   - Needs: New `TestDebugService` wrapper (doesn't exist yet)
+   - Priority: LOW - Debug/test component
 
-To determine which service wrappers are needed, we need to check what specific APIs each file is calling.
+4. **ipcBridgeDebug.test.ts**
+   - Priority: VERY LOW - Test file only
 
 ## Action Plan
 
@@ -80,7 +63,7 @@ To determine which service wrappers are needed, we need to check what specific A
 ### All Required Services Now Exist!
 Every API used by the 33 violating files now has a corresponding service wrapper.
 
-### Files Fixed (14/33)
+### Files Fixed (28/33)
 - ✅ ElectronPackageManagerApiProvider.ts (uses PackageManagerService)
 - ✅ MCPService.ts (uses McpToolsService)
 - ✅ SecureAuthService.ts (uses AuthenticationService)
@@ -91,6 +74,9 @@ Every API used by the 33 violating files now has a corresponding service wrapper
 - ✅ SessionDetailsPanel.tsx (uses AgentSessionArchiveService)
 - ✅ SecretsModal.tsx (uses SecretsService)
 - ✅ UpdateNotification.tsx (uses AppVersionManagerService)
+- ✅ pages/LandingPage/LandingPage.tsx (uses AlexandriaService)
+- ✅ pages/alexandria/AlexandriaRepositoryManager.tsx (uses AlexandriaService)
+- ✅ components/layers/DependenciesView.tsx (uses ShellService)
 
 ## Priority Order
 

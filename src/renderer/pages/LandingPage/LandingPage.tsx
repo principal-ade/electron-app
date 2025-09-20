@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from 'react';
-import { X, Plus, ChevronDown, FolderOpen, Github, Search, GitBranch, Clock, Star, Folder } from 'lucide-react';
+import { X, Plus, ChevronDown, FolderOpen, Github, Search, GitBranch, Star } from 'lucide-react';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/style.css';
 import type { AlexandriaEntry } from '@a24z/core-library';
@@ -13,14 +13,16 @@ import {
 } from '../../main-process-api/AgentConfigurationService';
 import { aiService } from '../../main-process-api/AIService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
+import { AlexandriaDocsService } from '../../main-process-api/AlexandriaDocsService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
+import { GitService } from '../../main-process-api/GitService';
 import { WindowService } from '../../main-process-api/WindowService';
 import { useComponentTracking } from '../../components/withComponentTracking';
 import { UpdateNotification } from '../../components/UpdateNotification';
 
-// import { ProjectsView } from './ProjectsView'; // Old view - replaced with Alexandria
 import { AlexandriaRepositoryManager } from '../alexandria/AlexandriaRepositoryManager';
 import { OnboardingFlowV2 } from './OnboardingFlowV2';
+import { RepositoryDetailsPanel } from './RepositoryDetailsPanel';
 
 interface LandingPageProps {
   initialAgentStatus: AgentInstallationStatus;
@@ -28,6 +30,13 @@ interface LandingPageProps {
 }
 
 type BottomViewMode = 'repos';
+
+interface EnhancedAlexandriaEntry extends AlexandriaEntry {
+  gitBranch?: string;
+  isDirty?: boolean;
+  dirtyFileCount?: number;
+  mostRecentChange?: string; // Most recent file modification time if dirty, otherwise last commit
+}
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   initialAgentStatus,
@@ -48,10 +57,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Repository state
-  const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
-  const [selectedRepository, setSelectedRepository] = useState<AlexandriaEntry | null>(null);
+  const [repositories, setRepositories] = useState<EnhancedAlexandriaEntry[]>([]);
+  const [selectedRepository, setSelectedRepository] = useState<EnhancedAlexandriaEntry | null>(null);
   const [isLoadingRepos, setIsLoadingRepos] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  // const [searchQuery, setSearchQuery] = useState(''); // Removed search for now
+
+  // Markdown files and git status state
+  const [markdownFiles, setMarkdownFiles] = useState<Array<{ path: string; lastModified?: string }>>([]);
+  const [gitStatus, setGitStatus] = useState<{
+    staged: Array<{ path: string; lastModified?: string }>;
+    unstaged: Array<{ path: string; lastModified?: string }>;
+    untracked: Array<{ path: string; lastModified?: string }>;
+  }>({ staged: [], unstaged: [], untracked: [] });
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false);
+  const [isLoadingGitStatus, setIsLoadingGitStatus] = useState(false);
+
 
   // Setup configuration status
   const [, setSetupStatus] = useState({
@@ -91,7 +111,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       ]);
 
       const llmConfigured =
-        (ollamaStatus?.running && ollamaStatus.models.length > 0) ||
+        (ollamaStatus?.isRunning && ollamaStatus.models && ollamaStatus.models.length > 0) ||
         (openRouterConfig?.enabled && openRouterConfig?.apiKey);
 
       // Check MCP configuration
@@ -111,7 +131,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         hooksConfigured,
         llmConfigured: !!llmConfigured,
         mcpConfigured,
-        isOllamaRunning: ollamaStatus?.running || false,
+        isOllamaRunning: ollamaStatus?.isRunning || false,
         hasOpenRouterKey:
           !!openRouterConfig?.enabled && !!openRouterConfig?.apiKey,
       });
@@ -127,8 +147,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     loadRepositories();
 
     // Subscribe to repository changes from backend
-    const unsubscribe = window.mainProcess.alexandria.onRepositoryChange(() => {
-      loadRepositories();
+    const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
+      // For removal and add events that we handle locally, skip the reload
+      if (event.type === 'removed') {
+        // Already handled in handleRepositoryRemoved
+        return;
+      }
+
+      if (event.type === 'added' && event.repository) {
+        // Check if we already have this repository (from our optimistic update)
+        setRepositories(prev => {
+          const exists = prev.some(repo => repo.name === event.repository!.name);
+          if (exists) {
+            // We added it optimistically, just update with backend data
+            return prev.map(repo =>
+              repo.name === event.repository!.name
+                ? { ...repo, ...event.repository }
+                : repo
+            );
+          } else {
+            // This was added externally, add it to our list
+            return [event.repository as EnhancedAlexandriaEntry, ...prev];
+          }
+        });
+        return;
+      }
+
+      // For update events, reload to get fresh data
+      if (event.type === 'updated') {
+        loadRepositories();
+      }
     });
 
     return () => {
@@ -136,16 +184,97 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     };
   }, []);
 
+  // Helper function to enhance a single repository with git info
+  const enhanceRepositoryWithGitInfo = async (repo: AlexandriaEntry): Promise<EnhancedAlexandriaEntry> => {
+    try {
+      // Get git branch
+      const branchResult = await GitService.execCommand(repo.path, [
+        'rev-parse',
+        '--abbrev-ref',
+        'HEAD',
+      ]).catch(() => ({ stdout: 'main', stderr: '' }));
+      const gitBranch = branchResult.stdout.trim() || 'main';
+
+      // Get git status to check if dirty
+      const status = await GitService.getStatus(repo.path).catch(() => ({
+        staged: [],
+        unstaged: [],
+        untracked: [],
+      }));
+
+      const isDirty = status.staged.length > 0 ||
+                     status.unstaged.length > 0 ||
+                     status.untracked.length > 0;
+      const dirtyFileCount = status.staged.length + status.unstaged.length + status.untracked.length;
+
+      let mostRecentChange = repo.github?.lastCommit;
+
+      // If there are uncommitted changes, get the most recent file modification time
+      if (isDirty) {
+        try {
+          const allChangedFiles = [...status.staged, ...status.unstaged, ...status.untracked];
+          const fileStats = await Promise.all(
+            allChangedFiles.map(async (filePath) => {
+              try {
+                const fullPath = `${repo.path}/${filePath}`;
+                const stats = await FileSystemService.getFileStats(fullPath);
+                return stats?.lastModified || null;
+              } catch (error) {
+                return null;
+              }
+            })
+          );
+
+          const validTimes = fileStats.filter(time => time);
+          if (validTimes.length > 0) {
+            const recentTime = validTimes.reduce((latest, current) => {
+              if (!latest) return current;
+              if (!current) return latest;
+              const latestDate = new Date(latest);
+              const currentDate = new Date(current);
+              return currentDate > latestDate ? current : latest;
+            });
+            mostRecentChange = recentTime ? (typeof recentTime === 'string' ? recentTime : recentTime.toISOString()) : mostRecentChange;
+          }
+        } catch (error) {
+          console.warn(`Failed to get modification times for ${repo.name}:`, error);
+        }
+      }
+
+      return {
+        ...repo,
+        gitBranch,
+        isDirty,
+        dirtyFileCount,
+        mostRecentChange,
+      };
+    } catch (error) {
+      console.warn(`Failed to get git info for ${repo.name}:`, error);
+      return {
+        ...repo,
+        gitBranch: 'main',
+        isDirty: false,
+        dirtyFileCount: 0,
+        mostRecentChange: repo.github?.lastCommit,
+      };
+    }
+  };
+
   const loadRepositories = async () => {
     try {
       setIsLoadingRepos(true);
       const repos = await AlexandriaService.getRepositories();
 
-      // Sort repositories by most recent commit
-      const sortedRepos = [...repos].sort((a, b) => {
-        const aCommit = a.github?.lastCommit ? new Date(a.github.lastCommit).getTime() : 0;
-        const bCommit = b.github?.lastCommit ? new Date(b.github.lastCommit).getTime() : 0;
-        return bCommit - aCommit;
+      // Enhance repositories with git information using the helper function
+      const enhancedRepos: EnhancedAlexandriaEntry[] = await Promise.all(
+        repos.map(repo => enhanceRepositoryWithGitInfo(repo))
+      );
+
+      // Sort repositories by most recent activity (either file changes or commits)
+      const sortedRepos = [...enhancedRepos].sort((a, b) => {
+        const aTime = a.mostRecentChange ? new Date(a.mostRecentChange).getTime() : 0;
+        const bTime = b.mostRecentChange ? new Date(b.mostRecentChange).getTime() : 0;
+        return bTime - aTime; // Most recent first
       });
 
       setRepositories(sortedRepos);
@@ -186,6 +315,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     };
   }, [showAddProjectDropdown]);
 
+  // Handle repository removal
+  const handleRepositoryRemoved = (removedRepoName: string) => {
+    // Update local state immediately for smooth UX
+    setRepositories(prev => prev.filter(repo => repo.name !== removedRepoName));
+
+    // Clear selection if the removed repo was selected
+    if (selectedRepository?.name === removedRepoName) {
+      // Select next available repository or null
+      const remainingRepos = repositories.filter(repo => repo.name !== removedRepoName);
+      setSelectedRepository(remainingRepos.length > 0 ? remainingRepos[0] : null);
+
+      // Clear related data
+      setMarkdownFiles([]);
+      setGitStatus({ staged: [], unstaged: [], untracked: [] });
+    }
+  };
+
   // Handle adding local repository
   const handleAddLocalRepository = async () => {
     try {
@@ -200,28 +346,207 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       }
 
       // Handle both possible response formats
-      const selectedPath =
-        result.filePaths?.[0] || result.filePath || result.path;
+      const selectedPath = result.filePaths?.[0];
 
       if (selectedPath) {
+        // Check if repository already exists by path
+        const existingRepo = repositories.find(repo =>
+          repo.path === selectedPath ||
+          repo.path === selectedPath.replace(/\/$/, '') || // Handle trailing slash
+          repo.path === selectedPath + '/'
+        );
+
+        if (existingRepo) {
+          // Repository already exists - select it instead
+          setSelectedRepository(existingRepo);
+
+          // Flash the existing repository to show it's already added
+          const repoElement = document.querySelector(`[data-repo-name="${existingRepo.name}"]`);
+          if (repoElement) {
+            // Add a flash animation
+            repoElement.classList.add('flash-highlight');
+            setTimeout(() => {
+              repoElement.classList.remove('flash-highlight');
+            }, 1000);
+          }
+
+          console.info(`Repository already exists: ${existingRepo.name}`);
+          return;
+        }
+
         const name = selectedPath.split('/').pop() || 'unnamed';
-        await AlexandriaService.registerRepository(name, selectedPath);
-        // Backend will emit event to update repository list
+
+        // Also check if a repository with the same name exists
+        const existingByName = repositories.find(repo => repo.name === name);
+        if (existingByName) {
+          // If the name exists but path is different, we might want to use a different name
+          // For now, let's add a number suffix
+          let counter = 2;
+          let uniqueName = `${name}-${counter}`;
+          while (repositories.find(repo => repo.name === uniqueName)) {
+            counter++;
+            uniqueName = `${name}-${counter}`;
+          }
+          console.info(`Repository name '${name}' already exists, using '${uniqueName}' instead`);
+          // Note: We'll still use 'name' for registration as the backend might handle this differently
+        }
+
+        // Create a basic placeholder entry for instant feedback
+        const placeholderRepo: EnhancedAlexandriaEntry = {
+          name,
+          path: selectedPath,
+          registeredAt: new Date().toISOString(),
+          hasViews: false,
+          viewCount: 0,
+          bookColor: '#3b82f6',
+          gitBranch: 'loading...',
+          isDirty: false,
+          dirtyFileCount: 0,
+          mostRecentChange: new Date().toISOString(),
+        };
+
+        // Add placeholder immediately for instant feedback
+        setRepositories(prev => [placeholderRepo, ...prev]);
+        setSelectedRepository(placeholderRepo);
+
+        // Clear previous selection data
+        setMarkdownFiles([]);
+        setGitStatus({ staged: [], unstaged: [], untracked: [] });
+
+        // Register with backend and get enriched data
+        const registeredRepo = await AlexandriaService.registerRepository(name, selectedPath);
+
+        // Immediately enhance with git info (this is the important part!)
+        const enhancedRepo = await enhanceRepositoryWithGitInfo(registeredRepo);
+
+        // Update with the fully enhanced repository
+        setRepositories(prev =>
+          prev.map(repo => repo.name === name ? enhancedRepo : repo)
+        );
+        setSelectedRepository(enhancedRepo);
+
+        // Load docs and git status for the newly selected repo
+        loadDocsAndGitStatusForRepo(enhancedRepo);
       }
     } catch (err) {
       console.error('Failed to add local repository:', err);
     }
   };
 
+  // Helper function to load docs and git status for a repository
+  const loadDocsAndGitStatusForRepo = async (repo: EnhancedAlexandriaEntry) => {
+    // Load markdown files
+    setIsLoadingDocs(true);
+    try {
+      const comprehensiveDocs = await AlexandriaDocsService.getComprehensiveDocuments(repo);
+      const allDocs = comprehensiveDocs.all || [];
+
+      // Get last modified times for each file using file system stats
+      const docsWithTimestamps = await Promise.all(
+        allDocs.map(async (filePath) => {
+          try {
+            const fullPath = `${repo.path}/${filePath}`;
+            const stats = await FileSystemService.getFileStats(fullPath);
+            const lastModified = stats?.lastModified;
+            return {
+              path: filePath,
+              lastModified: lastModified ? (typeof lastModified === 'string' ? lastModified : lastModified.toISOString()) : undefined
+            };
+          } catch (error) {
+            console.warn(`Failed to get timestamp for ${filePath}:`, error);
+            return {
+              path: filePath,
+              lastModified: undefined
+            };
+          }
+        })
+      );
+
+      // Sort by most recent changes first
+      const sortedDocs = docsWithTimestamps.sort((a, b) => {
+        if (!a.lastModified && !b.lastModified) return a.path.localeCompare(b.path);
+        if (!a.lastModified) return 1;
+        if (!b.lastModified) return -1;
+        return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+      });
+
+      setMarkdownFiles(sortedDocs);
+    } catch (error) {
+      console.error('Failed to load markdown files:', error);
+      setMarkdownFiles([]);
+    } finally {
+      setIsLoadingDocs(false);
+    }
+
+    // Load git status
+    setIsLoadingGitStatus(true);
+    try {
+      const status = await GitService.getStatus(repo.path);
+
+      // Helper function to get timestamps for files
+      const getFileTimestamps = async (files: string[]) => {
+        return Promise.all(
+          files.map(async (filePath) => {
+            try {
+              const fullPath = `${repo.path}/${filePath}`;
+              const stats = await FileSystemService.getFileStats(fullPath);
+              const lastModified = stats?.lastModified;
+              return {
+                path: filePath,
+                lastModified: lastModified ? (typeof lastModified === 'string' ? lastModified : lastModified.toISOString()) : undefined
+              };
+            } catch (error) {
+              console.warn(`Failed to get timestamp for ${filePath}:`, error);
+              return {
+                path: filePath,
+                lastModified: undefined
+              };
+            }
+          })
+        );
+      };
+
+      // Get timestamps for all file categories
+      const [stagedWithTime, unstagedWithTime, untrackedWithTime] = await Promise.all([
+        getFileTimestamps(status.staged),
+        getFileTimestamps(status.unstaged),
+        getFileTimestamps(status.untracked)
+      ]);
+
+      setGitStatus({
+        staged: stagedWithTime,
+        unstaged: unstagedWithTime,
+        untracked: untrackedWithTime
+      });
+    } catch (error) {
+      console.error('Failed to load git status:', error);
+      setGitStatus({ staged: [], unstaged: [], untracked: [] });
+    } finally {
+      setIsLoadingGitStatus(false);
+    }
+  };
+
   // Handle repository selection
-  const handleSelectRepository = async (repo: AlexandriaEntry) => {
+  const handleSelectRepository = async (repo: EnhancedAlexandriaEntry) => {
     setSelectedRepository(repo);
     // Open repository dashboard
     await WindowService.openRepositoryDashboard(repo);
   };
 
-  // Filter repositories based on search
-  const filteredRepositories = repositories.filter((repo) => {
+  // Load markdown files and git status when repository is selected
+  useEffect(() => {
+    if (!selectedRepository) {
+      setMarkdownFiles([]);
+      setGitStatus({ staged: [], unstaged: [], untracked: [] });
+      return;
+    }
+
+    loadDocsAndGitStatusForRepo(selectedRepository);
+  }, [selectedRepository]);
+
+  // Filter repositories based on search (currently disabled, returning all)
+  const filteredRepositories = repositories; // Search removed for now
+  /* const filteredRepositories = repositories.filter((repo) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -229,7 +554,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       repo.github?.description?.toLowerCase().includes(query) ||
       repo.github?.topics?.some((t) => t.toLowerCase().includes(query))
     );
-  });
+  }); */
 
   // Format relative time
   const getRelativeTime = (dateStr: string | undefined) => {
@@ -272,62 +597,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           overflow: 'hidden',
         }}
       >
-        {/* Repository List Header */}
-        <div
-          style={{
-            padding: '16px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.backgroundLight,
-          }}
-        >
-          <h3
-            style={{
-              margin: 0,
-              fontSize: '14px',
-              fontWeight: 600,
-              color: theme.colors.text,
-              marginBottom: '12px',
-            }}
-          >
-            Repositories
-          </h3>
-
-          {/* Search Input */}
-          <div style={{ position: 'relative' }}>
-            <Search
-              size={14}
-              style={{
-                position: 'absolute',
-                left: '10px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: theme.colors.textSecondary,
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Search repositories..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '6px 10px 6px 32px',
-                backgroundColor: theme.colors.background,
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: '6px',
-                fontSize: '12px',
-                color: theme.colors.text,
-                outline: 'none',
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = theme.colors.primary;
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = theme.colors.border;
-              }}
-            />
-          </div>
-        </div>
 
         {/* Repository List */}
         <div
@@ -357,9 +626,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 fontSize: '12px',
               }}
             >
-              {searchQuery
-                ? 'No repositories found'
-                : 'No repositories yet. Add one to get started!'}
+              No repositories yet. Add one to get started!
             </div>
           ) : (
             <div
@@ -372,6 +639,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {filteredRepositories.map((repo) => (
                 <div
                   key={repo.name}
+                  data-repo-name={repo.name}
                   onClick={() => setSelectedRepository(repo)}
                   style={{
                     padding: '12px',
@@ -403,25 +671,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     style={{
                       display: 'flex',
                       alignItems: 'flex-start',
-                      gap: '12px',
                       width: '100%',
                     }}
                   >
-                    <Folder
-                      size={16}
-                      color={
-                        selectedRepository?.name === repo.name
-                          ? theme.colors.primary
-                          : theme.colors.textSecondary
-                      }
-                      style={{ marginTop: '2px' }}
-                    />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div style={{ minWidth: 0, flex: 1, marginRight: '8px' }}>
                           <div
                             style={{
-                              fontSize: '13px',
+                              fontSize: theme.fontSizes[2], // 16px
                               fontWeight:
                                 selectedRepository?.name === repo.name ? 600 : 500,
                               color:
@@ -437,12 +695,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           </div>
                           <div
                             style={{
-                              fontSize: '11px',
+                              fontSize: theme.fontSizes[0], // 12px
                               color: theme.colors.textSecondary,
                               marginTop: '2px',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '8px',
+                              flexWrap: 'wrap',
                             }}
                           >
                             <span>{repo.github?.owner || repo.remoteUrl?.split('/')[3] || 'local'}</span>
@@ -452,20 +711,52 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                                 {repo.github.stars}
                               </span>
                             )}
+                            {/* Git Branch */}
+                            <span
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '2px',
+                                padding: '2px 6px',
+                                backgroundColor: `${theme.colors.primary}10`,
+                                borderRadius: '4px',
+                                fontSize: theme.fontSizes[0], // 12px
+                              }}
+                            >
+                              <GitBranch size={9} />
+                              {repo.gitBranch || 'main'}
+                            </span>
+                            {/* Dirty State Indicator */}
+                            {repo.isDirty && (
+                              <span
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '2px',
+                                  padding: '2px 6px',
+                                  backgroundColor: `${theme.colors.warning}15`,
+                                  color: theme.colors.warning,
+                                  borderRadius: '4px',
+                                  fontSize: theme.fontSizes[0], // 12px
+                                  fontWeight: 600,
+                                }}
+                                title={`${repo.dirtyFileCount} uncommitted changes`}
+                              >
+                                ● {repo.dirtyFileCount}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div
                           style={{
-                            fontSize: '10px',
-                            color: theme.colors.textSecondary,
+                            fontSize: theme.fontSizes[0],
+                            color: repo.isDirty ? theme.colors.warning : theme.colors.textSecondary,
                             whiteSpace: 'nowrap',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '2px',
+                            fontWeight: repo.isDirty ? 500 : 400,
                           }}
+                          title={repo.isDirty ? 'Most recent file change' : 'Last commit'}
                         >
-                          <Clock size={10} />
-                          {getRelativeTime(repo.github?.lastCommit)}
+                          {getRelativeTime(repo.mostRecentChange || repo.github?.lastCommit)}
                         </div>
                       </div>
                     </div>
@@ -482,446 +773,39 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Render right panel - Repository details
   const renderRightPanel = () => {
     return (
-      <div
-        style={{
-          height: '100%',
-          backgroundColor: theme.colors.background,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-      >
-        {selectedRepository ? (
-          <>
-            {/* Repository Header */}
-            <div
-              style={{
-                padding: '20px',
-                borderBottom: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.backgroundLight,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div>
-                  <h2
-                    style={{
-                      margin: 0,
-                      fontSize: '20px',
-                      fontWeight: 600,
-                      color: theme.colors.text,
-                      marginBottom: '4px',
-                    }}
-                  >
-                    {selectedRepository.name}
-                  </h2>
-                  {selectedRepository.github?.description && (
-                    <p
-                      style={{
-                        margin: '8px 0 0 0',
-                        fontSize: '13px',
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      {selectedRepository.github.description}
-                    </p>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleSelectRepository(selectedRepository)}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: theme.colors.primary,
-                    color: theme.colors.background,
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    transition: 'opacity 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.9';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  Open Dashboard
-                </button>
-              </div>
-            </div>
-
-            {/* Repository Info */}
-            <div
-              style={{
-                flex: 1,
-                overflow: 'auto',
-                padding: '20px',
-              }}
-            >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '16px',
-                  marginBottom: '24px',
-                }}
-              >
-                {/* Stats Cards */}
-                <div
-                  style={{
-                    padding: '16px',
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    borderRadius: '8px',
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '4px',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Last Commit
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '14px',
-                      color: theme.colors.text,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {getRelativeTime(selectedRepository.github?.lastCommit)}
-                  </div>
-                </div>
-
-                {selectedRepository.github?.stars && (
-                  <div
-                    style={{
-                      padding: '16px',
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      borderRadius: '8px',
-                      border: `1px solid ${theme.colors.border}`,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: theme.colors.textSecondary,
-                        marginBottom: '4px',
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      Stars
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '14px',
-                        color: theme.colors.text,
-                        fontWeight: 500,
-                      }}
-                    >
-                      {selectedRepository.github.stars}
-                    </div>
-                  </div>
-                )}
-
-                {selectedRepository.github?.primaryLanguage && (
-                  <div
-                    style={{
-                      padding: '16px',
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      borderRadius: '8px',
-                      border: `1px solid ${theme.colors.border}`,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: theme.colors.textSecondary,
-                        marginBottom: '4px',
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      Language
-                    </div>
-                    <div
-                      style={{
-                        fontSize: '14px',
-                        color: theme.colors.text,
-                        fontWeight: 500,
-                      }}
-                    >
-                      {selectedRepository.github.primaryLanguage}
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    padding: '16px',
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    borderRadius: '8px',
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '4px',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Views
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '14px',
-                      color: theme.colors.text,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {selectedRepository.viewCount || 0}
-                  </div>
-                </div>
-              </div>
-
-              {/* Last Commit Details */}
-              {selectedRepository.github?.lastCommit && (
-                <div
-                  style={{
-                    padding: '16px',
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    borderRadius: '8px',
-                    border: `1px solid ${theme.colors.border}`,
-                    marginBottom: '16px',
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '12px',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <GitBranch size={12} />
-                    Last Commit
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                    }}
-                  >
-                    {/* Commit Message */}
-                    {(selectedRepository.github as any).lastCommitMessage && (
-                      <div
-                        style={{
-                          padding: '12px',
-                          backgroundColor: theme.colors.background,
-                          borderRadius: '6px',
-                          border: `1px solid ${theme.colors.border}`,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: '13px',
-                            color: theme.colors.text,
-                            fontWeight: 500,
-                            marginBottom: '8px',
-                            lineHeight: '1.4',
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-word',
-                          }}
-                        >
-                          {(selectedRepository.github as any).lastCommitMessage}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '11px',
-                            color: theme.colors.textSecondary,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          {(selectedRepository.github as any).lastCommitAuthor && (
-                            <span>{(selectedRepository.github as any).lastCommitAuthor}</span>
-                          )}
-                          {(selectedRepository.github as any).lastCommitAuthor && (selectedRepository.github as any).lastCommitHash && (
-                            <span>•</span>
-                          )}
-                          {(selectedRepository.github as any).lastCommitHash && (
-                            <span style={{ fontFamily: 'monospace' }}>
-                              {(selectedRepository.github as any).lastCommitHash}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Time Info */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                      }}
-                    >
-                      <div style={{ flex: 1 }}>
-                        <div
-                          style={{
-                            fontSize: '13px',
-                            color: theme.colors.text,
-                            fontWeight: 500,
-                            marginBottom: '4px',
-                          }}
-                        >
-                          {getRelativeTime(selectedRepository.github.lastCommit)}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '11px',
-                            color: theme.colors.textSecondary,
-                          }}
-                        >
-                          {new Date(selectedRepository.github.lastCommit).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Repository Path */}
-              <div
-                style={{
-                  padding: '16px',
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  borderRadius: '8px',
-                  border: `1px solid ${theme.colors.border}`,
-                  marginBottom: '16px',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '11px',
-                    color: theme.colors.textSecondary,
-                    marginBottom: '8px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Local Path
-                </div>
-                <div
-                  style={{
-                    fontSize: '12px',
-                    color: theme.colors.text,
-                    fontFamily: 'monospace',
-                    wordBreak: 'break-all',
-                  }}
-                >
-                  {selectedRepository.path}
-                </div>
-              </div>
-
-              {/* Topics */}
-              {selectedRepository.github?.topics && selectedRepository.github.topics.length > 0 && (
-                <div
-                  style={{
-                    padding: '16px',
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    borderRadius: '8px',
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '12px',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Topics
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '8px',
-                    }}
-                  >
-                    {selectedRepository.github.topics.map((topic) => (
-                      <span
-                        key={topic}
-                        style={{
-                          padding: '4px 10px',
-                          backgroundColor: `${theme.colors.primary}20`,
-                          color: theme.colors.primary,
-                          borderRadius: '12px',
-                          fontSize: '11px',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {topic}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: theme.colors.textSecondary,
-              fontSize: '14px',
-            }}
-          >
-            {repositories.length === 0
-              ? 'Add a repository to get started'
-              : 'Select a repository to view details'}
-          </div>
-        )}
-      </div>
+      <RepositoryDetailsPanel
+        selectedRepository={selectedRepository}
+        repositories={repositories}
+        markdownFiles={markdownFiles}
+        gitStatus={gitStatus}
+        isLoadingDocs={isLoadingDocs}
+        isLoadingGitStatus={isLoadingGitStatus}
+        onOpenDashboard={handleSelectRepository}
+        onRepositoryRemoved={handleRepositoryRemoved}
+      />
     );
   };
 
   return (
     <>
+      {/* CSS for flash animation */}
+      <style>{`
+        @keyframes flashHighlight {
+          0%, 100% {
+            background-color: transparent;
+            border-color: transparent;
+          }
+          25%, 75% {
+            background-color: ${theme.colors.primary}30;
+            border-color: ${theme.colors.primary};
+            transform: scale(1.02);
+          }
+        }
+
+        .flash-highlight {
+          animation: flashHighlight 1s ease-in-out;
+        }
+      `}</style>
       {/* Onboarding Modal */}
       {isOnboardingOpen && (
         <div
@@ -1259,7 +1143,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            padding: '16px',
           }}
         >
           {/* Main Content Area with Resizable Panels */}
@@ -1279,8 +1162,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <AnimatedResizableLayout
               leftPanel={renderLeftPanel()}
               rightPanel={renderRightPanel()}
-              minSize={25}
-              defaultSize={35}
+              minSize={20}
+              defaultSize={25}
               collapsibleSide="left"
               style={{ height: '100%', width: '100%' }}
             />

@@ -65,4 +65,10 @@ export class TerminalService {
   ): () => void {
     return window.mainProcess.terminal.onWindowReady?.(callback) || (() => {});
   }
+
+  static onWindowClose(
+    callback: (data: { terminalId?: string; agentSessionId?: string; windowId: number }) => void,
+  ): () => void {
+    return window.mainProcess.terminal.onWindowClose?.(callback) || (() => {});
+  }
 }

@@ -195,6 +195,7 @@ export const StandaloneTerminal: React.FC = () => {
           onClose={() => window.close()}
           className="h-full"
           agentSessionId={terminalInfo.agentSessionId}
+          hideHeader={true}
         />
       </div>
     </div>

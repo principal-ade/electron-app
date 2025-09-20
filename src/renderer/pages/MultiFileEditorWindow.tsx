@@ -644,7 +644,7 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = ({
 
       {/* Editor */}
       {activeTab && (
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
           {showDiff ? (
             // Show diff view
             <DiffViewer

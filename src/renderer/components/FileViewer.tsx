@@ -4,7 +4,7 @@ import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { initVimMode } from 'monaco-vim';
 import { Presentation, X, Copy, Check } from 'lucide-react';
-import { IndustryMarkdownSlide } from 'themed-markdown';
+import { DocumentView } from 'themed-markdown';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 
 // Configure Monaco to use the locally bundled version instead of CDN
@@ -861,33 +861,24 @@ export const FileViewer: React.FC<FileViewerProps> = ({
     }
 
     if (showPresentationView && fileType === 'markdown') {
+      // Split content into slides if it contains slide separators
+      const slides = fileContent.includes('---')
+        ? fileContent.split(/\n---\n/).map(slide => slide.trim())
+        : [fileContent];
+
       return (
-        <div style={{ height: '100%', overflow: 'hidden' }}>
-          <IndustryMarkdownSlide
-            content={fileContent}
-            slideIdPrefix="fileviewer-md"
-            slideIndex={0}
-            isVisible={true}
+        <div style={{ position: 'relative', height: '100%' }}>
+          <DocumentView
+            content={slides}
+            showSegmented={false}
             theme={theme}
-            enableMermaidPopout={true}
-            enableHtmlPopout={true}
-            onLinkClick={(href) => {
-              if (href.startsWith('#')) {
-                const elementId = href.substring(1);
-                setTimeout(() => {
-                  const element = document.getElementById(elementId);
-                  element?.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'start',
-                  });
-                }, 100);
-              } else if (
-                href.startsWith('http://') ||
-                href.startsWith('https://')
-              ) {
-                window.open(href, '_blank');
-              }
+            onCheckboxChange={(slideIndex, lineNumber, checked) => {
+              // Handle checkbox changes if needed
+              console.log('Checkbox changed:', slideIndex, lineNumber, checked);
             }}
+            slideIdPrefix="fileviewer-md"
+            showSectionHeaders={false}
+            showSeparators={false}
           />
         </div>
       );

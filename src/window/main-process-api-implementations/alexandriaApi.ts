@@ -59,8 +59,8 @@ export const alexandriaAPI: AlexandriaAPI = {
     ipcRenderer.invoke(AlexandriaAPIEvent.GET_BY_PATH, path),
   registerRepository: (name: string, path: string) =>
     ipcRenderer.invoke(AlexandriaAPIEvent.REGISTER, name, path),
-  removeRepository: (name: string) =>
-    ipcRenderer.invoke(AlexandriaAPIEvent.REMOVE, name),
+  removeRepository: (name: string, deleteLocal?: boolean) =>
+    ipcRenderer.invoke(AlexandriaAPIEvent.REMOVE, name, deleteLocal),
   searchRepositories: (query: string) =>
     ipcRenderer.invoke(AlexandriaAPIEvent.SEARCH, query),
   getRepositoriesWithViews: () =>

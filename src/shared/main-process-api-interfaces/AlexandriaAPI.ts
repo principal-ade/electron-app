@@ -63,8 +63,10 @@ export interface AlexandriaAPI {
 
   /**
    * Remove a repository from the registry
+   * @param name - Repository name to remove
+   * @param deleteLocal - Whether to delete local files (optional)
    */
-  removeRepository(name: string): Promise<boolean>;
+  removeRepository(name: string, deleteLocal?: boolean): Promise<boolean>;
 
   /**
    * Search repositories by query

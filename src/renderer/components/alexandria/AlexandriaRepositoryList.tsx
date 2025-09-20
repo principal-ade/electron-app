@@ -9,6 +9,7 @@ interface AlexandriaEntryListProps {
   onSelectRepository: (repo: AlexandriaEntry) => void;
   onRefresh?: () => void;
   isLoading?: boolean;
+  selectedRepository?: AlexandriaEntry | null;
 }
 
 export const AlexandriaRepositoryList: React.FC<AlexandriaEntryListProps> = ({
@@ -16,6 +17,7 @@ export const AlexandriaRepositoryList: React.FC<AlexandriaEntryListProps> = ({
   onSelectRepository,
   onRefresh,
   isLoading = false,
+  selectedRepository,
 }) => {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -117,6 +119,7 @@ export const AlexandriaRepositoryList: React.FC<AlexandriaEntryListProps> = ({
                 key={repo.name}
                 repository={repo}
                 onSelect={onSelectRepository}
+                isSelected={selectedRepository?.name === repo.name}
               />
             ))}
           </div>

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
-import { Search, FileText, Book, Loader } from 'lucide-react';
+import { Search, FileText, Book, Loader, Eye, EyeOff } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { AlexandriaDocsService } from '../../../main-process-api/AlexandriaDocsService';
@@ -9,6 +9,7 @@ interface AlexandriaDocItem {
   path: string;
   name: string;
   relativePath: string;
+  isTracked: boolean;
 }
 
 interface AlexandriaDocsPanelProps {
@@ -47,38 +48,55 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
 
       setAlexandriaEntry(entry);
 
-      // Get documents from Alexandria (only those associated with CodebaseViews)
-      const { documents: docPaths, excluded } =
-        await AlexandriaDocsService.getDocumentsWithExclusions(entry);
+      // Get comprehensive documents including tracked and untracked
+      const comprehensiveDocs = await AlexandriaDocsService.getComprehensiveDocuments(entry);
+      const { tracked, untracked, excluded } = comprehensiveDocs;
 
       // Convert document paths to our format
-      // Note: Deduplication is handled in the backend service temporarily until Alexandria library is fixed
-      const docItems: AlexandriaDocItem[] = docPaths.map((docPath) => {
-        // Extract just the filename without extension for the name
+      const docItems: AlexandriaDocItem[] = [];
+
+      // Add tracked documents
+      for (const docPath of tracked) {
         const fileName = docPath.split('/').pop() || docPath;
         const name = fileName.replace(/\.(md|MD)$/i, '');
-
-        // Build the full path
         const fullPath = `${repositoryPath}/${docPath}`.replace(/\/+/g, '/');
 
-        return {
+        docItems.push({
           path: fullPath,
           name: name,
           relativePath: docPath,
-        };
-      });
+          isTracked: true,
+        });
+      }
 
-      // Sort by relative path
-      docItems.sort((a, b) =>
-        a.relativePath
+      // Add untracked documents
+      for (const docPath of untracked) {
+        const fileName = docPath.split('/').pop() || docPath;
+        const name = fileName.replace(/\.(md|MD)$/i, '');
+        const fullPath = `${repositoryPath}/${docPath}`.replace(/\/+/g, '/');
+
+        docItems.push({
+          path: fullPath,
+          name: name,
+          relativePath: docPath,
+          isTracked: false,
+        });
+      }
+
+      // Sort by tracked status first (tracked first), then by relative path
+      docItems.sort((a, b) => {
+        if (a.isTracked !== b.isTracked) {
+          return a.isTracked ? -1 : 1;
+        }
+        return a.relativePath
           .toLowerCase()
-          .localeCompare(b.relativePath.toLowerCase()),
-      );
+          .localeCompare(b.relativePath.toLowerCase());
+      });
 
       setDocuments(docItems);
 
       console.info(
-        `[AlexandriaDocsPanel] Loaded ${docItems.length} documents from Alexandria (${excluded.length} excluded)`,
+        `[AlexandriaDocsPanel] Loaded ${tracked.length} tracked, ${untracked.length} untracked documents (${excluded.length} excluded)`,
       );
     } catch (err) {
       console.error('[AlexandriaDocsPanel] Failed to fetch documents:', err);
@@ -316,15 +334,39 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                     gap: '8px',
                   }}
                 >
-                  <FileText
-                    size={16}
-                    color={
-                      selectedDocument === doc.path
-                        ? theme.colors.primary
-                        : theme.colors.textSecondary
-                    }
-                    style={{ marginTop: '2px', flexShrink: 0 }}
-                  />
+                  <div style={{ position: 'relative', flexShrink: 0, marginTop: '2px' }}>
+                    <FileText
+                      size={16}
+                      color={
+                        selectedDocument === doc.path
+                          ? theme.colors.primary
+                          : theme.colors.textSecondary
+                      }
+                    />
+                    {/* Tracked/Untracked indicator */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: -2,
+                        right: -2,
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        backgroundColor: doc.isTracked ? '#10b981' : '#f59e0b',
+                        border: `1px solid ${theme.colors.background}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                      title={doc.isTracked ? 'Tracked (in CodebaseView)' : 'Untracked'}
+                    >
+                      {doc.isTracked ? (
+                        <Eye size={6} color="white" />
+                      ) : (
+                        <EyeOff size={6} color="white" />
+                      )}
+                    </div>
+                  </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
@@ -339,17 +381,30 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                     >
                       {doc.name}
                     </div>
-                    <div
-                      style={{
-                        fontSize: '11px',
-                        color: theme.colors.textSecondary,
-                        opacity: 0.8,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {doc.relativePath}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: theme.colors.textSecondary,
+                          opacity: 0.8,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          flex: 1,
+                        }}
+                      >
+                        {doc.relativePath}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '10px',
+                          color: doc.isTracked ? '#10b981' : '#f59e0b',
+                          fontWeight: 500,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {doc.isTracked ? 'tracked' : 'untracked'}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -371,7 +426,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
             textAlign: 'center',
           }}
         >
-          Showing documents from Alexandria CodebaseViews
+          Showing tracked and untracked markdown documents
         </div>
       )}
     </div>

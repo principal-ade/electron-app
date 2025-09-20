@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
+import { ShellService } from '../../main-process-api/ShellService';
 
 interface PackageInfo {
   path: string;
@@ -153,12 +154,9 @@ export const DependenciesView: React.FC<DependenciesViewProps> = ({
           // Use grep command to search for patterns in JavaScript/TypeScript files
           const grepCommand = `grep -r --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" --include="*.mjs" --include="*.cjs" -l "${pattern}" . 2>/dev/null || true`;
 
-          const result = await window.mainProcess.shell.runCommand(
-            grepCommand,
-            {
-              cwd: workingDirectory,
-            },
-          );
+          const result = await ShellService.runCommand(grepCommand, {
+            cwd: workingDirectory,
+          });
 
           if (result && result.output) {
             // Parse the output lines as file paths

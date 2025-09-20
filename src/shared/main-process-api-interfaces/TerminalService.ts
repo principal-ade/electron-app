@@ -12,6 +12,7 @@ export enum TerminalAPIEvents {
   ON_DATA = 'terminal:data',
   ON_EXIT = 'terminal:exit',
   ON_WINDOW_READY = 'terminal:window-ready',
+  ON_WINDOW_CLOSE = 'terminal:window-close',
   CHECK_COMMAND = 'terminal:checkCommand',
   CLEAR_PATH_CACHE = 'terminal:clearPathCache',
 }
@@ -47,6 +48,13 @@ export interface TerminalAPI {
   onData: (callback: (data: TerminalData) => void) => () => void;
   onExit: (callback: (exit: TerminalExit) => void) => () => void;
   onWindowReady: (
+    callback: (data: {
+      terminalId: string;
+      agentSessionId?: string;
+      windowId: number;
+    }) => void,
+  ) => () => void;
+  onWindowClose: (
     callback: (data: {
       terminalId: string;
       agentSessionId?: string;

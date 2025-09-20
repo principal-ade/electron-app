@@ -6,11 +6,12 @@ import type { AlexandriaEntry } from '@a24z/core-library';
 interface AlexandriaRepositoryCardProps {
   repository: AlexandriaEntry;
   onSelect: (repo: AlexandriaEntry) => void;
+  isSelected?: boolean;
 }
 
 export const AlexandriaRepositoryCard: React.FC<
   AlexandriaRepositoryCardProps
-> = ({ repository, onSelect }) => {
+> = ({ repository, onSelect, isSelected = false }) => {
   const { theme } = useTheme();
 
   // Extract GitHub metadata from the nested github field
@@ -74,9 +75,26 @@ export const AlexandriaRepositoryCard: React.FC<
         width: '100%',
         maxWidth: '320px',
         margin: '0 auto',
+        position: 'relative',
       }}
       onClick={() => onSelect(repository)}
     >
+      {/* Selected indicator */}
+      {isSelected && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-4px',
+            left: '-4px',
+            right: '-4px',
+            bottom: '-4px',
+            border: `2px solid ${theme.colors.primary}`,
+            borderRadius: '8px',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }}
+        />
+      )}
       {/* Book container with 3D effect */}
       <div
         className="relative h-full w-full"

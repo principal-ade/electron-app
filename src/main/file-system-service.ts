@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import { promisify } from 'util';
 
@@ -230,5 +231,45 @@ export class FileSystemService {
     // This would typically scan a known directory for git repositories
     // For now, return empty array - can be implemented later
     return [];
+  }
+
+  /**
+   * Delete a directory and all its contents
+   * @param dirPath - Path to the directory to delete
+   * @returns Promise<void>
+   * @throws Error if deletion fails
+   */
+  static async deleteDirectory(dirPath: string): Promise<void> {
+    try {
+      // Check if path exists before deletion
+      await fsPromises.access(dirPath);
+
+      // Use recursive deletion for the directory
+      await fsPromises.rm(dirPath, { recursive: true, force: true });
+      console.log(`Successfully deleted directory: ${dirPath}`);
+    } catch (error: any) {
+      if (error.code === 'ENOENT') {
+        // Directory doesn't exist, consider it a success
+        console.log(`Directory does not exist, nothing to delete: ${dirPath}`);
+        return;
+      }
+
+      console.error(`Failed to delete directory ${dirPath}:`, error);
+      throw new Error(`Failed to delete directory: ${error.message}`);
+    }
+  }
+
+  /**
+   * Check if a path exists
+   * @param pathToCheck - Path to check
+   * @returns Promise<boolean> true if exists, false otherwise
+   */
+  static async pathExists(pathToCheck: string): Promise<boolean> {
+    try {
+      await fsPromises.access(pathToCheck);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

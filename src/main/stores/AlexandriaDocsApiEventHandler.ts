@@ -3,7 +3,7 @@
  */
 
 import { ipcMain } from 'electron';
-import type { AlexandriaDocsAPI } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
+import type { AlexandriaDocsAPI, ComprehensiveDocuments } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
 import { AlexandriaDocsAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
 import type { AlexandriaEntry } from '@a24z/core-library';
@@ -44,6 +44,14 @@ export class AlexandriaDocsApiEventHandler implements AlexandriaDocsAPI {
     );
   }
 
+  async getComprehensiveDocuments(entry: AlexandriaEntry): Promise<ComprehensiveDocuments> {
+    // Use the entry's name to get comprehensive documents (always respecting .gitignore)
+    if (!entry.name) {
+      throw new Error('Alexandria entry must have a name');
+    }
+    return this.registryService.getComprehensiveDocuments(entry.name, true);
+  }
+
   /**
    * Clean up handlers when shutting down
    */
@@ -52,6 +60,7 @@ export class AlexandriaDocsApiEventHandler implements AlexandriaDocsAPI {
     ipcMain.removeHandler(AlexandriaDocsAPIEvent.GET_DOCUMENTS);
     ipcMain.removeHandler(AlexandriaDocsAPIEvent.GET_EXCLUDED_DOCUMENTS);
     ipcMain.removeHandler(AlexandriaDocsAPIEvent.GET_DOCUMENTS_WITH_EXCLUSIONS);
+    ipcMain.removeHandler(AlexandriaDocsAPIEvent.GET_COMPREHENSIVE_DOCUMENTS);
   }
 }
 
@@ -75,6 +84,11 @@ export function registerAlexandriaDocsHandlers(): void {
   ipcMain.handle(
     AlexandriaDocsAPIEvent.GET_DOCUMENTS_WITH_EXCLUSIONS,
     (_, entry: AlexandriaEntry) => handler.getDocumentsWithExclusions(entry),
+  );
+
+  ipcMain.handle(
+    AlexandriaDocsAPIEvent.GET_COMPREHENSIVE_DOCUMENTS,
+    (_, entry: AlexandriaEntry) => handler.getComprehensiveDocuments(entry),
   );
 
   console.log('[AlexandriaDocs] IPC handlers registered');

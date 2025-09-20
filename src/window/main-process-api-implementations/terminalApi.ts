@@ -87,6 +87,23 @@ export const terminalAPI: TerminalAPI = {
     };
   },
 
+  onWindowClose: (
+    callback: (data: {
+      terminalId: string;
+      agentSessionId?: string;
+      windowId: number;
+    }) => void,
+  ) => {
+    const listener = (
+      _event: any,
+      data: { terminalId: string; agentSessionId?: string; windowId: number },
+    ) => callback(data);
+    ipcRenderer.on(TerminalAPIEvents.ON_WINDOW_CLOSE, listener);
+    return () => {
+      ipcRenderer.removeListener(TerminalAPIEvents.ON_WINDOW_CLOSE, listener);
+    };
+  },
+
   refresh: async (sessionId: string): Promise<boolean> => {
     return ipcRenderer.invoke(TerminalAPIEvents.REFRESH, sessionId);
   },

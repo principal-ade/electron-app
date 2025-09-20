@@ -96,7 +96,7 @@ export const DocumentSearchView: React.FC<DocumentSearchViewProps> = ({
     // Subscribe to index updates
     const unsubscribe = documentSearchService.onIndexUpdate((event) => {
       // Only log completion events, not every progress update
-      if (event.type === 'completed' || event.type === 'error') {
+      if (event.type === 'completed' || event.type === 'failed') {
         console.log('Index update completed:', event.type);
         // Refresh status after index completes
         documentSearchService.getStatus().then(setIndexStatus);

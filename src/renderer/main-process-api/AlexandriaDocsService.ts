@@ -4,7 +4,10 @@
  */
 
 import type { AlexandriaEntry } from '@a24z/core-library';
-import type { AlexandriaDocsWithExclusions } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
+import type {
+  AlexandriaDocsWithExclusions,
+  ComprehensiveDocuments
+} from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
 
 export class AlexandriaDocsService {
   /**
@@ -36,5 +39,16 @@ export class AlexandriaDocsService {
     entry: AlexandriaEntry,
   ): Promise<AlexandriaDocsWithExclusions> {
     return window.mainProcess.alexandriaDocs.getDocumentsWithExclusions(entry);
+  }
+
+  /**
+   * Get comprehensive document information including tracked and untracked
+   * @param entry - The Alexandria repository entry
+   * @returns Object with tracked, untracked, excluded, and all document paths
+   */
+  static async getComprehensiveDocuments(
+    entry: AlexandriaEntry,
+  ): Promise<ComprehensiveDocuments> {
+    return window.mainProcess.alexandriaDocs.getComprehensiveDocuments(entry);
   }
 }

@@ -15,4 +15,10 @@ export const alexandriaDocsAPI: AlexandriaDocsAPI = {
       AlexandriaDocsAPIEvent.GET_DOCUMENTS_WITH_EXCLUSIONS,
       entry,
     ),
+
+  getComprehensiveDocuments: (entry: AlexandriaEntry) =>
+    ipcRenderer.invoke(
+      AlexandriaDocsAPIEvent.GET_COMPREHENSIVE_DOCUMENTS,
+      entry,
+    ),
 };

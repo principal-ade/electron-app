@@ -8,18 +8,17 @@ const projectRoot = path.join(__dirname, '../..');
 
 console.log('🚀 Starting production build process...');
 
-// Step 0: Sync branding
-console.log('🎨 Syncing branding configuration...');
-execSync('npm run sync:branding', {
-  cwd: projectRoot,
-  stdio: 'inherit',
-});
-
 // Step 1: Clean up
 console.log('🧹 Cleaning up old builds...');
-execSync('node -r ts-node/register ./.erb/scripts/clean.js dist', {
-  cwd: projectRoot,
-  stdio: 'inherit',
+// Clean up manually since ts-node might not be available after npm install
+const distPath = path.join(projectRoot, 'dist');
+const buildPath = path.join(projectRoot, 'release/build');
+const dllPath = path.join(projectRoot, 'dll');
+
+[distPath, buildPath, dllPath].forEach((folder) => {
+  if (fs.existsSync(folder)) {
+    fs.rmSync(folder, { recursive: true, force: true });
+  }
 });
 
 // Clean release/app/dist to remove stale preload files
@@ -37,10 +36,10 @@ const packageJsonBackup = fs.readFileSync(packageJsonPath, 'utf8');
 // Step 3: Core library dependencies removed - no longer needed
 
 try {
-  // Step 3: Remove pnpm workspace and install with npm
-  console.log('🔄 Converting to npm dependencies...');
+  // Step 3: Clean reinstall for production build
+  console.log('🔄 Performing clean npm install for production build...');
 
-  // Remove node_modules and pnpm lock
+  // Remove node_modules for clean install
   if (fs.existsSync(path.join(projectRoot, 'node_modules'))) {
     fs.rmSync(path.join(projectRoot, 'node_modules'), { recursive: true });
   }

@@ -885,6 +885,18 @@ class TerminalManager {
     terminalWindow.on('closed', () => {
       console.log(`[Terminal] Pop-out window closed for session ${sessionId}`);
       this.terminalWindows.delete(sessionId);
+      
+      // Notify all windows about the terminal window close
+      const windows = BrowserWindow.getAllWindows();
+      windows.forEach((window) => {
+        if (!window.isDestroyed()) {
+          window.webContents.send(TerminalAPIEvents.ON_WINDOW_CLOSE, {
+            terminalId: sessionId,
+            agentSessionId: session.agentSessionId,
+            windowId: terminalWindow.id,
+          });
+        }
+      });
     });
 
     // Send terminal data to this window as well

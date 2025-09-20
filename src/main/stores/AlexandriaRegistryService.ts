@@ -6,9 +6,11 @@
 import {
   AlexandriaOutpostManager,
   NodeFileSystemAdapter,
+  NodeGlobAdapter,
 } from '@a24z/core-library';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { gitClientFactory } from '../utils/gitClientFactory';
+import { FileSystemService } from '../file-system-service';
 
 export class AlexandriaRegistryService {
   private static instance: AlexandriaRegistryService;
@@ -16,9 +18,10 @@ export class AlexandriaRegistryService {
   private initialized = false;
 
   private constructor() {
-    // Create filesystem adapter and outpost manager
+    // Create filesystem and glob adapters for outpost manager
     const fsAdapter = new NodeFileSystemAdapter();
-    this.outpostManager = new AlexandriaOutpostManager(fsAdapter);
+    const globAdapter = new NodeGlobAdapter();
+    this.outpostManager = new AlexandriaOutpostManager(fsAdapter, globAdapter);
   }
 
   static getInstance(): AlexandriaRegistryService {
@@ -184,14 +187,52 @@ export class AlexandriaRegistryService {
 
   /**
    * Remove a repository by name
+   * @param name - Repository name to remove
+   * @param deleteLocal - Whether to delete local files (optional)
+   * @returns Promise<boolean> indicating success
    */
-  async removeRepository(name: string): Promise<boolean> {
-    // AlexandriaOutpostManager doesn't have a remove method yet
-    // We'll need to request this feature or implement it differently
-    console.warn(
-      'Repository removal not yet implemented in AlexandriaOutpostManager',
-    );
-    return false;
+  async removeRepository(name: string, deleteLocal = false): Promise<boolean> {
+    try {
+      // Get the repository details before removal
+      const repository = await this.getRepository(name);
+      if (!repository) {
+        console.warn(`Repository not found: ${name}`);
+        return false;
+      }
+
+      // Access the private projectRegistry field via reflection
+      // This is a workaround until AlexandriaOutpostManager exposes removal
+      const registryField = (this.outpostManager as any).projectRegistry;
+      if (!registryField || typeof registryField.removeProject !== 'function') {
+        console.error('Cannot access project registry for removal');
+        return false;
+      }
+
+      // Remove from registry
+      const removed = registryField.removeProject(name);
+
+      if (!removed) {
+        console.warn(`Failed to remove repository from registry: ${name}`);
+        return false;
+      }
+
+      // Optionally delete local files
+      if (deleteLocal && repository.path) {
+        try {
+          await FileSystemService.deleteDirectory(repository.path);
+          console.log(`Deleted local files for repository: ${name} at ${repository.path}`);
+        } catch (error) {
+          console.error(`Failed to delete local files for ${name}:`, error);
+          // Continue even if deletion fails - registry removal succeeded
+        }
+      }
+
+      console.log(`Repository removed from registry: ${name}`);
+      return true;
+    } catch (error) {
+      console.error(`Error removing repository ${name}:`, error);
+      return false;
+    }
   }
 
   /**
@@ -379,5 +420,99 @@ export class AlexandriaRegistryService {
     }
 
     return results;
+  }
+
+  /**
+   * Get all markdown files in a repository (tracked and untracked)
+   * @param name - Repository name
+   * @param useGitignore - Whether to respect .gitignore files (default: true)
+   * @returns Array of all markdown file paths
+   */
+  async getAllMarkdownDocuments(name: string, useGitignore = true): Promise<string[]> {
+    const entry = await this.getRepository(name);
+    if (!entry) {
+      throw new Error(`Repository not found: ${name}`);
+    }
+
+    return this.outpostManager.getAllDocs(entry, useGitignore);
+  }
+
+  /**
+   * Get all markdown files by repository path
+   * @param path - Repository path
+   * @param useGitignore - Whether to respect .gitignore files (default: true)
+   * @returns Array of all markdown file paths
+   */
+  async getAllMarkdownDocumentsByPath(path: string, useGitignore = true): Promise<string[]> {
+    const entry = await this.getRepositoryByPath(path);
+    if (!entry) {
+      throw new Error(`Repository not found at path: ${path}`);
+    }
+
+    return this.outpostManager.getAllDocs(entry, useGitignore);
+  }
+
+  /**
+   * Get untracked markdown documents in a repository
+   * These are markdown files not associated with any CodebaseView
+   * @param name - Repository name
+   * @param useGitignore - Whether to respect .gitignore files (default: true)
+   * @returns Array of untracked markdown file paths
+   */
+  async getUntrackedDocuments(name: string, useGitignore = true): Promise<string[]> {
+    const entry = await this.getRepository(name);
+    if (!entry) {
+      throw new Error(`Repository not found: ${name}`);
+    }
+
+    return this.outpostManager.getUntrackedDocs(entry, useGitignore);
+  }
+
+  /**
+   * Get untracked markdown documents by repository path
+   * @param path - Repository path
+   * @param useGitignore - Whether to respect .gitignore files (default: true)
+   * @returns Array of untracked markdown file paths
+   */
+  async getUntrackedDocumentsByPath(path: string, useGitignore = true): Promise<string[]> {
+    const entry = await this.getRepositoryByPath(path);
+    if (!entry) {
+      throw new Error(`Repository not found at path: ${path}`);
+    }
+
+    return this.outpostManager.getUntrackedDocs(entry, useGitignore);
+  }
+
+  /**
+   * Get comprehensive document information for a repository
+   * Returns tracked, untracked, and excluded documents
+   * @param name - Repository name
+   * @param useGitignore - Whether to respect .gitignore files (default: true)
+   * @returns Object with categorized document arrays
+   */
+  async getComprehensiveDocuments(name: string, useGitignore = true): Promise<{
+    tracked: string[];
+    untracked: string[];
+    excluded: string[];
+    all: string[];
+  }> {
+    const entry = await this.getRepository(name);
+    if (!entry) {
+      throw new Error(`Repository not found: ${name}`);
+    }
+
+    const [tracked, untracked, excluded, all] = await Promise.all([
+      this.outpostManager.getAlexandriaEntryDocs(entry),
+      this.outpostManager.getUntrackedDocs(entry, useGitignore),
+      Promise.resolve(this.outpostManager.getAlexandriaEntryExcludedDocs(entry)),
+      this.outpostManager.getAllDocs(entry, useGitignore),
+    ]);
+
+    return {
+      tracked,
+      untracked,
+      excluded,
+      all,
+    };
   }
 }

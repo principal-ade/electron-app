@@ -57,8 +57,8 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
     return repo;
   }
 
-  async removeRepository(name: string) {
-    const success = await this.registryService.removeRepository(name);
+  async removeRepository(name: string, deleteLocal?: boolean) {
+    const success = await this.registryService.removeRepository(name, deleteLocal);
     if (success) {
       // Broadcast the event to all windows
       this.broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_REMOVED, {
@@ -126,8 +126,8 @@ export function registerAlexandriaHandlers(): void {
   ipcMain.handle(AlexandriaAPIEvent.REGISTER, (_, name: string, path: string) =>
     handler.registerRepository(name, path),
   );
-  ipcMain.handle(AlexandriaAPIEvent.REMOVE, (_, name: string) =>
-    handler.removeRepository(name),
+  ipcMain.handle(AlexandriaAPIEvent.REMOVE, (_, name: string, deleteLocal?: boolean) =>
+    handler.removeRepository(name, deleteLocal),
   );
   ipcMain.handle(AlexandriaAPIEvent.SEARCH, (_, query: string) =>
     handler.searchRepositories(query),
