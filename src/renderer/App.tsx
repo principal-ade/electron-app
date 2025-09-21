@@ -248,15 +248,15 @@ function AppContent({
     return (
       <Suspense fallback={<LoadingFallback />}>
         <ArchivedSessionsViewer
-          initialSessionId={windowInitData?.sessionId}
-          initialDirectory={windowInitData?.directory}
+          initialSessionId={(windowInitData as any)?.sessionId}
+          initialDirectory={(windowInitData as any)?.directory}
         />
       </Suspense>
     );
   }
 
   if (currentView === 'markdownView') {
-    return <MarkdownView filePath={windowInitData?.filePath || ''} />;
+    return <MarkdownView filePath={(windowInitData as any)?.filePath || ''} />;
   }
 
   if (currentView === 'storeViewer') {
@@ -270,7 +270,7 @@ function AppContent({
   if (currentView === 'multiFileEditor') {
     return (
       <Suspense fallback={<LoadingFallback />}>
-        <MultiFileEditorWindow {...(windowInitData as any || {})} />
+        <MultiFileEditorWindow {...((windowInitData as any) || {})} />
       </Suspense>
     );
   }
@@ -285,7 +285,7 @@ function AppContent({
     return (
       <Suspense fallback={<LoadingFallback />}>
         <RepositoryManager
-          repository={windowInitData?.repository}
+          repository={(windowInitData as any)?.repository}
           onBack={() => window.close()}
         />
       </Suspense>

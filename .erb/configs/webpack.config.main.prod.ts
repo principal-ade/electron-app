@@ -7,6 +7,7 @@ import webpack from 'webpack';
 import { merge } from 'webpack-merge';
 import TerserPlugin from 'terser-webpack-plugin';
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
+import CopyWebpackPlugin from 'copy-webpack-plugin';
 import baseConfig from './webpack.config.main.base';
 import webpackPaths from './webpack.paths';
 import checkNodeEnv from '../scripts/check-node-env';
@@ -67,6 +68,19 @@ const configuration: webpack.Configuration = {
 
     new webpack.DefinePlugin({
       'process.type': '"browser"',
+    }),
+
+    // Copy worker files to production build
+    new CopyWebpackPlugin({
+      patterns: [
+        {
+          from: path.join(webpackPaths.srcMainPath, 'electron-cli-bridge/workers'),
+          to: path.join(webpackPaths.distMainPath, 'workers'),
+          globOptions: {
+            ignore: ['**/*.ts', '**/*.map'],
+          },
+        },
+      ],
     }),
   ],
 

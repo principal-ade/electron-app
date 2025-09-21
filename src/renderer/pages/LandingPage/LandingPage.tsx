@@ -23,6 +23,7 @@ import { UpdateNotification } from '../../components/UpdateNotification';
 import { AlexandriaRepositoryManager } from '../alexandria/AlexandriaRepositoryManager';
 import { OnboardingFlowV2 } from './OnboardingFlowV2';
 import { RepositoryDetailsPanel } from './RepositoryDetailsPanel';
+import { GitCloneModal } from '../../components/GitCloneModal';
 
 interface LandingPageProps {
   initialAgentStatus: AgentInstallationStatus;
@@ -54,6 +55,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [, setHasUpdateAvailable] = useState(false);
   const [showAddProjectDropdown, setShowAddProjectDropdown] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showGitCloneModal, setShowGitCloneModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Repository state
@@ -575,8 +577,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Handle pasting GitHub link
   const handleAddGithubLink = async () => {
-    // TODO: Implement GitHub link modal
-    console.info('Add GitHub link - not yet implemented');
+    setShowAddProjectDropdown(false);
+    setShowGitCloneModal(true);
+  };
+
+  // Handle repository added from Git clone modal
+  const handleRepositoryAdded = async (repo: any) => {
+    // Refresh the repositories list to include the new one
+    await loadRepositories();
+    // Select the newly added repository
+    setSelectedRepository(repo);
   };
 
   // Handle GitHub search
@@ -1169,6 +1179,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             />
           )}
         </div>
+
+        {/* Git Clone Modal */}
+        <GitCloneModal
+          isOpen={showGitCloneModal}
+          onClose={() => setShowGitCloneModal(false)}
+          onRepositoryAdded={handleRepositoryAdded}
+        />
       </div>
     </>
   );

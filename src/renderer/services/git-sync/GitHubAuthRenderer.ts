@@ -3,7 +3,7 @@
  * Simple IPC wrapper that delegates all auth to main process
  */
 
-const { ipcRenderer } = window.electron || {};
+import { AuthenticationService } from '../../main-process-api/AuthenticationService';
 
 export class GitHubAuthRenderer {
   /**
@@ -11,23 +11,27 @@ export class GitHubAuthRenderer {
    * Opens browser and handles OAuth flow in main process
    */
   static async authenticate(): Promise<{ token: string; user: any }> {
-    if (!ipcRenderer) {
-      throw new Error('IPC not available');
+    // Use proper service layer - login handles GitHub OAuth
+    const result = await AuthenticationService.login();
+    if (result.success && result.user) {
+      return {
+        token: result.token || '',
+        user: result.user,
+      };
     }
-
-    // Main process handles everything
-    return await ipcRenderer.invoke('github:authenticate');
+    throw new Error(result.error || 'Authentication failed');
   }
 
   /**
    * Check if authenticated
    */
   static async checkAuth(): Promise<{ authenticated: boolean; user?: any }> {
-    if (!ipcRenderer) {
-      return { authenticated: false };
-    }
-
-    return await ipcRenderer.invoke('github:check-auth');
+    // Use proper service layer
+    const authState = await AuthenticationService.getAuthState();
+    return {
+      authenticated: authState.isAuthenticated,
+      user: authState.user,
+    };
   }
 
   /**
@@ -40,22 +44,15 @@ export class GitHubAuthRenderer {
     userId: string;
     branch: string;
   }): Promise<string> {
-    if (!ipcRenderer) {
-      throw new Error('IPC not available');
-    }
-
-    // Main process has the GitHub token and creates JWT
-    return await ipcRenderer.invoke('github:create-jwt', payload);
+    // TODO: Implement JWT creation in AuthenticationService
+    throw new Error('JWT creation not yet implemented in service layer');
   }
 
   /**
    * Logout
    */
   static async logout(): Promise<void> {
-    if (!ipcRenderer) {
-      return;
-    }
-
-    await ipcRenderer.invoke('github:logout');
+    // Use proper service layer
+    await AuthenticationService.logout();
   }
 }

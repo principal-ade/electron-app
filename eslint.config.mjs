@@ -20,8 +20,14 @@ export default [
       'scripts/**',
       '**/*.d.ts',
       '!src/shared/**/*.d.ts',
-      // Temporarily ignore renderer and other source files except the ones we're starting with
-      'src/renderer/**/*',
+      // Temporarily ignore some renderer files with complex issues
+      'src/renderer/components/agent-overview/**/*',
+      'src/renderer/components/agent-session-debug/**/*',
+      'src/renderer/components/session-history/**/*',
+      'src/renderer/components/shared/ExcalidrawWrapper.tsx',
+      'src/renderer/components/shared/LocalSearchPanel.tsx',
+      'src/renderer/services/p2p/**/*',
+      'src/renderer/validation/**/*',
       'src/types/**/*',
       // Re-include specific renderer files we want to lint
       '!src/renderer/pages/RepoManager/**/*.ts',
@@ -60,14 +66,22 @@ export default [
       // Landing page and repository management components
       '!src/renderer/pages/LandingPage/**/*.tsx',
       '!src/renderer/pages/LandingPage/**/*.ts',
-      '!src/renderer/components/landing-page/RepositoryCard.tsx',
-      '!src/renderer/components/landing-page/RepositorySettingsModal.tsx',
-      '!src/renderer/components/landing-page/EmptyStateView.tsx',
-      '!src/renderer/components/landing-page/ForkParentModal.tsx',
-      // App.tsx and shared components
+      '!src/renderer/components/landing-page/**/*.tsx',
+      '!src/renderer/components/landing-page/**/*.ts',
+      // App.tsx and core components
       '!src/renderer/App.tsx',
-      '!src/renderer/components/shared/**/*.tsx',
-      '!src/renderer/components/shared/**/*.ts',
+      '!src/renderer/components/*.tsx',
+      '!src/renderer/components/*.ts',
+      // Core services and utilities
+      '!src/renderer/services/FileTreeSourceService.ts',
+      '!src/renderer/services/FileTreeCacheService.ts',
+      '!src/renderer/services/LocalSearchService.ts',
+      '!src/renderer/services/MCPService.ts',
+      '!src/renderer/utils/**/*.ts',
+      '!src/renderer/utils/**/*.tsx',
+      // Main process API implementations
+      '!src/renderer/main-process-api/**/*.ts',
+      '!src/renderer/main-process-api/**/*.tsx',
     ],
   },
   {
@@ -104,17 +118,22 @@ export default [
       'src/renderer/main-process-api/GitWatcherService.ts',
       // Landing page and repository management components
       'src/renderer/pages/LandingPage/**/*.{ts,tsx,js,jsx}',
-      'src/renderer/components/landing-page/RepositoryCard.tsx',
-      'src/renderer/components/landing-page/RepositorySettingsModal.tsx',
-      'src/renderer/components/landing-page/EmptyStateView.tsx',
-      'src/renderer/components/landing-page/ForkParentModal.tsx',
+      'src/renderer/components/landing-page/**/*.{ts,tsx,js,jsx}',
       // Main process repository management
       'src/main/stores/RepositoryApiEventHandler.ts',
       'src/main/initialization.ts',
       'src/main/version-control-providers/avatarStorageService.ts',
-      // App.tsx and shared components
+      // App.tsx and core components
       'src/renderer/App.tsx',
-      'src/renderer/components/shared/**/*.{ts,tsx,js,jsx}',
+      'src/renderer/components/*.{ts,tsx,js,jsx}',
+      // Core services and utilities
+      'src/renderer/services/FileTreeSourceService.ts',
+      'src/renderer/services/FileTreeCacheService.ts',
+      'src/renderer/services/LocalSearchService.ts',
+      'src/renderer/services/MCPService.ts',
+      'src/renderer/utils/**/*.{ts,tsx,js,jsx}',
+      // Main process API implementations
+      'src/renderer/main-process-api/**/*.{ts,tsx,js,jsx}',
       // Docker services
       'src/main/docker/**/*.ts',
     ],

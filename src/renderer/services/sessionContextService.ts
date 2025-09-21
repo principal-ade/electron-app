@@ -4,6 +4,7 @@ import {
   CreateContextOptions,
 } from '../types/sessionContext';
 import { AgentSessionRecord } from '../../shared/sessionTypes';
+import { StoreService } from '../main-process-api/StoreService';
 
 class SessionContextService {
   private readonly STORAGE_KEY = 'session-contexts';
@@ -11,7 +12,7 @@ class SessionContextService {
   // Get all contexts for a directory
   async getContextsForDirectory(directory: string): Promise<SessionContext[]> {
     try {
-      const result = await window.electron?.storage.get(
+      const result = await StoreService.get(
         `${this.STORAGE_KEY}:${directory}`,
       );
       const store = result as SessionContextStore | undefined;
@@ -38,7 +39,7 @@ class SessionContextService {
       lastUpdated: Date.now(),
     };
 
-    await window.electron?.storage.set(
+    await StoreService.set(
       `${this.STORAGE_KEY}:${directory}`,
       store,
     );
@@ -54,7 +55,7 @@ class SessionContextService {
       lastUpdated: Date.now(),
     };
 
-    await window.electron?.storage.set(
+    await StoreService.set(
       `${this.STORAGE_KEY}:${directory}`,
       store,
     );

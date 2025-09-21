@@ -5,6 +5,7 @@ import '@a24z/panels/style.css';
 import { FileText, Wrench, Globe, X, Clipboard, Check } from 'lucide-react';
 import { AnimatedTimelineEvent } from '../landing-page/AnimatedTimelineEvent';
 import { FileViewer } from '../FileViewer';
+import { ShellService } from '../../main-process-api/ShellService';
 import type { AgentSessionRecord } from '../../../shared/sessionTypes';
 
 interface ActiveSegmentTimelineProps {
@@ -144,7 +145,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
           const packageIndex = searchPath.indexOf(`${packageName}/`);
           if (packageIndex >= 0) {
             relativePath = searchPath.substring(
-              packageIndex + packageName.length + 1,
+              packageIndex + (packageName?.length || 0) + 1,
             );
           }
         } else {
@@ -282,7 +283,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                 color: packageInfo.color.color,
               }}
             >
-              {packageInfo.name}
+              {String(packageInfo.name)}
             </span>
             {fileName}
           </span>
@@ -474,7 +475,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                     color: packageInfo.color.color,
                   }}
                 >
-                  {packageInfo.name}
+                  {String(packageInfo.name)}
                 </span>
               )}
             </span>
@@ -584,7 +585,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                     color: packageInfo.color.color,
                   }}
                 >
-                  {packageInfo.name}
+                  {String(packageInfo.name)}
                 </span>
               )}
             </span>
@@ -703,8 +704,11 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                       }));
 
                       try {
-                        const result = await window.shellAPI.runGrep(
-                          event.data.parameters,
+                        // TODO: runGrep method not available in ShellService
+                        // Using runCommand as fallback
+                        const result = await ShellService.runCommand(
+                          `grep ${event.data.parameters?.pattern || ''} ${event.data.parameters?.path || ''}`,
+                          { cwd: session.workingDirectory }
                         );
                         setGrepResults((prev) => ({
                           ...prev,
@@ -716,7 +720,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                           ...prev,
                           [key]: {
                             loading: false,
-                            data: { error: error.message },
+                            data: { error: (error as Error).message },
                           },
                         }));
                       }
@@ -847,10 +851,12 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                       }));
 
                       try {
-                        const result = await window.shellAPI.runBashCommand({
-                          command: event.data.parameters?.command,
-                          cwd: event.data.parameters?.cwd,
-                        });
+                        // TODO: runBashCommand method not available in ShellService
+                        // Using runCommand as fallback
+                        const result = await ShellService.runCommand(
+                          event.data.parameters?.command || '',
+                          { cwd: event.data.parameters?.cwd || session.workingDirectory }
+                        );
                         setBashResults((prev) => ({
                           ...prev,
                           [key]: { loading: false, data: result },
@@ -861,7 +867,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                           ...prev,
                           [key]: {
                             loading: false,
-                            data: { error: error.message },
+                            data: { error: (error as Error).message },
                           },
                         }));
                       }
@@ -977,7 +983,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                     color: packageInfo.color.color,
                   }}
                 >
-                  {packageInfo.name}
+                  {String(packageInfo.name)}
                 </span>
               )}
             </span>
@@ -1030,7 +1036,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                     color: packageInfo.color.color,
                   }}
                 >
-                  {packageInfo.name}
+                  {String(packageInfo.name)}
                 </span>
               )}
             </span>

@@ -11,7 +11,9 @@ import type { FileSystemFilterLayer } from '@principal-ai/codebase-composition';
 import { GitHubWebAdapters } from '../adapters/GitHubWebAdapters';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { GitService } from '../main-process-api/GitService';
-import * as path from 'path';
+// Note: path module not available in renderer process in production
+// Using string manipulation for Mac alpha testing
+// TODO: Implement proper cross-platform path handling (see docs/WINDOWS_PATH_COMPATIBILITY.md)
 
 export interface TreeLoadResult {
   fileTree: FileTree;
@@ -65,14 +67,15 @@ async function transformPathsToFileTree(
 
   // Process files
   for (const relativePath of filePaths) {
-    const fullPath = path.join(rootPath, relativePath);
+    const fullPath = `${rootPath}/${relativePath}`.replace(/\/+/g, '/');
 
     // Get file stats via FileSystem API
     const stats = await FileSystemService.getFileStats(fullPath);
     if (!stats) continue;
 
-    const extension =
-      path.extname(relativePath).toLowerCase() || 'no-extension';
+    const extension = relativePath.includes('.')
+      ? ('.' + relativePath.split('.').pop()?.toLowerCase()) || 'no-extension'
+      : 'no-extension';
     const depth = relativePath.split('/').length - 1;
     maxDepth = Math.max(maxDepth, depth);
 
@@ -82,7 +85,7 @@ async function transformPathsToFileTree(
 
     allFiles.push({
       path: fullPath,
-      name: path.basename(relativePath),
+      name: relativePath.split('/').pop() || relativePath,
       extension,
       size: stats.size,
       lastModified: new Date(stats.lastModified),
@@ -96,20 +99,20 @@ async function transformPathsToFileTree(
     const cleanPath = relativePath.endsWith('/')
       ? relativePath.slice(0, -1)
       : relativePath;
-    const fullPath = path.join(rootPath, cleanPath);
+    const fullPath = cleanPath ? `${rootPath}/${cleanPath}`.replace(/\/+/g, '/') : rootPath;
     const depth = cleanPath.split('/').length - (cleanPath === '' ? 1 : 0);
     maxDepth = Math.max(maxDepth, depth);
 
     // Count files in this directory
     const filesInDir = allFiles.filter(
       (f) =>
-        path.dirname(f.relativePath) === cleanPath ||
+        (f.relativePath.includes('/') ? f.relativePath.split('/').slice(0, -1).join('/') : '') === cleanPath ||
         (cleanPath === '' && !f.relativePath.includes('/')),
     );
 
     allDirectories.push({
       path: fullPath,
-      name: path.basename(cleanPath) || path.basename(rootPath),
+      name: (cleanPath.split('/').pop() || rootPath.split('/').pop() || rootPath),
       children: [], // We'll build the tree structure later if needed
       fileCount: filesInDir.length,
       totalSize: filesInDir.reduce((sum, f) => sum + f.size, 0),
@@ -121,7 +124,7 @@ async function transformPathsToFileTree(
   // Create root directory
   const rootDir: DirectoryInfo = {
     path: rootPath,
-    name: path.basename(rootPath),
+    name: rootPath.split('/').pop() || rootPath,
     children: [],
     fileCount: allFiles.length,
     totalSize,
@@ -159,7 +162,7 @@ export async function loadLocalFileSystemTree(
   });
 
   // Check for .gitignore file - it's required for proper filtering
-  const gitignorePath = path.join(options.localPath, '.gitignore');
+  const gitignorePath = `${options.localPath}/.gitignore`.replace(/\/+/g, '/');
   const gitignoreExists =
     (await FileSystemService.getFileStats(gitignorePath)) !== null;
 

@@ -58,54 +58,58 @@ export class CLIBridge extends EventEmitter {
    */
   private async spawnWorker(name: string, scriptName: string): Promise<void> {
     try {
-      // Resolve worker path - always use absolute path from project root
-      // Workers are plain JS files that don't need webpack compilation
       const fs = require('fs');
       let workerPath: string;
 
-      // Try multiple possible locations
-      const possiblePaths = [
-        // Source location (most likely)
-        path.join(
-          process.cwd(),
+      // Determine the correct path based on whether we're in production or development
+      if (app.isPackaged) {
+        // Production: app is packaged, worker should be in dist/main/workers
+        workerPath = path.join(__dirname, 'workers', scriptName);
+        this.log('info', `Production mode: looking for worker at ${workerPath}`);
+      } else {
+        // Development: running from source
+        // In development, __dirname will be in dist/main after TypeScript compilation
+        // The worker .cjs file is in src/main/electron-cli-bridge/workers
+        const srcWorkerPath = path.join(
+          app.getAppPath(),
           'src',
           'main',
           'electron-cli-bridge',
           'workers',
           scriptName,
-        ),
-        // Alternative if __dirname is available
-        path.join(__dirname, 'workers', scriptName),
-        // Development build location
-        path.join(
+        );
+
+        // Also check if it's in the dist folder (for compiled development builds)
+        const distWorkerPath = path.join(
           __dirname,
-          '..',
-          '..',
           'src',
           'main',
           'electron-cli-bridge',
           'workers',
           scriptName,
-        ),
-      ];
+        );
 
-      // Log debugging info
-      this.log('debug', `Looking for worker ${name} in:`);
-      this.log('debug', `  - cwd: ${process.cwd()}`);
-      this.log('debug', `  - __dirname: ${__dirname}`);
-
-      // Find the first existing path
-      for (const tryPath of possiblePaths) {
-        this.log('debug', `  - Checking: ${tryPath}`);
-        if (fs.existsSync(tryPath)) {
-          workerPath = tryPath;
-          break;
+        if (fs.existsSync(srcWorkerPath)) {
+          workerPath = srcWorkerPath;
+        } else if (fs.existsSync(distWorkerPath)) {
+          workerPath = distWorkerPath;
+        } else {
+          throw new Error(
+            `Worker script not found in development. Tried:\n` +
+            `  - ${srcWorkerPath}\n` +
+            `  - ${distWorkerPath}`
+          );
         }
+        this.log('info', `Development mode: found worker at ${workerPath}`);
       }
 
-      if (!workerPath!) {
+      // Verify the worker file exists
+      if (!fs.existsSync(workerPath)) {
         throw new Error(
-          `Worker script not found. Tried: ${possiblePaths.join(', ')}`,
+          `Worker script not found at: ${workerPath}\n` +
+          `isPackaged: ${app.isPackaged}\n` +
+          `__dirname: ${__dirname}\n` +
+          `app.getAppPath(): ${app.getAppPath()}`
         );
       }
 

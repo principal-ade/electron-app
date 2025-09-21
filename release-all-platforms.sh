@@ -18,7 +18,17 @@ if [ -z "$GH_TOKEN" ]; then
     exit 1
 fi
 
-# Get version from package.json
+# Increment patch version
+echo -e "${YELLOW}Incrementing patch version...${NC}"
+NEW_VERSION=$(node scripts/increment-version.js)
+echo -e "${GREEN}Version incremented to $NEW_VERSION${NC}"
+
+# Commit the version change
+echo -e "${YELLOW}Committing version change...${NC}"
+git add package.json
+git commit -m "Bump version to $NEW_VERSION"
+
+# Get version from package.json (now updated)
 VERSION=$(node -p "require('./package.json').version")
 echo -e "${YELLOW}Building version $VERSION for all platforms...${NC}"
 
@@ -71,30 +81,24 @@ ls -la release/build/
 TOTAL_SIZE=$(du -sh release/build/ | cut -f1)
 echo -e "${YELLOW}Total size: $TOTAL_SIZE${NC}"
 
+# Create git tag and push
+echo -e "${YELLOW}Creating and pushing git tag v$VERSION...${NC}"
+git tag "v$VERSION"
+git push origin "v$VERSION"
+echo -e "${GREEN}✓ Tag v$VERSION created and pushed${NC}"
+
 # Optional: Create GitHub release
 echo ""
 read -p "Do you want to create a GitHub release? (y/n) " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${YELLOW}Creating GitHub release...${NC}"
-    
+
     # Check if gh CLI is installed
     if command -v gh &> /dev/null; then
-        # Create release notes
-        echo "Creating release v$VERSION..."
-        
-        # Check if tag already exists
-        if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-            echo -e "${YELLOW}Tag v$VERSION already exists${NC}"
-        else
-            echo "Creating git tag v$VERSION..."
-            git tag "v$VERSION"
-            git push origin "v$VERSION"
-        fi
-        
         # Create GitHub release
         gh release create "v$VERSION" \
-            --title "PrincipleMD v$VERSION" \
+            --title "Principal AI v$VERSION" \
             --notes "## What's New
 
 ### Features
@@ -104,19 +108,19 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
 ### Downloads
 - **Mac**: Download the .dmg file
-- **Linux**: Download the .AppImage file  
+- **Linux**: Download the .AppImage file
 - **Windows**: Download the .exe file
 
 ### Installation
-See the [installation guide](https://github.com/yourusername/PrincipleMD/blob/main/README.md) for platform-specific instructions.
+See the [installation guide](https://github.com/a24z-ai/electron-app/blob/main/README.md) for platform-specific instructions.
 " \
             release/build/*.dmg \
             release/build/*.AppImage \
             release/build/*.exe \
             release/build/latest*.yml
-            
+
         echo -e "${GREEN}✓ GitHub release created successfully!${NC}"
-        echo "View at: https://github.com/yourusername/PrincipleMD/releases/tag/v$VERSION"
+        echo "View at: https://github.com/a24z-ai/electron-app/releases/tag/v$VERSION"
     else
         echo -e "${YELLOW}GitHub CLI not found. Using electron-builder publish instead...${NC}"
         GH_TOKEN=$GH_TOKEN npm run publish

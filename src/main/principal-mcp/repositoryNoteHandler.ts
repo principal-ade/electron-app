@@ -264,15 +264,8 @@ class RepositoryNoteHandler {
         return false;
       }
 
-      // @a24z/core-library doesn't expose a delete method directly
-      // We'll need to work around this by getting all notes and filtering
-      console.warn(
-        '[RepositoryNoteHandler] Note deletion not directly supported by @a24z/core-library',
-      );
-
-      // For now, return false as deletion isn't supported
-      // You could implement this by directly manipulating the JSON file if needed
-      return false;
+      // Use MemoryPalace's deleteNoteById method
+      return memory.deleteNoteById(noteId);
     } catch (error) {
       console.error('[RepositoryNoteHandler] Error deleting note:', error);
       return false;

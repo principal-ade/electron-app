@@ -16,6 +16,7 @@ import {
   Bot,
   Cpu,
   Palette,
+  FolderOpen,
 } from 'lucide-react';
 
 import { useTheme } from 'themed-markdown';
@@ -26,6 +27,7 @@ import type { EditorId } from '../../../shared/types/editor.types';
 import { EDITOR_LABELS } from '../../../shared/types/editor.types';
 import { AppVersionManagerService } from '../../main-process-api/AppVersionManagerService';
 import { DockerService } from '../../main-process-api/DockerService';
+import { FileSystemService } from '../../main-process-api/FileSystemService';
 import {
   AgentConfigurationService,
   AgentInstallationStatus,
@@ -62,6 +64,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [showDebugInfo, setShowDebugInfo] = useState(false);
   const [updateInfo, setUpdateInfo] = useState<any>(null);
   const [defaultEditor, setDefaultEditor] = useState<EditorId>('vscode');
+  const [defaultCloneDirectory, setDefaultCloneDirectory] = useState<string>('');
   const [selectedTheme, setSelectedTheme] = useState<string>('default');
   const [pendingTheme, setPendingTheme] = useState<string | null>(null);
   const [isApplyingTheme, setIsApplyingTheme] = useState(false);
@@ -190,6 +193,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         .then((prefs) => {
           const editor = (prefs.defaultEditor ?? 'vscode') as EditorId;
           setDefaultEditor(editor);
+
+          // Load default clone directory
+          setDefaultCloneDirectory(prefs.defaultCloneDirectory || '');
 
           // Load markdown theme preferences
           setUseCustomMarkdownTheme(prefs.useCustomMarkdownTheme ?? false);
@@ -918,6 +924,149 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           </option>
                         ))}
                       </select>
+                    </div>
+                  </div>
+
+                  {/* Default Clone Directory */}
+                  <div style={{ marginBottom: '32px' }}>
+                    <h4
+                      style={{
+                        fontSize: '16px',
+                        fontWeight: 600,
+                        marginBottom: '16px',
+                        color: theme.colors.text,
+                      }}
+                    >
+                      Default Clone Directory
+                    </h4>
+                    <div
+                      style={{
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        borderRadius: '12px',
+                        padding: '20px',
+                        border: `1px solid ${theme.colors.border}`,
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: '14px',
+                          color: theme.colors.textSecondary,
+                          marginBottom: '12px',
+                        }}
+                      >
+                        Choose the default directory where Git repositories will be cloned when using "Paste Link" from the landing page
+                      </p>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '12px',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <input
+                          type="text"
+                          placeholder="e.g., /Users/username/Developer"
+                          value={defaultCloneDirectory || ''}
+                          onChange={(e) => setDefaultCloneDirectory(e.target.value)}
+                          style={{
+                            flex: 1,
+                            padding: '10px 14px',
+                            borderRadius: '8px',
+                            border: `1px solid ${theme.colors.border}`,
+                            backgroundColor: theme.colors.background,
+                            color: theme.colors.text,
+                            fontSize: '14px',
+                          }}
+                        />
+                        <button
+                          onClick={async () => {
+                            try {
+                              const result = await FileSystemService.selectDirectory({
+                                title: 'Select Default Clone Directory',
+                                buttonLabel: 'Select Directory',
+                                properties: ['openDirectory', 'createDirectory'],
+                              });
+
+                              if (!result || result.canceled || !result.filePaths?.[0]) {
+                                return;
+                              }
+
+                              const selectedPath = result.filePaths[0];
+                              setDefaultCloneDirectory(selectedPath);
+                              await UserPreferencesService.updatePreferences({
+                                defaultCloneDirectory: selectedPath,
+                              });
+                            } catch (error) {
+                              console.error('Error selecting directory:', error);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 16px',
+                            borderRadius: '8px',
+                            border: `1px solid ${theme.colors.border}`,
+                            backgroundColor: theme.colors.background,
+                            color: theme.colors.text,
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = theme.colors.background;
+                          }}
+                        >
+                          <FolderOpen size={16} />
+                          Browse
+                        </button>
+                        <button
+                          onClick={async () => {
+                            await UserPreferencesService.updatePreferences({
+                              defaultCloneDirectory: defaultCloneDirectory || undefined,
+                            });
+                          }}
+                          disabled={!defaultCloneDirectory?.trim()}
+                          style={{
+                            padding: '10px 16px',
+                            borderRadius: '8px',
+                            border: 'none',
+                            backgroundColor: theme.colors.primary,
+                            color: 'white',
+                            cursor: defaultCloneDirectory?.trim() ? 'pointer' : 'not-allowed',
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            opacity: defaultCloneDirectory?.trim() ? 1 : 0.5,
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (defaultCloneDirectory?.trim()) {
+                              e.currentTarget.style.transform = 'scale(1.02)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          Save
+                        </button>
+                      </div>
+                      <div
+                        style={{
+                          marginTop: '12px',
+                          padding: '12px',
+                          backgroundColor: theme.colors.backgroundLight,
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          color: theme.colors.textSecondary,
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        <strong>Note:</strong> If no directory is set, you'll be prompted to choose one each time you clone a repository. Setting a default directory provides a smoother cloning experience.
+                      </div>
                     </div>
                   </div>
 

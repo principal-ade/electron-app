@@ -1,6 +1,6 @@
 {
   "name": "principal-ai",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Specktor - The Specktor engineer for your codebase",
   "type": "module",
   "keywords": [
@@ -65,6 +65,7 @@
     "package:windows": "npm run validate:deps && ts-node ./.erb/scripts/clean.js dist && npm run build:windows && electron-builder build --publish never",
     "package:windows:npm": "npm run validate:deps && node ./.erb/scripts/build-production-windows.js",
     "package:linux": "npm run validate:deps && ts-node ./.erb/scripts/clean.js dist && npm run build:linux && electron-builder build --publish never",
+    "release": "./release-all-platforms.sh",
     "rebuild": "node scripts/rebuild-native.js",
     "rebuild:direct": "electron-rebuild --version 38.1.0 --parallel --types prod,dev,optional --module-dir release/app",
     "prestart": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.dev.ts",
@@ -153,12 +154,7 @@
       ".erb/dll"
     ],
     "transform": {
-      "^.+\\.[jt]sx?$": [
-        "babel-jest",
-        {
-          "configFile": "./.babelrc.js"
-        }
-      ]
+      "^.+\\.[jt]sx?$": "babel-jest"
     },
     "transformIgnorePatterns": [
       "node_modules/(?!(react-markdown|remark-gfm|rehype-raw|rehype-highlight|hast-util-sanitize|unist-util-position|globby|globby/.*)/)"
@@ -273,6 +269,7 @@
     "buffer": "^6.0.3",
     "chalk": "^4.1.2",
     "chokidar-cli": "^3.0.0",
+    "copy-webpack-plugin": "^13.0.1",
     "core-js": "^3.41.0",
     "cross-env": "^7.0.3",
     "css-loader": "^7.1.2",

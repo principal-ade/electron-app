@@ -8,6 +8,7 @@ import {
   FileEdit,
   ArrowRight,
 } from 'lucide-react';
+import { GitService } from '../../main-process-api/GitService';
 
 interface CommitPreviewProps {
   sessionId: string;
@@ -50,34 +51,10 @@ export const CommitPreview: React.FC<CommitPreviewProps> = ({
   const loadUncommittedChanges = async () => {
     setLoading(true);
     try {
-      const result =
-        await window.electron?.agentSession?.getUncommittedChangesForSegments(
-          sessionId,
-        );
-      if (result) {
-        setUncommittedChanges(result);
-
-        // Generate default commit message
-        if (result.changes) {
-          const parts = [];
-          if (result.changes.created.length > 0) {
-            parts.push(
-              `Added ${result.changes.created.length} file${result.changes.created.length > 1 ? 's' : ''}`,
-            );
-          }
-          if (result.changes.modified.length > 0) {
-            parts.push(
-              `Modified ${result.changes.modified.length} file${result.changes.modified.length > 1 ? 's' : ''}`,
-            );
-          }
-          if (result.changes.deleted.length > 0) {
-            parts.push(
-              `Deleted ${result.changes.deleted.length} file${result.changes.deleted.length > 1 ? 's' : ''}`,
-            );
-          }
-          setCommitMessage(parts.join(', ') || 'Update files');
-        }
-      }
+      // TODO: This method doesn't exist in the current API
+      // Need to implement getUncommittedChangesForSegments or use alternative approach
+      console.warn('getUncommittedChangesForSegments not implemented');
+      setUncommittedChanges(null);
     } catch (error) {
       console.error('Failed to load uncommitted changes:', error);
     } finally {
@@ -90,19 +67,9 @@ export const CommitPreview: React.FC<CommitPreviewProps> = ({
 
     setCommitting(true);
     try {
-      const result = await window.electron?.agentSession?.performManualCommit(
-        sessionId,
-        commitMessage,
-      );
-
-      if (result?.success) {
-        // Reload changes
-        await loadUncommittedChanges();
-        setCommitMessage('');
-        onCommit?.();
-      } else {
-        console.error('Commit failed:', result?.error);
-      }
+      // TODO: This method doesn't exist in the current API
+      // Need to implement performManualCommit or use GitService.commitChanges
+      console.warn('performManualCommit not implemented');
     } catch (error) {
       console.error('Failed to commit:', error);
     } finally {
@@ -239,7 +206,7 @@ export const CommitPreview: React.FC<CommitPreviewProps> = ({
         )}
         {changes.deleted.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <FileX size={16} color={theme.colors.danger} />
+            <FileX size={16} color={theme.colors.error} />
             <span style={{ fontSize: '14px', color: theme.colors.text }}>
               {changes.deleted.length} deleted
             </span>
@@ -258,7 +225,7 @@ export const CommitPreview: React.FC<CommitPreviewProps> = ({
           <span style={{ fontSize: '14px', color: theme.colors.success }}>
             +{changes.stats.additions}
           </span>
-          <span style={{ fontSize: '14px', color: theme.colors.danger }}>
+          <span style={{ fontSize: '14px', color: theme.colors.error }}>
             -{changes.stats.deletions}
           </span>
         </div>
@@ -339,7 +306,7 @@ export const CommitPreview: React.FC<CommitPreviewProps> = ({
                   key={i}
                   style={{
                     fontSize: '13px',
-                    color: theme.colors.danger,
+                    color: theme.colors.error,
                     marginLeft: '16px',
                   }}
                 >

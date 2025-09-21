@@ -1,0 +1,18 @@
+{
+  "id": "note-1758471183559-lwh984e97",
+  "note": "Feature: Filter in the Repos that only show the repos with chaneges",
+  "anchors": [
+    "."
+  ],
+  "tags": [
+    "general"
+  ],
+  "metadata": {
+    "directoryPath": "/Users/griever/Developer/electron-app",
+    "relativePath": ".",
+    "confidence": "medium",
+    "type": "explanation"
+  },
+  "timestamp": 1758471183559,
+  "codebaseViewId": "default"
+}

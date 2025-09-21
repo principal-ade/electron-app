@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { ChevronRight, GitBranch, Trash2, ExternalLink, Code, ChevronDown, Terminal } from 'lucide-react';
+import { ChevronRight, GitBranch, Trash2, ExternalLink, Code, ChevronDown, Terminal, Plus } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
@@ -7,6 +7,8 @@ import { WindowService } from '../../main-process-api/WindowService';
 import { RemoveRepositoryDialog } from '../../components/dialogs/RemoveRepositoryDialog';
 import { ShellService } from '../../main-process-api/ShellService';
 import { TerminalService } from '../../main-process-api/TerminalService';
+import { AddNoteModal } from '../../components/landing-page/AddNoteModal';
+import { RepositoryNotesPanel } from '../../components/landing-page/RepositoryNotesPanel';
 
 interface EnhancedAlexandriaEntry extends AlexandriaEntry {
   gitBranch?: string;
@@ -46,6 +48,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const [isCommitExpanded, setIsCommitExpanded] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [showIdeDropdown, setShowIdeDropdown] = useState(false);
+  const [showAddNoteModal, setShowAddNoteModal] = useState(false);
   const ideDropdownRef = useRef<HTMLDivElement>(null);
   
   // Track terminal windows by repository path
@@ -333,6 +336,33 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   alignItems: 'center',
                 }}
               >
+                <button
+                  onClick={() => setShowAddNoteModal(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.primary,
+                    border: `1px solid ${theme.colors.primary}`,
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = `${theme.colors.primary}15`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  title="Add a note to this repository"
+                >
+                  <Plus size={14} />
+                  Add Note
+                </button>
                 <button
                   onClick={() => onOpenDashboard(selectedRepository)}
                   style={{
@@ -784,7 +814,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
               </div>
             )}
 
-            {/* Git Changes/Last Commit and Markdown Files Side-by-Side */}
+            {/* Git Changes and Repository Content Side-by-Side */}
             <div
               style={{
                 display: 'grid',
@@ -800,6 +830,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   backgroundColor: theme.colors.backgroundSecondary,
                   borderRadius: '8px',
                   border: `1px solid ${theme.colors.border}`,
+                  height: 'fit-content',
                 }}
               >
                 {/* Show Git Changes if there are any */}
@@ -1304,6 +1335,15 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 )}
               </div>
 
+              {/* Right Column Container - Markdown and Notes */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  height: 'fit-content',
+                }}
+              >
               {/* Markdown Files List */}
               <div
                 style={{
@@ -1444,7 +1484,14 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   )}
                 </div>
               </div>
+
+              {/* Repository Notes Panel */}
+              <RepositoryNotesPanel
+                repositoryPath={selectedRepository.path}
+                isLoading={false}
+              />
             </div>
+          </div>
           </div>
         </>
       ) : (
@@ -1462,6 +1509,19 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             ? 'Add a repository to get started'
             : 'Select a repository to view details'}
         </div>
+      )}
+
+      {/* Add Note Modal */}
+      {showAddNoteModal && selectedRepository && (
+        <AddNoteModal
+          isOpen={showAddNoteModal}
+          onClose={() => setShowAddNoteModal(false)}
+          onNoteAdded={() => {
+            // The RepositoryNotesPanel will automatically refresh when it detects the modal closed
+            // We could also trigger a refresh here if needed
+          }}
+          repositoryPath={selectedRepository.path}
+        />
       )}
 
       {/* Remove Repository Dialog */}

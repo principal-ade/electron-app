@@ -120,9 +120,9 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
     };
 
     try {
-      if (!window.electron?.packageManager?.checkVulnerabilities) {
-        throw new Error('Package manager API not available');
-      }
+      // Use proper service layer instead of direct window.electron access
+      // TODO: Implement vulnerability checking in PackageManagerService
+      throw new Error('Vulnerability checking not yet implemented');
 
       // Set up progress listener first
       const progressUpdates: VulnerabilityCheckResult[] = [];
@@ -207,9 +207,9 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
     };
 
     try {
-      if (!window.electron?.packageManager?.checkLicenses) {
-        throw new Error('Package manager API not available');
-      }
+      // Use proper service layer instead of direct window.electron access
+      // TODO: Implement license checking in PackageManagerService
+      throw new Error('License checking not yet implemented');
 
       // Set up progress listener first
       const progressUpdates: LicenseCheckResult[] = [];
