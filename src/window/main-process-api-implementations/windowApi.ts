@@ -7,7 +7,8 @@ import { ipcRenderer } from 'electron';
 import type {
   WindowAPI,
   StoreViewerOptions,
-  MultiFileEditorOptions,
+  OpenLocalFilesRequest,
+  OpenRemoteFilesRequest,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -23,10 +24,16 @@ export const windowAPI: WindowAPI = {
     ipcRenderer.invoke(WindowEvent.OPEN_STORE_VIEWER, options),
 
   /**
-   * Open Multi-File Editor window
+   * Open an editor window for local files
    */
-  openMultiFileEditor: (options: MultiFileEditorOptions) =>
-    ipcRenderer.invoke(WindowEvent.OPEN_MULTI_FILE_EDITOR, options),
+  openLocalFiles: (request: OpenLocalFilesRequest) =>
+    ipcRenderer.invoke(WindowEvent.OPEN_LOCAL_FILES, request),
+
+  /**
+   * Open an editor window for remote GitHub files
+   */
+  openRemoteFiles: (request: OpenRemoteFilesRequest) =>
+    ipcRenderer.invoke(WindowEvent.OPEN_REMOTE_FILES, request),
 
   /**
    * Open Repository Dashboard for Alexandria repositories

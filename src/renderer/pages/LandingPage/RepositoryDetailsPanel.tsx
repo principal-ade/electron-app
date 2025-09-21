@@ -231,12 +231,11 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           repo = selectedRepository.github.name;
         }
 
-        // Open the multi-file editor window
-        await WindowService.openMultiFileEditor({
-          sessionId: `view-${owner}-${repo}-${Date.now()}`,
-          sessionName: `View ${filePath}`,
+        // Open the local files editor window
+        await WindowService.openLocalFiles({
+          windowId: `view-${owner}-${repo}-${Date.now()}`,
+          windowTitle: `View ${filePath}`,
           files,
-          repositoryPath: selectedRepository.path,
         });
       } catch (error) {
         console.error(

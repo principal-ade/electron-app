@@ -783,7 +783,7 @@ export class AgentSessionArchivingService {
         // Type guard to ensure namespace is a valid key of AgentEventIndexes
         if (
           namespace !== AgentEventNamespaces.CLAUDE &&
-          namespace !== AgentEventNamespaces.GEMINI &&
+          namespace !== AgentEventNamespaces.CLINE &&
           namespace !== AgentEventNamespaces.OPENCODE
         ) {
           continue;
@@ -798,7 +798,7 @@ export class AgentSessionArchivingService {
 
         // Filter out the deleted keys from the index
         const updatedIndex = currentIndex.filter(
-          (key) => !deletedKeysSet.has(key),
+          (key: string) => !deletedKeysSet.has(key),
         );
 
         if (updatedIndex.length !== currentIndex.length) {

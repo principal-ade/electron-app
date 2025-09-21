@@ -31,7 +31,8 @@ import {
 } from './types';
 
 // Re-export for backward compatibility
-export { applicationWindows, specialWindows, WindowFeatures } from './types';
+export { applicationWindows, specialWindows } from './types';
+export type { WindowFeatures } from './types';
 
 // Track if titlebar IPC handlers have been registered
 let titlebarHandlersRegistered = false;
@@ -557,7 +558,7 @@ export function createSpecialWindow(
   purpose: string,
   options: BrowserWindowConstructorOptions,
   features?: Partial<WindowFeatures>,
-): ModernApplicationWindow | null {
+): IModernApplicationWindow | null {
   // Check if window already exists
   const existingId = specialWindows.get(purpose);
   if (existingId) {
@@ -645,7 +646,7 @@ export const handleAppRestart = () => {
           });
         }
       });
-      appWindow.close();
+      appWindow.window.close();
     }
   });
 };

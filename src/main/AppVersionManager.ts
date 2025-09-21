@@ -141,7 +141,7 @@ export default class AppVersionManager {
       } catch (err) {
         log.error('[AppUpdater] Test download failed:', err);
         console.error('[AppUpdater] Test download failed:', err);
-        this.sendToWindow('update-error', err);
+        this.sendToWindow('update-error', err instanceof Error ? err : new Error(String(err)));
         // Restore original setting
         autoUpdater.autoInstallOnAppQuit = originalAutoInstall;
       }

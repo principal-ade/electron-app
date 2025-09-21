@@ -37,7 +37,7 @@ import { hasA24zDirectory, getA24zNoteCount } from '../../utils/a24zUtils';
 import { A24zMemoryInfoModal } from './shared/A24zMemoryInfoModal';
 import { RepositorySwitcherModal } from './shared/RepositorySwitcherModal';
 import { SecretsModal } from './shared/SecretsModal';
-import { ModeSelector, type RepositoryMode } from './shared/ModeSelector';
+import { SimpleModeSelector, type RepositoryMode } from './shared/SimpleModeSelector';
 import { SourceSelectionService } from '../../services/SourceSelectionService';
 import { WindowService } from '../../main-process-api/WindowService';
 import type {
@@ -1245,7 +1245,7 @@ export const RepositoryManagerHeader: React.FC<
           }}
         >
           {mode && (
-            <ModeSelector
+            <SimpleModeSelector
               mode={mode}
               onModeChange={onModeChange}
               hasLocalClones={!!repository?.localClones?.length}

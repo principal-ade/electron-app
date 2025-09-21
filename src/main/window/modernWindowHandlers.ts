@@ -62,23 +62,21 @@ export function registerModernWindowHandlers(): void {
     },
   );
 
-  // Multi-File Editor Window
+// Open Local Files in Editor Window
   ipcMain.handle(
-    WindowEvent.OPEN_MULTI_FILE_EDITOR,
+    WindowEvent.OPEN_LOCAL_FILES,
     async (
       _event,
-      options: {
-        sessionId: string;
-        sessionName?: string;
+      request: {
+        windowId: string;
+        windowTitle?: string;
         files: Array<{
           path: string;
           relativePath?: string;
-          lastModified?: number;
         }>;
-        repositoryPath: string;
       },
     ) => {
-      const windowName = `multi-file-editor-${options.sessionId}`;
+      const windowName = `file-editor-${request.windowId}`;
 
       // Get screen dimensions for left-half positioning
       const primaryDisplay = screen.getPrimaryDisplay();
@@ -94,7 +92,65 @@ export function registerModernWindowHandlers(): void {
           y: 0,
           minWidth: 1000,
           minHeight: 600,
-          title: `File Editor - ${options.sessionName || options.sessionId}`,
+          title: request.windowTitle || `File Editor`,
+        },
+        {
+          fileSystemAdapter: true,
+          contentSecurityPolicy: true,
+          externalLinkHandler: true,
+          menu: true,
+        },
+      );
+
+      if (!window) return;
+
+      // Pass the request data with a type indicator
+      const payload = {
+        ...request,
+        editorType: 'local',
+      };
+
+      // Encode the payload as JSON in the URL
+      const encoded = encodeURIComponent(JSON.stringify(payload));
+      const url = `${resolveHtmlPath('index.html')}#multi-file-editor/${encoded}`;
+
+      window.window.loadURL(url);
+    },
+  );
+
+  // Open Remote Files in Editor Window
+  ipcMain.handle(
+    WindowEvent.OPEN_REMOTE_FILES,
+    async (
+      _event,
+      request: {
+        windowId: string;
+        windowTitle?: string;
+        files: Array<{
+          path: string;
+        }>;
+        owner: string;
+        repo: string;
+        branch?: string;
+      },
+    ) => {
+      const windowName = `file-editor-${request.windowId}`;
+
+      // Get screen dimensions for left-half positioning
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } =
+        primaryDisplay.workAreaSize;
+
+      const window = createSpecialWindow(
+        windowName,
+        {
+          width: Math.floor(screenWidth / 2),
+          height: screenHeight,
+          x: 0,
+          y: 0,
+          minWidth: 1000,
+          minHeight: 600,
+          title: request.windowTitle || `File Editor - ${request.owner}/${request.repo}`,
         },
         {
           fileSystemAdapter: true,
@@ -107,8 +163,14 @@ export function registerModernWindowHandlers(): void {
 
       if (!window) return;
 
-      // Encode the options as JSON in the URL
-      const encoded = encodeURIComponent(JSON.stringify(options));
+      // Pass the request data with a type indicator
+      const payload = {
+        ...request,
+        editorType: 'remote',
+      };
+
+      // Encode the payload as JSON in the URL
+      const encoded = encodeURIComponent(JSON.stringify(payload));
       const url = `${resolveHtmlPath('index.html')}#multi-file-editor/${encoded}`;
 
       window.window.loadURL(url);

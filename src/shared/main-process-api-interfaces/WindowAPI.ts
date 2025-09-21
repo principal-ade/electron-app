@@ -10,21 +10,43 @@ export interface StoreViewerOptions {
   namespace?: string;
 }
 
-export interface MultiFileEditorOptions {
-  sessionId: string;
-  sessionName?: string;
+
+/**
+ * Request to open local files in an editor window
+ */
+export interface OpenLocalFilesRequest {
+  /** Unique identifier for window deduplication */
+  windowId: string;
+  /** Display title for the window */
+  windowTitle?: string;
+  /** Files to open with absolute paths */
   files: Array<{
+    /** Absolute path to the file on disk */
     path: string;
+    /** Optional relative path for display purposes */
     relativePath?: string;
-    lastModified?: number;
   }>;
-  repositoryPath: string;
-  isRemote?: boolean;
-  remoteInfo?: {
-    owner: string;
-    repo: string;
-    branch: string;
-  };
+}
+
+/**
+ * Request to open remote GitHub files in an editor window
+ */
+export interface OpenRemoteFilesRequest {
+  /** Unique identifier for window deduplication */
+  windowId: string;
+  /** Display title for the window */
+  windowTitle?: string;
+  /** Files to open with repository-relative paths */
+  files: Array<{
+    /** Path relative to repository root (e.g., 'src/index.ts') */
+    path: string;
+  }>;
+  /** GitHub repository owner */
+  owner: string;
+  /** GitHub repository name */
+  repo: string;
+  /** Branch to read from (defaults to main/master) */
+  branch?: string;
 }
 
 /**
@@ -37,11 +59,18 @@ export interface WindowAPI {
    */
   openStoreViewer(options?: StoreViewerOptions): Promise<void>;
 
+
   /**
-   * Open Multi-File Editor window
-   * @param options - Session and file information
+   * Open an editor window for local files
+   * @param request - Request containing local file paths and window configuration
    */
-  openMultiFileEditor(options: MultiFileEditorOptions): Promise<void>;
+  openLocalFiles(request: OpenLocalFilesRequest): Promise<void>;
+
+  /**
+   * Open an editor window for remote GitHub files
+   * @param request - Request containing repository info and file paths
+   */
+  openRemoteFiles(request: OpenRemoteFilesRequest): Promise<void>;
 
   /**
    * Open Repository Dashboard for Alexandria repositories

@@ -1378,12 +1378,20 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
   const handleFileClick = useCallback(
     async (filePath: string) => {
       console.info('[LocalDevelopmentView] File clicked:', filePath);
+      console.info('[LocalDevelopmentView] Repository path:', localClone.path);
 
       try {
+        // Convert relative path to absolute path
+        const absolutePath = filePath.startsWith('/')
+          ? filePath
+          : `${localClone.path}/${filePath}`;
+
+        console.info('[LocalDevelopmentView] Absolute path:', absolutePath);
+
         // Prepare file info for the multi-file editor
         const files = [
           {
-            path: filePath,
+            path: absolutePath,
             relativePath: filePath,
             lastModified: Date.now(),
           },
@@ -1405,22 +1413,17 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
           }
         }
 
-        console.info('[LocalDevelopmentView] Opening multi-file editor with:', {
-          sessionId: `develop-${owner}-${repo}`,
-          sessionName: `Develop ${owner}/${repo}`,
-          repositoryPath: `${owner}/${repo}`,
+        console.info('[LocalDevelopmentView] Opening local files editor with:', {
+          windowId: `develop-${owner}-${repo}`,
+          windowTitle: `Develop ${owner}/${repo}`,
           files,
-          localPath: localClone.path,
-          branch: currentBranch,
         });
 
-        // Open the multi-file editor window with local repository context
-        await WindowService.openMultiFileEditor({
-          sessionId: `develop-${owner}-${repo}`,
-          sessionName: `Develop ${owner}/${repo}`,
+        // Open the local files editor window
+        await WindowService.openLocalFiles({
+          windowId: `develop-${owner}-${repo}`,
+          windowTitle: `Develop ${owner}/${repo}`,
           files,
-          repositoryPath: `${owner}/${repo}`,
-          // Note: localInfo removed as it's not part of MultiFileEditorOptions type
         });
       } catch (error) {
         console.error(

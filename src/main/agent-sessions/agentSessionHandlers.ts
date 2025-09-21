@@ -700,7 +700,7 @@ export function setupSessionHandlers(): void {
       // Look in various agent event namespaces
       const namespaces = [
         AgentEventNamespaces.CLAUDE,
-        AgentEventNamespaces.GEMINI,
+        AgentEventNamespaces.CLINE,
         AgentEventNamespaces.OPENCODE,
       ];
       const allEvents: any[] = [];

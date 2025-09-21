@@ -553,7 +553,7 @@ export const RightPaneContainer: React.FC<RightPaneContainerProps> = ({
               {/* Hover Information Bar - Always visible */}
               <div
                 style={{
-                  height: '48px',
+                  height: '56px',
                   borderTop: `1px solid ${theme.colors.border}`,
                   backgroundColor: theme.colors.background,
                   display: 'flex',
@@ -568,20 +568,46 @@ export const RightPaneContainer: React.FC<RightPaneContainerProps> = ({
                 {hoverInfo &&
                 (hoverInfo.hoveredBuilding || hoverInfo.hoveredDistrict) ? (
                   <>
-                    {/* File/Directory name */}
+                    {/* File/Directory name and path */}
                     <div
                       style={{
-                        fontWeight: 500,
-                        color: theme.colors.primary,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
                         flex: '1 1 auto',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                        minWidth: 0,
                       }}
                     >
-                      {hoverInfo.fileTooltip?.text ||
-                        hoverInfo.directoryTooltip?.text ||
-                        'Unknown'}
+                      {/* Name (filename or last directory part) */}
+                      <div
+                        style={{
+                          fontWeight: 600,
+                          color: theme.colors.primary,
+                          fontSize: '14px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {hoverInfo.fileTooltip?.text ||
+                          (hoverInfo.hoveredDistrict?.path?.split('/').pop() ||
+                           hoverInfo.hoveredDistrict?.path) ||
+                          'Unknown'}
+                      </div>
+                      {/* Full path */}
+                      <div
+                        style={{
+                          color: theme.colors.textSecondary,
+                          fontSize: '11px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {hoverInfo.hoveredBuilding?.path ||
+                          hoverInfo.hoveredDistrict?.path ||
+                          '/'}
+                      </div>
                     </div>
 
                     {/* File count for directories */}
@@ -598,25 +624,6 @@ export const RightPaneContainer: React.FC<RightPaneContainerProps> = ({
                           {hoverInfo.fileCount === 1 ? 'file' : 'files'}
                         </div>
                       )}
-
-                    {/* Type indicator */}
-                    <div
-                      style={{
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        backgroundColor: hoverInfo.hoveredBuilding
-                          ? theme.colors.primary + '15'
-                          : theme.colors.backgroundTertiary,
-                        color: hoverInfo.hoveredBuilding
-                          ? theme.colors.primary
-                          : theme.colors.textSecondary,
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        flexShrink: 0,
-                      }}
-                    >
-                      {hoverInfo.hoveredBuilding ? 'FILE' : 'DIRECTORY'}
-                    </div>
                   </>
                 ) : (
                   /* Default help text when not hovering */

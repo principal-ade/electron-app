@@ -58,8 +58,10 @@ export class BatchEventReprocessor {
     // Pre-detect repositories for unique working directories to minimize lookups
     const uniqueWorkingDirs = new Set<string>();
     for (const event of events) {
-      const wd = event.data?.working_directory || event.data?.workingDirectory;
-      if (wd) uniqueWorkingDirs.add(wd);
+      // The library uses 'cwd' field for working directory
+      if ('cwd' in event.data && typeof event.data.cwd === 'string') {
+        uniqueWorkingDirs.add(event.data.cwd);
+      }
     }
 
     console.log(

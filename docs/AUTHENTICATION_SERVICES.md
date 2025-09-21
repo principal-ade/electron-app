@@ -6,7 +6,9 @@ This document describes the authentication services used in the Electron applica
 
 ## Services
 
-### AuthService (`src/main/services/AuthService.ts`)
+### AuthService
+
+File: `src/main/services/AuthService.ts`
 
 The primary authentication service that handles GitHub OAuth authentication for the application.
 
@@ -26,7 +28,9 @@ The primary authentication service that handles GitHub OAuth authentication for 
 - This check would trigger macOS keychain access prompts on startup
 - Encryption availability is implicitly verified when actually encrypting/decrypting data
 
-### SecureTokenIPC (`src/main/services/SecureTokenIPC.ts`)
+### SecureTokenIPC
+
+File: `src/main/services/SecureTokenIPC.ts`
 
 Provides IPC (Inter-Process Communication) handlers for secure token operations between the main and renderer processes.
 
@@ -41,7 +45,9 @@ Provides IPC (Inter-Process Communication) handlers for secure token operations 
 - All IPC handlers are registered without creating the service instance
 - The actual SecureTokenStorage instance is created only when first token operation occurs
 
-### SecureTokenStorage (`src/main/services/SecureTokenStorage.ts`)
+### SecureTokenStorage
+
+File: `src/main/services/SecureTokenStorage.ts`
 
 Low-level secure storage service that handles the actual encryption/decryption of tokens.
 
@@ -113,7 +119,7 @@ To avoid keychain prompts on application startup:
 
 ```typescript
 // In main process - services are registered but not instantiated
-import { registerSecureTokenHandlers } from './services/SecureTokenIPC';
+import { registerSecureTokenHandlers } from `src/main/services/SecureTokenIPC`;
 
 // Register handlers without triggering keychain
 registerSecureTokenHandlers();
@@ -143,7 +149,7 @@ const result = await window.mainProcess.authentication.check();
 
 ## Related Files
 
-- `/src/shared/main-process-api-interfaces/SecureTokenAPI.ts` - API event definitions
-- `/src/shared/main-process-api-interfaces/AuthenticationAPI.ts` - Authentication interfaces
-- `/src/main/services/AuthStateManager.ts` - Auth state management
-- `/src/main/services/OAuthServerClient.ts` - OAuth client implementation
+- `src/shared/main-process-api-interfaces/SecureTokenAPI.ts` - API event definitions
+- `src/shared/main-process-api-interfaces/AuthenticationAPI.ts` - Authentication interfaces
+- `src/main/services/AuthStateManager.ts` - Auth state management
+- `src/main/services/OAuthServerClient.ts` - OAuth client implementation

@@ -270,7 +270,7 @@ function AppContent({
   if (currentView === 'multiFileEditor') {
     return (
       <Suspense fallback={<LoadingFallback />}>
-        <MultiFileEditorWindow {...(windowInitData || {})} />
+        <MultiFileEditorWindow {...(windowInitData as any || {})} />
       </Suspense>
     );
   }

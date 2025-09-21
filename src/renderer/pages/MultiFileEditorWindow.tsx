@@ -30,26 +30,29 @@ import {
 interface FileInfo {
   path: string;
   relativePath?: string;
-  lastModified?: number;
 }
 
-interface MultiFileEditorWindowProps {
-  sessionId: string;
-  sessionName?: string;
+// Props for local file editor
+interface LocalEditorProps {
+  editorType: 'local';
+  windowId: string;
+  windowTitle?: string;
   files: FileInfo[];
-  repositoryPath: string;
-  isRemote?: boolean;
-  remoteInfo?: {
-    owner: string;
-    repo: string;
-    branch?: string;
-  };
-  isLocal?: boolean;
-  localInfo?: {
-    path: string;
-    branch?: string;
-  };
 }
+
+// Props for remote file editor
+interface RemoteEditorProps {
+  editorType: 'remote';
+  windowId: string;
+  windowTitle?: string;
+  files: Array<{ path: string }>;
+  owner: string;
+  repo: string;
+  branch?: string;
+}
+
+// Union type for the component props
+type MultiFileEditorWindowProps = LocalEditorProps | RemoteEditorProps;
 
 interface FileTab {
   path: string;
@@ -71,16 +74,9 @@ interface SessionActivity {
   timestamp: number;
 }
 
-export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = ({
-  sessionId,
-  sessionName,
-  files,
-  repositoryPath,
-  isRemote = false,
-  remoteInfo,
-  isLocal = false,
-  localInfo,
-}) => {
+export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
+  props,
+) => {
   const { theme } = useTheme();
   const [activeTabIndex, setActiveTabIndex] = useState(0);
   const [tabs, setTabs] = useState<FileTab[]>([]);
@@ -94,28 +90,43 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = ({
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [preferredEditor, setPreferredEditor] = useState<EditorId>('vscode');
 
+  // Extract common props
+  const { windowId, windowTitle, files, editorType } = props;
+
   // Create a stable reference for file paths to avoid infinite loops
   const filePaths = useMemo(() => files.map((f) => f.path), [files]);
 
-  // Create content provider based on whether files are local or remote
+  // For local files, derive repository path from the first file
+  // This assumes all files are in the same repository
+  const repositoryPath = useMemo(() => {
+    if (editorType === 'local' && files.length > 0) {
+      // Get the directory of the first file as a rough approximation
+      // In reality, we'd want to find the actual git root
+      const firstFilePath = files[0].path;
+      const lastSlash = firstFilePath.lastIndexOf('/');
+      return lastSlash > 0 ? firstFilePath.substring(0, lastSlash) : '/';
+    }
+    return '';
+  }, [editorType, files]);
+
+  // Create content provider based on editor type
   const contentProvider = useMemo(() => {
-    if (isRemote && remoteInfo) {
+    if (editorType === 'remote') {
       return new GitHubContentProvider(
-        remoteInfo.owner,
-        remoteInfo.repo,
-        remoteInfo.branch || 'main',
+        props.owner,
+        props.repo,
+        props.branch || 'main',
       );
-    } else if (isLocal || localInfo) {
+    } else {
       return new LocalFileSystemProvider();
     }
-    return null;
-  }, [isRemote, remoteInfo, isLocal, localInfo]);
+  }, [editorType, props]);
 
   // Initialize tabs from files
   useEffect(() => {
     const initialTabs: FileTab[] = files.map((file) => ({
       path: file.path,
-      relativePath: file.relativePath,
+      relativePath: 'relativePath' in file ? file.relativePath : file.path,
       name: file.path.split('/').pop() || 'Untitled', // Just the filename
       isModified: false,
       gitStatus: undefined,
@@ -133,7 +144,10 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = ({
   }, []);
 
   // Subscribe to real-time session events and load initial events
+  // NOTE: This is disabled for now as we're not tracking agent sessions
   useEffect(() => {
+    // Agent session tracking disabled - not needed for file editing
+    /*
     let unsubscribeCLI: (() => void) | undefined;
     let unsubscribeProcessed: (() => void) | undefined;
 
@@ -302,12 +316,13 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = ({
       if (unsubscribeCLI) unsubscribeCLI();
       if (unsubscribeProcessed) unsubscribeProcessed();
     };
-  }, [sessionId]);
+    */
+  }, []);
 
   // Fetch git status for files (only for local repositories)
   useEffect(() => {
     // Skip git status for remote files
-    if (isRemote) {
+    if (editorType === 'remote') {
       return;
     }
 
@@ -360,7 +375,7 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = ({
     const interval = setInterval(fetchGitStatus, 2000); // Poll every 2 seconds
 
     return () => clearInterval(interval);
-  }, [repositoryPath, filePaths, isRemote]);
+  }, [repositoryPath, filePaths, editorType]);
 
   const handleTabClose = (index: number) => {
     const newTabs = [...tabs];
@@ -481,7 +496,7 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <FileText size={16} />
           <span style={{ fontWeight: 600 }}>
-            {sessionName || `Session ${sessionId.substring(0, 8)}`}
+            {windowTitle || 'File Editor'}
           </span>
           {isSessionActive && (
             <span
@@ -652,7 +667,7 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = ({
               repositoryPath={repositoryPath}
               gitStatus={activeTab.gitStatus}
             />
-          ) : (isRemote || isLocal) && contentProvider ? (
+          ) : contentProvider ? (
             // Show FileViewer with content provider for remote or local files
             <FileViewer
               key={activeTab.path}
@@ -668,25 +683,9 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = ({
                   throw new Error('No content provider available');
                 }
                 try {
-                  console.log('[MultiFileEditor] Loading file:', {
-                    path: activeTab.path,
-                    relativePath: activeTab.relativePath,
-                    isRemote,
-                    isLocal,
-                    localInfo,
-                    remoteInfo,
-                  });
-
-                  // For local files, we need to pass the full path
-                  const pathToLoad =
-                    isLocal && localInfo
-                      ? activeTab.path.startsWith('/')
-                        ? activeTab.path
-                        : `${localInfo.path}/${activeTab.path}`
-                      : activeTab.path;
-
+                  // Path is already correct - absolute for local, relative for remote
                   const content =
-                    await contentProvider.readFileContent(pathToLoad);
+                    await contentProvider.readFileContent(activeTab.path);
                   if (content === null) {
                     // File doesn't exist or couldn't be fetched
                     throw new Error(

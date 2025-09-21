@@ -51,17 +51,19 @@ export class AlexandriaRegistryService {
           }
 
           if (commitInfo && commitInfo.date) {
-            // Update the github field with last commit date and details
+            // Update the github field with last commit date only (per type constraints)
+            // Store other commit details at the top level
             const enrichedEntry = {
               ...entry,
               github: {
                 ...entry.github,
                 lastCommit: commitInfo.date, // ISO date string from git
-                lastCommitMessage: commitInfo.message,
-                lastCommitAuthor: commitInfo.author,
-                lastCommitHash: commitInfo.shortHash || commitInfo.hash,
               },
-            };
+              // Additional commit details (not part of GithubRepository type)
+              lastCommitMessage: commitInfo.message,
+              lastCommitAuthor: commitInfo.author,
+              lastCommitHash: commitInfo.shortHash || commitInfo.hash,
+            } as AlexandriaEntry;
             return enrichedEntry;
           }
         } catch (error) {
@@ -95,11 +97,12 @@ export class AlexandriaRegistryService {
           github: {
             ...entry.github,
             lastCommit: commitInfo.date,
-            lastCommitMessage: commitInfo.message,
-            lastCommitAuthor: commitInfo.author,
-            lastCommitHash: commitInfo.shortHash || commitInfo.hash,
           },
-        };
+          // Additional commit details (not part of GithubRepository type)
+          lastCommitMessage: commitInfo.message,
+          lastCommitAuthor: commitInfo.author,
+          lastCommitHash: commitInfo.shortHash || commitInfo.hash,
+        } as AlexandriaEntry;
       }
     } catch (error) {
       // Silently continue if git info fails
@@ -127,11 +130,12 @@ export class AlexandriaRegistryService {
           github: {
             ...entry.github,
             lastCommit: commitInfo.date,
-            lastCommitMessage: commitInfo.message,
-            lastCommitAuthor: commitInfo.author,
-            lastCommitHash: commitInfo.shortHash || commitInfo.hash,
           },
-        };
+          // Additional commit details (not part of GithubRepository type)
+          lastCommitMessage: commitInfo.message,
+          lastCommitAuthor: commitInfo.author,
+          lastCommitHash: commitInfo.shortHash || commitInfo.hash,
+        } as AlexandriaEntry;
       }
     } catch (error) {
       // Silently continue if git info fails
@@ -285,11 +289,12 @@ export class AlexandriaRegistryService {
           github: {
             ...repo.github,
             lastCommit: commitInfo.date,
-            lastCommitMessage: commitInfo.message,
-            lastCommitAuthor: commitInfo.author,
-            lastCommitHash: commitInfo.shortHash || commitInfo.hash,
           },
-        };
+          // Additional commit details (not part of GithubRepository type)
+          lastCommitMessage: commitInfo.message,
+          lastCommitAuthor: commitInfo.author,
+          lastCommitHash: commitInfo.shortHash || commitInfo.hash,
+        } as AlexandriaEntry;
       }
     } catch (error) {
       // Silently continue if git info fails

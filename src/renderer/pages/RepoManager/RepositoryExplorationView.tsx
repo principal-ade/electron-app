@@ -288,44 +288,76 @@ export const RepositoryExplorationView: React.FC<
       // Open multi-file editor window
       const openMultiFileEditor = async () => {
         try {
-          // Prepare file info for the multi-file editor
-          const files = [
-            {
-              path: filePath,
-              relativePath: filePath,
-              lastModified: Date.now(),
-            },
-          ];
+          // Check if this is a local or remote source
+          if (activeFileTreeSource?.type === 'local') {
+            // For local sources, convert relative path to absolute path
+            const absolutePath = filePath.startsWith('/')
+              ? filePath
+              : `${activeFileTreeSource.location}/${filePath}`;
 
-          // Include any previously opened files
-          openedFiles.forEach((openedFile) => {
-            if (openedFile !== filePath) {
-              files.push({
-                path: openedFile,
-                relativePath: openedFile,
+            // Prepare file info for the multi-file editor
+            const files = [
+              {
+                path: absolutePath,
+                relativePath: filePath,
                 lastModified: Date.now(),
-              });
-            }
-          });
+              },
+            ];
 
-          // Pass remote repository information for the multi-file editor
-          const branch =
-            activeFileTreeSource?.metadata?.currentBranch ||
-            remoteData.defaultBranch;
+            // Include any previously opened files
+            openedFiles.forEach((openedFile) => {
+              if (openedFile !== filePath) {
+                const absPath = openedFile.startsWith('/')
+                  ? openedFile
+                  : `${activeFileTreeSource.location}/${openedFile}`;
+                files.push({
+                  path: absPath,
+                  relativePath: openedFile,
+                  lastModified: Date.now(),
+                });
+              }
+            });
 
-          await WindowService.openMultiFileEditor({
-            sessionId: `explore-${remoteData.owner}-${remoteData.repo}`,
-            sessionName: `Explore ${remoteData.owner}/${remoteData.repo}`,
-            files,
-            repositoryPath: remoteData.owner + '/' + remoteData.repo,
-            // Add remote repository info so the editor knows to use remote content provider
-            isRemote: true,
-            remoteInfo: {
+            await WindowService.openLocalFiles({
+              windowId: `explore-local-${activeFileTreeSource.id}`,
+              windowTitle: `Explore ${activeFileTreeSource.name}`,
+              files,
+            });
+          } else {
+            // For remote sources, use the existing remote flow
+            const files = [
+              {
+                path: filePath,
+                relativePath: filePath,
+                lastModified: Date.now(),
+              },
+            ];
+
+            // Include any previously opened files
+            openedFiles.forEach((openedFile) => {
+              if (openedFile !== filePath) {
+                files.push({
+                  path: openedFile,
+                  relativePath: openedFile,
+                  lastModified: Date.now(),
+                });
+              }
+            });
+
+            // Pass remote repository information for the multi-file editor
+            const branch =
+              activeFileTreeSource?.metadata?.currentBranch ||
+              remoteData.defaultBranch;
+
+            await WindowService.openRemoteFiles({
+              windowId: `explore-${remoteData.owner}-${remoteData.repo}`,
+              windowTitle: `Explore ${remoteData.owner}/${remoteData.repo}`,
+              files,
               owner: remoteData.owner,
               repo: remoteData.repo,
               branch,
-            },
-          });
+            });
+          }
         } catch (error) {
           console.error(
             '[RepositoryExplorationView] Failed to open multi-file editor:',

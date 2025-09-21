@@ -503,13 +503,13 @@ export class DocumentIndexingService {
     // If we don't have repositories cached, load them from Alexandria
     if (this.alexandriaRepositories.length === 0) {
       try {
-        const entries = await this.alexandriaRegistry.getAllEntries();
+        const entries = await this.alexandriaRegistry.getRepositories();
         this.alexandriaRepositories = entries
-          .map((entry) => ({
+          .map((entry: any) => ({
             path: entry.localClones?.[0]?.path || entry.location || '',
             name: entry.name,
           }))
-          .filter((repo) => repo.path); // Filter out entries without valid paths
+          .filter((repo: any) => repo.path); // Filter out entries without valid paths
       } catch (error) {
         console.error(
           '[DocumentIndexingService] Failed to load Alexandria repositories:',
@@ -526,7 +526,9 @@ export class DocumentIndexingService {
         path: repo.path,
         indexed: true,
         documentCount: 0, // We don't track per-repo counts anymore
-        lastIndexed: this.lastIndexTime?.toISOString(),
+        lastIndexed: this.lastIndexTime || new Date(),
+        watching: false,
+        status: 'healthy' as const,
       }));
 
     return {

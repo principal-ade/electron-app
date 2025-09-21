@@ -23,7 +23,7 @@ export class EventQueue {
     this.pendingCounts.set(key, currentCount + 1);
 
     // Create new queue entry that waits for the current queue, then executes
-    const newQueue = currentQueue
+    const resultPromise = currentQueue
       .then(() => operation())
       .catch((error) => {
         // Log error but don't stop the queue
@@ -32,7 +32,12 @@ export class EventQueue {
           error,
         );
         throw error;
-      })
+      });
+
+    // Create a void promise for queue tracking
+    const queuePromise = resultPromise
+      .then(() => {})
+      .catch(() => {})
       .finally(() => {
         // Decrement pending count
         const count = this.pendingCounts.get(key) || 1;
@@ -45,11 +50,11 @@ export class EventQueue {
         }
       });
 
-    // Update the queue for this key
-    this.queues.set(key, newQueue);
+    // Update the queue for this key with the void promise
+    this.queues.set(key, queuePromise);
 
-    // Wait for this operation to complete
-    return newQueue;
+    // Return the result promise
+    return resultPromise;
   }
 
   /**

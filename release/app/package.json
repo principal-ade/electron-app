@@ -1,6 +1,6 @@
 {
   "name": "specktor-electron",
-  "version": "0.0.91",
+  "version": "0.0.1",
   "description": "Specktor - The Specktor engineer for your codebase",
   "author": {
     "name": "principle-md",
@@ -9,6 +9,7 @@
   },
   "main": "dist/main/main.js",
   "dependencies": {
+    "@a24z/agent-manager": "^1.0.1",
     "@a24z/core-library": "^0.1.9",
     "@a24z/markdown-search": "^2.0.5",
     "@a24z/observability-sdk": "^0.4.1",

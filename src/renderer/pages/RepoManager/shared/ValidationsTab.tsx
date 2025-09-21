@@ -715,34 +715,6 @@ export const ValidationsTab: React.FC<ValidationsTabProps> = ({
         backgroundColor: theme.colors.background,
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          padding: '20px 24px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-          backgroundColor: theme.colors.backgroundLight,
-        }}
-      >
-        <h2
-          style={{
-            fontSize: '20px',
-            fontWeight: 600,
-            color: theme.colors.text,
-            marginBottom: '8px',
-          }}
-        >
-          Code Validations
-        </h2>
-        <p
-          style={{
-            fontSize: '14px',
-            color: theme.colors.textSecondary,
-          }}
-        >
-          Run various quality checks and validations on your packages
-        </p>
-      </div>
-
       {/* Controls Section */}
       <div
         style={{

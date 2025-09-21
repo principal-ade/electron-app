@@ -64,27 +64,30 @@ const findImports = () => {
   for (const filePath of filesToScan) {
     const content = fs.readFileSync(filePath, 'utf8');
 
+    // Normalize content to handle multi-line imports
+    // Remove comments and normalize whitespace for better pattern matching
+    const normalizedContent = content
+      .replace(/\/\/.*$/gm, '')           // Remove line comments
+      .replace(/\/\*[\s\S]*?\*\//g, '')   // Remove block comments
+      .replace(/\s+/g, ' ');               // Normalize whitespace
+
     // Multiple regex patterns to catch different import styles
     const patterns = [
-      // Standard imports: import ... from 'package'
-      /import\s+(?:.*?\s+)?from\s+['"]([^'"]+)['"]/g,
+      // From clause patterns (handles multi-line imports better)
+      /from\s+['"]([^'"]+)['"]/g,
 
       // Dynamic imports: import('package')
       /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
 
       // Require statements: require('package')
       /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
-
-      // Export from: export ... from 'package'
-      /export\s+(?:.*?\s+)?from\s+['"]([^'"]+)['"]/g,
-
-      // Type imports: import type ... from 'package'
-      /import\s+type\s+(?:.*?\s+)?from\s+['"]([^'"]+)['"]/g,
     ];
 
+    // First process normalized content for from clauses
     for (const pattern of patterns) {
       let match;
-      while ((match = pattern.exec(content)) !== null) {
+      const searchContent = pattern === patterns[0] ? normalizedContent : content;
+      while ((match = pattern.exec(searchContent)) !== null) {
         const importPath = match[1];
 
         // Skip template literals and dynamic imports

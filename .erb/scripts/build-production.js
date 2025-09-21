@@ -6,7 +6,35 @@ const { execSync } = require('child_process');
 
 const projectRoot = path.join(__dirname, '../..');
 
+// Load environment variables from .env file if it exists
+const envPath = path.join(projectRoot, '.env');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split('\n').forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const [key, ...valueParts] = trimmed.split('=');
+      if (key) {
+        process.env[key] = valueParts.join('=');
+      }
+    }
+  });
+  console.log('✓ Loaded environment variables from .env');
+}
+
 console.log('🚀 Starting production build process...');
+
+// Sync versions from main package.json to release/app/package.json
+const mainPackageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
+const releaseAppPackageJsonPath = path.join(projectRoot, 'release/app/package.json');
+const releaseAppPackageJson = JSON.parse(fs.readFileSync(releaseAppPackageJsonPath, 'utf8'));
+
+if (mainPackageJson.version !== releaseAppPackageJson.version) {
+  console.log(`📦 Syncing version: ${releaseAppPackageJson.version} → ${mainPackageJson.version}`);
+  releaseAppPackageJson.version = mainPackageJson.version;
+  fs.writeFileSync(releaseAppPackageJsonPath, JSON.stringify(releaseAppPackageJson, null, 2) + '\n');
+  console.log('✓ Version synced to release/app/package.json');
+}
 
 // Step 1: Clean up
 console.log('🧹 Cleaning up old builds...');
@@ -17,7 +45,18 @@ const dllPath = path.join(projectRoot, 'dll');
 
 [distPath, buildPath, dllPath].forEach((folder) => {
   if (fs.existsSync(folder)) {
-    fs.rmSync(folder, { recursive: true, force: true });
+    try {
+      fs.rmSync(folder, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    } catch (err) {
+      // If fs.rmSync fails, try using shell command as fallback
+      console.log(`⚠️  fs.rmSync failed for ${folder}, using rm -rf as fallback`);
+      try {
+        execSync(`rm -rf "${folder}"`, { stdio: 'inherit' });
+      } catch (shellErr) {
+        console.error(`❌ Failed to remove ${folder}:`, shellErr.message);
+        console.log('   You may need to manually delete this folder and retry.');
+      }
+    }
   }
 });
 
@@ -87,7 +126,43 @@ try {
   // Step 5: Package with electron-builder
   console.log('📦 Packaging application...');
   // Check if --publish flag was passed
-  const publishArg = process.argv.includes('--publish')
+  const shouldPublish = process.argv.includes('--publish');
+
+  if (shouldPublish) {
+    // Pre-publish check: verify GitHub release doesn't already exist
+    const version = mainPackageJson.version;
+    console.log(`🔍 Checking if version ${version} can be published...`);
+
+    if (!process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
+      console.error('❌ No GitHub token found. Please set GH_TOKEN or GITHUB_TOKEN environment variable.');
+      console.log('   You can set it in your .env file or export it manually:');
+      console.log('   export GH_TOKEN=your_github_token_here');
+      process.exit(1);
+    }
+
+    const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+    try {
+      // Check if release already exists
+      const checkCmd = `curl -s -H "Authorization: token ${token}" https://api.github.com/repos/a24z-ai/electron-app/releases/tags/v${version}`;
+      const releaseCheck = execSync(checkCmd, { encoding: 'utf8' });
+
+      if (releaseCheck && JSON.parse(releaseCheck).id) {
+        console.warn(`⚠️  Release v${version} already exists on GitHub.`);
+        console.log('   Options:');
+        console.log('   1. Delete the existing release on GitHub');
+        console.log('   2. Bump the version in package.json');
+        console.log('   3. Run without --publish flag to build without publishing');
+        process.exit(1);
+      }
+    } catch (e) {
+      // 404 error is expected and means we can publish
+      if (!e.stdout || !e.stdout.includes('Not Found')) {
+        console.log('✓ Version can be published');
+      }
+    }
+  }
+
+  const publishArg = shouldPublish
     ? '--publish always'
     : '--publish never';
   execSync(`electron-builder build ${publishArg}`, {

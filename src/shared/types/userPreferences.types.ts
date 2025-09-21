@@ -106,7 +106,6 @@ export interface UserPreferences {
   //                     src/renderer/services/ai/ArchitecturalScaffoldService.ts:117,142
   //                     src/renderer/services/validation/AIScriptAnalysisService.ts:114
   // - validationConfigs: src/renderer/services/validation/ConfiguredValidationService.ts:13
-  // - projectTodos: src/renderer/services/storage/TodoStorageService.ts:13
   // - customArchitectureLayers: src/renderer/services/storage/CustomLayersStorageService.ts:3
   // - sessionContexts: src/renderer/services/sessionContextService.ts (with pattern `sessionContexts:${directory}`)
 }

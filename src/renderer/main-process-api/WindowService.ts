@@ -9,7 +9,8 @@
 
 import type {
   StoreViewerOptions,
-  MultiFileEditorOptions,
+  OpenLocalFilesRequest,
+  OpenRemoteFilesRequest,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@a24z/core-library';
 
@@ -31,17 +32,32 @@ export class WindowService {
   }
 
   /**
-   * Open Multi-File Editor window for a session
-   * @param options - Session and file information
+   * Open an editor window for local files
+   * @param request - Request containing local file paths and window configuration
    */
-  static async openMultiFileEditor(
-    options: MultiFileEditorOptions,
+  static async openLocalFiles(
+    request: OpenLocalFilesRequest,
   ): Promise<void> {
     try {
-      await window.mainProcess.window.openMultiFileEditor(options);
+      await window.mainProcess.window.openLocalFiles(request);
     } catch (error) {
-      console.error('[WindowService] Failed to open multi-file editor:', error);
-      throw new Error('Failed to open multi-file editor window');
+      console.error('[WindowService] Failed to open local files:', error);
+      throw new Error('Failed to open local files editor window');
+    }
+  }
+
+  /**
+   * Open an editor window for remote GitHub files
+   * @param request - Request containing repository info and file paths
+   */
+  static async openRemoteFiles(
+    request: OpenRemoteFilesRequest,
+  ): Promise<void> {
+    try {
+      await window.mainProcess.window.openRemoteFiles(request);
+    } catch (error) {
+      console.error('[WindowService] Failed to open remote files:', error);
+      throw new Error('Failed to open remote files editor window');
     }
   }
 
