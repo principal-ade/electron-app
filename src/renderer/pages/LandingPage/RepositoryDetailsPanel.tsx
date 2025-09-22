@@ -250,6 +250,22 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     [selectedRepository],
   );
 
+  // Handle clicking a markdown file from the Markdown Documents list.
+  // Opens the dedicated markdown-view special window for a single file.
+  const handleOpenMarkdown = useCallback(
+    async (filePath: string) => {
+      if (!selectedRepository) return;
+
+      try {
+        const absolutePath = `${selectedRepository.path}/${filePath}`;
+        await WindowService.openMarkdownView(absolutePath, selectedRepository.name);
+      } catch (error) {
+        console.error('[RepositoryDetailsPanel] Error opening markdown view:', error);
+      }
+    },
+    [selectedRepository],
+  );
+
   // Format relative time
   const getRelativeTime = (dateStr: string | undefined) => {
     if (!dateStr) return 'Never';
@@ -693,126 +709,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
               padding: '20px',
             }}
           >
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '16px',
-                marginBottom: '16px',
-              }}
-            >
-              {/* Stats Cards */}
-              {selectedRepository.github?.stars && (
-                <div
-                  style={{
-                    padding: '16px',
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    borderRadius: '8px',
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '4px',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Stars
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '14px',
-                      color: theme.colors.text,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {selectedRepository.github.stars}
-                  </div>
-                </div>
-              )}
-
-              {selectedRepository.github?.primaryLanguage && (
-                <div
-                  style={{
-                    padding: '16px',
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    borderRadius: '8px',
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: '11px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '4px',
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                    }}
-                  >
-                    Language
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '14px',
-                      color: theme.colors.text,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {selectedRepository.github.primaryLanguage}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Topics */}
-            {selectedRepository?.github?.topics && selectedRepository.github.topics.length > 0 && (
-              <div
-                style={{
-                  padding: '16px',
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  borderRadius: '8px',
-                  border: `1px solid ${theme.colors.border}`,
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '11px',
-                    color: theme.colors.textSecondary,
-                    marginBottom: '12px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Topics
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: '8px',
-                  }}
-                >
-                  {selectedRepository?.github?.topics.map((topic) => (
-                    <span
-                      key={topic}
-                      style={{
-                        padding: '4px 10px',
-                        backgroundColor: `${theme.colors.primary}20`,
-                        color: theme.colors.primary,
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Git Changes and Repository Content Side-by-Side */}
             <div
@@ -820,7 +716,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 gap: '16px',
-                marginTop: '24px',
               }}
             >
               {/* Git Changes List or Last Commit */}
@@ -1428,7 +1323,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                               e.currentTarget.style.backgroundColor =
                                 theme.colors.background;
                             }}
-                            onClick={() => handleFileClick(file.path)}
+                            onClick={() => handleOpenMarkdown(file.path)}
                             title={file.path}
                           >
                             <div

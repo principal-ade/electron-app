@@ -1,0 +1,18 @@
+{
+  "id": "note-1758499837323-ipn4f9b6k",
+  "note": "Add back the search tab in the open dashboard explore maybe?",
+  "anchors": [
+    "."
+  ],
+  "tags": [
+    "general"
+  ],
+  "metadata": {
+    "directoryPath": "/Users/griever/Developer/electron-app",
+    "relativePath": ".",
+    "confidence": "medium",
+    "type": "explanation"
+  },
+  "timestamp": 1758499837323,
+  "codebaseViewId": "default"
+}

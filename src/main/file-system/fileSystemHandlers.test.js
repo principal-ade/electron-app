@@ -52,7 +52,9 @@ describe('FileSystemHandlerService', () => {
             }));
             fs.promises.stat = mockStat;
             const patterns = ['node_modules/', 'dist/', '.git'];
-            const result = await service.buildFilteredFileTree('/test', patterns);
+            const result = await service.buildFilteredFileTree('/test', {
+                ignorePatterns: patterns,
+            });
             // Check that filter was called with the right patterns
             expect(mockIgnore.add).toHaveBeenCalledWith(patterns);
             expect(mockFdir.filter).toHaveBeenCalled();
@@ -90,7 +92,7 @@ describe('FileSystemHandlerService', () => {
                 mtime: new Date('2023-01-01'),
             }));
             fs.promises.stat = mockStat;
-            const result = await service.buildFilteredFileTree('/test', []);
+            const result = await service.buildFilteredFileTree('/test', {});
             // Should return relative paths
             expect(result.paths).toContain('src/file.js');
             expect(result.paths).toContain('package.json');
@@ -123,7 +125,9 @@ describe('FileSystemHandlerService', () => {
             }));
             fs.promises.stat = mockStat;
             const patterns = ['docs/'];
-            const result = await service.buildFilteredFileTree('/test', patterns, 'src');
+            const result = await service.buildFilteredFileTree('/test', {
+                ignorePatterns: patterns,
+            });
             // Get the filter function that was passed to fdir
             const filterFn = mockFdir.filter.mock.calls[0][0];
             // Test that files outside sourceDirectory are included (not filtered)
@@ -160,7 +164,7 @@ describe('FileSystemHandlerService', () => {
                 };
             });
             fs.promises.stat = mockStat;
-            const result = await service.buildFilteredFileTree('/test', []);
+            const result = await service.buildFilteredFileTree('/test', {});
             // Should still return results for good files, skipping the problematic one
             expect(result.paths).toContain('good-file.js');
             expect(result.paths).toContain('another-good-file.js');
@@ -180,7 +184,7 @@ describe('FileSystemHandlerService', () => {
             };
             const { fdir } = require('fdir');
             fdir.mockImplementation(() => mockFdir);
-            const result = await service.buildFilteredFileTree('/test', []);
+            const result = await service.buildFilteredFileTree('/test', {});
             expect(result.paths).toEqual([]);
             expect(result.stats).toBeUndefined();
         });
@@ -205,7 +209,7 @@ describe('FileSystemHandlerService', () => {
                 mtime: new Date('2023-01-01'),
             }));
             fs.promises.stat = mockStat;
-            const result = await service.buildFilteredFileTree('/test', []);
+            const result = await service.buildFilteredFileTree('/test', {});
             expect(result.paths).toContain('src/'); // Directory with trailing slash
             expect(result.paths).toContain('file.js'); // File without trailing slash
         });

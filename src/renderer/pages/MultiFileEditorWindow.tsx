@@ -10,6 +10,7 @@ import {
   FileText,
   ExternalLink,
 } from 'lucide-react';
+import { EditorTitlebar } from '../components/Titlebar';
 import { WatchingFileViewer } from './LandingPage/AgentConfigurationView/WatchingFileViewer';
 import { FileViewer } from '../components/FileViewer';
 import { DiffViewer } from '../components/DiffViewer';
@@ -477,11 +478,27 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        height: '100%',
+        minHeight: '100vh',
         backgroundColor: theme.colors.background,
         color: theme.colors.text,
+        overflow: 'hidden',
       }}
     >
+      {/* Titlebar */}
+      <EditorTitlebar
+        fileName={activeTab && files.length > 0 ? files[activeTab]?.path?.split('/').pop() : undefined}
+        filePath={activeTab && files.length > 0 ? files[activeTab]?.path : undefined}
+        isRemote={isRemoteEditor}
+        repository={isRemoteEditor ? `${props.owner}/${props.repo}` : undefined}
+        onOpenInGitHub={isRemoteEditor && activeTab !== null ? () => {
+          const file = files[activeTab];
+          if (file) {
+            window.open(`https://github.com/${props.owner}/${props.repo}/blob/${props.branch || 'main'}/${file.path}`, '_blank');
+          }
+        } : undefined}
+      />
+
       {/* Header */}
       <div
         style={{

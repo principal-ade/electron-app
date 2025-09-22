@@ -20,6 +20,7 @@ import '@a24z/panels/style.css';
 import { useTheme } from 'themed-markdown';
 
 import { FileViewer } from '../components/FileViewer';
+import { StoreViewerTitlebar } from '../components/Titlebar';
 import { StoreService } from '../main-process-api/StoreService';
 import { AgentSessionEventsService } from '../main-process-api/AgentSessionEventsService';
 import {
@@ -984,16 +985,26 @@ export const StoreViewer: React.FC<StoreViewerProps> = () => {
 
   return (
     <div
-      className="fixed inset-0 flex flex-col h-screen"
+      className="fixed inset-0 flex flex-col"
       style={{ backgroundColor: theme.colors.background }}
     >
-      <AnimatedResizableLayout
-        leftPanel={renderLeftPanel()}
-        rightPanel={renderRightPanel()}
-        minSize={30}
-        defaultSize={50}
+      {/* Titlebar */}
+      <StoreViewerTitlebar
+        agent={selectedNamespace?.agent}
+        namespace={selectedNamespace?.namespace}
+        onRefresh={loadStoreInfo}
       />
-      {renderStorageOverview()}
+
+      {/* Main content - flex-1 to fill remaining space */}
+      <div className="flex-1 relative">
+        <AnimatedResizableLayout
+          leftPanel={renderLeftPanel()}
+          rightPanel={renderRightPanel()}
+          minSize={30}
+          defaultSize={50}
+        />
+        {renderStorageOverview()}
+      </div>
     </div>
   );
 };

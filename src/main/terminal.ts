@@ -176,7 +176,6 @@ class TerminalManager {
 
     // Handle PTY data
     ptyProcess.onData((data: string) => {
-      console.log(`[Terminal] PTY data for ${sessionId}: ${data.length} bytes`);
       if (this.mainWindow && !this.mainWindow.isDestroyed()) {
         this.mainWindow.webContents.send('terminal:data', {
           sessionId,

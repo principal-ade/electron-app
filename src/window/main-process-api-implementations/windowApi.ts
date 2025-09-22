@@ -36,8 +36,20 @@ export const windowAPI: WindowAPI = {
     ipcRenderer.invoke(WindowEvent.OPEN_REMOTE_FILES, request),
 
   /**
+   * Open a markdown viewer window for a single file path
+   */
+  openMarkdownView: (filePath: string, projectName: string) =>
+    ipcRenderer.invoke(WindowEvent.OPEN_MARKDOWN_VIEW, filePath, projectName),
+
+  /**
    * Open Repository Dashboard for Alexandria repositories
    */
   openRepositoryDashboard: (repository: AlexandriaEntry) =>
     ipcRenderer.invoke(WindowEvent.OPEN_REPOSITORY_DASHBOARD, repository),
+
+  /**
+   * Open Pattern Discovery (Callimachus) window
+   */
+  openCallimachusWindow: () =>
+    ipcRenderer.invoke(WindowEvent.OPEN_CALLIMACHUS_WINDOW),
 };

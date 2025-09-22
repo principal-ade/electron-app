@@ -20,6 +20,7 @@ export default [
       'scripts/**',
       '**/*.d.ts',
       '!src/shared/**/*.d.ts',
+      'src/renderer/unused/**',
       // Temporarily ignore some renderer files with complex issues
       'src/renderer/components/agent-overview/**/*',
       'src/renderer/components/agent-session-debug/**/*',

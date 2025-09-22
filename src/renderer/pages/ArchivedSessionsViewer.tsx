@@ -3,6 +3,7 @@ import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/style.css';
 import { useTheme } from 'themed-markdown';
 import { Sparkles, X } from 'lucide-react';
+import { SessionDetailsTitlebar } from '../components/Titlebar';
 import { ArchivedAgentSessionsPanel } from '../components/repository-maps/ArchivedAgentSessionsPanel';
 import { SessionDetailsPanel } from '../components/agent-overview/SessionDetailsPanel';
 import type { AgentSessionRecord } from '../../shared/sessionTypes';
@@ -154,12 +155,20 @@ export const ArchivedSessionsViewer: React.FC<ArchivedSessionsViewerProps> = ({
   return (
     <div
       style={{
-        height: '100vh',
+        height: '100%',
+        minHeight: '100vh',
         backgroundColor: theme.colors.background,
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
+      {/* Titlebar */}
+      <SessionDetailsTitlebar
+        sessionId={selectedSession?.sessionId}
+        directory={initialDirectory || selectedSession?.projectPath}
+      />
+
       {/* Header */}
       <div
         style={{

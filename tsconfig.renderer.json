@@ -23,6 +23,7 @@
     "release/build",
     "release/app/dist",
     ".erb/dll",
+    "src/renderer/unused/**/*",
     // Temporarily exclude shared files with TypeScript errors - TO BE FIXED ONE BY ONE
   ]
 }

@@ -325,9 +325,46 @@ export function registerModernWindowHandlers(): void {
         { name: 'All Files', extensions: ['*'] },
       ],
     });
-
+  
     if (!result.canceled && result.filePaths.length > 0) {
       const filePath = result.filePaths[0];
+      const fileName = path.basename(filePath);
+      const windowName = `markdown-${filePath}`;
+  
+      const window = createSpecialWindow(
+        windowName,
+        {
+          width: 1200,
+          height: 800,
+          title: `Markdown: ${fileName}`,
+        },
+        {
+          fileSystemAdapter: true,
+          contentSecurityPolicy: true,
+          externalLinkHandler: true,
+        },
+      );
+  
+      if (!window) return;
+  
+      // Load with file data
+      const encodedData = encodeURIComponent(
+        JSON.stringify({
+          mode: 'markdown-view',
+          filePath,
+        }),
+      );
+      const url = `${resolveHtmlPath('index.html')}#markdown-view/${encodedData}`;
+  
+      window.window.loadURL(url);
+    }
+  });
+
+  // Open a markdown view window for a specific file path (renderer can call this directly)
+  ipcMain.handle(WindowEvent.OPEN_MARKDOWN_VIEW, async (_event, filePath: string, projectName: string) => {
+    if (!filePath || typeof filePath !== 'string') return;
+
+    try {
       const fileName = path.basename(filePath);
       const windowName = `markdown-${filePath}`;
 
@@ -336,7 +373,7 @@ export function registerModernWindowHandlers(): void {
         {
           width: 1200,
           height: 800,
-          title: `Markdown: ${fileName}`,
+          title: `${projectName}: ${fileName}`,
         },
         {
           fileSystemAdapter: true,
@@ -352,11 +389,40 @@ export function registerModernWindowHandlers(): void {
         JSON.stringify({
           mode: 'markdown-view',
           filePath,
+          projectName,
         }),
       );
       const url = `${resolveHtmlPath('index.html')}#markdown-view/${encodedData}`;
 
       window.window.loadURL(url);
+    } catch (err) {
+      console.error('[modernWindowHandlers] OPEN_MARKDOWN_VIEW error:', err);
     }
+  });
+
+  // Callimachus Pattern Discovery Window
+  ipcMain.handle(WindowEvent.OPEN_CALLIMACHUS_WINDOW, async () => {
+    const windowName = 'callimachus-pattern-discovery';
+
+    const window = createSpecialWindow(
+      windowName,
+      {
+        width: 1000,
+        height: 700,
+        minWidth: 800,
+        minHeight: 500,
+        title: 'Pattern Discovery - Callimachus',
+      },
+      {
+        fileSystemAdapter: true,
+        contentSecurityPolicy: true,
+        externalLinkHandler: true,
+      },
+    );
+
+    if (!window) return;
+
+    const url = `${resolveHtmlPath('index.html')}#/callimachus`;
+    window.window.loadURL(url);
   });
 }

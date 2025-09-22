@@ -1,6 +1,6 @@
 {
   "name": "principal-ai",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "Specktor - The Specktor engineer for your codebase",
   "type": "module",
   "keywords": [
@@ -162,6 +162,7 @@
   },
   "dependencies": {
     "@a24z/agent-manager": "^1.0.1",
+    "@a24z/callimachus": "^0.1.3",
     "@a24z/core-library": "^0.1.9",
     "@a24z/markdown-search": "^2.0.5",
     "@a24z/observability-sdk": "^0.4.1",
@@ -228,7 +229,7 @@
     "simple-peer": "^9.11.1",
     "socket.io-client": "^4.8.1",
     "stream-browserify": "^3.0.0",
-    "themed-markdown": "^0.1.11",
+    "themed-markdown": "^0.1.24",
     "ts-json-schema-generator": "^2.4.0",
     "uuid": "^11.1.0",
     "ws": "^8.18.3",

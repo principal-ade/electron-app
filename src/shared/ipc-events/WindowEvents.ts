@@ -8,6 +8,10 @@ export enum WindowEvent {
   OPEN_LOCAL_FILES = 'window:open-local-files',
   OPEN_REMOTE_FILES = 'window:open-remote-files',
   OPEN_REPOSITORY_DASHBOARD = 'window:open-repository-dashboard',
+  // Open a markdown viewer for a specific file path (no dialog)
+  OPEN_MARKDOWN_VIEW = 'window:open-markdown-view',
+  // Open the markdown file selection dialog (existing)
   OPEN_MARKDOWN_FILE_DIALOG = 'window:open-markdown-file-dialog',
   OPEN_SESSION_DETAILS = 'window:open-session-details',
+  OPEN_CALLIMACHUS_WINDOW = 'window:open-callimachus',
 }

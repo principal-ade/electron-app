@@ -87,6 +87,7 @@ export interface UserPreferences {
   // Markdown rendering preferences
   useCustomMarkdownTheme?: boolean; // If true, use customMarkdownTheme instead of app theme
   customMarkdownTheme?: Record<string, unknown>; // Custom theme object for markdown rendering
+  markdownFontSizeScale?: number; // Font size scale for markdown viewer (default 1.0)
 
   // Agent auto-update preferences
   agentAutoUpdate?: {

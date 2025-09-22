@@ -1,5 +1,6 @@
 import React from 'react';
-import { SlidePresentation, DocumentView } from 'themed-markdown';
+import { ThemedSlidePresentation } from '../../../components/markdown/ThemedSlidePresentation';
+import { ThemedDocumentView } from '../../../components/markdown/ThemedDocumentView';
 import { ThemedMonaco } from '../../../components/shared/ThemedMonaco';
 import { MarkdownEmptyOverlay } from '../../../components/repository-maps/MarkdownEmptyOverlay';
 import type { Theme } from 'themed-markdown';
@@ -12,6 +13,7 @@ interface MarkdownDocumentViewerProps {
   currentSlide: number;
   theme: Theme;
   showSegmented?: boolean;
+  fontSizeScale?: number;
   onContentChange: (content: string) => void;
   onSlideNavigate: (slideNumber: number) => void;
   onCheckboxChange: (
@@ -29,6 +31,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
   currentSlide,
   theme,
   showSegmented = true,
+  fontSizeScale = 1.0,
   onContentChange,
   onSlideNavigate,
   onCheckboxChange,
@@ -72,14 +75,15 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
   // Check if content is empty
   const isEmpty = !content || content.trim() === '';
 
-  // Document View - Use the new DocumentView component
+  // Document View - Use the new ThemedDocumentView component
   if (viewMode === 'document') {
     return (
       <div style={{ position: 'relative', height: '100%' }}>
-        <DocumentView
+        <ThemedDocumentView
           content={slides}
           showSegmented={showSegmented}
           theme={theme}
+          fontSizeScale={fontSizeScale}
           onCheckboxChange={onCheckboxChange}
           slideIdPrefix="planning-doc"
           showSectionHeaders={showSegmented}
@@ -90,20 +94,20 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
     );
   }
 
-  // Slide View (default) - Use the new SlidePresentation component
+  // Slide View (default) - Use the new ThemedSlidePresentation component
   return (
     <div style={{ position: 'relative', height: '100%' }}>
-      <SlidePresentation
+      <ThemedSlidePresentation
         slides={slides}
         initialSlide={currentSlide}
         theme={theme}
+        fontSizeScale={fontSizeScale}
         onSlideChange={onSlideNavigate}
         onCheckboxChange={onCheckboxChange}
         showNavigation={true}
         showSlideCounter={true}
         showFullscreenButton={true}
         slideIdPrefix="planning-slide"
-        enableMermaidPopout={true}
         enableHtmlPopout={true}
         enableKeyboardScrolling={true}
       />

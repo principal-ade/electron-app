@@ -93,7 +93,7 @@ describe('SecretManager', () => {
             const invalidSecrets = [
                 { '123_INVALID': 'value' }, // Invalid key (starts with number)
                 { KEY: 123 }, // Invalid value (not string)
-                { KEY: 'value\0' }, // Contains null byte
+                { KEY: 'value\0' },
             ];
             for (const secrets of invalidSecrets) {
                 const result = await secretManager.storeSecrets('test-repo', '/path', secrets);

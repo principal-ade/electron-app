@@ -126,9 +126,9 @@ describe('SecretManager', () => {
 
     it('should validate secret keys and values', async () => {
       const invalidSecrets = [
-        { '123_INVALID': 'value' }, // Invalid key (starts with number)
+        { '123_INVALID': 'value' } as any, // Invalid key (starts with number)
         { KEY: 123 as any }, // Invalid value (not string)
-        { KEY: 'value\0' }, // Contains null byte
+        { KEY: 'value\0' } as any, // Contains null byte
       ];
 
       for (const secrets of invalidSecrets) {

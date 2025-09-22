@@ -62,6 +62,22 @@ export class WindowService {
   }
 
   /**
+   * Open a markdown viewer window for a single file path.
+   * This calls the main process to open the special markdown-view window
+   * with the given absolute file path.
+   * @param filePath - Absolute path to the markdown file to open
+   * @param projectName - Name of the project/repository this file belongs to
+   */
+  static async openMarkdownView(filePath: string, projectName: string): Promise<void> {
+    try {
+      await window.mainProcess.window.openMarkdownView(filePath, projectName);
+    } catch (error) {
+      console.error('[WindowService] Failed to open markdown view:', error);
+      throw new Error('Failed to open markdown view window');
+    }
+  }
+
+  /**
    * Open Repository Dashboard for Alexandria repositories
    * @param repository - Alexandria repository from @a24z/core-library package
    */
@@ -76,6 +92,22 @@ export class WindowService {
         error,
       );
       throw new Error('Failed to open repository dashboard window');
+    }
+  }
+
+  /**
+   * Open Pattern Discovery (Callimachus) window
+   * Opens a dedicated window for semantic code pattern search and discovery
+   */
+  static async openCallimachusWindow(): Promise<void> {
+    try {
+      await window.mainProcess.window.openCallimachusWindow();
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to open Callimachus window:',
+        error,
+      );
+      throw new Error('Failed to open Pattern Discovery window');
     }
   }
 }

@@ -8,8 +8,7 @@ import { useTheme } from 'themed-markdown';
 import { GlobalFeedbackProvider } from './GlobalFeedbackProvider';
 import { UserPromptProvider } from './components/mcp/UserPromptProvider';
 import { CustomThemeProvider } from './providers/CustomThemeProvider';
-import { CustomTitlebar } from './pages/CustomTitlebar/CustomTitlebar';
-import { RepoManagerTitlebar } from './pages/CustomTitlebar/RepoManagerTitlebar';
+import { MainWindowTitlebar, RepositoryTitlebar, MarkdownViewerTitlebar } from './components/Titlebar';
 import { SettingsModal } from './components/landing-page/SettingsModal';
 
 import {
@@ -17,6 +16,7 @@ import {
   AgentInstallationStatus,
 } from './main-process-api/AgentConfigurationService';
 import { AppVersionManagerService } from './main-process-api/AppVersionManagerService';
+import { UserPreferencesService } from './main-process-api/UserPreferencesService';
 
 // Import MarkdownView directly (not lazy loaded)
 import { MarkdownView } from './pages/MarkdownView';
@@ -50,6 +50,11 @@ const MultiFileEditorWindow = React.lazy(() =>
     default: m.MultiFileEditorWindow,
   })),
 );
+const CallimachusWindow = React.lazy(() =>
+  import('./pages/CallimachusWindow').then((m) => ({
+    default: m.CallimachusWindow,
+  })),
+);
 
 function AppContent({
   setHasUpdateAvailable,
@@ -66,6 +71,7 @@ function AppContent({
     | 'markdownView'
     | 'repositoryMaps'
     | 'multiFileEditor'
+    | 'callimachus'
   >('landing');
   // const [useNewUI, setUseNewUI] = React.useState(false); // No longer needed
   const [windowInitData, setWindowInitData] = React.useState<unknown>(null);
@@ -155,6 +161,9 @@ function AppContent({
           }
         }
         setCurrentView('repositoryMaps');
+      } else if (hash === '#/callimachus' || hash.startsWith('#/callimachus')) {
+        // Callimachus Pattern Discovery route
+        setCurrentView('callimachus');
       } else {
         AgentConfigurationService.checkAgentInstallations().then((status) => {
           setAgentStatus(status);
@@ -256,7 +265,9 @@ function AppContent({
   }
 
   if (currentView === 'markdownView') {
-    return <MarkdownView filePath={(windowInitData as any)?.filePath || ''} />;
+    // Get fontSizeScale from parent App component through window object
+    const fontSizeScale = (window as any).markdownFontSizeScale || 1.0;
+    return <MarkdownView filePath={(windowInitData as any)?.filePath || ''} fontSizeScale={fontSizeScale} />;
   }
 
   if (currentView === 'storeViewer') {
@@ -271,6 +282,14 @@ function AppContent({
     return (
       <Suspense fallback={<LoadingFallback />}>
         <MultiFileEditorWindow {...((windowInitData as any) || {})} />
+      </Suspense>
+    );
+  }
+
+  if (currentView === 'callimachus') {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <CallimachusWindow />
       </Suspense>
     );
   }
@@ -303,6 +322,52 @@ function App() {
     owner?: string;
     name?: string;
   } | null>(null);
+  const [markdownFilePath, setMarkdownFilePath] = React.useState<string | null>(null);
+  const [markdownProjectName, setMarkdownProjectName] = React.useState<string | null>(null);
+  const [markdownFontSizeScale, setMarkdownFontSizeScale] = React.useState<number>(1.0);
+
+  // Load markdown font size preference
+  React.useEffect(() => {
+    if (currentView === 'markdown-view') {
+      UserPreferencesService.getPreferences().then(prefs => {
+        if (prefs?.markdownFontSizeScale) {
+          setMarkdownFontSizeScale(prefs.markdownFontSizeScale);
+        }
+      }).catch(err => {
+        console.error('Error loading font size preference:', err);
+      });
+    }
+  }, [currentView]);
+
+  // Handle font size changes
+  const handleMarkdownFontIncrease = React.useCallback(async () => {
+    const newScale = Math.min(markdownFontSizeScale + 0.1, 3.0);
+    setMarkdownFontSizeScale(newScale);
+    try {
+      await UserPreferencesService.updatePreferences({
+        markdownFontSizeScale: newScale,
+      });
+    } catch (err) {
+      console.error('Error saving font size preference:', err);
+    }
+  }, [markdownFontSizeScale]);
+
+  const handleMarkdownFontDecrease = React.useCallback(async () => {
+    const newScale = Math.max(markdownFontSizeScale - 0.1, 0.5);
+    setMarkdownFontSizeScale(newScale);
+    try {
+      await UserPreferencesService.updatePreferences({
+        markdownFontSizeScale: newScale,
+      });
+    } catch (err) {
+      console.error('Error saving font size preference:', err);
+    }
+  }, [markdownFontSizeScale]);
+
+  // Store fontSizeScale on window for AppContent to access
+  React.useEffect(() => {
+    (window as any).markdownFontSizeScale = markdownFontSizeScale;
+  }, [markdownFontSizeScale]);
 
   // Add platform class to body for CSS targeting and track current view
   React.useEffect(() => {
@@ -334,9 +399,28 @@ function App() {
             console.error('Failed to parse repository data:', e);
           }
         }
+      } else if (hash.startsWith('#markdown-view')) {
+        setCurrentView('markdown-view');
+        // Extract markdown file path and project name from hash
+        if (hash.includes('/')) {
+          try {
+            const encodedData = hash.substring('#markdown-view/'.length);
+            const data = JSON.parse(decodeURIComponent(encodedData));
+            if (data?.filePath) {
+              setMarkdownFilePath(data.filePath);
+            }
+            if (data?.projectName) {
+              setMarkdownProjectName(data.projectName);
+            }
+          } catch (e) {
+            console.error('Failed to parse markdown view data:', e);
+          }
+        }
       } else {
         setCurrentView('');
         setRepositoryData(null);
+        setMarkdownFilePath(null);
+        setMarkdownProjectName(null);
       }
     };
 
@@ -357,14 +441,23 @@ function App() {
             onClose={() => setIsSettingsOpen(false)}
           />
           {currentView === 'repository-maps' && repositoryData ? (
-            <RepoManagerTitlebar
+            <RepositoryTitlebar
               repositoryOwner={repositoryData.owner}
               repositoryName={repositoryData.name}
               onSettingsClick={() => setIsSettingsOpen(true)}
               hasUpdateAvailable={hasUpdateAvailable}
             />
+          ) : currentView === 'markdown-view' && markdownFilePath ? (
+            <MarkdownViewerTitlebar
+              filePath={markdownFilePath}
+              fileName={markdownFilePath.split('/').pop()}
+              projectName={markdownProjectName || undefined}
+              fontSizeScale={markdownFontSizeScale}
+              onFontSizeIncrease={handleMarkdownFontIncrease}
+              onFontSizeDecrease={handleMarkdownFontDecrease}
+            />
           ) : (
-            <CustomTitlebar
+            <MainWindowTitlebar
               onSettingsClick={() => setIsSettingsOpen(true)}
               hasUpdateAvailable={hasUpdateAvailable}
             />

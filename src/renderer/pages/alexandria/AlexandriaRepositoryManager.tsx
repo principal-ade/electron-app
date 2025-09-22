@@ -1,3 +1,18 @@
+/**
+ * TODO: This component is scheduled for refactoring
+ *
+ * The AlexandriaRepositoryManager will be changed to focus primarily on the search functionality
+ * rather than showing the full Alexandria UI. The landing page has shifted to handle repository
+ * management directly, so this component should be simplified to just the DocumentSearchView part.
+ *
+ * Current issues that won't be fixed due to pending refactor:
+ * - Uses height: '100vh' which doesn't account for window titlebar
+ * - Missing proper titlebar component integration
+ * - Shows repository list that duplicates landing page functionality
+ *
+ * @deprecated The repository list functionality will be removed in favor of landing page
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
 import { Trash2, ExternalLink } from 'lucide-react';

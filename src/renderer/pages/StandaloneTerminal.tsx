@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTheme } from 'themed-markdown';
 
 import TerminalPanel from '../components/Terminal/TerminalPanel';
+import { TerminalTitlebar } from '../components/Titlebar';
 import { TerminalService } from '../main-process-api/TerminalService';
 import { AgentSessionService } from '../main-process-api/AgentSessionService';
 import { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
@@ -78,7 +79,8 @@ export const StandaloneTerminal: React.FC = () => {
     return (
       <div
         style={{
-          height: '100vh',
+          height: '100%',
+          minHeight: '100vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -102,7 +104,8 @@ export const StandaloneTerminal: React.FC = () => {
     return (
       <div
         style={{
-          height: '100vh',
+          height: '100%',
+          minHeight: '100vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -145,50 +148,35 @@ export const StandaloneTerminal: React.FC = () => {
   return (
     <div
       style={{
-        height: '100vh',
+        height: '100%',
+        minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         backgroundColor: theme.colors.background,
+        overflow: 'hidden',
       }}
     >
-      {/* AI Session Header (if associated) */}
-      {aiSession && (
-        <div
-          style={{
-            padding: '8px 16px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.backgroundSecondary,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={theme.colors.primary}
-            strokeWidth="2"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1" />
-          </svg>
-          <span
-            style={{
-              fontSize: '13px',
-              color: theme.colors.text,
-              fontWeight: '500',
-            }}
-          >
-            AI Session:{' '}
-            {aiSession.metadata?.customName || aiSession.sessionId.slice(0, 8)}
-          </span>
-        </div>
-      )}
+      {/* Terminal Titlebar */}
+      <TerminalTitlebar
+        directory={terminalInfo.directory}
+        sessionId={sessionId}
+        agentSessionId={terminalInfo.agentSessionId}
+        agentSessionName={aiSession?.metadata?.customName}
+        onOpenInExplorer={() => {
+          if (terminalInfo.directory) {
+            window.electron?.shell?.openPath(terminalInfo.directory);
+          }
+        }}
+      />
 
-      {/* Terminal Panel */}
-      <div style={{ flex: 1, minHeight: 0 }}>
+      {/* Terminal Panel - uses flex to fill remaining space */}
+      <div style={{
+        flex: '1 1 0',
+        minHeight: 0,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
         <TerminalPanel
           directory={terminalInfo.directory}
           terminalId={sessionId}
@@ -196,6 +184,7 @@ export const StandaloneTerminal: React.FC = () => {
           className="h-full"
           agentSessionId={terminalInfo.agentSessionId}
           hideHeader={true}
+          isVisible={true}
         />
       </div>
     </div>

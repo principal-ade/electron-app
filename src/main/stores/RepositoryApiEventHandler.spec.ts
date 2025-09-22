@@ -31,7 +31,7 @@ jest.mock('fs', () => ({
 }));
 
 jest.mock('fs/promises', () => ({
-  mkdir: jest.fn().mockResolvedValue(undefined),
+  mkdir: jest.fn().mockResolvedValue(undefined as never),
   readFile: jest.fn(),
   writeFile: jest.fn(),
   unlink: jest.fn(),
@@ -64,7 +64,7 @@ import { avatarStorageService } from '../version-control-providers/avatarStorage
 import { getTypedStorageManagerInstance } from './initialization';
 
 // Mock fetch for GitHub API calls
-global.fetch = jest.fn();
+global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 
 describe('RepositoryApiEventHandler', () => {
   let handler: RepositoryApiEventHandler;
@@ -93,7 +93,7 @@ describe('RepositoryApiEventHandler', () => {
       keys: jest.fn(),
     };
     (getTypedStorageManagerInstance as jest.Mock).mockResolvedValue(
-      mockStorageManager,
+      mockStorageManager as never,
     );
 
     // Setup mock window for broadcasting
@@ -122,8 +122,8 @@ describe('RepositoryApiEventHandler', () => {
         topics: ['test', 'repository'],
         private: false,
         fork: false,
-      }),
-    });
+      } as never),
+    } as never);
   });
 
   afterEach(() => {
@@ -197,7 +197,7 @@ describe('RepositoryApiEventHandler', () => {
         (global.fetch as jest.Mock).mockResolvedValue({
           ok: false,
           status: 404,
-        });
+        } as never);
 
         const params = {
           remoteUrl: 'https://github.com/test-owner/private-repo',
@@ -340,7 +340,7 @@ describe('RepositoryApiEventHandler', () => {
 
       it('should handle network failures during GitHub metadata fetch', async () => {
         (global.fetch as jest.Mock).mockRejectedValue(
-          new Error('Network error'),
+          new Error('Network error') as never,
         );
 
         const params = {
@@ -550,7 +550,7 @@ describe('RepositoryApiEventHandler', () => {
         expect(result).toBe(true);
 
         const savedRepo = (mockStorageManager.set as jest.Mock).mock
-          .calls[0][1];
+          .calls[0][1] as any;
         expect(savedRepo.localClones).toHaveLength(2);
         expect(
           savedRepo.localClones.some((c: any) => c.path === '/clone/one'),
@@ -823,7 +823,7 @@ describe('RepositoryApiEventHandler', () => {
     describe('Storage Manager Initialization', () => {
       it('should handle storage manager initialization failure', async () => {
         (getTypedStorageManagerInstance as jest.Mock).mockRejectedValue(
-          new Error('Init failed'),
+          new Error('Init failed') as never,
         );
 
         await expect(

@@ -73,8 +73,22 @@ export interface WindowAPI {
   openRemoteFiles(request: OpenRemoteFilesRequest): Promise<void>;
 
   /**
+   * Open a markdown viewer window for a single file path.
+   * Unlike the dialog-based flow, this accepts a specific absolute file path.
+   * @param filePath - Absolute path to the markdown file to open
+   * @param projectName - Name of the project/repository this file belongs to
+   */
+  openMarkdownView(filePath: string, projectName: string): Promise<void>;
+
+  /**
    * Open Repository Dashboard for Alexandria repositories
    * @param repository - Alexandria repository entry with path information
    */
   openRepositoryDashboard(repository: AlexandriaEntry): Promise<void>;
+
+  /**
+   * Open Pattern Discovery (Callimachus) window
+   * Opens a dedicated window for semantic code pattern search and discovery
+   */
+  openCallimachusWindow(): Promise<void>;
 }
