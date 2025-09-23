@@ -445,6 +445,153 @@ export class GitService {
     }
   }
 
+  static async push(
+    directory: string,
+    options?: {
+      branch?: string;
+      remote?: string;
+      force?: boolean;
+      setUpstream?: boolean;
+    },
+  ): Promise<{ success: boolean; message: string }> {
+    console.log(`[GitService] Pushing changes from: ${directory}`);
+    try {
+      const args = ['push'];
+
+      if (options?.force) {
+        args.push('--force-with-lease'); // Safer than --force
+      }
+
+      if (options?.setUpstream) {
+        args.push('--set-upstream');
+      }
+
+      args.push(options?.remote || 'origin');
+
+      if (options?.branch) {
+        args.push(options.branch);
+      }
+
+      const result = await window.mainProcess.git.execCommand(directory, args);
+
+      return {
+        success: true,
+        message: result.stdout || 'Push successful',
+      };
+    } catch (error: any) {
+      console.error('[GitService] Push failed:', error);
+
+      // Parse common push errors
+      const errorMessage = error.message || error.stderr || 'Push failed';
+
+      if (errorMessage.includes('no upstream branch')) {
+        return {
+          success: false,
+          message: 'No upstream branch set. Use --set-upstream to configure.',
+        };
+      }
+
+      if (errorMessage.includes('rejected')) {
+        if (errorMessage.includes('non-fast-forward')) {
+          return {
+            success: false,
+            message: 'Push rejected: Remote has changes. Pull first or force push.',
+          };
+        }
+        return {
+          success: false,
+          message: 'Push rejected by remote.',
+        };
+      }
+
+      if (errorMessage.includes('Could not read from remote repository')) {
+        return {
+          success: false,
+          message: 'Authentication failed. Check your credentials.',
+        };
+      }
+
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+  }
+
+  static async isPushSafe(
+    directory: string,
+  ): Promise<{
+    safe: boolean;
+    reason?: string;
+    hasUpstream: boolean;
+    needsUpstream: boolean;
+  }> {
+    console.log(`[GitService] Checking if push is safe for: ${directory}`);
+    try {
+      // Get branch status
+      const status = await this.getBranchStatus(directory);
+
+      if (!status.hasUpstream) {
+        // Check if there are any commits
+        try {
+          await window.mainProcess.git.execCommand(directory, [
+            'rev-parse',
+            'HEAD',
+          ]);
+          return {
+            safe: true,
+            hasUpstream: false,
+            needsUpstream: true,
+            reason: 'No upstream branch. Will set upstream on push.',
+          };
+        } catch {
+          return {
+            safe: false,
+            hasUpstream: false,
+            needsUpstream: false,
+            reason: 'No commits to push.',
+          };
+        }
+      }
+
+      // If we're behind, push is not safe
+      if (status.behind > 0) {
+        return {
+          safe: false,
+          hasUpstream: true,
+          needsUpstream: false,
+          reason: `Cannot push: ${status.behind} commit${status.behind > 1 ? 's' : ''} behind remote.`,
+        };
+      }
+
+      // If we're ahead, push is safe
+      if (status.ahead > 0) {
+        return {
+          safe: true,
+          hasUpstream: true,
+          needsUpstream: false,
+          reason: `Ready to push ${status.ahead} commit${status.ahead > 1 ? 's' : ''}.`,
+        };
+      }
+
+      // If we're up to date, nothing to push
+      return {
+        safe: false,
+        hasUpstream: true,
+        needsUpstream: false,
+        reason: 'Already up to date with remote.',
+      };
+    } catch (error: any) {
+      console.error('[GitService] Failed to check push safety:', error);
+      return {
+        safe: false,
+        hasUpstream: false,
+        needsUpstream: false,
+        reason: 'Failed to check push status.',
+      };
+    }
+  }
+
   /**
    * Subscribe to git status updates
    * @returns Unsubscribe function

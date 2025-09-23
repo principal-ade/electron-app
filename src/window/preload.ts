@@ -15,9 +15,9 @@ import { typeSchemaApi } from './main-process-api-implementations/typeSchemaApi'
 import { packageManagerApi } from './main-process-api-implementations/packageManagerApi';
 import { agentConfigAPI } from './main-process-api-implementations/agentConfigApi';
 import { agentSessionApi } from './main-process-api-implementations/agentSessionApi';
+import { agentSessionSDKApi } from './main-process-api-implementations/agentSessionSDKApi';
 import { agentInstallationAPI } from './main-process-api-implementations/agentInstallationApi';
 import { agentSessionEventsAPI } from './main-process-api-implementations/agentSessionEventsApi';
-import { agentSessionArchiveAPI } from './main-process-api-implementations/agentSessionArchiveApi';
 import { agentUpdateAPI } from './main-process-api-implementations/agentUpdateApi';
 import { authenticationAPI } from './main-process-api-implementations/authenticationApi';
 import { clipboardAPI } from './main-process-api-implementations/clipboardApi';
@@ -49,10 +49,10 @@ import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
 import { planningAPI } from './main-process-api-implementations/planningApi';
 import { feedbackAPI } from './main-process-api-implementations/feedbackApi';
-import { sessionViewApi } from './main-process-api-implementations/sessionViewApi';
 import { llmModelsAPI } from './main-process-api-implementations/llmModelsApi';
 import { testDebugAPI } from './main-process-api-implementations/testDebugApi';
 import { documentSearchAPI } from './main-process-api-implementations/documentSearchApi';
+import { observabilityAPI } from './main-process-api-implementations/observabilityApi';
 // Removed mermaid import - it uses 'debug' which isn't available in preload context
 // import mermaid from 'mermaid';
 
@@ -93,7 +93,7 @@ const mainProcessExposure: MainProcessAPI = {
   alexandria: alexandriaAPI,
   alexandriaDocs: alexandriaDocsAPI,
   agentSession: agentSessionApi,
-  agentSessionArchive: agentSessionArchiveAPI,
+  agentSessionSDK: agentSessionSDKApi,
   agentSessionEvents: agentSessionEventsAPI,
   agentUpdate: agentUpdateAPI,
   appVersionManager: appVersionManagerApi,
@@ -129,10 +129,10 @@ const mainProcessExposure: MainProcessAPI = {
   window: windowAPI,
   planning: planningAPI,
   feedback: feedbackAPI,
-  sessionView: sessionViewApi,
   llmModels: llmModelsAPI,
   testDebug: testDebugAPI,
   documentSearch: documentSearchAPI,
+  observability: observabilityAPI,
 };
 
 // Mermaid removed from preload - will be loaded in renderer instead

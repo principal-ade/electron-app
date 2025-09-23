@@ -60,13 +60,22 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
   return (
     <div
       className={`custom-titlebar ${className}`}
-      style={{ backgroundColor, ...style }}
+      style={{
+        backgroundColor,
+        height: '56px',
+        fontFamily: theme.fonts.body,
+        ...style
+      }}
     >
       <div className="titlebar-drag-region">
         {title && (
           <div
             className="titlebar-title"
-            style={{ color: accentColor }}
+            style={{
+              color: accentColor,
+              fontSize: theme.fontSizes[3],
+              fontFamily: theme.fonts.heading
+            }}
             onClick={onTitleClick}
           >
             {title}

@@ -425,4 +425,31 @@ export function registerModernWindowHandlers(): void {
     const url = `${resolveHtmlPath('index.html')}#/callimachus`;
     window.window.loadURL(url);
   });
+
+  // Search Window for Alexandria Repository Search
+  ipcMain.handle(WindowEvent.OPEN_SEARCH_WINDOW, async () => {
+    const windowName = 'alexandria-search';
+
+    const window = createSpecialWindow(
+      windowName,
+      {
+        width: 1200,
+        height: 800,
+        minWidth: 900,
+        minHeight: 600,
+        title: 'Alexandria Search',
+      },
+      {
+        fileSystemAdapter: true,
+        contentSecurityPolicy: true,
+        externalLinkHandler: true,
+        windowManagerAdapter: true,
+      },
+    );
+
+    if (!window) return;
+
+    const url = `${resolveHtmlPath('index.html')}#/search`;
+    window.window.loadURL(url);
+  });
 }

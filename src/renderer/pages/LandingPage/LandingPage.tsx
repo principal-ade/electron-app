@@ -1,8 +1,10 @@
-import React, { useCallback, useState, useEffect, useRef } from 'react';
-import { X, Plus, ChevronDown, FolderOpen, Github, Search, GitBranch, Star } from 'lucide-react';
+import React, { useCallback, useState, useEffect } from 'react';
+import { X, GitBranch, Star } from 'lucide-react';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/style.css';
 import type { AlexandriaEntry } from '@a24z/core-library';
+import { MainWindowTitlebar } from '../../components/Titlebar';
+import type { EnhancedAlexandriaEntry, GitStatus } from '../../../shared/types/repository.types';
 
 import { SupportedLLMProvider } from '../../../shared/main-process-api-interfaces/LLMModelsAPI';
 import { useTheme } from 'themed-markdown';
@@ -17,31 +19,29 @@ import { AlexandriaDocsService } from '../../main-process-api/AlexandriaDocsServ
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { GitService } from '../../main-process-api/GitService';
 import { WindowService } from '../../main-process-api/WindowService';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { useComponentTracking } from '../../components/withComponentTracking';
-import { UpdateNotification } from '../../components/UpdateNotification';
 
 import { AlexandriaRepositoryManager } from '../alexandria/AlexandriaRepositoryManager';
 import { OnboardingFlowV2 } from './OnboardingFlowV2';
 import { RepositoryDetailsPanel } from './RepositoryDetailsPanel';
 import { GitCloneModal } from '../../components/GitCloneModal';
+import { RepositoryListHeader } from '../../components/landing-page/RepositoryListHeader';
 
 interface LandingPageProps {
   initialAgentStatus: AgentInstallationStatus;
   onUpdateAvailable?: (hasUpdate: boolean) => void;
+  onSettingsClick?: () => void;
+  hasUpdateAvailable?: boolean;
 }
 
 type BottomViewMode = 'repos';
 
-interface EnhancedAlexandriaEntry extends AlexandriaEntry {
-  gitBranch?: string;
-  isDirty?: boolean;
-  dirtyFileCount?: number;
-  mostRecentChange?: string; // Most recent file modification time if dirty, otherwise last commit
-}
-
 export const LandingPage: React.FC<LandingPageProps> = ({
   initialAgentStatus,
   onUpdateAvailable,
+  onSettingsClick,
+  hasUpdateAvailable,
 }) => {
   const { theme } = useTheme();
   const trackingProps = useComponentTracking(
@@ -52,25 +52,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [, setAgentStatus] =
     useState<AgentInstallationStatus>(initialAgentStatus);
-  const [, setHasUpdateAvailable] = useState(false);
-  const [showAddProjectDropdown, setShowAddProjectDropdown] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
   const [showGitCloneModal, setShowGitCloneModal] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Repository state
   const [repositories, setRepositories] = useState<EnhancedAlexandriaEntry[]>([]);
   const [selectedRepository, setSelectedRepository] = useState<EnhancedAlexandriaEntry | null>(null);
   const [isLoadingRepos, setIsLoadingRepos] = useState(true);
-  // const [searchQuery, setSearchQuery] = useState(''); // Removed search for now
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showOnlyWithChanges, setShowOnlyWithChanges] = useState(false);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+
+  // Bulk status check state
+  const [repositoryStatuses, setRepositoryStatuses] = useState<Map<string, any>>(new Map());
+  const [isCheckingAllStatus, setIsCheckingAllStatus] = useState(false);
 
   // Markdown files and git status state
   const [markdownFiles, setMarkdownFiles] = useState<Array<{ path: string; lastModified?: string }>>([]);
-  const [gitStatus, setGitStatus] = useState<{
-    staged: Array<{ path: string; lastModified?: string }>;
-    unstaged: Array<{ path: string; lastModified?: string }>;
-    untracked: Array<{ path: string; lastModified?: string }>;
-  }>({ staged: [], unstaged: [], untracked: [] });
+  const [gitStatus, setGitStatus] = useState<GitStatus>({ staged: [], unstaged: [], untracked: [] });
   const [isLoadingDocs, setIsLoadingDocs] = useState(false);
   const [isLoadingGitStatus, setIsLoadingGitStatus] = useState(false);
 
@@ -144,50 +142,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   }, []);
 
-  // Load repositories on mount and listen for backend events
-  useEffect(() => {
-    loadRepositories();
-
-    // Subscribe to repository changes from backend
-    const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
-      // For removal and add events that we handle locally, skip the reload
-      if (event.type === 'removed') {
-        // Already handled in handleRepositoryRemoved
-        return;
-      }
-
-      if (event.type === 'added' && event.repository) {
-        // Check if we already have this repository (from our optimistic update)
-        setRepositories(prev => {
-          const exists = prev.some(repo => repo.name === event.repository!.name);
-          if (exists) {
-            // We added it optimistically, just update with backend data
-            return prev.map(repo =>
-              repo.name === event.repository!.name
-                ? { ...repo, ...event.repository }
-                : repo
-            );
-          } else {
-            // This was added externally, add it to our list
-            return [event.repository as EnhancedAlexandriaEntry, ...prev];
-          }
-        });
-        return;
-      }
-
-      // For update events, reload to get fresh data
-      if (event.type === 'updated') {
-        loadRepositories();
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
   // Helper function to enhance a single repository with git info
-  const enhanceRepositoryWithGitInfo = async (repo: AlexandriaEntry): Promise<EnhancedAlexandriaEntry> => {
+  const enhanceRepositoryWithGitInfo = useCallback(async (repo: AlexandriaEntry): Promise<EnhancedAlexandriaEntry> => {
     try {
       // Get git branch
       const branchResult = await GitService.execCommand(repo.path, [
@@ -260,9 +216,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         mostRecentChange: repo.github?.lastCommit,
       };
     }
-  };
+  }, []);
 
-  const loadRepositories = async () => {
+  const loadRepositories = useCallback(async () => {
     try {
       setIsLoadingRepos(true);
       const repos = await AlexandriaService.getRepositories();
@@ -281,6 +237,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       setRepositories(sortedRepos);
 
+      // Load preferences if not already loaded
+      if (!preferencesLoaded) {
+        const preferences = await UserPreferencesService.getPreferences();
+        setPreferencesLoaded(true);
+
+        // Load the show only with changes filter
+        if (preferences.landingPage?.showOnlyWithChanges !== undefined) {
+          setShowOnlyWithChanges(preferences.landingPage.showOnlyWithChanges);
+        }
+
+        // Try to restore the previously selected repository
+        if (preferences.landingPage?.selectedRepository) {
+          const savedRepo = sortedRepos.find(r => r.name === preferences.landingPage?.selectedRepository);
+          if (savedRepo) {
+            setSelectedRepository(savedRepo);
+            return; // Don't auto-select first if we found the saved one
+          }
+        }
+      }
+
       // Select first repository by default if none selected
       if (!selectedRepository && sortedRepos.length > 0) {
         setSelectedRepository(sortedRepos[0]);
@@ -290,32 +266,55 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     } finally {
       setIsLoadingRepos(false);
     }
-  };
+  }, [enhanceRepositoryWithGitInfo]);
+
+  // Load repositories on mount and listen for backend events
+  useEffect(() => {
+    loadRepositories();
+
+    // Subscribe to repository changes from backend
+    const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
+      // For removal and add events that we handle locally, skip the reload
+      if (event.type === 'removed') {
+        // Already handled in handleRepositoryRemoved
+        return;
+      }
+
+      if (event.type === 'added' && event.repository) {
+        // Check if we already have this repository (from our optimistic update)
+        setRepositories(prev => {
+          const exists = prev.some(repo => repo.name === event.repository!.name);
+          if (exists) {
+            // We added it optimistically, just update with backend data
+            return prev.map(repo =>
+              repo.name === event.repository!.name
+                ? { ...repo, ...event.repository }
+                : repo
+            );
+          } else {
+            // This was added externally, add it to our list
+            return [event.repository as EnhancedAlexandriaEntry, ...prev];
+          }
+        });
+        return;
+      }
+
+      // For update events, reload to get fresh data
+      if (event.type === 'updated') {
+        loadRepositories();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [loadRepositories]);
 
   // Check full setup configuration status
   useEffect(() => {
     checkSetup();
   }, [checkSetup]);
 
-  // Handle click outside dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setShowAddProjectDropdown(false);
-      }
-    };
-
-    if (showAddProjectDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showAddProjectDropdown]);
 
   // Handle repository removal
   const handleRepositoryRemoved = (removedRepoName: string) => {
@@ -326,16 +325,118 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     if (selectedRepository?.name === removedRepoName) {
       // Select next available repository or null
       const remainingRepos = repositories.filter(repo => repo.name !== removedRepoName);
-      setSelectedRepository(remainingRepos.length > 0 ? remainingRepos[0] : null);
+      const nextRepo = remainingRepos.length > 0 ? remainingRepos[0] : null;
+      setSelectedRepository(nextRepo);
 
       // Clear related data
       setMarkdownFiles([]);
       setGitStatus({ staged: [], unstaged: [], untracked: [] });
+
+      // Update preferences to clear or update selection
+      UserPreferencesService.updatePreferences({
+        landingPage: {
+          selectedRepository: nextRepo?.name,
+          showOnlyWithChanges,
+        },
+      });
     }
   };
 
+  // Helper function to load docs and git status for a repository
+  const loadDocsAndGitStatusForRepo = useCallback(async (repo: EnhancedAlexandriaEntry) => {
+    // Load markdown files
+    setIsLoadingDocs(true);
+    try {
+      const comprehensiveDocs = await AlexandriaDocsService.getComprehensiveDocuments(repo);
+      const allDocs = comprehensiveDocs.all || [];
+
+      // Get last modified times for each file using file system stats
+      const docsWithTimestamps = await Promise.all(
+        allDocs.map(async (filePath) => {
+          try {
+            const fullPath = `${repo.path}/${filePath}`;
+            const stats = await FileSystemService.getFileStats(fullPath);
+            const lastModified = stats?.lastModified;
+            return {
+              path: filePath,
+              lastModified: lastModified ? (typeof lastModified === 'string' ? lastModified : lastModified.toISOString()) : undefined
+            };
+          } catch (error) {
+            console.warn(`Failed to get timestamp for ${filePath}:`, error);
+            return {
+              path: filePath,
+              lastModified: undefined
+            };
+          }
+        })
+      );
+
+      // Sort by most recent changes first
+      const sortedDocs = docsWithTimestamps.sort((a, b) => {
+        if (!a.lastModified && !b.lastModified) return a.path.localeCompare(b.path);
+        if (!a.lastModified) return 1;
+        if (!b.lastModified) return -1;
+        return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+      });
+
+      setMarkdownFiles(sortedDocs);
+    } catch (error) {
+      console.error('Failed to load markdown files:', error);
+      setMarkdownFiles([]);
+    } finally {
+      setIsLoadingDocs(false);
+    }
+
+    // Load git status
+    setIsLoadingGitStatus(true);
+    try {
+      const status = await GitService.getStatus(repo.path);
+
+      // Helper function to get timestamps for files
+      const getFileTimestamps = async (files: string[]) => {
+        return Promise.all(
+          files.map(async (filePath) => {
+            try {
+              const fullPath = `${repo.path}/${filePath}`;
+              const stats = await FileSystemService.getFileStats(fullPath);
+              const lastModified = stats?.lastModified;
+              return {
+                path: filePath,
+                lastModified: lastModified ? (typeof lastModified === 'string' ? lastModified : lastModified.toISOString()) : undefined
+              };
+            } catch (error) {
+              console.warn(`Failed to get timestamp for ${filePath}:`, error);
+              return {
+                path: filePath,
+                lastModified: undefined
+              };
+            }
+          })
+        );
+      };
+
+      // Get timestamps for all file categories
+      const [stagedWithTime, unstagedWithTime, untrackedWithTime] = await Promise.all([
+        getFileTimestamps(status.staged),
+        getFileTimestamps(status.unstaged),
+        getFileTimestamps(status.untracked)
+      ]);
+
+      setGitStatus({
+        staged: stagedWithTime,
+        unstaged: unstagedWithTime,
+        untracked: untrackedWithTime
+      });
+    } catch (error) {
+      console.error('Failed to load git status:', error);
+      setGitStatus({ staged: [], unstaged: [], untracked: [] });
+    } finally {
+      setIsLoadingGitStatus(false);
+    }
+  }, []);
+
   // Handle adding local repository
-  const handleAddLocalRepository = async () => {
+  const handleAddLocalRepository = useCallback(async () => {
     try {
       const result = await FileSystemService.selectDirectory({
         title: 'Select Local Repository',
@@ -433,100 +534,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     } catch (err) {
       console.error('Failed to add local repository:', err);
     }
-  };
-
-  // Helper function to load docs and git status for a repository
-  const loadDocsAndGitStatusForRepo = async (repo: EnhancedAlexandriaEntry) => {
-    // Load markdown files
-    setIsLoadingDocs(true);
-    try {
-      const comprehensiveDocs = await AlexandriaDocsService.getComprehensiveDocuments(repo);
-      const allDocs = comprehensiveDocs.all || [];
-
-      // Get last modified times for each file using file system stats
-      const docsWithTimestamps = await Promise.all(
-        allDocs.map(async (filePath) => {
-          try {
-            const fullPath = `${repo.path}/${filePath}`;
-            const stats = await FileSystemService.getFileStats(fullPath);
-            const lastModified = stats?.lastModified;
-            return {
-              path: filePath,
-              lastModified: lastModified ? (typeof lastModified === 'string' ? lastModified : lastModified.toISOString()) : undefined
-            };
-          } catch (error) {
-            console.warn(`Failed to get timestamp for ${filePath}:`, error);
-            return {
-              path: filePath,
-              lastModified: undefined
-            };
-          }
-        })
-      );
-
-      // Sort by most recent changes first
-      const sortedDocs = docsWithTimestamps.sort((a, b) => {
-        if (!a.lastModified && !b.lastModified) return a.path.localeCompare(b.path);
-        if (!a.lastModified) return 1;
-        if (!b.lastModified) return -1;
-        return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
-      });
-
-      setMarkdownFiles(sortedDocs);
-    } catch (error) {
-      console.error('Failed to load markdown files:', error);
-      setMarkdownFiles([]);
-    } finally {
-      setIsLoadingDocs(false);
-    }
-
-    // Load git status
-    setIsLoadingGitStatus(true);
-    try {
-      const status = await GitService.getStatus(repo.path);
-
-      // Helper function to get timestamps for files
-      const getFileTimestamps = async (files: string[]) => {
-        return Promise.all(
-          files.map(async (filePath) => {
-            try {
-              const fullPath = `${repo.path}/${filePath}`;
-              const stats = await FileSystemService.getFileStats(fullPath);
-              const lastModified = stats?.lastModified;
-              return {
-                path: filePath,
-                lastModified: lastModified ? (typeof lastModified === 'string' ? lastModified : lastModified.toISOString()) : undefined
-              };
-            } catch (error) {
-              console.warn(`Failed to get timestamp for ${filePath}:`, error);
-              return {
-                path: filePath,
-                lastModified: undefined
-              };
-            }
-          })
-        );
-      };
-
-      // Get timestamps for all file categories
-      const [stagedWithTime, unstagedWithTime, untrackedWithTime] = await Promise.all([
-        getFileTimestamps(status.staged),
-        getFileTimestamps(status.unstaged),
-        getFileTimestamps(status.untracked)
-      ]);
-
-      setGitStatus({
-        staged: stagedWithTime,
-        unstaged: unstagedWithTime,
-        untracked: untrackedWithTime
-      });
-    } catch (error) {
-      console.error('Failed to load git status:', error);
-      setGitStatus({ staged: [], unstaged: [], untracked: [] });
-    } finally {
-      setIsLoadingGitStatus(false);
-    }
-  };
+  }, [repositories, enhanceRepositoryWithGitInfo, loadDocsAndGitStatusForRepo]);
 
   // Handle repository selection
   const handleSelectRepository = async (repo: EnhancedAlexandriaEntry) => {
@@ -534,6 +542,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     // Open repository dashboard
     await WindowService.openRepositoryDashboard(repo);
   };
+
+  // Save preferences when selected repository or filter changes
+  useEffect(() => {
+    // Don't save preferences until they've been loaded initially
+    if (!preferencesLoaded) return;
+
+    const savePreferences = async () => {
+      await UserPreferencesService.updatePreferences({
+        landingPage: {
+          selectedRepository: selectedRepository?.name,
+          showOnlyWithChanges,
+        },
+      });
+    };
+
+    // Debounce the save to avoid too many writes
+    const timeoutId = setTimeout(savePreferences, 500);
+    return () => clearTimeout(timeoutId);
+  }, [selectedRepository, showOnlyWithChanges, preferencesLoaded]);
 
   // Load markdown files and git status when repository is selected
   useEffect(() => {
@@ -544,11 +571,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
 
     loadDocsAndGitStatusForRepo(selectedRepository);
-  }, [selectedRepository]);
+  }, [selectedRepository, loadDocsAndGitStatusForRepo]);
 
-  // Filter repositories based on search (currently disabled, returning all)
-  const filteredRepositories = repositories; // Search removed for now
-  /* const filteredRepositories = repositories.filter((repo) => {
+  // Filter repositories based on search and changes filter
+  const filteredRepositories = repositories.filter((repo) => {
+    // Apply changes filter first
+    if (showOnlyWithChanges && !repo.isDirty) {
+      return false;
+    }
+
+    // Apply search filter
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -556,7 +588,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       repo.github?.description?.toLowerCase().includes(query) ||
       repo.github?.topics?.some((t) => t.toLowerCase().includes(query))
     );
-  }); */
+  });
 
   // Format relative time
   const getRelativeTime = (dateStr: string | undefined) => {
@@ -576,24 +608,85 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   // Handle pasting GitHub link
-  const handleAddGithubLink = async () => {
-    setShowAddProjectDropdown(false);
+  const handleAddGithubLink = useCallback(() => {
     setShowGitCloneModal(true);
-  };
+  }, []);
+
+
+  // Handle checking all repository statuses
+  const handleCheckAllStatus = useCallback(async () => {
+    if (isCheckingAllStatus || repositories.length === 0) return;
+
+    setIsCheckingAllStatus(true);
+    const statusMap = new Map<string, any>();
+
+    try {
+
+      // Check each repository's status
+      for (const repo of repositories) {
+        try {
+          // Get current branch
+          const branchResult = await GitService.execCommand(repo.path, [
+            'rev-parse',
+            '--abbrev-ref',
+            'HEAD',
+          ]);
+          const branch = branchResult.stdout.trim() || 'main';
+
+          // Get branch status (ahead/behind)
+          const branchStatus = await GitService.getBranchStatus(repo.path);
+
+          // Get file status (staged/unstaged/untracked)
+          const gitStatus = await GitService.getStatus(repo.path);
+
+          // Check if push is safe (has upstream)
+          const pushSafety = await GitService.isPushSafe(repo.path);
+
+          statusMap.set(repo.name, {
+            branch,
+            ahead: branchStatus.ahead,
+            behind: branchStatus.behind,
+            staged: gitStatus.staged.length,
+            unstaged: gitStatus.unstaged.length,
+            untracked: gitStatus.untracked.length,
+            hasUncommittedChanges: branchStatus.hasUncommittedChanges,
+            canFastForward: branchStatus.canFastForward,
+            needsUpstream: pushSafety.needsUpstream,
+            lastChecked: new Date(),
+          });
+        } catch (error) {
+          // Add error status for this repository
+          statusMap.set(repo.name, {
+            branch: 'unknown',
+            error: `Failed to check: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            lastChecked: new Date(),
+          });
+        }
+
+        // Update the statuses as we go for better UX
+        setRepositoryStatuses(new Map(statusMap));
+      }
+    } catch (error) {
+      console.error('Failed to check repository statuses:', error);
+    } finally {
+      setIsCheckingAllStatus(false);
+    }
+  }, [repositories, isCheckingAllStatus]);
+
 
   // Handle repository added from Git clone modal
-  const handleRepositoryAdded = async (repo: any) => {
+  const handleRepositoryAdded = useCallback(async (repo: any) => {
     // Refresh the repositories list to include the new one
     await loadRepositories();
     // Select the newly added repository
     setSelectedRepository(repo);
-  };
+  }, [loadRepositories]);
 
   // Handle GitHub search
-  const handleSearchGithub = async () => {
+  const handleSearchGithub = useCallback(async () => {
     // TODO: Implement GitHub search modal
     console.info('Search GitHub - not yet implemented');
-  };
+  }, []);
 
   // Render left panel - Repository sidebar
   const renderLeftPanel = () => {
@@ -607,6 +700,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           overflow: 'hidden',
         }}
       >
+
+        {/* Repository List Header with Search */}
+        <RepositoryListHeader
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onAddLocalRepository={handleAddLocalRepository}
+          onAddGithubLink={handleAddGithubLink}
+          repositoryCount={repositories.length}
+          onCheckAllStatus={handleCheckAllStatus}
+          isCheckingStatus={isCheckingAllStatus}
+          showOnlyWithChanges={showOnlyWithChanges}
+          onToggleChangesFilter={(newValue) => {
+            setShowOnlyWithChanges(newValue);
+            // Save filter preference immediately
+            UserPreferencesService.updatePreferences({
+              landingPage: {
+                selectedRepository: selectedRepository?.name,
+                showOnlyWithChanges: newValue,
+              },
+            });
+          }}
+        />
 
         {/* Repository List */}
         <div
@@ -622,7 +737,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 padding: '20px',
                 textAlign: 'center',
                 color: theme.colors.textSecondary,
-                fontSize: '12px',
+                fontSize: theme.fontSizes[1],
               }}
             >
               Loading repositories...
@@ -633,7 +748,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 padding: '20px',
                 textAlign: 'center',
                 color: theme.colors.textSecondary,
-                fontSize: '12px',
+                fontSize: theme.fontSizes[1],
               }}
             >
               No repositories yet. Add one to get started!
@@ -646,11 +761,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 gap: '4px',
               }}
             >
-              {filteredRepositories.map((repo) => (
+              {filteredRepositories.map((repo) => {
+                const status = repositoryStatuses.get(repo.name);
+                return (
                 <div
                   key={repo.name}
                   data-repo-name={repo.name}
-                  onClick={() => setSelectedRepository(repo)}
+                  onClick={() => {
+                    setSelectedRepository(repo);
+                    // Also save the selection immediately when user clicks
+                    UserPreferencesService.updatePreferences({
+                      landingPage: {
+                        selectedRepository: repo.name,
+                        showOnlyWithChanges,
+                      },
+                    });
+                  }}
                   style={{
                     padding: '12px',
                     backgroundColor:
@@ -733,11 +859,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                                 fontSize: theme.fontSizes[0], // 12px
                               }}
                             >
-                              <GitBranch size={9} />
-                              {repo.gitBranch || 'main'}
+                              <GitBranch size={10} />
+                              {status?.branch || repo.gitBranch || 'main'}
                             </span>
                             {/* Dirty State Indicator */}
-                            {repo.isDirty && (
+                            {(status?.hasUncommittedChanges || repo.isDirty) && (
                               <span
                                 style={{
                                   display: 'flex',
@@ -750,12 +876,93 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                                   fontSize: theme.fontSizes[0], // 12px
                                   fontWeight: 600,
                                 }}
-                                title={`${repo.dirtyFileCount} uncommitted changes`}
+                                title={`${status ? (status.staged + status.unstaged + status.untracked) : repo.dirtyFileCount} uncommitted changes`}
                               >
-                                ● {repo.dirtyFileCount}
+                                ● {status ? (status.staged + status.unstaged + status.untracked) : repo.dirtyFileCount}
                               </span>
                             )}
                           </div>
+                          {/* Status information from bulk check */}
+                          {status && (
+                            <div
+                              style={{
+                                fontSize: theme.fontSizes[0],
+                                marginTop: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                flexWrap: 'wrap',
+                              }}
+                            >
+                              {status.error ? (
+                                <span style={{ color: theme.colors.error }}>
+                                  ⚠ {status.error}
+                                </span>
+                              ) : (
+                                <>
+                                  {/* Ahead/Behind indicators */}
+                                  {(status.ahead > 0 || status.behind > 0) && (
+                                    <span
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '2px',
+                                        padding: '1px 4px',
+                                        backgroundColor: status.behind > 0
+                                          ? `${theme.colors.warning}10`
+                                          : `${theme.colors.info}10`,
+                                        color: status.behind > 0
+                                          ? theme.colors.warning
+                                          : theme.colors.info,
+                                        borderRadius: '3px',
+                                        fontWeight: 500,
+                                      }}
+                                    >
+                                      {status.ahead > 0 && `↑${status.ahead}`}
+                                      {status.ahead > 0 && status.behind > 0 && ' '}
+                                      {status.behind > 0 && `↓${status.behind}`}
+                                    </span>
+                                  )}
+                                  {/* File changes breakdown */}
+                                  {status.staged > 0 && (
+                                    <span style={{ color: theme.colors.success }}>
+                                      +{status.staged} staged
+                                    </span>
+                                  )}
+                                  {status.unstaged > 0 && (
+                                    <span style={{ color: theme.colors.warning }}>
+                                      ~{status.unstaged} modified
+                                    </span>
+                                  )}
+                                  {status.untracked > 0 && (
+                                    <span style={{ color: theme.colors.textSecondary }}>
+                                      ?{status.untracked} untracked
+                                    </span>
+                                  )}
+                                  {/* Fast-forward available */}
+                                  {status.canFastForward && (
+                                    <span
+                                      style={{
+                                        color: theme.colors.success,
+                                      }}
+                                    >
+                                      ⟳ FF available
+                                    </span>
+                                  )}
+                                  {/* No upstream */}
+                                  {status.needsUpstream && (
+                                    <span
+                                      style={{
+                                        color: theme.colors.textSecondary,
+                                      }}
+                                    >
+                                      ⊘ No upstream
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                         <div
                           style={{
@@ -772,7 +979,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -797,7 +1005,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   return (
-    <>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <MainWindowTitlebar
+        onSettingsClick={onSettingsClick}
+        hasUpdateAvailable={hasUpdateAvailable}
+        onUpdateAvailable={onUpdateAvailable}
+      />
       {/* CSS for flash animation */}
       <style>{`
         @keyframes flashHighlight {
@@ -889,261 +1102,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <div
         {...trackingProps}
         style={{
-          height: '100%',
+          flex: 1,
           backgroundColor: theme.colors.background,
           color: theme.colors.text,
+          fontFamily: theme.fonts.body,
           display: 'flex',
           flexDirection: 'column',
+          overflow: 'hidden',
         }}
       >
-        {/* Header */}
-        <div
-          style={{
-            width: '100%',
-            padding: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.background,
-          }}
-        >
-          {/* Main Header Row - Brand, Update Notification (centered), and Buttons */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start', // Align items to top
-              justifyContent: 'space-between',
-              position: 'relative',
-            }}
-          >
-            {/* Update Notification - Absolutely positioned in center at top */}
-            <div
-              style={{
-                position: 'absolute',
-                top: '0',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 10,
-              }}
-            >
-              <UpdateNotification
-                onUpdateAvailable={(hasUpdate) => {
-                  setHasUpdateAvailable(hasUpdate);
-                  onUpdateAvailable?.(hasUpdate);
-                }}
-              />
-            </div>
-
-            {/* Left Section - Brand */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '16px',
-              }}
-            >
-              {/* Brand Name removed - now shown in titlebar */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  gap: '4px',
-                }}
-              >
-                <p
-                  style={{
-                    fontSize: '24px',
-                    color: theme.colors.textSecondary,
-                    margin: 0,
-                    fontWeight: 300,
-                  }}
-                >
-                  Codebase Manager
-                </p>
-              </div>
-            </div>
-
-            {/* Right Section - Controls */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '12px',
-                alignItems: 'center',
-              }}
-            >
-              {/* Search Button */}
-              <button
-                onClick={() => setShowSearch(!showSearch)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  backgroundColor: showSearch
-                    ? theme.colors.primary
-                    : 'transparent',
-                  color: showSearch
-                    ? theme.colors.background
-                    : theme.colors.text,
-                  border: `1px solid ${showSearch ? theme.colors.primary : theme.colors.border}`,
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  if (!showSearch) {
-                    e.currentTarget.style.borderColor = theme.colors.primary;
-                    e.currentTarget.style.color = theme.colors.primary;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!showSearch) {
-                    e.currentTarget.style.borderColor = theme.colors.border;
-                    e.currentTarget.style.color = theme.colors.text;
-                  }
-                }}
-              >
-                <Search size={16} />
-                Search
-              </button>
-
-              {/* Add Project Dropdown */}
-              <div ref={dropdownRef} style={{ position: 'relative' }}>
-                <button
-                  onClick={() =>
-                    setShowAddProjectDropdown(!showAddProjectDropdown)
-                  }
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    backgroundColor: theme.colors.primary,
-                    color: theme.colors.background,
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.9';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  <Plus size={16} />
-                  Add Project
-                  <ChevronDown
-                    size={14}
-                    style={{
-                      transform: showAddProjectDropdown
-                        ? 'rotate(180deg)'
-                        : 'rotate(0)',
-                      transition: 'transform 0.2s',
-                    }}
-                  />
-                </button>
-
-                {/* Dropdown Menu */}
-                {showAddProjectDropdown && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
-                      marginTop: '4px',
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      border: `1px solid ${theme.colors.border}`,
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                      minWidth: '200px',
-                      zIndex: 1000,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <button
-                      onClick={() => {
-                        setShowAddProjectDropdown(false);
-                        handleAddLocalRepository();
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        width: '100%',
-                        padding: '12px 16px',
-                        backgroundColor: 'transparent',
-                        color: theme.colors.text,
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        textAlign: 'left',
-                        transition: 'background-color 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor =
-                          theme.colors.backgroundTertiary;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
-                    >
-                      <FolderOpen size={16} />
-                      Local Folder
-                    </button>
-
-                    <div
-                      style={{
-                        height: '1px',
-                        backgroundColor: theme.colors.border,
-                      }}
-                    />
-
-                    <button
-                      onClick={() => {
-                        setShowAddProjectDropdown(false);
-                        handleAddGithubLink();
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        width: '100%',
-                        padding: '12px 16px',
-                        backgroundColor: 'transparent',
-                        color: theme.colors.text,
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: 500,
-                        textAlign: 'left',
-                        transition: 'background-color 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor =
-                          theme.colors.backgroundTertiary;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
-                    >
-                      <Github size={16} />
-                      Paste Link
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Main Content Container */}
         <div
@@ -1187,6 +1154,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           onRepositoryAdded={handleRepositoryAdded}
         />
       </div>
-    </>
+    </div>
   );
 };

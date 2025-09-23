@@ -110,4 +110,20 @@ export class WindowService {
       throw new Error('Failed to open Pattern Discovery window');
     }
   }
+
+  /**
+   * Open Alexandria Search window
+   * Opens a dedicated window for searching across Alexandria repositories
+   */
+  static async openSearchWindow(): Promise<void> {
+    try {
+      await window.mainProcess.window.openSearchWindow();
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to open Search window:',
+        error,
+      );
+      throw new Error('Failed to open Alexandria Search window');
+    }
+  }
 }

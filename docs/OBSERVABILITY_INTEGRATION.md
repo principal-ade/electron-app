@@ -2,23 +2,31 @@
 
 ## Overview
 
-The application now integrates with the `@a24z/observability-sdk` to forward RepoNormalized events from the agent monitoring pipeline to a centralized observability platform. This enables real-time monitoring, analytics, and insights into agent behavior across all sessions.
+The application now integrates with the `@a24z/observability-sdk` to forward RepoNormalized events from the agent monitoring pipeline to a Turso database for centralized observability. This enables real-time monitoring, analytics, and insights into agent behavior across all sessions.
 
 ## Configuration
 
-### Environment Variables
+### UI Configuration
 
-Set these environment variables to configure the observability integration:
+The observability integration can be configured through the application UI:
+
+1. Click the **Activity** button in the main window titlebar
+2. Enter your Turso database configuration:
+   - **Turso Database URL**: Your Turso database URL (e.g., `libsql://your-db.turso.io`)
+   - **Auth Token**: Your Turso authentication token (optional for local databases)
+3. Click **Test Connection** to verify connectivity
+4. Click **Save** to store the configuration securely
+
+The configuration is stored encrypted in the SecretManager and persists across application restarts.
+
+### Environment Variables (Alternative)
+
+You can also configure the integration using environment variables:
 
 ```bash
-# Required: Database connection
-OBSERVABILITY_DATABASE_URL=postgresql://user:password@host:port/database
-# or use the generic DATABASE_URL
-DATABASE_URL=postgresql://user:password@host:port/database
-
-# Optional: API configuration
-OBSERVABILITY_API_KEY=your-api-key-here
-OBSERVABILITY_ENDPOINT=https://observability.example.com/api
+# Turso Database Configuration
+TURSO_DATABASE_URL=libsql://your-db.turso.io
+TURSO_AUTH_TOKEN=your-auth-token
 
 # Optional: Debug mode
 DEBUG_OBSERVABILITY=true  # Enable debug logging
@@ -27,16 +35,14 @@ NODE_ENV=production       # Set environment (development/staging/production)
 
 ### Configuration Options
 
-The observability integration can be configured programmatically in `AgentSessionEventProcessorV2`:
+The observability integration supports these configuration options:
 
 ```typescript
 {
-  databaseUrl: string,      // Database connection URL
-  apiKey: string,           // API key for authentication
-  endpoint: string,         // API endpoint URL
+  tursoUrl: string,         // Turso database URL (required)
+  tursoAuthToken?: string,  // Turso auth token (optional for local)
   environment: string,      // Environment (development/staging/production)
-  batchSize: number,        // Number of events to batch (default: 100)
-  flushInterval: number,    // Flush interval in ms (default: 30000)
+  enabled: boolean,         // Enable/disable observability
   debug: boolean           // Enable debug logging (default: false)
 }
 ```
@@ -51,8 +57,8 @@ The observability integration can be configured programmatically in `AgentSessio
    - Repository information (root, owner, repo, branch)
    - Normalized file paths (relative to repo)
    - Working directory context
-4. **Observability Forwarding**: `ObservabilityIntegration` converts and forwards events to the SDK
-5. **Centralized Storage**: Events are stored in the configured database
+4. **Observability Forwarding**: `ObservabilityIntegration` forwards events to the Turso SDK
+5. **Turso Storage**: Events are stored in SQLite-based Turso database with automatic table creation
 
 ### Event Structure
 
@@ -98,20 +104,34 @@ RepoNormalized events sent to observability include:
 
 ## Features
 
+### Automatic Table Creation
+
+The Turso SDK automatically creates all required tables on first connection:
+- `sessions` - Session metadata and statistics
+- `session_start_logs` - Session start events
+- `session_end_logs` - Session end events
+- `user_prompt_logs` - User prompts and interactions
+- `pre_hook_logs` - Tool invocation events
+- `post_hook_logs` - Tool completion events
+- `stop_logs` - Stop events
+- `subagent_stop_logs` - Subagent stop events
+- `notification_logs` - System notifications
+
 ### Automatic Event Forwarding
 
 All processed events are automatically forwarded to the observability platform:
 - Tool usage events (file reads, edits, commands)
 - Session lifecycle events (start, stop)
+- User prompts and interactions
 - Error events
 - Custom agent events
 
-### Batching and Performance
+### Performance
 
-- Events are batched for efficient transmission (default: 100 events)
-- Automatic flushing every 30 seconds (configurable)
 - Non-blocking async processing
+- SQLite-based Turso for high performance
 - Graceful error handling (failures don't affect main pipeline)
+- Automatic connection management
 
 ### Monitoring
 
@@ -129,21 +149,17 @@ The integration provides statistics via `getStats()`:
 
 ### Basic Setup
 
-The integration is automatically initialized when `AgentSessionEventProcessorV2` starts:
+The integration is manually initialized when configuration is provided through the UI:
 
 ```typescript
-// In AgentSessionEventProcessorV2 constructor
-private async initializeObservability(): Promise<void> {
-  this.observability = getObservabilityIntegration({
-    environment: process.env.NODE_ENV || 'development',
-    debug: process.env.DEBUG_OBSERVABILITY === 'true',
-    batchSize: 50,
-    flushInterval: 15000
-  });
+// Configuration is stored in SecretManager and loaded on initialization
+const observability = getObservabilityIntegration();
 
-  await this.observability.initialize();
-}
+// Initialize when configuration is available
+await observability.initialize();
 ```
+
+The integration does NOT start automatically on app startup - it requires explicit configuration through the UI or environment variables.
 
 ### Manual Integration
 
@@ -153,12 +169,16 @@ For custom implementations:
 import { getObservabilityIntegration } from './observability/ObservabilityIntegration';
 
 // Get singleton instance
-const observability = getObservabilityIntegration({
-  databaseUrl: 'postgresql://...',
-  environment: 'production'
+const observability = getObservabilityIntegration();
+
+// Configure and save settings
+await observability.saveConfiguration({
+  tursoUrl: 'libsql://your-db.turso.io',
+  tursoAuthToken: 'your-auth-token',
+  enabled: true
 });
 
-// Initialize
+// Initialize (creates tables automatically)
 await observability.initialize();
 
 // Process events
@@ -203,6 +223,21 @@ This ensures:
 - Connections are closed cleanly
 - Statistics are logged
 
+## Testing Connection
+
+To test the Turso database connection:
+
+1. Click the **Activity** button in the titlebar
+2. Enter your Turso database credentials
+3. Click **Test Connection**
+4. Verify the success message appears
+
+The test will:
+- Validate the connection URL format
+- Connect to the Turso database
+- Create tables if they don't exist
+- Verify read/write permissions
+
 ## Debugging
 
 Enable debug mode for detailed logging:
@@ -214,7 +249,7 @@ DEBUG_OBSERVABILITY=true npm run dev
 This will log:
 - SDK initialization details
 - Event processing information
-- Batch operations
+- Table creation operations
 - Error details
 
 ## Benefits
@@ -226,10 +261,42 @@ This will log:
 5. **Session Analysis**: Understand agent behavior patterns
 6. **Cross-Agent Insights**: Compare performance across different AI agents
 
+## Turso Database
+
+### What is Turso?
+
+Turso is a SQLite-based database platform that provides:
+- Edge database capabilities with global replication
+- SQLite compatibility with cloud features
+- Low-latency data access
+- Built-in data encryption
+
+### Setting up Turso
+
+1. Create a Turso account at https://turso.tech
+2. Create a new database or use an existing one
+3. Get your database URL and auth token from the Turso dashboard
+4. Configure the app using the Activity button in the titlebar
+
+### Database Schema
+
+The observability integration automatically creates the following tables:
+- **sessions**: Stores session metadata including start/end times and statistics
+- **session_start_logs**: Records session initialization events
+- **session_end_logs**: Records session completion events
+- **user_prompt_logs**: Stores user prompts with token counts
+- **pre_hook_logs**: Records tool invocation events
+- **post_hook_logs**: Records tool completion events with results
+- **stop_logs**: Records stop events during sessions
+- **subagent_stop_logs**: Records subagent stop events
+- **notification_logs**: Stores system notifications and messages
+
 ## Future Enhancements
 
+- Real-time event streaming to UI
 - Custom dashboards for event visualization
 - Alert configuration for anomalies
 - Performance optimization recommendations
 - Agent behavior analytics
 - Cost tracking based on token usage
+- Export capabilities for analytics tools

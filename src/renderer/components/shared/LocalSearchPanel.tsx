@@ -6,7 +6,7 @@ import {
   localSearchService,
   LocalSearchResult,
   ContentMatch,
-} from '../../../services/LocalSearchService';
+} from '../../services/LocalSearchService';
 
 export interface DirectoryFilter {
   id: string;

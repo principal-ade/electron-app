@@ -5,7 +5,7 @@
  * Used by both backend (for storage) and frontend (for real-time updates).
  */
 
-import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import { NormalizedAgentSessionEvent } from '../types/legacy-event.types';
 import { EventActivityType } from '../sessionEnums';
 
 /**

@@ -1,7 +1,5 @@
-import {
-  NormalizedAgentSessionEvent,
-  SupportedAgent,
-} from '@principal-ai/agent-monitoring';
+import { SupportedAgent } from '@principal-ai/agent-monitoring';
+import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
 
 import { Repository } from '../../shared/types/repository.types';
 import { LLMConfiguration } from '../../shared/main-process-api-interfaces/LLMModelsAPI';
@@ -85,8 +83,6 @@ export interface ArchiveConfiguration {
   };
 }
 
-// AgentEventNamespaces has been moved to shared/types/namespaces.types.ts
-import { AgentEventNamespaces } from '../../shared/types/namespaces.types';
 
 /**
  * Docker Management Data Types
@@ -198,33 +194,6 @@ export interface DockerAnalysisSession {
   };
 }
 
-/**
- * Agent event indexes structure
- * Maps each agent's event namespace to its list of event keys
- */
-export interface AgentEventIndexes {
-  [AgentEventNamespaces.CLAUDE]: string[];
-  [AgentEventNamespaces.OPENCODE]: string[];
-  [AgentEventNamespaces.CLINE]: string[];
-}
-
-// Type mapping from SupportedAgent to specific namespace
-type AgentNamespaceMap = {
-  [SupportedAgent.CLAUDE]: AgentEventNamespaces.CLAUDE;
-  [SupportedAgent.OPENCODE]: AgentEventNamespaces.OPENCODE;
-  [SupportedAgent.CLINE]: AgentEventNamespaces.CLINE;
-};
-
-export function getAgentEventNamespace<T extends SupportedAgent>(
-  agent: T,
-): AgentNamespaceMap[T] {
-  const namespaceMap: AgentNamespaceMap = {
-    [SupportedAgent.CLAUDE]: AgentEventNamespaces.CLAUDE,
-    [SupportedAgent.OPENCODE]: AgentEventNamespaces.OPENCODE,
-    [SupportedAgent.CLINE]: AgentEventNamespaces.CLINE,
-  };
-  return namespaceMap[agent];
-}
 
 /**
  * Type-safe namespace data type definitions
@@ -237,11 +206,9 @@ export interface NamespaceDataTypes {
   [StaticNamespaces.LLM_MODELS]: LLMConfiguration;
   [StaticNamespaces.CACHE]: Record<string, any>;
   [StaticNamespaces.TEMP]: Record<string, any>;
-  [StaticNamespaces.AGENT_SESSIONS]: ProcessedSessionData; // Canonical session storage
   [StaticNamespaces.GLOBAL_SESSION_REGISTRY]: GlobalSessionRegistry; // Global session index and active session tracking
   [StaticNamespaces.SESSION_SUMMARIES]: SessionSummary; // Recent session summaries for quick access
   [StaticNamespaces.ARCHIVE_CONFIGURATION]: ArchiveConfiguration; // Archive system configuration settings
-  [StaticNamespaces.AGENT_EVENT_INDEXES]: AgentEventIndexes; // Centralized storage for agent event indexes
   [StaticNamespaces.MCP_BRIDGE_DATA]: any; // MCP Bridge data storage (MCPBridgeDataEntry from MCPBridgeDataStore)
 
   // Docker Management namespaces
@@ -385,14 +352,6 @@ export class TypedNamespaceRegistry {
       category: NamespaceCategory.CORE,
     });
 
-    // Session data
-    this.register(StaticNamespaces.AGENT_SESSIONS, {
-      name: StaticNamespaces.AGENT_SESSIONS,
-      description: 'Agent session data with flat event list',
-      storageProvider: 'electron-store',
-      category: NamespaceCategory.AGENT_SESSION_EVENTS,
-      isPrimary: true,
-    });
 
     // Cache and temporary data
 

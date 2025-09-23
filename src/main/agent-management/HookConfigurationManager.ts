@@ -520,15 +520,6 @@ export class HookConfigurationManager {
     error?: string;
   }> {
     try {
-      // Check if this is a Claude fallback file
-      if (filePath.includes('claude-hook-events.json')) {
-        const result = await this.claudeManager.clearFallbackFile();
-        return {
-          success: result.success,
-          backupPath: result.backupPath as string | undefined,
-          error: result.error as string | undefined,
-        };
-      }
 
       // For other agents, use the existing implementation
       // Create backup with timestamp

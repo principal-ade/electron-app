@@ -94,8 +94,13 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
   // Extract common props
   const { windowId, windowTitle, files, editorType } = props;
 
+  // Determine if this is a remote editor
+  const isRemoteEditor = editorType === 'remote';
+
   // Create a stable reference for file paths to avoid infinite loops
-  const filePaths = useMemo(() => files.map((f) => f.path), [files]);
+  // Use JSON.stringify to create a stable dependency that only changes when paths actually change
+  const filePathsString = useMemo(() => JSON.stringify(files.map(f => f.path)), [files]);
+  const filePaths = useMemo(() => JSON.parse(filePathsString), [filePathsString]);
 
   // For local files, derive repository path from the first file
   // This assumes all files are in the same repository
@@ -112,7 +117,7 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
 
   // Create content provider based on editor type
   const contentProvider = useMemo(() => {
-    if (editorType === 'remote') {
+    if (editorType === 'remote' && props.editorType === 'remote') {
       return new GitHubContentProvider(
         props.owner,
         props.repo,
@@ -121,19 +126,29 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
     } else {
       return new LocalFileSystemProvider();
     }
-  }, [editorType, props]);
+  }, [editorType, props.editorType === 'remote' ? props.owner : null, props.editorType === 'remote' ? props.repo : null, props.editorType === 'remote' ? props.branch : null]);
 
-  // Initialize tabs from files
+  // Initialize tabs from files - only on mount or when file paths actually change
   useEffect(() => {
-    const initialTabs: FileTab[] = files.map((file) => ({
-      path: file.path,
-      relativePath: 'relativePath' in file ? file.relativePath : file.path,
-      name: file.path.split('/').pop() || 'Untitled', // Just the filename
-      isModified: false,
-      gitStatus: undefined,
-    }));
-    setTabs(initialTabs);
-  }, [files]);
+    setTabs(prevTabs => {
+      // If we already have tabs and the file paths haven't changed, keep existing state
+      const existingPaths = prevTabs.map(t => t.path).sort().join(',');
+      const newPaths = files.map(f => f.path).sort().join(',');
+
+      if (prevTabs.length > 0 && existingPaths === newPaths) {
+        return prevTabs;
+      }
+
+      // Otherwise create new tabs
+      return files.map((file) => ({
+        path: file.path,
+        relativePath: 'relativePath' in file ? file.relativePath : file.path,
+        name: file.path.split('/').pop() || 'Untitled',
+        isModified: false,
+        gitStatus: undefined,
+      }));
+    });
+  }, [filePathsString]); // Use stable string dependency
 
   // Load preferred editor
   useEffect(() => {
@@ -376,7 +391,7 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
     const interval = setInterval(fetchGitStatus, 2000); // Poll every 2 seconds
 
     return () => clearInterval(interval);
-  }, [repositoryPath, filePaths, editorType]);
+  }, [repositoryPath, filePathsString, editorType]); // Use stable string dependency
 
   const handleTabClose = (index: number) => {
     const newTabs = [...tabs];
@@ -473,6 +488,32 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
     [activeTabIndex],
   );
 
+  // Memoize the content loader function to prevent re-renders
+  const loadFileContent = useCallback(async () => {
+    if (!contentProvider || !activeTab) {
+      console.error('[MultiFileEditor] No content provider or active tab available');
+      throw new Error('No content provider available');
+    }
+    try {
+      // Path is already correct - absolute for local, relative for remote
+      const content = await contentProvider.readFileContent(activeTab.path);
+      if (content === null) {
+        // File doesn't exist or couldn't be fetched
+        throw new Error(
+          `File not found: ${activeTab.path}\n\nThis file may have been deleted, renamed, or you may not have access to it.`,
+        );
+      }
+      return content;
+    } catch (error) {
+      console.error('[MultiFileEditor] Failed to load file:', error);
+      // Re-throw with a user-friendly message
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`Failed to load file: ${activeTab?.path || 'unknown'}`);
+    }
+  }, [contentProvider, activeTab?.path]);
+
   return (
     <div
       style={{
@@ -490,8 +531,8 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
         fileName={activeTab && files.length > 0 ? files[activeTab]?.path?.split('/').pop() : undefined}
         filePath={activeTab && files.length > 0 ? files[activeTab]?.path : undefined}
         isRemote={isRemoteEditor}
-        repository={isRemoteEditor ? `${props.owner}/${props.repo}` : undefined}
-        onOpenInGitHub={isRemoteEditor && activeTab !== null ? () => {
+        repository={isRemoteEditor && props.editorType === 'remote' ? `${props.owner}/${props.repo}` : undefined}
+        onOpenInGitHub={isRemoteEditor && activeTab !== null && props.editorType === 'remote' ? () => {
           const file = files[activeTab];
           if (file) {
             window.open(`https://github.com/${props.owner}/${props.repo}/blob/${props.branch || 'main'}/${file.path}`, '_blank');
@@ -692,36 +733,7 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
               displayPath={activeTab.relativePath || activeTab.path}
               className="full-height"
               editable={false} // Files are read-only in viewer mode
-              contentLoader={async () => {
-                if (!contentProvider) {
-                  console.error(
-                    '[MultiFileEditor] No content provider available',
-                  );
-                  throw new Error('No content provider available');
-                }
-                try {
-                  // Path is already correct - absolute for local, relative for remote
-                  const content =
-                    await contentProvider.readFileContent(activeTab.path);
-                  if (content === null) {
-                    // File doesn't exist or couldn't be fetched
-                    throw new Error(
-                      `File not found: ${activeTab.path}\n\nThis file may have been deleted, renamed, or you may not have access to it.`,
-                    );
-                  }
-                  return content;
-                } catch (error) {
-                  console.error(
-                    '[MultiFileEditor] Failed to load file:',
-                    error,
-                  );
-                  // Re-throw with a user-friendly message
-                  if (error instanceof Error) {
-                    throw error;
-                  }
-                  throw new Error(`Failed to load file: ${activeTab.path}`);
-                }
-              }}
+              contentLoader={loadFileContent}
             />
           ) : (
             // Show WatchingFileViewer for local files without content provider (legacy mode)

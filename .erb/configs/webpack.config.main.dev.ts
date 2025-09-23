@@ -10,6 +10,7 @@ import { merge } from 'webpack-merge';
 import checkNodeEnv from '../scripts/check-node-env';
 import baseConfig from './webpack.config.main.base';
 import webpackPaths from './webpack.paths';
+import { dependencies as externals } from '../../package.json';
 
 // When an ESLint server is running, we can't set the NODE_ENV so we'll check if it's
 // at the dev webpack config is not accidentally run in a production environment
@@ -27,7 +28,24 @@ const configuration: webpack.Configuration = {
   entry: {
     main: path.join(webpackPaths.srcMainPath, 'main.ts'),
     preload: path.join(webpackPaths.srcWindowPath, 'preload.ts'),
+    'event-worker': path.join(webpackPaths.srcPath, 'event-processing-server', 'worker-entry.ts'),
   },
+
+  // Override externals - don't externalize dependencies for event-worker
+  // The worker bundle needs to be self-contained
+  externals: [
+    ({ request, context, contextInfo, getResolve }, callback) => {
+      // For the event-worker entry, bundle everything
+      if (contextInfo?.issuer?.includes('event-processing-server')) {
+        return callback();
+      }
+      // For main and preload, externalize node_modules as usual
+      if (Object.keys(externals || {}).includes(request) || ['node-pty', 'keytar'].includes(request)) {
+        return callback(null, `commonjs ${request}`);
+      }
+      callback();
+    },
+  ],
 
   output: {
     path: webpackPaths.dllPath,

@@ -5,17 +5,24 @@ import { useTheme } from 'themed-markdown';
 
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { MarkdownViewerTitlebar } from '../components/Titlebar';
 
 import { MarkdownDocumentViewer } from './RepoManager/shared/MarkdownDocumentViewer';
 
 interface MarkdownViewProps {
   filePath: string;
   fontSizeScale?: number;
+  projectName?: string;
+  onFontSizeIncrease?: () => void;
+  onFontSizeDecrease?: () => void;
 }
 
 export const MarkdownView: React.FC<MarkdownViewProps> = ({
   filePath,
-  fontSizeScale: propFontSizeScale
+  fontSizeScale: propFontSizeScale,
+  projectName,
+  onFontSizeIncrease,
+  onFontSizeDecrease
 }) => {
   const { theme } = useTheme();
   const [content, setContent] = useState<string>(
@@ -187,39 +194,59 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
 
   if (loading) {
     return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: theme.colors.background,
-          color: theme.colors.text,
-          fontFamily: theme.fonts.body,
-          fontSize: theme.fontSizes[2],
-        }}
-      >
-        Loading markdown file...
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <MarkdownViewerTitlebar
+          filePath={filePath}
+          fileName={filePath.split('/').pop()}
+          projectName={projectName}
+          fontSizeScale={fontSizeScale}
+          onFontSizeIncrease={onFontSizeIncrease}
+          onFontSizeDecrease={onFontSizeDecrease}
+        />
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme.colors.background,
+            color: theme.colors.text,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[2],
+          }}
+        >
+          Loading markdown file...
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: theme.colors.background,
-          color: theme.colors.error,
-          fontFamily: theme.fonts.body,
-          fontSize: theme.fontSizes[2],
-          padding: theme.space[4],
-        }}
-      >
-        {error}
+      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <MarkdownViewerTitlebar
+          filePath={filePath}
+          fileName={filePath.split('/').pop()}
+          projectName={projectName}
+          fontSizeScale={fontSizeScale}
+          onFontSizeIncrease={onFontSizeIncrease}
+          onFontSizeDecrease={onFontSizeDecrease}
+        />
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: theme.colors.background,
+            color: theme.colors.error,
+            fontFamily: theme.fonts.body,
+            fontSize: theme.fontSizes[2],
+            padding: theme.space[4],
+          }}
+        >
+          {error}
+        </div>
       </div>
     );
   }
@@ -229,35 +256,45 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
     typeof content === 'string' ? content : '# Loading...\n\nPlease wait...';
 
   return (
-    <div
-      style={{
-        height: '100%',
-        width: '100%',
-        backgroundColor: theme.colors.background,
-        position: 'relative',
-      }}
-    >
-      {/* Unsaved indicator */}
-      {isDirty && (
-        <div
-          style={{
-            position: 'absolute',
-            top: theme.space[3],
-            left: theme.space[3],
-            padding: `${theme.space[1]}px ${theme.space[2]}px`,
-            backgroundColor: theme.colors.warning,
-            color: theme.colors.background,
-            borderRadius: theme.radii[1],
-            fontSize: theme.fontSizes[0],
-            zIndex: 20,
-          }}
-        >
-          Unsaved changes
-        </div>
-      )}
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <MarkdownViewerTitlebar
+        filePath={filePath}
+        fileName={filePath.split('/').pop()}
+        projectName={projectName}
+        fontSizeScale={fontSizeScale}
+        onFontSizeIncrease={onFontSizeIncrease}
+        onFontSizeDecrease={onFontSizeDecrease}
+      />
+      <div
+        style={{
+          flex: 1,
+          width: '100%',
+          backgroundColor: theme.colors.background,
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Unsaved indicator */}
+        {isDirty && (
+          <div
+            style={{
+              position: 'absolute',
+              top: theme.space[3],
+              left: theme.space[3],
+              padding: `${theme.space[1]}px ${theme.space[2]}px`,
+              backgroundColor: theme.colors.warning,
+              color: theme.colors.background,
+              borderRadius: theme.radii[1],
+              fontSize: theme.fontSizes[0],
+              zIndex: 20,
+            }}
+          >
+            Unsaved changes
+          </div>
+        )}
 
-      {/* Slide-based viewer (parse content into slides and render the shared viewer) */}
-      <MarkdownDocumentViewer
+        {/* Slide-based viewer (parse content into slides and render the shared viewer) */}
+        <MarkdownDocumentViewer
         viewMode={'slides'}
         showEditor={false}
         showSegmented={true}
@@ -287,7 +324,8 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
           // Optionally treat checkbox toggles as edits
           setIsDirty(true);
         }}
-      />
+        />
+      </div>
     </div>
   );
 };

@@ -14,4 +14,5 @@ export enum WindowEvent {
   OPEN_MARKDOWN_FILE_DIALOG = 'window:open-markdown-file-dialog',
   OPEN_SESSION_DETAILS = 'window:open-session-details',
   OPEN_CALLIMACHUS_WINDOW = 'window:open-callimachus',
+  OPEN_SEARCH_WINDOW = 'window:open-search',
 }

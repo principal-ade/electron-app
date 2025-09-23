@@ -42,9 +42,9 @@ jest.mock('../../components/Terminal/TerminalPanel', () => ({
   default: () => <div data-testid="terminal-panel">Terminal Panel</div>,
 }));
 
-jest.mock('./shared/DocumentSearchPanel', () => ({
-  DocumentSearchPanel: () => (
-    <div data-testid="document-search-panel">Document Search Panel</div>
+jest.mock('./shared/MarkdownSearchPanel', () => ({
+  MarkdownSearchPanel: () => (
+    <div data-testid="markdown-search-panel">Markdown Search Panel</div>
   ),
 }));
 

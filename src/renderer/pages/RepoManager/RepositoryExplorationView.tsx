@@ -1,22 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  BookOpen,
   GitBranch,
   Layers,
   Search,
   FileText,
-  Brain,
   Book,
   PanelLeft,
   PanelLeftClose,
-  Clock,
-  Scale,
 } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { PackageLayer } from '@principal-ai/codebase-composition';
-import { ThemedMarkdownSlide } from '../../components/markdown/ThemedMarkdownSlide';
 import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { MarkdownDocumentViewer } from './shared/MarkdownDocumentViewer';
@@ -27,7 +22,6 @@ import { WindowService } from '../../main-process-api/WindowService';
 import type { Repository } from '../../../shared/types/repository.types';
 import { RightPaneMode } from '../../../shared/types/userPreferences.types';
 import { RepositoryNote } from '../../../shared/main-process-api-interfaces/RepositoryNotesAPI';
-import type { A24zNote } from '../../../shared/main-process-api-interfaces/A24zAPI';
 import { RepositoryNotesService } from '../../main-process-api/RepositoryNotesService';
 import { GitHubWebAdapters } from '../../adapters/GitHubWebAdapters';
 import { ElectronPlatformAdapters } from '../../adapters/ElectronPlatformAdapters';
@@ -44,10 +38,13 @@ import { RepoSourceArchitecturePanelSimple } from './shared/RepoSourceArchitectu
 import {
   NullContentProvider,
   GitHubContentProvider,
+  ContentProvider,
+  LocalFileSystemProvider,
 } from '../../services/ContentProviders';
 import { RemoteFileViewerModal } from './shared/RemoteFileViewerModal';
 import { HelpModal } from './shared/HelpModal';
 import { useGitChanges } from '../../contexts/GitChangesContext';
+import { RepositorySearchTab } from '../../components/repository-maps/RepositorySearchTab';
 
 interface RepositoryExplorationViewProps {
   repository: Repository;
@@ -60,15 +57,12 @@ interface RepositoryExplorationViewProps {
 
   // Shared tree data from parent
   fileTree?: FileTree | null;
-  cityData?: CityData | null;
   activeFileTreeSource?: FileTreeSource | null;
   fileTreeSourceService?: FileTreeSourceService;
   cacheService?: FileTreeCacheService;
   cityDataCache?: unknown;
   treeStats?: FileTreeStats | null;
 
-  // a24z notes from parent (already loaded)
-  a24zNotes?: A24zNote[];
 
   // File color highlight layers from parent
   fileColorHighlightLayers?: HighlightLayer[];
@@ -84,18 +78,16 @@ export const RepositoryExplorationView: React.FC<
   remoteData,
   searchQuery,
   fileTree: sharedFileTree,
-  cityData: sharedCityData,
   activeFileTreeSource: sharedActiveSource,
   fileTreeSourceService: sharedFileTreeService,
   cacheService: sharedCacheService,
   cityDataCache: _cityDataCache,
   treeStats: sharedTreeStats,
-  a24zNotes: a24zNotesProp = [],
   fileColorHighlightLayers = [],
   onFileTreeLoaded,
 }) => {
   const { theme } = useTheme();
-  const [activeTab, setActiveTab] = useState<string>('readme');
+  const [activeTab, setActiveTab] = useState<string>('search');
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
 
   // Services - use shared if provided, otherwise create local
@@ -145,17 +137,6 @@ export const RepositoryExplorationView: React.FC<
     }
   }, [sharedTreeStats]);
 
-  // README state
-  const [readmeContent, setReadmeContent] = useState<string | null>(null);
-  const [loadingReadme, setLoadingReadme] = useState(false);
-
-  // CHANGELOG state
-  const [changelogContent, setChangelogContent] = useState<string | null>(null);
-  const [loadingChangelog, setLoadingChangelog] = useState(false);
-
-  // LICENSE state
-  const [licenseContent, setLicenseContent] = useState<string | null>(null);
-  const [loadingLicense, setLoadingLicense] = useState(false);
 
   // Notes state
   const [tribalKnowledgeNotes, setTribalKnowledgeNotes] = useState<
@@ -168,20 +149,15 @@ export const RepositoryExplorationView: React.FC<
     HighlightLayer[]
   >([]);
 
-  // a24z memory state - notes come from props, only manage the layer locally
-  const a24zNotes = a24zNotesProp; // Use the prop instead of local state
-  const [a24zHighlightLayer, setA24zHighlightLayer] =
-    useState<HighlightLayer | null>(null);
-  const [showA24zLayer, setShowA24zLayer] = useState(true);
 
   // Search state
-  const [selectedFile] = useState<string | null>(null); // setSelectedFile will be used when file selection is implemented
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<string[]>([]);
   const [searchHighlightLayer, setSearchHighlightLayer] =
     useState<HighlightLayer | null>(null);
   const [selectedFileLayer, setSelectedFileLayer] =
     useState<HighlightLayer | null>(null);
-  const [hoveredSearchResult] = useState<string | null>(null); // setHoveredSearchResult will be used when hover is implemented
+  const [hoveredSearchResult, setHoveredSearchResult] = useState<string | null>(null);
   const [hoveredSearchLayer, setHoveredSearchLayer] =
     useState<HighlightLayer | null>(null);
 
@@ -243,7 +219,6 @@ export const RepositoryExplorationView: React.FC<
     getGitHighlightLayers,
     checkGitStatus,
     getGitState,
-    toggleGitChanges,
     initializeLocalSource,
     setGitChangesVisible,
   } = useGitChanges();
@@ -254,10 +229,7 @@ export const RepositoryExplorationView: React.FC<
   // Auto-initialize git state for local sources (loads HEAD tree)
   useEffect(() => {
     if (activeFileTreeSource?.type === 'local') {
-      console.log(
-        '[RepositoryExploration] Auto-initializing git state for local source:',
-        activeFileTreeSource.id,
-      );
+      // Auto-initializing git state for local source
       initializeLocalSource(activeFileTreeSource);
     }
   }, [activeFileTreeSource, initializeLocalSource]);
@@ -371,17 +343,57 @@ export const RepositoryExplorationView: React.FC<
     [remoteData, openedFiles, activeFileTreeSource],
   );
 
+  // Handle search file selection
+  const handleSearchFileSelect = useCallback(
+    (filePath: string, lineNumbers?: number[], searchQuery?: string) => {
+      // Set selected file for highlighting
+      setSelectedFile(filePath);
+
+      // Open file using existing handler
+      handleFileClick(filePath);
+
+      // Log search context
+      console.log(
+        '[RepositoryExplorationView] Search file selected:',
+        filePath,
+        'lines:',
+        lineNumbers,
+        'query:',
+        searchQuery,
+      );
+    },
+    [handleFileClick],
+  );
+
+  // Handle search results change for highlighting
+  const handleSearchResultsChange = useCallback((results: string[]) => {
+    console.log(
+      '[RepositoryExplorationView] Search results changed:',
+      results.length,
+      'files',
+    );
+    setSearchResults(results);
+  }, []);
+
+  // Handle search result hover for highlighting
+  const handleSearchResultHover = useCallback((filePath: string | null) => {
+    setHoveredSearchResult(filePath);
+  }, []);
+
   // Right pane mode: for remote exploration we default to city and do not show terminal toggle
   const [rightPaneMode, setRightPaneMode] = useState<RightPaneMode>('city');
 
-  // Create content provider for remote repositories
-  const _contentProvider = useMemo(() => {
-    // Will be used for content fetching
-    // For search, we should NOT use GitHubContentProvider for content search
-    // as it would make API calls for every file. Use NullContentProvider for search,
-    // but we'll create a separate provider for viewing individual files
+  // Create content provider for search
+  const searchContentProvider = useMemo<ContentProvider>(() => {
+    // For local repositories, use filesystem provider for content search
+    if (activeFileTreeSource?.type === 'local') {
+      // This enables full content search for local files
+      return new LocalFileSystemProvider();
+    }
+    // For remote repositories, use NullContentProvider to avoid API calls
+    // This means remote repos only search filenames, not content
     return new NullContentProvider();
-  }, []);
+  }, [activeFileTreeSource]);
 
   // Handle dependency analysis highlighting
   const handlePackageAnalysisStart = useCallback(
@@ -623,156 +635,6 @@ export const RepositoryExplorationView: React.FC<
     }
   }, [sharedFileTree, onFileTreeLoaded]);
 
-  // Fetch README content
-  useEffect(() => {
-    const fetchReadme = async () => {
-      if (!fileTree) {
-        return;
-      }
-
-      // For local sources, read README from the actual local file system
-      if (activeFileTreeSource?.type === 'local') {
-        try {
-          const localBasePath = activeFileTreeSource.location;
-          const readmeFiles = [
-            'README.md',
-            'readme.md',
-            'README.MD',
-            'README.txt',
-            'readme.txt',
-          ];
-          let content = null;
-
-          for (const filename of readmeFiles) {
-            const fullPath = `${localBasePath}/${filename}`;
-            const result = await adapters?.fileSystem.readFile(fullPath);
-            if (result?.content) {
-              content = result.content;
-              break;
-            }
-          }
-
-          setReadmeContent(content);
-          setLoadingReadme(false);
-          return;
-        } catch (error) {
-          console.error('Error reading local README:', error);
-          setReadmeContent(
-            '# Error loading README\n\nFailed to load the local README file.',
-          );
-          setLoadingReadme(false);
-        }
-        return;
-      }
-
-      // For remote sources, use GitHub adapters
-      if (!adapters) {
-        return;
-      }
-      const activeRef =
-        activeFileTreeSource?.metadata?.currentBranch ||
-        remoteData.defaultBranch;
-
-      setLoadingReadme(true);
-      try {
-        // Try to discover the actual README filename at the repo root via the already loaded file tree
-        let discoveredPath: string | null = null;
-        try {
-          if (fileTree) {
-            // Use the correct FileTree API - allFiles is an array of FileInfo objects
-            if (fileTree.allFiles) {
-              const readmeFile = fileTree.allFiles.find((file) => {
-                // Check if it's a root-level file (no directory separator)
-                if (file.relativePath.includes('/')) return false;
-                // Check if it matches README pattern
-                return /^readme(\.[^/]*)?$/i.test(file.name);
-              });
-              discoveredPath = readmeFile?.relativePath || null;
-            } else {
-              discoveredPath = null;
-            }
-            if (discoveredPath) {
-              // Found README path
-            } else {
-              // No README content found
-            }
-          } else {
-            // No fileTree available
-          }
-        } catch (err) {
-          console.warn(
-            '[Exploration] README: fileTree discovery threw error',
-            err,
-          );
-        }
-
-        const readmeVariants = [
-          'README.md',
-          'readme.md',
-          'Readme.md',
-          'README.MD',
-        ];
-        let content = null as string | null;
-
-        // Prefer discoveredPath if available
-        if (discoveredPath) {
-          const result = await adapters.fileSystem.readFile(discoveredPath);
-          if (result && result.content) {
-            content = result.content;
-          } else {
-            // No fileTree available
-          }
-        }
-
-        // Fallback to variant guesses at repo root
-        if (!content) {
-          for (const variant of readmeVariants) {
-            const result = await adapters.fileSystem.readFile(variant);
-            if (result && result.content) {
-              content = result.content;
-              break;
-            } else {
-              // No README content found
-            }
-          }
-        }
-
-        if (!content) {
-          console.warn(
-            '[Exploration] README: not found in repo root for any variant',
-            {
-              owner: remoteData.owner,
-              repo: remoteData.repo,
-              ref: activeRef,
-            },
-          );
-        }
-
-        // If not found, leave readmeContent null so the UI shows the file tree list for verification
-        if (content) {
-          setReadmeContent(content);
-        } else {
-          setReadmeContent(null);
-        }
-      } catch (error) {
-        console.error('Failed to fetch README:', error);
-        setReadmeContent(
-          '# Error loading README\n\nFailed to load the README file.',
-        );
-      } finally {
-        setLoadingReadme(false);
-      }
-    };
-
-    fetchReadme();
-  }, [
-    adapters,
-    activeFileTreeSource,
-    remoteData.owner,
-    remoteData.repo,
-    remoteData.defaultBranch,
-    fileTree,
-  ]);
 
   // Fetch repository notes
   useEffect(() => {
@@ -790,76 +652,6 @@ export const RepositoryExplorationView: React.FC<
     fetchNotes();
   }, [repository.remoteUrl]);
 
-  // a24z notes are now loaded in RepositoryManager and passed as props
-
-  // Create a24z highlight layer from anchors
-  useEffect(() => {
-    if (!showA24zLayer || a24zNotes.length === 0) {
-      setA24zHighlightLayer(null);
-      return;
-    }
-
-    console.info(
-      '[ExploreView] Processing a24z notes for highlight layer:',
-      a24zNotes.length,
-      'notes',
-    );
-
-    // Collect all unique file paths from anchors
-    const filePaths = new Set<string>();
-    for (const note of a24zNotes) {
-      console.info('[ExploreView] Processing note:', {
-        id: note.id,
-        anchors: note.anchors,
-        type: note.type,
-        tags: note.tags,
-      });
-
-      if (note.anchors && Array.isArray(note.anchors)) {
-        for (const anchor of note.anchors) {
-          if (anchor && typeof anchor === 'string') {
-            // Remove leading slash if present
-            const cleanPath = anchor.startsWith('/')
-              ? anchor.substring(1)
-              : anchor;
-            filePaths.add(cleanPath);
-            console.info('[ExploreView] Added anchor path:', cleanPath);
-          }
-        }
-      }
-    }
-
-    console.info(
-      '[ExploreView] Total unique file paths from a24z notes:',
-      filePaths.size,
-    );
-
-    if (filePaths.size === 0) {
-      setA24zHighlightLayer(null);
-      return;
-    }
-
-    // Create highlight layer
-    const layer: HighlightLayer = {
-      id: 'a24z-memory',
-      name: `a24z Memory (${a24zNotes.length} notes)`,
-      enabled: true,
-      color: '#9333ea', // Purple color for a24z
-      priority: 15, // Lower priority than search/selection
-      items: Array.from(filePaths).map((path) => ({
-        path,
-        type: 'file' as const,
-        renderStrategy: 'border' as const, // Use border to not interfere with other highlights
-      })),
-    };
-
-    console.info(
-      '[ExploreView] Created a24z highlight layer with',
-      layer.items.length,
-      'items',
-    );
-    setA24zHighlightLayer(layer);
-  }, [a24zNotes, showA24zLayer]);
 
   // Create search highlight layer
   useEffect(() => {
@@ -1159,817 +951,48 @@ export const RepositoryExplorationView: React.FC<
     });
   };
 
-  // Check if CHANGELOG.md exists at root
-  const hasChangelog = useMemo(() => {
-    if (!fileTree) return false;
+  // Get git state for source badges (moved here to be available for fileTrees)
+  const gitState =
+    activeFileTreeSource?.type === 'local'
+      ? getGitState(activeFileTreeSource.id)
+      : undefined;
 
-    // Check for CHANGELOG.md at root (case-insensitive)
-    return fileTree.allFiles.some((file) => {
-      const fileName = file.name.toLowerCase();
-      const isAtRoot = !file.relativePath.includes('/');
-      return isAtRoot && fileName === 'changelog.md';
-    });
-  }, [fileTree]);
+  // Create a Map of file trees for the search tab (moved here to be available for tabs)
+  const fileTrees = useMemo(() => {
+    const trees = new Map<string, FileTree>();
 
-  // Check if LICENSE file exists at root
-  const hasLicense = useMemo(() => {
-    if (!fileTree) return false;
+    // Add the main file tree
+    if (fileTree) {
+      const treeId = activeFileTreeSource?.id || 'main';
+      trees.set(treeId, fileTree);
+    }
 
-    // Check for LICENSE files at root (various formats)
-    return fileTree.allFiles.some((file) => {
-      const fileName = file.name.toLowerCase();
-      const isAtRoot = !file.relativePath.includes('/');
-      // Match LICENSE, LICENSE.txt, LICENSE.md, LICENCE (UK spelling), COPYING, etc.
-      return (
-        isAtRoot &&
-        (fileName === 'license' ||
-          fileName === 'license.txt' ||
-          fileName === 'license.md' ||
-          fileName === 'licence' ||
-          fileName === 'licence.txt' ||
-          fileName === 'licence.md' ||
-          fileName === 'copying' ||
-          fileName === 'copying.txt' ||
-          fileName.startsWith('license.')) // LICENSE.MIT, LICENSE.Apache, etc.
-      );
-    });
-  }, [fileTree]);
+    // Add HEAD tree if available (for git repositories)
+    if (gitState?.headTree && activeFileTreeSource?.type === 'local') {
+      trees.set('HEAD', gitState.headTree);
+    }
 
-  // Fetch CHANGELOG content
-  useEffect(() => {
-    const fetchChangelog = async () => {
-      if (!fileTree || !hasChangelog) {
-        setChangelogContent(null);
-        return;
-      }
-
-      setLoadingChangelog(true);
-
-      try {
-        // For local sources, read CHANGELOG from the actual local file system
-        if (activeFileTreeSource?.type === 'local') {
-          const localBasePath = activeFileTreeSource.location;
-          const changelogFiles = [
-            'CHANGELOG.md',
-            'changelog.md',
-            'Changelog.md',
-            'CHANGELOG.MD',
-          ];
-          let content = null;
-
-          for (const filename of changelogFiles) {
-            const fullPath = `${localBasePath}/${filename}`;
-            const result = await adapters?.fileSystem.readFile(fullPath);
-            if (result?.content) {
-              content = result.content;
-              break;
-            }
-          }
-
-          setChangelogContent(content);
-          setLoadingChangelog(false);
-          return;
-        }
-
-        // For remote sources, use GitHub adapters
-        if (!adapters) {
-          return;
-        }
-
-        const changelogVariants = [
-          'CHANGELOG.md',
-          'changelog.md',
-          'Changelog.md',
-          'CHANGELOG.MD',
-        ];
-        let content = null;
-
-        for (const variant of changelogVariants) {
-          const result = await adapters.fileSystem.readFile(variant);
-          if (result && result.content) {
-            content = result.content;
-            break;
-          }
-        }
-
-        if (content) {
-          setChangelogContent(content);
-        } else {
-          setChangelogContent(null);
-        }
-      } catch (error) {
-        console.error('Failed to fetch CHANGELOG:', error);
-        setChangelogContent(
-          '# Error loading CHANGELOG\n\nFailed to load the CHANGELOG file.',
-        );
-      } finally {
-        setLoadingChangelog(false);
-      }
-    };
-
-    fetchChangelog();
-  }, [
-    adapters,
-    activeFileTreeSource,
-    remoteData.owner,
-    remoteData.repo,
-    fileTree,
-    hasChangelog,
-  ]);
-
-  // Fetch LICENSE content
-  useEffect(() => {
-    const fetchLicense = async () => {
-      if (!fileTree || !hasLicense) {
-        setLicenseContent(null);
-        return;
-      }
-
-      setLoadingLicense(true);
-
-      try {
-        // For local sources, read LICENSE from the actual local file system
-        if (activeFileTreeSource?.type === 'local') {
-          const localBasePath = activeFileTreeSource.location;
-          // Try various LICENSE file formats
-          const licenseFiles = [
-            'LICENSE',
-            'LICENSE.txt',
-            'LICENSE.md',
-            'LICENCE',
-            'LICENCE.txt',
-            'LICENCE.md', // UK spelling
-            'license',
-            'license.txt',
-            'license.md',
-            'COPYING',
-            'COPYING.txt',
-            'copying',
-            'LICENSE.MIT',
-            'LICENSE.Apache',
-            'LICENSE.BSD', // Specific license types
-          ];
-          let content = null;
-
-          for (const filename of licenseFiles) {
-            const fullPath = `${localBasePath}/${filename}`;
-            const result = await adapters?.fileSystem.readFile(fullPath);
-            if (result?.content) {
-              content = result.content;
-              // Wrap plain text license in markdown code block for better formatting
-              if (!filename.endsWith('.md')) {
-                content = '```\n' + content + '\n```';
-              }
-              break;
-            }
-          }
-
-          setLicenseContent(content);
-          setLoadingLicense(false);
-          return;
-        }
-
-        // For remote sources, use GitHub adapters
-        if (!adapters) {
-          return;
-        }
-
-        const licenseVariants = [
-          'LICENSE',
-          'LICENSE.txt',
-          'LICENSE.md',
-          'LICENCE',
-          'LICENCE.txt',
-          'LICENCE.md',
-          'license',
-          'license.txt',
-          'license.md',
-          'COPYING',
-          'COPYING.txt',
-        ];
-        let content = null;
-
-        for (const variant of licenseVariants) {
-          const result = await adapters.fileSystem.readFile(variant);
-          if (result && result.content) {
-            content = result.content;
-            // Wrap plain text license in markdown code block for better formatting
-            if (!variant.endsWith('.md')) {
-              content = '```\n' + content + '\n```';
-            }
-            break;
-          }
-        }
-
-        if (content) {
-          setLicenseContent(content);
-        } else {
-          setLicenseContent(null);
-        }
-      } catch (error) {
-        console.error('Failed to fetch LICENSE:', error);
-        setLicenseContent(
-          '# Error loading LICENSE\n\nFailed to load the LICENSE file.',
-        );
-      } finally {
-        setLoadingLicense(false);
-      }
-    };
-
-    fetchLicense();
-  }, [
-    adapters,
-    activeFileTreeSource,
-    remoteData.owner,
-    remoteData.repo,
-    fileTree,
-    hasLicense,
-  ]);
+    return trees;
+  }, [fileTree, gitState?.headTree, activeFileTreeSource]);
 
   // Create tabs configuration
   const tabs: TabConfig[] = [
     {
-      id: 'readme',
-      label: 'README',
-      icon: <BookOpen size={14} />,
+      id: 'search',
+      label: 'Search',
+      icon: <Search size={14} />,
       visible: true,
       content: (
-        <div
-          style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
-        >
-          {loadingReadme ? (
-            <div
-              style={{
-                padding: '32px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '200px',
-              }}
-            >
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  backgroundColor: `${theme.colors.primary}15`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                  animation: 'gentlePulse 2s ease-in-out infinite',
-                }}
-              >
-                <BookOpen size={24} color={theme.colors.primary} />
-              </div>
-
-              <h3
-                style={{
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: '8px',
-                }}
-              >
-                Loading README
-              </h3>
-
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  marginBottom: '20px',
-                }}
-              >
-                Fetching repository documentation...
-              </p>
-
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '6px',
-                }}
-              >
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={`loading-dot-${i}`}
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.primary,
-                      opacity: 0.3,
-                      animation: 'bounce 1.4s ease-in-out infinite',
-                      animationDelay: `${i * 0.2}s`,
-                    }}
-                  />
-                ))}
-              </div>
-
-              <style>{`
-                @keyframes gentlePulse {
-                  0%, 100% { 
-                    opacity: 1;
-                    transform: scale(1);
-                  }
-                  50% { 
-                    opacity: 0.8;
-                    transform: scale(1.05);
-                  }
-                }
-                
-                @keyframes bounce {
-                  0%, 80%, 100% {
-                    transform: scale(1);
-                    opacity: 0.3;
-                  }
-                  40% {
-                    transform: scale(1.3);
-                    opacity: 1;
-                  }
-                }
-              `}</style>
-            </div>
-          ) : readmeContent ? (
-            <div
-              id="readme-container"
-              style={{ height: '100%', overflow: 'auto' }}
-            >
-              <ThemedMarkdownSlide
-                content={readmeContent}
-                slideIdPrefix="readme"
-                slideIndex={0}
-                useCustomTheme={true}
-                isVisible={true}
-                theme={theme}
-                onLinkClick={(href) => {
-                  if (href.startsWith('#')) {
-                    const elementId = href.substring(1);
-                    setTimeout(() => {
-                      const element = document.getElementById(elementId);
-                      element?.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start',
-                      });
-                    }, 100);
-                  } else if (
-                    href.startsWith('http://') ||
-                    href.startsWith('https://')
-                  ) {
-                    window.open(href, '_blank');
-                  }
-                }}
-              />
-            </div>
-          ) : (
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 24,
-              }}
-            >
-              <div
-                style={{
-                  width: '100%',
-                  maxWidth: 720,
-                  border: `1px dashed ${theme.colors.border}`,
-                  borderRadius: 12,
-                  padding: 24,
-                  background: theme.colors.background,
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: 16,
-                    alignItems: 'center',
-                    marginBottom: 12,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: 8,
-                      background: theme.colors.primary + '22',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <BookOpen size={22} color={theme.colors.primary} />
-                  </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 18,
-                        fontWeight: 700,
-                        color: theme.colors.text,
-                      }}
-                    >
-                      No README found at repository root
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      Add a README.md to the root of {remoteData.owner}/
-                      {remoteData.repo} on branch{' '}
-                      {activeFileTreeSource?.metadata?.currentBranch ||
-                        remoteData.defaultBranch}{' '}
-                      and it will render here automatically.
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  style={{
-                    marginTop: 12,
-                    padding: '12px 14px',
-                    borderRadius: 8,
-                    background:
-                      theme.colors.backgroundSecondary ||
-                      theme.colors.background,
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: theme.colors.textSecondary,
-                      marginBottom: 8,
-                    }}
-                  >
-                    We look for a README file at the repository root using these
-                    common names:
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {['README.md', 'readme.md', 'Readme.md', 'README.MD'].map(
-                      (name) => (
-                        <div
-                          key={name}
-                          style={{
-                            fontFamily: 'monospace',
-                            fontSize: 12,
-                            padding: '6px 10px',
-                            borderRadius: 6,
-                            border: `1px solid ${theme.colors.border}`,
-                            background: theme.colors.background,
-                            color: theme.colors.text,
-                          }}
-                        >
-                          {name}
-                        </div>
-                      ),
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                  <button
-                    onClick={() => {
-                      const url = `https://github.com/${remoteData.owner}/${remoteData.repo}`;
-                      window.open(url, '_blank');
-                    }}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      border: `1px solid ${theme.colors.border}`,
-                      background: theme.colors.background,
-                      color: theme.colors.text,
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Open repository on GitHub
-                  </button>
-                  <button
-                    onClick={() => {
-                      // Simple refresh: re-trigger the README effect by toggling active source
-                      if (activeFileTreeSource)
-                        setActiveFileTreeSource({ ...activeFileTreeSource });
-                    }}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: 8,
-                      border: 'none',
-                      background: theme.colors.primary,
-                      color: '#fff',
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      fontWeight: 600,
-                    }}
-                  >
-                    Refresh
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      id: 'changelog',
-      label: 'Changelog',
-      icon: <Clock size={14} />,
-      visible: hasChangelog,
-      content: (
-        <div
-          style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
-        >
-          {loadingChangelog ? (
-            <div
-              style={{
-                padding: '32px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '200px',
-              }}
-            >
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  backgroundColor: `${theme.colors.primary}15`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                  animation: 'gentlePulse 2s ease-in-out infinite',
-                }}
-              >
-                <Clock size={24} color={theme.colors.primary} />
-              </div>
-
-              <h3
-                style={{
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: '8px',
-                }}
-              >
-                Loading Changelog
-              </h3>
-
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  marginBottom: '20px',
-                }}
-              >
-                Fetching version history...
-              </p>
-
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '6px',
-                }}
-              >
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={`loading-dot-${i}`}
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.primary,
-                      opacity: 0.3,
-                      animation: 'bounce 1.4s ease-in-out infinite',
-                      animationDelay: `${i * 0.2}s`,
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : changelogContent ? (
-            <div
-              id="changelog-container"
-              style={{ height: '100%', overflow: 'auto' }}
-            >
-              <ThemedMarkdownSlide
-                content={changelogContent}
-                slideIdPrefix="changelog"
-                slideIndex={0}
-                useCustomTheme={true}
-                isVisible={true}
-              />
-            </div>
-          ) : (
-            <div
-              style={{
-                padding: '40px 20px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-              }}
-            >
-              <div
-                style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '12px',
-                  backgroundColor: theme.colors.backgroundTertiary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                }}
-              >
-                <Clock size={32} color={theme.colors.textTertiary} />
-              </div>
-
-              <h3
-                style={{
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: '8px',
-                }}
-              >
-                No Changelog Found
-              </h3>
-
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  textAlign: 'center',
-                  maxWidth: '400px',
-                  lineHeight: 1.5,
-                }}
-              >
-                Add a CHANGELOG.md to the root of {remoteData.owner}/
-                {remoteData.repo} to display version history here.
-              </p>
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      id: 'license',
-      label: 'License',
-      icon: <Scale size={14} />,
-      visible: hasLicense,
-      content: (
-        <div
-          style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
-        >
-          {loadingLicense ? (
-            <div
-              style={{
-                padding: '32px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '200px',
-              }}
-            >
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '12px',
-                  backgroundColor: `${theme.colors.primary}15`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                  animation: 'gentlePulse 2s ease-in-out infinite',
-                }}
-              >
-                <Scale size={24} color={theme.colors.primary} />
-              </div>
-
-              <h3
-                style={{
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: '8px',
-                }}
-              >
-                Loading License
-              </h3>
-
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  marginBottom: '20px',
-                }}
-              >
-                Fetching license information...
-              </p>
-
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '6px',
-                }}
-              >
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={`loading-dot-${i}`}
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.primary,
-                      opacity: 0.3,
-                      animation: 'bounce 1.4s ease-in-out infinite',
-                      animationDelay: `${i * 0.2}s`,
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : licenseContent ? (
-            <div
-              id="license-container"
-              style={{
-                height: '100%',
-                overflow: 'auto',
-                backgroundColor: theme.colors.backgroundLight,
-              }}
-            >
-              <ThemedMarkdownSlide
-                content={licenseContent}
-                slideIdPrefix="license"
-                slideIndex={0}
-                useCustomTheme={true}
-                isVisible={true}
-              />
-            </div>
-          ) : (
-            <div
-              style={{
-                padding: '40px 20px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-              }}
-            >
-              <div
-                style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '12px',
-                  backgroundColor: theme.colors.backgroundTertiary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                }}
-              >
-                <Scale size={32} color={theme.colors.textTertiary} />
-              </div>
-
-              <h3
-                style={{
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                  marginBottom: '8px',
-                }}
-              >
-                No License Found
-              </h3>
-
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  textAlign: 'center',
-                  maxWidth: '400px',
-                  lineHeight: 1.5,
-                }}
-              >
-                Add a LICENSE file to the root of {remoteData.owner}/
-                {remoteData.repo} to display licensing information here.
-              </p>
-            </div>
-          )}
-        </div>
+        <RepositorySearchTab
+          fileTrees={fileTrees}
+          activeFileTreeSource={activeFileTreeSource}
+          contentProvider={searchContentProvider}
+          showEditorSelector={false} // Hide editor selector in explore view
+          onFileSelect={handleSearchFileSelect}
+          selectedFile={selectedFile}
+          onSearchResultsChange={handleSearchResultsChange}
+          onSearchResultHover={handleSearchResultHover}
+        />
       ),
     },
     {
@@ -2021,12 +1044,6 @@ export const RepositoryExplorationView: React.FC<
     },
   ];
 
-  // Get git state for source badges
-  const gitState =
-    activeFileTreeSource?.type === 'local'
-      ? getGitState(activeFileTreeSource.id)
-      : undefined;
-
   // Create toolbar items
   const toolbarItems = useMemo<ToolbarItem[]>(() => {
     const items: ToolbarItem[] = [];
@@ -2058,20 +1075,6 @@ export const RepositoryExplorationView: React.FC<
       });
     }
 
-    // a24z memory tool (for local sources)
-    if (activeFileTreeSource?.type === 'local' && a24zNotes.length > 0) {
-      items.push({
-        id: 'a24z-memory',
-        label: 'a24z Memory',
-        shortLabel: 'a24z',
-        icon: <Brain />,
-        count: a24zNotes.length,
-        color: '#9333ea',
-        active: showA24zLayer,
-        onClick: () => setShowA24zLayer(!showA24zLayer),
-        tooltip: `${showA24zLayer ? 'Hide' : 'Show'} a24z memory coverage (${a24zNotes.length} notes)`,
-      });
-    }
 
     // Search results
     if (searchResults.length > 0) {
@@ -2133,8 +1136,6 @@ export const RepositoryExplorationView: React.FC<
     gitState,
     activeFileTreeSource,
     setGitChangesVisible,
-    a24zNotes.length,
-    showA24zLayer,
   ]);
 
   // Error handling
@@ -2451,7 +1452,6 @@ export const RepositoryExplorationView: React.FC<
                   : [
                       ...fileColorHighlightLayers, // Add file colors as base layer
                       ...noteHighlightLayers,
-                      ...(a24zHighlightLayer ? [a24zHighlightLayer] : []),
                       ...(searchHighlightLayer ? [searchHighlightLayer] : []),
                       ...(hoveredSearchLayer ? [hoveredSearchLayer] : []),
                       ...(selectedFileLayer ? [selectedFileLayer] : []),

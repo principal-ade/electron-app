@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
-import { AgentSessionArchiveService } from '../../main-process-api/AgentSessionArchiveService';
 import { SessionDetailsHeader } from './SessionDetailsHeader';
 import { SegmentedTimelineView } from './SegmentedTimelineView';
 import { FileActivityView } from './FileActivityView';
@@ -17,19 +16,9 @@ const agentSession = {
     directory: string,
     sessionId: string,
   ): Promise<AgentSessionRecord | null> => {
-    try {
-      // Try to get archived session first
-      const archivedSession =
-        await AgentSessionArchiveService.getArchivedSession(sessionId);
-      if (archivedSession) {
-        return archivedSession as AgentSessionRecord;
-      }
-      // TODO: Fall back to active session API when it's available
-      return null;
-    } catch (error) {
-      console.error('Failed to load session:', error);
-      return null;
-    }
+    // Archives removed - sessions are now only in memory or SDK
+    // TODO: Use SDK API to get session
+    return null;
   },
   updateRepositoryInfo: async (directory: string, sessionId: string) => {
     // Stub - archived sessions don't need repository info updates

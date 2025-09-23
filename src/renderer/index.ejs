@@ -4,18 +4,24 @@
     <meta charset="utf-8" />
     <title>Specktor</title>
     <style>
-      /* Prevent white flash while loading */
+      /* Digital matrix grid fallback theme */
       html, body {
         margin: 0;
         padding: 0;
-        background: #1f2937; /* Dark gray matching the window backgroundColor */
-        color: white;
+        background: rgba(0, 0, 0, 0.5);
+        background-image:
+          linear-gradient(rgba(128, 128, 128, 0.15) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(128, 128, 128, 0.15) 1px, transparent 1px);
+        background-size: 20px 20px;
+        color: rgba(128, 128, 128, 0.8);
         height: 100vh;
         overflow: hidden;
+        font-family: 'Courier New', monospace;
       }
       #root {
         height: 100vh;
         width: 100vw;
+        background: transparent;
       }
     </style>
     <script>

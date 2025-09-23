@@ -24,7 +24,6 @@ enum SupportedLLMProvider {
   OLLAMA = 'ollama',
   OPENAI = 'openai',
 }
-import { AGENT_INFO, SupportedAgent } from '@principal-ai/agent-monitoring';
 import { StorageNamespaces } from './all-namespaces';
 
 /**
@@ -841,16 +840,6 @@ export class MultiStoreManager extends EventEmitter {
         },
       },
       {
-        name: StaticNamespaces.AGENT_SESSIONS,
-        storageProvider: StorageProviderType.ELECTRON_STORE,
-        category: NamespaceCategory.AGENT_SESSION_EVENTS,
-        isPrimary: true,
-        config: {
-          path: 'agent-sessions',
-          defaults: {},
-        },
-      },
-      {
         name: StaticNamespaces.SESSION_SUMMARIES,
         storageProvider: StorageProviderType.ELECTRON_STORE,
         category: NamespaceCategory.CORE,
@@ -876,19 +865,6 @@ export class MultiStoreManager extends EventEmitter {
         config: {
           path: 'global-session-registry',
           defaults: {},
-        },
-      },
-      {
-        name: StaticNamespaces.AGENT_EVENT_INDEXES,
-        storageProvider: StorageProviderType.ELECTRON_STORE,
-        category: NamespaceCategory.CORE,
-        config: {
-          path: 'agent-event-indexes',
-          defaults: {
-            [AGENT_INFO[SupportedAgent.CLAUDE].storageEventsNamespace]: [],
-            [AGENT_INFO[SupportedAgent.OPENCODE].storageEventsNamespace]: [],
-            [AGENT_INFO[SupportedAgent.CLINE].storageEventsNamespace]: [],
-          },
         },
       },
       {

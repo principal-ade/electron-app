@@ -47,6 +47,7 @@ export interface WorkerResponse {
   id: string;
   type: WorkerResponseType;
   data?: string;
+  stderr?: string;
   exitCode?: number;
   error?: string;
   duration?: number;

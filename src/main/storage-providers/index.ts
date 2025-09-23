@@ -53,13 +53,10 @@ export {
 } from './typed-multistore-wrapper';
 
 // Export all namespaces type system
-export type {
-  AgentEventNamespace,
-  AGENT_EVENT_NAMESPACES,
+export {
   isValidNamespace as isValidAllNamespace,
   getAllNamespaces,
   isStaticNamespace,
-  isAgentEventNamespace,
 } from './all-namespaces';
 
 // Export backends

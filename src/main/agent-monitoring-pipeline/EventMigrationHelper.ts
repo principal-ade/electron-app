@@ -8,7 +8,6 @@
  */
 
 import {
-  NormalizedAgentSessionEvent,
   UniversalAgentSessionEvent,
   RepoNormalizedUniversalAgentSessionEvent,
   NormalizedPathInfo,
@@ -16,6 +15,7 @@ import {
   FileOperation,
   getFileOperation,
 } from '@principal-ai/agent-monitoring';
+import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
 
 export class EventMigrationHelper {
   /**

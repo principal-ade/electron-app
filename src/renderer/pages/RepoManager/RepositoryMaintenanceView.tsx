@@ -23,7 +23,6 @@ import { PackageLayer } from '@principal-ai/codebase-composition';
 import { CityMapManager } from './shared/CityMapManager';
 
 import type { Repository } from '../../../shared/types/repository.types';
-import type { A24zNote } from '../../../shared/main-process-api-interfaces/A24zAPI';
 import { RepositoryNote } from '../../../shared/main-process-api-interfaces/RepositoryNotesAPI';
 import { RepositoryNotesService } from '../../main-process-api/RepositoryNotesService';
 import { GitHubWebAdapters } from '../../adapters/GitHubWebAdapters';
@@ -64,8 +63,6 @@ interface RepositoryMaintenanceViewProps {
   cityDataCache?: unknown;
   treeStats?: FileTreeStats | null;
 
-  // a24z notes from parent (already loaded)
-  a24zNotes?: A24zNote[];
 
   // Package layers from parent
   packageLayers?: PackageLayer[] | null;
@@ -91,7 +88,6 @@ export const RepositoryMaintenanceView: React.FC<
   cacheService: sharedCacheService,
   cityDataCache,
   treeStats: sharedTreeStats,
-  a24zNotes: a24zNotesProp = [],
   packageLayers: packageLayersProp,
   onPackageLayersChange,
   fileColorHighlightLayers = [],
@@ -161,11 +157,6 @@ export const RepositoryMaintenanceView: React.FC<
     HighlightLayer[]
   >([]);
 
-  // a24z memory state - notes come from props, only manage the layer locally
-  const a24zNotes = a24zNotesProp; // Use the prop instead of local state
-  const [a24zHighlightLayer, setA24zHighlightLayer] =
-    useState<HighlightLayer | null>(null);
-  const [showA24zLayer, setShowA24zLayer] = useState(true);
 
   // Search state
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -341,20 +332,6 @@ export const RepositoryMaintenanceView: React.FC<
   const toolbarItems = useMemo<ToolbarItem[]>(() => {
     const items: ToolbarItem[] = [];
 
-    // a24z memory tool (for local sources from parent)
-    if (activeFileTreeSource?.type === 'local' && a24zNotes.length > 0) {
-      items.push({
-        id: 'a24z-memory',
-        label: 'a24z Memory',
-        shortLabel: 'a24z',
-        icon: <Brain />,
-        count: a24zNotes.length,
-        color: '#9333ea',
-        active: showA24zLayer,
-        onClick: () => setShowA24zLayer(!showA24zLayer),
-        tooltip: `${showA24zLayer ? 'Hide' : 'Show'} a24z memory coverage (${a24zNotes.length} notes)`,
-      });
-    }
 
     // Search results
     if (searchResults.length > 0) {
@@ -419,8 +396,6 @@ export const RepositoryMaintenanceView: React.FC<
     searchResults.length,
     selectedNoteIds.size,
     knipHighlightLayers,
-    a24zNotes.length,
-    showA24zLayer,
     activeFileTreeSource,
   ]);
 
@@ -789,76 +764,6 @@ export const RepositoryMaintenanceView: React.FC<
     fetchNotes();
   }, [repository.remoteUrl]);
 
-  // a24z notes are now loaded in RepositoryManager and passed as props
-
-  // Create a24z highlight layer from anchors
-  useEffect(() => {
-    if (!showA24zLayer || a24zNotes.length === 0) {
-      setA24zHighlightLayer(null);
-      return;
-    }
-
-    console.info(
-      '[MaintenanceView] Processing a24z notes for highlight layer:',
-      a24zNotes.length,
-      'notes',
-    );
-
-    // Collect all unique file paths from anchors
-    const filePaths = new Set<string>();
-    for (const note of a24zNotes) {
-      console.info('[MaintenanceView] Processing note:', {
-        id: note.id,
-        anchors: note.anchors,
-        type: note.type,
-        tags: note.tags,
-      });
-
-      if (note.anchors && Array.isArray(note.anchors)) {
-        for (const anchor of note.anchors) {
-          if (anchor && typeof anchor === 'string') {
-            // Remove leading slash if present
-            const cleanPath = anchor.startsWith('/')
-              ? anchor.substring(1)
-              : anchor;
-            filePaths.add(cleanPath);
-            console.info('[MaintenanceView] Added anchor path:', cleanPath);
-          }
-        }
-      }
-    }
-
-    console.info(
-      '[MaintenanceView] Total unique file paths from a24z notes:',
-      filePaths.size,
-    );
-
-    if (filePaths.size === 0) {
-      setA24zHighlightLayer(null);
-      return;
-    }
-
-    // Create highlight layer
-    const layer: HighlightLayer = {
-      id: 'a24z-memory',
-      name: `a24z Memory (${a24zNotes.length} notes)`,
-      enabled: true,
-      color: '#9333ea', // Purple color for a24z
-      priority: 15, // Lower priority than search/selection
-      items: Array.from(filePaths).map((path) => ({
-        path,
-        type: 'file' as const,
-        renderStrategy: 'border' as const, // Use border to not interfere with other highlights
-      })),
-    };
-
-    console.info(
-      '[MaintenanceView] Created a24z highlight layer with',
-      layer.items.length,
-      'items',
-    );
-    setA24zHighlightLayer(layer);
-  }, [a24zNotes, showA24zLayer]);
 
   // Create search highlight layer
   useEffect(() => {
@@ -1518,7 +1423,6 @@ export const RepositoryMaintenanceView: React.FC<
               const layers = [
                 ...fileColorHighlightLayers,
                 ...noteHighlightLayers,
-                ...(a24zHighlightLayer ? [a24zHighlightLayer] : []),
                 ...(searchHighlightLayer ? [searchHighlightLayer] : []),
                 ...(hoveredSearchLayer ? [hoveredSearchLayer] : []),
                 ...(selectedFileLayer ? [selectedFileLayer] : []),

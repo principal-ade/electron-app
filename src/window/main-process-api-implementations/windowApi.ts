@@ -52,4 +52,10 @@ export const windowAPI: WindowAPI = {
    */
   openCallimachusWindow: () =>
     ipcRenderer.invoke(WindowEvent.OPEN_CALLIMACHUS_WINDOW),
+
+  /**
+   * Open Alexandria Search window
+   */
+  openSearchWindow: () =>
+    ipcRenderer.invoke(WindowEvent.OPEN_SEARCH_WINDOW),
 };

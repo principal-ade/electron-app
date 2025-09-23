@@ -1,17 +1,15 @@
 /* Custom titlebar styles */
 .custom-titlebar {
-  height: 40px;
+  height: 56px;
   /* Background color now set dynamically via inline styles */
   display: flex;
   align-items: center;
   justify-content: space-between;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 9999;
+  position: relative; /* Contain absolutely positioned children */
+  flex-shrink: 0; /* Prevent titlebar from shrinking */
   -webkit-app-region: drag;
   user-select: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* macOS specific - leave space for traffic lights */
@@ -78,7 +76,3 @@
   height: 12px;
 }
 
-/* Adjust main content to account for titlebar */
-body.has-custom-titlebar {
-  padding-top: 40px;
-}

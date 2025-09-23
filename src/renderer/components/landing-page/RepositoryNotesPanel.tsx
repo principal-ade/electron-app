@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, Calendar } from 'lucide-react';
+import { Trash2, Calendar, Plus } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 import { RepositoryNotesService } from '../../main-process-api/RepositoryNotesService';
 import type { RepositoryNote } from '../../../shared/main-process-api-interfaces/RepositoryNotesAPI';
+import { AddNoteModal } from './AddNoteModal';
 
 interface RepositoryNotesPanelProps {
   repositoryPath: string;
@@ -18,6 +19,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
+  const [showAddNoteModal, setShowAddNoteModal] = useState(false);
 
   const loadNotes = async () => {
     try {
@@ -108,6 +110,14 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
     return 'Just now';
   };
 
+  // Reload notes when modal closes after adding a note
+  useEffect(() => {
+    if (!showAddNoteModal && repositoryPath) {
+      // Reload notes after modal closes
+      loadNotes();
+    }
+  }, [showAddNoteModal]);
+
   return (
     <div
       style={{
@@ -122,7 +132,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
     >
       <div
         style={{
-          fontSize: '11px',
+          fontSize: theme.fontSizes[1],
           color: theme.colors.textSecondary,
           marginBottom: '12px',
           fontWeight: 600,
@@ -133,9 +143,39 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
         }}
       >
         <span>Repository Notes</span>
-        <span style={{ fontSize: theme.fontSizes[0], fontWeight: 'normal' }}>
-          {isLoading ? 'Loading...' : `${notes.length} notes`}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: theme.fontSizes[1], fontWeight: 'normal' }}>
+            {isLoading ? 'Loading...' : `${notes.length} notes`}
+          </span>
+          <button
+            onClick={() => setShowAddNoteModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              backgroundColor: 'transparent',
+              color: theme.colors.primary,
+              border: `1px solid ${theme.colors.primary}`,
+              borderRadius: '4px',
+              fontSize: theme.fontSizes[0],
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              textTransform: 'none',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = `${theme.colors.primary}15`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+            title="Add a note to this repository"
+          >
+            <Plus size={14} />
+            Add Note
+          </button>
+        </div>
       </div>
 
       <div
@@ -151,7 +191,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
               padding: '20px',
               textAlign: 'center',
               color: theme.colors.textSecondary,
-              fontSize: '12px',
+              fontSize: theme.fontSizes[1],
             }}
           >
             Loading notes...
@@ -162,7 +202,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
               padding: '20px',
               textAlign: 'center',
               color: theme.colors.error || '#ef4444',
-              fontSize: '12px',
+              fontSize: theme.fontSizes[1],
             }}
           >
             {error}
@@ -173,7 +213,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
               padding: '20px',
               textAlign: 'center',
               color: theme.colors.error || '#ef4444',
-              fontSize: '12px',
+              fontSize: theme.fontSizes[1],
             }}
           >
             Error: Invalid notes data
@@ -184,12 +224,12 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
               padding: '40px 20px',
               textAlign: 'center',
               color: theme.colors.textSecondary,
-              fontSize: '12px',
+              fontSize: theme.fontSizes[1],
             }}
           >
             <div style={{ marginBottom: '8px' }}>📝</div>
             <div>No notes yet</div>
-            <div style={{ fontSize: '11px', marginTop: '4px' }}>
+            <div style={{ fontSize: theme.fontSizes[0], marginTop: '4px' }}>
               Click "Add Note" to create your first note
             </div>
           </div>
@@ -250,7 +290,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
                   {deletingNoteId === note.id ? (
                     <div style={{ width: '12px', height: '12px' }}>⋯</div>
                   ) : (
-                    <Trash2 size={12} />
+                    <Trash2 size={14} />
                   )}
                 </button>
 
@@ -287,7 +327,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
                           backgroundColor: `${theme.colors.primary}15`,
                           color: theme.colors.primary,
                           borderRadius: '10px',
-                          fontSize: '10px',
+                          fontSize: theme.fontSizes[0],
                           fontWeight: 500,
                         }}
                       >
@@ -309,7 +349,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
                   }}
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                    <Calendar size={9} />
+                    <Calendar size={10} />
                     {getRelativeTime(note.timestamp)}
                   </span>
                   {note.confidence && (
@@ -319,7 +359,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
                         backgroundColor: `${theme.colors.success}15`,
                         color: theme.colors.success,
                         borderRadius: '8px',
-                        fontSize: '9px',
+                        fontSize: theme.fontSizes[0],
                         fontWeight: 500,
                       }}
                     >
@@ -333,7 +373,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
                         backgroundColor: `${theme.colors.warning}15`,
                         color: theme.colors.warning,
                         borderRadius: '8px',
-                        fontSize: '9px',
+                        fontSize: theme.fontSizes[0],
                         fontWeight: 500,
                       }}
                     >
@@ -346,6 +386,18 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* Add Note Modal */}
+      {showAddNoteModal && (
+        <AddNoteModal
+          isOpen={showAddNoteModal}
+          onClose={() => setShowAddNoteModal(false)}
+          onNoteAdded={() => {
+            // Notes will be refreshed when modal closes due to the useEffect above
+          }}
+          repositoryPath={repositoryPath}
+        />
+      )}
     </div>
   );
 };

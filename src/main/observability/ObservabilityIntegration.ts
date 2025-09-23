@@ -6,68 +6,94 @@
  */
 
 import { EventEmitter } from 'events';
-import { ObservabilitySDK } from '@a24z/observability-sdk';
+// @ts-ignore - Type definitions not available yet
+import { TursoObservabilitySDK } from '@a24z/observability-sdk';
+
+interface TursoConfig {
+  url: string;
+  authToken?: string;
+}
 import type {
   RepoNormalizedUniversalAgentSessionEvent,
-  NormalizedAgentSessionEvent,
   SupportedAgent,
 } from '@principal-ai/agent-monitoring';
+import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
+import { SecretManager } from '../stores/SecretManager';
 
-interface ObservabilityConfig {
-  apiKey?: string;
-  endpoint?: string;
-  databaseUrl?: string;
+export interface ObservabilityConfig {
+  tursoUrl?: string;
+  tursoAuthToken?: string;
   environment?: 'development' | 'staging' | 'production';
   batchSize?: number;
   flushInterval?: number;
   debug?: boolean;
+  enabled?: boolean;
 }
 
 export class ObservabilityIntegration extends EventEmitter {
-  private sdk: ObservabilitySDK;
+  private sdk: TursoObservabilitySDK | null = null;
   private isInitialized: boolean = false;
   private eventCount: number = 0;
   private errorCount: number = 0;
+  private config: ObservabilityConfig;
+  private secretManager: SecretManager;
 
   constructor(config: ObservabilityConfig = {}) {
     super();
+    this.config = config;
+    this.secretManager = SecretManager.getInstance();
 
-    const databaseUrl =
-      'postgres://postgres.hdbuazqkffjfnsppeajp:I93y1CFdDngWRgT2@aws-1-us-west-1.pooler.supabase.com:6543/postgres?sslmode=no-verify&supa=base-pooler.x';
-    //config.databaseUrl || process.env.OBSERVABILITY_DATABASE_URL || process.env.DATABASE_URL;
+    // Don't initialize SDK in constructor - wait for initialize() to be called
+    console.log('[ObservabilityIntegration] Created, waiting for initialization');
+  }
 
-    if (!databaseUrl) {
-      console.warn(
-        '[ObservabilityIntegration] No database URL provided, observability disabled',
-      );
-      this.sdk = null as any;
-      return;
-    }
-
-    // Override console.log to filter out verbose SDK logging
-    const originalConsoleLog = console.log;
-    const filteredConsoleLog = (...args: any[]) => {
-      // Filter out ObservabilitySDK verbose logs
-      if (
-        typeof args[0] === 'string' &&
-        (args[0].includes('[ObservabilitySDK] Event data:') ||
-          args[0].includes('[ObservabilitySDK] Processing event type:'))
-      ) {
-        return;
+  /**
+   * Load configuration from SecretManager
+   */
+  private async loadConfiguration(): Promise<ObservabilityConfig | null> {
+    try {
+      const stored = await this.secretManager.getSecrets('observability-config');
+      if (stored && Object.keys(stored).length > 0) {
+        return {
+          tursoUrl: stored.tursoUrl,
+          tursoAuthToken: stored.tursoAuthToken,
+          environment: (stored.environment as any) || 'development',
+          enabled: stored.enabled === 'true',
+          debug: stored.debug === 'true',
+        };
       }
-      originalConsoleLog.apply(console, args);
-    };
+    } catch (error) {
+      console.error('[ObservabilityIntegration] Failed to load configuration:', error);
+    }
+    return null;
+  }
 
-    // Temporarily replace console.log during SDK initialization
-    console.log = filteredConsoleLog;
+  /**
+   * Save configuration to SecretManager
+   */
+  async saveConfiguration(config: ObservabilityConfig): Promise<void> {
+    const secrets: Record<string, string> = {};
+    if (config.tursoUrl) secrets.tursoUrl = config.tursoUrl;
+    if (config.tursoAuthToken) secrets.tursoAuthToken = config.tursoAuthToken;
+    if (config.environment) secrets.environment = config.environment;
+    secrets.enabled = config.enabled ? 'true' : 'false';
+    secrets.debug = config.debug ? 'true' : 'false';
 
-    // Initialize the observability SDK with the correct constructor signature
-    this.sdk = new ObservabilitySDK(databaseUrl);
+    await this.secretManager.storeSecrets('observability-config', 'observability-config', secrets);
+    this.config = config;
+  }
 
-    // Keep the filtered console.log active since SDK will continue to log
-    // Note: This affects all console.log calls in this process, but filters only ObservabilitySDK messages
+  /**
+   * Initialize SDK with Turso configuration
+   */
+  private async initializeSDK(config: TursoConfig): Promise<void> {
+    // Initialize the Turso SDK
+    this.sdk = new TursoObservabilitySDK(config);
 
-    console.log('[ObservabilityIntegration] Initialized with database URL');
+    // Initialize the database schema (creates tables if they don't exist)
+    await this.sdk.initializeSchema();
+
+    console.log('[ObservabilityIntegration] Turso SDK initialized with schema');
   }
 
   /**
@@ -78,16 +104,30 @@ export class ObservabilityIntegration extends EventEmitter {
       return;
     }
 
-    if (!this.sdk) {
-      // No SDK available (no database URL provided)
-      console.log(
-        '[ObservabilityIntegration] Skipping initialization - no database URL',
-      );
-      return;
-    }
-
     try {
-      // The SDK doesn't have an initialize method, it's ready after construction
+      // Load configuration from SecretManager
+      const loadedConfig = await this.loadConfiguration();
+      if (loadedConfig) {
+        this.config = { ...this.config, ...loadedConfig };
+      }
+
+      // Check if we have Turso configuration
+      const tursoUrl = this.config.tursoUrl || process.env.TURSO_DATABASE_URL;
+      const tursoAuthToken = this.config.tursoAuthToken || process.env.TURSO_AUTH_TOKEN;
+
+      if (!tursoUrl || this.config.enabled === false) {
+        console.log(
+          '[ObservabilityIntegration] Observability disabled or no Turso URL configured',
+        );
+        return;
+      }
+
+      // Initialize the SDK with Turso configuration
+      await this.initializeSDK({
+        url: tursoUrl,
+        authToken: tursoAuthToken,
+      });
+
       this.isInitialized = true;
       console.log('[ObservabilityIntegration] SDK ready for event processing');
       this.emit('initialized');
@@ -109,9 +149,8 @@ export class ObservabilityIntegration extends EventEmitter {
     }
 
     try {
-      // Use the new processEvent method that routes to the appropriate table
-      // The SDK will handle different event types automatically
-      await this.sdk.processEvent(event as any);
+      // Use the Turso SDK's writeNormalizedEvent method
+      await this.sdk.writeNormalizedEvent(event);
 
       this.eventCount++;
 
@@ -176,6 +215,62 @@ export class ObservabilityIntegration extends EventEmitter {
       errorCount: this.errorCount,
       errorRate: this.eventCount > 0 ? this.errorCount / this.eventCount : 0,
     };
+  }
+
+  /**
+   * Test connection with provided configuration
+   */
+  async testConnection(config: ObservabilityConfig): Promise<{ success: boolean; error?: string }> {
+    if (!config.tursoUrl) {
+      return { success: false, error: 'Turso Database URL is required' };
+    }
+
+    try {
+      // Create a temporary SDK instance to test the connection
+      const testSdk = new TursoObservabilitySDK({
+        url: config.tursoUrl,
+        authToken: config.tursoAuthToken,
+      });
+
+      // Initialize the schema (creates tables if they don't exist)
+      await testSdk.initializeSchema();
+
+      // Try to perform a simple operation to verify connectivity
+      // The SDK will throw an error if it can't connect
+      await testSdk.getRecentSessions(1);
+
+      // Clean up the test SDK
+      await testSdk.close();
+
+      return { success: true };
+    } catch (error) {
+      console.error('[ObservabilityIntegration] Connection test failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      };
+    }
+  }
+
+  /**
+   * Get current configuration
+   */
+  async getConfiguration(): Promise<ObservabilityConfig> {
+    const stored = await this.loadConfiguration();
+    return stored || this.config;
+  }
+
+  /**
+   * Update configuration and restart if needed
+   */
+  async updateConfiguration(config: ObservabilityConfig): Promise<void> {
+    await this.saveConfiguration(config);
+
+    // If already initialized and config changed, restart
+    if (this.isInitialized) {
+      await this.shutdown();
+      await this.initialize();
+    }
   }
 }
 

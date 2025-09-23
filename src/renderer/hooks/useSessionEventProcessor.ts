@@ -3,7 +3,7 @@
  */
 
 import { useCallback, useRef } from 'react';
-import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
 import {
   sessionEventProcessor,
   SessionState,

@@ -4,16 +4,14 @@ import path from 'path';
 import { APP_BRANDING } from '../shared/config/appBranding';
 import { initializeStorage } from './stores/initialization';
 import { ElectronMCPIntegration } from './mcp-app-control/mcp-integration';
-import { AgentSessionEventsHttpBridge } from './agent-session-events/AgentSessionEventsHttpBridge';
+// import { AgentSessionEventsHttpBridge } from './agent-session-events/AgentSessionEventsHttpBridge';
+import { startEventServer, stopEventServer, getEventServerManager } from './agent-session-events/EventServerManager';
 import {
   startPlanningMCPBridge,
   stopPlanningMCPBridge,
 } from './planning-mcp/PlanningMCPBridge';
 import { applicationWindows } from './window/modernWindowManager';
-import { agentSessionArchivingService } from './agent-sessions/AgentSessionArchivingService';
-import { agentSessionAutoArchivingService } from './stores/AgentSessionAutoArchivingService';
-import { registerArchiveHandlers } from './stores/archiveHandlers';
-import { setupSessionHandlers } from './agent-sessions/agentSessionHandlers';
+import { registerAgentSessionSDKHandlers } from './agent-session-events/agentSessionSDKHandlers';
 
 // Import all IPC handlers
 import { registerWindowManagerIpcHandlers } from './window/windowManagerHandlers';
@@ -34,7 +32,6 @@ import { registerFeedbackHandlers } from './services/ipc/feedback/feedbackHandle
 import { getTerminalManager } from './terminalWrapper';
 import { excalidrawHandlers } from './drawings/excalidrawHandlers';
 import { registerUserPromptHandlers } from './principal-mcp/userPromptHandlers';
-import { registerSessionViewHandlers } from './services/ipc/sessionView/sessionViewHandlers';
 
 import { setupAgentConfigHandlers } from './agent-management/agentConfigHandlers';
 import { registerFileSystemIpcHandlers } from './file-system/fileSystemHandlers';
@@ -59,9 +56,10 @@ import {
   registerDocumentSearchHandlers,
   shutdownDocumentSearch,
 } from './services/ipc/documentSearchHandlers';
+import { registerObservabilityHandlers } from './observability/observabilityHandlers';
 
 let mcpIntegration: ElectronMCPIntegration | null = null;
-let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
+// let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let planningMCPBridgePort: number | null = null;
 
 const agentEventsBridgePort = APP_BRANDING.BRIDGE_PORTS.AGENT_SESSION_EVENTS;
@@ -128,18 +126,30 @@ const setupKnipAnalysisHandler = () => {
 
 // Setup HTTP bridges
 const setupHttpBridges = async () => {
-  // Initialize MCP Integration and HTTP Bridges first
+  // Initialize MCP Integration first
   mcpIntegration = new ElectronMCPIntegration();
-  agentSessionEventsHttpBridge = new AgentSessionEventsHttpBridge(
-    agentEventsBridgePort,
-  );
 
-  // Start agent session events bridge
-  await agentSessionEventsHttpBridge
-    .start()
-    .catch((err: any) =>
-      console.error('Agent Session Events Bridge failed to start:', err),
+  // Start the event processing server in utility process
+  // This replaces the old AgentSessionEventsHttpBridge
+  try {
+    await startEventServer();
+    const serverManager = getEventServerManager();
+    const status = serverManager.getStatus();
+    console.log(
+      `[Main Process] Event Processing Server started on port ${status.port}`,
     );
+
+    // Listen for server events
+    serverManager.on('server-error', (error) => {
+      console.error('[Main Process] Event server error:', error);
+    });
+
+    serverManager.on('stopped', (code) => {
+      console.warn(`[Main Process] Event server stopped with code ${code}`);
+    });
+  } catch (err) {
+    console.error('Event Processing Server failed to start:', err);
+  }
 
   // Start Planning MCP Bridge
   try {
@@ -229,17 +239,17 @@ const registerAllIpcHandlers = async () => {
   registerGitHubIpcHandlers(applicationWindows);
   registerGitHandlers();
   registerGitWatcherHandlers();
-  setupSessionHandlers();
+  registerAgentSessionSDKHandlers(); // SDK-based handlers replace old session handlers
   // Agent installation handlers removed - we only configure hooks now
   setupAgentConfigHandlers();
   setupShellHandlers();
-  registerArchiveHandlers();
   registerDockerHandlers();
   registerOptimizedDockerHandlers();
   registerKnipAnalysisHandlers();
   registerKnipHandlers();
   registerPlanningHandlers();
   registerDocumentSearchHandlers();
+  registerObservabilityHandlers();
 
   // LLM Models handlers have been removed
   const typedStore = await getTypedStorageManager();
@@ -259,7 +269,6 @@ const registerAllIpcHandlers = async () => {
   registerSystemHandlers();
   registerFeedbackHandlers();
   registerUserPromptHandlers();
-  registerSessionViewHandlers();
 };
 
 // Setup terminal manager
@@ -297,40 +306,7 @@ export const initializeServices = async () => {
     setupTerminalManager();
   }, 1000);
 
-  // Setup periodic cleanup for old archives
-  setupArchiveCleanup();
-
   // Agent auto-update removed - agents are installed externally
-};
-
-// Setup periodic cleanup for archived sessions
-const setupArchiveCleanup = () => {
-  // Initialize auto-archiving service
-  agentSessionAutoArchivingService
-    .initialize()
-    .catch((err) =>
-      console.error(
-        '[Main] Agent session auto-archiving service initialization failed:',
-        err,
-      ),
-    );
-
-  // Run cleanup on startup
-  setTimeout(() => {
-    agentSessionArchivingService
-      .cleanupOldArchives()
-      .catch((err) => console.error('[Main] Archive cleanup failed:', err));
-  }, 30000); // 30 seconds after startup
-
-  // Run cleanup every 24 hours
-  setInterval(
-    () => {
-      agentSessionArchivingService
-        .cleanupOldArchives()
-        .catch((err) => console.error('[Main] Archive cleanup failed:', err));
-    },
-    24 * 60 * 60 * 1000,
-  );
 };
 
 // Cleanup function for app shutdown
@@ -349,9 +325,12 @@ export const shutdownServices = async () => {
     console.log('[Main Process] ElectronMCPIntegration shutdown complete.');
   }
 
-  if (agentSessionEventsHttpBridge) {
-    await agentSessionEventsHttpBridge.stop();
-    console.log('[Main Process] Agent Events HTTP Bridge stopped.');
+  // Stop the event processing server
+  try {
+    await stopEventServer();
+    console.log('[Main Process] Event Processing Server stopped.');
+  } catch (err) {
+    console.error('[Main Process] Failed to stop event server:', err);
   }
 
   // Stop Planning MCP Bridge

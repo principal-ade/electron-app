@@ -92,9 +92,46 @@ export class GitClientFactory {
         return { value };
       },
 
-      raw: async (args: string[]) => {
-        const result = await git.raw(_baseDir, args);
-        return result.stdout || '';
+      raw: async (args: string[], options?: any) => {
+        try {
+          const result = await git.raw(_baseDir, args, options);
+
+          // Return stdout for successful commands
+          if (result.success) {
+            return result.stdout || '';
+          }
+
+          // Special case: git ls-remote with no refs returns exit code 2
+          // This happens with empty repositories and is not an error
+          if (args[0] === 'ls-remote' && result.exitCode === 2 && !result.stderr) {
+            return '';  // Return empty string for empty repo
+          }
+
+          // For failed commands, throw an error with the stderr message
+          const errorMsg = result.stderr || result.stdout || `Command failed with exit code ${result.exitCode}`;
+          throw new Error(errorMsg);
+        } catch (error) {
+          // If the error is the "object could not be cloned" error, it's an IPC issue
+          if (error instanceof Error && error.message.includes('An object could not be cloned')) {
+            // This means there's a serialization issue with the options object
+            // Try again without the problematic options
+            try {
+              const simpleOptions = {
+                env: options?.env,
+                timeout: options?.timeout
+              };
+              const result = await git.raw(_baseDir, args, simpleOptions);
+              if (result.success) {
+                return result.stdout || '';
+              }
+              const errorMsg = result.stderr || result.stdout || `Command failed with exit code ${result.exitCode}`;
+              throw new Error(errorMsg);
+            } catch (retryError) {
+              throw retryError;
+            }
+          }
+          throw error;
+        }
       },
     };
   }

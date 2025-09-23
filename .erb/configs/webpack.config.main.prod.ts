@@ -12,6 +12,7 @@ import baseConfig from './webpack.config.main.base';
 import webpackPaths from './webpack.paths';
 import checkNodeEnv from '../scripts/check-node-env';
 import deleteSourceMaps from '../scripts/delete-source-maps';
+import { dependencies as externals } from '../../package.json';
 
 checkNodeEnv('production');
 deleteSourceMaps();
@@ -27,7 +28,23 @@ const configuration: webpack.Configuration = {
     main: path.join(webpackPaths.srcMainPath, 'main.ts'),
     preload: path.join(webpackPaths.srcWindowPath, 'preload.ts'),
     terminal: path.join(webpackPaths.srcMainPath, 'terminal.ts'),
+    'event-worker': path.join(webpackPaths.srcPath, 'event-processing-server', 'worker-entry.ts'),
   },
+
+  // Override externals - don't externalize dependencies for event-worker
+  externals: [
+    ({ request, context, contextInfo, getResolve }, callback) => {
+      // For the event-worker entry, bundle everything
+      if (contextInfo?.issuer?.includes('event-processing-server')) {
+        return callback();
+      }
+      // For main and preload, externalize node_modules as usual
+      if (Object.keys(externals || {}).includes(request) || ['node-pty', 'keytar'].includes(request)) {
+        return callback(null, `commonjs ${request}`);
+      }
+      callback();
+    },
+  ],
 
   output: {
     path: webpackPaths.distMainPath,

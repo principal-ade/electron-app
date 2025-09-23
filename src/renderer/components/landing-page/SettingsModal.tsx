@@ -39,6 +39,7 @@ import { IDEConfigurationView } from '../../components/configuration/IDEConfigur
 import { predefinedThemes, getThemeNames } from '../../themes/predefinedThemes';
 import { ThemeService } from '../../services/ThemeService';
 import { WindowService } from '../../main-process-api/WindowService';
+import AppIcon from '../../../../assets/icons/icon-48x48.png';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -81,7 +82,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [agentStatus, setAgentStatus] =
     useState<AgentInstallationStatus | null>(null);
   const [activeAgentView, setActiveAgentView] = useState<
-    'claude' | 'cline' | 'gemini' | 'opencode' | null
+    'claude' | 'cline' | 'opencode' | null
   >(null);
   const [activeToolsView, setActiveToolsView] = useState<
     'terminal' | 'ide' | null
@@ -232,12 +233,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
       // Check agent status
       checkAgentStatus();
-
-      // Check CLI tools and Docker when developer tab is active
-      if (activeCategory === 'developer') {
-        checkCliTools();
-        checkDockerStatus();
-      }
     }
   }, [isOpen, activeCategory, checkAgentStatus]);
 
@@ -647,94 +642,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                 </button>
 
-                <button
-                  onClick={() => {
-                    setActiveCategory('developer-tools');
-                    setActiveAgentView(null);
-                    setActiveToolsView(null);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor:
-                      activeCategory === 'developer-tools'
-                        ? theme.colors.primary + '20'
-                        : 'transparent',
-                    color:
-                      activeCategory === 'developer-tools'
-                        ? theme.colors.primary
-                        : theme.colors.text,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    fontSize: '14px',
-                    fontWeight:
-                      activeCategory === 'developer-tools' ? 600 : 500,
-                    textAlign: 'left',
-                    width: '100%',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeCategory !== 'developer-tools') {
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.backgroundTertiary;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeCategory !== 'developer-tools') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  <Terminal size={18} />
-                  Developer Tools
-                </button>
-
-                <button
-                  onClick={() => {
-                    setActiveCategory('developer');
-                    setActiveAgentView(null);
-                    setActiveToolsView(null);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor:
-                      activeCategory === 'developer'
-                        ? theme.colors.primary + '20'
-                        : 'transparent',
-                    color:
-                      activeCategory === 'developer'
-                        ? theme.colors.primary
-                        : theme.colors.text,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    fontSize: '14px',
-                    fontWeight: activeCategory === 'developer' ? 600 : 500,
-                    textAlign: 'left',
-                    width: '100%',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeCategory !== 'developer') {
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.backgroundTertiary;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeCategory !== 'developer') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                >
-                  <Code size={18} />
-                  Developer
-                </button>
               </div>
             </div>
 
@@ -774,7 +681,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         color: theme.colors.text,
                       }}
                     >
-                      About Specktor
+                      About Principal AI
                     </h4>
                     <div
                       style={{
@@ -797,13 +704,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                             width: '48px',
                             height: '48px',
                             borderRadius: '12px',
-                            background: `linear-gradient(135deg, ${theme.colors.primary}, #10b981)`,
+                            overflow: 'hidden',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                           }}
                         >
-                          <Sparkles size={24} color="white" />
+                          <img
+                            src={AppIcon}
+                            alt="Principal AI"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'contain',
+                            }}
+                          />
                         </div>
                         <div>
                           <p
@@ -813,7 +728,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               margin: '0 0 4px 0',
                             }}
                           >
-                            Specktor
+                            Principal AI
                           </p>
                           <p
                             style={{
@@ -1505,7 +1420,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               color: theme.colors.text,
                               border: `1px solid ${theme.colors.border}`,
                               borderRadius: '4px',
-                              fontFamily: 'monospace',
+                              fontFamily: theme.fonts.monospace,
                               fontSize: '12px',
                               resize: 'vertical',
                             }}
@@ -1738,107 +1653,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                               <button
                                 onClick={() => {
                                   setActiveAgentView('claude');
-                                  setAgentViewLayout('simple');
-                                }}
-                                style={{
-                                  padding: '8px 16px',
-                                  borderRadius: '6px',
-                                  border: `1px solid ${theme.colors.border}`,
-                                  backgroundColor: theme.colors.background,
-                                  color: theme.colors.text,
-                                  cursor: 'pointer',
-                                  fontSize: '13px',
-                                }}
-                              >
-                                Configure
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Gemini */}
-                          <div
-                            style={{
-                              backgroundColor: theme.colors.backgroundSecondary,
-                              borderRadius: '12px',
-                              padding: '20px',
-                              border: `1px solid ${theme.colors.border}`,
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '12px',
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    width: '40px',
-                                    height: '40px',
-                                    borderRadius: '8px',
-                                    background:
-                                      'linear-gradient(135deg, #4285F420, #4285F440)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                  }}
-                                >
-                                  <Bot size={20} color="#4285F4" />
-                                </div>
-                                <div>
-                                  <h5
-                                    style={{
-                                      fontSize: '16px',
-                                      fontWeight: 600,
-                                      margin: '0 0 4px 0',
-                                    }}
-                                  >
-                                    Gemini
-                                  </h5>
-                                  <p
-                                    style={{
-                                      fontSize: '13px',
-                                      color: theme.colors.textSecondary,
-                                      margin: 0,
-                                    }}
-                                  >
-                                    Google's AI assistant
-                                  </p>
-                                  {agentStatus?.gemini?.isInstalled && (
-                                    <div
-                                      style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        marginTop: '4px',
-                                      }}
-                                    >
-                                      <CheckCircle
-                                        size={12}
-                                        color={theme.colors.success}
-                                      />
-                                      <span
-                                        style={{
-                                          fontSize: '11px',
-                                          color: theme.colors.success,
-                                        }}
-                                      >
-                                        Installed
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => {
-                                  setActiveAgentView('gemini');
                                   setAgentViewLayout('simple');
                                 }}
                                 style={{
@@ -2105,16 +1919,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                           onBackToSetup={() => setAgentViewLayout('simple')}
                         />
                       )}
-                      {activeAgentView === 'gemini' && agentStatus && (
-                        <AgentConfigurationView
-                          agentType={SupportedAgent.GEMINI}
-                          agentStatus={agentStatus.gemini}
-                          checkAgentStatus={checkAgentStatus}
-                          viewLayout={agentViewLayout}
-                          onShowDetails={() => setAgentViewLayout('detailed')}
-                          onBackToSetup={() => setAgentViewLayout('simple')}
-                        />
-                      )}
                       {activeAgentView === 'opencode' && agentStatus && (
                         <AgentConfigurationView
                           agentType={SupportedAgent.OPENCODE}
@@ -2130,220 +1934,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               )}
 
-              {/* Developer Tools Settings */}
-              {activeCategory === 'developer-tools' && (
-                <div style={{ maxWidth: '100%', height: '100%' }}>
-                  {!activeToolsView ? (
-                    <div style={{ maxWidth: '800px' }}>
-                      <h3
-                        style={{
-                          fontSize: '24px',
-                          fontWeight: 600,
-                          marginBottom: '32px',
-                          color: theme.colors.text,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                        }}
-                      >
-                        <Terminal size={24} />
-                        Developer Tools
-                      </h3>
-
-                      {/* Developer Tools Section */}
-                      <div style={{ marginBottom: '32px' }}>
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '12px',
-                          }}
-                        >
-                          {/* Terminal */}
-                          <div
-                            style={{
-                              backgroundColor: theme.colors.backgroundSecondary,
-                              borderRadius: '12px',
-                              padding: '20px',
-                              border: `1px solid ${theme.colors.border}`,
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '12px',
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    width: '40px',
-                                    height: '40px',
-                                    borderRadius: '8px',
-                                    background:
-                                      'linear-gradient(135deg, #000000, #333333)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                  }}
-                                >
-                                  <Terminal size={20} color="white" />
-                                </div>
-                                <div>
-                                  <h5
-                                    style={{
-                                      fontSize: '16px',
-                                      fontWeight: 600,
-                                      margin: '0 0 4px 0',
-                                    }}
-                                  >
-                                    Terminal
-                                  </h5>
-                                  <p
-                                    style={{
-                                      fontSize: '13px',
-                                      color: theme.colors.textSecondary,
-                                      margin: 0,
-                                    }}
-                                  >
-                                    Terminal integration settings
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => setActiveToolsView('terminal')}
-                                style={{
-                                  padding: '8px 16px',
-                                  borderRadius: '6px',
-                                  border: `1px solid ${theme.colors.border}`,
-                                  backgroundColor: theme.colors.background,
-                                  color: theme.colors.text,
-                                  cursor: 'pointer',
-                                  fontSize: '13px',
-                                }}
-                              >
-                                Configure
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* IDE/Editor */}
-                          <div
-                            style={{
-                              backgroundColor: theme.colors.backgroundSecondary,
-                              borderRadius: '12px',
-                              padding: '20px',
-                              border: `1px solid ${theme.colors.border}`,
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '12px',
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    width: '40px',
-                                    height: '40px',
-                                    borderRadius: '8px',
-                                    background:
-                                      'linear-gradient(135deg, #007ACC20, #007ACC40)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                  }}
-                                >
-                                  <Code size={20} color="#007ACC" />
-                                </div>
-                                <div>
-                                  <h5
-                                    style={{
-                                      fontSize: '16px',
-                                      fontWeight: 600,
-                                      margin: '0 0 4px 0',
-                                    }}
-                                  >
-                                    IDE/Editor
-                                  </h5>
-                                  <p
-                                    style={{
-                                      fontSize: '13px',
-                                      color: theme.colors.textSecondary,
-                                      margin: 0,
-                                    }}
-                                  >
-                                    Code editor integration settings
-                                  </p>
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => setActiveToolsView('ide')}
-                                style={{
-                                  padding: '8px 16px',
-                                  borderRadius: '6px',
-                                  border: `1px solid ${theme.colors.border}`,
-                                  backgroundColor: theme.colors.background,
-                                  color: theme.colors.text,
-                                  cursor: 'pointer',
-                                  fontSize: '13px',
-                                }}
-                              >
-                                Configure
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ height: '100%', overflow: 'auto' }}>
-                      <div
-                        style={{
-                          padding: '20px 0',
-                          borderBottom: `1px solid ${theme.colors.border}`,
-                          marginBottom: '20px',
-                        }}
-                      >
-                        <button
-                          onClick={() => setActiveToolsView(null)}
-                          style={{
-                            padding: '8px 16px',
-                            borderRadius: '6px',
-                            border: `1px solid ${theme.colors.border}`,
-                            backgroundColor: theme.colors.background,
-                            color: theme.colors.text,
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            marginBottom: '16px',
-                          }}
-                        >
-                          ← Back to Developer Tools
-                        </button>
-                      </div>
-                      {activeToolsView === 'terminal' && (
-                        <TerminalConfigurationView />
-                      )}
-                      {activeToolsView === 'ide' && <IDEConfigurationView />}
-                    </div>
-                  )}
-                </div>
-              )}
 
               {/* Updates Settings */}
               {activeCategory === 'updates' && (
@@ -2724,420 +2314,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
               )}
 
-              {/* Developer Settings */}
-              {activeCategory === 'developer' && (
-                <div style={{ maxWidth: '800px' }}>
-                  <h3
-                    style={{
-                      fontSize: '24px',
-                      fontWeight: 600,
-                      marginBottom: '32px',
-                      color: theme.colors.text,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                    }}
-                  >
-                    <Code size={24} />
-                    Developer Tools
-                  </h3>
-
-                  {/* Store Viewer */}
-                  <div style={{ marginBottom: '24px' }}>
-                    <div
-                      style={{
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        borderRadius: '12px',
-                        padding: '20px',
-                        border: `1px solid ${theme.colors.border}`,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <div>
-                          <h4
-                            style={{
-                              fontSize: '16px',
-                              fontWeight: 600,
-                              margin: '0 0 8px 0',
-                            }}
-                          >
-                            Database Viewer
-                          </h4>
-                          <p
-                            style={{
-                              fontSize: '14px',
-                              margin: 0,
-                              color: theme.colors.textSecondary,
-                            }}
-                          >
-                            Inspect and manage application data stored in the
-                            local database
-                          </p>
-                        </div>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await WindowService.openStoreViewer();
-                            } catch (error) {
-                              console.error(
-                                'Failed to open store viewer:',
-                                error,
-                              );
-                            }
-                          }}
-                          style={{
-                            padding: '10px 20px',
-                            borderRadius: '8px',
-                            border: 'none',
-                            backgroundColor: theme.colors.primary,
-                            color: 'white',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'all 0.2s',
-                          }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.transform = 'scale(1.02)')
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.transform = 'scale(1)')
-                          }
-                        >
-                          <Database size={16} />
-                          Open Viewer
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Docker Status */}
-                  <div style={{ marginBottom: '24px' }}>
-                    <div
-                      style={{
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        borderRadius: '12px',
-                        padding: '20px',
-                        border: `1px solid ${theme.colors.border}`,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                        }}
-                      >
-                        <div style={{ flex: 1 }}>
-                          <h4
-                            style={{
-                              fontSize: '16px',
-                              fontWeight: 600,
-                              margin: '0 0 8px 0',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                            }}
-                          >
-                            <Container size={20} />
-                            Docker Integration
-                          </h4>
-                          <p
-                            style={{
-                              fontSize: '14px',
-                              margin: 0,
-                              color: theme.colors.textSecondary,
-                            }}
-                          >
-                            Run code analysis tools like Knip in isolated Docker
-                            containers
-                          </p>
-
-                          {/* Docker Status Info */}
-                          {dockerStatus && (
-                            <div
-                              style={{
-                                marginTop: '12px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '8px',
-                              }}
-                            >
-                              {/* Installation Status */}
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                }}
-                              >
-                                {dockerStatus.installed ? (
-                                  <CheckCircle
-                                    size={16}
-                                    style={{ color: theme.colors.success }}
-                                  />
-                                ) : (
-                                  <AlertCircle
-                                    size={16}
-                                    style={{ color: theme.colors.error }}
-                                  />
-                                )}
-                                <span
-                                  style={{
-                                    fontSize: '13px',
-                                    color: theme.colors.text,
-                                  }}
-                                >
-                                  Docker{' '}
-                                  {dockerStatus.installed
-                                    ? `installed (v${dockerStatus.version || 'unknown'})`
-                                    : 'not installed'}
-                                </span>
-                              </div>
-
-                              {/* Running Status */}
-                              {dockerStatus.installed && (
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                  }}
-                                >
-                                  {dockerStatus.running ? (
-                                    <CheckCircle
-                                      size={16}
-                                      style={{ color: theme.colors.success }}
-                                    />
-                                  ) : (
-                                    <AlertCircle
-                                      size={16}
-                                      style={{ color: theme.colors.warning }}
-                                    />
-                                  )}
-                                  <span
-                                    style={{
-                                      fontSize: '13px',
-                                      color: theme.colors.text,
-                                    }}
-                                  >
-                                    Docker daemon{' '}
-                                    {dockerStatus.running
-                                      ? 'is running'
-                                      : 'is not running'}
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* Knip Image Status */}
-                              {dockerStatus.installed &&
-                                dockerStatus.running && (
-                                  <div
-                                    style={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '8px',
-                                    }}
-                                  >
-                                    {dockerStatus.hasKnipImage ? (
-                                      <CheckCircle
-                                        size={16}
-                                        style={{ color: theme.colors.success }}
-                                      />
-                                    ) : (
-                                      <Info
-                                        size={16}
-                                        style={{
-                                          color: theme.colors.textSecondary,
-                                        }}
-                                      />
-                                    )}
-                                    <span
-                                      style={{
-                                        fontSize: '13px',
-                                        color: theme.colors.text,
-                                      }}
-                                    >
-                                      Knip Docker image{' '}
-                                      {dockerStatus.hasKnipImage
-                                        ? 'available'
-                                        : 'not installed'}
-                                    </span>
-                                  </div>
-                                )}
-                            </div>
-                          )}
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          {/* Refresh Button */}
-                          <button
-                            onClick={checkDockerStatus}
-                            disabled={checkingDocker}
-                            style={{
-                              padding: '10px',
-                              borderRadius: '8px',
-                              border: `1px solid ${theme.colors.border}`,
-                              backgroundColor: theme.colors.background,
-                              color: theme.colors.text,
-                              cursor: checkingDocker
-                                ? 'not-allowed'
-                                : 'pointer',
-                              fontSize: '14px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              transition: 'all 0.2s',
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!checkingDocker) {
-                                e.currentTarget.style.backgroundColor =
-                                  theme.colors.backgroundTertiary;
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                theme.colors.background;
-                            }}
-                          >
-                            <RefreshCw
-                              size={16}
-                              className={checkingDocker ? 'animate-spin' : ''}
-                            />
-                          </button>
-
-                          {/* Install/Open Docker Button */}
-                          {dockerStatus && !dockerStatus.installed && (
-                            <button
-                              onClick={() => {
-                                window.open(
-                                  'https://www.docker.com/products/docker-desktop/',
-                                  '_blank',
-                                );
-                              }}
-                              style={{
-                                padding: '10px 20px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                backgroundColor: theme.colors.primary,
-                                color: 'white',
-                                cursor: 'pointer',
-                                fontSize: '14px',
-                                fontWeight: 600,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                transition: 'all 0.2s',
-                              }}
-                              onMouseEnter={(e) =>
-                                (e.currentTarget.style.transform =
-                                  'scale(1.02)')
-                              }
-                              onMouseLeave={(e) =>
-                                (e.currentTarget.style.transform = 'scale(1)')
-                              }
-                            >
-                              Install Docker
-                            </button>
-                          )}
-
-                          {/* Pull Knip Image Button */}
-                          {dockerStatus &&
-                            dockerStatus.installed &&
-                            dockerStatus.running &&
-                            !dockerStatus.hasKnipImage && (
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const success =
-                                      await DockerService.pullImage(
-                                        'knip/knip:latest',
-                                      );
-                                    if (success) {
-                                      await checkDockerStatus(); // Refresh status
-                                    }
-                                  } catch (error) {
-                                    console.error(
-                                      'Failed to pull Knip image:',
-                                      error,
-                                    );
-                                  }
-                                }}
-                                style={{
-                                  padding: '10px 20px',
-                                  borderRadius: '8px',
-                                  border: 'none',
-                                  backgroundColor: theme.colors.primary,
-                                  color: 'white',
-                                  cursor: 'pointer',
-                                  fontSize: '14px',
-                                  fontWeight: 600,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                  transition: 'all 0.2s',
-                                }}
-                                onMouseEnter={(e) =>
-                                  (e.currentTarget.style.transform =
-                                    'scale(1.02)')
-                                }
-                                onMouseLeave={(e) =>
-                                  (e.currentTarget.style.transform = 'scale(1)')
-                                }
-                              >
-                                Install Knip
-                              </button>
-                            )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Debug Info */}
-                  {isDevMode && (
-                    <div
-                      style={{
-                        backgroundColor: `${theme.colors.warning}15`,
-                        border: `1px solid ${theme.colors.warning}30`,
-                        borderRadius: '12px',
-                        padding: '20px',
-                      }}
-                    >
-                      <h4
-                        style={{
-                          fontSize: '16px',
-                          fontWeight: 600,
-                          margin: '0 0 12px 0',
-                          color: theme.colors.warning,
-                        }}
-                      >
-                        Development Mode Active
-                      </h4>
-                      <p
-                        style={{
-                          fontSize: '14px',
-                          margin: 0,
-                          color: theme.colors.textSecondary,
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        You are running a development build. Some features may
-                        behave differently than in production. Auto-update is
-                        disabled to prevent overwriting your development
-                        environment.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>

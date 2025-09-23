@@ -7,6 +7,7 @@ import App from './App';
 import { AppErrorBoundary } from './AppErrorBoundary';
 import './styles/tailwind.css';
 import './index.css';
+import 'highlight.js/styles/atom-one-dark.css';
 
 // Initialize mermaid and expose to window
 mermaid.initialize({

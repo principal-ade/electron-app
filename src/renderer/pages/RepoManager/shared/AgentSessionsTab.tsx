@@ -13,7 +13,6 @@ import {
   FileOperation,
   TodoItem,
 } from '../../../main-process-api/AgentSessionService';
-import { AgentSessionArchiveService } from '../../../main-process-api/AgentSessionArchiveService';
 import { ShellService } from '../../../main-process-api/ShellService';
 import {
   useFileChanges,
@@ -322,9 +321,6 @@ export const AgentSessionsTab: React.FC<AgentSessionsTabProps> = ({
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>('');
   const [copiedSessionId, setCopiedSessionId] = useState<string | null>(null);
-  const [archivingSessionId, setArchivingSessionId] = useState<string | null>(
-    null,
-  );
   const editInputRef = useRef<HTMLInputElement>(null!);
   const [isAgentModalOpen, setIsAgentModalOpen] = useState(false);
   const [sessionShownOnMap, setSessionShownOnMap] = useState<string | null>(
@@ -1013,34 +1009,11 @@ export const AgentSessionsTab: React.FC<AgentSessionsTabProps> = ({
     };
   }, [sourceId, registerSessionActivity, loadSelectedSessions]);
 
-  // Archive session
+  // Archive session - functionality removed
   const archiveSession = async (sessionId: string) => {
-    const cardData = sessionCards.get(sessionId);
-    if (!cardData) return;
-
-    setArchivingSessionId(sessionId);
-    try {
-      await AgentSessionArchiveService.archiveSession(sessionId);
-
-      // Mark as locally archived immediately to update counts
-      setLocallyArchivedSessions((prev) => new Set([...prev, sessionId]));
-
-      // Remove from selected sessions after archiving
-      onSessionUnselect?.(sessionId);
-
-      // Reload sessions to update UI (skip loading state)
-      await loadSelectedSessions(true);
-    } catch (error) {
-      console.error('Failed to archive session:', error);
-      // Remove from locally archived on error
-      setLocallyArchivedSessions((prev) => {
-        const updated = new Set(prev);
-        updated.delete(sessionId);
-        return updated;
-      });
-    } finally {
-      setArchivingSessionId(null);
-    }
+    // Archiving functionality has been removed
+    // Sessions are now only in memory or SDK
+    console.log('Archive requested but functionality removed:', sessionId);
   };
 
   // Start editing session name
@@ -1261,9 +1234,7 @@ export const AgentSessionsTab: React.FC<AgentSessionsTabProps> = ({
                     editingName={editingName}
                     editInputRef={editInputRef}
                     isCopied={copiedSessionId === cardData.session.sessionId}
-                    isArchiving={
-                      archivingSessionId === cardData.session.sessionId
-                    }
+                    isArchiving={false} // Archiving removed
                     isShownOnMap={
                       sessionShownOnMap === cardData.session.sessionId
                     }

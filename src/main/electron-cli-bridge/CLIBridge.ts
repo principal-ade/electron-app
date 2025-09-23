@@ -115,9 +115,21 @@ export class CLIBridge extends EventEmitter {
 
       this.log('info', `Spawning ${name} worker from: ${workerPath}`);
 
+      // Pass SSH-related environment variables to the worker for Git SSH operations
+      const workerEnv = {
+        ...process.env,
+        // Ensure SSH agent socket is passed
+        SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK,
+        // Ensure HOME is set for SSH key lookup
+        HOME: process.env.HOME,
+        // Pass PATH to find ssh binary
+        PATH: process.env.PATH,
+      };
+
       const worker = utilityProcess.fork(workerPath, [], {
         serviceName: `cli-bridge-${name}`,
         stdio: 'pipe',
+        env: workerEnv,
       });
 
       // Set up event handlers
@@ -235,7 +247,7 @@ export class CLIBridge extends EventEmitter {
         const result: ExecuteResult = {
           success: response.exitCode === 0,
           stdout: response.data || '',
-          stderr: '',
+          stderr: response.stderr || '',
           exitCode: response.exitCode || 0,
           duration,
         };

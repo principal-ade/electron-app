@@ -3,7 +3,7 @@
  *
  * The AlexandriaRepositoryManager will be changed to focus primarily on the search functionality
  * rather than showing the full Alexandria UI. The landing page has shifted to handle repository
- * management directly, so this component should be simplified to just the DocumentSearchView part.
+ * management directly, so this component should be simplified to just the AllRepositoryMarkdownSearchView part.
  *
  * Current issues that won't be fixed due to pending refactor:
  * - Uses height: '100vh' which doesn't account for window titlebar
@@ -20,7 +20,7 @@ import type { AlexandriaEntry } from '@a24z/core-library';
 import { AlexandriaRepositoryList } from '../../components/alexandria/AlexandriaRepositoryList';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WindowService } from '../../main-process-api/WindowService';
-import { DocumentSearchView } from '../DocumentSearch/DocumentSearchView';
+import { AllRepositoryMarkdownSearchView } from '../AllRepositoryMarkdownSearch/AllRepositoryMarkdownSearchView';
 import { RemoveRepositoryDialog } from '../../components/dialogs/RemoveRepositoryDialog';
 
 interface AlexandriaRepositoryManagerProps {
@@ -126,7 +126,7 @@ export const AlexandriaRepositoryManager: React.FC<
 
   // Show search view if active
   if (showSearch) {
-    return <DocumentSearchView onClose={onSearchClose || (() => {})} />;
+    return <AllRepositoryMarkdownSearchView onClose={onSearchClose || (() => {})} />;
   }
 
   if (error) {
@@ -177,7 +177,7 @@ export const AlexandriaRepositoryManager: React.FC<
       >
         <h1
           style={{
-            fontSize: '24px',
+            fontSize: theme.fontSizes[5],
             fontWeight: 600,
             color: theme.colors.text,
             margin: 0,
@@ -201,7 +201,7 @@ export const AlexandriaRepositoryManager: React.FC<
                 backgroundColor: theme.colors.background,
                 border: `1px solid ${theme.colors.border}`,
                 borderRadius: '4px',
-                fontSize: '13px',
+                fontSize: theme.fontSizes[1],
                 color: theme.colors.textSecondary,
                 maxWidth: '200px',
                 overflow: 'hidden',
@@ -224,7 +224,7 @@ export const AlexandriaRepositoryManager: React.FC<
                 color: theme.colors.background,
                 border: 'none',
                 borderRadius: '4px',
-                fontSize: '13px',
+                fontSize: theme.fontSizes[1],
                 fontWeight: '500',
                 cursor: 'pointer',
                 transition: 'opacity 0.2s',
@@ -251,7 +251,7 @@ export const AlexandriaRepositoryManager: React.FC<
                 color: theme.colors.error || '#ef4444',
                 border: `1px solid ${theme.colors.error || '#ef4444'}`,
                 borderRadius: '4px',
-                fontSize: '13px',
+                fontSize: theme.fontSizes[1],
                 fontWeight: '500',
                 cursor: 'pointer',
                 transition: 'all 0.2s',

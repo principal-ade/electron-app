@@ -235,22 +235,6 @@ export class NamespaceDataValidator {
     );
   }
 
-  static isAgentSessions(
-    data: any,
-  ): data is NamespaceDataTypes[StaticNamespaces.AGENT_SESSIONS] {
-    return (
-      data &&
-      typeof data === 'object' &&
-      'sessionId' in data &&
-      'provider' in data &&
-      'workingDirectory' in data &&
-      'startTime' in data &&
-      'lastUpdateTime' in data &&
-      'events' in data &&
-      Array.isArray(data.events) &&
-      'totalEvents' in data
-    );
-  }
 
   static isLLMModels(
     data: any,
@@ -321,8 +305,6 @@ export class NamespaceDataValidator {
         return this.isAIConfiguration(data);
       case StaticNamespaces.LLM_MODELS:
         return this.isLLMModels(data);
-      case StaticNamespaces.AGENT_SESSIONS:
-        return this.isAgentSessions(data);
       case StaticNamespaces.DOCKER_CONTAINERS:
         return this.isToolContainerState(data);
       case StaticNamespaces.DOCKER_SESSIONS:

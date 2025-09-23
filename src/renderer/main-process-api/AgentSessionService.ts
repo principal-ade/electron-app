@@ -1,7 +1,7 @@
 import { DirectorySessions } from '../../shared/main-process-api-interfaces/AgentSessionAPI';
 import { SessionState } from '../../shared/event-processing/SessionEventProcessor';
 import { AgentSessionRecord } from '../../shared/sessionTypes';
-import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
 
 /**
  * File operation types we track

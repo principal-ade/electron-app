@@ -160,7 +160,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
         borderRadius: '6px',
         color:
           updateAvailable || updateDownloaded
-            ? 'white'
+            ? theme.colors.background
             : theme.colors.textSecondary,
         fontSize: '13px',
         fontWeight: 500,
@@ -204,7 +204,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
             alignItems: 'center',
             gap: '4px',
             padding: '4px 10px',
-            backgroundColor: 'white',
+            backgroundColor: theme.colors.background,
             color: theme.colors.primary,
             border: 'none',
             borderRadius: '4px',
@@ -230,7 +230,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
             alignItems: 'center',
             gap: '8px',
             padding: '6px 14px',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            backgroundColor: `${theme.colors.background}33`,
             borderRadius: '6px',
           }}
         >
@@ -238,7 +238,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
             style={{
               width: '100px',
               height: '4px',
-              backgroundColor: 'rgba(255, 255, 255, 0.3)',
+              backgroundColor: `${theme.colors.background}4D`,
               borderRadius: '2px',
               overflow: 'hidden',
             }}
@@ -247,7 +247,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
               style={{
                 width: `${downloadProgress || 0}%`,
                 height: '100%',
-                backgroundColor: 'white',
+                backgroundColor: theme.colors.background,
                 borderRadius: '2px',
                 transition: 'width 0.3s ease',
               }}
@@ -263,7 +263,7 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
             alignItems: 'center',
             gap: '4px',
             padding: '4px 10px',
-            backgroundColor: 'white',
+            backgroundColor: theme.colors.background,
             color: theme.colors.primary,
             border: 'none',
             borderRadius: '4px',
@@ -331,8 +331,8 @@ export const UpdateNotification: React.FC<UpdateNotificationProps> = ({
             height: '20px',
             borderRadius: '50%',
             border: 'none',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            color: 'white',
+            backgroundColor: `${theme.colors.background}33`,
+            color: theme.colors.background,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',

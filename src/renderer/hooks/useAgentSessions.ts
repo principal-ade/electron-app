@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AgentSessionService } from '../main-process-api/AgentSessionService';
+import { AgentSessionSDKService } from '../main-process-api/AgentSessionSDKService';
 import { AgentSessionRecord } from '../../shared/sessionTypes';
 
 export interface UseAgentSessionsOptions {
@@ -39,14 +39,11 @@ export function useAgentSessions({
       setIsLoading(true);
       setError(null);
 
-      // Step 1: Get session summaries for this directory
-      const allDirectorySessions =
-        await AgentSessionService.getActiveSessions();
-      const directorySessions = allDirectorySessions.find(
-        (ds) => ds.directory === directory,
-      );
+      // Step 1: Get session summaries for this directory (mapped to repository)
+      const projectSessions =
+        await AgentSessionSDKService.getActiveSessionsForDirectory(directory);
 
-      if (!directorySessions || directorySessions.summaries.length === 0) {
+      if (!projectSessions || projectSessions.summaries.length === 0) {
         setSessions([]);
         setActiveSessionId(null);
         return;
@@ -54,11 +51,11 @@ export function useAgentSessions({
 
       // Step 2: Fetch full session details for each summary
       const fullSessions = await Promise.all(
-        directorySessions.summaries.map(async (summary) => {
+        projectSessions.summaries.map(async (summary) => {
           try {
-            const fullSession = await AgentSessionService.getSession(
+            const fullSession = await AgentSessionSDKService.getSDKSession(
               summary.sessionId,
-              directory,
+              summary.repository,
             );
             return fullSession;
           } catch (err) {
@@ -83,7 +80,7 @@ export function useAgentSessions({
       setSessions(fullSessions.filter(Boolean));
 
       // Find active session
-      const activeSession = directorySessions.summaries.find((s) => s.active);
+      const activeSession = projectSessions.summaries.find((s) => s.active);
       setActiveSessionId(activeSession?.sessionId || null);
     } catch (err) {
       setError(err as Error);

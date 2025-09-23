@@ -1,3 +1,27 @@
+import type { AlexandriaEntry } from '@a24z/core-library';
+
+/**
+ * Enhanced Alexandria repository entry with git status information
+ */
+export interface EnhancedAlexandriaEntry extends AlexandriaEntry {
+  gitBranch?: string;
+  isDirty?: boolean;
+  dirtyFileCount?: number;
+  mostRecentChange?: string; // Most recent file modification time if dirty, otherwise last commit
+  lastCommitMessage?: string;
+  lastCommitAuthor?: string;
+  lastCommitHash?: string;
+}
+
+/**
+ * Git status information for a repository
+ */
+export interface GitStatus {
+  staged: Array<{ path: string; lastModified?: string }>;
+  unstaged: Array<{ path: string; lastModified?: string }>;
+  untracked: Array<{ path: string; lastModified?: string }>;
+}
+
 /**
  * Local git repository information
  * Represents a git repository on the local filesystem

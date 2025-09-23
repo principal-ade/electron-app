@@ -4,7 +4,7 @@ import type { AlexandriaAPI } from './AlexandriaAPI';
 import type { AlexandriaDocsAPI } from './AlexandriaDocsAPI';
 import type { AgentInstallationAPI } from './AgentInstallationAPI';
 import type { AgentSessionAPI } from './AgentSessionAPI';
-import type { AgentSessionArchiveAPI } from './AgentSessionArchiveAPI';
+import type { AgentSessionSDKAPI } from './AgentSessionSDKAPI';
 import type { AgentUpdateAPI } from './AgentUpdateAPI';
 import type { AuthenticationAPI } from './AuthenticationAPI';
 import type { ClipboardAPI } from './ClipboardAPI';
@@ -40,8 +40,8 @@ import type { GitSyncAPI } from './GitSyncAPI';
 import type { WindowAPI } from './WindowAPI';
 import type { PlanningAPI } from './PlanningAPI';
 import type { FeedbackAPI } from './FeedbackAPI';
-import type { SessionViewAPI } from './SessionViewAPI';
 import type { DocumentSearchAPI } from '../ipc/DocumentSearchIPC';
+import type { ObservabilityAPI } from './ObservabilityAPI';
 
 // Re-export for convenience
 export type {
@@ -72,8 +72,8 @@ export interface MainProcessAPI {
   alexandriaDocs: AlexandriaDocsAPI;
   agentInstallation: AgentInstallationAPI;
   agentSession: AgentSessionAPI;
+  agentSessionSDK: AgentSessionSDKAPI;
   agentSessionEvents: AgentSessionEventsAPI;
-  agentSessionArchive: AgentSessionArchiveAPI;
   agentUpdate: AgentUpdateAPI;
   appVersionManager: AppVersionManagerAPI;
   authentication: AuthenticationAPI;
@@ -108,9 +108,9 @@ export interface MainProcessAPI {
   window: WindowAPI;
   planning: PlanningAPI;
   feedback: FeedbackAPI;
-  sessionView: SessionViewAPI;
   testDebug: TestDebugAPI;
   documentSearch: DocumentSearchAPI;
+  observability: ObservabilityAPI;
 }
 
 /**

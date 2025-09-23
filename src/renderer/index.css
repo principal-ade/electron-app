@@ -6,13 +6,17 @@
 
 @layer base {
   body {
-    background: linear-gradient(to bottom, rgb(31 41 55), rgb(17 24 39));
-    color: white;
+    background: rgba(0, 0, 0, 0.5);
+    background-image:
+      linear-gradient(rgba(128, 128, 128, 0.15) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(128, 128, 128, 0.15) 1px, transparent 1px);
+    background-size: 20px 20px;
+    color: rgba(128, 128, 128, 0.8);
     height: 100%;
     overflow: hidden;
     margin: 0;
     padding: 0;
-    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-family: 'Courier New', monospace, ui-sans-serif, system-ui, sans-serif;
   }
 
   /* Hide scrollbars */

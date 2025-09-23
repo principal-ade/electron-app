@@ -7,15 +7,12 @@ import {
   Copy,
   CheckCircle,
   TestTube,
-  Archive,
 } from 'lucide-react';
 import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { NormalizedEventCard } from './NormalizedEventCard';
 import { EventProcessingTestView } from './EventProcessingTestView';
-import { ArchiveTestView } from './ArchiveTestView';
 import { HighlightLayer, LayerItem } from '@principal-ai/code-city-react';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
-import { AgentSessionArchiveService } from '../../main-process-api/AgentSessionArchiveService';
 
 interface AgentSessionDebugModalProps {
   sessionId: string;
@@ -50,7 +47,6 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
   const [eventToReprocess, setEventToReprocess] = useState<
     NormalizedAgentSessionEvent | undefined
   >();
-  const [showArchiveTest, setShowArchiveTest] = useState(false);
   const [sessionStatus, setSessionStatus] = useState<{
     isArchived: boolean;
     lastEventTime?: number;
@@ -140,17 +136,6 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
         `[SessionDebugModal] Checking status for session ${sessionId}`,
       );
 
-      // Check if session is archived (returns null if not found, no error thrown)
-      const archived = await AgentSessionArchiveService.loadSession(sessionId);
-      console.log(`[SessionDebugModal] Archive check result:`, {
-        archived,
-        type: typeof archived,
-        isNull: archived === null,
-        isUndefined: archived === undefined,
-        isFalsy: !archived,
-        keys: archived ? Object.keys(archived) : 'N/A',
-      });
-
       // Check if session exists in active storage using new API
       // We need to find the directory for this session first
       let activeSession = null;
@@ -202,7 +187,7 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
         rawEventCount > 0 && rawEventCount !== processedEventCount;
 
       const newStatus = {
-        isArchived: !!archived,
+        isArchived: false, // Archiving removed
         storageSize,
         lastEventTime: sessionStatus.lastEventTime,
         timeSinceLastEvent: sessionStatus.timeSinceLastEvent,
@@ -597,22 +582,6 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
               )}
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <button
-                onClick={() => setShowArchiveTest(true)}
-                style={{
-                  padding: '6px',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#8b5cf6',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-                title="Test Archive Functionality"
-              >
-                <Archive size={20} />
-              </button>
               <button
                 onClick={() => setShowTestView(true)}
                 style={{
@@ -1323,23 +1292,6 @@ export const AgentSessionDebugModal: React.FC<AgentSessionDebugModalProps> = ({
         />
       )}
 
-      {/* Archive Test View */}
-      {showArchiveTest && (
-        <ArchiveTestView
-          sessionId={sessionId}
-          sessionName={sessionName}
-          currentEvents={events}
-          onClose={() => {
-            setShowArchiveTest(false);
-            // Always refresh status when closing archive modal
-            checkSessionStatus();
-          }}
-          onArchiveSuccess={() => {
-            // Refresh session status after successful archive
-            checkSessionStatus();
-          }}
-        />
-      )}
     </div>
   );
 };

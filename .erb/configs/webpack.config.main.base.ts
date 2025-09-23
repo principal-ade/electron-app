@@ -11,9 +11,7 @@ import webpackPaths from './webpack.paths';
 const configuration: webpack.Configuration = {
   // Main process should externalize node_modules
   externals: [
-    ...Object.keys(externals || {}).filter(
-      (dep) => dep !== 'a24z-memory',
-    ),
+    ...Object.keys(externals || {}),
     'node-pty',
     'keytar',
   ],

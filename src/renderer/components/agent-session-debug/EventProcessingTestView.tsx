@@ -67,23 +67,6 @@ export const EventProcessingTestView: React.FC<
         2,
       ),
     },
-    [SupportedAgent.GEMINI]: {
-      name: 'Gemini Tool Event',
-      event: JSON.stringify(
-        {
-          eventType: 'tool_call',
-          sessionId: 'gemini-test-456',
-          directory: '/home/user/code',
-          timestamp: Date.now(),
-          toolName: 'file_read',
-          parameters: {
-            path: 'src/main.py',
-          },
-        },
-        null,
-        2,
-      ),
-    },
   };
 
   const processEvent = async () => {
@@ -245,7 +228,6 @@ export const EventProcessingTestView: React.FC<
           >
             <option value={SupportedAgent.CLAUDE}>Claude</option>
             <option value={SupportedAgent.CLINE}>Cline</option>
-            <option value={SupportedAgent.GEMINI}>Gemini</option>
             <option value={SupportedAgent.OPENCODE}>OpenCode</option>
           </select>
 

@@ -33,8 +33,6 @@ import { LicenseBadge } from '../../components/common/LicenseBadge';
 import { SyncStatusIndicator } from '../../components/repository-maps/SyncStatusIndicator';
 import { gitSyncConnectionManager } from '../../services/git-sync/GitSyncConnectionManager';
 import type { SyncStatus } from '../../services/git-sync/GitSyncClient';
-import { hasA24zDirectory, getA24zNoteCount } from '../../utils/a24zUtils';
-import { A24zMemoryInfoModal } from './shared/A24zMemoryInfoModal';
 import { RepositorySwitcherModal } from './shared/RepositorySwitcherModal';
 import { SecretsModal } from './shared/SecretsModal';
 import { SimpleModeSelector, type RepositoryMode } from './shared/SimpleModeSelector';
@@ -121,11 +119,6 @@ export const RepositoryManagerHeader: React.FC<
   const [cloneSyncStatuses, setCloneSyncStatuses] = useState<
     Record<string, SyncStatus>
   >({});
-  const [a24zInfo, setA24zInfo] = useState<{
-    hasA24z: boolean;
-    noteCount: number;
-  } | null>(null);
-  const [showA24zInfoModal, setShowA24zInfoModal] = useState(false);
   const [showRepositorySwitcher, setShowRepositorySwitcher] = useState(false);
   const [showSourceSelector, setShowSourceSelector] = useState(false);
   const [showSourceHelpModal, setShowSourceHelpModal] = useState(false);
@@ -205,22 +198,6 @@ export const RepositoryManagerHeader: React.FC<
     }
   }, [showSourceSelector]);
 
-  // Check for a24z directory when we have a selected local source
-  useEffect(() => {
-    const checkA24z = async () => {
-      if (selectedSource?.type === 'local') {
-        const hasA24z = await hasA24zDirectory(selectedSource.location);
-        const noteCount = hasA24z
-          ? await getA24zNoteCount(selectedSource.location)
-          : 0;
-        setA24zInfo({ hasA24z, noteCount });
-      } else {
-        setA24zInfo(null);
-      }
-    };
-
-    checkA24z();
-  }, [selectedSource]);
 
   // Monitor connection status changes
   useEffect(() => {
@@ -1280,38 +1257,6 @@ export const RepositoryManagerHeader: React.FC<
             />
           )}
 
-          {/* a24z badge - temporarily hidden while deciding on placement */}
-          {/* {a24zInfo?.hasA24z && (
-          <button
-            onClick={() => setShowA24zInfoModal(true)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              backgroundColor: '#9333ea20',
-              border: '1px solid #9333ea40',
-              fontSize: '12px',
-              fontWeight: 600,
-              color: '#9333ea',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            title={`a24z memory: ${a24zInfo.noteCount} note${a24zInfo.noteCount !== 1 ? 's' : ''} - Click to learn more`}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#9333ea30';
-              e.currentTarget.style.borderColor = '#9333ea60';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#9333ea20';
-              e.currentTarget.style.borderColor = '#9333ea40';
-            }}
-          >
-            <Brain size={14} />
-            <span>a24z memory</span>
-          </button>
-        )} */}
         </div>
 
         {/* Badge Info Modal */}
@@ -1345,13 +1290,6 @@ export const RepositoryManagerHeader: React.FC<
           }}
         />
       )} */}
-
-        {/* A24z Memory Info Modal */}
-        <A24zMemoryInfoModal
-          isOpen={showA24zInfoModal}
-          onClose={() => setShowA24zInfoModal(false)}
-          noteCount={a24zInfo?.noteCount}
-        />
 
         {/* Repository Switcher Modal */}
         <RepositorySwitcherModal

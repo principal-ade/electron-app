@@ -15,9 +15,8 @@ import {
 } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 import { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
-// Type alias for backward compatibility
-type NormalizedAgentSessionEvent = RepoNormalizedUniversalAgentSessionEvent;
-import { AgentSessionService } from '../../main-process-api/AgentSessionService';
+// Using SDK service with new types directly
+import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
 
 interface SessionEventsViewProps {
   sessionId: string;
@@ -29,10 +28,10 @@ export const SessionEventsView: React.FC<SessionEventsViewProps> = ({
   sessionName,
 }) => {
   const { theme } = useTheme();
-  const [events, setEvents] = useState<NormalizedAgentSessionEvent[]>([]);
+  const [events, setEvents] = useState<RepoNormalizedUniversalAgentSessionEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] =
-    useState<NormalizedAgentSessionEvent | null>(null);
+    useState<RepoNormalizedUniversalAgentSessionEvent | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
 
@@ -45,7 +44,7 @@ export const SessionEventsView: React.FC<SessionEventsViewProps> = ({
     setLoading(true);
     try {
       const sessionEvents =
-        await AgentSessionService.getSessionEvents(sessionId);
+        await AgentSessionSDKService.getSDKSessionEvents(sessionId);
       if (sessionEvents) {
         setEvents(sessionEvents);
         // Auto-select first event

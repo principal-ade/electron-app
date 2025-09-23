@@ -16,11 +16,9 @@ export enum StaticNamespaces {
   LLM_MODELS = 'llm-models',
   CACHE = 'cache',
   TEMP = 'temp',
-  AGENT_SESSIONS = 'agent-sessions',
   GLOBAL_SESSION_REGISTRY = 'global-session-registry',
   SESSION_SUMMARIES = 'session-summaries',
   ARCHIVE_CONFIGURATION = 'archive-configuration',
-  AGENT_EVENT_INDEXES = 'agent-event-indexes',
   MCP_BRIDGE_DATA = 'mcp-bridge-data',
 
   // Docker Management
@@ -32,20 +30,9 @@ export enum StaticNamespaces {
 }
 
 /**
- * Agent event namespaces used for per-agent event storage
- * These are dynamic namespaces created for each agent provider.
+ * Type alias for all storage namespaces
  */
-export enum AgentEventNamespaces {
-  CLAUDE = 'claude-hook-events',
-  OPENCODE = 'opencode-hook-events',
-  CLINE = 'cline-hook-events',
-}
-
-/**
- * Union type of all known namespaces (static + agent event namespaces)
- * This represents all possible storage namespaces in the system.
- */
-export type StorageNamespaces = StaticNamespaces | AgentEventNamespaces;
+export type StorageNamespaces = StaticNamespaces;
 
 /**
  * Type guard to check if a string is a valid static namespace

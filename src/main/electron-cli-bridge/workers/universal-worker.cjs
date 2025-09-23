@@ -39,14 +39,16 @@ class CommandExecutor {
     // Build the full command string
     const fullCommand = this.buildCommand(command, args);
 
-    console.log(`[Worker] Executing: ${fullCommand}`);
-    console.log(`[Worker] Working directory: ${options.cwd || process.cwd()}`);
     
     // Prepare execSync options
+    // For SSH to work, we need to preserve SSH_AUTH_SOCK and other SSH-related env vars
+    const execEnv = options.env ? { ...process.env, ...options.env } : process.env;
+
+
     const execOptions = {
       encoding: options.encoding || 'utf8',
       cwd: options.cwd || process.cwd(),
-      env: { ...process.env, ...options.env },
+      env: execEnv,
       timeout: options.timeout || 60000,
       maxBuffer: options.maxBuffer || 10 * 1024 * 1024, // 10MB default
       stdio: 'pipe'
@@ -64,12 +66,13 @@ class CommandExecutor {
     try {
       // Execute the command
       stdout = execSync(fullCommand, execOptions);
-      
+
       // execSync returns stdout directly
       return {
         id,
         type: 'complete',
         data: stdout,
+        stderr: '',  // No stderr on success
         exitCode: 0,
         duration: Date.now() - startTime
       };
@@ -80,29 +83,28 @@ class CommandExecutor {
       stderr = error.stderr ? error.stderr.toString() : '';
       exitCode = error.status || 1;
 
-      console.log(`[Worker] Command exited with code ${exitCode}`);
-      console.log(`[Worker] stdout length: ${stdout.length}`);
-      console.log(`[Worker] stderr length: ${stderr.length}`);
+
+      // For git commands, return both stdout and stderr properly
+      if (command === 'git') {
+        return {
+          id,
+          type: 'complete',
+          data: stdout || '',  // stdout in data field
+          stderr: stderr || '',  // stderr in separate field
+          exitCode: exitCode,
+          duration: Date.now() - startTime
+        };
+      }
 
       // For some commands (like ESLint), non-zero exit doesn't mean failure
       // It just means there were linting issues found
       if (command === 'npx' && args[0] === 'eslint') {
-        console.log(`[Worker] ESLint command completed with exit code ${exitCode}`);
-        console.log(`[Worker] ESLint stdout:`, stdout ? stdout.substring(0, 200) : 'empty');
-        console.log(`[Worker] ESLint stderr:`, stderr ? stderr.substring(0, 200) : 'empty');
 
         // ESLint returns exit code 1 when it finds problems
         // This is not an error, just a result
         // ESLint outputs JSON to stdout even when there are errors
         // But if stdout is empty, it might mean ESLint didn't run properly
         const output = stdout || stderr || '';
-        console.log(`[Worker] ESLint output length: ${output.length}`);
-
-        // If still no output, there might be a problem with the command
-        if (!output && exitCode !== 0) {
-          console.log(`[Worker] WARNING: ESLint exited with code ${exitCode} but no output captured`);
-          console.log(`[Worker] Full command was: ${fullCommand}`);
-        }
 
         return {
           id,

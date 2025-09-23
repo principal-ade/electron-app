@@ -60,7 +60,6 @@ const configuration: webpack.Configuration = {
         // Exclude all Node.js specific packages
         const nodeOnlyPackages = [
           '@modelcontextprotocol/sdk',
-          'a24z-memory', // MCP server package that uses Node.js modules
           'simple-git', // Git operations library - Node.js only, uses child_process
           'eslint', // ESLint is Node.js only and should only run in main process
           '@typescript-eslint/eslint-plugin',

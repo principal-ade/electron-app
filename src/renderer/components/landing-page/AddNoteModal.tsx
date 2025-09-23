@@ -205,7 +205,7 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
                 backgroundColor: theme.colors.background,
                 color: theme.colors.text,
                 fontSize: theme.fontSizes[1],
-                fontFamily: 'inherit',
+                fontFamily: theme.fonts.body,
                 resize: 'vertical',
                 outline: 'none',
               }}

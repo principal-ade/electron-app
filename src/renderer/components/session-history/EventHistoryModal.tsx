@@ -12,14 +12,14 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
-import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import {
   eventSegmenter,
   EventSegment,
   SegmentationMode,
 } from '../../services/EventSegmenterService';
 import { EventSegmentView } from './EventSegmentView';
-import { AgentSessionService } from '../../main-process-api/AgentSessionService';
+import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
 
 interface EventHistoryModalProps {
   isOpen: boolean;
@@ -42,13 +42,13 @@ export const EventHistoryModal: React.FC<EventHistoryModalProps> = ({
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [events, setEvents] = useState<NormalizedAgentSessionEvent[]>([]);
+  const [events, setEvents] = useState<RepoNormalizedUniversalAgentSessionEvent[]>([]);
 
   // Load full event data
   useEffect(() => {
     if (isOpen && sessionId) {
       setLoading(true);
-      AgentSessionService.getSessionEvents(sessionId)
+      AgentSessionSDKService.getSDKSessionEvents(sessionId)
         .then((loadedEvents) => {
           setEvents(loadedEvents || []);
         })

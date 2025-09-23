@@ -565,8 +565,11 @@ export class GitExecutor extends BaseExecutor {
   /**
    * Execute raw git command
    */
-  async raw(directory: string, args: string[]): Promise<ExecuteResult> {
-    return this.execute('git', args, { cwd: directory });
+  async raw(directory: string, args: string[], options?: Partial<ExecuteOptions>): Promise<ExecuteResult> {
+    return this.execute('git', args, {
+      cwd: directory,
+      ...options
+    });
   }
 
   /**

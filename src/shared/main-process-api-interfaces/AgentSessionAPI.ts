@@ -4,7 +4,7 @@
  */
 
 import type { SessionState } from '../event-processing/SessionEventProcessor';
-import type { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import type { NormalizedAgentSessionEvent } from '../types/legacy-event.types';
 
 export interface SessionSummary {
   sessionId: string;

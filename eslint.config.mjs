@@ -87,7 +87,8 @@ export default [
   },
   {
     files: [
-      'src/main/**/*.{ts,tsx,js,jsx}', 
+      'src/main/**/*.{ts,tsx,js,jsx}',
+      'src/event-processing-server/**/*.{ts,tsx,js,jsx}',
       'src/window/**/*.{ts,tsx,js,jsx}',
       'src/shared/**/*.{ts,tsx,js,jsx}',
       'src/renderer/pages/RepoManager/**/*.{ts,tsx,js,jsx}',

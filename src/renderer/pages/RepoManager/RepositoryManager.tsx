@@ -14,6 +14,7 @@ import {
   PackageLayer,
 } from '@principal-ai/codebase-composition';
 import { SourceFileSystemAdapter } from '../../adapters/SourceFileSystemAdapter';
+import { RepositoryTitlebar } from '../../components/Titlebar';
 
 import type { Repository } from '../../../shared/types/repository.types';
 import { RepositoryViewType } from '../../../shared/types/userPreferences.types';
@@ -24,7 +25,8 @@ import { RepositoryMaintenanceView } from './RepositoryMaintenanceView';
 import { PlanningView } from './PlanningView';
 import { FileChangeProvider } from '../../contexts/FileChangeContext';
 import { GitChangesProvider } from '../../contexts/GitChangesContext';
-import { AgentSessionService } from '../../main-process-api/AgentSessionService';
+import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
+import { SDKServiceDebug } from '../../components/SDKServiceDebug';
 import { EventActivityType } from '../../../shared/sessionEnums';
 import { GitService } from '../../main-process-api/GitService';
 import {
@@ -42,7 +44,6 @@ import { SourceSelectionService } from '../../services/SourceSelectionService';
 import { AgentConfigurationService } from '../../main-process-api/AgentConfigurationService';
 import { SupportedAgent } from '@principal-ai/agent-monitoring';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
-import { A24zService } from '../../main-process-api/A24zService';
 import { RepositoryUIState } from '../../../shared/types/userPreferences.types';
 
 // Window init data type for RepositoryManager
@@ -53,19 +54,20 @@ interface RepositoryManagerWindowData {
 }
 
 import { loadManifestContents } from '../../utils/loadManifestContents';
-import type { A24zNote } from '../../../shared/main-process-api-interfaces/A24zAPI';
 import { GitHubWebAdapters } from '../../adapters/GitHubWebAdapters';
 import { ElectronPlatformAdapters } from '../../adapters';
 
 interface RepositoryManagerProps {
   repository: Repository;
   onBack?: () => void;
+  onSettingsClick?: () => void;
+  hasUpdateAvailable?: boolean;
 }
 
 type ViewMode = RepositoryViewType;
 
 export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
-  ({ repository }) => {
+  ({ repository, onBack, onSettingsClick, hasUpdateAvailable }) => {
     const { theme } = useTheme();
 
     // Repository identifier for state persistence
@@ -151,9 +153,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
     const [agentsWithMCP, setAgentsWithMCP] = useState<SupportedAgent[]>([]);
     const [loadingAgentMCPStatus, setLoadingAgentMCPStatus] = useState(true);
 
-    // a24z memory state - loaded once and shared across all views
-    const [a24zNotes, setA24zNotes] = useState<A24zNote[]>([]);
-    const [, setLoadingA24zNotes] = useState(false); // loadingA24zNotes will be used for loading UI
 
     // Note: File tree sources and toggle logic removed - badges now launch windows
 
@@ -198,40 +197,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
       checkAgentMCPStatus();
     }, []); // Only run once on mount
 
-    // Load a24z notes when source changes (only for local sources)
-    useEffect(() => {
-      const loadA24zNotes = async () => {
-        // Only load for local sources
-        if (selectedSource?.type !== 'local' || !selectedSource.location) {
-          setA24zNotes([]);
-          return;
-        }
-
-        setLoadingA24zNotes(true);
-        try {
-          console.info(
-            '[RepositoryManager] Loading a24z notes for:',
-            selectedSource.location,
-          );
-          const notes = await A24zService.getAllNotes(selectedSource.location);
-          console.info(
-            '[RepositoryManager] Loaded a24z notes:',
-            notes?.length || 0,
-          );
-          setA24zNotes(notes || []);
-        } catch (error) {
-          console.error(
-            '[RepositoryManager] Failed to load a24z notes:',
-            error,
-          );
-          setA24zNotes([]);
-        } finally {
-          setLoadingA24zNotes(false);
-        }
-      };
-
-      loadA24zNotes();
-    }, [selectedSource]);
 
     // Load saved UI state for this repository
     useEffect(() => {
@@ -768,24 +733,24 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
         const activeSessions: EnhancedUIAgentSessionData[] = [];
         const pathsToCheck = repository.localClones?.map((c) => c.path) || [];
 
-        // Get active sessions from the service
-        const directorySessions = await AgentSessionService.getActiveSessions();
+        // Get active sessions from the SDK service
+        const projectSessions = await AgentSessionSDKService.getActiveSessionsByProject();
 
-        if (directorySessions && directorySessions.length > 0) {
-          for (const dirSession of directorySessions) {
-            // Check if this session's directory is within any of the repository's clones
+        if (projectSessions && projectSessions.length > 0) {
+          for (const projectSession of projectSessions) {
+            // Check if this session's repository is within any of the repository's clones
             const isRelevant =
               pathsToCheck.length === 0 ||
               pathsToCheck.some(
                 (clonePath) =>
                   clonePath &&
-                  dirSession.directory &&
-                  dirSession.directory.startsWith(clonePath),
+                  projectSession.repository &&
+                  projectSession.repository.startsWith(clonePath),
               );
 
-            if (isRelevant && dirSession.summaries) {
+            if (isRelevant && projectSession.summaries) {
               // Convert session summaries to our UI format
-              for (const summary of dirSession.summaries) {
+              for (const summary of projectSession.summaries) {
                 console.info('[RepositoryManager] Loading session summary:', {
                   sessionId: summary.sessionId.substring(0, 8),
                   fileAccessCount: summary.fileAccessCount,
@@ -1065,16 +1030,29 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
     return (
       <div
         style={{
-          width: '100%',
-          height: '100%',
+          width: '100vw',
+          height: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          padding: '20px 20px 0 20px',
-          overflow: 'hidden',
-          boxSizing: 'border-box',
           backgroundColor: theme.colors.background,
         }}
       >
+        <RepositoryTitlebar
+          repositoryOwner={repository.owner}
+          repositoryName={repository.name}
+          onSettingsClick={onSettingsClick}
+          hasUpdateAvailable={hasUpdateAvailable}
+        />
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '20px 20px 0 20px',
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+          }}
+        >
         {/* Header - Content-based height */}
         <div
           style={{
@@ -1474,7 +1452,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                   fileTreeSourceService={fileTreeSourceService}
                   cacheService={cacheService}
                   treeStats={treeStats}
-                  a24zNotes={a24zNotes}
                 />
               </FileChangeProvider>
             </GitChangesProvider>
@@ -1513,13 +1490,11 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 }}
                 searchQuery={searchQuery}
                 fileTree={fileTree}
-                cityData={cityData}
                 activeFileTreeSource={selectedSource}
                 fileTreeSourceService={fileTreeSourceService}
                 cacheService={cacheService}
                 cityDataCache={cityDataCache}
                 treeStats={treeStats}
-                a24zNotes={a24zNotes}
                 fileColorHighlightLayers={fileColorHighlightLayers}
                 packageLayers={packageLayers}
                 onPackageLayersChange={setPackageLayers}
@@ -1536,13 +1511,11 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 }}
                 searchQuery={searchQuery}
                 fileTree={fileTree}
-                cityData={cityData}
                 activeFileTreeSource={selectedSource}
                 fileTreeSourceService={fileTreeSourceService}
                 cacheService={cacheService}
                 cityDataCache={cityDataCache}
                 treeStats={treeStats}
-                a24zNotes={a24zNotes}
                 fileColorHighlightLayers={fileColorHighlightLayers}
               />
             </GitChangesProvider>
@@ -1562,6 +1535,10 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
               source dropdown.
             </div>
           ) : null}
+        </div>
+
+        {/* SDK Service Debug Component */}
+        <SDKServiceDebug />
         </div>
       </div>
     );

@@ -3,7 +3,7 @@
  * Provides meaningful segmentation for event history visualization
  */
 
-import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 export interface TodoInfo {
   id: string;
@@ -16,7 +16,7 @@ export interface EventSegment {
   todoInfo?: TodoInfo;
   startIndex: number;
   endIndex: number;
-  events: NormalizedAgentSessionEvent[];
+  events: RepoNormalizedUniversalAgentSessionEvent[];
   timestamp: number;
   summary: string;
   stats: {
@@ -34,7 +34,7 @@ export class EventSegmenterService {
    * Main segmentation method - choose strategy based on mode
    */
   segmentEvents(
-    events: NormalizedAgentSessionEvent[],
+    events: RepoNormalizedUniversalAgentSessionEvent[],
     mode: SegmentationMode = 'hybrid',
   ): EventSegment[] {
     switch (mode) {
@@ -53,7 +53,7 @@ export class EventSegmenterService {
    * Segment events based on todo transitions
    */
   private segmentByTodos(
-    events: NormalizedAgentSessionEvent[],
+    events: RepoNormalizedUniversalAgentSessionEvent[],
   ): EventSegment[] {
     const segments: EventSegment[] = [];
     let currentTodo: TodoInfo | null = null;
@@ -235,7 +235,7 @@ export class EventSegmenterService {
    * Create a segment with computed statistics
    */
   private createSegment(
-    events: NormalizedAgentSessionEvent[],
+    events: RepoNormalizedUniversalAgentSessionEvent[],
     startIndex: number,
     endIndex: number,
     type: 'todo' | 'stop' | 'orphaned' | 'setup',

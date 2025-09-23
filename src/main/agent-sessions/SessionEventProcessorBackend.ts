@@ -7,7 +7,7 @@ import {
   SessionState,
 } from '../../shared/event-processing/SessionEventProcessor';
 import { AgentSessionRecord } from '../../shared/sessionTypes';
-import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
 
 /**
  * Convert stored session to processor state

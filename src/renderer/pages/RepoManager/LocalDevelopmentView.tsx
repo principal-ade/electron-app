@@ -15,13 +15,11 @@ import { EventActivityType } from '../../../shared/sessionEnums';
 import { useSessionEventProcessor } from '../../hooks/useSessionEventProcessor';
 import type { Repository } from '../../../shared/types/repository.types';
 import { RepositoryNote } from '../../../shared/main-process-api-interfaces/RepositoryNotesAPI';
-import type { A24zNote } from '../../../shared/main-process-api-interfaces/A24zAPI';
 
 import { ElectronPlatformAdapters } from '../../adapters';
 import { RepositoryNotesService } from '../../main-process-api/RepositoryNotesService';
 import { TerminalService } from '../../main-process-api/TerminalService';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
-import { AgentSessionArchiveService } from '../../main-process-api/AgentSessionArchiveService';
 import { FileTreeSourceService } from '../../services/FileTreeSourceService';
 import { FileTreeCacheService } from '../../services/FileTreeCacheService';
 import { FileTreeSource, FileTreeStats } from '../../types/file-tree-source';
@@ -67,8 +65,6 @@ interface LocalDevelopmentViewProps {
   cacheService?: FileTreeCacheService;
   treeStats?: FileTreeStats | null;
 
-  // a24z notes from parent (already loaded)
-  a24zNotes?: A24zNote[];
 
   // File color highlight layers from parent
   fileColorHighlightLayers?: HighlightLayer[];
@@ -97,7 +93,6 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
   fileTreeSourceService: _sharedFileTreeService,
   cacheService: sharedCacheService,
   treeStats: sharedTreeStats,
-  a24zNotes: a24zNotesProp = [],
   fileColorHighlightLayers = [],
   onRefresh,
 }) => {
@@ -388,11 +383,6 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
     HighlightLayer[]
   >([]);
 
-  // a24z memory state - notes come from props, only manage the layer locally
-  const a24zNotes = a24zNotesProp; // Use the prop instead of local state
-  const [a24zHighlightLayer, setA24zHighlightLayer] =
-    useState<HighlightLayer | null>(null);
-  const [showA24zLayer, setShowA24zLayer] = useState(true);
 
   // Theme state (README loading removed as it was never used)
   const [_customDocsTheme, _setCustomDocsTheme] = useState<any | null>(null);
@@ -564,7 +554,6 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
     fetchNotes();
   }, [repository.remoteUrl]);
 
-  // a24z notes are now loaded in RepositoryManager and passed as props
 
   // Load custom theme from local file system (README loading removed as it was never used)
   useEffect(() => {
@@ -615,73 +604,6 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
     loadCustomTheme();
   }, [localClone?.path, contentProvider]);
 
-  // Create a24z highlight layer from anchors
-  useEffect(() => {
-    if (!showA24zLayer || a24zNotes.length === 0) {
-      setA24zHighlightLayer(null);
-      return;
-    }
-
-    console.info(
-      '[LocalDev] Processing a24z notes for highlight layer:',
-      a24zNotes.length,
-      'notes',
-    );
-
-    // Collect all unique file paths from anchors
-    const filePaths = new Set<string>();
-    for (const note of a24zNotes) {
-      console.info('[LocalDev] Processing note:', {
-        id: note.id,
-        anchors: note.anchors,
-        type: note.type,
-        tags: note.tags,
-      });
-
-      if (note.anchors && Array.isArray(note.anchors)) {
-        for (const anchor of note.anchors) {
-          console.info('[LocalDev] Processing anchor:', anchor);
-          // Anchors are relative paths, normalize them
-          let normalizedPath = anchor;
-          // Remove leading slash if present
-          if (normalizedPath.startsWith('/')) {
-            normalizedPath = normalizedPath.substring(1);
-          }
-          // Remove ./ if present
-          if (normalizedPath.startsWith('./')) {
-            normalizedPath = normalizedPath.substring(2);
-          }
-          console.info('[LocalDev] Normalized path:', normalizedPath);
-          filePaths.add(normalizedPath);
-        }
-      }
-    }
-
-    if (filePaths.size === 0) {
-      setA24zHighlightLayer(null);
-      return;
-    }
-
-    const layer: HighlightLayer = {
-      id: 'a24z-memory',
-      name: `a24z Memory (${filePaths.size} files)`,
-      enabled: true,
-      color: '#9333ea', // Purple for a24z
-      priority: 20, // Lower than search but higher than most
-      items: Array.from(filePaths).map((path) => ({
-        path,
-        type: 'file' as const,
-      })),
-    };
-
-    console.info(
-      '[LocalDev] Created a24z highlight layer with',
-      filePaths.size,
-      'files',
-    );
-    console.info('[LocalDev] a24z file paths:', Array.from(filePaths));
-    setA24zHighlightLayer(layer);
-  }, [a24zNotes, showA24zLayer]);
 
   // Create note highlight layers
   useEffect(() => {
@@ -913,25 +835,11 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
       '[LocalDev] - Selected file layer:',
       selectedFileLayer ? 'yes' : 'no',
     );
-    console.info('[LocalDev] - a24z layer:', a24zHighlightLayer ? 'yes' : 'no');
-
-    if (a24zHighlightLayer) {
-      console.info('[LocalDev] - a24z layer details:', {
-        id: a24zHighlightLayer.id,
-        name: a24zHighlightLayer.name,
-        enabled: a24zHighlightLayer.enabled,
-        color: a24zHighlightLayer.color,
-        priority: a24zHighlightLayer.priority,
-        itemCount: a24zHighlightLayer.items.length,
-        sampleItems: a24zHighlightLayer.items.slice(0, 3),
-      });
-    }
 
     const layers = [
       ...fileColorHighlightLayers,
       ...noteHighlightLayers,
       ...sessionHighlightLayers,
-      ...(a24zHighlightLayer ? [a24zHighlightLayer] : []),
       ...(searchHighlightLayer ? [searchHighlightLayer] : []),
       ...(selectedFileLayer ? [selectedFileLayer] : []),
     ];
@@ -978,7 +886,6 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
     fileColorHighlightLayers,
     noteHighlightLayers,
     sessionHighlightLayers,
-    a24zHighlightLayer,
     searchHighlightLayer,
     selectedFileLayer,
     currentSourceId,
@@ -1312,20 +1219,6 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
       });
     }
 
-    // a24z memory tool
-    if (a24zNotes.length > 0) {
-      items.push({
-        id: 'a24z-memory',
-        label: 'a24z Memory',
-        shortLabel: 'a24z',
-        icon: <Brain />,
-        count: a24zNotes.length,
-        color: '#9333ea',
-        active: showA24zLayer,
-        onClick: () => setShowA24zLayer(!showA24zLayer),
-        tooltip: `${showA24zLayer ? 'Hide' : 'Show'} a24z memory coverage (${a24zNotes.length} notes)`,
-      });
-    }
 
     // Search results
     if (searchResults.length > 0) {
@@ -1365,8 +1258,6 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
 
     return items;
   }, [
-    a24zNotes.length,
-    showA24zLayer,
     searchResults.length,
     selectedNoteIds.size,
     gitState,
@@ -1640,25 +1531,7 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
                 );
               }
             }}
-            onArchive={async () => {
-              if (selectedSessionForDetail && selectedSessionCardData) {
-                try {
-                  await AgentSessionArchiveService.archiveSession(
-                    selectedSessionForDetail,
-                  );
-                  // Clear the detail view after archiving
-                  setSelectedSessionForDetail(null);
-                  setSelectedSessionCardData(null);
-                  setRightPaneMode('city');
-                  // Trigger refresh to update the session list
-                  if (onSessionRefresh) {
-                    onSessionRefresh(selectedSessionForDetail);
-                  }
-                } catch (error) {
-                  console.error('Failed to archive session:', error);
-                }
-              }
-            }}
+            onArchive={undefined} // Archiving functionality removed
             onOpenPackageCommands={async (project) => {
               // Find the corresponding package layer and open command panel
               if (!fileTreeSourceService || !activeFileTreeSource?.id) return;

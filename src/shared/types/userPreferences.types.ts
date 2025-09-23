@@ -102,6 +102,12 @@ export interface UserPreferences {
   // Keyed by repository full name (e.g., "owner/repo")
   repositoryUIStates?: Record<string, RepositoryUIState>;
 
+  // Landing page preferences
+  landingPage?: {
+    selectedRepository?: string; // Name of the selected repository
+    showOnlyWithChanges?: boolean; // Filter to show only repositories with uncommitted changes
+  };
+
   // TODO: Add these fields that are currently using direct storage.get/set calls:
   // - aiConfiguration: src/renderer/services/ai/SessionSummaryService.ts:223
   //                     src/renderer/services/ai/ArchitecturalScaffoldService.ts:117,142

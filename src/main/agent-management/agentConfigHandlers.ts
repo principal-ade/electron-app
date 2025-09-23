@@ -5,12 +5,12 @@ import path from 'path';
 
 import {
   SupportedAgent,
-  AgentSettings,
   AGENT_INFO,
   convertOpenCodeToNormalized,
   convertNormalizedToOpenCode,
   NormalizedHook,
 } from '@principal-ai/agent-monitoring';
+import { AgentSettings } from '../../shared/types/legacy-event.types';
 
 // MOCK IMPLEMENTATIONS - These functions are not exported from @principal-ai/agent-monitoring
 // TODO: These need to be properly implemented or the package needs to be updated
@@ -390,35 +390,6 @@ export function setupAgentConfigHandlers() {
           mcpServerPath,
         );
 
-        // Also add a24z-memory MCP server (using npx to run it)
-        // This provides the note storage functionality
-        const a24zServerName = 'a24z-memory';
-
-        // Check if a24z-memory is already configured
-        if (!hasAgentMCP(agentType, updatedSettings, a24zServerName)) {
-          console.log(
-            '[AgentConfig] Adding a24z-memory MCP server alongside PrincipleMD MCP',
-          );
-
-          // For a24z-memory, we use npx to run it
-          // This assumes a24z-memory is installed as a dependency
-          updatedSettings = configureAgentMCP(
-            agentType,
-            updatedSettings,
-            a24zServerName,
-            'a24z-memory', // This will be run with npx
-          );
-
-          // Update the command to use npx for a24z-memory
-          if (agentType === 'claude' && updatedSettings.mcpServers) {
-            updatedSettings.mcpServers[a24zServerName] = {
-              type: 'stdio' as const,
-              command: 'npx',
-              args: ['a24z-memory'],
-              env: {},
-            };
-          }
-        }
 
         // Write updated settings
         await writeAgentSettings(configPath, updatedSettings);
@@ -458,16 +429,6 @@ export function setupAgentConfigHandlers() {
           serverName,
         );
 
-        // Also remove a24z-memory MCP if it exists
-        const a24zServerName = 'a24z-memory';
-        if (hasAgentMCP(agentType, updatedSettings, a24zServerName)) {
-          console.log('[AgentConfig] Also removing a24z-memory MCP server');
-          updatedSettings = removeAgentMCP(
-            agentType,
-            updatedSettings,
-            a24zServerName,
-          );
-        }
 
         // Write updated settings
         await writeAgentSettings(configPath, updatedSettings);

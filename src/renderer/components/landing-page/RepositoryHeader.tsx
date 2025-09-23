@@ -1,0 +1,726 @@
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { GitBranch, Trash2, ExternalLink, Code, ChevronDown, Terminal, RefreshCw, GitPullRequest, Upload } from 'lucide-react';
+import { useTheme } from 'themed-markdown';
+import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.types';
+import { GitBranchStatus } from '../../main-process-api/GitService';
+import { ShellService } from '../../main-process-api/ShellService';
+import { TerminalService } from '../../main-process-api/TerminalService';
+
+interface RepositoryHeaderProps {
+  repository: EnhancedAlexandriaEntry;
+  branchStatus: GitBranchStatus | null;
+  pushStatus: { safe: boolean; reason?: string; needsUpstream: boolean } | null;
+  isCheckingUpdates: boolean;
+  isFastForwarding: boolean;
+  isPushing: boolean;
+  terminalWindows: Map<string, number>;
+  onCheckForUpdates: () => void;
+  onPerformFastForward: () => void;
+  onPerformPush: () => void;
+  onOpenDashboard: () => void;
+  onRemove: () => void;
+  onTerminalWindowsUpdate: (windows: Map<string, number>) => void;
+}
+
+const spinAnimation = `
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+`;
+
+export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
+  repository,
+  branchStatus,
+  pushStatus,
+  isCheckingUpdates,
+  isFastForwarding,
+  isPushing,
+  terminalWindows,
+  onCheckForUpdates,
+  onPerformFastForward,
+  onPerformPush,
+  onOpenDashboard,
+  onRemove,
+  onTerminalWindowsUpdate,
+}) => {
+  const { theme } = useTheme();
+  const [showIdeDropdown, setShowIdeDropdown] = useState(false);
+  const ideDropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleOpenInIDE = useCallback(async (editor: 'vscode' | 'cursor' | 'webstorm' | 'sublime' | 'intellij') => {
+    if (!repository?.path) return;
+
+    try {
+      const result = await ShellService.openInEditor({
+        editor,
+        dir: repository.path
+      });
+
+      if (!result.success) {
+        console.error('Failed to open in IDE:', result.error);
+      }
+    } catch (error) {
+      console.error('Error opening in IDE:', error);
+    }
+
+    setShowIdeDropdown(false);
+  }, [repository]);
+
+  const handleOpenInDefaultIDE = useCallback(async () => {
+    if (!repository?.path) return;
+
+    try {
+      const result = await ShellService.openInDefaultEditor(repository.path);
+      if (!result.success) {
+        console.error('Failed to open in default IDE:', result.error);
+      }
+    } catch (error) {
+      console.error('Error opening in default IDE:', error);
+    }
+
+    setShowIdeDropdown(false);
+  }, [repository]);
+
+  const handleOpenTerminal = useCallback(async () => {
+    if (!repository?.path) return;
+
+    try {
+      const existingWindowId = terminalWindows.get(repository.path);
+
+      if (existingWindowId) {
+        try {
+          await TerminalService.focusWindow(existingWindowId);
+          console.log(`[RepositoryHeader] Focused existing terminal window ${existingWindowId} for ${repository.path}`);
+          return;
+        } catch (focusError) {
+          console.warn('Failed to focus existing terminal window, will create new one:', focusError);
+          const newMap = new Map(terminalWindows);
+          newMap.delete(repository.path);
+          onTerminalWindowsUpdate(newMap);
+        }
+      }
+
+      const terminalId = await TerminalService.getOrCreate(repository.path);
+      const { windowId } = await TerminalService.popOut(terminalId);
+
+      const newMap = new Map(terminalWindows);
+      newMap.set(repository.path, windowId);
+      onTerminalWindowsUpdate(newMap);
+
+      console.log(`[RepositoryHeader] Created new terminal window ${windowId} for ${repository.path}`);
+    } catch (error) {
+      console.error('Error opening terminal:', error);
+    }
+  }, [repository, terminalWindows, onTerminalWindowsUpdate]);
+
+  // Handle click outside IDE dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        ideDropdownRef.current &&
+        !ideDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowIdeDropdown(false);
+      }
+    };
+
+    if (showIdeDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showIdeDropdown]);
+
+  return (
+    <div
+      style={{
+        padding: '20px',
+        borderBottom: `1px solid ${theme.colors.border}`,
+        backgroundColor: theme.colors.backgroundLight,
+      }}
+    >
+      <style>{spinAnimation}</style>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '4px',
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                fontSize: theme.fontSizes[5],
+                fontWeight: 600,
+                color: theme.colors.text,
+              }}
+            >
+              {repository.name}
+            </h2>
+
+            {/* Branch Status Indicator */}
+            {branchStatus && branchStatus.hasUpstream && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: '16px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  backgroundColor:
+                    branchStatus.behind > 0 && branchStatus.ahead === 0
+                      ? `${theme.colors.warning}15`
+                      : branchStatus.ahead > 0 && branchStatus.behind === 0
+                      ? `${theme.colors.info}15`
+                      : branchStatus.ahead > 0 && branchStatus.behind > 0
+                      ? `${theme.colors.error}15`
+                      : `${theme.colors.success}15`,
+                  color:
+                    branchStatus.behind > 0 && branchStatus.ahead === 0
+                      ? theme.colors.warning
+                      : branchStatus.ahead > 0 && branchStatus.behind === 0
+                      ? theme.colors.info
+                      : branchStatus.ahead > 0 && branchStatus.behind > 0
+                      ? theme.colors.error
+                      : theme.colors.success,
+                  border: `1px solid ${
+                    branchStatus.behind > 0 && branchStatus.ahead === 0
+                      ? theme.colors.warning
+                      : branchStatus.ahead > 0 && branchStatus.behind === 0
+                      ? theme.colors.info
+                      : branchStatus.ahead > 0 && branchStatus.behind > 0
+                      ? theme.colors.error
+                      : theme.colors.success
+                  }30`,
+                }}
+              >
+                <GitBranch size={12} />
+                {branchStatus.behind > 0 && branchStatus.ahead === 0 && (
+                  <>↓ {branchStatus.behind} behind</>
+                )}
+                {branchStatus.ahead > 0 && branchStatus.behind === 0 && (
+                  <>↑ {branchStatus.ahead} ahead</>
+                )}
+                {branchStatus.ahead > 0 && branchStatus.behind > 0 && (
+                  <>↑{branchStatus.ahead} ↓{branchStatus.behind} diverged</>
+                )}
+                {branchStatus.ahead === 0 && branchStatus.behind === 0 && <>✓ up to date</>}
+              </div>
+            )}
+
+            {!branchStatus && isCheckingUpdates && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: '16px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                <RefreshCw size={12} className="spin" />
+                Checking...
+              </div>
+            )}
+          </div>
+          <div
+            style={{
+              fontSize: theme.fontSizes[0],
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.monospace,
+              marginTop: '4px',
+              marginBottom: repository.github?.description ? '8px' : '0',
+            }}
+          >
+            {repository.path}
+          </div>
+          {repository.github?.description && (
+            <p
+              style={{
+                margin: '0',
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textSecondary,
+              }}
+            >
+              {repository.github.description}
+            </p>
+          )}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            alignItems: 'center',
+          }}
+        >
+          {/* Check for Updates Button */}
+          <button
+            onClick={onCheckForUpdates}
+            disabled={isCheckingUpdates}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              backgroundColor: 'transparent',
+              color: isCheckingUpdates ? theme.colors.textSecondary : theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: isCheckingUpdates ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s',
+              opacity: isCheckingUpdates ? 0.6 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!isCheckingUpdates) {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+            title="Check for updates from remote repository"
+          >
+            <RefreshCw
+              size={14}
+              style={{
+                animation: isCheckingUpdates ? 'spin 1s linear infinite' : 'none',
+              }}
+            />
+            {isCheckingUpdates ? 'Checking...' : 'Check Updates'}
+          </button>
+
+          {/* Fast Forward Button - Only show when applicable */}
+          {branchStatus?.canFastForward && (
+            <button
+              onClick={onPerformFastForward}
+              disabled={isFastForwarding}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                backgroundColor: theme.colors.success,
+                color: theme.colors.background,
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: isFastForwarding ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                opacity: isFastForwarding ? 0.6 : 1,
+                animation: 'pulse 2s infinite',
+              }}
+              onMouseEnter={(e) => {
+                if (!isFastForwarding) {
+                  e.currentTarget.style.opacity = '0.9';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isFastForwarding) {
+                  e.currentTarget.style.opacity = '1';
+                }
+              }}
+              title={`Fast-forward merge ${branchStatus.behind} commit${branchStatus.behind > 1 ? 's' : ''}`}
+            >
+              <GitPullRequest
+                size={14}
+                style={{
+                  animation: isFastForwarding ? 'spin 1s linear infinite' : 'none',
+                }}
+              />
+              {isFastForwarding ? 'Merging...' : 'Fast Forward'}
+            </button>
+          )}
+
+          {/* Push Button - Only show when there are commits to push */}
+          {pushStatus?.safe && branchStatus?.ahead && branchStatus.ahead > 0 && (
+            <button
+              onClick={onPerformPush}
+              disabled={isPushing}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                backgroundColor: theme.colors.info || theme.colors.primary,
+                color: theme.colors.background,
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: isPushing ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                opacity: isPushing ? 0.6 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!isPushing) {
+                  e.currentTarget.style.opacity = '0.9';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isPushing) {
+                  e.currentTarget.style.opacity = '1';
+                }
+              }}
+              title={pushStatus.reason || `Push ${branchStatus.ahead} commit${branchStatus.ahead > 1 ? 's' : ''} to remote`}
+            >
+              <Upload
+                size={14}
+                style={{
+                  animation: isPushing ? 'spin 1s linear infinite' : 'none',
+                }}
+              />
+              {isPushing ? 'Pushing...' : pushStatus.needsUpstream ? 'Push & Set Upstream' : 'Push'}
+            </button>
+          )}
+
+          <button
+            onClick={onOpenDashboard}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              backgroundColor: theme.colors.primary,
+              color: theme.colors.background,
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'opacity 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            <ExternalLink size={14} />
+            Open Dashboard
+          </button>
+
+          {/* IDE Dropdown */}
+          <div ref={ideDropdownRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowIdeDropdown(!showIdeDropdown)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                backgroundColor: 'transparent',
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = theme.colors.border;
+              }}
+              title="Open in external IDE"
+            >
+              <Code size={14} />
+              Open in IDE
+              <ChevronDown size={12} />
+            </button>
+
+            {/* IDE Dropdown Menu */}
+            {showIdeDropdown && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '4px',
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  minWidth: '180px',
+                  zIndex: 1000,
+                  overflow: 'hidden',
+                }}
+              >
+                <button
+                  onClick={handleOpenInDefaultIDE}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    padding: '12px 16px',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.text,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <Code size={16} />
+                  Default (VS Code)
+                </button>
+
+                <div
+                  style={{
+                    height: '1px',
+                    backgroundColor: theme.colors.border,
+                  }}
+                />
+
+                <button
+                  onClick={() => handleOpenInIDE('vscode')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    padding: '12px 16px',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.text,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <Code size={16} />
+                  VS Code
+                </button>
+
+                <button
+                  onClick={() => handleOpenInIDE('cursor')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    padding: '12px 16px',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.text,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <Code size={16} />
+                  Cursor
+                </button>
+
+                <button
+                  onClick={() => handleOpenInIDE('webstorm')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    padding: '12px 16px',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.text,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <Code size={16} />
+                  WebStorm
+                </button>
+
+                <button
+                  onClick={() => handleOpenInIDE('sublime')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    padding: '12px 16px',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.text,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <Code size={16} />
+                  Sublime Text
+                </button>
+
+                <button
+                  onClick={() => handleOpenInIDE('intellij')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    width: '100%',
+                    padding: '12px 16px',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.text,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    textAlign: 'left',
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <Code size={16} />
+                  IntelliJ IDEA
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={handleOpenTerminal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              backgroundColor: 'transparent',
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+            title={
+              repository?.path && terminalWindows.has(repository.path)
+                ? "Focus existing terminal window"
+                : "Open terminal in repository directory"
+            }
+          >
+            <Terminal size={14} />
+            {repository?.path && terminalWindows.has(repository.path)
+              ? "Focus Terminal"
+              : "Terminal"
+            }
+          </button>
+
+          <button
+            onClick={onRemove}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              backgroundColor: 'transparent',
+              color: theme.colors.error || '#ef4444',
+              border: `1px solid ${theme.colors.error || '#ef4444'}`,
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = `${theme.colors.error || '#ef4444'}15`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+            title="Remove repository from Alexandria"
+          >
+            <Trash2 size={14} />
+            Remove
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

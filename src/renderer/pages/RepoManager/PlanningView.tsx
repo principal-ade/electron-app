@@ -36,7 +36,7 @@ import { ThemedMonaco } from '../../components/shared/ThemedMonaco';
 import type { Repository } from '../../../shared/types/repository.types';
 import { PlanningLeftTabType } from '../../../shared/types/userPreferences.types';
 import TerminalPanel from '../../components/Terminal/TerminalPanel';
-import { DocumentSearchPanel } from './shared/DocumentSearchPanel';
+import { MarkdownSearchPanel } from './shared/MarkdownSearchPanel';
 import { TerminalCleanupButton } from './shared/TerminalCleanupButton';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { TerminalService } from '../../main-process-api/TerminalService';
@@ -1684,7 +1684,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                     pointerEvents: activeLeftTab === 'search' ? 'auto' : 'none',
                   }}
                 >
-                  <DocumentSearchPanel
+                  <MarkdownSearchPanel
                     baseDirectory={localClone.path}
                     onDocumentSelect={(
                       filePath,

@@ -42,7 +42,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   const [isCloning, setIsCloning] = useState(false);
   const [cloneProgress, setCloneProgress] = useState<string>('');
 
-  // Reset state when modal opens
+  // Reset state when modal opens and focus the input
   useEffect(() => {
     if (isOpen) {
       setCurrentStep('input');
@@ -55,13 +55,53 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       setIsValidating(false);
       setIsCloning(false);
       setCloneProgress('');
+
+      // Focus the input field after a brief delay to ensure the modal is rendered
+      setTimeout(() => {
+        const input = document.getElementById('git-url-input');
+        if (input) {
+          input.focus();
+        }
+      }, 100);
     }
   }, [isOpen]);
+
+  // Normalize git URL (handle browser URLs, add .git if needed)
+  const normalizeGitUrl = (url: string): string => {
+    // Remove trailing slashes
+    url = url.replace(/\/+$/, '');
+
+    // Handle common git platforms - add .git if missing
+    if (url.includes('github.com') || url.includes('gitlab.com') || url.includes('bitbucket.org')) {
+      // Check if it's a browser URL (doesn't have .git extension)
+      if (!url.endsWith('.git') && !url.includes('.git/')) {
+        // Remove any URL fragments or query parameters
+        url = url.split('#')[0].split('?')[0];
+
+        // Handle URLs with /tree/, /blob/, /commits/ etc (GitHub browser URLs)
+        const patterns = ['/tree/', '/blob/', '/commits/', '/pulls', '/issues', '/wiki', '/settings', '/actions'];
+        for (const pattern of patterns) {
+          const index = url.indexOf(pattern);
+          if (index !== -1) {
+            url = url.substring(0, index);
+            break;
+          }
+        }
+
+        // Add .git extension
+        url = `${url}.git`;
+      }
+    }
+
+    return url;
+  };
 
   // Extract repo name from URL
   const extractRepoName = (url: string): string => {
     try {
-      const urlParts = url.split('/');
+      // First normalize the URL
+      const normalizedUrl = normalizeGitUrl(url);
+      const urlParts = normalizedUrl.split('/');
       const lastPart = urlParts[urlParts.length - 1];
       return lastPart.replace(/\.git$/, '');
     } catch {
@@ -69,10 +109,24 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     }
   };
 
-  // Validate Git URL format
+  // Validate Git URL format (now accepts browser URLs too)
   const isValidGitUrl = (url: string): boolean => {
-    const gitUrlRegex = /^(https?:\/\/|git@).*\.git$/;
-    return gitUrlRegex.test(url.trim());
+    // Basic validation - must start with http(s) or git@
+    const basicGitUrlRegex = /^(https?:\/\/|git@).+/;
+    if (!basicGitUrlRegex.test(url.trim())) {
+      return false;
+    }
+
+    // Check if it looks like a git repository URL
+    // Accept common patterns: github.com/owner/repo, gitlab.com/owner/repo, etc.
+    const repoPatterns = [
+      /github\.com\/[^/]+\/[^/]+/,
+      /gitlab\.com\/[^/]+\/[^/]+/,
+      /bitbucket\.org\/[^/]+\/[^/]+/,
+      /\.git$/  // Already has .git extension
+    ];
+
+    return repoPatterns.some(pattern => pattern.test(url));
   };
 
   // Handle URL validation and auth method checking
@@ -83,17 +137,20 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     }
 
     if (!isValidGitUrl(gitUrl)) {
-      setError('Please enter a valid Git URL (ending with .git)');
+      setError('Please enter a valid Git repository URL');
       return;
     }
+
+    // Normalize the URL (add .git if needed)
+    const normalizedUrl = normalizeGitUrl(gitUrl);
 
     setIsValidating(true);
     setError('');
     setCurrentStep('validating');
 
     try {
-      // Check authentication methods
-      const methods = await GitService.checkAuthMethods(gitUrl);
+      // Check authentication methods with normalized URL
+      const methods = await GitService.checkAuthMethods(normalizedUrl);
       setAuthMethods(methods);
 
       // Determine which method to use by default
@@ -102,13 +159,15 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       } else if (methods.https.available) {
         setSelectedAuthMethod('https');
       } else {
-        setError('Unable to access repository. Check authentication and URL.');
+        // Show detailed authentication help
+        const suggestions = methods.suggestions?.join('\n') || 'Unable to access repository. Check authentication and URL.';
+        setError(suggestions);
         setCurrentStep('error');
         return;
       }
 
-      // Extract repo name
-      const name = extractRepoName(gitUrl);
+      // Extract repo name from normalized URL
+      const name = extractRepoName(normalizedUrl);
       setRepoName(name);
 
       // Move to directory selection
@@ -174,12 +233,14 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
 
     try {
       // Determine which URL to use based on selected auth method
-      let cloneUrl = gitUrl;
+      // Use normalized URL as base
+      const baseUrl = normalizeGitUrl(gitUrl);
+      let cloneUrl = baseUrl;
       if (selectedAuthMethod === 'ssh' && authMethods?.ssh.available) {
         // Convert HTTPS to SSH if needed
-        if (gitUrl.startsWith('https://')) {
+        if (baseUrl.startsWith('https://')) {
           // Convert https://github.com/owner/repo.git to git@github.com:owner/repo.git
-          const match = gitUrl.match(/https:\/\/([^/]+)\/([^/]+)\/([^/.]+)\.git$/);
+          const match = baseUrl.match(/https:\/\/([^/]+)\/([^/]+)\/([^/.]+)\.git$/);
           if (match) {
             cloneUrl = `git@${match[1]}:${match[2]}/${match[3]}.git`;
           }
@@ -286,10 +347,11 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                   Git Repository URL
                 </label>
                 <input
+                  id="git-url-input"
                   type="text"
                   value={gitUrl}
                   onChange={(e) => setGitUrl(e.target.value)}
-                  placeholder="https://github.com/owner/repo.git"
+                  placeholder="https://github.com/owner/repo or git@github.com:owner/repo.git"
                   disabled={isValidating}
                   style={{
                     width: '100%',
@@ -311,7 +373,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                   className="text-xs mt-1"
                   style={{ color: theme.colors.textSecondary }}
                 >
-                  Enter the HTTPS or SSH URL of the Git repository
+                  Enter the repository URL (you can paste directly from your browser)
                 </p>
               </div>
 
@@ -574,10 +636,38 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                 style={{ color: theme.colors.error }}
               >
                 <AlertCircle size={20} />
-                <span className="font-medium">Clone Failed</span>
+                <span className="font-medium">Authentication Required</span>
               </div>
 
-              <p style={{ color: theme.colors.textSecondary }}>{error}</p>
+              <div
+                className="text-sm space-y-2 max-h-96 overflow-y-auto"
+                style={{ color: theme.colors.textSecondary }}
+              >
+                {error.split('\n').map((line, index) => {
+                  // Handle markdown-style headers
+                  if (line.startsWith('**') && line.endsWith('**')) {
+                    return (
+                      <p key={index} className="font-semibold mt-3" style={{ color: theme.colors.text }}>
+                        {line.replace(/\*\*/g, '')}
+                      </p>
+                    );
+                  }
+                  // Handle list items
+                  if (line.startsWith('•') || /^\d+\./.test(line)) {
+                    return (
+                      <p key={index} className="ml-4">
+                        {line}
+                      </p>
+                    );
+                  }
+                  // Handle empty lines
+                  if (line.trim() === '') {
+                    return <div key={index} className="h-2" />;
+                  }
+                  // Regular text
+                  return <p key={index}>{line}</p>;
+                })}
+              </div>
 
               <div className="flex justify-end gap-3">
                 <button

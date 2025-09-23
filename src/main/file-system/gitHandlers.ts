@@ -7,23 +7,92 @@ import * as os from 'os';
 // Create a single instance of the git service
 const gitService = new GitRepositoryService();
 
+// Helper function to normalize git URLs (add .git if needed, handle browser URLs)
+function normalizeGitUrl(url: string): string {
+  // Remove trailing slashes
+  url = url.replace(/\/+$/, '');
+
+  // Handle common git platforms - add .git if missing
+  if (url.includes('github.com') || url.includes('gitlab.com') || url.includes('bitbucket.org')) {
+    // Check if it's a browser URL (doesn't have .git extension)
+    if (!url.endsWith('.git') && !url.includes('.git/')) {
+      // Remove any URL fragments or query parameters
+      url = url.split('#')[0].split('?')[0];
+
+      // Handle URLs with /tree/, /blob/, /commits/ etc (GitHub browser URLs)
+      const patterns = ['/tree/', '/blob/', '/commits/', '/pulls', '/issues', '/wiki', '/settings', '/actions'];
+      for (const pattern of patterns) {
+        const index = url.indexOf(pattern);
+        if (index !== -1) {
+          url = url.substring(0, index);
+          break;
+        }
+      }
+
+      // Add .git extension
+      url = `${url}.git`;
+    }
+  }
+
+  return url;
+}
+
 // Helper function to test if a git URL is accessible
 async function testGitAccess(
   url: string,
 ): Promise<{ accessible: boolean; message: string }> {
   try {
-    console.log(`[Git] Testing access to ${url}`);
+    // Normalize the URL first
+    const normalizedUrl = normalizeGitUrl(url);
+
     // Use ls-remote to test if we can access the repository
     // This doesn't clone, just checks if we can connect
     const git = await gitClientFactory.getClient(os.homedir());
-    const result = await git.raw(['ls-remote', '--exit-code', '--heads', url]);
+
+    // Check if this is an SSH URL
+    const isSSH = normalizedUrl.startsWith('git@') || normalizedUrl.includes('ssh://');
+
+    // For SSH, we need certain env vars for authentication
+    // For HTTPS, we need to prevent interactive prompts
+    // Only pass serializable environment variables
+    const baseEnv = {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      USER: process.env.USER,
+      SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK,
+      SSH_AGENT_PID: process.env.SSH_AGENT_PID,
+    };
+
+    const envVars = isSSH ?
+      baseEnv :
+      {
+        ...baseEnv,
+        GIT_TERMINAL_PROMPT: '0',
+        GIT_ASKPASS: '/bin/echo',
+        GCM_INTERACTIVE: 'never'
+      };
+
+    // Use a shorter timeout for the auth check
+    // Note: We remove --exit-code because it returns 2 for empty repos
+    // Instead, we'll check for authentication errors in stderr
+    const result = await Promise.race([
+      git.raw(
+        ['ls-remote', normalizedUrl],
+        {
+          env: envVars,
+          timeout: 10000  // Give SSH a bit more time (10 seconds)
+        }
+      ),
+      new Promise<string>((_, reject) =>
+        setTimeout(() => reject(new Error('Authentication timeout')), 10000)
+      )
+    ]);
 
     // If we get here without error, the URL is accessible
-    if (
-      result &&
-      !result.includes('fatal:') &&
-      !result.includes('Authentication failed')
-    ) {
+    // Empty result is OK (means empty repository)
+    // Check for actual error messages in the result
+    if (result !== undefined && !result.includes('fatal:') && !result.includes('Authentication failed')) {
+      // Even empty string is OK - it means we connected but repo is empty
       return { accessible: true, message: 'Authentication successful' };
     }
 
@@ -54,6 +123,10 @@ async function testGitAccess(
     // Parse the error message for common issues
     const errorMsg = error instanceof Error ? error.message : String(error);
 
+    if (errorMsg.includes('Authentication timeout')) {
+      return { accessible: false, message: 'Authentication required - repository is private' };
+    }
+
     if (errorMsg.includes('Repository not found') || errorMsg.includes('404')) {
       return { accessible: false, message: 'Repository not found or private' };
     }
@@ -62,7 +135,15 @@ async function testGitAccess(
       return { accessible: false, message: 'Authentication required' };
     }
 
-    return { accessible: false, message: 'Connection failed' };
+    if (errorMsg.includes('Permission denied')) {
+      return { accessible: false, message: 'Permission denied - check SSH keys' };
+    }
+
+    if (errorMsg.includes('Host key verification failed')) {
+      return { accessible: false, message: 'SSH host key verification failed - run: ssh-keyscan github.com >> ~/.ssh/known_hosts' };
+    }
+
+    return { accessible: false, message: `Connection failed: ${errorMsg.substring(0, 100)}` };
   }
 }
 
@@ -185,16 +266,43 @@ export function registerGitHandlers(): void {
     GitEvents.CLONE_REPOSITORY,
     async (_event, remoteUrl: string, targetPath: string) => {
       try {
-        console.log(`[Git] Cloning repository ${remoteUrl} to ${targetPath}`);
+        // Normalize the URL first
+        const normalizedUrl = normalizeGitUrl(remoteUrl);
 
-        // Use simple-git to clone the repository
+        // Use gitClientFactory to clone the repository
         const parentDir = targetPath.substring(0, targetPath.lastIndexOf('/'));
         const git = await gitClientFactory.getClient(parentDir);
 
-        // Clone the repository
-        await git.clone(remoteUrl, targetPath);
+        // Clone the repository with normalized URL and authentication handling
+        // Check if this is an SSH URL
+        const isSSH = normalizedUrl.startsWith('git@') || normalizedUrl.includes('ssh://');
 
-        console.log(`[Git] Clone successful`);
+        // Only pass serializable environment variables
+        const baseEnv = {
+          PATH: process.env.PATH,
+          HOME: process.env.HOME,
+          USER: process.env.USER,
+          SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK,
+          SSH_AGENT_PID: process.env.SSH_AGENT_PID,
+        };
+
+        const cloneEnv = isSSH ?
+          baseEnv :
+          {
+            ...baseEnv,
+            GIT_TERMINAL_PROMPT: '0',
+            GIT_ASKPASS: '/bin/echo',
+            GCM_INTERACTIVE: 'never'
+          };
+
+        await git.raw(
+          ['clone', normalizedUrl, targetPath],
+          {
+            env: cloneEnv,
+            timeout: 120000 // 2 minutes for clone operation
+          }
+        );
+
 
         return true;
       } catch (error) {
@@ -209,7 +317,8 @@ export function registerGitHandlers(): void {
     GitEvents.CHECK_AUTH_METHODS,
     async (_event, remoteUrl: string) => {
       try {
-        console.log(`[Git] Checking auth methods for ${remoteUrl}`);
+        // Normalize the input URL first
+        const normalizedUrl = normalizeGitUrl(remoteUrl);
 
         const result = {
           ssh: { available: false, reason: '' },
@@ -218,32 +327,33 @@ export function registerGitHandlers(): void {
         };
 
         // Parse the URL to determine the service (GitHub, GitLab, etc)
-        const isGitHub = remoteUrl.includes('github.com');
-        const isGitLab = remoteUrl.includes('gitlab.com');
+        const isGitHub = normalizedUrl.includes('github.com');
+        const isGitLab = normalizedUrl.includes('gitlab.com');
 
-        // Test HTTPS access (always test the provided URL first)
-        const httpsTest = await testGitAccess(remoteUrl);
+        // Test HTTPS access (always test the normalized URL)
+        const httpsTest = await testGitAccess(normalizedUrl);
         result.https.available = httpsTest.accessible;
         result.https.reason = httpsTest.message;
 
         // Create SSH URL variant and test it
         let sshUrl = '';
         if (isGitHub) {
-          // Convert https://github.com/owner/repo to git@github.com:owner/repo.git
-          const match = remoteUrl.match(/github\.com\/([^/]+)\/([^/.]+)/);
+          // Convert https://github.com/owner/repo.git to git@github.com:owner/repo.git
+          // Match pattern: github.com/owner/repo or github.com/owner/repo.git
+          const match = normalizedUrl.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/);
           if (match) {
             sshUrl = `git@github.com:${match[1]}/${match[2]}.git`;
           }
         } else if (isGitLab) {
-          // Convert https://gitlab.com/owner/repo to git@gitlab.com:owner/repo.git
-          const match = remoteUrl.match(/gitlab\.com\/([^/]+)\/([^/.]+)/);
+          // Convert https://gitlab.com/owner/repo.git to git@gitlab.com:owner/repo.git
+          const match = normalizedUrl.match(/gitlab\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/);
           if (match) {
             sshUrl = `git@gitlab.com:${match[1]}/${match[2]}.git`;
           }
         } else {
           // Generic conversion for other git services
-          const match = remoteUrl.match(
-            /https?:\/\/([^/]+)\/([^/]+)\/([^/.]+)/,
+          const match = normalizedUrl.match(
+            /https?:\/\/([^/]+)\/([^/]+)\/([^/]+?)(?:\.git)?$/,
           );
           if (match) {
             sshUrl = `git@${match[1]}:${match[2]}/${match[3]}.git`;
@@ -262,36 +372,62 @@ export function registerGitHandlers(): void {
 
         // Generate helpful suggestions based on results
         if (!result.ssh.available && !result.https.available) {
-          // Neither method works
-          result.suggestions.push(
-            'Unable to access this repository. This could mean:',
-            '• The repository is private and requires authentication',
-            '• The repository URL is incorrect',
-            '• Network connectivity issues',
-            '',
-            'To set up authentication:',
-            '1. For SSH: Generate keys with: ssh-keygen -t ed25519',
-            '   Then add the public key to your GitHub/GitLab account',
-            '2. For HTTPS: Use a personal access token or configure:',
-            '   git config --global credential.helper store',
-          );
+          // Neither method works - provide detailed guidance
+          const isGitHubPrivate = normalizedUrl.includes('github.com') &&
+            (result.https.reason?.includes('Authentication required') ||
+             result.ssh.reason?.includes('Authentication required'));
+
+          if (isGitHubPrivate) {
+            result.suggestions.push(
+              'This appears to be a private repository that requires authentication.',
+              '',
+              'To clone this repository, you need to set up authentication:',
+              '',
+              '**Option 1: GitHub CLI (Recommended)**',
+              '1. Install GitHub CLI: brew install gh',
+              '2. Authenticate: gh auth login',
+              '3. Try cloning again',
+              '',
+              '**Option 2: Personal Access Token**',
+              '1. Go to GitHub → Settings → Developer Settings → Personal Access Tokens',
+              '2. Generate a new token with "repo" scope',
+              '3. Use the token as your password when prompted',
+              '',
+              '**Option 3: SSH Keys**',
+              '1. Generate SSH key: ssh-keygen -t ed25519 -C "your_email@example.com"',
+              '2. Add to SSH agent: ssh-add ~/.ssh/id_ed25519',
+              '3. Add public key to GitHub: Settings → SSH and GPG keys',
+              '4. Use the SSH URL instead: git@github.com:owner/repo.git',
+            );
+          } else {
+            result.suggestions.push(
+              'Unable to access this repository. Possible reasons:',
+              '• The repository is private and requires authentication',
+              '• The repository URL is incorrect or does not exist',
+              '• Network connectivity issues',
+              '',
+              'To set up authentication:',
+              '• For GitHub: Use gh auth login or a Personal Access Token',
+              '• For SSH: Generate keys with ssh-keygen and add to your Git provider',
+              '• For HTTPS: Configure a credential helper or use a personal access token',
+            );
+          }
         } else if (result.ssh.available && !result.https.available) {
           result.suggestions.push(
-            'SSH access is working. Using SSH URL for cloning.',
+            'SSH access is available. The repository will be cloned using SSH.',
           );
         } else if (!result.ssh.available && result.https.available) {
           result.suggestions.push(
-            'HTTPS access is working. Using HTTPS URL for cloning.',
+            'HTTPS access is available. The repository will be cloned using HTTPS.',
           );
         } else {
           // Both work
           result.suggestions.push(
             'Both SSH and HTTPS access are available.',
-            "SSH is recommended for frequent use as it doesn't require entering credentials.",
+            'SSH will be used by default as it doesn\'t require entering credentials.',
           );
         }
 
-        console.log(`[Git] Auth check result:`, result);
         return result;
       } catch (error) {
         console.error('[Git] Failed to check auth methods:', error);

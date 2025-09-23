@@ -162,7 +162,7 @@ export const AlexandriaRepositoryCard: React.FC<
               <Star size={12} style={{ color: '#FFC107', fill: '#FFC107' }} />
               <div
                 style={{
-                  fontSize: '8px',
+                  fontSize: theme.fontSizes[0],
                   color: '#FFC107',
                   fontWeight: 'bold',
                   marginTop: '2px',
@@ -278,7 +278,7 @@ export const AlexandriaRepositoryCard: React.FC<
                     style={{
                       padding: '4px 8px',
                       backgroundColor: mutedBg,
-                      fontSize: '12px',
+                      fontSize: theme.fontSizes[0],
                       borderRadius: '4px',
                       color: textSecondary,
                     }}
@@ -291,7 +291,7 @@ export const AlexandriaRepositoryCard: React.FC<
                     style={{
                       padding: '4px 8px',
                       backgroundColor: theme.colors.backgroundTertiary,
-                      fontSize: '12px',
+                      fontSize: theme.fontSizes[0],
                       borderRadius: '4px',
                       color: textSecondary,
                     }}
@@ -321,7 +321,7 @@ export const AlexandriaRepositoryCard: React.FC<
                   color: textSecondary,
                   padding: '6px 12px',
                   borderRadius: '999px',
-                  fontSize: '14px',
+                  fontSize: theme.fontSizes[1],
                   fontWeight: theme.fontWeights.medium,
                 }}
               >
@@ -348,7 +348,7 @@ export const AlexandriaRepositoryCard: React.FC<
                   color: textSecondary,
                   padding: '6px 12px',
                   borderRadius: '999px',
-                  fontSize: '14px',
+                  fontSize: theme.fontSizes[1],
                   fontWeight: theme.fontWeights.medium,
                 }}
               >

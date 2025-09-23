@@ -8,7 +8,7 @@ import { useTheme } from 'themed-markdown';
 import { GlobalFeedbackProvider } from './GlobalFeedbackProvider';
 import { UserPromptProvider } from './components/mcp/UserPromptProvider';
 import { CustomThemeProvider } from './providers/CustomThemeProvider';
-import { MainWindowTitlebar, RepositoryTitlebar, MarkdownViewerTitlebar } from './components/Titlebar';
+// Titlebars are now integrated into each component
 import { SettingsModal } from './components/landing-page/SettingsModal';
 
 import {
@@ -25,11 +25,6 @@ import { MarkdownView } from './pages/MarkdownView';
 const LandingPage = React.lazy(() =>
   import('./pages/LandingPage/LandingPage').then((m) => ({
     default: m.LandingPage,
-  })),
-);
-const ArchivedSessionsViewer = React.lazy(() =>
-  import('./pages/ArchivedSessionsViewer').then((m) => ({
-    default: m.ArchivedSessionsViewer,
   })),
 );
 const StandaloneTerminal = React.lazy(() =>
@@ -55,23 +50,34 @@ const CallimachusWindow = React.lazy(() =>
     default: m.CallimachusWindow,
   })),
 );
+const SearchWindow = React.lazy(() =>
+  import('./pages/SearchWindow').then((m) => ({
+    default: m.SearchWindow,
+  })),
+);
 
 function AppContent({
   setHasUpdateAvailable,
+  onLandingPageMounted,
+  onSettingsClick,
+  hasUpdateAvailable,
 }: {
   setHasUpdateAvailable: (hasUpdate: boolean) => void;
+  onSettingsClick?: () => void;
+  hasUpdateAvailable?: boolean;
+  // onLandingPageMounted removed - add project buttons now in repository list header
 }) {
   const { theme } = useTheme();
 
   const [currentView, setCurrentView] = React.useState<
     | 'landing'
-    | 'ArchivedSessionsViewer'
     | 'terminal'
     | 'storeViewer'
     | 'markdownView'
     | 'repositoryMaps'
     | 'multiFileEditor'
     | 'callimachus'
+    | 'search'
   >('landing');
   // const [useNewUI, setUseNewUI] = React.useState(false); // No longer needed
   const [windowInitData, setWindowInitData] = React.useState<unknown>(null);
@@ -97,18 +103,6 @@ function AppContent({
       if (hash.startsWith('#/terminal/')) {
         // This is a terminal route, render the standalone terminal
         setCurrentView('terminal' as unknown as typeof currentView);
-      } else if (hash.startsWith('#session-details')) {
-        // Session details view route
-        if (hash.includes('/')) {
-          try {
-            const encodedData = hash.substring('#session-details/'.length);
-            const data = JSON.parse(decodeURIComponent(encodedData));
-            setWindowInitData(data);
-          } catch (e) {
-            console.error('Failed to parse session details data:', e);
-          }
-        }
-        setCurrentView('ArchivedSessionsViewer');
       } else if (hash.startsWith('#markdown-view')) {
         // Markdown view route
         if (hash.includes('/')) {
@@ -164,6 +158,9 @@ function AppContent({
       } else if (hash === '#/callimachus' || hash.startsWith('#/callimachus')) {
         // Callimachus Pattern Discovery route
         setCurrentView('callimachus');
+      } else if (hash === '#/search' || hash.startsWith('#/search')) {
+        // Alexandria Search route
+        setCurrentView('search');
       } else {
         AgentConfigurationService.checkAgentInstallations().then((status) => {
           setAgentStatus(status);
@@ -231,6 +228,9 @@ function AppContent({
           <LandingPage
             initialAgentStatus={agentStatus}
             onUpdateAvailable={setHasUpdateAvailable}
+            onSettingsClick={onSettingsClick}
+            hasUpdateAvailable={hasUpdateAvailable}
+            // onMountActions prop removed - add project buttons now in repository list header
           />
         )}
       </Suspense>
@@ -253,21 +253,21 @@ function AppContent({
     );
   }
 
-  if (currentView === 'ArchivedSessionsViewer') {
-    return (
-      <Suspense fallback={<LoadingFallback />}>
-        <ArchivedSessionsViewer
-          initialSessionId={(windowInitData as any)?.sessionId}
-          initialDirectory={(windowInitData as any)?.directory}
-        />
-      </Suspense>
-    );
-  }
-
   if (currentView === 'markdownView') {
-    // Get fontSizeScale from parent App component through window object
+    // Get fontSizeScale and other props from parent App component
     const fontSizeScale = (window as any).markdownFontSizeScale || 1.0;
-    return <MarkdownView filePath={(windowInitData as any)?.filePath || ''} fontSizeScale={fontSizeScale} />;
+    const projectName = (window as any).markdownProjectName;
+    const onFontSizeIncrease = (window as any).handleMarkdownFontIncrease;
+    const onFontSizeDecrease = (window as any).handleMarkdownFontDecrease;
+    return (
+      <MarkdownView
+        filePath={(windowInitData as any)?.filePath || ''}
+        fontSizeScale={fontSizeScale}
+        projectName={projectName}
+        onFontSizeIncrease={onFontSizeIncrease}
+        onFontSizeDecrease={onFontSizeDecrease}
+      />
+    );
   }
 
   if (currentView === 'storeViewer') {
@@ -294,6 +294,14 @@ function AppContent({
     );
   }
 
+  if (currentView === 'search') {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <SearchWindow />
+      </Suspense>
+    );
+  }
+
   if (currentView === 'repositoryMaps') {
     // Pass windowInitData to the window object so RepositoryManager can access mode
     if (windowInitData) {
@@ -306,6 +314,8 @@ function AppContent({
         <RepositoryManager
           repository={(windowInitData as any)?.repository}
           onBack={() => window.close()}
+          onSettingsClick={onSettingsClick}
+          hasUpdateAvailable={hasUpdateAvailable}
         />
       </Suspense>
     );
@@ -325,6 +335,7 @@ function App() {
   const [markdownFilePath, setMarkdownFilePath] = React.useState<string | null>(null);
   const [markdownProjectName, setMarkdownProjectName] = React.useState<string | null>(null);
   const [markdownFontSizeScale, setMarkdownFontSizeScale] = React.useState<number>(1.0);
+  // Removed landingPageActions as add project buttons are now in the repository list header
 
   // Load markdown font size preference
   React.useEffect(() => {
@@ -364,10 +375,13 @@ function App() {
     }
   }, [markdownFontSizeScale]);
 
-  // Store fontSizeScale on window for AppContent to access
+  // Store fontSizeScale and handlers on window for AppContent to access
   React.useEffect(() => {
     (window as any).markdownFontSizeScale = markdownFontSizeScale;
-  }, [markdownFontSizeScale]);
+    (window as any).markdownProjectName = markdownProjectName;
+    (window as any).handleMarkdownFontIncrease = handleMarkdownFontIncrease;
+    (window as any).handleMarkdownFontDecrease = handleMarkdownFontDecrease;
+  }, [markdownFontSizeScale, markdownProjectName, handleMarkdownFontIncrease, handleMarkdownFontDecrease]);
 
   // Add platform class to body for CSS targeting and track current view
   React.useEffect(() => {
@@ -379,7 +393,6 @@ function App() {
     } else {
       document.body.classList.add('platform-linux');
     }
-    document.body.classList.add('has-custom-titlebar');
 
     // Track current view from hash
     const checkView = () => {
@@ -399,6 +412,8 @@ function App() {
             console.error('Failed to parse repository data:', e);
           }
         }
+      } else if (hash === '#/search' || hash.startsWith('#/search')) {
+        setCurrentView('search');
       } else if (hash.startsWith('#markdown-view')) {
         setCurrentView('markdown-view');
         // Extract markdown file path and project name from hash
@@ -440,29 +455,12 @@ function App() {
             isOpen={isSettingsOpen}
             onClose={() => setIsSettingsOpen(false)}
           />
-          {currentView === 'repository-maps' && repositoryData ? (
-            <RepositoryTitlebar
-              repositoryOwner={repositoryData.owner}
-              repositoryName={repositoryData.name}
-              onSettingsClick={() => setIsSettingsOpen(true)}
-              hasUpdateAvailable={hasUpdateAvailable}
-            />
-          ) : currentView === 'markdown-view' && markdownFilePath ? (
-            <MarkdownViewerTitlebar
-              filePath={markdownFilePath}
-              fileName={markdownFilePath.split('/').pop()}
-              projectName={markdownProjectName || undefined}
-              fontSizeScale={markdownFontSizeScale}
-              onFontSizeIncrease={handleMarkdownFontIncrease}
-              onFontSizeDecrease={handleMarkdownFontDecrease}
-            />
-          ) : (
-            <MainWindowTitlebar
-              onSettingsClick={() => setIsSettingsOpen(true)}
-              hasUpdateAvailable={hasUpdateAvailable}
-            />
-          )}
-          <AppContent setHasUpdateAvailable={setHasUpdateAvailable} />
+          <AppContent
+            setHasUpdateAvailable={setHasUpdateAvailable}
+            onSettingsClick={() => setIsSettingsOpen(true)}
+            hasUpdateAvailable={hasUpdateAvailable}
+            // onLandingPageMounted removed - add project buttons now in repository list header
+          />
         </UserPromptProvider>
       </GlobalFeedbackProvider>
     </CustomThemeProvider>

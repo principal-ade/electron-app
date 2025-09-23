@@ -11,6 +11,7 @@
   },
   "include": [
     "src/main/**/*",
+    "src/event-processing-server/**/*",
     "src/shared/**/*",
     "src/types/**/*",
     "src/window/main-process-api-implementations/**/*"
