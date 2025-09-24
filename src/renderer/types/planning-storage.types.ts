@@ -1,5 +1,5 @@
 export type DocumentType = 'markdown' | 'excalidraw';
-export type StorageLocation = 'repository' | 'app-data';
+export type StorageLocation = 'repository' | 'app-data' | 'alexandria';
 
 export interface DocumentInfo {
   path: string;

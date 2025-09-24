@@ -18,7 +18,7 @@ import type {
   SupportedAgent,
 } from '@principal-ai/agent-monitoring';
 import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
-import { SecretManager } from '../stores/SecretManager';
+import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 
 export interface ObservabilityConfig {
   tursoUrl?: string;
@@ -36,23 +36,23 @@ export class ObservabilityIntegration extends EventEmitter {
   private eventCount: number = 0;
   private errorCount: number = 0;
   private config: ObservabilityConfig;
-  private secretManager: SecretManager;
+  private storage: UnifiedSecureStorage;
 
   constructor(config: ObservabilityConfig = {}) {
     super();
     this.config = config;
-    this.secretManager = SecretManager.getInstance();
+    this.storage = UnifiedSecureStorage.getInstance();
 
     // Don't initialize SDK in constructor - wait for initialize() to be called
     console.log('[ObservabilityIntegration] Created, waiting for initialization');
   }
 
   /**
-   * Load configuration from SecretManager
+   * Load configuration from UnifiedSecureStorage
    */
   private async loadConfiguration(): Promise<ObservabilityConfig | null> {
     try {
-      const stored = await this.secretManager.getSecrets('observability-config');
+      const stored = await this.storage.getSecrets('observability-config');
       if (stored && Object.keys(stored).length > 0) {
         return {
           tursoUrl: stored.tursoUrl,
@@ -69,7 +69,7 @@ export class ObservabilityIntegration extends EventEmitter {
   }
 
   /**
-   * Save configuration to SecretManager
+   * Save configuration to UnifiedSecureStorage
    */
   async saveConfiguration(config: ObservabilityConfig): Promise<void> {
     const secrets: Record<string, string> = {};
@@ -79,7 +79,7 @@ export class ObservabilityIntegration extends EventEmitter {
     secrets.enabled = config.enabled ? 'true' : 'false';
     secrets.debug = config.debug ? 'true' : 'false';
 
-    await this.secretManager.storeSecrets('observability-config', 'observability-config', secrets);
+    await this.storage.storeSecrets('observability-config', 'observability-config', secrets);
     this.config = config;
   }
 
@@ -105,7 +105,7 @@ export class ObservabilityIntegration extends EventEmitter {
     }
 
     try {
-      // Load configuration from SecretManager
+      // Load configuration from UnifiedSecureStorage
       const loadedConfig = await this.loadConfiguration();
       if (loadedConfig) {
         this.config = { ...this.config, ...loadedConfig };

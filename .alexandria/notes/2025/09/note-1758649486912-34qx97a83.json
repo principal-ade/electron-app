@@ -1,0 +1,18 @@
+{
+  "id": "note-1758649486912-34qx97a83",
+  "note": "Repository search should show clean result, even when teh filter is on",
+  "anchors": [
+    "."
+  ],
+  "tags": [
+    "general"
+  ],
+  "metadata": {
+    "directoryPath": "/Users/griever/Developer/electron-app",
+    "relativePath": ".",
+    "confidence": "medium",
+    "type": "explanation"
+  },
+  "timestamp": 1758649486912,
+  "codebaseViewId": "default"
+}

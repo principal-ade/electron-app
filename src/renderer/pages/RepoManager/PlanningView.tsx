@@ -50,6 +50,7 @@ import {
   ExcalidrawStorageService,
   DiagramListItem,
 } from '../../main-process-api/ExcalidrawStorageService';
+import { AlexandriaDrawingService } from '../../main-process-api/AlexandriaDrawingService';
 import {
   DocumentType,
   StorageLocation,
@@ -67,7 +68,6 @@ import type { AgentDocumentRequest } from '../../../shared/main-process-api-inte
 interface PlanningViewProps {
   repository: Repository;
   localClone: { path: string; currentBranch?: string };
-  onRefresh?: () => void;
   agentsWithMCP?: SupportedAgent[];
   loadingAgentMCPStatus?: boolean;
   fileTree?: FileTree | null;
@@ -136,7 +136,6 @@ async function getPlanningDocumentsDirectory(
 export const PlanningView: React.FC<PlanningViewProps> = ({
   repository,
   localClone,
-  onRefresh,
   fileTree: sharedFileTree,
   activeFileTreeSource: sharedActiveSource,
   fileTreeSourceService: sharedFileTreeService,
@@ -200,6 +199,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
   const [showAgentSelector, setShowAgentSelector] = useState(false);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [storageDiagrams, setStorageDiagrams] = useState<DiagramListItem[]>([]);
+  const [alexandriaDiagrams, setAlexandriaDiagrams] = useState<DiagramListItem[]>([]);
   const [storageSearchQuery, setStorageSearchQuery] = useState('');
   const [loadingStorageDiagrams, setLoadingStorageDiagrams] = useState(false);
   const [agentDocumentRequest, setAgentDocumentRequest] =
@@ -312,6 +312,32 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
             },
           });
           // Clear tracking refs when loading from app-data
+          setCurrentExcalidrawData(null);
+          lastExcalidrawElements.current = null;
+        } else if (storageLocation === 'alexandria' && filePath) {
+          // Load from Alexandria storage (.alexandria/drawings/)
+          const diagramData = await AlexandriaDrawingService.loadDiagram(
+            filePath,
+            localClone.path,
+          );
+
+          if (!diagramData) {
+            throw new Error('Diagram not found in Alexandria storage');
+          }
+
+          setSlideDocument({
+            content: diagramData,
+            presentation: undefined,
+            currentSlide: 0,
+            type: 'excalidraw',
+            storageLocation: 'alexandria',
+            metadata: {
+              title: filePath.replace('.excalidraw', ''),
+              lastModified: new Date(),
+              filePath,
+            },
+          });
+          // Clear tracking refs when loading from alexandria
           setCurrentExcalidrawData(null);
           lastExcalidrawElements.current = null;
         } else if (storageLocation === 'repository' && filePath) {
@@ -447,6 +473,16 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
               },
             }));
           }
+        } else if (slideDocument.storageLocation === 'alexandria' && slideDocument.metadata.filePath) {
+          // Save to Alexandria storage - use current data if available
+          const dataToSave =
+            currentExcalidrawData ||
+            (slideDocument.content as ExcalidrawDiagramData);
+          await AlexandriaDrawingService.saveDiagram(
+            slideDocument.metadata.filePath,
+            dataToSave,
+            localClone.path,
+          );
         } else if (slideDocument.metadata.filePath) {
           // Save to repository - use current data if available
           const dataToSave =
@@ -621,12 +657,13 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     async (options: {
       documentType: 'new' | 'existing';
       format?: 'markdown' | 'excalidraw';
+      storageLocation?: 'repository' | 'app-data' | 'alexandria';
     }) => {
       setShowStartOverlay(false);
       setStartOverlayStep('document'); // Reset for next time
 
       if (options.documentType === 'new' && options.format) {
-        await createNewDocument(options.format, 'app-data', true);
+        await createNewDocument(options.format, options.storageLocation || 'app-data', true);
       } else if (options.documentType === 'existing') {
         // For existing documents, default to storage tab (App Docs)
         setActiveLeftTab('storage');
@@ -640,10 +677,17 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
   const loadStorageDiagrams = useCallback(async () => {
     setLoadingStorageDiagrams(true);
     try {
-      const diagrams = await ExcalidrawStorageService.listDiagrams(
+      // Load app-data diagrams
+      const appDiagrams = await ExcalidrawStorageService.listDiagrams(
         localClone.path,
       );
-      setStorageDiagrams(diagrams);
+      setStorageDiagrams(appDiagrams);
+
+      // Load Alexandria diagrams
+      const alexDiagrams = await AlexandriaDrawingService.listDiagrams(
+        localClone.path,
+      );
+      setAlexandriaDiagrams(alexDiagrams);
     } catch (error) {
       console.error('Failed to load storage diagrams:', error);
     } finally {
@@ -691,6 +735,26 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
               err,
             );
             setError('Failed to create Excalidraw document');
+          }
+        } else if (storageLocation === 'alexandria') {
+          // Create in Alexandria storage (.alexandria/drawings/)
+          const fileName = `diagram-${Date.now()}.excalidraw`;
+          const defaultContent =
+            ExcalidrawStorageService.createDefaultDiagramData();
+
+          try {
+            await AlexandriaDrawingService.saveDiagram(
+              fileName,
+              defaultContent,
+              localClone.path,
+            );
+            await loadDocument(fileName, 'excalidraw', 'alexandria');
+          } catch (err) {
+            console.error(
+              '[PlanningView] Failed to create Excalidraw in Alexandria:',
+              err,
+            );
+            setError('Failed to create Excalidraw document in Alexandria');
           }
         } else {
           // Create in app data storage (will be handled by ExcalidrawWrapper on first save)
@@ -1413,10 +1477,6 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
           <PlanningStartOverlay
             theme={theme}
             onStart={handleStartChoice}
-            onCancel={() => {
-              setShowStartOverlay(false);
-              setStartOverlayStep('document'); // Reset for next time
-            }}
             initialStep={startOverlayStep}
           />
         </div>
@@ -1962,12 +2022,152 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                         style={{
                           display: 'flex',
                           flexDirection: 'column',
-                          gap: '8px',
+                          gap: '16px',
                         }}
                       >
-                        {/* Filter diagrams based on search */}
-                        {storageDiagrams
-                          .filter(
+                        {/* Alexandria Diagrams Section */}
+                        {alexandriaDiagrams.length > 0 && (
+                          <div>
+                            <div
+                              style={{
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: theme.colors.textSecondary,
+                                marginBottom: '8px',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px',
+                              }}
+                            >
+                              Alexandria Storage
+                            </div>
+                            {alexandriaDiagrams
+                              .filter(
+                                (diagram) =>
+                                  storageSearchQuery === '' ||
+                                  diagram.name
+                                    .toLowerCase()
+                                    .includes(storageSearchQuery.toLowerCase()),
+                              )
+                              .map((diagram) => (
+                                <div
+                                  key={diagram.id}
+                                  style={{
+                                    padding: '12px',
+                                    backgroundColor:
+                                      theme.colors.backgroundSecondary,
+                                    border: `1px solid ${theme.colors.border}`,
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    marginBottom: '8px',
+                                  }}
+                                  onClick={() =>
+                                    loadDocument(
+                                      diagram.name,
+                                      'excalidraw',
+                                      'alexandria',
+                                    )
+                                  }
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                      theme.colors.backgroundLight;
+                                    e.currentTarget.style.borderColor =
+                                      theme.colors.primary;
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.backgroundColor =
+                                      theme.colors.backgroundSecondary;
+                                    e.currentTarget.style.borderColor =
+                                      theme.colors.border;
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'space-between',
+                                      marginBottom: '6px',
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                      }}
+                                    >
+                                      <PenTool
+                                        size={14}
+                                        style={{ color: theme.colors.primary }}
+                                      />
+                                      <span
+                                        style={{
+                                          fontSize: '13px',
+                                          fontWeight: 600,
+                                          color: theme.colors.text,
+                                        }}
+                                      >
+                                        {diagram.name.replace('.excalidraw', '')}
+                                      </span>
+                                    </div>
+                                    <span
+                                      style={{
+                                        fontSize: '10px',
+                                        padding: '2px 6px',
+                                        backgroundColor:
+                                          theme.colors.success + '20',
+                                        color: theme.colors.success,
+                                        borderRadius: '4px',
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      ALEXANDRIA
+                                    </span>
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '12px',
+                                      fontSize: '11px',
+                                      color: theme.colors.textSecondary,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                      }}
+                                    >
+                                      <Clock size={11} />
+                                      {new Date(
+                                        diagram.updatedAt,
+                                      ).toLocaleDateString()}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+
+                        {/* App Data Diagrams Section */}
+                        {storageDiagrams.length > 0 && (
+                          <div>
+                            <div
+                              style={{
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: theme.colors.textSecondary,
+                                marginBottom: '8px',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px',
+                              }}
+                            >
+                              App Data Storage
+                            </div>
+                            {storageDiagrams
+                              .filter(
                             (diagram) =>
                               storageSearchQuery === '' ||
                               diagram.name
@@ -2088,8 +2288,10 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                               </div>
                             </div>
                           ))}
+                          </div>
+                        )}
 
-                        {storageDiagrams.length === 0 && (
+                        {storageDiagrams.length === 0 && alexandriaDiagrams.length === 0 && (
                           <div
                             style={{
                               textAlign: 'center',
@@ -3169,6 +3371,14 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                   <br />
                   <span style={{ fontSize: '11px' }}>
                     This will update the diagram name in your local storage.
+                  </span>
+                </>
+              ) : slideDocument.storageLocation === 'alexandria' ? (
+                <>
+                  <strong>Storage:</strong> Alexandria (.alexandria/drawings)
+                  <br />
+                  <span style={{ fontSize: '11px' }}>
+                    This will rename the drawing in your Alexandria storage.
                   </span>
                 </>
               ) : slideDocument.metadata.filePath ? (

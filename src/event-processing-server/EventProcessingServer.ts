@@ -7,7 +7,6 @@ import { EventEmitter } from 'events';
 import * as os from 'os';
 import { machineIdSync } from 'node-machine-id';
 import {
-  SupportedAgent,
   isToolEvent,
   isStopEvent,
   RepositoryInfo,

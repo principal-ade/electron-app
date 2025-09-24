@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { GitBranch, Trash2, ExternalLink, Code, ChevronDown, Terminal, RefreshCw, GitPullRequest, Upload } from 'lucide-react';
+import { GitBranch, Trash2, ExternalLink, Code, ChevronDown, Terminal, RefreshCw, GitPullRequest, Upload, Github } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.types';
 import { GitBranchStatus } from '../../main-process-api/GitService';
@@ -14,7 +14,6 @@ interface RepositoryHeaderProps {
   isFastForwarding: boolean;
   isPushing: boolean;
   terminalWindows: Map<string, number>;
-  onCheckForUpdates: () => void;
   onPerformFastForward: () => void;
   onPerformPush: () => void;
   onOpenDashboard: () => void;
@@ -41,7 +40,6 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
   isFastForwarding,
   isPushing,
   terminalWindows,
-  onCheckForUpdates,
   onPerformFastForward,
   onPerformPush,
   onOpenDashboard,
@@ -84,6 +82,13 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
     }
 
     setShowIdeDropdown(false);
+  }, [repository]);
+
+  const handleOpenGitHub = useCallback(() => {
+    if (!repository?.github?.owner || !repository?.github?.name) return;
+
+    const githubUrl = `https://github.com/${repository.github.owner}/${repository.github.name}`;
+    window.open(githubUrl, '_blank');
   }, [repository]);
 
   const handleOpenTerminal = useCallback(async () => {
@@ -174,6 +179,38 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               {repository.name}
             </h2>
 
+            {/* GitHub Button */}
+            {repository?.github?.owner && repository?.github?.name && (
+              <button
+                onClick={handleOpenGitHub}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '28px',
+                  height: '28px',
+                  padding: 0,
+                  backgroundColor: 'transparent',
+                  color: theme.colors.text,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.borderColor = theme.colors.border;
+                }}
+                title={`Open on GitHub: ${repository.github.owner}/${repository.github.name}`}
+              >
+                <Github size={14} />
+              </button>
+            )}
+
             {/* Branch Status Indicator */}
             {branchStatus && branchStatus.hasUpstream && (
               <div
@@ -182,7 +219,7 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
                   alignItems: 'center',
                   gap: '6px',
                   padding: '4px 10px',
-                  borderRadius: '16px',
+                  borderRadius: '4px',
                   fontSize: '12px',
                   fontWeight: 500,
                   backgroundColor:
@@ -214,15 +251,15 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               >
                 <GitBranch size={12} />
                 {branchStatus.behind > 0 && branchStatus.ahead === 0 && (
-                  <>↓ {branchStatus.behind} behind</>
+                  <>↓ {branchStatus.behind} {branchStatus.branch}</>
                 )}
                 {branchStatus.ahead > 0 && branchStatus.behind === 0 && (
-                  <>↑ {branchStatus.ahead} ahead</>
+                  <>↑ {branchStatus.ahead} {branchStatus.branch}</>
                 )}
                 {branchStatus.ahead > 0 && branchStatus.behind > 0 && (
-                  <>↑{branchStatus.ahead} ↓{branchStatus.behind} diverged</>
+                  <>↑{branchStatus.ahead} ↓{branchStatus.behind} {branchStatus.branch}</>
                 )}
-                {branchStatus.ahead === 0 && branchStatus.behind === 0 && <>✓ up to date</>}
+                {branchStatus.ahead === 0 && branchStatus.behind === 0 && <>{branchStatus.branch}</>}
               </div>
             )}
 
@@ -233,7 +270,7 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
                   alignItems: 'center',
                   gap: '6px',
                   padding: '4px 10px',
-                  borderRadius: '16px',
+                  borderRadius: '4px',
                   fontSize: '12px',
                   fontWeight: 500,
                   backgroundColor: theme.colors.backgroundSecondary,
@@ -245,28 +282,15 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               </div>
             )}
           </div>
-          <div
+          <p
             style={{
-              fontSize: theme.fontSizes[0],
+              margin: '0',
+              fontSize: theme.fontSizes[1],
               color: theme.colors.textSecondary,
-              fontFamily: theme.fonts.monospace,
-              marginTop: '4px',
-              marginBottom: repository.github?.description ? '8px' : '0',
             }}
           >
-            {repository.path}
-          </div>
-          {repository.github?.description && (
-            <p
-              style={{
-                margin: '0',
-                fontSize: theme.fontSizes[1],
-                color: theme.colors.textSecondary,
-              }}
-            >
-              {repository.github.description}
-            </p>
-          )}
+            {repository.github?.description || 'No Description'}
+          </p>
         </div>
         <div
           style={{
@@ -275,47 +299,7 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
             alignItems: 'center',
           }}
         >
-          {/* Check for Updates Button */}
-          <button
-            onClick={onCheckForUpdates}
-            disabled={isCheckingUpdates}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 12px',
-              backgroundColor: 'transparent',
-              color: isCheckingUpdates ? theme.colors.textSecondary : theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: isCheckingUpdates ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s',
-              opacity: isCheckingUpdates ? 0.6 : 1,
-            }}
-            onMouseEnter={(e) => {
-              if (!isCheckingUpdates) {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                e.currentTarget.style.borderColor = theme.colors.primary;
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = theme.colors.border;
-            }}
-            title="Check for updates from remote repository"
-          >
-            <RefreshCw
-              size={14}
-              style={{
-                animation: isCheckingUpdates ? 'spin 1s linear infinite' : 'none',
-              }}
-            />
-            {isCheckingUpdates ? 'Checking...' : 'Check Updates'}
-          </button>
-
-          {/* Fast Forward Button - Only show when applicable */}
+{/* Fast Forward Button - Only show when applicable */}
           {branchStatus?.canFastForward && (
             <button
               onClick={onPerformFastForward}
@@ -401,26 +385,65 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
           )}
 
           <button
+            onClick={handleOpenTerminal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              backgroundColor: 'transparent',
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+            title={
+              repository?.path && terminalWindows.has(repository.path)
+                ? "Focus existing terminal window"
+                : "Open terminal in repository directory"
+            }
+          >
+            <Terminal size={14} />
+            {repository?.path && terminalWindows.has(repository.path)
+              ? "Focus Terminal"
+              : "Terminal"
+            }
+          </button>
+
+          <button
             onClick={onOpenDashboard}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 16px',
-              backgroundColor: theme.colors.primary,
-              color: theme.colors.background,
-              border: 'none',
+              padding: '8px 12px',
+              backgroundColor: 'transparent',
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
               borderRadius: '6px',
               fontSize: '13px',
               fontWeight: 500,
               cursor: 'pointer',
-              transition: 'opacity 0.2s',
+              transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.9';
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
             }}
           >
             <ExternalLink size={14} />
@@ -654,43 +677,6 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               </div>
             )}
           </div>
-
-          <button
-            onClick={handleOpenTerminal}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 12px',
-              backgroundColor: 'transparent',
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-              e.currentTarget.style.borderColor = theme.colors.primary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = theme.colors.border;
-            }}
-            title={
-              repository?.path && terminalWindows.has(repository.path)
-                ? "Focus existing terminal window"
-                : "Open terminal in repository directory"
-            }
-          >
-            <Terminal size={14} />
-            {repository?.path && terminalWindows.has(repository.path)
-              ? "Focus Terminal"
-              : "Terminal"
-            }
-          </button>
 
           <button
             onClick={onRemove}

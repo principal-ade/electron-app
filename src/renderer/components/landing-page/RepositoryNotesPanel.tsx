@@ -142,11 +142,13 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
           justifyContent: 'space-between',
         }}
       >
-        <span>Repository Notes</span>
+        <span>Notes</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: theme.fontSizes[1], fontWeight: 'normal' }}>
-            {isLoading ? 'Loading...' : `${notes.length} notes`}
-          </span>
+          {(isLoading || notes.length > 0) && (
+            <span style={{ fontSize: theme.fontSizes[1], fontWeight: 'normal' }}>
+              {isLoading ? 'Loading...' : `${notes.length} notes`}
+            </span>
+          )}
           <button
             onClick={() => setShowAddNoteModal(true)}
             style={{
@@ -173,7 +175,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
             title="Add a note to this repository"
           >
             <Plus size={14} />
-            Add Note
+            Note
           </button>
         </div>
       </div>

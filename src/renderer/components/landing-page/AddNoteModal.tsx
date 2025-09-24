@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 import { RepositoryNotesService } from '../../main-process-api/RepositoryNotesService';
@@ -23,6 +23,7 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
   const [isLoadingTags, setIsLoadingTags] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Load available tags when modal opens
   useEffect(() => {
@@ -30,6 +31,16 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
       loadAvailableTags();
     }
   }, [isOpen, repositoryPath]);
+
+  // Auto-focus the textarea when modal opens
+  useEffect(() => {
+    if (isOpen && textareaRef.current) {
+      // Small delay to ensure the modal is fully rendered
+      setTimeout(() => {
+        textareaRef.current?.focus();
+      }, 50);
+    }
+  }, [isOpen]);
 
   const loadAvailableTags = async () => {
     try {
@@ -193,6 +204,7 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
               Note Content *
             </label>
             <textarea
+              ref={textareaRef}
               value={noteContent}
               onChange={(e) => setNoteContent(e.target.value)}
               placeholder="Enter your note here..."

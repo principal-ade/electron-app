@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { SecureTokenStorage, TOKEN_KEYS } from './SecureTokenStorage';
+import { UnifiedSecureStorage, TOKEN_KEYS } from './UnifiedSecureStorage';
 import { SecureTokenAPIEvent } from '../../shared/main-process-api-interfaces/SecureTokenAPI';
 import AuthStateManager from './AuthStateManager';
 
@@ -8,7 +8,7 @@ import AuthStateManager from './AuthStateManager';
  * Provides a bridge between renderer process and secure storage in main process
  */
 export class SecureTokenIPC {
-  private storage: SecureTokenStorage | null = null;
+  private storage: UnifiedSecureStorage | null = null;
 
   constructor() {
     // Don't initialize storage immediately, defer until first use
@@ -16,9 +16,9 @@ export class SecureTokenIPC {
     // Don't migrate on startup, wait for first actual use
   }
 
-  public getStorage(): SecureTokenStorage {
+  public getStorage(): UnifiedSecureStorage {
     if (!this.storage) {
-      this.storage = SecureTokenStorage.getInstance();
+      this.storage = UnifiedSecureStorage.getInstance();
     }
     return this.storage;
   }
@@ -76,7 +76,8 @@ export class SecureTokenIPC {
 
     // Check if authenticated
     ipcMain.handle(SecureTokenAPIEvent.IS_AUTHENTICATED, async () => {
-      return this.getStorage().hasToken(TOKEN_KEYS.ORBIT_AUTH);
+      const token = await this.getStorage().getToken(TOKEN_KEYS.ORBIT_AUTH);
+      return token !== null;
     });
 
     // Clear GitHub auth
@@ -138,7 +139,8 @@ export class SecureTokenIPC {
       SecureTokenAPIEvent.MIGRATE_FROM_LOCALSTORAGE,
       async (event, tokens: any[]) => {
         try {
-          await this.getStorage().migrateFromLocalStorage(tokens);
+          // Migration no longer needed with unified storage
+          console.log('Migration skipped - using unified storage');
           return { success: true };
         } catch (error) {
           console.error('Migration failed:', error);
@@ -169,7 +171,7 @@ function getSecureTokenIPC(): SecureTokenIPC {
 export function registerSecureTokenHandlers(): void {
   // Register handlers without creating the SecureTokenIPC instance
   const { ipcMain } = require('electron');
-  const { TOKEN_KEYS } = require('./SecureTokenStorage');
+  const { TOKEN_KEYS } = require('./UnifiedSecureStorage');
   const {
     SecureTokenAPIEvent,
   } = require('../../shared/main-process-api-interfaces/SecureTokenAPI');
@@ -224,7 +226,8 @@ export function registerSecureTokenHandlers(): void {
 
   // Check if authenticated
   ipcMain.handle(SecureTokenAPIEvent.IS_AUTHENTICATED, async () => {
-    return getSecureTokenIPC().getStorage().hasToken(TOKEN_KEYS.ORBIT_AUTH);
+    const token = await getSecureTokenIPC().getStorage().getToken(TOKEN_KEYS.ORBIT_AUTH);
+    return token !== null;
   });
 
   // Clear GitHub auth
@@ -289,7 +292,8 @@ export function registerSecureTokenHandlers(): void {
     SecureTokenAPIEvent.MIGRATE_FROM_LOCALSTORAGE,
     async (event: any, tokens: any[]) => {
       try {
-        await getSecureTokenIPC().getStorage().migrateFromLocalStorage(tokens);
+        // Migration no longer needed with unified storage
+        console.log('Migration skipped - using unified storage');
         return { success: true };
       } catch (error) {
         console.error('Migration failed:', error);

@@ -68,7 +68,6 @@ describe('loadFileSystemTree', () => {
         localPath: '/path/to/repo',
         owner: 'test-owner',
         repo: 'test-repo',
-        includeVCS: true,
       });
 
       expect(result.fileTree).toEqual(mockFileTree);
@@ -110,7 +109,6 @@ describe('loadFileSystemTree', () => {
         localPath: '/path/to/repo',
         owner: 'test-owner',
         repo: 'test-repo',
-        includeVCS: true,
       });
 
       expect(capturedConfig.versionControlLayerFactory).toBeDefined();
@@ -215,7 +213,7 @@ describe('loadFileSystemTree', () => {
         github: {},
       };
 
-      (GitHubWebAdapters as jest.Mock).mockImplementation(() => mockAdapters);
+      (GitHubWebAdapters as unknown as jest.Mock).mockImplementation(() => mockAdapters);
 
       const mockLoadFileSystemTree = jest.fn().mockResolvedValue({
         fileSystemTree: mockGitHubTree,
@@ -245,7 +243,7 @@ describe('loadFileSystemTree', () => {
     });
 
     it('should handle GitHub API errors gracefully', async () => {
-      (GitHubWebAdapters as jest.Mock).mockImplementation(() => {
+      (GitHubWebAdapters as unknown as jest.Mock).mockImplementation(() => {
         throw new Error('GitHub API rate limit exceeded');
       });
 
@@ -266,7 +264,7 @@ describe('loadFileSystemTree', () => {
         github: {},
       };
 
-      (GitHubWebAdapters as jest.Mock).mockImplementation(() => mockAdapters);
+      (GitHubWebAdapters as unknown as jest.Mock).mockImplementation(() => mockAdapters);
 
       (FileSystemModule as jest.Mock).mockImplementation(() => ({
         loadFileSystemTree: jest.fn().mockResolvedValue({
@@ -325,7 +323,6 @@ describe('loadFileSystemTree', () => {
         localPath: '/path/to/repo',
         owner: 'owner',
         repo: 'repo',
-        includeVCS: false,
       });
 
       expect(result.fileTree).toEqual(mockTree);
@@ -338,7 +335,7 @@ describe('loadFileSystemTree', () => {
         children: [],
       };
 
-      (GitHubWebAdapters as jest.Mock).mockImplementation(() => ({
+      (GitHubWebAdapters as unknown as jest.Mock).mockImplementation(() => ({
         fileSystem: {},
         config: {},
         git: {},

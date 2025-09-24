@@ -10,6 +10,11 @@ export enum ExcalidrawAPIEvents {
   LIST_DIAGRAMS = 'excalidraw:listDiagrams',
   DELETE_DIAGRAM = 'excalidraw:deleteDiagram',
   EXPORT_DIAGRAM = 'excalidraw:exportDiagram',
+  // Alexandria storage events
+  SAVE_ALEXANDRIA_DIAGRAM = 'excalidraw:saveAlexandriaDiagram',
+  LOAD_ALEXANDRIA_DIAGRAM = 'excalidraw:loadAlexandriaDiagram',
+  LIST_ALEXANDRIA_DIAGRAMS = 'excalidraw:listAlexandriaDiagrams',
+  DELETE_ALEXANDRIA_DIAGRAM = 'excalidraw:deleteAlexandriaDiagram',
 }
 
 export const excalidrawAPI: ExcalidrawAPI = {
@@ -23,4 +28,13 @@ export const excalidrawAPI: ExcalidrawAPI = {
     ipcRenderer.invoke(ExcalidrawAPIEvents.DELETE_DIAGRAM, diagramId),
   exportDiagram: (diagramId: string, format: 'png' | 'svg' | 'json') =>
     ipcRenderer.invoke(ExcalidrawAPIEvents.EXPORT_DIAGRAM, diagramId, format),
+  // Alexandria storage methods
+  saveAlexandriaDiagram: (name: string, data: any, repositoryPath: string) =>
+    ipcRenderer.invoke(ExcalidrawAPIEvents.SAVE_ALEXANDRIA_DIAGRAM, name, data, repositoryPath),
+  loadAlexandriaDiagram: (fileName: string, repositoryPath: string) =>
+    ipcRenderer.invoke(ExcalidrawAPIEvents.LOAD_ALEXANDRIA_DIAGRAM, fileName, repositoryPath),
+  listAlexandriaDiagrams: (repositoryPath: string) =>
+    ipcRenderer.invoke(ExcalidrawAPIEvents.LIST_ALEXANDRIA_DIAGRAMS, repositoryPath),
+  deleteAlexandriaDiagram: (fileName: string, repositoryPath: string) =>
+    ipcRenderer.invoke(ExcalidrawAPIEvents.DELETE_ALEXANDRIA_DIAGRAM, fileName, repositoryPath),
 };

@@ -108,14 +108,11 @@ export class ESLintRunner implements ValidationRunner {
         {
           name: path.basename(packagePath),
           path: packagePath,
-          hasTypescript: false, // We only want ESLint
-          hasEslint: true,
         },
       ],
       {
         includeTypescript: false,
         includeEslint: true,
-        maxFiles: 1000,
       },
     )) as {
       error?: string;

@@ -42,7 +42,7 @@ export const MainWindowTitlebar: React.FC<MainWindowTitlebarProps> = ({
 
   return (
     <>
-      <BaseTitlebar title="Principal View">
+      <BaseTitlebar title="Principal View" showThemeDropdown={true}>
         {/* Update notification positioned on the right side */}
         <div
           style={{

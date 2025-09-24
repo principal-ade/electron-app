@@ -9,6 +9,7 @@ import { RepositoryNotesPanel } from '../../components/landing-page/RepositoryNo
 import { GitService, GitBranchStatus } from '../../main-process-api/GitService';
 import { RepositoryHeader } from '../../components/landing-page/RepositoryHeader';
 import { GitStatusPanel } from '../../components/landing-page/GitStatusPanel';
+import { QualityHexagonPanel } from '../../components/quality';
 
 interface RepositoryDetailsPanelProps {
   selectedRepository: EnhancedAlexandriaEntry | null;
@@ -141,11 +142,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         console.log('Fast-forward successful:', result.message);
         // Refresh branch status after merge
         await checkForUpdates();
-        // Trigger parent component to refresh git status if callback provided
-        if (onRepositoryRemoved) {
-          // We're repurposing this callback - might want a more specific one
-          window.location.reload(); // Simple refresh for now
-        }
       } else {
         console.error('Fast-forward failed:', result.message);
       }
@@ -298,7 +294,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             isFastForwarding={isFastForwarding}
             isPushing={isPushing}
             terminalWindows={terminalWindows}
-            onCheckForUpdates={checkForUpdates}
             onPerformFastForward={performFastForward}
             onPerformPush={performPush}
             onOpenDashboard={() => onOpenDashboard(selectedRepository)}
@@ -316,7 +311,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             }}
           >
 
-            {/* Git Changes and Repository Content Side-by-Side */}
+            {/* Main Content Grid */}
             <div
               style={{
                 display: 'grid',
@@ -324,15 +319,32 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 gap: '16px',
               }}
             >
-              {/* Git Changes List or Last Commit */}
-              <GitStatusPanel
-                repository={selectedRepository}
-                gitStatus={gitStatus}
-                isLoadingGitStatus={isLoadingGitStatus}
-                onFileClick={handleFileClick}
-              />
+              {/* Left Column - Git Status and Quality Panel */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                }}
+              >
+                {/* Git Changes List or Last Commit */}
+                <GitStatusPanel
+                  repository={selectedRepository}
+                  gitStatus={gitStatus}
+                  isLoadingGitStatus={isLoadingGitStatus}
+                  onFileClick={handleFileClick}
+                />
 
-              {/* Right Column Container - Markdown and Notes */}
+                {/* Quality Hexagon Panel */}
+                <QualityHexagonPanel
+                  directory={selectedRepository.path}
+                  autoAnalyze={false}
+                  size="lg"
+                  compact={false}
+                />
+              </div>
+
+              {/* Right Column - Markdown and Notes */}
               <div
                 style={{
                   display: 'flex',
@@ -341,15 +353,15 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   height: 'fit-content',
                 }}
               >
-              {/* Markdown Files List */}
-              <div
-                style={{
-                  padding: '16px',
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  borderRadius: '8px',
-                  border: `1px solid ${theme.colors.border}`,
-                }}
-              >
+                {/* Markdown Files List */}
+                <div
+                  style={{
+                    padding: '16px',
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.colors.border}`,
+                  }}
+                >
                 <div
                   style={{
                     fontSize: theme.fontSizes[1],
@@ -363,8 +375,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   }}
                 >
                   <span>Markdown Documents</span>
-                  <span style={{ fontSize: theme.fontSizes[1], fontWeight: 'normal' }}>
-                    {isLoadingDocs ? 'Loading...' : `${markdownFiles.length} files`}
+                  <span style={{ fontSize: theme.fontSizes[1], fontWeight: 'normal', marginRight: '4px' }}>
+                    {isLoadingDocs ? 'Loading...' : markdownFiles.length}
                   </span>
                 </div>
                 <div
@@ -480,15 +492,15 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                     </div>
                   )}
                 </div>
-              </div>
+                </div>
 
-              {/* Repository Notes Panel */}
-              <RepositoryNotesPanel
-                repositoryPath={selectedRepository.path}
-                isLoading={false}
-              />
+                {/* Repository Notes Panel */}
+                <RepositoryNotesPanel
+                  repositoryPath={selectedRepository.path}
+                  isLoading={false}
+                />
+              </div>
             </div>
-          </div>
           </div>
         </>
       ) : (

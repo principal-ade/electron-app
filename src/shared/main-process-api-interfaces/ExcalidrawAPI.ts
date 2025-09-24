@@ -49,4 +49,23 @@ export interface ExcalidrawAPI {
     diagramId: string,
     format: 'png' | 'svg' | 'json',
   ) => Promise<{ success: boolean; data?: Blob; error?: string }>;
+  // Alexandria storage methods
+  saveAlexandriaDiagram: (
+    name: string,
+    data: ExcalidrawDiagramData,
+    repositoryPath: string,
+  ) => Promise<{ success: boolean; fileName?: string; error?: string }>;
+  loadAlexandriaDiagram: (
+    fileName: string,
+    repositoryPath: string,
+  ) => Promise<{ success: boolean; data?: ExcalidrawDiagramData; error?: string }>;
+  listAlexandriaDiagrams: (repositoryPath: string) => Promise<{
+    success: boolean;
+    data?: any[];
+    error?: string;
+  }>;
+  deleteAlexandriaDiagram: (
+    fileName: string,
+    repositoryPath: string,
+  ) => Promise<{ success: boolean; error?: string }>;
 }

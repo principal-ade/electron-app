@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from 'themed-markdown';
 import './Titlebar.css';
+import { ThemeDropdown } from './ThemeDropdown';
 
 declare global {
   interface Window {
@@ -17,6 +18,7 @@ declare global {
 export interface BaseTitlebarProps {
   title?: string | React.ReactNode;
   showWindowControls?: boolean;
+  showThemeDropdown?: boolean;
   children?: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
@@ -26,6 +28,7 @@ export interface BaseTitlebarProps {
 export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
   title,
   showWindowControls = true,
+  showThemeDropdown = false,
   children,
   className = '',
   style,
@@ -59,22 +62,59 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
 
   return (
     <div
-      className={`custom-titlebar ${className}`}
+      className={`custom-titlebar ${isMac ? 'platform-darwin' : ''} ${className}`}
       style={{
         backgroundColor,
         height: '56px',
         fontFamily: theme.fonts.body,
+        borderBottom: `1px solid ${theme.colors.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        position: 'relative',
         ...style
       }}
     >
-      <div className="titlebar-drag-region">
-        {title && (
+      {/* Left-side content container */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        marginLeft: isMac ? '80px' : '20px',
+        gap: '8px',
+      }}>
+        {React.Children.toArray(children).filter((child: any) =>
+          child?.props?.position === 'left'
+        )}
+      </div>
+
+      {/* Theme dropdown after left content */}
+      {showThemeDropdown && (
+        <div style={{ marginLeft: '8px' }}>
+          <ThemeDropdown />
+        </div>
+      )}
+
+      {/* Center content (replaces title) */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        WebkitAppRegion: 'drag' as any,
+      }}>
+        {React.Children.toArray(children).filter((child: any) =>
+          child?.props?.position === 'center'
+        )}
+        {/* Show title only if no center content */}
+        {React.Children.toArray(children).filter((child: any) =>
+          child?.props?.position === 'center'
+        ).length === 0 && title && (
           <div
             className="titlebar-title"
             style={{
               color: accentColor,
               fontSize: theme.fontSizes[3],
-              fontFamily: theme.fonts.heading
+              fontFamily: theme.fonts.heading,
+              WebkitAppRegion: 'no-drag' as any,
             }}
             onClick={onTitleClick}
           >
@@ -83,7 +123,17 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
         )}
       </div>
 
-      {children}
+      {/* Right-side content container */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        marginLeft: 'auto',
+        marginRight: showWindowControls && !isMac ? '0' : '20px',
+      }}>
+        {React.Children.toArray(children).filter((child: any) =>
+          !child?.props?.position || child?.props?.position === 'right'
+        )}
+      </div>
 
       {showWindowControls && !isMac && (
         <div className="titlebar-controls">

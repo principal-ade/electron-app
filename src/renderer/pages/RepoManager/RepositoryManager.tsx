@@ -18,11 +18,13 @@ import { RepositoryTitlebar } from '../../components/Titlebar';
 
 import type { Repository } from '../../../shared/types/repository.types';
 import { RepositoryViewType } from '../../../shared/types/userPreferences.types';
-import { RepositoryManagerHeader } from './RepositoryManagerHeader';
 import { LocalDevelopmentView } from './LocalDevelopmentView';
 import { RepositoryExplorationView } from './RepositoryExplorationView';
 import { RepositoryMaintenanceView } from './RepositoryMaintenanceView';
 import { PlanningView } from './PlanningView';
+import { SecretsModal } from './shared/SecretsModal';
+import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
+import { BadgeInfoModal } from './shared/BadgeInfoModal';
 import { FileChangeProvider } from '../../contexts/FileChangeContext';
 import { GitChangesProvider } from '../../contexts/GitChangesContext';
 import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
@@ -87,6 +89,11 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
 
     // Search state - TODO: Move to floating search component in bottom-left corner
     const [searchQuery] = useState<string>(''); // setSearchQuery will be used when search is implemented
+
+    // Modal states
+    const [showSecretsModal, setShowSecretsModal] = useState(false);
+    const [showSourceHelpModal, setShowSourceHelpModal] = useState(false);
+    const [showBadgeInfoModal, setShowBadgeInfoModal] = useState(false);
 
     // File tree services - shared across all views
     const fileTreeSourceService = useMemo(
@@ -606,9 +613,9 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
             '[RepositoryManager] Clone added to current repository:',
             data.clonePath,
           );
-          // Force a re-render by updating the repository prop
-          // Note: This might need to be handled by the parent component passing updated repository prop
-          window.location.reload(); // Simple solution for now
+          // TODO: Update the repository data without a full page reload
+          // For now, we've removed the window.location.reload() to prevent jarring reloads
+          // The parent component should handle repository updates through props
         }
       };
 
@@ -622,6 +629,10 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
             '[RepositoryManager] Clone removed from current repository:',
             data.clonePath,
           );
+
+          // TODO: Update the repository data without a full page reload
+          // For now, we handle the source selection change locally
+
           // If the removed clone was the selected one, we need to handle it
           if (
             selectedSource?.type === 'local' &&
@@ -1038,52 +1049,27 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
         }}
       >
         <RepositoryTitlebar
+          repository={repository}
           repositoryOwner={repository.owner}
           repositoryName={repository.name}
           onSettingsClick={onSettingsClick}
           hasUpdateAvailable={hasUpdateAvailable}
+          selectedSource={selectedSource}
+          onSourceSelect={setSelectedSource}
+          onSecretsClick={() => setShowSecretsModal(true)}
+          onHelpClick={() => setShowSourceHelpModal(true)}
+          onForkBadgeClick={() => setShowBadgeInfoModal(true)}
+          mode={viewMode}
+          onModeChange={handleViewModeChange}
         />
         <div
           style={{
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            padding: '20px 20px 0 20px',
+            padding: '20px',
             overflow: 'hidden',
             boxSizing: 'border-box',
-          }}
-        >
-        {/* Header - Content-based height */}
-        <div
-          style={{
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          <RepositoryManagerHeader
-            repository={repository}
-            ghOwner={ghOwner}
-            ghRepo={ghRepo}
-            mode={viewMode}
-            onModeChange={handleViewModeChange}
-            onSourceSelect={setSelectedSource}
-            selectedSource={selectedSource}
-            fileTreeStats={treeStats}
-            packageLayers={packageLayers}
-            filterLayers={filterLayers}
-          />
-        </div>
-
-        {/* Main Content - Remaining space */}
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0, // Important for flexbox overflow
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            paddingBottom: '20px',
           }}
         >
           {/* Loading State */}
@@ -1462,7 +1448,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 path: selectedSource.location,
                 currentBranch: selectedSource.metadata?.currentBranch,
               }}
-              onRefresh={() => {}}
               fileTree={fileTree}
               activeFileTreeSource={selectedSource}
               fileTreeSourceService={fileTreeSourceService}
@@ -1539,7 +1524,25 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
 
         {/* SDK Service Debug Component */}
         <SDKServiceDebug />
-        </div>
+
+        {/* Modals */}
+        <SecretsModal
+          isOpen={showSecretsModal}
+          onClose={() => setShowSecretsModal(false)}
+          repository={repository}
+          selectedSource={selectedSource}
+        />
+
+        <SourceBadgeHelpModal
+          isOpen={showSourceHelpModal}
+          onClose={() => setShowSourceHelpModal(false)}
+        />
+
+        <BadgeInfoModal
+          isOpen={showBadgeInfoModal}
+          onClose={() => setShowBadgeInfoModal(false)}
+          repository={repository}
+        />
       </div>
     );
   },

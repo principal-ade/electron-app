@@ -66,11 +66,11 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
               <GitBranch size={14} />
               Git Changes
             </span>
-            <span style={{ fontSize: theme.fontSizes[0], fontWeight: 'normal' }}>
-              {isLoadingGitStatus ? 'Loading...' :
-                `${gitStatus.staged.length + gitStatus.unstaged.length + gitStatus.untracked.length} changes`
-              }
-            </span>
+            {isLoadingGitStatus && (
+              <span style={{ fontSize: theme.fontSizes[0], fontWeight: 'normal', marginRight: '4px' }}>
+                Loading...
+              </span>
+            )}
           </div>
           <div
             style={{

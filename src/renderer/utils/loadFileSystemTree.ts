@@ -242,7 +242,7 @@ export async function loadLocalFileSystemTree(
     path: options.localPath,
     fileCount: stats.fileCount,
     directoryCount: stats.directoryCount,
-    pathsCount: tree.paths?.length || 0,
+    pathsCount: tree.allFiles?.length || 0,
     hasAllFiles: !!tree.allFiles,
     hasAllDirectories: !!tree.allDirectories,
   });
@@ -346,7 +346,6 @@ export async function loadLocalGitCommitTree(
     ]);
 
     console.log(`[loadLocalGitCommitTree] Git command result:`, {
-      success: result.success,
       stdout:
         result.stdout?.substring(0, 200) +
         (result.stdout?.length > 200 ? '...' : ''),
@@ -371,13 +370,14 @@ export async function loadLocalGitCommitTree(
 
     // Build a simple file tree structure
     // For now, we'll create a minimal tree that satisfies the FileTree interface
-    const allFiles = filePaths.map((path) => ({
+    const allFiles: FileInfo[] = filePaths.map((path) => ({
       path,
       name: path.split('/').pop() || path,
       isDirectory: false,
       extension: path.includes('.') ? path.split('.').pop() || '' : '',
       size: 0, // Size not available from ls-tree --name-only
-      lastModified: new Date().toISOString(), // Not available, use current time
+      lastModified: new Date(), // Not available, use current time
+      relativePath: path,
     }));
 
     // Create directory entries from file paths
@@ -390,26 +390,39 @@ export async function loadLocalGitCommitTree(
       }
     });
 
-    const allDirectories = Array.from(dirSet).map((path) => ({
+    const allDirectories: DirectoryInfo[] = Array.from(dirSet).map((path) => ({
       path,
       name: path.split('/').pop() || path,
-      isDirectory: true,
       children: [], // We'll populate this if needed
-      size: 0,
-      lastModified: new Date().toISOString(),
+      fileCount: 0,
+      totalSize: 0,
+      depth: path.split('/').length - 1,
+      relativePath: path,
     }));
 
-    // Create the file tree object
-    const fileTree = {
-      name: repo,
-      path: '',
-      isDirectory: true,
-      children: [], // We could build the tree structure here if needed
+    // Create the file tree object with required FileTree properties
+    const fileTree: FileTree = {
+      sha: commitSha,
+      root: {
+        path: '',
+        name: repo,
+        children: [],
+        fileCount: allFiles.length,
+        totalSize: allFiles.reduce((sum, file) => sum + (file.size || 0), 0),
+        depth: 0,
+        relativePath: '',
+      },
       allFiles,
       allDirectories,
-      // Add other required properties for FileTree interface
-      size: allFiles.reduce((sum, file) => sum + (file.size || 0), 0),
-      lastModified: new Date().toISOString(),
+      stats: {
+        totalFiles: allFiles.length,
+        totalDirectories: allDirectories.length,
+        totalSize: allFiles.reduce((sum, file) => sum + (file.size || 0), 0),
+        maxDepth: Math.max(...allDirectories.map(d => d.path.split('/').length - 1), 0),
+        buildingTypeDistribution: {},
+        directoryTypeDistribution: {},
+        combinedTypeDistribution: {},
+      },
     };
 
     const stats = {

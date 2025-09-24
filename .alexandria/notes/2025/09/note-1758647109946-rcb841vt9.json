@@ -1,0 +1,18 @@
+{
+  "id": "note-1758647109946-rcb841vt9",
+  "note": "I want to open a terminal in the current terminal window so I can run my own commands.",
+  "anchors": [
+    "."
+  ],
+  "tags": [
+    "general"
+  ],
+  "metadata": {
+    "directoryPath": "/Users/griever/Developer/electron-app",
+    "relativePath": ".",
+    "confidence": "medium",
+    "type": "explanation"
+  },
+  "timestamp": 1758647109946,
+  "codebaseViewId": "default"
+}

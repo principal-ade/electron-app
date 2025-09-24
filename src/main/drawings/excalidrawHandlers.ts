@@ -1,9 +1,10 @@
-import { ipcMain, app } from 'electron';
+import { ipcMain, app, IpcMainInvokeEvent } from 'electron';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { ExcalidrawAPIEvents } from '../../window/main-process-api-implementations/excalidrawApi';
-import { ExcalidrawDiagram } from '../../shared/main-process-api-interfaces/ExcalidrawAPI';
+import { ExcalidrawDiagram, ExcalidrawDiagramData } from '../../shared/main-process-api-interfaces/ExcalidrawAPI';
+import { MemoryPalace, NodeFileSystemAdapter } from '@a24z/core-library';
 
 class ExcalidrawHandlers {
   private storageDir: string;
@@ -11,6 +12,9 @@ class ExcalidrawHandlers {
   private indexPath: string;
 
   private index: Map<string, any>;
+
+  private memoryInstances: Map<string, MemoryPalace> = new Map();
+  private fs = new NodeFileSystemAdapter();
 
   constructor() {
     this.storageDir = path.join(app.getPath('userData'), 'excalidraw-files');
@@ -35,10 +39,10 @@ class ExcalidrawHandlers {
         try {
           const data = await fs.readJson(this.indexPath);
           this.index = new Map(Object.entries(data.diagrams || {}));
-        } catch (parseError: any) {
+        } catch (parseError) {
           console.error(
             'Failed to parse index.json, creating backup and starting fresh:',
-            parseError.message,
+            parseError instanceof Error ? parseError.message : String(parseError),
           );
 
           // Backup the corrupted file
@@ -129,7 +133,7 @@ class ExcalidrawHandlers {
                 }
               }
             }
-          } catch (statErr) {
+          } catch {
             // Skip non-directories or inaccessible paths
           }
         }
@@ -180,7 +184,7 @@ class ExcalidrawHandlers {
     throw new Error('Invalid diagram configuration');
   }
 
-  async saveDiagram(event: any, diagram: ExcalidrawDiagram) {
+  async saveDiagram(event: IpcMainInvokeEvent, diagram: ExcalidrawDiagram) {
     try {
       const filePath = this.getDiagramPath(diagram);
       await fs.ensureDir(path.dirname(filePath));
@@ -208,13 +212,13 @@ class ExcalidrawHandlers {
       await this.saveIndex();
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save diagram:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
-  async loadDiagram(event: any, diagramId: string) {
+  async loadDiagram(event: IpcMainInvokeEvent, diagramId: string) {
     try {
       const indexEntry = this.index.get(diagramId);
       if (!indexEntry) {
@@ -223,17 +227,17 @@ class ExcalidrawHandlers {
 
       const diagram = await fs.readJson(indexEntry.filePath);
       return { success: true, data: diagram };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to load diagram:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
-  async listDiagrams(event: any, projectPath?: string) {
+  async listDiagrams(event: IpcMainInvokeEvent, projectPath?: string) {
     try {
       const diagrams = [];
 
-      for (const [id, entry] of this.index) {
+      for (const [_id, entry] of Array.from(this.index)) {
         // If projectPath is provided, only include diagrams from that project or repo-agnostic ones
         if (projectPath) {
           if (entry.projectPath !== projectPath && !entry.isRepoAgnostic) {
@@ -252,13 +256,13 @@ class ExcalidrawHandlers {
       }
 
       return { success: true, data: diagrams };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to list diagrams:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
-  async deleteDiagram(event: any, diagramId: string) {
+  async deleteDiagram(event: IpcMainInvokeEvent, diagramId: string) {
     try {
       const indexEntry = this.index.get(diagramId);
       if (!indexEntry) {
@@ -273,14 +277,14 @@ class ExcalidrawHandlers {
       await this.saveIndex();
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete diagram:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
   async exportDiagram(
-    event: any,
+    event: IpcMainInvokeEvent,
     diagramId: string,
     format: 'png' | 'svg' | 'json',
   ) {
@@ -301,13 +305,125 @@ class ExcalidrawHandlers {
         success: false,
         error: 'PNG/SVG export should be handled on the renderer side',
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to export diagram:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  // Alexandria/MemoryPalace methods
+  private getMemoryInstance(repositoryPath: string): MemoryPalace | null {
+    try {
+      // Cache MemoryPalace instances per repository
+      if (!this.memoryInstances.has(repositoryPath)) {
+        // Validate the repository path first
+        const validatedPath = MemoryPalace.validateRepositoryPath(
+          this.fs,
+          repositoryPath,
+        );
+        this.memoryInstances.set(
+          repositoryPath,
+          new MemoryPalace(validatedPath, this.fs),
+        );
+      }
+      return this.memoryInstances.get(repositoryPath) || null;
+    } catch (error) {
+      console.error('[ExcalidrawHandlers] Failed to get MemoryPalace instance:', error);
+      return null;
+    }
+  }
+
+  async saveAlexandriaDiagram(event: IpcMainInvokeEvent, name: string, data: ExcalidrawDiagramData, repositoryPath: string) {
+    try {
+      const memory = this.getMemoryInstance(repositoryPath);
+      if (!memory) {
+        return { success: false, error: 'Failed to initialize Alexandria storage' };
+      }
+
+      // Ensure name has .excalidraw extension
+      const fileName = name.endsWith('.excalidraw') ? name : `${name}.excalidraw`;
+
+      // Save the drawing using MemoryPalace public method
+      memory.saveDrawing(fileName, JSON.stringify(data, null, 2));
+
+      return { success: true, fileName };
+    } catch (error) {
+      console.error('[ExcalidrawHandlers] Failed to save Alexandria diagram:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async loadAlexandriaDiagram(event: IpcMainInvokeEvent, fileName: string, repositoryPath: string) {
+    try {
+      const memory = this.getMemoryInstance(repositoryPath);
+      if (!memory) {
+        return { success: false, error: 'Failed to initialize Alexandria storage' };
+      }
+
+      // Load the drawing using MemoryPalace public method
+      const content = memory.loadDrawing(fileName);
+
+      if (!content) {
+        return { success: false, error: 'Diagram not found in Alexandria' };
+      }
+
+      // Parse and return the data
+      const data = JSON.parse(content);
+      return { success: true, data };
+    } catch (error) {
+      console.error('[ExcalidrawHandlers] Failed to load Alexandria diagram:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async listAlexandriaDiagrams(event: IpcMainInvokeEvent, repositoryPath: string) {
+    try {
+      const memory = this.getMemoryInstance(repositoryPath);
+      if (!memory) {
+        return { success: false, error: 'Failed to initialize Alexandria storage' };
+      }
+
+      // List drawings with metadata using MemoryPalace public method
+      const drawings = memory.listDrawingsWithMetadata();
+
+      // Convert to the expected format
+      const diagrams = drawings
+        .filter(d => d.format === 'excalidraw' || d.name.endsWith('.excalidraw'))
+        .map(drawing => ({
+          id: drawing.id,
+          name: drawing.name.replace('.excalidraw', ''),
+          projectPath: repositoryPath,
+          isRepoAgnostic: false,
+          createdAt: new Date(drawing.created),
+          updatedAt: new Date(drawing.modified),
+        }));
+
+      return { success: true, data: diagrams };
+    } catch (error) {
+      console.error('[ExcalidrawHandlers] Failed to list Alexandria diagrams:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  }
+
+  async deleteAlexandriaDiagram(event: IpcMainInvokeEvent, fileName: string, repositoryPath: string) {
+    try {
+      const memory = this.getMemoryInstance(repositoryPath);
+      if (!memory) {
+        return { success: false, error: 'Failed to initialize Alexandria storage' };
+      }
+
+      // Delete the drawing using MemoryPalace public method
+      const success = memory.deleteDrawing(fileName);
+
+      return { success };
+    } catch (error) {
+      console.error('[ExcalidrawHandlers] Failed to delete Alexandria diagram:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     }
   }
 
   registerHandlers() {
+    // Existing app-data handlers
     ipcMain.handle(
       ExcalidrawAPIEvents.SAVE_DIAGRAM,
       this.saveDiagram.bind(this),
@@ -327,6 +443,24 @@ class ExcalidrawHandlers {
     ipcMain.handle(
       ExcalidrawAPIEvents.EXPORT_DIAGRAM,
       this.exportDiagram.bind(this),
+    );
+
+    // New Alexandria handlers
+    ipcMain.handle(
+      ExcalidrawAPIEvents.SAVE_ALEXANDRIA_DIAGRAM,
+      this.saveAlexandriaDiagram.bind(this),
+    );
+    ipcMain.handle(
+      ExcalidrawAPIEvents.LOAD_ALEXANDRIA_DIAGRAM,
+      this.loadAlexandriaDiagram.bind(this),
+    );
+    ipcMain.handle(
+      ExcalidrawAPIEvents.LIST_ALEXANDRIA_DIAGRAMS,
+      this.listAlexandriaDiagrams.bind(this),
+    );
+    ipcMain.handle(
+      ExcalidrawAPIEvents.DELETE_ALEXANDRIA_DIAGRAM,
+      this.deleteAlexandriaDiagram.bind(this),
     );
   }
 }

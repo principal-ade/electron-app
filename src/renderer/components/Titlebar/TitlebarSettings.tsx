@@ -16,13 +16,25 @@ export const TitlebarSettings: React.FC<TitlebarSettingsProps> = ({
   }
 
   return (
-    <TitlebarButton
-      onClick={onSettingsClick}
-      icon={<Settings size={18} />}
-      ariaLabel="Settings"
-      title={hasUpdateAvailable ? 'Settings (Update Available)' : 'Settings'}
-      badge={hasUpdateAvailable}
-      position="right"
-    />
+    <div style={{
+      WebkitAppRegion: 'no-drag' as any,
+      display: 'flex',
+      alignItems: 'center',
+    }}>
+      <TitlebarButton
+        onClick={onSettingsClick}
+        icon={<Settings size={18} />}
+        ariaLabel="Settings"
+        title={hasUpdateAvailable ? 'Settings (Update Available)' : 'Settings'}
+        badge={hasUpdateAvailable}
+        position="right"
+        style={{
+          position: 'relative',
+          right: 'auto',
+          top: 'auto',
+          transform: 'none',
+        }}
+      />
+    </div>
   );
 };

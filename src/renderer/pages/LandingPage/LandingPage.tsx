@@ -167,6 +167,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
       let mostRecentChange = repo.github?.lastCommit;
 
+      // If no GitHub lastCommit, get the last commit date from git
+      if (!mostRecentChange) {
+        try {
+          const lastCommitResult = await GitService.execCommand(repo.path, [
+            'log',
+            '-1',
+            '--format=%cI', // ISO 8601 format
+          ]).catch(() => null);
+
+          if (lastCommitResult && lastCommitResult.stdout) {
+            mostRecentChange = lastCommitResult.stdout.trim();
+          }
+        } catch (error) {
+          console.warn(`Failed to get last commit date for ${repo.name}:`, error);
+        }
+      }
+
       // If there are uncommitted changes, get the most recent file modification time
       if (isDirty) {
         try {

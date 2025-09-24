@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from 'themed-markdown';
-import { Star, Library } from 'lucide-react';
+import { Star } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 
 interface AlexandriaRepositoryCardProps {
@@ -330,34 +330,6 @@ export const AlexandriaRepositoryCard: React.FC<
             </div>
           )}
 
-          {/* Chapter badge positioned at absolute bottom right of card */}
-          {repository.hasViews && (
-            <div
-              style={{
-                position: 'absolute',
-                bottom: '16px',
-                right: '16px',
-              }}
-            >
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: `${mutedBg}CC`,
-                  color: textSecondary,
-                  padding: '6px 12px',
-                  borderRadius: '999px',
-                  fontSize: theme.fontSizes[1],
-                  fontWeight: theme.fontWeights.medium,
-                }}
-              >
-                <Library size={14} />
-                {repository.viewCount}{' '}
-                {repository.viewCount === 1 ? 'Chapter' : 'Chapters'}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

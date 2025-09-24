@@ -12,7 +12,7 @@ interface GitCloneModalProps {
   onRepositoryAdded?: (repo: any) => void;
 }
 
-type CloneStep = 'input' | 'validating' | 'directory' | 'cloning' | 'complete' | 'error';
+type CloneStep = 'input' | 'validating' | 'directory' | 'existing-repo' | 'cloning' | 'complete' | 'error';
 
 interface AuthMethod {
   available: boolean;
@@ -41,6 +41,8 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   const [isValidating, setIsValidating] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
   const [cloneProgress, setCloneProgress] = useState<string>('');
+  const [existingRepoPath, setExistingRepoPath] = useState<string>('');
+  const [showExistingRepoOption, setShowExistingRepoOption] = useState(false);
 
   // Reset state when modal opens and focus the input
   useEffect(() => {
@@ -55,6 +57,8 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       setIsValidating(false);
       setIsCloning(false);
       setCloneProgress('');
+      setExistingRepoPath('');
+      setShowExistingRepoOption(false);
 
       // Focus the input field after a brief delay to ensure the modal is rendered
       setTimeout(() => {
@@ -210,7 +214,50 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       try {
         const stats = await FileSystemService.getFileStats(fullPath);
         if (stats) {
-          setError(`Directory already exists: ${fullPath}`);
+          // Directory exists - check if it's a git repository
+          const gitInfo = await GitService.getRepositoryInfo(fullPath);
+
+          if (gitInfo && gitInfo.isRepository) {
+            // It's already a git repository - check if it matches the URL we're trying to clone
+            const existingRemote = gitInfo.remotes?.find(r => r.name === 'origin');
+
+            // Better normalization for comparison that handles SSH and HTTPS
+            const normalizeForComparison = (url: string): string => {
+              // Convert to lowercase and remove trailing slashes
+              let normalized = url.toLowerCase().replace(/\/$/, '');
+
+              // Remove .git extension
+              normalized = normalized.replace(/\.git$/, '');
+
+              // Convert SSH format to HTTPS format for comparison
+              // git@github.com:owner/repo -> https://github.com/owner/repo
+              normalized = normalized.replace(/^git@([^:]+):/, 'https://$1/');
+
+              // Also handle ssh:// format
+              normalized = normalized.replace(/^ssh:\/\/git@([^/]+)\//, 'https://$1/');
+
+              return normalized;
+            };
+
+            const normalizedInputUrl = normalizeForComparison(gitUrl);
+            const normalizedExistingUrl = existingRemote?.url ? normalizeForComparison(existingRemote.url) : '';
+
+            if (normalizedExistingUrl === normalizedInputUrl) {
+              // Same repository - offer to register it
+              setExistingRepoPath(fullPath);
+              setCurrentStep('existing-repo');
+              setCloneDirectory(fullPath);
+            } else if (existingRemote) {
+              // Different repository
+              setError(`Directory already exists at ${fullPath} and contains a different repository (${existingRemote.url})`);
+            } else {
+              // Git repo but no origin remote
+              setError(`Directory already exists at ${fullPath} and is a git repository without an origin remote`);
+            }
+          } else {
+            // Directory exists but is not a git repository
+            setError(`Directory already exists at ${fullPath} and is not a git repository`);
+          }
           return;
         }
       } catch {
@@ -284,6 +331,51 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   const handleRetry = () => {
     setCurrentStep('input');
     setError('');
+    setShowExistingRepoOption(false);
+    setExistingRepoPath('');
+  };
+
+  // Handle choosing a different directory
+  const handleChooseDifferentDirectory = async () => {
+    setCurrentStep('directory');
+    setError('');
+    setExistingRepoPath('');
+    // Let user select a new directory
+    await handleSelectDirectory();
+  };
+
+  // Handle registering an existing repository
+  const handleRegisterExisting = async () => {
+    const pathToRegister = existingRepoPath || cloneDirectory;
+    if (!pathToRegister) return;
+
+    setIsCloning(true);
+    setCloneProgress('Registering existing repository...');
+    setError('');
+
+    try {
+      // Register with Alexandria
+      const registeredRepo = await AlexandriaService.registerRepository(repoName, pathToRegister);
+
+      setCloneProgress('Registration complete!');
+      setCurrentStep('complete');
+
+      // Notify parent component
+      if (onRepositoryAdded) {
+        onRepositoryAdded(registeredRepo);
+      }
+
+      // Auto-close after a delay
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    } catch (err) {
+      console.error('Error registering existing repository:', err);
+      setError(err instanceof Error ? err.message : 'Failed to register existing repository');
+      setCurrentStep('error');
+    } finally {
+      setIsCloning(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -383,7 +475,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                   style={{ color: theme.colors.error }}
                 >
                   <AlertCircle size={16} />
-                  {error}
+                  <span>{error}</span>
                 </div>
               )}
 
@@ -583,6 +675,104 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                 >
                   <FolderOpen size={16} />
                   Select Directory & Clone
+                </button>
+              </div>
+            </div>
+          )}
+
+          {currentStep === 'existing-repo' && (
+            <div className="space-y-4">
+              <div
+                className="flex items-center gap-2"
+                style={{ color: theme.colors.info || theme.colors.primary }}
+              >
+                <AlertCircle size={20} />
+                <span className="font-medium">Existing Repository Found</span>
+              </div>
+
+              <div
+                className="p-4 rounded-md"
+                style={{
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  border: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                <p
+                  className="text-sm mb-3"
+                  style={{ color: theme.colors.text }}
+                >
+                  This directory already contains a clone of the repository you're trying to add:
+                </p>
+                <div
+                  className="flex items-center gap-2 mb-3"
+                >
+                  <FolderOpen size={16} style={{ color: theme.colors.textSecondary }} />
+                  <span
+                    className="text-sm font-mono"
+                    style={{ color: theme.colors.text }}
+                  >
+                    {cloneDirectory}
+                  </span>
+                </div>
+                <p
+                  className="text-sm"
+                  style={{ color: theme.colors.textSecondary }}
+                >
+                  You can register this existing clone to your workspace, or choose a different location.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={handleChooseDifferentDirectory}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: 'transparent',
+                    color: theme.colors.text,
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  Choose Different Location
+                </button>
+                <button
+                  onClick={handleRegisterExisting}
+                  disabled={isCloning}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: theme.colors.success,
+                    color: theme.colors.background,
+                    cursor: isCloning ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    opacity: isCloning ? 0.5 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isCloning) {
+                      e.currentTarget.style.opacity = '0.9';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isCloning) {
+                      e.currentTarget.style.opacity = '1';
+                    }
+                  }}
+                >
+                  <CheckCircle size={16} />
+                  {isCloning ? 'Registering...' : 'Register Existing Clone'}
                 </button>
               </div>
             </div>
