@@ -253,6 +253,8 @@ function TerminalPanel({
         brightWhite: '#e6e6e6',
       },
       scrollback: 10000,
+      // Add padding inside the terminal for better readability
+      padding: { top: 4, bottom: 12, left: 4, right: 4 },
     });
 
     // Add addons
@@ -296,10 +298,29 @@ function TerminalPanel({
 
   // Handle connecting to existing session
   useEffect(() => {
-    if (terminal && sessionId && terminalId) {
+    if (terminal && sessionId && terminalId && fitAddonRef.current) {
       // We're reconnecting to an existing session
       console.log('[TerminalPanel] Connected to existing session:', sessionId);
-      // Removed refresh - it was clearing the screen with Ctrl+L
+
+      // Trigger a resize to force the PTY to repaint its buffer
+      // This is needed when connecting to an existing session to see the current content
+      setTimeout(() => {
+        if (fitAddonRef.current && sessionId) {
+          const dimensions = fitAddonRef.current.proposeDimensions();
+          if (dimensions) {
+            console.log('[TerminalPanel] Triggering resize to refresh existing session');
+            // First resize to slightly different dimensions to force a redraw
+            TerminalService.resize(sessionId, dimensions.cols, dimensions.rows - 1)
+              .then(() => {
+                // Then resize back to actual dimensions
+                setTimeout(() => {
+                  TerminalService.resize(sessionId, dimensions.cols, dimensions.rows);
+                }, 50);
+              })
+              .catch(err => console.error('[TerminalPanel] Failed to resize terminal:', err));
+          }
+        }
+      }, 200); // Give time for terminal to initialize
     }
   }, [terminal, sessionId, terminalId]);
 

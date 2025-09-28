@@ -1,10 +1,9 @@
 import React from 'react';
 import { BaseTitlebar } from './BaseTitlebar';
-import { TitlebarSettings } from './TitlebarSettings';
-import { TitlebarAuth } from './TitlebarAuth';
 import { TitlebarSourceSelector } from './TitlebarSourceSelector';
 import { TitlebarModeSelector } from './TitlebarModeSelector';
 import { TitlebarForkBadge } from './TitlebarForkBadge';
+import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
 import type { Repository } from '../../../shared/types/repository.types';
 import type { FileTreeSource } from '../../types/file-tree-source';
 import type { RepositoryMode } from '../../pages/RepoManager/shared/SimpleModeSelector';
@@ -13,7 +12,6 @@ export interface RepositoryTitlebarProps {
   repository?: Repository;
   repositoryOwner?: string;
   repositoryName?: string;
-  onSettingsClick?: () => void;
   hasUpdateAvailable?: boolean;
   selectedSource?: FileTreeSource | null;
   onSourceSelect?: (source: FileTreeSource) => void;
@@ -28,7 +26,6 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   repository,
   repositoryOwner,
   repositoryName,
-  onSettingsClick,
   hasUpdateAvailable,
   selectedSource,
   onSourceSelect,
@@ -65,11 +62,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           hasLocalClones={!!repository?.localClones?.length}
         />
       )}
-      <TitlebarAuth />
-      <TitlebarSettings
-        onSettingsClick={onSettingsClick}
-        hasUpdateAvailable={hasUpdateAvailable}
-      />
+      <TitlebarOpenInIDE repository={repository} />
     </BaseTitlebar>
   );
 };

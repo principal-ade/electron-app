@@ -196,12 +196,78 @@ missingInRelease.sort((a, b) => a.name.localeCompare(b.name));
 missingEverywhere.sort();
 onlyInDevDeps.sort((a, b) => a.name.localeCompare(b.name));
 
+// Auto-sync version mismatches between root and release
+const versionMismatches = [];
+let releasePackageModified = false;
+
+for (const [packageName, rootVersion] of Object.entries(rootDeps)) {
+  const releaseVersion = releaseDeps[packageName];
+  if (releaseVersion && rootVersion !== releaseVersion) {
+    versionMismatches.push({
+      name: packageName,
+      rootVersion,
+      releaseVersion
+    });
+
+    // Auto-fix by updating release package to match root
+    if (releasePkg.dependencies?.[packageName]) {
+      releasePkg.dependencies[packageName] = rootVersion;
+      releasePackageModified = true;
+    } else if (releasePkg.peerDependencies?.[packageName]) {
+      releasePkg.peerDependencies[packageName] = rootVersion;
+      releasePackageModified = true;
+    }
+  }
+}
+
+// Write back the modified release package.json if changes were made
+if (releasePackageModified) {
+  fs.writeFileSync(releasePkgPath, JSON.stringify(releasePkg, null, 2) + '\n');
+
+  // Run npm install in release/app to update the actual packages
+  console.log('📦 Running npm install in release/app to update packages...\n');
+  try {
+    execSync('npm install', {
+      cwd: path.join(__dirname, '..', 'release', 'app'),
+      stdio: 'inherit'
+    });
+    console.log('✅ Dependencies updated successfully!\n');
+  } catch (error) {
+    console.error('❌ Failed to update dependencies in release/app');
+    console.error('   Please run: cd release/app && npm install\n');
+    process.exit(1);
+  }
+}
+
+// Also run npm update to get latest patch versions of packages
+// This ensures we're using the same versions as the root package
+console.log('🔄 Updating to latest patch versions in release/app...\n');
+try {
+  execSync('npm update', {
+    cwd: path.join(__dirname, '..', 'release', 'app'),
+    stdio: 'inherit'
+  });
+} catch (error) {
+  console.error('⚠️  Warning: Failed to update to latest patch versions');
+}
+
 // Report results
 console.log('='.repeat(70));
 console.log('DEPENDENCY VALIDATION REPORT');
 console.log('='.repeat(70) + '\n');
 
 let hasErrors = false;
+
+if (versionMismatches.length > 0) {
+  console.log('🔧 VERSION MISMATCHES FIXED');
+  console.log('   Auto-synced these packages from root to release:\n');
+
+  for (const mismatch of versionMismatches) {
+    console.log(`   • ${mismatch.name}: ${mismatch.releaseVersion} → ${mismatch.rootVersion}`);
+  }
+  console.log(`\n   Updated ${releasePkgPath}`);
+  console.log('   Ran npm install in release/app to update packages\n');
+}
 
 if (missingInRelease.length > 0) {
   hasErrors = true;

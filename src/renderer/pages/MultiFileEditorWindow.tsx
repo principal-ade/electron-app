@@ -11,9 +11,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { EditorTitlebar } from '../components/Titlebar';
-import { WatchingFileViewer } from './LandingPage/AgentConfigurationView/WatchingFileViewer';
-import { FileViewer } from '../components/FileViewer';
-import { DiffViewer } from '../components/DiffViewer';
+import { FilePanel } from '../components/FilePanel';
 import { AgentSessionService } from '../main-process-api/AgentSessionService';
 import { AgentSessionEventsService } from '../main-process-api/AgentSessionEventsService';
 import { GitService } from '../main-process-api/GitService';
@@ -84,7 +82,6 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
   const [fileActivities, setFileActivities] = useState<
     Map<string, SessionActivity[]>
   >(new Map());
-  const [showDiff, setShowDiff] = useState(false);
   const [gitStatuses, setGitStatuses] = useState<Map<string, string>>(
     new Map(),
   );
@@ -102,17 +99,36 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
   const filePathsString = useMemo(() => JSON.stringify(files.map(f => f.path)), [files]);
   const filePaths = useMemo(() => JSON.parse(filePathsString), [filePathsString]);
 
-  // For local files, derive repository path from the first file
-  // This assumes all files are in the same repository
-  const repositoryPath = useMemo(() => {
-    if (editorType === 'local' && files.length > 0) {
-      // Get the directory of the first file as a rough approximation
-      // In reality, we'd want to find the actual git root
-      const firstFilePath = files[0].path;
-      const lastSlash = firstFilePath.lastIndexOf('/');
-      return lastSlash > 0 ? firstFilePath.substring(0, lastSlash) : '/';
-    }
-    return '';
+  // For local files, find the actual git repository root
+  const [repositoryPath, setRepositoryPath] = useState<string>('');
+
+  useEffect(() => {
+    const findGitRoot = async () => {
+      if (editorType === 'local' && files.length > 0) {
+        try {
+          // Use the first file's directory to find the git root
+          const firstFilePath = files[0].path;
+          const lastSlash = firstFilePath.lastIndexOf('/');
+          const startDir = lastSlash > 0 ? firstFilePath.substring(0, lastSlash) : '/';
+
+          // Try to find the git root
+          const result = await GitService.execCommand(startDir, ['rev-parse', '--show-toplevel']);
+          if (result.stdout) {
+            setRepositoryPath(result.stdout.trim());
+          } else {
+            // Fallback to the directory if not a git repo
+            setRepositoryPath(startDir);
+          }
+        } catch (error) {
+          console.log('Not a git repository, using file directory');
+          const firstFilePath = files[0].path;
+          const lastSlash = firstFilePath.lastIndexOf('/');
+          setRepositoryPath(lastSlash > 0 ? firstFilePath.substring(0, lastSlash) : '/');
+        }
+      }
+    };
+
+    findGitRoot();
   }, [editorType, files]);
 
   // Create content provider based on editor type
@@ -126,7 +142,7 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
     } else {
       return new LocalFileSystemProvider();
     }
-  }, [editorType, props.editorType === 'remote' ? props.owner : null, props.editorType === 'remote' ? props.repo : null, props.editorType === 'remote' ? props.branch : null]);
+  }, [editorType, props]);
 
   // Initialize tabs from files - only on mount or when file paths actually change
   useEffect(() => {
@@ -575,24 +591,6 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
           )}
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => setShowDiff(!showDiff)}
-            style={{
-              padding: '4px 12px',
-              borderRadius: '4px',
-              backgroundColor: showDiff ? theme.colors.primary : 'transparent',
-              color: showDiff ? '#fff' : theme.colors.text,
-              border: `1px solid ${showDiff ? theme.colors.primary : theme.colors.border}`,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '12px',
-            }}
-          >
-            <GitCommit size={12} />
-            {showDiff ? 'Hide Diff' : 'Show Diff'}
-          </button>
 
           <button
             onClick={async () => {
@@ -718,33 +716,23 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
       {/* Editor */}
       {activeTab && (
         <div style={{ flex: 1, overflow: 'auto', position: 'relative' }}>
-          {showDiff ? (
-            // Show diff view
-            <DiffViewer
-              filePath={activeTab.path}
-              repositoryPath={repositoryPath}
-              gitStatus={activeTab.gitStatus}
-            />
-          ) : contentProvider ? (
-            // Show FileViewer with content provider for remote or local files
-            <FileViewer
-              key={activeTab.path}
-              filePath={activeTab.path}
-              displayPath={activeTab.relativePath || activeTab.path}
-              className="full-height"
-              editable={false} // Files are read-only in viewer mode
-              contentLoader={loadFileContent}
-            />
-          ) : (
-            // Show WatchingFileViewer for local files without content provider (legacy mode)
-            <WatchingFileViewer
-              key={activeTab.path}
-              filePath={activeTab.path}
-              className="full-height"
-              editable={true}
-              onModifiedChange={handleModifiedChange}
-            />
-          )}
+          {/* Use FilePanel which handles both normal view and diff view */}
+          <FilePanel
+            key={activeTab.path}
+            filePath={activeTab.path}
+            displayPath={activeTab.relativePath || activeTab.path}
+            repositoryPath={editorType === 'local' ? repositoryPath : undefined}
+            className="full-height"
+            editable={!isRemoteEditor} // Editable for local files, read-only for remote
+            enableVimMode={true}
+            onModifiedChange={handleModifiedChange}
+            contentLoader={isRemoteEditor ? loadFileContent : undefined}
+            onSave={!isRemoteEditor ? async (content: string) => {
+              // Save to local file system
+              const { FileSystemService } = await import('../main-process-api/FileSystemService');
+              await FileSystemService.writeFile(activeTab.path, content);
+            } : undefined}
+          />
 
           {/* Activity overlay */}
           {activeTab.lastActivity && isSessionActive && (

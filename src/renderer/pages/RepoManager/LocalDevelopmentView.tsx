@@ -21,7 +21,7 @@ import { RepositoryNotesService } from '../../main-process-api/RepositoryNotesSe
 import { TerminalService } from '../../main-process-api/TerminalService';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
 import { FileTreeSourceService } from '../../services/FileTreeSourceService';
-import { FileTreeCacheService } from '../../services/FileTreeCacheService';
+import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
 import { FileTreeSource, FileTreeStats } from '../../types/file-tree-source';
 import { WindowService } from '../../main-process-api/WindowService';
 
@@ -62,7 +62,7 @@ interface LocalDevelopmentViewProps {
   cityData?: CityData | null;
   activeFileTreeSource?: FileTreeSource | null;
   fileTreeSourceService?: FileTreeSourceService;
-  cacheService?: FileTreeCacheService;
+  cacheService?: MonitoredFileTreeService;
   treeStats?: FileTreeStats | null;
 
 
@@ -118,7 +118,7 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
     [_sharedFileTreeService],
   );
   const cacheService = useMemo(
-    () => sharedCacheService || new FileTreeCacheService(),
+    () => sharedCacheService || new MonitoredFileTreeService(),
     [sharedCacheService],
   );
 
@@ -563,8 +563,8 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
       }
 
       try {
-        // Try to load custom theme from .specktor/docs_theme.json
-        const themePath = `${localClone.path}/.specktor/docs_theme.json`;
+        // Try to load custom theme from .principal-ade/docs_theme.json
+        const themePath = `${localClone.path}/.principal-ade/docs_theme.json`;
         console.info(
           '[LocalDev] Theme: checking for custom theme at',
           themePath,

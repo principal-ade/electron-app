@@ -4,12 +4,24 @@ import { FileSystemService } from '../../../main-process-api/FileSystemService';
 
 interface WatchingFileViewerProps {
   filePath: string;
+  displayPath?: string;
+  onClose?: () => void;
   className?: string;
+  enableVimMode?: boolean;
   editable?: boolean;
   onSave?: (content: string) => Promise<void>;
   onModifiedChange?: (isModified: boolean) => void;
   hideInternalSaveButton?: boolean;
   onContentChange?: (content: string) => void;
+  initialContent?: string;
+  contentLoader?: () => Promise<string | null>;
+  // Git-related props
+  hasGitChanges?: boolean;
+  gitStatus?: 'modified' | 'added' | 'deleted' | 'untracked' | null;
+  isCheckingGit?: boolean;
+  onShowDiff?: () => void;
+  allowEditToggle?: boolean;
+  onEditableChange?: (editable: boolean) => void;
 }
 
 export const WatchingFileViewer: React.FC<WatchingFileViewerProps> = (

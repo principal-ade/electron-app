@@ -12,7 +12,7 @@ export class SecureTokenIPC {
 
   constructor() {
     // Don't initialize storage immediately, defer until first use
-    this.setupHandlers();
+    // Don't register handlers here - they should be registered once via registerSecureTokenHandlers()
     // Don't migrate on startup, wait for first actual use
   }
 
@@ -46,20 +46,22 @@ export class SecureTokenIPC {
     // Get GitHub auth token
     ipcMain.handle(SecureTokenAPIEvent.GET_GITHUB_AUTH, async () => {
       try {
-        const data = await this.getStorage().getTokenWithMetadata(
-          TOKEN_KEYS.ORBIT_AUTH,
+        // Try GITHUB_TOKEN first (current auth system)
+        let data = await this.getStorage().getTokenWithMetadata(
+          TOKEN_KEYS.GITHUB_TOKEN,
         );
+
+        // Fallback to ORBIT_AUTH for legacy/P2P
         if (!data) {
-          // Ensure state is cleared if no credentials found
-          AuthStateManager.getInstance().clearAuthentication();
-          return { authenticated: false };
+          data = await this.getStorage().getTokenWithMetadata(
+            TOKEN_KEYS.ORBIT_AUTH,
+          );
         }
 
-        // Update AuthStateManager when credentials are successfully retrieved
-        AuthStateManager.getInstance().setAuthenticated(
-          data.metadata.user,
-          data.token,
-        );
+        if (!data) {
+          // No tokens found
+          return { authenticated: false };
+        }
 
         return {
           authenticated: true,
@@ -68,8 +70,6 @@ export class SecureTokenIPC {
         };
       } catch (error) {
         console.error('Failed to get GitHub auth:', error);
-        // Ensure state is cleared on error
-        AuthStateManager.getInstance().clearAuthentication();
         return { authenticated: false };
       }
     });
@@ -199,18 +199,22 @@ export function registerSecureTokenHandlers(): void {
   // Get GitHub auth token
   ipcMain.handle(SecureTokenAPIEvent.GET_GITHUB_AUTH, async () => {
     try {
-      const data = await getSecureTokenIPC()
+      // Try GITHUB_TOKEN first (current auth system)
+      let data = await getSecureTokenIPC()
         .getStorage()
-        .getTokenWithMetadata(TOKEN_KEYS.ORBIT_AUTH);
+        .getTokenWithMetadata(TOKEN_KEYS.GITHUB_TOKEN);
+
+      // Fallback to ORBIT_AUTH for legacy/P2P
       if (!data) {
-        AuthStateManager.getInstance().clearAuthentication();
-        return { authenticated: false };
+        data = await getSecureTokenIPC()
+          .getStorage()
+          .getTokenWithMetadata(TOKEN_KEYS.ORBIT_AUTH);
       }
 
-      AuthStateManager.getInstance().setAuthenticated(
-        data.metadata.user,
-        data.token,
-      );
+      if (!data) {
+        // No tokens found
+        return { authenticated: false };
+      }
 
       return {
         authenticated: true,
@@ -219,7 +223,6 @@ export function registerSecureTokenHandlers(): void {
       };
     } catch (error) {
       console.error('Failed to get GitHub auth:', error);
-      AuthStateManager.getInstance().clearAuthentication();
       return { authenticated: false };
     }
   });

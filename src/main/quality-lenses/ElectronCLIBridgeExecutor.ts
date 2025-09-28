@@ -1,6 +1,6 @@
 /**
  * Custom executor that integrates codebase-quality-lenses with electron-cli-bridge
- * This bridges the gap between the lens package and our app's Git implementation
+ * This bridges the gap between the lens package and our app's command execution infrastructure
  */
 
 import type {
@@ -15,7 +15,7 @@ import { Readable } from 'stream';
 
 /**
  * Executor implementation that uses the app's electron-cli-bridge
- * for running Git commands through the existing infrastructure
+ * for running all commands through the existing infrastructure
  */
 export class ElectronCLIBridgeExecutor implements Executor {
   readonly type = 'electron' as const;
@@ -34,7 +34,7 @@ export class ElectronCLIBridgeExecutor implements Executor {
   /**
    * Execute a command using electron-cli-bridge
    *
-   * @param command - The command to execute (e.g., 'git')
+   * @param command - The command to execute (e.g., 'git', 'npm', 'eslint')
    * @param args - Command arguments
    * @param options - Execution options (cwd, env, timeout, etc.)
    * @returns Execution result with stdout, stderr, and exit code
@@ -47,40 +47,34 @@ export class ElectronCLIBridgeExecutor implements Executor {
     await this.ensureInitialized();
 
     try {
-      // Use the git executor from electron-cli-bridge for git commands
-      if (command === 'git') {
-        const result = await electronCLI.git.raw(options.cwd || process.cwd(), args);
+      console.log(`[ElectronCLIBridgeExecutor] Executing command:`, {
+        command,
+        args,
+        cwd: options.cwd
+      });
 
-        return {
-          stdout: result.stdout || '',
-          stderr: result.stderr || '',
-          exitCode: result.exitCode || 0,
-          duration: 0,
-          command,
-          args,
-        };
-      }
+      // Use the general execute method from electron-cli-bridge for all commands
+      const result = await electronCLI.execute(command, args, {
+        cwd: options.cwd,
+        env: options.env,
+        timeout: options.timeout,
+      });
 
-      // For non-git commands, use general execute if available
-      if (electronCLI.execute) {
-        const result = await electronCLI.execute(command, args, {
-          cwd: options.cwd,
-          env: options.env,
-          timeout: options.timeout,
-        });
+      console.log(`[ElectronCLIBridgeExecutor] Result:`, {
+        exitCode: result.exitCode,
+        stdoutLength: result.stdout?.length,
+        stderrLength: result.stderr?.length,
+        stdoutPreview: result.stdout?.substring(0, 100)
+      });
 
-        return {
-          stdout: result.stdout || '',
-          stderr: result.stderr || '',
-          exitCode: result.exitCode || 0,
-          duration: 0,
-          command,
-          args,
-        };
-      }
-
-      // If no general execute available, throw error
-      throw new Error(`Command '${command}' not supported by electron-cli-bridge`);
+      return {
+        stdout: result.stdout || '',
+        stderr: result.stderr || '',
+        exitCode: result.exitCode || 0,
+        duration: 0,
+        command,
+        args,
+      };
     } catch (error: any) {
       return {
         stdout: '',
@@ -128,15 +122,26 @@ export class ElectronCLIBridgeExecutor implements Executor {
 
   /**
    * Check if a command is available
+   * Uses electron-cli-bridge to check command availability
    */
   async isAvailable(command: string): Promise<boolean> {
-    if (command === 'git') {
-      // Git is always available through electron-cli-bridge
-      await this.ensureInitialized();
-      const result = await electronCLI.git.checkAvailability();
-      return result.available;
+    await this.ensureInitialized();
+
+    try {
+      // For git commands, use the specific git availability check
+      if (command === 'git') {
+        const result = await electronCLI.git.checkAvailability();
+        return result.available;
+      }
+
+      // For other commands, try a simple execution test
+      // Most commands support --version or --help
+      const testArgs = command === 'npm' ? ['--version'] : ['--version'];
+      const result = await electronCLI.execute(command, testArgs, { timeout: 5000 });
+      return result.exitCode === 0;
+    } catch (error) {
+      // If execution fails, command is not available
+      return false;
     }
-    // For other commands, assume they're not available through our bridge
-    return false;
   }
 }

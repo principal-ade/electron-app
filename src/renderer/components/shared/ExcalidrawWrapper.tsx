@@ -11,6 +11,8 @@ import '@excalidraw/excalidraw/index.css';
 import { useTheme } from 'themed-markdown';
 import { debounce } from 'lodash';
 import { ExcalidrawStorageService } from '../../main-process-api/ExcalidrawStorageService';
+import { AlexandriaDrawingService } from '../../main-process-api/AlexandriaDrawingService';
+import { RoomDrawingService } from '../../main-process-api/RoomDrawingService';
 import {
   diagramEventBus,
   DIAGRAM_EVENTS,
@@ -37,6 +39,10 @@ interface ExcalidrawWrapperProps {
   showSaveButton?: boolean;
   showNewDiagramButton?: boolean;
   showNameEditor?: boolean;
+  // Control which storage to use
+  useAlexandriaStorage?: boolean;
+  // Room-aware drawing support
+  roomId?: string;
 }
 
 export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
@@ -53,6 +59,8 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
   showSaveButton = true, // Default to true for backward compatibility
   showNewDiagramButton = true, // Default to true for backward compatibility
   showNameEditor = true, // Default to true for backward compatibility
+  useAlexandriaStorage = false, // Default to false for backward compatibility
+  roomId,
 }) => {
   const { theme } = useTheme();
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
@@ -86,6 +94,7 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
           appState: {
             showWelcomeScreen: false,
             collaborators: new Map(),
+            name: diagramName || 'Untitled Diagram',
           },
         });
         // Mark as loaded for new diagrams
@@ -166,6 +175,12 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
               appState,
             });
 
+            // If the appState has a name, update our UI state to reflect it
+            if (cleanAppState.name && typeof cleanAppState.name === 'string') {
+              setCurrentDiagramName(cleanAppState.name);
+              setEditingName(cleanAppState.name);
+            }
+
             // Force a refresh to recalculate viewport
             setTimeout(() => {
               excalidrawAPI.refresh();
@@ -222,8 +237,9 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
       diagramName: currentDiagramName,
       projectPath,
       currentLibraryItems,
+      useAlexandriaStorage,
     };
-  }, [excalidrawAPI, currentDiagramName, projectPath, currentLibraryItems]);
+  }, [excalidrawAPI, currentDiagramName, projectPath, currentLibraryItems, useAlexandriaStorage]);
 
   // Track if this is the first save for draft naming
   const [draftNumber, setDraftNumber] = useState<number | null>(null);
@@ -231,7 +247,7 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
 
   // Auto-save functionality using refs to avoid re-renders
   const handleSave = useCallback(async () => {
-    const { excalidrawAPI, projectPath, currentLibraryItems } =
+    const { excalidrawAPI, projectPath, currentLibraryItems, useAlexandriaStorage } =
       saveDataRef.current;
     const { diagramName } = saveDataRef.current;
 
@@ -295,12 +311,55 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
         setCurrentDiagramName(saveName); // Update the name state
       }
 
-      const savedId = await ExcalidrawStorageService.saveDiagram(
-        saveName,
-        data,
-        projectPath,
-        currentDiagramIdRef.current || currentDiagramId,
-      );
+      let savedId: string;
+
+      if (useAlexandriaStorage && projectPath) {
+        // If we have a roomId, use the room-aware service
+        if (roomId) {
+          const drawingName = saveName || 'Untitled Drawing';
+          // If we already have a diagram ID, we're updating an existing drawing
+          const existingId = currentDiagramIdRef.current || currentDiagramId;
+
+          if (existingId) {
+            // Update existing drawing - pass the ID to update instead of creating new
+            const drawingIdFromService = await RoomDrawingService.updateRoomDrawing(
+              projectPath,
+              roomId,
+              existingId,
+              drawingName,
+              data
+            );
+            savedId = drawingIdFromService || existingId;
+          } else {
+            // Create new drawing
+            const drawingIdFromService = await RoomDrawingService.saveRoomDrawing(
+              projectPath,
+              roomId,
+              drawingName,
+              data
+            );
+            savedId = drawingIdFromService || saveName;
+          }
+        } else {
+          // Fall back to Alexandria service for non-room drawings
+          const fileName = currentDiagramIdRef.current || currentDiagramId || saveName;
+          const fileNameWithExt = fileName.endsWith('.excalidraw') ? fileName : `${fileName}.excalidraw`;
+          await AlexandriaDrawingService.saveDiagram(
+            fileNameWithExt,
+            data,
+            projectPath
+          );
+          savedId = fileName.replace('.excalidraw', '');
+        }
+      } else {
+        // Save to app-data storage
+        savedId = await ExcalidrawStorageService.saveDiagram(
+          saveName,
+          data,
+          projectPath,
+          currentDiagramIdRef.current || currentDiagramId,
+        );
+      }
 
       if (!currentDiagramIdRef.current) {
         currentDiagramIdRef.current = savedId;
@@ -370,6 +429,16 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
     setIsEditingName(false);
     // Update the ref immediately so save uses the new name
     saveDataRef.current.diagramName = newName;
+
+    // Update Excalidraw's appState with the new name
+    if (excalidrawAPI) {
+      excalidrawAPI.updateScene({
+        appState: {
+          name: newName,
+        },
+      });
+    }
+
     // If we have a diagram ID, save the updated name
     if (currentDiagramId) {
       handleSave();

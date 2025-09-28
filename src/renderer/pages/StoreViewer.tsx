@@ -18,6 +18,7 @@ import {
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/style.css';
 import { useTheme } from 'themed-markdown';
+import { usePanelsTheme } from '../theme/panelsTheme';
 
 import { FileViewer } from '../components/FileViewer';
 import { StoreViewerTitlebar } from '../components/Titlebar';
@@ -33,6 +34,7 @@ interface StoreViewerProps {}
 
 export const StoreViewer: React.FC<StoreViewerProps> = () => {
   const { theme } = useTheme();
+  const panelsTheme = usePanelsTheme();
   const [storeStats, setStoreStats] = useState<StorageStats | null>(null);
   const [storePath, setStorePath] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -927,7 +929,6 @@ export const StoreViewer: React.FC<StoreViewerProps> = () => {
                             const result =
                               await StoreService.cleanupSessionStorage({
                                 olderThanDays: 7,
-                                includeArchives: true,
                                 includeProcessed: true,
                               });
                             alert(
@@ -945,34 +946,6 @@ export const StoreViewer: React.FC<StoreViewerProps> = () => {
                       <span>Clean Sessions &gt; 7 Days</span>
                     </button>
 
-                    <button
-                      onClick={async () => {
-                        if (
-                          window.confirm(
-                            'Delete all archived sessions older than 30 days?',
-                          )
-                        ) {
-                          try {
-                            const result =
-                              await StoreService.cleanupSessionStorage({
-                                olderThanDays: 30,
-                                includeArchives: true,
-                                includeProcessed: false,
-                              });
-                            alert(
-                              `Cleaned up ${result.deletedCount} archives, freed ${formatBytes(result.freedSpace)}`,
-                            );
-                            loadStorageMetrics();
-                          } catch (err) {
-                            console.error('Cleanup failed:', err);
-                          }
-                        }
-                      }}
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded transition-colors"
-                    >
-                      <Archive size={16} />
-                      <span>Clean Archives &gt; 30 Days</span>
-                    </button>
                   </div>
                 </div>
               </div>
@@ -1002,6 +975,7 @@ export const StoreViewer: React.FC<StoreViewerProps> = () => {
           rightPanel={renderRightPanel()}
           minSize={30}
           defaultSize={50}
+          theme={panelsTheme}
         />
         {renderStorageOverview()}
       </div>

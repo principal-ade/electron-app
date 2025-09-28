@@ -143,19 +143,6 @@ class SessionCache {
     return this.eventsBySession.get(sessionId) || null;
   }
 
-  deleteFromActive(sessionId: string): boolean {
-    const deleted = this.sessions.delete(sessionId);
-    this.eventsBySession.delete(sessionId);
-    return deleted;
-  }
-
-  updateSessionMetadata(sessionId: string, metadata: { customName?: string }): boolean {
-    const session = this.sessions.get(sessionId);
-    if (!session) return false;
-
-    session.metadata = { ...session.metadata, ...metadata };
-    return true;
-  }
 }
 
 // Create singleton cache
@@ -260,77 +247,6 @@ export function registerAgentSessionSDKHandlers(): void {
     }
   );
 
-  // Update session metadata
-  ipcMain.handle(
-    AgentSessionSDKAPIEvents.UPDATE_SESSION_METADATA,
-    async (_event, sessionId: string, repository: string, metadata: { customName?: string }) => {
-      try {
-        const updated = sessionCache.updateSessionMetadata(sessionId, metadata);
-        console.log(`[SDK Handlers] Updated metadata for session ${sessionId}:`, updated);
-        return updated;
-
-      } catch (error) {
-        console.error('[SDK Handlers] Error updating session metadata:', error);
-        return false;
-      }
-    }
-  );
-
-  // Delete from active
-  ipcMain.handle(
-    AgentSessionSDKAPIEvents.DELETE_FROM_ACTIVE,
-    async (_event, sessionId: string) => {
-      try {
-        const deleted = sessionCache.deleteFromActive(sessionId);
-        console.log(`[SDK Handlers] Deleted session ${sessionId}:`, deleted);
-        return deleted;
-
-      } catch (error) {
-        console.error('[SDK Handlers] Error deleting session:', error);
-        return false;
-      }
-    }
-  );
-
-  // Reprocess session
-  ipcMain.handle(
-    AgentSessionSDKAPIEvents.REPROCESS_SESSION,
-    async (_event, sessionId: string) => {
-      try {
-        // In the new architecture, reprocessing means re-reading from SDK
-        // For now, return success
-        console.log(`[SDK Handlers] Reprocess requested for session ${sessionId}`);
-        return {
-          success: true,
-          processedCount: 0,
-        };
-
-      } catch (error) {
-        console.error('[SDK Handlers] Error reprocessing session:', error);
-        return {
-          success: false,
-          error: (error as Error).message,
-        };
-      }
-    }
-  );
-
-  // Get raw session events (for debugging)
-  ipcMain.handle(
-    AgentSessionSDKAPIEvents.GET_RAW_SESSION_EVENTS,
-    async (_event, sessionId: string) => {
-      try {
-        // Return the same as regular events for now
-        const events = sessionCache.getSessionEvents(sessionId);
-        console.log(`[SDK Handlers] Returning raw events for session ${sessionId}`);
-        return events;
-
-      } catch (error) {
-        console.error('[SDK Handlers] Error getting raw events:', error);
-        return null;
-      }
-    }
-  );
 
   console.log('[SDK Handlers] Agent session SDK handlers registered');
 }

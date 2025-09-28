@@ -11,6 +11,7 @@ import Store from 'electron-store';
 import { OAuthServerClient } from './OAuthServerClient';
 import AuthStateManager from './AuthStateManager';
 import { UnifiedSecureStorage, TOKEN_KEYS } from './UnifiedSecureStorage';
+import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 
 interface AuthResult {
   success: boolean;
@@ -48,7 +49,7 @@ class AuthService {
 
   private setupHandlers() {
     // Check handler - reads from safeStorage
-    ipcMain.handle('cli-auth:check', async () => {
+    ipcMain.handle(AuthEvent.CHECK, async () => {
       try {
         console.log('\n========================================');
         console.log('[AuthService] CHECK HANDLER INVOKED');
@@ -78,8 +79,15 @@ class AuthService {
           );
         } else {
           console.log('[AuthService] FAILURE: No stored credentials found');
-          // Ensure state is cleared if no credentials found
-          AuthStateManager.getInstance().clearAuthentication();
+          // Only clear auth if we're currently authenticated but have no stored credentials
+          // This prevents clearing auth due to transient storage access issues
+          const currentState = AuthStateManager.getInstance().getFullState();
+          if (!currentState.isAuthenticated) {
+            console.log('[AuthService] Already unauthenticated, not clearing');
+          } else {
+            console.log('[AuthService] WARNING: Currently authenticated but no stored credentials found');
+            // Don't clear - this might be a transient storage issue
+          }
         }
 
         return result;
@@ -90,7 +98,7 @@ class AuthService {
     });
 
     // Status handler
-    ipcMain.handle('cli-auth:status', async () => {
+    ipcMain.handle(AuthEvent.STATUS, async () => {
       try {
         const auth = await this.getStoredAuth();
         if (auth.success && auth.user) {
@@ -107,7 +115,7 @@ class AuthService {
     });
 
     // Login handler - implements OAuth flow
-    ipcMain.handle('cli-auth:login', async (event, options = {}) => {
+    ipcMain.handle(AuthEvent.LOGIN, async (event, options = {}) => {
       console.log('[AuthService] Login requested with options:', options);
 
       if (this.isAuthenticating && !options.forceNew) {
@@ -201,7 +209,7 @@ class AuthService {
     });
 
     // Logout handler
-    ipcMain.handle('cli-auth:logout', async () => {
+    ipcMain.handle(AuthEvent.LOGOUT, async () => {
       try {
         await this.clearStoredAuth();
 
@@ -293,23 +301,27 @@ class AuthService {
 
   /**
    * Initialize auth state on startup
-   * Only checks if credentials exist without decrypting (to avoid keychain prompt)
+   * Checks and loads stored credentials to populate AuthStateManager
    */
   async initializeAuthState(): Promise<void> {
     try {
       console.log(
-        '[AuthService] Checking for existing authentication (without decryption)...',
+        '[AuthService] Initializing auth state on startup...',
       );
 
-      // Only check if credentials exist, don't decrypt yet
-      const hasStoredAuth = await this.hasStoredAuth();
+      // Try to get stored auth - this will decrypt credentials
+      const storedAuth = await this.getStoredAuth();
 
-      if (hasStoredAuth) {
+      if (storedAuth.success && storedAuth.token && storedAuth.user) {
         console.log(
-          '[AuthService] Found stored credentials (will decrypt on first use)',
+          '[AuthService] Found and loaded stored credentials for:',
+          storedAuth.user.login,
         );
-        // Don't update AuthStateManager yet - wait for actual auth check
-        // This avoids the keychain prompt on startup
+        // Update AuthStateManager with stored credentials
+        AuthStateManager.getInstance().setAuthenticated(
+          storedAuth.user,
+          storedAuth.token,
+        );
       } else {
         console.log('[AuthService] No existing authentication found');
         // Ensure AuthStateManager is in unauthenticated state

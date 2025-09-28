@@ -3,6 +3,12 @@
 ## Overview
 This document outlines a simplified, iterative implementation plan for the Quality Metrics feature. The approach prioritizes getting a working UI with mock data first, then implementing the real analysis without caching to ensure tools work correctly.
 
+## Current Status
+- ✅ ESLint verification completed (see QUALITY_LENS_VERIFICATION.md)
+- ✅ QualityHexagonPanel implemented with mock data
+- ✅ Integration in RepositoryDetailsPanel
+- 🚧 Embedding quality metrics in PackageLayer data structure
+
 ## Implementation Phases
 
 ### Phase 1: UI with Mock Service (Week 1)
@@ -451,414 +457,321 @@ const LandingPage: React.FC = () => {
 };
 ```
 
-### Phase 2: Basic Utility Process (Week 2)
+### Phase 2: Embed Quality Metrics in PackageLayer
 
-#### Step 2.1: Create Minimal Quality Metrics Server
-**File:** `src/quality-metrics-server/QualityMetricsServer.ts`
+#### Architecture Overview
+Quality metrics are embedded directly in the PackageLayer data structure, following the pattern from `LENS_TO_HEXAGON_MAPPING.md`:
+1. **Single Data Structure**: Quality metrics are part of package information
+2. **Calculated During Package Processing**: Metrics computed when packages are analyzed
+3. **Cached with Package Data**: No separate quality analysis calls needed
+4. **Monorepo Support**: Each package gets its own quality hexagon
+
+#### Integration Points
+
+##### 2.1: Extend PackageLayer Type Definition
+
+**File:** `src/repository-monitoring-server/types.ts`
+Extend PackageLayer with quality metrics:
 ```typescript
-import { EventEmitter } from 'events';
+interface QualityMetrics {
+  tests: number;        // Test quality/coverage (0-100)
+  deadCode: number;     // Dead/unused code percentage (0-100, lower is better)
+  linting: number;      // Linting quality (0-100)
+  formatting: number;   // Format consistency (0-100)
+  types: number;        // Type safety coverage (0-100)
+  documentation: number; // Documentation coverage (0-100)
+}
 
-export class QualityMetricsServer extends EventEmitter {
+interface PackageQualityMetrics {
+  // Raw lens data
+  lenses?: Map<string, LensConfig>;
+
+  // Hexagon metrics (computed from lenses)
+  hexagon: QualityMetrics;
+
+  // Quality tier based on overall score
+  tier: 'bronze' | 'silver' | 'gold' | 'platinum';
+
+  // Confidence level of metrics
+  confidence: 'high' | 'medium' | 'low';
+
+  // Which metrics have data
+  coverage: {
+    linting: boolean;
+    types: boolean;
+    tests: boolean;
+    formatting: boolean;
+    deadCode: boolean;
+    documentation: boolean;
+  };
+
+  // Available tools detected in package.json
+  availableTools: string[];
+
+  // Timestamp of last analysis
+  timestamp: number;
+}
+
+// Extend existing PackageWithMetrics type
+export interface PackageWithMetrics {
+  packageLayer: PackageLayer;
+  qualityMetrics?: PackageQualityMetrics; // Add quality metrics here
+}
+```
+
+##### 2.2: Update PackageProcessor to Calculate Quality Metrics
+
+**File:** `src/repository-monitoring-server/PackageProcessor.ts`
+Add quality metrics calculation during package processing:
+```typescript
+import { QualityLensService } from '../main/quality-lenses/QualityLensService';
+import type { LensResult } from '@principal-ai/codebase-quality-lenses';
+
+class PackageProcessor {
+  private qualityLensService: QualityLensService;
+
   constructor() {
-    super();
-    this.setupMessageHandlers();
-    console.log('[QualityMetricsServer] Initialized - NO CACHING MODE');
+    this.qualityLensService = QualityLensService.getInstance();
   }
 
-  private setupMessageHandlers(): void {
-    process.on('message', async (message: any) => {
-      console.log('[QualityMetricsServer] Received message:', message.type);
+  /**
+   * Process a package and extract all information including quality metrics
+   */
+  async processPackage(packagePath: string, packageData: any): Promise<PackageWithMetrics> {
+    // Existing package processing...
+    const packageLayer = await this.extractPackageLayer(packagePath, packageData);
 
-      switch (message.type) {
-        case 'ANALYZE_DIRECTORY':
-          await this.handleAnalyzeDirectory(message);
-          break;
-        case 'PING':
-          this.sendMessage({ type: 'PONG', id: message.id });
-          break;
-      }
-    });
-  }
+    // Add quality metrics calculation
+    const qualityMetrics = await this.calculateQualityMetrics(packagePath, packageData);
 
-  private async handleAnalyzeDirectory(message: any): Promise<void> {
-    const { id, directory, options } = message;
-
-    console.log(`[QualityMetricsServer] Starting analysis for ${directory}`);
-    console.log('[QualityMetricsServer] Options:', options);
-    console.log('[QualityMetricsServer] IMPORTANT: Running without cache - all tools will execute');
-
-    try {
-      // Send start event
-      this.sendMessage({
-        type: 'ANALYSIS_STARTED',
-        id,
-        directory,
-        timestamp: Date.now()
-      });
-
-      // TODO: Replace with real analysis
-      // For now, just simulate processing
-      await this.simulateAnalysis(directory);
-
-      // Generate metrics (will be replaced with real tool execution)
-      const metrics = await this.runQualityTools(directory);
-
-      // Send completion
-      this.sendMessage({
-        type: 'ANALYSIS_COMPLETED',
-        id,
-        directory,
-        metrics,
-        timestamp: Date.now()
-      });
-
-    } catch (error) {
-      console.error('[QualityMetricsServer] Analysis failed:', error);
-      this.sendMessage({
-        type: 'ANALYSIS_ERROR',
-        id,
-        directory,
-        error: error.message,
-        timestamp: Date.now()
-      });
-    }
-  }
-
-  private async runQualityTools(directory: string): Promise<any> {
-    console.log(`[QualityMetricsServer] Running quality tools for ${directory}`);
-    console.log('[QualityMetricsServer] NO CACHE - Executing all tools fresh');
-
-    // This will be replaced with real tool execution
-    // For MVP, return mock data
     return {
-      directory,
-      timestamp: Date.now(),
-      hexagon: {
-        tests: 75,
-        deadCode: 15,
-        formatting: 90,
-        linting: 85,
-        types: 95,
-        documentation: 60
-      },
-      tier: 'silver',
-      availableTools: ['eslint', 'typescript'],
-      toolResults: {},
-      suggestions: []
+      packageLayer,
+      qualityMetrics
     };
   }
 
-  private async simulateAnalysis(directory: string): Promise<void> {
-    // Simulate some processing time
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
+  /**
+   * Calculate quality metrics for a package
+   */
+  private async calculateQualityMetrics(
+    packagePath: string,
+    packageData: any
+  ): Promise<PackageQualityMetrics> {
+    const scripts = packageData.scripts || {};
+    const availableTools = this.detectAvailableTools(scripts);
+    const results = new Map<string, LensResult>();
 
-  private sendMessage(message: any): void {
-    if (process.send) {
-      process.send(message);
-    }
-  }
-}
+    // Map lens commands to hexagon metrics
+    const lensMapping = {
+      'lens:eslint:check': 'linting',
+      'lens:typescript:check': 'types',
+      'lens:test:coverage': 'tests',
+      'lens:prettier:check': 'formatting',
+      'lens:knip:check': 'deadCode',
+      'lens:typedoc:coverage': 'documentation'
+    };
 
-// Start the server
-const server = new QualityMetricsServer();
-console.log('[QualityMetricsServer] Process started');
-```
+    // Execute available lens commands
+    for (const [scriptName, metricName] of Object.entries(lensMapping)) {
+      if (scripts[scriptName]) {
+        try {
+          const result = await this.qualityLensService.executeTool({
+            repoPath: packagePath,
+            toolName: metricName,
+            command: scripts[scriptName]
+          });
 
-#### Step 2.2: Create Manager in Main Process
-**File:** `src/main/quality-metrics/QualityMetricsManager.ts`
-```typescript
-import { EventEmitter } from 'events';
-import { utilityProcess, UtilityProcess } from 'electron';
-import * as path from 'path';
-
-export class QualityMetricsManager extends EventEmitter {
-  private worker: UtilityProcess | null = null;
-  private pendingRequests = new Map<string, any>();
-
-  async start(): Promise<void> {
-    if (this.worker) {
-      console.log('[QualityMetricsManager] Already started');
-      return;
-    }
-
-    console.log('[QualityMetricsManager] Starting quality metrics server...');
-    console.log('[QualityMetricsManager] RUNNING WITHOUT CACHE - All analyses will be fresh');
-
-    // For now, use a simple worker file
-    const workerPath = path.join(__dirname, 'quality-worker.js');
-
-    this.worker = utilityProcess.fork(workerPath, [], {
-      serviceName: 'quality-metrics-server',
-      stdio: 'pipe'
-    });
-
-    this.worker.on('message', (message: any) => {
-      console.log('[QualityMetricsManager] Received message:', message.type);
-      this.handleMessage(message);
-    });
-
-    this.worker.on('spawn', () => {
-      console.log('[QualityMetricsManager] Worker spawned successfully');
-    });
-
-    this.worker.on('exit', (code) => {
-      console.log(`[QualityMetricsManager] Worker exited with code ${code}`);
-      this.worker = null;
-    });
-  }
-
-  async analyzeDirectory(directory: string, options?: any): Promise<any> {
-    console.log(`[QualityMetricsManager] Analyze request for ${directory}`);
-    console.log('[QualityMetricsManager] NO CACHING - Will run all tools');
-
-    if (!this.worker) {
-      await this.start();
-    }
-
-    const requestId = this.generateRequestId();
-
-    return new Promise((resolve, reject) => {
-      this.pendingRequests.set(requestId, { resolve, reject });
-
-      this.worker!.postMessage({
-        type: 'ANALYZE_DIRECTORY',
-        id: requestId,
-        directory,
-        options,
-        timestamp: Date.now()
-      });
-    });
-  }
-
-  private handleMessage(message: any): void {
-    switch (message.type) {
-      case 'ANALYSIS_COMPLETED':
-        const request = this.pendingRequests.get(message.id);
-        if (request) {
-          request.resolve(message.metrics);
-          this.pendingRequests.delete(message.id);
+          if (result.lensResult) {
+            results.set(metricName, result.lensResult);
+          }
+        } catch (error) {
+          console.error(`[PackageProcessor] Failed to run ${scriptName}:`, error);
         }
-        break;
-
-      case 'ANALYSIS_ERROR':
-        const errorRequest = this.pendingRequests.get(message.id);
-        if (errorRequest) {
-          errorRequest.reject(new Error(message.error));
-          this.pendingRequests.delete(message.id);
-        }
-        break;
-    }
-  }
-
-  private generateRequestId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
-}
-
-export const qualityMetricsManager = new QualityMetricsManager();
-```
-
-### Phase 3: Real Tool Execution (Week 3)
-
-#### Step 3.1: Integrate Real Tools (No Caching)
-**File:** `src/quality-metrics-server/ToolExecutor.ts`
-```typescript
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
-
-export class ToolExecutor {
-  async executeESLint(directory: string): Promise<ToolResult> {
-    console.log(`[ToolExecutor] Running ESLint for ${directory}`);
-    console.log('[ToolExecutor] NO CACHE - Executing fresh');
-
-    const startTime = Date.now();
-
-    try {
-      const { stdout, stderr } = await execAsync(
-        'npx eslint . --format json',
-        { cwd: directory }
-      );
-
-      const duration = Date.now() - startTime;
-      console.log(`[ToolExecutor] ESLint completed in ${duration}ms`);
-
-      // Parse results
-      const results = JSON.parse(stdout);
-      const errorCount = results.reduce((acc, file) => acc + file.errorCount, 0);
-      const warningCount = results.reduce((acc, file) => acc + file.warningCount, 0);
-
-      return {
-        tool: 'eslint',
-        success: true,
-        duration,
-        output: stdout,
-        metrics: {
-          errors: errorCount,
-          warnings: warningCount,
-          score: errorCount === 0 ? 100 : Math.max(0, 100 - (errorCount * 5))
-        }
-      };
-    } catch (error) {
-      console.error('[ToolExecutor] ESLint failed:', error);
-      return {
-        tool: 'eslint',
-        success: false,
-        duration: Date.now() - startTime,
-        error: error.message,
-        metrics: { score: 0 }
-      };
-    }
-  }
-
-  async executeTypeScript(directory: string): Promise<ToolResult> {
-    console.log(`[ToolExecutor] Running TypeScript for ${directory}`);
-    console.log('[ToolExecutor] NO CACHE - Executing fresh');
-
-    const startTime = Date.now();
-
-    try {
-      const { stdout, stderr } = await execAsync(
-        'npx tsc --noEmit',
-        { cwd: directory }
-      );
-
-      const duration = Date.now() - startTime;
-      console.log(`[ToolExecutor] TypeScript completed in ${duration}ms`);
-
-      // If no errors, tsc exits with 0
-      return {
-        tool: 'typescript',
-        success: true,
-        duration,
-        output: 'No type errors found',
-        metrics: { score: 100 }
-      };
-    } catch (error) {
-      // tsc exits with non-zero if there are type errors
-      const duration = Date.now() - startTime;
-      const errorCount = (error.stdout?.match(/error TS/g) || []).length;
-
-      return {
-        tool: 'typescript',
-        success: false,
-        duration,
-        output: error.stdout || error.stderr,
-        metrics: {
-          errors: errorCount,
-          score: Math.max(0, 100 - (errorCount * 3))
-        }
-      };
-    }
-  }
-
-  async executeJest(directory: string): Promise<ToolResult> {
-    console.log(`[ToolExecutor] Running Jest for ${directory}`);
-    console.log('[ToolExecutor] NO CACHE - Executing fresh');
-
-    const startTime = Date.now();
-
-    try {
-      const { stdout } = await execAsync(
-        'npx jest --coverage --json',
-        { cwd: directory }
-      );
-
-      const duration = Date.now() - startTime;
-      console.log(`[ToolExecutor] Jest completed in ${duration}ms`);
-
-      const results = JSON.parse(stdout);
-      const coverage = results.coverageMap?.total?.lines?.pct || 0;
-
-      return {
-        tool: 'jest',
-        success: results.success,
-        duration,
-        output: stdout,
-        metrics: {
-          coverage,
-          score: coverage
-        }
-      };
-    } catch (error) {
-      console.error('[ToolExecutor] Jest failed:', error);
-      return {
-        tool: 'jest',
-        success: false,
-        duration: Date.now() - startTime,
-        error: error.message,
-        metrics: { score: 0 }
-      };
-    }
-  }
-}
-```
-
-### Phase 4: Connect UI to Real Service (Week 4)
-
-#### Step 4.1: Create Real Service Interface
-**File:** `src/renderer/services/QualityMetricsService.ts`
-```typescript
-class QualityMetricsServiceImpl {
-  private useMock = process.env.USE_MOCK_QUALITY === 'true';
-
-  async analyzeDirectory(
-    directory: string,
-    options?: AnalysisOptions
-  ): Promise<QualityMetrics> {
-    console.log(`[QualityMetricsService] Analyzing ${directory}`);
-    console.log(`[QualityMetricsService] Mode: ${this.useMock ? 'MOCK' : 'REAL'}`);
-    console.log('[QualityMetricsService] NO CACHING - Fresh analysis every time');
-
-    if (this.useMock) {
-      return MockQualityMetricsService.analyzeDirectory(directory, options);
-    }
-
-    // Call real IPC
-    return window.mainProcess.quality.analyze(directory, options);
-  }
-
-  subscribeToUpdates(
-    directory: string,
-    callback: (metrics: QualityMetrics) => void
-  ): () => void {
-    if (this.useMock) {
-      return MockQualityMetricsService.subscribeToUpdates(directory, callback);
-    }
-
-    // Real IPC subscription
-    const listener = (event: any, data: any) => {
-      if (data.directory === directory) {
-        callback(data.metrics);
       }
-    };
+    }
 
-    window.mainProcess.on('quality:update', listener);
-    window.mainProcess.quality.subscribe(directory);
+    // Fallback to common script names if no lens: commands
+    if (results.size === 0) {
+      await this.detectAndRunFallbackTools(packagePath, scripts, results);
+    }
 
-    return () => {
-      window.mainProcess.off('quality:update', listener);
-      window.mainProcess.quality.unsubscribe(directory);
+    // Calculate hexagon metrics from results
+    const hexagon = this.calculateHexagonMetrics(results);
+    const tier = this.calculateTier(hexagon);
+
+    return {
+      hexagon,
+      tier,
+      confidence: results.size > 0 ? 'high' : 'low',
+      coverage: {
+        linting: results.has('linting'),
+        types: results.has('types'),
+        tests: results.has('tests'),
+        formatting: results.has('formatting'),
+        deadCode: results.has('deadCode'),
+        documentation: results.has('documentation')
+      },
+      availableTools,
+      timestamp: Date.now()
     };
   }
+
+  /**
+   * Calculate hexagon scores from lens results
+   */
+  private calculateHexagonMetrics(results: Map<string, LensResult>): QualityMetrics {
+    return {
+      tests: this.calculateTestScore(results.get('tests')),
+      deadCode: this.calculateDeadCodeScore(results.get('deadCode')),
+      linting: this.calculateLintingScore(results.get('linting')),
+      formatting: this.calculateFormattingScore(results.get('formatting')),
+      types: this.calculateTypeScore(results.get('types')),
+      documentation: this.calculateDocumentationScore(results.get('documentation'))
+    };
+  }
+
+  private calculateLintingScore(lensResult?: LensResult): number {
+    if (!lensResult) return 0;
+
+    const issues = lensResult.issues || [];
+    const filesAnalyzed = lensResult.metrics?.filesAnalyzed || 1;
+    const issuesPerFile = issues.length / filesAnalyzed;
+
+    // Scoring bands from LENS_TO_HEXAGON_MAPPING
+    if (issuesPerFile === 0) return 100;
+    if (issuesPerFile < 0.5) return 90;
+    if (issuesPerFile < 1) return 75;
+    if (issuesPerFile < 3) return 50;
+    if (issuesPerFile < 5) return 25;
+    return 0;
+  }
+
+  private calculateTier(hexagon: QualityMetrics): 'bronze' | 'silver' | 'gold' | 'platinum' {
+    const average = Object.values(hexagon).reduce((a, b) => a + b, 0) / 6;
+
+    if (average >= 95) return 'platinum';
+    if (average >= 85) return 'gold';
+    if (average >= 75) return 'silver';
+    return 'bronze';
+  }
+}
+```
+
+##### 2.3: Update QualityHexagonPanel to Use Package Data
+
+**File:** `src/renderer/principal-window/views/RepositoryExplorer/components/quality/QualityHexagonPanel.tsx`
+Update to fetch quality metrics from package data:
+```typescript
+import { RepositoryMonitoringService } from '../../../../main-process-api/RepositoryMonitoringService';
+
+interface QualityHexagonPanelProps {
+  directory: string;
+  autoAnalyze?: boolean;
+  compact?: boolean;
 }
 
-export const QualityMetricsService = new QualityMetricsServiceImpl();
+export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
+  directory,
+  autoAnalyze = false,
+  compact = false,
+}) => {
+  const [metrics, setMetrics] = useState<ExtendedQualityMetrics | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchQualityMetrics = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Fetch packages with embedded quality metrics
+      const packagesData = await RepositoryMonitoringService.getPackages(directory);
+
+      if (packagesData && packagesData.packages.length > 0) {
+        // For single package repos, use the root package
+        // For monorepos, could aggregate or show multiple hexagons
+        const rootPackage = packagesData.packages.find(p => p.packageLayer.isRoot);
+        const targetPackage = rootPackage || packagesData.packages[0];
+
+        if (targetPackage?.qualityMetrics) {
+          setMetrics({
+            hexagon: targetPackage.qualityMetrics.hexagon,
+            tier: targetPackage.qualityMetrics.tier,
+            availableTools: targetPackage.qualityMetrics.availableTools,
+            suggestions: [] // Could calculate suggestions from coverage
+          });
+        } else {
+          // Fallback to mock if no quality metrics in package
+          const mockResult = await MockQualityMetricsService.analyzeDirectory(directory);
+          setMetrics(mockResult);
+        }
+      } else {
+        setError('No packages found in repository');
+      }
+    } catch (err) {
+      console.error('[QualityHexagon] Failed to fetch quality metrics:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load quality metrics');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (autoAnalyze && directory) {
+      fetchQualityMetrics();
+    }
+  }, [directory, autoAnalyze]);
+
+  // Rest of component remains the same...
+}
 ```
 
-#### Step 4.2: Update Component to Use Real Service
-**File:** `src/renderer/components/quality/QualityHexagonPanel.tsx` (Update imports)
-```typescript
-// Change from:
-import { MockQualityMetricsService } from '../../services/MockQualityMetricsService';
+### Phase 2.5: Progressive Implementation Strategy
 
-// To:
-import { QualityMetricsService } from '../../services/QualityMetricsService';
+With quality metrics embedded in PackageLayer, implementation becomes simpler:
 
-// Update all MockQualityMetricsService references to QualityMetricsService
-```
+1. **Stage 1 - Mock Data (COMPLETED)**: UI displays mock data from MockQualityMetricsService
+2. **Stage 2 - Package Integration**: PackageProcessor detects lens: commands in package.json
+3. **Stage 3 - Single Tool**: Execute ESLint lens and calculate linting score
+4. **Stage 4 - Multiple Tools**: Add remaining lenses progressively
+5. **Stage 5 - Caching**: Package-level caching of quality metrics
+
+#### Key Benefits of PackageLayer Integration
+
+1. **Single Source of Truth**: Quality metrics are part of package data
+2. **Automatic Caching**: Metrics cached with package information
+3. **Monorepo Support**: Each package gets its own quality metrics
+4. **Simpler UI**: No separate quality analysis calls needed
+5. **Progressive Enhancement**: Can add metrics incrementally
+
+### Phase 3: Implementation Details
+
+#### Detecting Lens Commands
+The PackageProcessor should look for lens commands in this priority:
+1. Explicit `lens:*` commands (highest confidence)
+2. Common tool commands (`lint`, `test`, `typecheck`)
+3. Tool-specific commands (`eslint`, `jest`, `tsc`)
+
+#### Score Calculation
+Follow the formulas from LENS_TO_HEXAGON_MAPPING.md:
+- **Linting**: Based on issues per file
+- **Types**: Percentage of files with type coverage
+- **Tests**: Weighted average of pass rate and coverage
+- **Formatting**: Percentage of properly formatted files
+- **Dead Code**: Percentage of unused exports/dependencies
+- **Documentation**: Percentage of documented exports
+
+### Phase 4: Benefits Over Separate Quality Analysis
+
+The PackageLayer integration approach is superior to a separate quality analysis service:
+
+| Aspect | Separate Service | PackageLayer Integration |
+|--------|------------------|-------------------------|
+| API Calls | 2 (packages + quality) | 1 (packages with quality) |
+| Caching | Complex dual caching | Simple package cache |
+| Monorepo | Manual package detection | Automatic per-package metrics |
+| Data Consistency | Can get out of sync | Always synchronized |
+| Implementation | New service + IPC | Extends existing PackageProcessor |
 
 ## Testing Plan
 
@@ -1005,47 +918,47 @@ JEST_PATH=/usr/local/bin/jest
 
 ## MVP Deliverables Checklist
 
-### Week 1 ✅
-- [ ] Mock service with realistic data
-- [ ] Quality Hexagon UI component
-- [ ] Integration in Landing Page
-- [ ] Basic styling
-- [ ] Loading states
+### Phase 1: UI Foundation ✅
+- [x] Mock service with realistic data
+- [x] Quality Hexagon UI component
+- [x] Integration in RepositoryDetailsPanel
+- [x] Basic styling
+- [x] Loading states
 
-### Week 2
-- [ ] Basic utility process setup
-- [ ] Message protocol
-- [ ] Main process manager
-- [ ] IPC handlers
-- [ ] Process lifecycle management
+### Phase 2: PackageLayer Integration
+- [ ] Extend PackageLayer types with quality metrics
+- [ ] Update PackageProcessor to detect lens commands
+- [ ] Calculate hexagon metrics from lens results
+- [ ] Cache metrics with package data
+- [ ] Update QualityHexagonPanel to use package data
 
-### Week 3
-- [ ] Real ESLint execution
-- [ ] Real TypeScript execution
-- [ ] Real Jest execution
-- [ ] Tool discovery
-- [ ] Error handling
+### Phase 3: Tool Execution
+- [ ] Wire QualityLensService to PackageProcessor
+- [ ] Implement ESLint score calculation
+- [ ] Implement TypeScript score calculation
+- [ ] Implement Jest score calculation
+- [ ] Add fallback detection for common commands
 
-### Week 4
-- [ ] Connect UI to real service
-- [ ] Switch between mock/real
-- [ ] Debug logging
-- [ ] Performance monitoring
-- [ ] Documentation
+### Phase 4: Polish & Testing
+- [ ] Handle monorepo with multiple packages
+- [ ] Add progress indicators during analysis
+- [ ] Implement error recovery
+- [ ] Add debug logging
+- [ ] Documentation updates
 
 ## Success Criteria
 
-1. **UI Works with Mock Data** - Can display hexagon with mock metrics
-2. **No Caching** - Every analysis runs fresh (for debugging)
-3. **Real Tools Execute** - ESLint, TypeScript, Jest run successfully
-4. **Clear Logging** - Can see what tools run and their output
-5. **Error Recovery** - Gracefully handles tool failures
-6. **User Feedback** - Shows progress during analysis
+1. **UI Works with Package Data** - Hexagon displays metrics from PackageLayer
+2. **Lens Detection** - Correctly identifies lens: commands in package.json
+3. **Real Tools Execute** - ESLint, TypeScript, Jest run through QualityLensService
+4. **Monorepo Support** - Each package shows its own quality hexagon
+5. **Error Recovery** - Continues even if individual tools fail
+6. **Progressive Loading** - Shows cached data while refreshing
 
 ## Next Steps After MVP
 
-1. **Add Caching** - Once tools are stable
-2. **Add More Tools** - Prettier, Knip, Documentation
-3. **Incremental Updates** - Only re-run changed tools
-4. **Historical Tracking** - Store metrics over time
-5. **Comparison View** - Compare branches/commits
+1. **Smart Caching** - Invalidate only when package.json or code changes
+2. **Add More Lenses** - Prettier, Knip, Documentation tools
+3. **Aggregated View** - Combined quality metrics for monorepos
+4. **Historical Tracking** - Store metrics over time in Alexandria
+5. **CI Integration** - Export metrics for build pipelines

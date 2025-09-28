@@ -99,105 +99,21 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
 
   const handleInstallAgent = useCallback(async () => {
     setError(null);
+    // Open download URL for all agents
+    window.open(agentConfig.ui.downloadUrl, '_blank');
+
+    // Show message to user
+    setInstallProgress({ message: 'Opening download page...' });
+
+    // Clear message after 2 seconds and refresh status
+    setTimeout(() => {
+      setInstallProgress(null);
+      checkAgentStatus();
+    }, 2000);
+
+    // Handle tour navigation if applicable
     if (agentType === 'claude') {
-      window.open(agentConfig.ui.downloadUrl, '_blank');
       handleClaudeTourNext?.();
-    } else {
-      setIsInstallingAgent(true);
-      setInstallProgress({ message: 'Starting installation...' });
-
-      // Set up progress listener
-      const unsubscribeProgress = AgentInstallationService.onInstallProgress(
-        agentType,
-        (progress: InstallProgress | string) => {
-          console.log('Install progress:', progress);
-          if (typeof progress === 'string') {
-            setInstallProgress({ message: progress });
-          } else {
-            setInstallProgress(progress);
-          }
-        },
-      );
-
-      // Set up listeners before installing
-      const unsubscribeComplete = AgentInstallationService.onInstallComplete(
-        agentType,
-        async () => {
-          console.log(`${agentType} install complete event received`);
-          setInstallProgress({ message: 'Installation complete!' });
-          setIsInstallingAgent(false);
-
-          // First check agent installation directly
-          try {
-            const installationStatus =
-              await AgentInstallationService.checkInstallation(agentType);
-            console.log(
-              `Direct ${agentType} check result:`,
-              installationStatus,
-            );
-
-            // If installed, update local status immediately
-            if (installationStatus.installed) {
-              setLocalInstallStatus(true);
-              setTimeout(() => {
-                console.log('Calling checkAgentStatus after install complete');
-                checkAgentStatus();
-                setInstallProgress(null);
-              }, 1000); // Increased delay to 1 second
-            } else {
-              // If still not detected, retry once more after a longer delay
-              setTimeout(async () => {
-                const retryStatus =
-                  await AgentInstallationService.checkInstallation(agentType);
-                console.log(`Retry ${agentType} check result:`, retryStatus);
-                if (retryStatus.installed) {
-                  setLocalInstallStatus(true);
-                }
-                checkAgentStatus();
-                setInstallProgress(null);
-              }, 2000);
-            }
-          } catch (error) {
-            console.error(`Error checking ${agentType} status:`, error);
-            // Fallback to regular check
-            setTimeout(() => {
-              checkAgentStatus();
-              setInstallProgress(null);
-            }, 1000);
-          }
-
-          // Clean up listener
-          unsubscribeComplete();
-          unsubscribeError();
-          unsubscribeProgress?.();
-        },
-      );
-
-      const unsubscribeError = AgentInstallationService.onInstallError(
-        agentType,
-        (error) => {
-          console.error(`${agentType} install error:`, error);
-          setError(error);
-          setIsInstallingAgent(false);
-          setInstallProgress(null);
-          // Clean up listener
-          unsubscribeComplete();
-          unsubscribeError();
-          unsubscribeProgress?.();
-        },
-      );
-
-      try {
-        await AgentInstallationService.install(agentType);
-      } catch (error) {
-        setError(`Failed to install ${agentType}`);
-        setIsInstallingAgent(false);
-        setInstallProgress(null);
-        // Clean up listeners in case of immediate error
-        unsubscribeComplete();
-        unsubscribeError();
-        unsubscribeProgress?.();
-      }
     }
   }, [
     agentType,
@@ -247,38 +163,9 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
 
   const handleUninstallAgent = useCallback(async () => {
     setError(null);
-    if (
-      agentType === SupportedAgent.OPENCODE ||
-      agentType === SupportedAgent.CLINE
-    ) {
-      const confirmed = window.confirm(
-        `Are you sure you want to uninstall ${agentConfig.displayName}?`,
-      );
-      if (confirmed) {
-        setIsInstallingAgent(true);
-
-        // Set up uninstall complete listener
-        const unsubscribeUninstall =
-          AgentInstallationService.onUninstallComplete(agentType, () => {
-            console.log(`${agentType} uninstall complete event received`);
-            setLocalInstallStatus(false);
-            setIsInstallingAgent(false);
-            checkAgentStatus();
-            unsubscribeUninstall();
-          });
-
-        try {
-          await AgentInstallationService.uninstall(agentType);
-        } catch (error) {
-          setError(`Failed to uninstall ${agentConfig.displayName}`);
-          setIsInstallingAgent(false);
-          unsubscribeUninstall();
-        }
-      }
-    } else {
-      alert('Please uninstall Claude manually through your system settings');
-    }
-  }, [agentType, agentConfig.displayName, checkAgentStatus]);
+    // For all agents, direct user to uninstall manually
+    alert(`Please uninstall ${agentConfig.displayName} manually through your system settings`);
+  }, [agentConfig.displayName]);
 
   const handleMCPToggle = useCallback(async () => {
     setIsTogglingMCP(true);

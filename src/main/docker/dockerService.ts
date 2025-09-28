@@ -45,8 +45,8 @@ export class DockerService {
   private dockerPath: string | null = null;
 
   private readonly DEFAULT_KNIP_IMAGE = 'node:18-alpine';
-  private readonly CUSTOM_KNIP_IMAGE = 'specktor/knip:latest';
-  private readonly DEFAULT_CONTAINER_NAME = 'specktor-knip-analyzer';
+  private readonly CUSTOM_KNIP_IMAGE = 'principal-ade/knip:latest';
+  private readonly DEFAULT_CONTAINER_NAME = 'principal-ade-knip-analyzer';
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
@@ -332,7 +332,7 @@ export class DockerService {
 
     // Check for custom Knip image first
     const hasCustomImage = status.images.some(
-      (img) => img.repository === 'specktor/knip' && img.tag === 'latest',
+      (img) => img.repository === 'principal-ade/knip' && img.tag === 'latest',
     );
 
     if (hasCustomImage) {
@@ -353,7 +353,7 @@ export class DockerService {
     if (!status.installed || !status.running) return false;
 
     return status.images.some(
-      (img) => img.repository === 'specktor/knip' && img.tag === 'latest',
+      (img) => img.repository === 'principal-ade/knip' && img.tag === 'latest',
     );
   }
 
@@ -539,7 +539,7 @@ ENTRYPOINT ["knip"]
 
       // Build the Docker image
       const { stdout, stderr } = await execAsync(
-        `"${this.dockerPath}" build -t specktor/knip:latest -f "${dockerfilePath}" "${tmpDir}"`,
+        `"${this.dockerPath}" build -t principal-ade/knip:latest -f "${dockerfilePath}" "${tmpDir}"`
       );
 
       console.log('Docker build output:', stdout);

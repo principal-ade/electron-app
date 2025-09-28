@@ -1,0 +1,488 @@
+import React, { useState, useEffect } from 'react';
+import { useTheme } from 'themed-markdown';
+import { RefreshCw, Sparkles, Info } from 'lucide-react';
+import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
+
+export const UpdatesSettings: React.FC = () => {
+  const { theme } = useTheme();
+  const [isChecking, setIsChecking] = useState(false);
+  const [lastCheck, setLastCheck] = useState<Date | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<string | null>(null);
+  const [currentVersion, setCurrentVersion] = useState('0.0.0');
+  const [isDevMode, setIsDevMode] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [availableVersion, setAvailableVersion] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [isDownloaded, setIsDownloaded] = useState(false);
+
+  useEffect(() => {
+    AppVersionManagerService.getVersion().then(setCurrentVersion);
+    AppVersionManagerService.isDevMode().then(setIsDevMode);
+
+    const handleUpdateAvailable = (info: { version: string }) => {
+      setUpdateAvailable(true);
+      setAvailableVersion(info.version);
+      setUpdateStatus(`Update available: v${info.version}`);
+      setLastCheck(new Date());
+      setIsChecking(false);
+      setIsDownloaded(false);
+      setDownloadProgress(0);
+      setDownloadError(null);
+    };
+
+    const handleUpdateNotAvailable = () => {
+      setUpdateAvailable(false);
+      setAvailableVersion(null);
+      setUpdateStatus('You have the latest version');
+      setLastCheck(new Date());
+      setIsChecking(false);
+    };
+
+    const handleUpdateError = (err: Error | { message?: string; toString(): string }) => {
+      const errorMessage = parseUpdateError(err);
+      if (isDownloading) {
+        setDownloadError(errorMessage);
+        setIsDownloading(false);
+        setUpdateStatus('Download failed');
+      } else {
+        setUpdateAvailable(false);
+        setAvailableVersion(null);
+        setUpdateStatus(`Error: ${errorMessage}`);
+      }
+      setIsChecking(false);
+    };
+
+    const handleUpdateDownloadProgress = (progress: { percent?: number }) => {
+      setDownloadProgress(progress.percent || 0);
+    };
+
+    const handleUpdateDownloaded = () => {
+      setIsDownloaded(true);
+      setIsDownloading(false);
+      setDownloadProgress(100);
+      setUpdateStatus('Update downloaded successfully');
+    };
+
+    const handleUpdateCheckComplete = () => {
+      setIsChecking(false);
+    };
+
+    const unsubscribe = [
+      AppVersionManagerService.onUpdateAvailable(handleUpdateAvailable),
+      AppVersionManagerService.onUpdateNotAvailable(handleUpdateNotAvailable),
+      AppVersionManagerService.onUpdateError(handleUpdateError),
+      AppVersionManagerService.onUpdateDownloadProgress(handleUpdateDownloadProgress),
+      AppVersionManagerService.onUpdateDownloaded(handleUpdateDownloaded),
+      AppVersionManagerService.onUpdateCheckComplete(handleUpdateCheckComplete),
+    ];
+
+    // Start silent update check
+    setIsChecking(true);
+    AppVersionManagerService.checkForUpdateSilently();
+
+    return () => {
+      unsubscribe.forEach(fn => fn());
+    };
+  }, [isDownloading]);
+
+  const parseUpdateError = (err: Error | { message?: string; toString(): string }): string => {
+    let errorMessage = err.message || err.toString();
+
+    if (errorMessage.includes('ENOENT') || errorMessage.includes('no such file')) {
+      return 'Update file not found. The update server may be temporarily unavailable.';
+    } else if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('connect')) {
+      return 'Cannot connect to update server. Please check your internet connection.';
+    } else if (errorMessage.includes('ETIMEDOUT')) {
+      return 'Update server timeout. Please try again later.';
+    } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+      return 'Access denied. The update may not be available for your platform.';
+    } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+      return 'Update not found. There may be no update available for your version.';
+    } else if (errorMessage.includes('CERT') || errorMessage.includes('certificate')) {
+      return 'Certificate error. Please check your system date/time or proxy settings.';
+    } else if (errorMessage.includes('sha512') || errorMessage.includes('checksum')) {
+      return 'Update verification failed. The update file may be corrupted or the server configuration may be incorrect.';
+    }
+    return errorMessage;
+  };
+
+  const checkForUpdates = () => {
+    setIsChecking(true);
+    setUpdateStatus(null);
+    setDownloadError(null);
+    AppVersionManagerService.checkForUpdate();
+  };
+
+  const downloadUpdate = () => {
+    setIsDownloading(true);
+    setDownloadError(null);
+    setDownloadProgress(0);
+    setUpdateStatus('Downloading update...');
+    AppVersionManagerService.downloadUpdate();
+  };
+
+  const installUpdate = () => {
+    setUpdateStatus('Installing update...');
+    AppVersionManagerService.installUpdate();
+  };
+
+  return (
+    <div style={{ maxWidth: '800px' }}>
+      <style>
+        {`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+      {/* Current Version */}
+      <div style={{ marginBottom: '32px' }}>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div>
+              <h4
+                style={{
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  margin: '0 0 8px 0',
+                }}
+              >
+                Current Version
+              </h4>
+              <p
+                style={{
+                  fontSize: '24px',
+                  fontWeight: 700,
+                  color: theme.colors.primary,
+                  margin: 0,
+                }}
+              >
+                v{currentVersion}
+              </p>
+              {lastCheck && (
+                <p
+                  style={{
+                    fontSize: '12px',
+                    color: theme.colors.textSecondary,
+                    marginTop: '8px',
+                  }}
+                >
+                  Last checked: {lastCheck.toLocaleTimeString()}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={checkForUpdates}
+              disabled={isChecking}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 20px',
+                backgroundColor: isChecking
+                  ? theme.colors.backgroundTertiary
+                  : updateAvailable
+                    ? theme.colors.warning
+                    : theme.colors.primary,
+                color: isChecking ? theme.colors.textSecondary : '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: isChecking ? 'not-allowed' : 'pointer',
+                opacity: isChecking ? 0.5 : 1,
+                transition: 'all 0.2s',
+                fontSize: '14px',
+                fontWeight: 600,
+              }}
+              onMouseEnter={(e) => {
+                if (!isChecking) {
+                  e.currentTarget.style.transform = 'scale(1.02)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              <RefreshCw
+                size={16}
+                style={isChecking ? { animation: 'spin 1s linear infinite' } : {}}
+              />
+              {isChecking
+                ? 'Checking...'
+                : updateAvailable
+                  ? `Update to v${availableVersion}`
+                  : 'Check for Updates'}
+            </button>
+          </div>
+
+          {updateStatus && (
+            <div
+              style={{
+                marginTop: '16px',
+                padding: '12px',
+                backgroundColor: updateStatus.includes('available')
+                  ? `${theme.colors.warning}15`
+                  : updateStatus.includes('Error')
+                    ? `${theme.colors.error}15`
+                    : `${theme.colors.success}15`,
+                borderRadius: '8px',
+                border: `1px solid ${
+                  updateStatus.includes('available')
+                    ? theme.colors.warning + '30'
+                    : updateStatus.includes('Error')
+                      ? theme.colors.error + '30'
+                      : theme.colors.success + '30'
+                }`,
+              }}
+            >
+              <p
+                style={{
+                  fontSize: '14px',
+                  margin: 0,
+                  color: updateStatus.includes('available')
+                    ? theme.colors.warning
+                    : updateStatus.includes('Error')
+                      ? theme.colors.error
+                      : theme.colors.success,
+                }}
+              >
+                {updateStatus}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Update Available Section */}
+      {updateAvailable && availableVersion && (
+        <div
+          style={{
+            backgroundColor: `${theme.colors.warning}10`,
+            border: `2px solid ${theme.colors.warning}`,
+            borderRadius: '12px',
+            padding: '24px',
+            marginBottom: '32px',
+          }}
+        >
+          <h4
+            style={{
+              fontSize: '18px',
+              fontWeight: 600,
+              margin: '0 0 16px 0',
+              color: theme.colors.warning,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <Sparkles size={20} />
+            New Version Available!
+          </h4>
+
+          <div style={{ marginBottom: '20px' }}>
+            <p
+              style={{
+                fontSize: '14px',
+                margin: '0 0 8px 0',
+                color: theme.colors.text,
+              }}
+            >
+              <strong>Current:</strong> v{currentVersion} → <strong>Available:</strong> v
+              {availableVersion}
+            </p>
+          </div>
+
+          {isDevMode ? (
+            <div>
+              <div
+                style={{
+                  padding: '12px',
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  borderRadius: '8px',
+                  marginBottom: '12px',
+                }}
+              >
+                <p
+                  style={{
+                    fontSize: '13px',
+                    margin: 0,
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  <Info
+                    size={14}
+                    style={{
+                      display: 'inline',
+                      marginRight: '6px',
+                      verticalAlign: 'text-bottom',
+                    }}
+                  />
+                  Development mode: Updates are detected but not automatically downloaded.
+                </p>
+              </div>
+              <button
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: theme.colors.warning,
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                }}
+                onClick={() => {
+                  setIsDownloading(true);
+                  setDownloadError(null);
+                  setDownloadProgress(0);
+                  setUpdateStatus("Test downloading update (won't auto-install)...");
+                  AppVersionManagerService.testDownloadUpdate();
+                }}
+                disabled={isDownloading || !updateAvailable}
+              >
+                Test Download (No Auto-Install)
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  alignItems: 'center',
+                }}
+              >
+                <button
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: isDownloaded
+                      ? theme.colors.success
+                      : isDownloading
+                        ? theme.colors.backgroundTertiary
+                        : theme.colors.warning,
+                    color: isDownloading ? theme.colors.textSecondary : '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: isDownloading ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    opacity: isDownloading ? 0.7 : 1,
+                    transition: 'all 0.2s',
+                  }}
+                  onClick={isDownloaded ? installUpdate : downloadUpdate}
+                  disabled={isDownloading}
+                >
+                  {isDownloading
+                    ? `Downloading... ${Math.round(downloadProgress)}%`
+                    : isDownloaded
+                      ? 'Install & Restart'
+                      : 'Download Update'}
+                </button>
+                <span
+                  style={{
+                    fontSize: '13px',
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  {isDownloaded
+                    ? 'Ready to install'
+                    : 'The app will restart after installation'}
+                </span>
+              </div>
+
+              {isDownloading && (
+                <div
+                  style={{
+                    width: '100%',
+                    height: '4px',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '2px',
+                    overflow: 'hidden',
+                    marginTop: '12px',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${downloadProgress}%`,
+                      height: '100%',
+                      backgroundColor: theme.colors.primary,
+                      transition: 'width 0.3s ease',
+                    }}
+                  />
+                </div>
+              )}
+
+              {downloadError && (
+                <div
+                  style={{
+                    marginTop: '12px',
+                    padding: '12px',
+                    backgroundColor: `${theme.colors.error}15`,
+                    border: `1px solid ${theme.colors.error}30`,
+                    borderRadius: '8px',
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: '13px',
+                      margin: 0,
+                      color: theme.colors.error,
+                    }}
+                  >
+                    {downloadError}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Auto-update info */}
+      <div
+        style={{
+          backgroundColor: theme.colors.backgroundSecondary,
+          borderRadius: '12px',
+          padding: '20px',
+          border: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            margin: '0 0 12px 0',
+          }}
+        >
+          Automatic Updates
+        </h4>
+        <p
+          style={{
+            fontSize: '14px',
+            margin: 0,
+            color: theme.colors.textSecondary,
+            lineHeight: 1.6,
+          }}
+        >
+          The application checks for updates on startup and every hour while running. Updates
+          are downloaded automatically and you'll be prompted to restart when ready.
+        </p>
+      </div>
+    </div>
+  );
+};

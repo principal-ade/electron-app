@@ -386,17 +386,38 @@ class ExcalidrawHandlers {
       // List drawings with metadata using MemoryPalace public method
       const drawings = memory.listDrawingsWithMetadata();
 
-      // Convert to the expected format
-      const diagrams = drawings
-        .filter(d => d.format === 'excalidraw' || d.name.endsWith('.excalidraw'))
-        .map(drawing => ({
-          id: drawing.id,
-          name: drawing.name.replace('.excalidraw', ''),
-          projectPath: repositoryPath,
-          isRepoAgnostic: false,
-          createdAt: new Date(drawing.created),
-          updatedAt: new Date(drawing.modified),
-        }));
+      // Convert to the expected format, loading each drawing to get its actual name
+      const diagrams = [];
+      for (const drawing of drawings.filter(d => d.format === 'excalidraw' || d.name.endsWith('.excalidraw'))) {
+        try {
+          // Load the drawing content to get the name from appState
+          const content = memory.loadDrawing(drawing.name);
+          let displayName = drawing.name.replace('.excalidraw', ''); // fallback to filename
+
+          if (content) {
+            try {
+              const data = JSON.parse(content);
+              // Use the name from appState if available
+              if (data.appState && data.appState.name) {
+                displayName = data.appState.name;
+              }
+            } catch (parseErr) {
+              console.warn(`Failed to parse drawing ${drawing.name}:`, parseErr);
+            }
+          }
+
+          diagrams.push({
+            id: drawing.id,
+            name: displayName,
+            projectPath: repositoryPath,
+            isRepoAgnostic: false,
+            createdAt: new Date(drawing.created),
+            updatedAt: new Date(drawing.modified),
+          });
+        } catch (err) {
+          console.error(`Failed to process drawing ${drawing.name}:`, err);
+        }
+      }
 
       return { success: true, data: diagrams };
     } catch (error) {

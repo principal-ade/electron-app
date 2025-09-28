@@ -6,15 +6,13 @@ import {
   SecretOperationResult,
   RepositorySecrets,
   SecretMetadata,
+  SecretMetadataOnly,
+  CopyResult,
 } from '../../shared/main-process-api-interfaces/SecretsAPI';
 
 export const secretsAPI: SecretsAPI = {
   store: (request: SecretStoreRequest): Promise<SecretOperationResult> => {
     return ipcRenderer.invoke(SecretsEvents.STORE, request);
-  },
-
-  get: (repoId: string): Promise<RepositorySecrets | null> => {
-    return ipcRenderer.invoke(SecretsEvents.GET, repoId);
   },
 
   delete: (repoId: string): Promise<SecretOperationResult> => {
@@ -42,5 +40,21 @@ export const secretsAPI: SecretsAPI = {
 
   clearCache: (): Promise<void> => {
     return ipcRenderer.invoke(SecretsEvents.CLEAR_CACHE);
+  },
+
+  getMetadata: (repoId: string): Promise<SecretMetadataOnly | null> => {
+    return ipcRenderer.invoke(SecretsEvents.GET_METADATA, repoId);
+  },
+
+  getSingle: (repoId: string, key: string): Promise<string | null> => {
+    return ipcRenderer.invoke(SecretsEvents.GET_SINGLE, repoId, key);
+  },
+
+  getMultiple: (repoId: string, keys: string[]): Promise<Record<string, string>> => {
+    return ipcRenderer.invoke(SecretsEvents.GET_MULTIPLE, repoId, keys);
+  },
+
+  copyToClipboard: (repoId: string, key: string): Promise<CopyResult> => {
+    return ipcRenderer.invoke(SecretsEvents.COPY_TO_CLIPBOARD, repoId, key);
   },
 };

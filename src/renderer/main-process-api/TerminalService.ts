@@ -52,6 +52,10 @@ export class TerminalService {
     return window.mainProcess.terminal.focusWindow(windowId);
   }
 
+  static async getOpenWindows(): Promise<Array<{ terminalId: string; windowId: number }>> {
+    return window.mainProcess.terminal.getOpenWindows();
+  }
+
   static async resize(id: string, cols: number, rows: number): Promise<void> {
     return window.mainProcess.terminal.resize(id, cols, rows);
   }

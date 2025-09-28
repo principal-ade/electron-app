@@ -151,37 +151,4 @@ export class SourceFileSystemAdapter implements FileSystemAdapter {
     };
   }
 
-  /**
-   * Build filtered file tree - delegates to the appropriate adapter
-   */
-  async buildFilteredFileTree(
-    directoryPath: string,
-    patterns?: string[],
-    sourceDirectory?: string,
-  ): Promise<{
-    paths: string[];
-    stats?: Map<
-      string,
-      {
-        size: number;
-        isDirectory: boolean;
-        lastModified: Date;
-      }
-    >;
-  }> {
-    if (this.source.type === 'local') {
-      const absolutePath = this.resolveLocalPath(directoryPath);
-      return this.electronAdapter.buildFilteredFileTree(
-        absolutePath,
-        patterns,
-        sourceDirectory,
-      );
-    } else {
-      return this.githubAdapter.buildFilteredFileTree(
-        directoryPath,
-        patterns,
-        sourceDirectory,
-      );
-    }
-  }
 }

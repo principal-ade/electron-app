@@ -10,6 +10,7 @@ import {
 import { Theme, useTheme } from 'themed-markdown';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/style.css';
+import { usePanelsTheme } from '../../../theme/panelsTheme';
 
 import { AgentSetupStatus } from '../../../../shared/main-process-api-interfaces/AgentConfigAPI';
 
@@ -41,6 +42,7 @@ export const DetailedConfigurationView: React.FC<
   DetailedConfigurationViewProps
 > = ({ agentType, initialAgentStatus, checkAgentStatus, onBackToSetup }) => {
   const { theme } = useTheme();
+  const panelsTheme = usePanelsTheme();
   const agentConfig = getAgentInfo(agentType);
 
   // =========================================================================
@@ -1107,6 +1109,7 @@ export const DetailedConfigurationView: React.FC<
       rightPanel={rightPanel}
       defaultSize={50}
       minSize={20}
+      theme={panelsTheme}
     />
   );
 };

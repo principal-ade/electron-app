@@ -1,7 +1,7 @@
 {
-  "name": "principal-ai",
-  "version": "0.0.10",
-  "description": "Specktor - The Specktor engineer for your codebase",
+  "name": "principal-ade",
+  "version": "0.0.21",
+  "description": "Principal ADE - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
     "electron",
@@ -36,18 +36,17 @@
     "icons:build:windows": "npm run icons:generate",
     "icons:build:linux": "npm run icons:generate",
     "validate:deps": "node scripts/validate-dependencies.js",
-    "build:mcp-server": "ncc build assets/principal-ai-mcp-server.cjs -o dist_mcp_server",
-    "build": "npm run validate:deps && node .erb/scripts/copy-native-deps.js && npm run icons:build && npm run build:dll && npm run build:mcp-server && concurrently \"npm run build:main\" \"npm run build:renderer\"",
-    "build:mac": "npm run validate:deps && node .erb/scripts/copy-native-deps.js && npm run icons:build:mac && npm run build:dll && npm run build:mcp-server && concurrently \"npm run build:main\" \"npm run build:renderer\"",
-    "build:windows": "npm run validate:deps && npm run icons:build:windows && npm run build:dll && npm run build:mcp-server && concurrently \"npm run build:main\" \"npm run build:renderer\"",
-    "build:linux": "npm run validate:deps && npm run icons:build:linux && npm run build:dll && npm run build:mcp-server && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build": "npm run validate:deps && node .erb/scripts/copy-native-deps.js && npm run icons:build && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build:mac": "npm run validate:deps && node .erb/scripts/copy-native-deps.js && npm run icons:build:mac && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build:windows": "npm run validate:deps && npm run icons:build:windows && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
+    "build:linux": "npm run validate:deps && npm run icons:build:linux && npm run build:dll && concurrently \"npm run build:main\" \"npm run build:renderer\"",
     "build:dll": "node -e \"process.exit(process.platform === 'win32' ? 0 : 1)\" && npm run build:dll:windows || npm run build:dll:unix",
     "build:dll:unix": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.standalone.ts",
     "build:dll:windows": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.dev.dll.windows.ts",
     "build:main": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.main.prod.ts",
     "build:renderer": "node -e \"process.exit(process.platform === 'win32' ? 0 : 1)\" && npm run build:renderer:windows || npm run build:renderer:unix",
-    "build:renderer:unix": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.prod.standalone.ts",
-    "build:renderer:windows": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.prod.windows.ts",
+    "build:renderer:unix": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.prod.multi.ts",
+    "build:renderer:windows": "cross-env NODE_ENV=production TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack --config ./.erb/configs/webpack.config.renderer.prod.multi.ts",
     "postinstall": "ts-node .erb/scripts/check-native-dep.js && electron-rebuild --version 38.1.0",
     "postinstall:full": "ts-node .erb/scripts/check-native-dep.js && electron-builder install-app-deps && electron-rebuild --version 38.1.0",
     "lint": "eslint .",
@@ -59,7 +58,7 @@
     "check": "npm run typecheck && npm run lint && npm run format:check",
     "check:strict": "npm run typecheck:strict && npm run lint && npm run format:check",
     "fix": "npm run format && npm run lint:fix",
-    "package": "npm run validate:deps && ts-node ./.erb/scripts/clean.js dist && npm run prepare:shared-lib && npm run prepare:core && npm run build && electron-builder build --publish never && node .erb/scripts/staple-artifacts.js",
+    "package": "npm run validate:deps && ts-node ./.erb/scripts/clean.js dist && npm run build && electron-builder build --publish never && node .erb/scripts/staple-artifacts.js",
     "package:mac": "npm run validate:deps && ts-node ./.erb/scripts/clean.js dist && npm run build:mac && electron-builder build --publish never && node .erb/scripts/staple-artifacts.js",
     "package:mac:with-shared": "npm run validate:deps && ts-node ./.erb/scripts/clean.js dist && npm run prepare:shared-lib && npm run build:mac && electron-builder build --publish never && node .erb/scripts/staple-artifacts.js",
     "package:mac:npm": "npm run validate:deps && node ./.erb/scripts/build-production.js",
@@ -84,6 +83,8 @@
     "start:renderer": "node -e \"process.exit(process.platform === 'win32' ? 0 : 1)\" && npm run start:renderer:windows || npm run start:renderer:unix",
     "start:renderer:unix": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack serve --config ./.erb/configs/webpack.config.renderer.dev.standalone.ts",
     "start:renderer:windows": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack serve --config ./.erb/configs/webpack.config.renderer.dev.windows.ts",
+    "start:multi": "ts-node ./.erb/scripts/check-port-in-use.js && npm run prestart && npm run start:renderer:multi",
+    "start:renderer:multi": "cross-env NODE_ENV=development TS_NODE_PROJECT=tsconfig.node.json TS_NODE_TRANSPILE_ONLY=true NODE_OPTIONS=\"-r ts-node/register --no-warnings\" webpack serve --config ./.erb/configs/webpack.config.renderer.dev.multi.ts",
     "test": "jest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
@@ -158,27 +159,27 @@
       "^.+\\.[jt]sx?$": "babel-jest"
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-markdown|remark-gfm|rehype-raw|rehype-highlight|hast-util-sanitize|unist-util-position|globby|globby/.*)/)"
+      "node_modules/(?!(react-markdown|remark-gfm|rehype-raw|rehype-highlight|hast-util-sanitize|unist-util-position|globby|@principal-ai|@sindresorhus|path-type|slash|unicorn-magic)/)"
     ]
   },
   "dependencies": {
-    "@a24z/agent-manager": "^1.0.1",
-    "@a24z/alexandria-ui": "^0.0.2",
-    "@a24z/callimachus": "^0.1.3",
-    "@a24z/core-library": "^0.1.9",
-    "@a24z/markdown-search": "^2.0.5",
-    "@a24z/observability-sdk": "^0.4.1",
-    "@a24z/panels": "^1.0.3",
+    "@a24z/agent-manager": "^1.0.10",
+    "@a24z/alexandria-ui": "^0.0.3",
+    "@a24z/callimachus": "^0.1.4",
+    "@a24z/core-library": "^0.1.21",
+    "@a24z/markdown-search": "^2.0.6",
+    "@a24z/observability-sdk": "^0.4.6",
+    "@a24z/panels": "^1.0.6",
     "@electron/notarize": "^3.0.0",
     "@excalidraw/excalidraw": "^0.18.0",
     "@excalidraw/math": "^0.18.0-f0063e113",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
-    "@principal-ai/agent-monitoring": "^0.3.5",
+    "@principal-ai/agent-monitoring": "^0.3.8",
     "@principal-ai/code-city-react": "^0.1.1",
     "@principal-ai/codebase-composition": "^0.2.0",
-    "@principal-ai/codebase-quality-lenses": "^0.1.2",
-    "@principal-ai/repository-abstraction": "^0.1.0",
+    "@principal-ai/codebase-quality-lenses": "^0.1.5",
+    "@principal-ai/repository-abstraction": "^0.2.0",
     "@radix-ui/react-tabs": "^1.1.13",
     "@types/jsonwebtoken": "^9.0.10",
     "@xterm/addon-fit": "^0.10.0",
@@ -231,7 +232,7 @@
     "simple-peer": "^9.11.1",
     "socket.io-client": "^4.8.1",
     "stream-browserify": "^3.0.0",
-    "themed-markdown": "^0.1.27",
+    "themed-markdown": "^0.1.42",
     "ts-json-schema-generator": "^2.4.0",
     "uuid": "^11.1.0",
     "ws": "^8.18.3",
@@ -333,9 +334,9 @@
     "webpack-merge": "^6.0.1"
   },
   "build": {
-    "productName": "Principal AI",
-    "appId": "com.a24z.specktor",
-    "copyright": "Copyright © 2025 Specktor",
+    "productName": "Principal ADE",
+    "appId": "com.a24z.principal-ade",
+    "copyright": "Copyright © 2025 Principal ADE",
     "asar": true,
     "asarUnpack": [
       "**\\\\*.{node,dll}",
@@ -386,7 +387,7 @@
       "target": [
         "nsis"
       ],
-      "legalTrademarks": "Copyright © 2025 Specktor"
+      "legalTrademarks": "Copyright © 2025 Principal ADE"
     },
     "nsis": {
       "oneClick": false,
@@ -400,11 +401,7 @@
       "category": "Development"
     },
     "extraResources": [
-      "./assets/**",
-      {
-        "from": "dist_mcp_server/index.js",
-        "to": "principal-ai-mcp-server.cjs"
-      }
+      "./assets/**"
     ],
     "publish": {
       "provider": "github",

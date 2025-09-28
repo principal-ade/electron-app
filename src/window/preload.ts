@@ -24,13 +24,13 @@ import { clipboardAPI } from './main-process-api-implementations/clipboardApi';
 import { excalidrawAPI } from './main-process-api-implementations/excalidrawApi';
 import { fileSystemAPI } from './main-process-api-implementations/fileSystemApi';
 import { gitAPI } from './main-process-api-implementations/gitApi';
-import { gitWatcherAPI } from './main-process-api-implementations/gitWatcherApi';
 import { violationsAPI } from './main-process-api-implementations/violationsApi';
 import { githubAPI } from './main-process-api-implementations/githubApi';
 import { storeAPI } from './main-process-api-implementations/storeApi';
 import { repositoryAPI } from './main-process-api-implementations/repositoryApi';
 import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi';
 import { alexandriaDocsAPI } from './main-process-api-implementations/alexandriaDocsApi';
+import { palaceRoomAPI } from './main-process-api-implementations/palaceRoomApi';
 import { shellAPI } from './main-process-api-implementations/shellApi';
 import { systemAPI } from './main-process-api-implementations/systemApi';
 import { userPromptAPI } from './main-process-api-implementations/userPromptApi';
@@ -38,6 +38,7 @@ import { userPreferencesAPI } from './main-process-api-implementations/userPrefe
 import { windowManagerAPI } from './main-process-api-implementations/windowManagerApi';
 import { a24zAPI } from './main-process-api-implementations/a24zApi';
 import { repositoryNotesApi } from './main-process-api-implementations/repositoryNotesApi';
+import { repositoryMonitoringAPI } from './main-process-api-implementations/repositoryMonitoringApi';
 import { secretsAPI } from './main-process-api-implementations/secretsApi';
 import { apiProxyApi } from './main-process-api-implementations/apiProxyApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
@@ -49,6 +50,7 @@ import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
 import { planningAPI } from './main-process-api-implementations/planningApi';
 import { feedbackAPI } from './main-process-api-implementations/feedbackApi';
+import { roomDrawingAPI } from './main-process-api-implementations/roomDrawingApi';
 import { llmModelsAPI } from './main-process-api-implementations/llmModelsApi';
 import { testDebugAPI } from './main-process-api-implementations/testDebugApi';
 import { documentSearchAPI } from './main-process-api-implementations/documentSearchApi';
@@ -92,6 +94,7 @@ const mainProcessExposure: MainProcessAPI = {
   agentConfig: agentConfigAPI,
   alexandria: alexandriaAPI,
   alexandriaDocs: alexandriaDocsAPI,
+  palaceRoom: palaceRoomAPI,
   agentSession: agentSessionApi,
   agentSessionSDK: agentSessionSDKApi,
   agentSessionEvents: agentSessionEventsAPI,
@@ -100,14 +103,15 @@ const mainProcessExposure: MainProcessAPI = {
   authentication: authenticationAPI,
   clipboard: clipboardAPI,
   excalidraw: excalidrawAPI,
+  roomDrawing: roomDrawingAPI,
   repository: repositoryAPI,
   github: githubAPI,
   git: gitAPI,
-  gitWatcher: gitWatcherAPI,
   violations: violationsAPI,
   fileSystem: fileSystemAPI,
   store: storeAPI,
   repositoryNotes: repositoryNotesApi,
+  repositoryMonitoring: repositoryMonitoringAPI,
   secrets: secretsAPI,
   shell: shellAPI,
   system: systemAPI,
@@ -169,7 +173,7 @@ try {
 }
 
 try {
-  contextBridge.exposeInMainWorld('appName', 'Specktor');
+  contextBridge.exposeInMainWorld('appName', 'Principal ADE');
   console.log('[Preload] ✅ AppName exposed');
 } catch (error) {
   console.error('[Preload] ❌ Failed to expose appName:', error);
@@ -184,7 +188,7 @@ try {
   console.log('[Preload] ✅ Context bridge is working');
   console.log('[Preload] ✅ Exposed APIs:', {
     mainProcess: Object.keys(mainProcessExposure),
-    appName: 'Specktor',
+    appName: 'Principal ADE',
   });
   console.log(
     '[Preload] 🚀 Preload script executed successfully - APIs exposed to renderer',

@@ -60,7 +60,7 @@ export const CustomTitlebar: React.FC<CustomTitlebarProps> = ({
     <div className="custom-titlebar" style={{ backgroundColor }}>
       <div className="titlebar-drag-region">
         <div className="titlebar-title" style={{ color: accentColor }}>
-          Principal AI
+          Principal ADE
         </div>
       </div>
 
@@ -216,7 +216,7 @@ export const SimpleCustomTitlebar: React.FC<CustomTitlebarProps> = ({
     <div className="custom-titlebar" style={{ backgroundColor }}>
       <div className="titlebar-drag-region">
         <div className="titlebar-title" style={{ color: accentColor }}>
-          Principal AI
+          Principal ADE
         </div>
       </div>
 

@@ -739,13 +739,13 @@ Please check for breaking changes and compatibility issues before updating.`;
                 setAnalysisStatus('');
 
                 // Handle package selection/deselection callbacks
-                if (prevValue && prevValue !== newValue) {
+                if (prevValue !== undefined && prevValue !== newValue) {
                   // Deselect previous package
                   onPackageDeselected?.();
                 }
 
-                if (newValue && newValue !== prevValue) {
-                  // Select new package
+                if (newValue !== '__placeholder__' && newValue !== prevValue) {
+                  // Select new package (newValue can be empty string for root package)
                   const selectedPackageData = packageLayers?.find(
                     (pkg) => pkg.packageData.path === newValue,
                   );
@@ -755,8 +755,8 @@ Please check for breaking changes and compatibility issues before updating.`;
                       selectedPackageData.packageData.name,
                     );
                   }
-                } else if (!newValue) {
-                  // Nothing selected
+                } else if (newValue === '__placeholder__') {
+                  // This is the placeholder "Choose a package..." option
                   onPackageDeselected?.();
                 }
               }}
@@ -774,10 +774,10 @@ Please check for breaking changes and compatibility issues before updating.`;
                 cursor: 'pointer',
               }}
             >
-              <option value="">Choose a package...</option>
+              <option value="__placeholder__">Choose a package...</option>
               {packageLayers?.map((pkg) => (
                 <option key={pkg.packageData.path} value={pkg.packageData.path}>
-                  {pkg.packageData.name} ({pkg.packageData.path})
+                  {pkg.packageData.name} ({pkg.packageData.path || 'root'})
                 </option>
               ))}
             </select>

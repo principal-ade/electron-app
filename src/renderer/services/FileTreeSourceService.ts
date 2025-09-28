@@ -16,7 +16,7 @@ import {
   isTemporarySource,
 } from '../types/file-tree-source';
 
-import { FileTreeCacheService } from './FileTreeCacheService';
+import { MonitoredFileTreeService } from './MonitoredFileTreeService';
 import { CloneVisibilityService } from './CloneVisibilityService';
 import { ElectronPlatformAdapters } from '../adapters';
 import { GitHubWebAdapters } from '../adapters/GitHubWebAdapters';
@@ -28,11 +28,11 @@ import { GitHubWebAdapters } from '../adapters/GitHubWebAdapters';
 export class FileTreeSourceService {
   private sources: Map<string, FileTreeSource> = new Map();
   private activeSourceId: string | null = null;
-  private cacheService: FileTreeCacheService;
+  private cacheService: MonitoredFileTreeService;
   private packageModule: PackageLayerModule;
 
-  constructor(cacheService?: FileTreeCacheService) {
-    this.cacheService = cacheService || new FileTreeCacheService();
+  constructor(cacheService?: MonitoredFileTreeService) {
+    this.cacheService = cacheService || new MonitoredFileTreeService();
     this.packageModule = new PackageLayerModule();
   }
 

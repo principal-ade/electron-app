@@ -8,6 +8,16 @@ export type RepositoryViewType =
   | 'collaboration'
   | 'deployment';
 
+// Interactive shell navigation view types
+export type InteractiveShellNavigationView =
+  | 'repository'
+  | 'terminal'
+  | 'rooms'
+  | 'search'
+  | 'settings'
+  | 'monitoring'
+  | 'auth';
+
 // Planning view left tab types
 export type PlanningLeftTabType = 'terminal' | 'search' | 'editor' | 'storage';
 
@@ -106,6 +116,11 @@ export interface UserPreferences {
   landingPage?: {
     selectedRepository?: string; // Name of the selected repository
     showOnlyWithChanges?: boolean; // Filter to show only repositories with uncommitted changes
+  };
+
+  // Interactive shell preferences
+  interactiveShell?: {
+    activeNavigationView?: InteractiveShellNavigationView;
   };
 
   // TODO: Add these fields that are currently using direct storage.get/set calls:

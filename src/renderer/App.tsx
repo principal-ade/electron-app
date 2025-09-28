@@ -9,7 +9,6 @@ import { GlobalFeedbackProvider } from './GlobalFeedbackProvider';
 import { UserPromptProvider } from './components/mcp/UserPromptProvider';
 import { CustomThemeProvider } from './providers/CustomThemeProvider';
 // Titlebars are now integrated into each component
-import { SettingsModal } from './components/landing-page/SettingsModal';
 
 import {
   AgentConfigurationService,
@@ -22,11 +21,7 @@ import { UserPreferencesService } from './main-process-api/UserPreferencesServic
 import { MarkdownView } from './pages/MarkdownView';
 
 // Lazy load all page components
-const LandingPage = React.lazy(() =>
-  import('./pages/LandingPage/LandingPage').then((m) => ({
-    default: m.LandingPage,
-  })),
-);
+// LandingPage removed - functionality migrated to RepositoryExplorer in principal-window
 const StandaloneTerminal = React.lazy(() =>
   import('./pages/StandaloneTerminal').then((m) => ({
     default: m.StandaloneTerminal,
@@ -50,20 +45,12 @@ const CallimachusWindow = React.lazy(() =>
     default: m.CallimachusWindow,
   })),
 );
-const SearchWindow = React.lazy(() =>
-  import('./pages/SearchWindow').then((m) => ({
-    default: m.SearchWindow,
-  })),
-);
 
 function AppContent({
   setHasUpdateAvailable,
-  onLandingPageMounted,
-  onSettingsClick,
   hasUpdateAvailable,
 }: {
   setHasUpdateAvailable: (hasUpdate: boolean) => void;
-  onSettingsClick?: () => void;
   hasUpdateAvailable?: boolean;
   // onLandingPageMounted removed - add project buttons now in repository list header
 }) {
@@ -221,19 +208,13 @@ function AppContent({
   );
 
   if (currentView === 'landing') {
+    // Landing page functionality has been migrated to RepositoryExplorer in principal-window
+    // This route should no longer be used - redirect or show error
     return (
-      <Suspense fallback={<LoadingFallback />}>
-        {/* We need to consume the context inside the provider */}
-        {agentStatus && (
-          <LandingPage
-            initialAgentStatus={agentStatus}
-            onUpdateAvailable={setHasUpdateAvailable}
-            onSettingsClick={onSettingsClick}
-            hasUpdateAvailable={hasUpdateAvailable}
-            // onMountActions prop removed - add project buttons now in repository list header
-          />
-        )}
-      </Suspense>
+      <div style={{ padding: '20px', textAlign: 'center' }}>
+        <h2>Landing page has been migrated to Principal View</h2>
+        <p>This route is no longer active. Please use the main window.</p>
+      </div>
     );
   }
 
@@ -254,18 +235,12 @@ function AppContent({
   }
 
   if (currentView === 'markdownView') {
-    // Get fontSizeScale and other props from parent App component
-    const fontSizeScale = (window as any).markdownFontSizeScale || 1.0;
+    // Get project name from parent App component
     const projectName = (window as any).markdownProjectName;
-    const onFontSizeIncrease = (window as any).handleMarkdownFontIncrease;
-    const onFontSizeDecrease = (window as any).handleMarkdownFontDecrease;
     return (
       <MarkdownView
         filePath={(windowInitData as any)?.filePath || ''}
-        fontSizeScale={fontSizeScale}
         projectName={projectName}
-        onFontSizeIncrease={onFontSizeIncrease}
-        onFontSizeDecrease={onFontSizeDecrease}
       />
     );
   }
@@ -294,13 +269,6 @@ function AppContent({
     );
   }
 
-  if (currentView === 'search') {
-    return (
-      <Suspense fallback={<LoadingFallback />}>
-        <SearchWindow />
-      </Suspense>
-    );
-  }
 
   if (currentView === 'repositoryMaps') {
     // Pass windowInitData to the window object so RepositoryManager can access mode
@@ -314,7 +282,6 @@ function AppContent({
         <RepositoryManager
           repository={(windowInitData as any)?.repository}
           onBack={() => window.close()}
-          onSettingsClick={onSettingsClick}
           hasUpdateAvailable={hasUpdateAvailable}
         />
       </Suspense>
@@ -325,7 +292,6 @@ function AppContent({
 }
 
 function App() {
-  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [hasUpdateAvailable, setHasUpdateAvailable] = React.useState(false);
   const [currentView, setCurrentView] = React.useState<string>('');
   const [repositoryData, setRepositoryData] = React.useState<{
@@ -334,54 +300,14 @@ function App() {
   } | null>(null);
   const [markdownFilePath, setMarkdownFilePath] = React.useState<string | null>(null);
   const [markdownProjectName, setMarkdownProjectName] = React.useState<string | null>(null);
-  const [markdownFontSizeScale, setMarkdownFontSizeScale] = React.useState<number>(1.0);
   // Removed landingPageActions as add project buttons are now in the repository list header
 
-  // Load markdown font size preference
+
+
+  // Store project name on window for AppContent to access
   React.useEffect(() => {
-    if (currentView === 'markdown-view') {
-      UserPreferencesService.getPreferences().then(prefs => {
-        if (prefs?.markdownFontSizeScale) {
-          setMarkdownFontSizeScale(prefs.markdownFontSizeScale);
-        }
-      }).catch(err => {
-        console.error('Error loading font size preference:', err);
-      });
-    }
-  }, [currentView]);
-
-  // Handle font size changes
-  const handleMarkdownFontIncrease = React.useCallback(async () => {
-    const newScale = Math.min(markdownFontSizeScale + 0.1, 3.0);
-    setMarkdownFontSizeScale(newScale);
-    try {
-      await UserPreferencesService.updatePreferences({
-        markdownFontSizeScale: newScale,
-      });
-    } catch (err) {
-      console.error('Error saving font size preference:', err);
-    }
-  }, [markdownFontSizeScale]);
-
-  const handleMarkdownFontDecrease = React.useCallback(async () => {
-    const newScale = Math.max(markdownFontSizeScale - 0.1, 0.5);
-    setMarkdownFontSizeScale(newScale);
-    try {
-      await UserPreferencesService.updatePreferences({
-        markdownFontSizeScale: newScale,
-      });
-    } catch (err) {
-      console.error('Error saving font size preference:', err);
-    }
-  }, [markdownFontSizeScale]);
-
-  // Store fontSizeScale and handlers on window for AppContent to access
-  React.useEffect(() => {
-    (window as any).markdownFontSizeScale = markdownFontSizeScale;
     (window as any).markdownProjectName = markdownProjectName;
-    (window as any).handleMarkdownFontIncrease = handleMarkdownFontIncrease;
-    (window as any).handleMarkdownFontDecrease = handleMarkdownFontDecrease;
-  }, [markdownFontSizeScale, markdownProjectName, handleMarkdownFontIncrease, handleMarkdownFontDecrease]);
+  }, [markdownProjectName]);
 
   // Add platform class to body for CSS targeting and track current view
   React.useEffect(() => {
@@ -451,13 +377,8 @@ function App() {
     <CustomThemeProvider>
       <GlobalFeedbackProvider>
         <UserPromptProvider>
-          <SettingsModal
-            isOpen={isSettingsOpen}
-            onClose={() => setIsSettingsOpen(false)}
-          />
           <AppContent
             setHasUpdateAvailable={setHasUpdateAvailable}
-            onSettingsClick={() => setIsSettingsOpen(true)}
             hasUpdateAvailable={hasUpdateAvailable}
             // onLandingPageMounted removed - add project buttons now in repository list header
           />

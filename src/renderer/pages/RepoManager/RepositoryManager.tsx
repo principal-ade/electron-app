@@ -15,6 +15,7 @@ import {
 } from '@principal-ai/codebase-composition';
 import { SourceFileSystemAdapter } from '../../adapters/SourceFileSystemAdapter';
 import { RepositoryTitlebar } from '../../components/Titlebar';
+import { RepositoryLoadingState } from './components/RepositoryLoadingState';
 
 import type { Repository } from '../../../shared/types/repository.types';
 import { RepositoryViewType } from '../../../shared/types/userPreferences.types';
@@ -28,21 +29,21 @@ import { BadgeInfoModal } from './shared/BadgeInfoModal';
 import { FileChangeProvider } from '../../contexts/FileChangeContext';
 import { GitChangesProvider } from '../../contexts/GitChangesContext';
 import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
-import { SDKServiceDebug } from '../../components/SDKServiceDebug';
 import { EventActivityType } from '../../../shared/sessionEnums';
 import { GitService } from '../../main-process-api/GitService';
+import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import {
   UIAgentSessionData,
   EnhancedUIAgentSessionData,
 } from '../../types/session.types';
-// import { DirectorySessions } from '../../../shared/main-process-api-interfaces/AgentSessionAPI'; // TODO: Remove if not needed
 import { FileTree } from '@principal-ai/repository-abstraction';
 import { FileTreeSourceService } from '../../services/FileTreeSourceService';
-import { FileTreeCacheService } from '../../services/FileTreeCacheService';
+import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
 import { FileTreeInvalidator } from '../../services/FileTreeInvalidator';
 import { CityDataCacheService } from '../../services/CityDataCacheService';
 import { FileTreeSource, FileTreeStats } from '../../types/file-tree-source';
 import { SourceSelectionService } from '../../services/SourceSelectionService';
+import { CloneVisibilityService } from '../../services/CloneVisibilityService';
 import { AgentConfigurationService } from '../../main-process-api/AgentConfigurationService';
 import { SupportedAgent } from '@principal-ai/agent-monitoring';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
@@ -55,21 +56,16 @@ interface RepositoryManagerWindowData {
   };
 }
 
-import { loadManifestContents } from '../../utils/loadManifestContents';
-import { GitHubWebAdapters } from '../../adapters/GitHubWebAdapters';
-import { ElectronPlatformAdapters } from '../../adapters';
-
 interface RepositoryManagerProps {
   repository: Repository;
   onBack?: () => void;
-  onSettingsClick?: () => void;
   hasUpdateAvailable?: boolean;
 }
 
 type ViewMode = RepositoryViewType;
 
 export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
-  ({ repository, onBack, onSettingsClick, hasUpdateAvailable }) => {
+  ({ repository, onBack, hasUpdateAvailable }) => {
     const { theme } = useTheme();
 
     // Repository identifier for state persistence
@@ -94,13 +90,14 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
     const [showSecretsModal, setShowSecretsModal] = useState(false);
     const [showSourceHelpModal, setShowSourceHelpModal] = useState(false);
     const [showBadgeInfoModal, setShowBadgeInfoModal] = useState(false);
+    const [cloneBranchStatuses, setCloneBranchStatuses] = useState<Record<string, any>>({});
 
     // File tree services - shared across all views
     const fileTreeSourceService = useMemo(
       () => new FileTreeSourceService(),
       [],
     );
-    const cacheService = useMemo(() => new FileTreeCacheService(), []);
+    const cacheService = useMemo(() => new MonitoredFileTreeService(), []);
     const cityDataCache = useMemo(() => new CityDataCacheService(), []);
     const fileTreeInvalidator = useMemo(
       () => new FileTreeInvalidator(cacheService, cityDataCache),
@@ -371,17 +368,66 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
       // Note: We now handle state updates in handleViewModeChange to avoid double updates
     }, [viewMode, uiStateLoaded]); // Don't depend on uiState to avoid loops
 
-    // Initialize selected source from repository
+    // Initialize selected source from repository and register with monitoring service
     useEffect(() => {
-      const defaultSource =
-        SourceSelectionService.getSelectedSource(repository);
-      if (defaultSource) {
-        setSelectedSource(defaultSource);
-        // Initialize the file tree source service with this source
-        fileTreeSourceService.initializeFromRepository(repository);
-        fileTreeSourceService.setActiveSource(defaultSource.id);
-      }
-    }, [repository, fileTreeSourceService]);
+      const initializeAndRegister = async () => {
+        const defaultSource =
+          SourceSelectionService.getSelectedSource(repository);
+        if (defaultSource) {
+          setSelectedSource(defaultSource);
+          // Initialize the file tree source service with this source
+          fileTreeSourceService.initializeFromRepository(repository);
+          fileTreeSourceService.setActiveSource(defaultSource.id);
+
+          // Register repository with monitoring service for local clones
+          if (repository.localClones && repository.localClones.length > 0) {
+            const visibleClonePath = CloneVisibilityService.getVisibleClonePath(repository);
+            if (visibleClonePath) {
+              try {
+                // Start monitoring service if not already started
+                console.log('[RepositoryManager] Starting monitoring service...');
+                await RepositoryMonitoringService.startMonitoring();
+                console.log('[RepositoryManager] Monitoring service started');
+
+                console.log('[RepositoryManager] Registering repository with monitoring service:', visibleClonePath);
+                await cacheService.registerRepository(visibleClonePath);
+                console.log('[RepositoryManager] Repository registered successfully');
+
+                // Enable git watching for the repository
+                console.log('[RepositoryManager] Enabling git watching for repository:', visibleClonePath);
+                const result = await RepositoryMonitoringService.enableGitWatching(visibleClonePath);
+                if (result.success) {
+                  console.log('[RepositoryManager] Git watching enabled successfully');
+                } else {
+                  console.warn('[RepositoryManager] Failed to enable git watching:', result.error);
+                }
+              } catch (error) {
+                console.error('[RepositoryManager] Failed to register repository:', error);
+                // Not fatal - the service will still work but may need to compute FileTree on first access
+              }
+            }
+          }
+        }
+      };
+
+      initializeAndRegister();
+
+      // Cleanup: disable git watching on unmount
+      return () => {
+        const visibleClonePath = CloneVisibilityService.getVisibleClonePath(repository);
+        if (visibleClonePath) {
+          RepositoryMonitoringService.disableGitWatching(visibleClonePath)
+            .then((result) => {
+              if (result.success) {
+                console.log('[RepositoryManager] Git watching disabled on unmount');
+              }
+            })
+            .catch((error) => {
+              console.error('[RepositoryManager] Failed to disable git watching on unmount:', error);
+            });
+        }
+      };
+    }, [repository, fileTreeSourceService, cacheService]);
 
     // Load file tree for selected source
     const loadTree = useCallback(
@@ -475,7 +521,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 const packageModule = new PackageLayerModule();
 
                 // Convert FileTree to FileSystemTree
-                const fileSystemTree = result.tree as FileTree;
+                const fileSystemTree = result.tree as any;
 
                 // Create file reader function from the source adapter
                 const fileReader = sourceAdapter.createFileReader();
@@ -772,8 +818,8 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
 
                 const baseSession: UIAgentSessionData = {
                   sessionId: summary.sessionId,
-                  directory: dirSession.directory,
-                  workingDirectory: dirSession.directory,
+                  directory: projectSession.repository || '',
+                  workingDirectory: projectSession.repository || '',
                   lastActivity: summary.lastActivity || Date.now(),
                   firstAccess: summary.startTime || Date.now(),
                   isActive: summary.active, // Use the actual active status from the summary
@@ -906,25 +952,25 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
         try {
           // Get fresh session data
           const directorySessions =
-            await AgentSessionService.getActiveSessions();
+            await AgentSessionSDKService.getActiveSessionsByProject();
           const pathsToCheck = repository.localClones?.map((c) => c.path) || [];
 
           if (directorySessions && directorySessions.length > 0) {
             for (const dirSession of directorySessions) {
               // Find the matching session
               const matchingSession = dirSession.summaries?.find(
-                (s) => s.sessionId === sessionId,
+                (s: any) => s.sessionId === sessionId,
               );
               if (
                 matchingSession &&
-                pathsToCheck.includes(dirSession.directory)
+                pathsToCheck.includes(dirSession.repository || '')
               ) {
                 // Compute fresh status
                 // Create a proper UIAgentSessionData from SessionSummary
                 const baseSession: UIAgentSessionData = {
                   sessionId: matchingSession.sessionId,
-                  directory: dirSession.directory,
-                  workingDirectory: dirSession.directory,
+                  directory: dirSession.repository || '',
+                  workingDirectory: dirSession.repository || '',
                   lastActivity: matchingSession.lastActivity || Date.now(),
                   firstAccess: matchingSession.startTime || Date.now(),
                   isActive: matchingSession.active,
@@ -1052,7 +1098,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           repository={repository}
           repositoryOwner={repository.owner}
           repositoryName={repository.name}
-          onSettingsClick={onSettingsClick}
           hasUpdateAvailable={hasUpdateAvailable}
           selectedSource={selectedSource}
           onSourceSelect={setSelectedSource}
@@ -1067,352 +1112,13 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            padding: '20px',
             overflow: 'hidden',
             boxSizing: 'border-box',
           }}
         >
           {/* Loading State */}
           {_loading && !fileTree ? (
-            <div
-              style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '40px',
-                gap: '24px',
-              }}
-            >
-              {/* Animated Tree Icon */}
-              <div
-                style={{
-                  position: 'relative',
-                  width: '120px',
-                  height: '120px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <style>{`
-                @keyframes tree-pulse {
-                  0%, 100% {
-                    transform: scale(1);
-                    opacity: 0.3;
-                  }
-                  50% {
-                    transform: scale(1.1);
-                    opacity: 0.5;
-                  }
-                }
-                
-                @keyframes tree-ring {
-                  0% {
-                    transform: scale(0.8);
-                    opacity: 0.6;
-                  }
-                  100% {
-                    transform: scale(1.3);
-                    opacity: 0;
-                  }
-                }
-                
-                @keyframes dots-fade {
-                  0%, 100% {
-                    opacity: 0.3;
-                  }
-                  50% {
-                    opacity: 1;
-                  }
-                }
-              `}</style>
-
-                {/* Background rings */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: '50%',
-                    border: `2px solid ${theme.colors.primary}`,
-                    animation: 'tree-ring 2s ease-out infinite',
-                  }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: '50%',
-                    border: `2px solid ${theme.colors.primary}`,
-                    animation: 'tree-ring 2s ease-out infinite 0.5s',
-                  }}
-                />
-
-                {/* Tree structure */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '4px',
-                    animation: 'tree-pulse 2s ease-in-out infinite',
-                  }}
-                >
-                  {/* Root node */}
-                  <div
-                    style={{
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.primary,
-                    }}
-                  />
-
-                  {/* Branches */}
-                  <svg
-                    width="60"
-                    height="40"
-                    viewBox="0 0 60 40"
-                    style={{ opacity: 0.6 }}
-                  >
-                    <line
-                      x1="30"
-                      y1="0"
-                      x2="30"
-                      y2="15"
-                      stroke={theme.colors.primary}
-                      strokeWidth="2"
-                    />
-                    <line
-                      x1="30"
-                      y1="15"
-                      x2="10"
-                      y2="30"
-                      stroke={theme.colors.primary}
-                      strokeWidth="2"
-                    />
-                    <line
-                      x1="30"
-                      y1="15"
-                      x2="50"
-                      y2="30"
-                      stroke={theme.colors.primary}
-                      strokeWidth="2"
-                    />
-                    <circle cx="10" cy="30" r="4" fill={theme.colors.primary} />
-                    <circle cx="50" cy="30" r="4" fill={theme.colors.primary} />
-                    <line
-                      x1="10"
-                      y1="30"
-                      x2="5"
-                      y2="38"
-                      stroke={theme.colors.primary}
-                      strokeWidth="1.5"
-                    />
-                    <line
-                      x1="10"
-                      y1="30"
-                      x2="15"
-                      y2="38"
-                      stroke={theme.colors.primary}
-                      strokeWidth="1.5"
-                    />
-                    <line
-                      x1="50"
-                      y1="30"
-                      x2="45"
-                      y2="38"
-                      stroke={theme.colors.primary}
-                      strokeWidth="1.5"
-                    />
-                    <line
-                      x1="50"
-                      y1="30"
-                      x2="55"
-                      y2="38"
-                      stroke={theme.colors.primary}
-                      strokeWidth="1.5"
-                    />
-                    <circle
-                      cx="5"
-                      cy="38"
-                      r="3"
-                      fill={theme.colors.primary}
-                      opacity="0.7"
-                    />
-                    <circle
-                      cx="15"
-                      cy="38"
-                      r="3"
-                      fill={theme.colors.primary}
-                      opacity="0.7"
-                    />
-                    <circle
-                      cx="45"
-                      cy="38"
-                      r="3"
-                      fill={theme.colors.primary}
-                      opacity="0.7"
-                    />
-                    <circle
-                      cx="55"
-                      cy="38"
-                      r="3"
-                      fill={theme.colors.primary}
-                      opacity="0.7"
-                    />
-                  </svg>
-                </div>
-              </div>
-
-              {/* Loading text */}
-              <div
-                style={{
-                  textAlign: 'center',
-                  gap: '8px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                <h3
-                  style={{
-                    fontSize: '20px',
-                    fontWeight: 600,
-                    color: theme.colors.text,
-                    margin: 0,
-                  }}
-                >
-                  Building Source Tree
-                </h3>
-                <p
-                  style={{
-                    fontSize: '14px',
-                    color: theme.colors.textSecondary,
-                    margin: 0,
-                  }}
-                >
-                  Analyzing {repository.name} repository structure
-                </p>
-
-                {/* Animated dots */}
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '8px',
-                    justifyContent: 'center',
-                    marginTop: '12px',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.primary,
-                      animation: 'dots-fade 1.5s ease-in-out infinite',
-                    }}
-                  />
-                  <span
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.primary,
-                      animation: 'dots-fade 1.5s ease-in-out infinite 0.3s',
-                    }}
-                  />
-                  <span
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.primary,
-                      animation: 'dots-fade 1.5s ease-in-out infinite 0.6s',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Additional info */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '12px',
-                  padding: '20px',
-                  borderRadius: '8px',
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  border: `1px solid ${theme.colors.border}`,
-                  maxWidth: '400px',
-                  width: '100%',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '13px',
-                    color: theme.colors.textSecondary,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '4px',
-                      height: '4px',
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.success || '#10b981',
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span>Parsing file structure and dependencies</span>
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '13px',
-                    color: theme.colors.textSecondary,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '4px',
-                      height: '4px',
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.success || '#10b981',
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span>Computing code metrics and statistics</span>
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontSize: '13px',
-                    color: theme.colors.textSecondary,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '4px',
-                      height: '4px',
-                      borderRadius: '50%',
-                      backgroundColor: theme.colors.warning || '#f59e0b',
-                      flexShrink: 0,
-                      animation: 'dots-fade 1s ease-in-out infinite',
-                    }}
-                  />
-                  <span>Generating visualization data...</span>
-                </div>
-              </div>
-            </div>
+            <RepositoryLoadingState repositoryName={repository.name} />
           ) : /* View Content */
           viewMode === 'collaboration' && selectedSource?.type === 'local' ? (
             <GitChangesProvider>
@@ -1522,8 +1228,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           ) : null}
         </div>
 
-        {/* SDK Service Debug Component */}
-        <SDKServiceDebug />
 
         {/* Modals */}
         <SecretsModal
@@ -1542,6 +1246,8 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           isOpen={showBadgeInfoModal}
           onClose={() => setShowBadgeInfoModal(false)}
           repository={repository}
+          cloneBranchStatuses={cloneBranchStatuses}
+          setCloneBranchStatuses={setCloneBranchStatuses}
         />
       </div>
     );

@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
+
 import { useTheme } from 'themed-markdown';
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { initVimMode } from 'monaco-vim';
-import { Presentation, X, Copy, Check } from 'lucide-react';
+import { Presentation, X, Copy, Check, GitBranch, Edit, Lock } from 'lucide-react';
 import { DocumentView } from 'themed-markdown';
 import { FileSystemService } from '../main-process-api/FileSystemService';
+import { MonacoEditorErrorBoundary } from './MonacoEditorErrorBoundary';
 
 // Configure Monaco to use the locally bundled version instead of CDN
 loader.config({ monaco });
@@ -43,19 +45,15 @@ interface FileViewerProps {
   onModifiedChange?: (isModified: boolean) => void; // Callback when modified state changes
   hideInternalSaveButton?: boolean; // Hide the built-in save button
   onContentChange?: (content: string) => void; // Callback when content changes
-  fileEdits?: Array<{
-    old_string: string;
-    new_string: string;
-    line?: number;
-    timestamp?: number; // To order edits chronologically
-  }> | null; // Edit information for highlighting changes
-  eventSequence?: Array<{
-    type: string;
-    timestamp: number;
-    data: any;
-  }> | null; // Full event sequence for advanced diff viewing
   initialContent?: string; // Optional: provide content directly instead of loading from file
   contentLoader?: () => Promise<string | null>; // Optional: custom content loader function
+  // Git-related props from FilePanel
+  hasGitChanges?: boolean;
+  gitStatus?: 'modified' | 'added' | 'deleted' | 'untracked' | null;
+  isCheckingGit?: boolean;
+  onShowDiff?: () => void;
+  allowEditToggle?: boolean; // Allow toggling between read-only and editable
+  onEditableChange?: (editable: boolean) => void; // Callback when editable state changes
 }
 
 export const FileViewer: React.FC<FileViewerProps> = ({
@@ -64,15 +62,19 @@ export const FileViewer: React.FC<FileViewerProps> = ({
   onClose,
   className = '',
   enableVimMode = false,
-  editable = false,
+  editable: initialEditable = false,
   onSave,
   onModifiedChange,
   hideInternalSaveButton = false,
   onContentChange,
-  fileEdits,
-  eventSequence,
   initialContent,
   contentLoader,
+  hasGitChanges = false,
+  gitStatus = null,
+  isCheckingGit = false,
+  onShowDiff,
+  allowEditToggle = false,
+  onEditableChange,
 }) => {
   const { theme } = useTheme();
   const [fileContent, setFileContent] = useState<string>('');
@@ -84,8 +86,8 @@ export const FileViewer: React.FC<FileViewerProps> = ({
   >('unknown');
   const [isModified, setIsModified] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [showDiffView, setShowDiffView] = useState(false);
   const [showPresentationView, setShowPresentationView] = useState(false);
+  const [editable, setEditable] = useState(initialEditable);
   const [vimModeEnabled, setVimModeEnabled] = useState(() => {
     // Only enable vim mode if the prop allows it
     if (!enableVimMode) return false;
@@ -184,9 +186,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({
         if (onContentChange) {
           onContentChange(initialContent);
         }
-        if (fileType === 'markdown') {
-          setShowPresentationView(true);
-        }
         setIsLoading(false);
         return;
       }
@@ -222,11 +221,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({
           setIsModified(false);
           if (onContentChange) {
             onContentChange(content);
-          }
-
-          // For markdown files, automatically show markdown slide view
-          if (fileType === 'markdown') {
-            setShowPresentationView(true);
           }
         } else {
           throw new Error('Failed to read file - no content returned');
@@ -285,197 +279,7 @@ export const FileViewer: React.FC<FileViewerProps> = ({
     return languageMap[ext] || 'plaintext';
   };
 
-  // Build a version history from edits
-  const buildVersionHistory = (
-    currentContent: string,
-    edits: Array<{
-      old_string: string;
-      new_string: string;
-      timestamp?: number;
-    }>,
-  ) => {
-    // Sort edits by timestamp (most recent first)
-    const sortedEdits = [...edits].sort(
-      (a, b) => (b.timestamp || 0) - (a.timestamp || 0),
-    );
 
-    // Try to reconstruct the file at each edit point
-    const versions: Array<{
-      content: string;
-      edit: (typeof edits)[0];
-      success: boolean;
-    }> = [];
-    let workingContent = currentContent;
-
-    // Work backwards from current state
-    for (const edit of sortedEdits) {
-      // Try to reverse the edit (find new_string and replace with old_string)
-      if (workingContent.includes(edit.new_string)) {
-        const previousContent = workingContent.replace(
-          edit.new_string,
-          edit.old_string,
-        );
-        versions.push({
-          content: workingContent,
-          edit,
-          success: true,
-        });
-        workingContent = previousContent;
-      } else {
-        // Edit doesn't apply cleanly - might be part of a larger change
-        versions.push({
-          content: workingContent,
-          edit,
-          success: false,
-        });
-      }
-    }
-
-    return versions.reverse(); // Return in chronological order
-  };
-
-  const applyEditHighlights = (editor: any) => {
-    if (!fileEdits || fileEdits.length === 0) return;
-
-    try {
-      const model = editor.getModel();
-      if (!model) return;
-
-      const decorations: any[] = [];
-      const content = model.getValue();
-      const lines = content.split('\n');
-
-      // If we have timestamps, try to build version history
-      const hasTimestamps = fileEdits.some((e) => e.timestamp);
-      if (hasTimestamps) {
-        const versions = buildVersionHistory(content, fileEdits);
-
-        // Find all changed regions
-        const changedLines = new Set<number>();
-
-        versions.forEach((version) => {
-          if (version.success && version.edit.new_string) {
-            // Find where this edit's new_string appears
-            const editLines = version.edit.new_string.split('\n');
-            for (let i = 0; i < lines.length; i++) {
-              if (lines[i].includes(editLines[0])) {
-                for (
-                  let j = 0;
-                  j < editLines.length && i + j < lines.length;
-                  j++
-                ) {
-                  changedLines.add(i + j + 1);
-                }
-              }
-            }
-          }
-        });
-
-        // Highlight all changed lines
-        changedLines.forEach((lineNum) => {
-          decorations.push({
-            range: {
-              startLineNumber: lineNum,
-              startColumn: 1,
-              endLineNumber: lineNum,
-              endColumn: model.getLineMaxColumn(lineNum),
-            },
-            options: {
-              isWholeLine: true,
-              className: 'edit-highlight-line',
-              glyphMarginClassName: 'edit-glyph-margin',
-              overviewRuler: {
-                color: theme.colors?.warning || '#ff9800',
-                position: 7,
-              },
-            },
-          });
-        });
-      }
-
-      // For each edit, find where it occurs in the file
-      fileEdits.forEach((edit) => {
-        if (
-          edit.line !== undefined &&
-          edit.line > 0 &&
-          edit.line <= model.getLineCount()
-        ) {
-          // If we have a specific line number, use it (ensure it's valid)
-          decorations.push({
-            range: {
-              startLineNumber: edit.line,
-              startColumn: 1,
-              endLineNumber: edit.line,
-              endColumn: model.getLineMaxColumn(edit.line),
-            },
-            options: {
-              isWholeLine: true,
-              className: 'edit-highlight-line',
-              glyphMarginClassName: 'edit-glyph-margin',
-              overviewRuler: {
-                color: theme.colors?.warning || '#ff9800',
-                position: 7, // OverviewRulerLane.Full
-              },
-            },
-          });
-        } else if (edit.new_string && typeof edit.new_string === 'string') {
-          // Search for the new string in the content
-          const searchString = edit.new_string.trim();
-          if (searchString.length > 0) {
-            for (let i = 0; i < lines.length; i++) {
-              const line = lines[i];
-              const index = line.indexOf(searchString);
-              if (index !== -1) {
-                decorations.push({
-                  range: {
-                    startLineNumber: i + 1,
-                    startColumn: index + 1,
-                    endLineNumber: i + 1,
-                    endColumn: index + searchString.length + 1,
-                  },
-                  options: {
-                    className: 'edit-highlight-inline',
-                    overviewRuler: {
-                      color: theme.colors?.success || '#4caf50',
-                      position: 7,
-                    },
-                  },
-                });
-              }
-            }
-          }
-        }
-      });
-
-      // Apply decorations
-      editor.deltaDecorations([], decorations);
-
-      // Add CSS for highlights
-      const styleId = 'file-viewer-edit-highlights';
-      if (!document.getElementById(styleId)) {
-        const style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-          .edit-highlight-line {
-            background-color: ${theme.colors?.warning || '#ff9800'}20;
-            border-left: 3px solid ${theme.colors?.warning || '#ff9800'};
-          }
-          .edit-highlight-inline {
-            background-color: ${theme.colors?.success || '#4caf50'}30;
-            border-bottom: 2px solid ${theme.colors?.success || '#4caf50'};
-          }
-          .edit-glyph-margin {
-            background-color: ${theme.colors?.warning || '#ff9800'};
-            width: 10px !important;
-            margin-left: 3px;
-          }
-        `;
-        document.head.appendChild(style);
-      }
-    } catch (error) {
-      console.error('Error applying edit highlights:', error);
-    }
-  };
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
@@ -549,12 +353,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({
       }
     });
 
-    // Apply edit highlights if provided (with a small delay to ensure editor is ready)
-    if (fileEdits && fileEdits.length > 0) {
-      setTimeout(() => {
-        applyEditHighlights(editor);
-      }, 100);
-    }
 
     // Focus the editor
     editor.focus();
@@ -645,12 +443,11 @@ export const FileViewer: React.FC<FileViewerProps> = ({
       // Check for Monaco-specific cancellation errors
       const { reason } = event;
       if (reason) {
-        // Log for debugging (remove this after confirming the fix works)
+        // Suppress Monaco cancellation errors silently
         if (
           reason.message?.includes('Canceled') ||
           reason.toString().includes('Canceled')
         ) {
-          console.log('Suppressing Monaco cancellation error:', reason);
           event.preventDefault();
           return;
         }
@@ -672,10 +469,14 @@ export const FileViewer: React.FC<FileViewerProps> = ({
           reason.stack &&
           (reason.stack.includes('WordHighlighter') ||
             reason.stack.includes('Delayer.cancel') ||
+            reason.stack.includes('Delayer.dispose') ||
+            reason.stack.includes('DisposableStore') ||
             reason.stack.includes('monaco-editor') ||
-            reason.stack.includes('renderer.dev.js'))
+            reason.stack.includes('renderer.dev.js') ||
+            reason.stack.includes('main.dev.js'))
         ) {
           event.preventDefault();
+          return;
         }
       }
     };
@@ -689,15 +490,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({
     };
   }, []);
 
-  // Apply highlights when fileEdits changes
-  useEffect(() => {
-    if (editorRef.current && fileEdits) {
-      // Add a small delay to ensure editor is ready
-      setTimeout(() => {
-        applyEditHighlights(editorRef.current);
-      }, 100);
-    }
-  }, [fileEdits]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -716,8 +508,8 @@ export const FileViewer: React.FC<FileViewerProps> = ({
           }
         }
 
-        // Don't dispose the editor itself - let Monaco handle its own cleanup
-        // The editor will be cleaned up when the component unmounts
+        // Clear the editor reference but don't dispose - let @monaco-editor/react handle that
+        editorRef.current = null;
       }
     };
   }, []);
@@ -756,95 +548,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({
     return 'vs-dark';
   };
 
-  const renderDiffView = () => {
-    if (!fileEdits || fileEdits.length === 0) return null;
-
-    const hasTimestamps = fileEdits.some((e) => e.timestamp);
-    const sortedEdits = hasTimestamps
-      ? [...fileEdits].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
-      : fileEdits;
-
-    return (
-      <div
-        style={{
-          height: '100%',
-          overflowY: 'auto',
-          backgroundColor: theme.colors?.background || '#1a1a1a',
-          padding: '16px',
-        }}
-      >
-        <h3
-          style={{
-            fontSize: '16px',
-            fontWeight: 600,
-            marginBottom: '16px',
-            color: theme.colors?.text || '#fff',
-          }}
-        >
-          Edit History ({sortedEdits.length} changes)
-        </h3>
-
-        {sortedEdits.map((edit, index) => (
-          <div
-            key={index}
-            style={{
-              marginBottom: '16px',
-              border: `1px solid ${theme.colors?.border || '#333'}`,
-              borderRadius: '8px',
-              padding: '12px',
-              backgroundColor: theme.colors?.backgroundSecondary || '#222',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '12px',
-                color: theme.colors?.textSecondary || '#999',
-                marginBottom: '8px',
-              }}
-            >
-              Edit {index + 1} of {sortedEdits.length}
-              {edit.timestamp && (
-                <span style={{ marginLeft: '8px' }}>
-                  • {new Date(edit.timestamp).toLocaleTimeString()}
-                </span>
-              )}
-            </div>
-
-            <div style={{ fontFamily: 'monospace', fontSize: '13px' }}>
-              <div
-                style={{
-                  padding: '8px',
-                  backgroundColor: '#3f2020',
-                  borderRadius: '4px',
-                  marginBottom: '4px',
-                  overflowX: 'auto',
-                }}
-              >
-                <span style={{ color: '#ff6b6b' }}>- </span>
-                <span style={{ color: '#ff9999', whiteSpace: 'pre-wrap' }}>
-                  {edit.old_string}
-                </span>
-              </div>
-
-              <div
-                style={{
-                  padding: '8px',
-                  backgroundColor: '#203f20',
-                  borderRadius: '4px',
-                  overflowX: 'auto',
-                }}
-              >
-                <span style={{ color: '#51cf66' }}>+ </span>
-                <span style={{ color: '#99ff99', whiteSpace: 'pre-wrap' }}>
-                  {edit.new_string}
-                </span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   const renderContent = () => {
     console.log(
@@ -856,9 +559,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({
       fileType,
     );
 
-    if (showDiffView && fileEdits) {
-      return renderDiffView();
-    }
 
     if (showPresentationView && fileType === 'markdown') {
       // Split content into slides if it contains slide separators
@@ -942,10 +642,12 @@ export const FileViewer: React.FC<FileViewerProps> = ({
     );
 
     return (
-      <Editor
-        height="100%"
-        language={language}
-        value={fileContent}
+      <MonacoEditorErrorBoundary>
+        <Editor
+          key={filePath} // Force complete remount when file changes
+          height="100%"
+          language={language}
+          value={fileContent}
         theme="custom-theme"
         onChange={(value) => {
           if (editable && value !== undefined) {
@@ -975,6 +677,22 @@ export const FileViewer: React.FC<FileViewerProps> = ({
         beforeMount={(monaco) => {
           // Configure Monaco for Electron environment
           try {
+            // Helper to convert RGBA to hex (Monaco doesn't support alpha channel)
+            const rgbaToHex = (color: string): string => {
+              if (!color) return color;
+
+              // Check if it's an rgba color
+              const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+              if (rgbaMatch) {
+                const r = parseInt(rgbaMatch[1], 10);
+                const g = parseInt(rgbaMatch[2], 10);
+                const b = parseInt(rgbaMatch[3], 10);
+                return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+              }
+
+              return color;
+            };
+
             // Define and set theme BEFORE editor mounts to ensure proper syntax highlighting
             const isDarkTheme = getMonacoTheme() === 'vs-dark';
 
@@ -991,10 +709,10 @@ export const FileViewer: React.FC<FileViewerProps> = ({
               ],
               colors: {
                 'editor.background':
-                  theme.colors?.background ||
+                  rgbaToHex(theme.colors?.background) ||
                   (isDarkTheme ? '#1a1a1a' : '#ffffff'),
                 'editor.foreground':
-                  theme.colors?.text || (isDarkTheme ? '#d4d4d4' : '#000000'),
+                  rgbaToHex(theme.colors?.text) || (isDarkTheme ? '#d4d4d4' : '#000000'),
                 'editor.lineHighlightBackground': isDarkTheme
                   ? '#2a2a2a'
                   : '#f0f0f0',
@@ -1147,7 +865,8 @@ export const FileViewer: React.FC<FileViewerProps> = ({
             showSnippets: true,
           },
         }}
-      />
+        />
+      </MonacoEditorErrorBoundary>
     );
   };
 
@@ -1169,17 +888,35 @@ export const FileViewer: React.FC<FileViewerProps> = ({
       >
         <div className="flex items-center gap-2 flex-1">
           <div className="flex-1 min-w-0">
-            <div
-              className="text-sm font-medium truncate"
-              style={{ color: theme.colors?.text || '#fff' }}
-            >
-              {fileNameForDisplay}
-              {isModified && (
-                <span style={{ color: theme.colors?.warning || '#ff9800' }}>
-                  {' '}
-                  •
-                </span>
-              )}
+            <div className="flex items-center gap-2">
+              <div
+                className="text-sm font-medium truncate"
+                style={{ color: theme.colors?.text || '#fff' }}
+              >
+                {fileNameForDisplay}
+                {isModified && (
+                  <span style={{ color: theme.colors?.warning || '#ff9800' }}>
+                    {' '}
+                    •
+                  </span>
+                )}
+              </div>
+              {/* Editable Status Indicator */}
+              <div
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-xs"
+                style={{
+                  backgroundColor: editable
+                    ? theme.colors?.success + '20' || '#10b98120'
+                    : theme.colors?.textSecondary + '20' || '#99999920',
+                  color: editable
+                    ? theme.colors?.success || '#10b981'
+                    : theme.colors?.textSecondary || '#999',
+                }}
+                title={editable ? 'File is editable' : 'File is read-only'}
+              >
+                {editable ? <Edit size={10} /> : <Lock size={10} />}
+                <span>{editable ? 'Editable' : 'Read-only'}</span>
+              </div>
             </div>
             <div
               className="text-xs opacity-60 truncate"
@@ -1203,6 +940,28 @@ export const FileViewer: React.FC<FileViewerProps> = ({
             {copiedPath ? <Check size={16} /> : <Copy size={16} />}
           </button>
 
+          {/* Edit Mode Toggle */}
+          {allowEditToggle && onSave && (
+            <button
+              onClick={() => {
+                const newEditable = !editable;
+                setEditable(newEditable);
+                if (onEditableChange) {
+                  onEditableChange(newEditable);
+                }
+              }}
+              className={`px-3 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+                editable
+                  ? 'bg-amber-600 text-white hover:bg-amber-700'
+                  : 'bg-gray-600 text-gray-300 hover:bg-gray-700'
+              }`}
+              title={editable ? 'Switch to read-only mode' : 'Enable editing'}
+            >
+              {editable ? <Lock size={12} /> : <Edit size={12} />}
+              {editable ? 'Lock' : 'Edit'}
+            </button>
+          )}
+
           {/* Save Button */}
           {editable && isModified && !hideInternalSaveButton && (
             <button
@@ -1215,22 +974,23 @@ export const FileViewer: React.FC<FileViewerProps> = ({
             </button>
           )}
 
-          {/* Diff View Toggle */}
-          {fileEdits && fileEdits.length > 0 && (
+          {/* Git Diff Button - Only show when file has git changes */}
+          {hasGitChanges && onShowDiff && (
             <button
-              onClick={() => setShowDiffView(!showDiffView)}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
-                showDiffView
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-gray-600 text-gray-300'
-              }`}
-              title="Toggle diff view"
+              onClick={onShowDiff}
+              className="px-3 py-1 text-xs rounded transition-colors bg-amber-600 text-white hover:bg-amber-700 flex items-center gap-1"
+              title="View git diff"
             >
-              {showDiffView
-                ? 'Hide Diffs'
-                : `Show ${fileEdits.length} Edit${fileEdits.length > 1 ? 's' : ''}`}
+              <GitBranch size={12} />
+              View Diff
+              {gitStatus && (
+                <span className="ml-1 text-xs opacity-80">
+                  ({gitStatus})
+                </span>
+              )}
             </button>
           )}
+
 
           {/* Vim Mode Toggle */}
           {fileType === 'code' && enableVimMode && (

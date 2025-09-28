@@ -29,16 +29,25 @@ const configuration: webpack.Configuration = {
     main: path.join(webpackPaths.srcMainPath, 'main.ts'),
     preload: path.join(webpackPaths.srcWindowPath, 'preload.ts'),
     'event-worker': path.join(webpackPaths.srcPath, 'event-processing-server', 'worker-entry.ts'),
+    'repository-monitoring-worker': path.join(webpackPaths.srcPath, 'repository-monitoring-server', 'worker-entry.ts'),
   },
 
-  // Override externals - don't externalize dependencies for event-worker
-  // The worker bundle needs to be self-contained
+  // Override externals - don't externalize dependencies for workers
+  // The worker bundles need to be self-contained
   externals: [
     ({ request, context, contextInfo, getResolve }, callback) => {
-      // For the event-worker entry, bundle everything
-      if (contextInfo?.issuer?.includes('event-processing-server')) {
-        return callback();
+      // For the worker entries, bundle everything
+      // Check if the request is coming from a worker entry or its dependencies
+      const isWorkerBundle =
+        context?.includes('event-processing-server') ||
+        context?.includes('repository-monitoring-server') ||
+        contextInfo?.issuer?.includes('event-processing-server') ||
+        contextInfo?.issuer?.includes('repository-monitoring-server');
+
+      if (isWorkerBundle) {
+        return callback(); // Bundle everything for workers
       }
+
       // For main and preload, externalize node_modules as usual
       if (Object.keys(externals || {}).includes(request) || ['node-pty', 'keytar'].includes(request)) {
         return callback(null, `commonjs ${request}`);

@@ -82,7 +82,7 @@ export class AgentConfigurationService {
   static async addMCPToAgent(
     agentType: SupportedAgent,
     serverName: string = APP_BRANDING.MCP_SERVER_CONFIG_KEY,
-  ): Promise<{ success: boolean; error?: string; status?: any }> {
+  ): Promise<{ success: boolean; error?: string; status?: { hasMCP: boolean; mcpCount: number } }> {
     try {
       const result = await window.mainProcess.agentConfig.addMCPToAgent(
         agentType,
@@ -101,7 +101,7 @@ export class AgentConfigurationService {
   static async removeMCPFromAgent(
     agentType: SupportedAgent,
     serverName: string = APP_BRANDING.MCP_SERVER_CONFIG_KEY,
-  ): Promise<{ success: boolean; error?: string; status?: any }> {
+  ): Promise<{ success: boolean; error?: string; status?: { hasMCP: boolean; mcpCount: number } }> {
     try {
       const result = await window.mainProcess.agentConfig.removeMCPFromAgent(
         agentType,
@@ -154,10 +154,10 @@ export class AgentConfigurationService {
     return result.filePath;
   }
 
-  static async readAgentSettings(agentType: SupportedAgent): Promise<any> {
+  static async readAgentSettings(agentType: SupportedAgent): Promise<AgentSettings | null> {
     try {
       const result = await window.mainProcess.agentConfig.readAgentSettings(
-        agentType as any,
+        agentType,
       );
       return result.success ? result.settings : null;
     } catch (error) {
@@ -180,7 +180,7 @@ export class AgentConfigurationService {
   static async removeHooksFromAgent(
     agentType: SupportedAgent,
   ): Promise<boolean> {
-    console.log('removeHooksFromAgent', agentType);
+    // Remove hooks from agent
     const result =
       await window.mainProcess.agentConfig.removeHooksFromAgent(agentType);
     return result.success;
@@ -188,7 +188,7 @@ export class AgentConfigurationService {
 
   static async updateAgentSettings(
     agentType: SupportedAgent,
-    config: any,
+    config: AgentSettings,
   ): Promise<boolean> {
     try {
       const result = await window.mainProcess.agentConfig.updateAgentSettings(

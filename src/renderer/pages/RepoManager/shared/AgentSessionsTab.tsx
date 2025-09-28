@@ -342,10 +342,6 @@ export const AgentSessionsTab: React.FC<AgentSessionsTabProps> = ({
     useState<TouchedProject | null>(null);
   const [affectedSessionsCount, setAffectedSessionsCount] = useState(0);
 
-  // Track locally archived sessions to exclude them from counts until parent updates
-  const [locallyArchivedSessions, setLocallyArchivedSessions] = useState<
-    Set<string>
-  >(new Set());
 
   // Cache for session written files to avoid reloading events
   const [sessionWrittenFilesCache, setSessionWrittenFilesCache] = useState<
@@ -580,16 +576,13 @@ export const AgentSessionsTab: React.FC<AgentSessionsTabProps> = ({
         // IMPORTANT: Check ALL sessions, not just selected ones, for accurate manual change detection
         const fileToAgents = new Map<string, Set<string>>();
 
-        // Filter sessions to only include ones from the selected clone and exclude locally archived
+        // Filter sessions to only include ones from the selected clone
         const filteredAgentSessions = selectedCloneAgentSessionIds
           ? allAgentSessions.filter(
               (session) =>
-                selectedCloneAgentSessionIds.has(session.sessionId) &&
-                !locallyArchivedSessions.has(session.sessionId),
+                selectedCloneAgentSessionIds.has(session.sessionId),
             )
-          : allAgentSessions.filter(
-              (session) => !locallyArchivedSessions.has(session.sessionId),
-            );
+          : allAgentSessions;
 
         // First pass: Track ALL agent modifications for accurate manual change detection
         for (const session of filteredAgentSessions) {
@@ -816,7 +809,6 @@ export const AgentSessionsTab: React.FC<AgentSessionsTabProps> = ({
       allAgentSessions,
       sources,
       repositoryPath,
-      locallyArchivedSessions,
       fileTreeSourceService,
       sourceId,
       registerSessionActivity,
@@ -956,25 +948,8 @@ export const AgentSessionsTab: React.FC<AgentSessionsTabProps> = ({
     // Load sessions immediately when component mounts or selection changes
     // Skip loading state after initial load to avoid flicker
     loadSelectedSessions(hasInitiallyLoaded);
-  }, [selectedAgentSessionIds, allAgentSessions, locallyArchivedSessions]); // Remove loadSelectedSessions from deps to avoid infinite loop
+  }, [selectedAgentSessionIds, allAgentSessions]); // Remove loadSelectedSessions from deps to avoid infinite loop
 
-  // Clear locally archived sessions when allAgentSessions updates (parent has refreshed)
-  useEffect(() => {
-    // Remove any locally archived sessions that are no longer in allAgentSessions
-    // or are now marked as archived in the parent data
-    setLocallyArchivedSessions((prev) => {
-      const updated = new Set<string>();
-      prev.forEach((sessionId) => {
-        const session = allAgentSessions.find((s) => s.sessionId === sessionId);
-        // Keep in locally archived if session still exists and is still active
-        // (meaning parent hasn't updated yet)
-        if (session && session.isActive && !session.archivedAt) {
-          updated.add(sessionId);
-        }
-      });
-      return updated;
-    });
-  }, [allAgentSessions]);
 
   // Listen for session updates
   useEffect(() => {
@@ -1009,12 +984,6 @@ export const AgentSessionsTab: React.FC<AgentSessionsTabProps> = ({
     };
   }, [sourceId, registerSessionActivity, loadSelectedSessions]);
 
-  // Archive session - functionality removed
-  const archiveSession = async (sessionId: string) => {
-    // Archiving functionality has been removed
-    // Sessions are now only in memory or SDK
-    console.log('Archive requested but functionality removed:', sessionId);
-  };
 
   // Start editing session name
   const startEditingSessionName = (sessionId: string, currentName?: string) => {
@@ -1259,7 +1228,10 @@ export const AgentSessionsTab: React.FC<AgentSessionsTabProps> = ({
                     onShowContext={() =>
                       onShowContext?.(cardData.session.sessionId)
                     }
-                    onArchive={() => archiveSession(cardData.session.sessionId)}
+                    onArchive={() => {
+                      // Archive functionality removed
+                      console.log('Archive functionality has been removed');
+                    }}
                     onToggleShowOnMap={() => {
                       // Toggle showing this session on the map
                       const newSessionId =

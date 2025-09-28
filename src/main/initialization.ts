@@ -19,10 +19,8 @@ import { registerModernWindowHandlers } from './window/modernWindowHandlers';
 import { registerMcpToolsIpcHandlers } from './principal-mcp/mcpToolsHandlers';
 import { registerStoreHandlers } from './stores/storeHandlers';
 import { registerSecretHandlers } from './stores/secretHandlers';
-import { registerMCPBridgeHandlers } from './stores/mcpBridgeHandlers';
 import { getTypedStorageManager } from './storage-providers';
 import { registerGitHandlers } from './file-system/gitHandlers';
-import { registerGitWatcherHandlers } from './file-system/gitWatcherHandlers';
 import { setupShellHandlers } from './file-system/shellHandlers';
 import { setupTypeExtractionHandlers } from './services/ipc/typeExtractionHandlers';
 import { setupTypeSchemaHandlers } from './services/ipc/type-schema/typeSchemaHandlers';
@@ -31,6 +29,7 @@ import { registerSystemHandlers } from './system/systemHandlers';
 import { registerFeedbackHandlers } from './services/ipc/feedback/feedbackHandlers';
 import { getTerminalManager } from './terminalWrapper';
 import { excalidrawHandlers } from './drawings/excalidrawHandlers';
+import { roomDrawingHandlers } from './drawings/roomDrawingHandlers';
 import { registerUserPromptHandlers } from './principal-mcp/userPromptHandlers';
 
 import { setupAgentConfigHandlers } from './agent-management/agentConfigHandlers';
@@ -38,7 +37,9 @@ import { registerFileSystemIpcHandlers } from './file-system/fileSystemHandlers'
 import { registerRepositoryHandlers } from './stores/RepositoryApiEventHandler';
 import { registerAlexandriaHandlers } from './stores/AlexandriaApiEventHandler';
 import { registerAlexandriaDocsHandlers } from './stores/AlexandriaDocsApiEventHandler';
+import { registerPalaceRoomHandlers } from './stores/PalaceRoomApiEventHandler';
 import { registerRepositoryNotesHandlers } from './principal-mcp/repositoryNotesHandlers';
+import { registerRepositoryMonitoringHandlers } from './repository-monitoring/ipcHandlers';
 import { registerViolationCollectionHandlers } from './handlers/ViolationCollectionHandlers';
 import { registerTestCoverageHandlers } from './handlers/TestCoverageHandlers';
 import { registerApiProxyHandlers } from './services/ApiProxyService';
@@ -174,11 +175,12 @@ const registerAllIpcHandlers = async () => {
   registerModernWindowHandlers(); // Register modern window creation handlers
   //registerStorageHandlers();
   registerStoreHandlers();
+  registerRepositoryMonitoringHandlers(); // Register repository monitoring handlers
   registerSecretHandlers();
-  registerMCPBridgeHandlers();
   registerRepositoryHandlers();
   registerAlexandriaHandlers();
   registerAlexandriaDocsHandlers();
+  registerPalaceRoomHandlers();
   registerRepositoryNotesHandlers();
   registerViolationCollectionHandlers();
   registerTestCoverageHandlers();
@@ -238,7 +240,6 @@ const registerAllIpcHandlers = async () => {
 
   registerGitHubIpcHandlers(applicationWindows);
   registerGitHandlers();
-  registerGitWatcherHandlers();
   registerAgentSessionSDKHandlers(); // SDK-based handlers replace old session handlers
   // Agent installation handlers removed - we only configure hooks now
   setupAgentConfigHandlers();
@@ -264,6 +265,7 @@ const registerAllIpcHandlers = async () => {
 
   setupTypeSchemaHandlers();
   excalidrawHandlers.registerHandlers();
+  roomDrawingHandlers.registerHandlers();
   setupTypeExtractionHandlers();
   registerPackageManagerHandlers();
   registerSystemHandlers();

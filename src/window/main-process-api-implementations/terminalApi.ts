@@ -54,6 +54,10 @@ export const terminalAPI: TerminalAPI = {
     return ipcRenderer.invoke(TerminalAPIEvents.FOCUS_WINDOW, windowId);
   },
 
+  getOpenWindows: async (): Promise<Array<{ terminalId: string; windowId: number }>> => {
+    return ipcRenderer.invoke(TerminalAPIEvents.GET_OPEN_WINDOWS);
+  },
+
   onData: (callback: (data: TerminalData) => void) => {
     const listener = (_event: any, data: TerminalData) => callback(data);
     ipcRenderer.on(TerminalAPIEvents.ON_DATA, listener);

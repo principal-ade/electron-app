@@ -6,23 +6,18 @@ import { useTheme } from 'themed-markdown';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { MarkdownViewerTitlebar } from '../components/Titlebar';
+import { FileDeleteConfirmDialog } from '../components/FileDeleteConfirmDialog';
 
 import { MarkdownDocumentViewer } from './RepoManager/shared/MarkdownDocumentViewer';
 
 interface MarkdownViewProps {
   filePath: string;
-  fontSizeScale?: number;
   projectName?: string;
-  onFontSizeIncrease?: () => void;
-  onFontSizeDecrease?: () => void;
 }
 
 export const MarkdownView: React.FC<MarkdownViewProps> = ({
   filePath,
-  fontSizeScale: propFontSizeScale,
   projectName,
-  onFontSizeIncrease,
-  onFontSizeDecrease
 }) => {
   const { theme } = useTheme();
   const [content, setContent] = useState<string>(
@@ -31,31 +26,49 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  const [fontSizeScale, setFontSizeScale] = useState<number>(propFontSizeScale || 1.0);
+  const [fontSizeScale, setFontSizeScale] = useState<number>(1.0);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Update font size when prop changes
+  // Load font size preference on mount
   useEffect(() => {
-    if (propFontSizeScale) {
-      setFontSizeScale(propFontSizeScale);
-    }
-  }, [propFontSizeScale]);
-
-  // Load font size preference on mount if not provided as prop
-  useEffect(() => {
-    if (!propFontSizeScale) {
-      const loadFontSize = async () => {
-        try {
-          const prefs = await UserPreferencesService.getPreferences();
-          if (prefs?.markdownFontSizeScale) {
-            setFontSizeScale(prefs.markdownFontSizeScale);
-          }
-        } catch (err) {
-          console.error('Error loading font size preference:', err);
+    const loadFontSize = async () => {
+      try {
+        const prefs = await UserPreferencesService.getPreferences();
+        if (prefs?.markdownFontSizeScale) {
+          setFontSizeScale(prefs.markdownFontSizeScale);
         }
-      };
-      loadFontSize();
+      } catch (err) {
+        console.error('Error loading font size preference:', err);
+      }
+    };
+    loadFontSize();
+  }, []);
+
+  // Handle font size increase
+  const handleFontSizeIncrease = useCallback(async () => {
+    const newScale = Math.min(fontSizeScale + 0.1, 3.0);
+    setFontSizeScale(newScale);
+    try {
+      await UserPreferencesService.updatePreferences({
+        markdownFontSizeScale: newScale,
+      });
+    } catch (err) {
+      console.error('Error saving font size preference:', err);
     }
-  }, [propFontSizeScale]);
+  }, [fontSizeScale]);
+
+  // Handle font size decrease
+  const handleFontSizeDecrease = useCallback(async () => {
+    const newScale = Math.max(fontSizeScale - 0.1, 0.5);
+    setFontSizeScale(newScale);
+    try {
+      await UserPreferencesService.updatePreferences({
+        markdownFontSizeScale: newScale,
+      });
+    } catch (err) {
+      console.error('Error saving font size preference:', err);
+    }
+  }, [fontSizeScale]);
 
   useEffect(() => {
     const loadFile = async () => {
@@ -192,6 +205,28 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
     [filePath],
   );
 
+  // Handle delete
+  const handleDelete = useCallback(async () => {
+    try {
+      // First, stop watching the file
+      await FileSystemService.stopWatchingFile(filePath);
+
+      // Delete the file
+      const result = await FileSystemService.deleteFile(filePath);
+
+      if (result?.success) {
+        // Close the window after successful deletion
+        window.close();
+      } else {
+        throw new Error(result?.error || 'Failed to delete file');
+      }
+    } catch (err) {
+      console.error('Error deleting file:', err);
+      setError(`Failed to delete file: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setShowDeleteConfirm(false);
+    }
+  }, [filePath]);
+
   if (loading) {
     return (
       <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -200,8 +235,9 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
           fileName={filePath.split('/').pop()}
           projectName={projectName}
           fontSizeScale={fontSizeScale}
-          onFontSizeIncrease={onFontSizeIncrease}
-          onFontSizeDecrease={onFontSizeDecrease}
+          onFontSizeIncrease={handleFontSizeIncrease}
+          onFontSizeDecrease={handleFontSizeDecrease}
+          onDelete={() => setShowDeleteConfirm(true)}
         />
         <div
           style={{
@@ -229,8 +265,9 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
           fileName={filePath.split('/').pop()}
           projectName={projectName}
           fontSizeScale={fontSizeScale}
-          onFontSizeIncrease={onFontSizeIncrease}
-          onFontSizeDecrease={onFontSizeDecrease}
+          onFontSizeIncrease={handleFontSizeIncrease}
+          onFontSizeDecrease={handleFontSizeDecrease}
+          onDelete={() => setShowDeleteConfirm(true)}
         />
         <div
           style={{
@@ -262,8 +299,9 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
         fileName={filePath.split('/').pop()}
         projectName={projectName}
         fontSizeScale={fontSizeScale}
-        onFontSizeIncrease={onFontSizeIncrease}
-        onFontSizeDecrease={onFontSizeDecrease}
+        onFontSizeIncrease={handleFontSizeIncrease}
+        onFontSizeDecrease={handleFontSizeDecrease}
+        onDelete={() => setShowDeleteConfirm(true)}
       />
       <div
         style={{
@@ -293,9 +331,9 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
           </div>
         )}
 
-        {/* Slide-based viewer (parse content into slides and render the shared viewer) */}
+        {/* Slide-based viewer with book view support */}
         <MarkdownDocumentViewer
-        viewMode={'slides'}
+        viewMode={'book'} // Use book view for better reading experience
         showEditor={false}
         showSegmented={true}
         content={safeContent}
@@ -325,6 +363,16 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
           setIsDirty(true);
         }}
         />
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <FileDeleteConfirmDialog
+          filePath={filePath}
+          fileName={filePath.split('/').pop()}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
       </div>
     </div>
   );

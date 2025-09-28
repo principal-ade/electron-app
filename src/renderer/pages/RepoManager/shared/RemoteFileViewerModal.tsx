@@ -246,6 +246,7 @@ export const RemoteFileViewerModal: React.FC<RemoteFileViewerModalProps> = ({
           }}
         >
           <FileViewer
+            key={relativePath} // Force remount when file changes
             filePath={relativePath}
             displayPath={relativePath}
             className="full-height"

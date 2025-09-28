@@ -1,22 +1,22 @@
 import { FileTreeSourceService } from './FileTreeSourceService';
-import { FileTreeCacheService } from './FileTreeCacheService';
+import { MonitoredFileTreeService } from './MonitoredFileTreeService';
 import { CloneVisibilityService } from './CloneVisibilityService';
 import type { Repository } from '../../shared/types/repository.types';
 import { createFileTreeSource } from '../types/file-tree-source';
 
 // Mock dependencies
-jest.mock('./FileTreeCacheService');
+jest.mock('./MonitoredFileTreeService');
 jest.mock('./CloneVisibilityService');
 jest.mock('../utils/loadFileSystemTree');
 
 describe('FileTreeSourceService', () => {
   let service: FileTreeSourceService;
-  let mockCacheService: jest.Mocked<FileTreeCacheService>;
+  let mockCacheService: jest.Mocked<MonitoredFileTreeService>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockCacheService =
-      new FileTreeCacheService() as jest.Mocked<FileTreeCacheService>;
+      new MonitoredFileTreeService() as jest.Mocked<MonitoredFileTreeService>;
     service = new FileTreeSourceService(mockCacheService);
   });
 

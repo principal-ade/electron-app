@@ -86,32 +86,6 @@ export interface AgentSessionSDKAPI {
     sessionId: string,
   ) => Promise<RepoNormalizedUniversalAgentSessionEvent[] | null>;
 
-  // Update session metadata (e.g., custom name)
-  updateSessionMetadata: (
-    sessionId: string,
-    repository: string,
-    metadata: { customName?: string },
-  ) => Promise<boolean>;
-
-  // Delete from active storage only
-  deleteFromActive: (sessionId: string) => Promise<boolean>;
-
-  // Reprocess events for a session
-  reprocessSession: (
-    sessionId: string,
-  ) => Promise<{ success: boolean; processedCount?: number; error?: string }>;
-
-  // Get raw session events (for debug view)
-  getRawSessionEvents: (sessionId: string) => Promise<any[] | null>;
-
-  // Event listeners
-  onSessionUpdated: (
-    callback: (data: { sessionId: string; repository: string }) => void,
-  ) => () => void;
-
-  onCliProviderEvent: (
-    callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
-  ) => () => void;
 
   onProcessedEvent: (
     callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,

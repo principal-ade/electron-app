@@ -3,6 +3,7 @@ import { useTheme } from 'themed-markdown';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/style.css';
+import { usePanelsTheme } from '../../../theme/panelsTheme';
 import {
   RightPaneContainer,
   RightPaneView,
@@ -103,8 +104,6 @@ export const RepositoryViewSkeleton: React.FC<RepositoryViewSkeletonProps> = ({
   onFileClick,
   rightPaneMode = 'city',
   onRightPaneModeChange,
-  terminalDirectory,
-  terminalTabsRef,
   showViewSwitcher = true,
   sessions = [],
   sessionFileActivities = new Map(),
@@ -128,6 +127,7 @@ export const RepositoryViewSkeleton: React.FC<RepositoryViewSkeletonProps> = ({
   documentContent,
 }) => {
   const { theme } = useTheme();
+  const panelsTheme = usePanelsTheme();
 
   // Filter out hidden tabs
   const visibleTabs = tabs.filter((tab) => tab.visible !== false);
@@ -297,6 +297,7 @@ export const RepositoryViewSkeleton: React.FC<RepositoryViewSkeletonProps> = ({
         defaultSize={50}
         minSize={25}
         style={{ height: '100%', width: '100%' }}
+        theme={panelsTheme}
       />
     </div>
   );

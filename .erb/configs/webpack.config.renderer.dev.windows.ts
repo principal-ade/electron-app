@@ -38,6 +38,50 @@ if (
   execSync('npm run postinstall');
 }
 
+// Check if principal-window entry exists
+const principalEntryPath = path.join(webpackPaths.srcRendererPath, 'principal-window', 'index.tsx');
+const legacyEntryPath = path.join(webpackPaths.srcRendererPath, 'index.tsx');
+
+// Define entry points - use object format for multiple named entries
+const entryPoints: { [key: string]: string } = {};
+const htmlPlugins: HtmlWebpackPlugin[] = [];
+
+// Add principal entry if it exists
+if (fs.existsSync(principalEntryPath)) {
+  entryPoints.principal = principalEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'principal.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['principal'], // Only include principal chunk
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: true,
+    })
+  );
+}
+
+// Always add legacy entry for index.html (dashboard, etc.)
+entryPoints.main = legacyEntryPath;
+htmlPlugins.push(
+  new HtmlWebpackPlugin({
+    filename: 'index.html',
+    template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+    chunks: ['main'], // Only include main chunk
+    minify: {
+      collapseWhitespace: true,
+      removeAttributeQuotes: true,
+      removeComments: true,
+    },
+    isBrowser: false,
+    isDevelopment: true,
+  })
+);
+
 const configuration: webpack.Configuration = {
   devtool: 'source-map',
 
@@ -57,14 +101,12 @@ const configuration: webpack.Configuration = {
     sideEffects: false,
   },
 
-  entry: [
-    path.join(webpackPaths.srcRendererPath, 'index.tsx'),
-  ],
+  entry: entryPoints,
 
   output: {
     path: webpackPaths.distRendererPath,
     publicPath: '/',
-    filename: 'renderer.dev.js',
+    filename: '[name].dev.js', // Use chunk name in filename
   },
 
   module: {
@@ -257,19 +299,7 @@ const configuration: webpack.Configuration = {
       features: ['!gotoSymbol'],
     }),
 
-    new HtmlWebpackPlugin({
-      filename: path.join('index.html'),
-      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
-      minify: {
-        collapseWhitespace: true,
-        removeAttributeQuotes: true,
-        removeComments: true,
-      },
-      isBrowser: false,
-      env: process.env.NODE_ENV,
-      isDevelopment: process.env.NODE_ENV !== 'production',
-      nodeModules: webpackPaths.appNodeModulesPath,
-    }),
+    ...htmlPlugins,
   ],
 
   node: {
@@ -283,10 +313,7 @@ const configuration: webpack.Configuration = {
     hot: false,
     liveReload: true,
     client: {
-      overlay: {
-        errors: true,
-        warnings: false,
-      },
+      overlay: false,  // Disable the error overlay completely
     },
     headers: { 'Access-Control-Allow-Origin': '*' },
     static: {
@@ -295,6 +322,13 @@ const configuration: webpack.Configuration = {
     },
     historyApiFallback: {
       verbose: true,
+      // Allow dots in paths and properly rewrite principal.html
+      disableDotRule: true,
+      rewrites: [
+        { from: /^\/principal.html/, to: '/principal.html' },
+        { from: /^\/index.html/, to: '/index.html' },
+        { from: /./, to: '/index.html' }
+      ]
     },
     setupMiddlewares(middlewares) {
       console.log('Starting preload.js builder...');

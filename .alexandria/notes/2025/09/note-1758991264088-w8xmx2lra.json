@@ -1,0 +1,18 @@
+{
+  "id": "note-1758991264088-w8xmx2lra",
+  "note": "Show a basic file tree in the search",
+  "anchors": [
+    "."
+  ],
+  "tags": [
+    "general"
+  ],
+  "metadata": {
+    "directoryPath": "/Users/griever/Developer/electron-app",
+    "relativePath": ".",
+    "confidence": "medium",
+    "type": "explanation"
+  },
+  "timestamp": 1758991264088,
+  "codebaseViewId": "default"
+}

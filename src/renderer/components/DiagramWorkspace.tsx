@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/style.css';
+import { usePanelsTheme } from '../theme/panelsTheme';
 import { ExcalidrawWrapper } from './shared/ExcalidrawWrapper';
 import {
   DiagramBrowser,
@@ -24,6 +25,7 @@ export const DiagramWorkspace: React.FC<DiagramWorkspaceProps> = ({
   defaultCollapsed = false,
   onDiagramChange,
 }) => {
+  const panelsTheme = usePanelsTheme();
   const [currentDiagramId, setCurrentDiagramId] = useState<string | null>(null);
   const [currentDiagramData, setCurrentDiagramData] =
     useState<ExcalidrawDiagramData | null>(null);
@@ -131,6 +133,7 @@ export const DiagramWorkspace: React.FC<DiagramWorkspaceProps> = ({
         height: '100%',
         width: '100%',
       }}
+      theme={panelsTheme}
     />
   );
 };

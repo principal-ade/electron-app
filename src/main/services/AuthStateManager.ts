@@ -7,6 +7,7 @@
 
 import { BrowserWindow, ipcMain } from 'electron';
 import { EventEmitter } from 'events';
+import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 
 export interface AuthUser {
   login: string;
@@ -53,17 +54,23 @@ class AuthStateManager extends EventEmitter {
 
   private setupHandlers() {
     // Handler for renderer processes to get current auth state
-    ipcMain.handle('auth-state:get', () => {
-      console.log('[AuthStateManager] State requested, returning:', {
-        isAuthenticated: this.state.isAuthenticated,
-        hasUser: !!this.state.user,
-        user: this.state.user?.login,
+    ipcMain.handle(AuthEvent.STATE_GET, () => {
+      const publicState = this.getPublicState();
+      console.log('[AuthStateManager] auth-state:get called, returning:', {
+        isAuthenticated: publicState.isAuthenticated,
+        hasUser: !!publicState.user,
+        user: publicState.user?.login,
+        internalStateCheck: {
+          isAuthenticated: this.state.isAuthenticated,
+          user: this.state.user?.login,
+          hasToken: !!this.state.token,
+        }
       });
-      return this.getPublicState();
+      return publicState;
     });
 
     // Handler for renderer processes to subscribe to auth changes
-    ipcMain.on('auth-state:subscribe', (event) => {
+    ipcMain.on(AuthEvent.STATE_SUBSCRIBE, (event) => {
       const webContents = event.sender;
       const windowId = webContents.id;
 
@@ -72,7 +79,7 @@ class AuthStateManager extends EventEmitter {
       );
 
       // Send current state immediately
-      webContents.send('auth-state:changed', this.getPublicState());
+      webContents.send(AuthEvent.STATE_CHANGED, this.getPublicState());
 
       // Clean up when window is closed
       webContents.on('destroyed', () => {
@@ -83,7 +90,7 @@ class AuthStateManager extends EventEmitter {
     });
 
     // Handler for renderer processes to unsubscribe
-    ipcMain.on('auth-state:unsubscribe', (event) => {
+    ipcMain.on(AuthEvent.STATE_UNSUBSCRIBE, (event) => {
       const windowId = event.sender.id;
       console.log(`[AuthStateManager] Window ${windowId} unsubscribed`);
     });
@@ -125,8 +132,13 @@ class AuthStateManager extends EventEmitter {
    */
   setAuthenticated(user: AuthUser, token: string) {
     console.log(
-      '[AuthStateManager] Setting authenticated state for:',
+      '[AuthStateManager] setAuthenticated called for:',
       user.login,
+      'Current state before update:',
+      {
+        isAuthenticated: this.state.isAuthenticated,
+        currentUser: this.state.user?.login,
+      }
     );
 
     this.updateState({
@@ -137,6 +149,15 @@ class AuthStateManager extends EventEmitter {
       },
       token,
     });
+
+    console.log(
+      '[AuthStateManager] State after setAuthenticated:',
+      {
+        isAuthenticated: this.state.isAuthenticated,
+        user: this.state.user?.login,
+        hasToken: !!this.state.token,
+      }
+    );
   }
 
   /**
@@ -179,7 +200,7 @@ class AuthStateManager extends EventEmitter {
     // Get all windows and send the update
     BrowserWindow.getAllWindows().forEach((window) => {
       if (!window.isDestroyed()) {
-        window.webContents.send('auth-state:changed', publicState);
+        window.webContents.send(AuthEvent.STATE_CHANGED, publicState);
         console.log(
           `[AuthStateManager] Broadcasted state change to window ${window.id}`,
         );

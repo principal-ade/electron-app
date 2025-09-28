@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit3, ExternalLink, Plus, Minus, Copy, Check } from 'lucide-react';
+import { Edit3, ExternalLink, Plus, Minus, Copy, Check, Trash2 } from 'lucide-react';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarButton } from './TitlebarButton';
 
@@ -12,6 +12,7 @@ export interface MarkdownViewerTitlebarProps {
   onOpenExternal?: () => void;
   onFontSizeIncrease?: () => void;
   onFontSizeDecrease?: () => void;
+  onDelete?: () => void;
 }
 
 export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
@@ -23,10 +24,11 @@ export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
   onOpenExternal,
   onFontSizeIncrease,
   onFontSizeDecrease,
+  onDelete,
 }) => {
   const [copied, setCopied] = useState(false);
   const displayFileName = fileName || filePath || 'Markdown Viewer';
-  const displayTitle = projectName ? `${projectName}: ${displayFileName}` : displayFileName;
+  const displayTitle = displayFileName;
   const fontSizePercent = Math.round(fontSizeScale * 100);
 
   const handleCopyPath = () => {
@@ -41,7 +43,7 @@ export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
   };
 
   return (
-    <BaseTitlebar title={displayTitle}>
+    <BaseTitlebar>
       {onEdit && (
         <TitlebarButton
           onClick={onEdit}
@@ -60,6 +62,55 @@ export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
           position="left"
         />
       )}
+      {/* Center content: title with delete button */}
+      <div
+        position="center" as any
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          marginLeft: '-100px',
+          WebkitAppRegion: 'no-drag' as any,
+        }}
+      >
+        <span
+          style={{
+            fontSize: '14px',
+            fontWeight: '500',
+            color: 'var(--color-text)',
+          }}
+        >
+          {displayTitle}
+        </span>
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'var(--color-error, #ef4444)',
+              borderRadius: '4px',
+              transition: 'background-color 0.2s',
+              WebkitAppRegion: 'no-drag' as any,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+            aria-label="Delete File"
+            title="Delete File"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
+      </div>
       {onFontSizeDecrease && (
         <TitlebarButton
           onClick={onFontSizeDecrease}

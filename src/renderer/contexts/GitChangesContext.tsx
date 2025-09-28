@@ -9,8 +9,10 @@ import React, {
 import { FileTree } from '@principal-ai/repository-abstraction';
 import { HighlightLayer } from '@principal-ai/code-city-react';
 import { GitService, GitDetailedChanges } from '../main-process-api/GitService';
-import { GitWatcherService } from '../main-process-api/GitWatcherService';
-import { loadLocalGitCommitTree } from '../utils/loadFileSystemTree';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import type { GitStatus } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+// TODO: Implement git commit tree loading in MonitoredFileTreeService
+// import { loadLocalGitCommitTree } from '../utils/loadFileSystemTree';
 import { FileTreeSource } from '../types/file-tree-source';
 
 /**
@@ -247,15 +249,19 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
           `[GitChangesProvider] Loading HEAD tree for ${source.id} at ${commitSha.substring(0, 7)}`,
         );
 
-        // Load the HEAD tree
-        const headResult = await loadLocalGitCommitTree({
-          localPath: source.location,
-          owner: source.owner,
-          repo: source.name,
-          commitSha: commitSha,
-        });
+        // TODO: Implement git commit tree loading in MonitoredFileTreeService
+        // For now, return null - this disables git diff highlighting
+        console.warn('[GitChangesProvider] Git commit tree loading not yet implemented with MonitoredFileTreeService');
+        return null;
 
-        return headResult.fileTree;
+        // Original code to restore when implemented:
+        // const headResult = await loadLocalGitCommitTree({
+        //   localPath: source.location,
+        //   owner: source.owner,
+        //   repo: source.name,
+        //   commitSha: commitSha,
+        // });
+        // return headResult.fileTree;
       } catch (error) {
         console.error(`[GitChangesProvider] Failed to load HEAD tree:`, error);
         throw error;
@@ -612,10 +618,10 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
   );
 
   /**
-   * Listen for git status updates from GitWatcher
+   * Listen for git status updates from Repository Monitoring Service
    */
   useEffect(() => {
-    const handleGitStatusUpdate = (status: any) => {
+    const handleGitStatusUpdate = (status: GitStatus) => {
       // Find matching source by path and refresh
       gitStatesRef.current.forEach((state, sourceId) => {
         if (state.sourcePath === status.repoPath) {
@@ -624,7 +630,7 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
       });
     };
 
-    const unsubscribe = GitWatcherService.onStatusUpdate(handleGitStatusUpdate);
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(handleGitStatusUpdate);
     return () => {
       unsubscribe();
     };

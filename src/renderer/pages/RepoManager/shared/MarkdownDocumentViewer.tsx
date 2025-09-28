@@ -1,12 +1,13 @@
 import React from 'react';
 import { ThemedSlidePresentation } from '../../../components/markdown/ThemedSlidePresentation';
+import { ThemedSlidePresentationBook } from '../../../components/markdown/ThemedSlidePresentationBook';
 import { ThemedDocumentView } from '../../../components/markdown/ThemedDocumentView';
 import { ThemedMonaco } from '../../../components/shared/ThemedMonaco';
 import { MarkdownEmptyOverlay } from '../../../components/repository-maps/MarkdownEmptyOverlay';
 import type { Theme } from 'themed-markdown';
 
 interface MarkdownDocumentViewerProps {
-  viewMode: 'slides' | 'document';
+  viewMode: 'slides' | 'document' | 'book';
   showEditor: boolean;
   content: string;
   slides: string[];
@@ -88,6 +89,30 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
           slideIdPrefix="planning-doc"
           showSectionHeaders={showSegmented}
           showSeparators={showSegmented}
+        />
+        {isEmpty && <MarkdownEmptyOverlay theme={theme} />}
+      </div>
+    );
+  }
+
+  // Book View - Use the new ThemedSlidePresentationBook component with book mode
+  if (viewMode === 'book') {
+    return (
+      <div style={{ position: 'relative', height: '100%' }}>
+        <ThemedSlidePresentationBook
+          slides={slides}
+          initialSlide={currentSlide}
+          theme={theme}
+          fontSizeScale={fontSizeScale}
+          onSlideChange={onSlideNavigate}
+          onCheckboxChange={onCheckboxChange}
+          showNavigation={true}
+          showSlideCounter={true}
+          showFullscreenButton={true}
+          viewMode="book"
+          slideIdPrefix="planning-book"
+          enableHtmlPopout={true}
+          enableKeyboardScrolling={true}
         />
         {isEmpty && <MarkdownEmptyOverlay theme={theme} />}
       </div>

@@ -33,7 +33,6 @@ export interface DirectorySessions {
 export enum AgentSessionAPIEvents {
   // Query operations
   GET_ACTIVE_SESSIONS = 'sessions:get-active',
-  GET_ARCHIVED_SESSIONS = 'sessions:get-archived',
   GET_SESSIONS_FOR_DIRECTORY = 'sessions:get-for-directory',
   GET_SESSION = 'sessions:get-session',
   GET_SESSION_EVENTS = 'sessions:get-events',
@@ -47,20 +46,15 @@ export enum AgentSessionAPIEvents {
   SESSION_CREATED = 'sessions:created',
   SESSION_UPDATED = 'sessions:updated',
   SESSION_DELETED = 'sessions:deleted',
-  SESSION_ARCHIVED = 'sessions:archived',
 }
 
 export interface AgentSessionAPI {
   // Get active sessions (fast, from live storage)
   getActiveSessions: () => Promise<DirectorySessions[]>;
 
-  // Get archived sessions (potentially slower, from file storage)
-  getArchivedSessions: () => Promise<DirectorySessions[]>;
-
   // Get sessions for a specific directory
   getSessionsForDirectory: (directory: string) => Promise<{
     active: SessionSummary[];
-    archived: SessionSummary[];
   }>;
 
   // Get a specific session by ID
@@ -76,9 +70,6 @@ export interface AgentSessionAPI {
 
   // Delete a session
   deleteSession: (sessionId: string, directory: string) => Promise<boolean>;
-
-  // Delete from active storage only (preserve archive)
-  deleteFromActive: (sessionId: string) => Promise<boolean>;
 
   // Clear all sessions for a directory
   clearSessionsForDirectory: (directory: string) => Promise<boolean>;
@@ -106,9 +97,6 @@ export interface AgentSessionAPI {
     callback: (data: { sessionId: string; directory: string }) => void,
   ) => () => void;
   onSessionDeleted: (
-    callback: (data: { sessionId: string; directory: string }) => void,
-  ) => () => void;
-  onSessionArchived: (
     callback: (data: { sessionId: string; directory: string }) => void,
   ) => () => void;
 

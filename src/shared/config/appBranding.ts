@@ -4,7 +4,7 @@
  */
 
 export const APP_BRANDING = {
-  APP_NAME: 'Principal AI',
+  APP_NAME: 'Principal ADE',
   COMPANY_NAME: 'A24Z',
 
   // Bridge ports for HTTP communication
@@ -14,8 +14,8 @@ export const APP_BRANDING = {
   },
 
   // MCP Server configuration
-  MCP_SERVER_FILENAME: 'principal-ai-mcp-server.cjs', // The actual MCP server file in assets
-  MCP_SERVER_CONFIG_KEY: 'principal-ai', // The key/identifier used in agent configurations
+  MCP_SERVER_FILENAME: 'principal-ade-mcp-server.cjs', // The actual MCP server file in assets
+  MCP_SERVER_CONFIG_KEY: 'principal-ade', // The key/identifier used in agent configurations
 } as const;
 
 export type AppBrandingConfig = typeof APP_BRANDING;

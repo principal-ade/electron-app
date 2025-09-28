@@ -15,6 +15,7 @@ import {
   FileCode,
   Zap,
   Activity,
+  Palette,
 } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
@@ -27,7 +28,7 @@ import { RepositoryNote } from '../../../shared/main-process-api-interfaces/Repo
 import { RepositoryNotesService } from '../../main-process-api/RepositoryNotesService';
 import { GitHubWebAdapters } from '../../adapters/GitHubWebAdapters';
 import { FileTreeSourceService } from '../../services/FileTreeSourceService';
-import { FileTreeCacheService } from '../../services/FileTreeCacheService';
+import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
 import { FileTreeSource, FileTreeStats } from '../../types/file-tree-source';
 import { WindowService } from '../../main-process-api/WindowService';
 import {
@@ -43,6 +44,7 @@ import {
 import { RemoteFileViewerModal } from './shared/RemoteFileViewerModal';
 import { HelpModal } from './shared/HelpModal';
 import { ValidationsTab } from './shared/ValidationsTab';
+import { ToolsTab } from './shared/ToolsTab';
 import { useViolationMonitoring } from '../../hooks/useViolationMonitoring';
 
 interface RepositoryMaintenanceViewProps {
@@ -59,7 +61,7 @@ interface RepositoryMaintenanceViewProps {
   cityData?: CityData | null;
   activeFileTreeSource?: FileTreeSource | null;
   fileTreeSourceService?: FileTreeSourceService;
-  cacheService?: FileTreeCacheService;
+  cacheService?: MonitoredFileTreeService;
   cityDataCache?: unknown;
   treeStats?: FileTreeStats | null;
 
@@ -94,7 +96,7 @@ export const RepositoryMaintenanceView: React.FC<
   onFileTreeLoaded,
 }) => {
   const { theme } = useTheme();
-  const [activeTab, setActiveTab] = useState<string>('validations');
+  const [activeTab, setActiveTab] = useState<string>('tools');
 
   // Services - use shared if provided, otherwise create local
   const fileTreeSourceService = useMemo(
@@ -102,7 +104,7 @@ export const RepositoryMaintenanceView: React.FC<
     [sharedFileTreeService],
   );
   const cacheService = useMemo(
-    () => sharedCacheService || new FileTreeCacheService(),
+    () => sharedCacheService || new MonitoredFileTreeService(),
     [sharedCacheService],
   );
 
@@ -229,6 +231,11 @@ export const RepositoryMaintenanceView: React.FC<
   const [selectedPackageForCoverage, setSelectedPackageForCoverage] =
     useState<string>('');
 
+  // Tools highlight layers state
+  const [toolsHighlightLayers, setToolsHighlightLayers] = useState<
+    HighlightLayer[]
+  >([]);
+
   // Use violation monitoring hook for local sources
   const _fileTreeForMonitoring = useMemo(() => {
     if (!fileTree) return null;
@@ -328,10 +335,26 @@ export const RepositoryMaintenanceView: React.FC<
   // Toolbar state
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
 
+  // File color state - default to showing file colors
+  const [showFileColors, setShowFileColors] = useState(true);
+
   // Create toolbar items
   const toolbarItems = useMemo<ToolbarItem[]>(() => {
     const items: ToolbarItem[] = [];
 
+    // File colors toggle - always show this first
+    items.push({
+      id: 'file-colors',
+      label: 'File Colors',
+      shortLabel: 'Colors',
+      icon: <Palette />,
+      color: '#6366f1',
+      active: showFileColors,
+      onClick: () => {
+        setShowFileColors(!showFileColors);
+      },
+      tooltip: `${showFileColors ? 'Hide' : 'Show'} file type colors`,
+    });
 
     // Search results
     if (searchResults.length > 0) {
@@ -393,6 +416,7 @@ export const RepositoryMaintenanceView: React.FC<
 
     return items;
   }, [
+    showFileColors,
     searchResults.length,
     selectedNoteIds.size,
     knipHighlightLayers,
@@ -520,7 +544,6 @@ export const RepositoryMaintenanceView: React.FC<
         opacity: 0.9,
         items: [
           { path: packagePath, type: 'directory' as const }, // Highlight the entire package directory
-          { path: packagePath + '/package.json', type: 'file' as const }, // Also highlight the package.json file
         ],
         enabled: true,
         priority: 10,
@@ -550,9 +573,9 @@ export const RepositoryMaintenanceView: React.FC<
           items: [
             { path: prevAnalyzingPath, type: 'directory' as const }, // Highlight the entire package directory
             {
-              path: prevAnalyzingPath + '/package.json',
+              path: packageData.packageData.manifestPath,
               type: 'file' as const,
-            }, // Also highlight the package.json file
+            }, // Highlight the package manifest file
           ],
           enabled: true,
           priority: 5,
@@ -579,7 +602,6 @@ export const RepositoryMaintenanceView: React.FC<
         priority: 10,
         items: [
           { path: packagePath, type: 'directory' as const }, // Highlight the entire package directory
-          { path: packagePath + '/package.json', type: 'file' as const }, // Also highlight the package.json file
         ],
         enabled: true,
       };
@@ -958,8 +980,10 @@ export const RepositoryMaintenanceView: React.FC<
           type: 'directory' as const,
           renderStrategy: 'fill',
         });
+        // Use manifestPath if available, otherwise use package.json
+        const manifestFile = pkg.packageData.manifestPath || 'package.json';
         items.push({
-          path: 'package.json',
+          path: manifestFile,
           type: 'file' as const,
           renderStrategy: 'fill',
         });
@@ -970,11 +994,14 @@ export const RepositoryMaintenanceView: React.FC<
           type: 'directory' as const,
           renderStrategy: 'fill',
         });
-        items.push({
-          path: `${pkg.packageData.path}/package.json`,
-          type: 'file' as const,
-          renderStrategy: 'fill',
-        });
+        // Use manifestPath if available
+        if (pkg.packageData.manifestPath) {
+          items.push({
+            path: pkg.packageData.manifestPath,
+            type: 'file' as const,
+            renderStrategy: 'fill',
+          });
+        }
       }
 
       const layer: HighlightLayer = {
@@ -1077,9 +1104,20 @@ export const RepositoryMaintenanceView: React.FC<
   // Create tabs configuration
   const tabs: TabConfig[] = [
     {
+      id: 'tools',
+      label: 'Tools',
+      icon: <Wrench size={14} />,
+      visible: true,
+      content: <ToolsTab
+        packageLayers={packageLayers}
+        repositoryPath={activeFileTreeSource?.type === 'local' ? activeFileTreeSource.location : ''}
+        onHighlightLayersChange={setToolsHighlightLayers}
+      />,
+    },
+    {
       id: 'validations',
       label: 'Validations',
-      icon: <Wrench size={14} />,
+      icon: <Activity size={14} />,
       visible: true,
       content: (
         <ValidationsTab
@@ -1421,7 +1459,7 @@ export const RepositoryMaintenanceView: React.FC<
             onFileClick={handleFileClick}
             highlightLayers={(() => {
               const layers = [
-                ...fileColorHighlightLayers,
+                ...(showFileColors ? fileColorHighlightLayers : []), // Conditionally add file colors
                 ...noteHighlightLayers,
                 ...(searchHighlightLayer ? [searchHighlightLayer] : []),
                 ...(hoveredSearchLayer ? [hoveredSearchLayer] : []),
@@ -1431,6 +1469,7 @@ export const RepositoryMaintenanceView: React.FC<
                 ...knipHighlightLayers,
                 ...(violationLayer ? [violationLayer] : []),
                 ...testCoverageLayers,
+                ...toolsHighlightLayers,
               ];
               return layers;
             })()}

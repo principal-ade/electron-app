@@ -7,16 +7,17 @@ import {
   PackageLayer,
 } from '@principal-ai/codebase-composition';
 
-import { FileTreeCacheService } from '../../../services/FileTreeCacheService';
+import { MonitoredFileTreeService } from '../../../services/MonitoredFileTreeService';
 import { GitHubWebAdapters } from '../../../adapters/GitHubWebAdapters';
 import { ElectronPlatformAdapters } from '../../../adapters';
 import { loadManifestContents } from '../../../utils/loadManifestContents';
 import { FileTreeSource } from '../../../types/file-tree-source';
 import { DependenciesPanel } from '../../../components/repository-maps/DependenciesPanel';
+import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 
 interface RepoSourceArchitecturePanelSimpleProps {
   source: FileTreeSource;
-  cacheService: FileTreeCacheService;
+  cacheService: MonitoredFileTreeService;
   packageLayers?: PackageLayer[] | null;
   onError?: (error: string) => void;
   onPackageLayersChanged?: (packageLayers: PackageLayer[] | null) => void;
@@ -120,43 +121,35 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
           return;
         }
 
-        // Add small delay for nice loading experience
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Use RepositoryMonitoringService for local sources (it's much faster and more accurate)
+        if (source.type === 'local' && source.location) {
+          console.debug('[ArchitecturePanel] Using RepositoryMonitoringService for packages...');
+          const result = await RepositoryMonitoringService.getPackages(source.location);
+          if (!result) {
+            throw new Error('Failed to get packages from repository monitoring service');
+          }
 
-        // Create package module
-        const packageModule = new PackageLayerModule();
+          const packageResult = result.packages;
+          console.debug('[ArchitecturePanel] Got packages from monitoring service:', {
+            count: packageResult.length,
+            isMonorepo: result.summary.isMonorepo,
+          });
 
-        // Load manifest contents using utility function
-        console.debug('[ArchitecturePanel] manifest load start', {
-          sourceType: source.type,
-          rootPath: source.type === 'local' ? source.location : undefined,
-          branch: source.metadata?.currentBranch,
-          commit: source.metadata?.commitSha,
-        });
-        const manifestContents = await loadManifestContents({
-          fileSystemTree,
-          fileSystemAdapter: adapters.fileSystem,
-          packageModule, // Reuse the same module instance
-          rootPath: source.type === 'local' ? source.location : undefined,
-        });
-        console.debug('[ArchitecturePanel] manifest load done', {
-          count: manifestContents.size,
-        });
+          setLocalPackageLayers(packageResult);
+          if (!packageLayersProp) {
+            onPackageLayersChanged?.(packageResult);
+          }
 
-        // Package layer analysis
-        const packageResult = await packageModule.discoverPackages(
-          fileSystemTree,
-          manifestContents,
-        );
-        setLocalPackageLayers(packageResult);
-        if (!packageLayersProp) {
-          onPackageLayersChanged?.(packageResult);
+          // Save to cache
+          cacheService.setAnalysis(source.id, {
+            packageLayers: packageResult,
+          });
+
+          return;
         }
 
-        // Save to cache
-        cacheService.setAnalysis(source.id, {
-          packageLayers: packageResult,
-        });
+        // For remote sources, we don't support package analysis yet
+        throw new Error('Package analysis is only supported for local repositories');
       } catch (err) {
         console.error('Error analyzing layers:', err);
       } finally {

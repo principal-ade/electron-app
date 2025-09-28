@@ -21,6 +21,9 @@ export const fileSystemAPI: FileSystemAPI = {
   writeFile: async (filePath: string, content: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.WRITE_FILE, filePath, content);
   },
+  deleteFile: async (filePath: string) => {
+    return ipcRenderer.invoke(FileSystemAPIEvent.DELETE_FILE, filePath);
+  },
   getFileStats: async (filePath: string) => {
     return ipcRenderer.invoke('file-system:get-file-stats', filePath);
   },
@@ -173,19 +176,5 @@ export const fileSystemAPI: FileSystemAPI = {
   },
   getDirectoryStats: async (dirPath: string) => {
     return ipcRenderer.invoke(FileSystemAPIEvent.GET_DIRECTORY_STATS, dirPath);
-  },
-  buildFilteredFileTree: async (
-    directoryPath: string,
-    options?: {
-      gitignore?: boolean;
-      ignorePatterns?: string[];
-      includeStats?: boolean;
-    },
-  ) => {
-    return ipcRenderer.invoke(
-      FileSystemAPIEvent.BUILD_FILTERED_FILE_TREE,
-      directoryPath,
-      options,
-    );
   },
 };

@@ -15,6 +15,18 @@ export interface SecretMetadata {
   secretCount: number;
 }
 
+export interface SecretMetadataOnly {
+  keys: string[];
+  count: number;
+  updatedAt: number;
+  repoId: string;
+}
+
+export interface CopyResult {
+  success: boolean;
+  error?: string;
+}
+
 export interface SecretOperationResult {
   success: boolean;
   error?: string;
@@ -33,10 +45,15 @@ export interface SecretStoreRequest {
 export enum SecretsEvents {
   // Core operations
   STORE = 'secrets:store',
-  GET = 'secrets:get',
   DELETE = 'secrets:delete',
   EXISTS = 'secrets:exists',
   LIST = 'secrets:list',
+
+  // On-demand operations
+  GET_METADATA = 'secrets:get-metadata',
+  GET_SINGLE = 'secrets:get-single',
+  GET_MULTIPLE = 'secrets:get-multiple',
+  COPY_TO_CLIPBOARD = 'secrets:copy-to-clipboard',
 
   // Bulk operations
   UPDATE = 'secrets:update',
@@ -54,11 +71,6 @@ export interface SecretsAPI {
    * Store secrets for a repository
    */
   store: (request: SecretStoreRequest) => Promise<SecretOperationResult>;
-
-  /**
-   * Get secrets for a repository
-   */
-  get: (repoId: string) => Promise<RepositorySecrets | null>;
 
   /**
    * Delete all secrets for a repository
@@ -92,4 +104,24 @@ export interface SecretsAPI {
    * Clear all in-memory caches
    */
   clearCache: () => Promise<void>;
+
+  /**
+   * Get only metadata and keys for a repository (no values)
+   */
+  getMetadata: (repoId: string) => Promise<SecretMetadataOnly | null>;
+
+  /**
+   * Get a single secret value on demand
+   */
+  getSingle: (repoId: string, key: string) => Promise<string | null>;
+
+  /**
+   * Get multiple specific secret values
+   */
+  getMultiple: (repoId: string, keys: string[]) => Promise<Record<string, string>>;
+
+  /**
+   * Copy a secret directly to clipboard without exposing it to renderer
+   */
+  copyToClipboard: (repoId: string, key: string) => Promise<CopyResult>;
 }

@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
 import { BaseTitlebar } from './BaseTitlebar';
-import { TitlebarSettings } from './TitlebarSettings';
 import { TitlebarButton } from './TitlebarButton';
-import { Search, Sparkles, Activity } from 'lucide-react';
+import { Sparkles, Activity } from 'lucide-react';
 import { WindowService } from '../../main-process-api/WindowService';
 import { ObservabilityConfigModal } from '../observability/ObservabilityConfigModal';
 import { UpdateNotification } from '../UpdateNotification';
 
 export interface MainWindowTitlebarProps {
-  onSettingsClick?: () => void;
   hasUpdateAvailable?: boolean;
   onUpdateAvailable?: (hasUpdate: boolean) => void;
 }
 
 export const MainWindowTitlebar: React.FC<MainWindowTitlebarProps> = ({
-  onSettingsClick,
   hasUpdateAvailable,
   onUpdateAvailable,
 }) => {
@@ -25,9 +22,6 @@ export const MainWindowTitlebar: React.FC<MainWindowTitlebarProps> = ({
     await WindowService.openCallimachusWindow();
   };
 
-  const handleSearchClick = async () => {
-    await WindowService.openSearchWindow();
-  };
 
   const handleObservabilityClick = () => {
     setShowObservabilityModal(true);
@@ -70,24 +64,12 @@ export const MainWindowTitlebar: React.FC<MainWindowTitlebarProps> = ({
           style={{ right: isMac ? '125px' : '160px' }}
         />
         <TitlebarButton
-          icon={<Search size={18} />}
-          ariaLabel="Alexandria Search"
-          title="Open Alexandria Search"
-          onClick={handleSearchClick}
-          position="right"
-          style={{ right: isMac ? '90px' : '125px' }}
-        />
-        <TitlebarButton
           icon={<Sparkles size={18} />}
           ariaLabel="Pattern Discovery"
           title="Open Pattern Discovery (Callimachus)"
           onClick={handleCallimachusClick}
           position="right"
           style={{ right: isMac ? '55px' : '90px' }}
-        />
-        <TitlebarSettings
-          onSettingsClick={onSettingsClick}
-          hasUpdateAvailable={hasUpdateAvailable || localHasUpdate}
         />
       </BaseTitlebar>
       <ObservabilityConfigModal

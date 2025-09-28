@@ -15,6 +15,7 @@ export enum TerminalAPIEvents {
   ON_WINDOW_CLOSE = 'terminal:window-close',
   CHECK_COMMAND = 'terminal:checkCommand',
   CLEAR_PATH_CACHE = 'terminal:clearPathCache',
+  GET_OPEN_WINDOWS = 'terminal:getOpenWindows',
 }
 
 export interface TerminalInfo {
@@ -45,6 +46,7 @@ export interface TerminalAPI {
   list: () => Promise<Array<TerminalInfo>>;
   popOut: (sessionId: string) => Promise<{ windowId: number }>;
   focusWindow: (windowId: number) => Promise<void>;
+  getOpenWindows: () => Promise<Array<{ terminalId: string; windowId: number }>>;
   onData: (callback: (data: TerminalData) => void) => () => void;
   onExit: (callback: (exit: TerminalExit) => void) => () => void;
   onWindowReady: (

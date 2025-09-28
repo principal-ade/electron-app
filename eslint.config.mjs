@@ -7,137 +7,34 @@ import reactHooksPlugin from 'eslint-plugin-react-hooks';
 export default [
   {
     ignores: [
+      // Build outputs and dependencies
       'dist/**',
       '.erb/**',
       'release/**',
       'node_modules/**',
+      'dist_mcp_server/**',
+
+      // Config files
       '*.config.js',
       '*.config.ts',
       '*.config.mjs',
       '*.config.cjs',
-      'dist_mcp_server/**',
+
+      // Assets and scripts
       'assets/**',
       'scripts/**',
+
+      // Type declaration files (except in src/shared)
       '**/*.d.ts',
       '!src/shared/**/*.d.ts',
+
+      // Unused code
       'src/renderer/unused/**',
-      // Temporarily ignore some renderer files with complex issues
-      'src/renderer/components/agent-overview/**/*',
-      'src/renderer/components/agent-session-debug/**/*',
-      'src/renderer/components/session-history/**/*',
-      'src/renderer/components/shared/ExcalidrawWrapper.tsx',
-      'src/renderer/components/shared/LocalSearchPanel.tsx',
-      'src/renderer/services/p2p/**/*',
-      'src/renderer/validation/**/*',
-      'src/types/**/*',
-      // Re-include specific renderer files we want to lint
-      '!src/renderer/pages/RepoManager/**/*.ts',
-      '!src/renderer/pages/RepoManager/**/*.tsx',
-      // Include all window folder files
-      '!src/window/**/*.ts',
-      '!src/window/**/*.tsx',
-      // Include all shared library files - all issues have been fixed!
-      '!src/shared/**/*.ts',
-      '!src/shared/**/*.tsx',
-      '!src/renderer/pages/RepoManager/**/*.ts',
-      '!src/renderer/pages/RepoManager/**/*.tsx',
-      // File tree and linter integration files (renderer)
-      '!src/renderer/services/FileTreeSourceService.ts',
-      '!src/renderer/services/FileTreeCacheService.ts',
-      '!src/renderer/services/CloneVisibilityService.ts',
-      '!src/renderer/services/FileTreeInvalidator.ts',
-      '!src/renderer/services/CityDataCacheService.ts',
-      '!src/renderer/utils/loadFileSystemTree.ts',
-      '!src/renderer/utils/loadManifestContents.ts',
-      '!src/renderer/adapters/ElectronFileSystemAdapter.ts',
-      '!src/renderer/adapters/SourceFileSystemAdapter.ts',
-      '!src/renderer/adapters/github/GitHubFileSystemAdapter.ts',
-      '!src/renderer/adapters/GitHubWebAdapters.ts',
-      '!src/renderer/adapters/index.ts',
-      '!src/renderer/hooks/useViolationMonitoring.ts',
-      '!src/renderer/types/file-tree-source.ts',
-      '!src/renderer/contexts/GitChangesContext.tsx',
-      // Renderer to main process bridge files
-      '!src/renderer/main-process-api/FileSystemService.ts',
-      '!src/renderer/main-process-api/GithubService.ts',
-      '!src/renderer/main-process-api/RepositoryService.ts',
-      '!src/renderer/main-process-api/GitService.ts',
-      '!src/renderer/main-process-api/UserPreferencesService.ts',
-      '!src/renderer/main-process-api/GitWatcherService.ts',
-      // Landing page and repository management components
-      '!src/renderer/pages/LandingPage/**/*.tsx',
-      '!src/renderer/pages/LandingPage/**/*.ts',
-      '!src/renderer/components/landing-page/**/*.tsx',
-      '!src/renderer/components/landing-page/**/*.ts',
-      // App.tsx and core components
-      '!src/renderer/App.tsx',
-      '!src/renderer/components/*.tsx',
-      '!src/renderer/components/*.ts',
-      // Core services and utilities
-      '!src/renderer/services/FileTreeSourceService.ts',
-      '!src/renderer/services/FileTreeCacheService.ts',
-      '!src/renderer/services/LocalSearchService.ts',
-      '!src/renderer/services/MCPService.ts',
-      '!src/renderer/utils/**/*.ts',
-      '!src/renderer/utils/**/*.tsx',
-      // Main process API implementations
-      '!src/renderer/main-process-api/**/*.ts',
-      '!src/renderer/main-process-api/**/*.tsx',
     ],
   },
   {
     files: [
-      'src/main/**/*.{ts,tsx,js,jsx}',
-      'src/event-processing-server/**/*.{ts,tsx,js,jsx}',
-      'src/window/**/*.{ts,tsx,js,jsx}',
-      'src/shared/**/*.{ts,tsx,js,jsx}',
-      'src/renderer/pages/RepoManager/**/*.{ts,tsx,js,jsx}',
-      // File tree and linter integration files (renderer)
-      'src/renderer/services/FileTreeSourceService.ts',
-      'src/renderer/services/FileTreeCacheService.ts',
-      'src/renderer/services/CloneVisibilityService.ts',
-      'src/renderer/services/FileTreeInvalidator.ts',
-      'src/renderer/services/CityDataCacheService.ts',
-      'src/renderer/utils/loadFileSystemTree.ts',
-      'src/renderer/utils/loadManifestContents.ts',
-      'src/renderer/adapters/ElectronFileSystemAdapter.ts',
-      'src/renderer/adapters/SourceFileSystemAdapter.ts',
-      'src/renderer/adapters/github/GitHubFileSystemAdapter.ts',
-      'src/renderer/adapters/GitHubWebAdapters.ts',
-      'src/renderer/adapters/index.ts',
-      'src/renderer/hooks/useViolationMonitoring.ts',
-      'src/renderer/types/file-tree-source.ts',
-      'src/renderer/contexts/GitChangesContext.tsx',
-      // Main process services
-      'src/main/services/ViolationCollectionService.ts',
-      'src/main/services/ViolationMonitoringServiceIPC.ts',
-      // Renderer to main process bridge files
-      'src/renderer/main-process-api/FileSystemService.ts',
-      'src/renderer/main-process-api/GithubService.ts',
-      'src/renderer/main-process-api/RepositoryService.ts',
-      'src/renderer/main-process-api/GitService.ts',
-      'src/renderer/main-process-api/UserPreferencesService.ts',
-      'src/renderer/main-process-api/GitWatcherService.ts',
-      // Landing page and repository management components
-      'src/renderer/pages/LandingPage/**/*.{ts,tsx,js,jsx}',
-      'src/renderer/components/landing-page/**/*.{ts,tsx,js,jsx}',
-      // Main process repository management
-      'src/main/stores/RepositoryApiEventHandler.ts',
-      'src/main/initialization.ts',
-      'src/main/version-control-providers/avatarStorageService.ts',
-      // App.tsx and core components
-      'src/renderer/App.tsx',
-      'src/renderer/components/*.{ts,tsx,js,jsx}',
-      // Core services and utilities
-      'src/renderer/services/FileTreeSourceService.ts',
-      'src/renderer/services/FileTreeCacheService.ts',
-      'src/renderer/services/LocalSearchService.ts',
-      'src/renderer/services/MCPService.ts',
-      'src/renderer/utils/**/*.{ts,tsx,js,jsx}',
-      // Main process API implementations
-      'src/renderer/main-process-api/**/*.{ts,tsx,js,jsx}',
-      // Docker services
-      'src/main/docker/**/*.ts',
+      'src/**/*.{ts,tsx,js,jsx}',
     ],
     languageOptions: {
       parser: typescriptParser,

@@ -92,9 +92,4 @@ export interface WindowAPI {
    */
   openCallimachusWindow(): Promise<void>;
 
-  /**
-   * Open Alexandria Search window
-   * Opens a dedicated window for searching across Alexandria repositories
-   */
-  openSearchWindow(): Promise<void>;
 }

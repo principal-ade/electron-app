@@ -18,14 +18,7 @@ interface SlideDocument {
 }
 
 interface SlideOperation {
-  type:
-    | 'navigate'
-    | 'update'
-    | 'create'
-    | 'delete'
-    | 'move'
-    | 'merge'
-    | 'split';
+  type: 'navigate' | 'load';
   params: any;
   timestamp: number;
 }
@@ -127,30 +120,7 @@ export class PlanningMCPBridge extends EventEmitter {
     }
   }
 
-  private async saveDocument(filePath: string): Promise<boolean> {
-    try {
-      const doc = this.documents.get(filePath);
-      if (!doc) return false;
-
-      // Ensure directory exists
-      const dir = path.dirname(filePath);
-      await fs.mkdir(dir, { recursive: true });
-
-      // Save to file
-      await fs.writeFile(filePath, doc.content, 'utf-8');
-
-      // Update metadata
-      doc.metadata.lastModified = new Date();
-
-      // Emit save event
-      this.emit('document-saved', { filePath, slides: doc.slides.length });
-
-      return true;
-    } catch (error) {
-      console.error('[Planning MCP Bridge] Error saving document:', error);
-      return false;
-    }
-  }
+  // Removed saveDocument method - Planning bridge is now read-only
 
   private recordOperation(operation: SlideOperation) {
     this.operationHistory.push(operation);
@@ -199,6 +169,13 @@ export class PlanningMCPBridge extends EventEmitter {
         }
 
         const doc = await this.loadDocument(filePath);
+
+        // Record the load operation
+        this.recordOperation({
+          type: 'load',
+          params: { filePath },
+          timestamp: Date.now(),
+        });
 
         // Notify renderer windows that a document was loaded
         this.notifyWindows('document-loaded', {
@@ -288,220 +265,6 @@ export class PlanningMCPBridge extends EventEmitter {
       }
     });
 
-    // Update slide content
-    this.app.post('/slide/update', async (req: Request, res: Response) => {
-      try {
-        const { filePath, slideNumber, content, autoSave = false } = req.body;
-        const doc = await this.loadDocument(filePath);
-
-        if (slideNumber < 0 || slideNumber >= doc.slides.length) {
-          res.status(400).json({ error: 'Invalid slide number' });
-          return;
-        }
-
-        doc.slides[slideNumber] = content;
-        doc.content = this.joinSlides(doc.slides);
-
-        if (autoSave) {
-          await this.saveDocument(filePath);
-        }
-
-        this.recordOperation({
-          type: 'update',
-          params: { slideNumber, contentLength: content.length },
-          timestamp: Date.now(),
-        });
-
-        // Notify renderer windows
-        this.emit('slide-updated', { filePath, slideNumber, content });
-
-        // Make sure doc exists before accessing its properties
-        if (doc && doc.slides) {
-          this.notifyWindows('slide-updated', {
-            filePath,
-            slideNumber,
-            content,
-            slides: doc.slides,
-            currentSlide: doc.currentSlide,
-          });
-        }
-
-        res.json({ success: true });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message });
-      }
-    });
-
-    // Create new slide
-    this.app.post('/slide/create', async (req: Request, res: Response) => {
-      try {
-        const {
-          filePath,
-          position = 'after',
-          content = '# New Slide\n\nContent here...',
-          autoSave = false,
-        } = req.body;
-        const doc = await this.loadDocument(filePath);
-
-        let insertIndex: number;
-        if (position === 'end') {
-          insertIndex = doc.slides.length;
-        } else if (position === 'before') {
-          insertIndex = doc.currentSlide;
-        } else {
-          insertIndex = doc.currentSlide + 1;
-        }
-
-        doc.slides.splice(insertIndex, 0, content);
-        doc.content = this.joinSlides(doc.slides);
-        doc.metadata.totalSlides = doc.slides.length;
-
-        // Update current slide if needed
-        if (position === 'before') {
-          doc.currentSlide = insertIndex;
-        } else if (position === 'after') {
-          doc.currentSlide = insertIndex;
-        }
-
-        if (autoSave) {
-          await this.saveDocument(filePath);
-        }
-
-        this.recordOperation({
-          type: 'create',
-          params: { position, insertIndex },
-          timestamp: Date.now(),
-        });
-
-        res.json({
-          success: true,
-          slideNumber: insertIndex,
-          totalSlides: doc.slides.length,
-        });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message });
-      }
-    });
-
-    // Delete slide
-    this.app.post('/slide/delete', async (req: Request, res: Response) => {
-      try {
-        const { filePath, slideNumber, autoSave = false } = req.body;
-        const doc = await this.loadDocument(filePath);
-
-        if (doc.slides.length <= 1) {
-          res.status(400).json({ error: 'Cannot delete the last slide' });
-          return;
-        }
-
-        if (slideNumber < 0 || slideNumber >= doc.slides.length) {
-          res.status(400).json({ error: 'Invalid slide number' });
-          return;
-        }
-
-        doc.slides.splice(slideNumber, 1);
-        doc.content = this.joinSlides(doc.slides);
-        doc.metadata.totalSlides = doc.slides.length;
-
-        // Adjust current slide if needed
-        if (doc.currentSlide >= doc.slides.length) {
-          doc.currentSlide = doc.slides.length - 1;
-        }
-
-        if (autoSave) {
-          await this.saveDocument(filePath);
-        }
-
-        this.recordOperation({
-          type: 'delete',
-          params: { slideNumber },
-          timestamp: Date.now(),
-        });
-
-        res.json({
-          success: true,
-          totalSlides: doc.slides.length,
-          currentSlide: doc.currentSlide,
-        });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message });
-      }
-    });
-
-    // Move slide
-    this.app.post('/slide/move', async (req: Request, res: Response) => {
-      try {
-        const { filePath, from, to, autoSave = false } = req.body;
-        const doc = await this.loadDocument(filePath);
-
-        if (
-          from < 0 ||
-          from >= doc.slides.length ||
-          to < 0 ||
-          to >= doc.slides.length
-        ) {
-          res.status(400).json({ error: 'Invalid slide positions' });
-          return;
-        }
-
-        const [movedSlide] = doc.slides.splice(from, 1);
-        doc.slides.splice(to, 0, movedSlide);
-        doc.content = this.joinSlides(doc.slides);
-
-        if (autoSave) {
-          await this.saveDocument(filePath);
-        }
-
-        this.recordOperation({
-          type: 'move',
-          params: { from, to },
-          timestamp: Date.now(),
-        });
-
-        res.json({ success: true });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message });
-      }
-    });
-
-    // Search slides
-    this.app.post('/slide/search', async (req: Request, res: Response) => {
-      try {
-        const { filePath, query, caseSensitive = false } = req.body;
-        const doc = await this.loadDocument(filePath);
-
-        const searchQuery = caseSensitive ? query : query.toLowerCase();
-        const results = [];
-
-        for (let i = 0; i < doc.slides.length; i++) {
-          const slideContent = caseSensitive
-            ? doc.slides[i]
-            : doc.slides[i].toLowerCase();
-          if (slideContent.includes(searchQuery)) {
-            const lines = doc.slides[i].split('\n');
-            const matches = lines
-              .map((line, lineNum) => {
-                const lineToSearch = caseSensitive ? line : line.toLowerCase();
-                if (lineToSearch.includes(searchQuery)) {
-                  return { lineNumber: lineNum, line: lines[lineNum] };
-                }
-                return null;
-              })
-              .filter(Boolean);
-
-            results.push({
-              slideNumber: i,
-              matches,
-            });
-          }
-        }
-
-        res.json({ results });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message });
-      }
-    });
-
     // Get all slides
     this.app.post('/slide/list', async (req: Request, res: Response) => {
       try {
@@ -513,18 +276,6 @@ export class PlanningMCPBridge extends EventEmitter {
           currentSlide: doc.currentSlide,
           metadata: doc.metadata,
         });
-      } catch (error: any) {
-        res.status(500).json({ error: error.message });
-      }
-    });
-
-    // Save document
-    this.app.post('/document/save', async (req: Request, res: Response) => {
-      try {
-        const { filePath } = req.body;
-        const success = await this.saveDocument(filePath);
-
-        res.json({ success });
       } catch (error: any) {
         res.status(500).json({ error: error.message });
       }

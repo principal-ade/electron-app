@@ -1,0 +1,54 @@
+.integrated-shell {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.main-content {
+  flex: 1;
+  position: relative;
+  height: 100vh;
+}
+
+.content-wrapper {
+  /* Positioned absolutely in the component */
+}
+
+.view-container {
+  /* Styled in the component */
+}
+
+/* Platform-specific adjustments */
+.platform-darwin .integrated-titlebar {
+  padding-left: 80px !important;
+}
+
+.platform-darwin .navigation-sidebar {
+  padding-top: 32px !important; /* Mac has smaller titlebar area needed */
+}
+
+.nav-item {
+  position: relative;
+}
+
+/* Remove default button styles */
+.nav-item {
+  -webkit-app-region: no-drag;
+  outline: none;
+}
+
+.nav-item:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}

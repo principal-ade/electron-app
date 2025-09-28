@@ -98,7 +98,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     if command -v gh &> /dev/null; then
         # Create GitHub release
         gh release create "v$VERSION" \
-            --title "Principal AI v$VERSION" \
+            --title "Principal ADE v$VERSION" \
             --notes "## What's New
 
 ### Features

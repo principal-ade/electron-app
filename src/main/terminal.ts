@@ -646,6 +646,22 @@ class TerminalManager {
       console.log('[Terminal] PATH cache cleared');
       return true;
     });
+
+    // Get list of open terminal windows
+    ipcMain.handle(TerminalAPIEvents.GET_OPEN_WINDOWS, async () => {
+      const openWindows: Array<{ terminalId: string; windowId: number }> = [];
+
+      this.terminalWindows.forEach((window, terminalId) => {
+        if (!window.isDestroyed()) {
+          openWindows.push({
+            terminalId,
+            windowId: window.id
+          });
+        }
+      });
+
+      return openWindows;
+    });
   }
 
   // Create terminal with command - used internally by other services

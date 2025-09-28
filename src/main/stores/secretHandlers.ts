@@ -3,13 +3,15 @@
  * Focused on store, get, and delete operations
  */
 
-import { ipcMain, IpcMainInvokeEvent } from 'electron';
+import { ipcMain, IpcMainInvokeEvent, clipboard } from 'electron';
 import {
   SecretsEvents,
   SecretStoreRequest,
   SecretOperationResult,
   RepositorySecrets,
   SecretMetadata,
+  SecretMetadataOnly,
+  CopyResult,
 } from '../../shared/main-process-api-interfaces/SecretsAPI';
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 
@@ -57,32 +59,6 @@ export function registerSecretHandlers(): void {
       } catch (error: any) {
         console.error('[SecretHandlers] Error storing secrets:', error);
         return { success: false, error: error.message };
-      }
-    },
-  );
-
-  // Get secrets for a repository
-  ipcMain.handle(
-    SecretsEvents.GET,
-    async (
-      event: IpcMainInvokeEvent,
-      repoId: string,
-    ): Promise<RepositorySecrets | null> => {
-      try {
-        console.log('[SecretHandlers] Getting secrets for repository:', repoId);
-
-        if (!validateSource(event)) {
-          throw new Error('Unauthorized source');
-        }
-
-        if (!repoId) {
-          throw new Error('Repository ID is required');
-        }
-
-        return await getStorage().getSecrets(repoId);
-      } catch (error: any) {
-        console.error('[SecretHandlers] Error getting secrets:', error);
-        return null;
       }
     },
   );
@@ -253,6 +229,161 @@ export function registerSecretHandlers(): void {
     },
   );
 
+  // Get only metadata without values
+  ipcMain.handle(
+    SecretsEvents.GET_METADATA,
+    async (
+      event: IpcMainInvokeEvent,
+      repoId: string,
+    ): Promise<SecretMetadataOnly | null> => {
+      try {
+        console.log('[SecretHandlers] Getting metadata for repository:', repoId);
+
+        if (!validateSource(event)) {
+          throw new Error('Unauthorized source');
+        }
+
+        if (!repoId) {
+          throw new Error('Repository ID is required');
+        }
+
+        const secrets = await getStorage().getSecrets(repoId);
+
+        if (!secrets) {
+          return null;
+        }
+
+        // Get metadata from storage
+        const allMetadata = await getStorage().getAllSecretsMetadata();
+        const repoMetadata = allMetadata.find(m => m.repoId === repoId);
+
+        // Return only metadata, not values
+        return {
+          keys: Object.keys(secrets),
+          count: Object.keys(secrets).length,
+          updatedAt: repoMetadata?.updatedAt || Date.now(),
+          repoId
+        };
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error getting metadata:', error);
+        return null;
+      }
+    },
+  );
+
+  // Get a single secret value
+  ipcMain.handle(
+    SecretsEvents.GET_SINGLE,
+    async (
+      event: IpcMainInvokeEvent,
+      repoId: string,
+      key: string,
+    ): Promise<string | null> => {
+      try {
+        if (!validateSource(event)) {
+          throw new Error('Unauthorized source');
+        }
+
+        if (!repoId || !key) {
+          throw new Error('Repository ID and key are required');
+        }
+
+        const secrets = await getStorage().getSecrets(repoId);
+
+        if (!secrets || !secrets[key]) {
+          return null;
+        }
+
+        // Log access for audit
+        console.log(`[SecretHandlers] Secret accessed: ${repoId}/${key}`);
+
+        return secrets[key];
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error getting single secret:', error);
+        return null;
+      }
+    },
+  );
+
+  // Get multiple specific secret values
+  ipcMain.handle(
+    SecretsEvents.GET_MULTIPLE,
+    async (
+      event: IpcMainInvokeEvent,
+      repoId: string,
+      keys: string[],
+    ): Promise<Record<string, string>> => {
+      try {
+        if (!validateSource(event)) {
+          throw new Error('Unauthorized source');
+        }
+
+        if (!repoId || !keys || keys.length === 0) {
+          return {};
+        }
+
+        const secrets = await getStorage().getSecrets(repoId);
+
+        if (!secrets) {
+          return {};
+        }
+
+        // Return only requested keys
+        const result: Record<string, string> = {};
+        for (const key of keys) {
+          if (secrets[key]) {
+            result[key] = secrets[key];
+          }
+        }
+
+        // Log access for audit
+        console.log(`[SecretHandlers] Multiple secrets accessed: ${repoId}/${keys.join(', ')}`);
+
+        return result;
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error getting multiple secrets:', error);
+        return {};
+      }
+    },
+  );
+
+  // Copy secret directly to clipboard without exposing to renderer
+  ipcMain.handle(
+    SecretsEvents.COPY_TO_CLIPBOARD,
+    async (
+      event: IpcMainInvokeEvent,
+      repoId: string,
+      key: string,
+    ): Promise<CopyResult> => {
+      try {
+        if (!validateSource(event)) {
+          return { success: false, error: 'Unauthorized source' };
+        }
+
+        if (!repoId || !key) {
+          return { success: false, error: 'Repository ID and key are required' };
+        }
+
+        const secrets = await getStorage().getSecrets(repoId);
+
+        if (!secrets || !secrets[key]) {
+          return { success: false, error: 'Secret not found' };
+        }
+
+        // Copy to clipboard
+        clipboard.writeText(secrets[key]);
+
+        // Log access for audit
+        console.log(`[SecretHandlers] Secret copied to clipboard: ${repoId}/${key}`);
+
+        return { success: true };
+      } catch (error: any) {
+        console.error('[SecretHandlers] Error copying to clipboard:', error);
+        return { success: false, error: error.message };
+      }
+    },
+  );
+
   console.log('[SecretHandlers] All handlers registered successfully');
 }
 
@@ -262,9 +393,18 @@ export function registerSecretHandlers(): void {
 function validateSource(event: IpcMainInvokeEvent): boolean {
   try {
     const url = event.sender.getURL();
-    // Only accept from file:// protocol (our app)
-    return url.startsWith('file://');
-  } catch {
+    // Accept from file:// protocol (production) or localhost (development)
+    const isValid = url.startsWith('file://') ||
+                    url.startsWith('http://localhost') ||
+                    url.includes('localhost:1212'); // Common Electron dev port
+
+    if (!isValid) {
+      console.warn('[SecretHandlers] Rejected request from URL:', url);
+    }
+
+    return isValid;
+  } catch (error) {
+    console.error('[SecretHandlers] Error validating source:', error);
     return false;
   }
 }

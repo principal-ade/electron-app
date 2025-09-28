@@ -33,55 +33,8 @@ export interface SessionSummary {
   toolCallCount: number;
   repositoriesAccessed: string[];
   isActive: boolean;
-  archivePath?: string; // Path to archived file if archived
 }
 
-export interface ArchiveConfiguration {
-  // Auto-archiving settings
-  autoArchive: {
-    enabled: boolean;
-    // Archive sessions after this period of inactivity (in hours)
-    inactivityThreshold: number; // Default: 24 hours
-    // Archive completed sessions after this delay (in seconds)
-    completedSessionDelay: number; // Default: 5 seconds
-    // Check for stale sessions every X minutes
-    checkInterval: number; // Default: 60 minutes
-  };
-
-  // Storage management
-  storage: {
-    // Maximum age for archived files (in days)
-    maxArchiveAge: number; // Default: 30 days
-    // Maximum age for session summaries (in days)
-    maxSummaryAge: number; // Default: 7 days
-    // Maximum total size for archives (in MB)
-    maxArchiveSize: number; // Default: 1000 MB
-    // Compress archives to save space
-    compressArchives: boolean; // Default: true
-  };
-
-  // Session handling
-  sessions: {
-    // Archive sessions even without Stop event
-    archiveIncompleteSessions: boolean; // Default: true
-    // Minimum event count to archive a session
-    minEventsToArchive: number; // Default: 5
-    // Include raw events in the archive files (they are always removed from the active store)
-    keepRawEvents: boolean; // Default: true - preserves original data for reprocessing
-    // Archive sessions by repository
-    groupByRepository: boolean; // Default: false
-  };
-
-  // Export settings
-  export: {
-    // Default export format
-    defaultFormat: 'json' | 'csv' | 'markdown';
-    // Include raw events in export
-    includeRawEvents: boolean; // Default: false
-    // Include session metrics
-    includeMetrics: boolean; // Default: true
-  };
-}
 
 
 /**
@@ -208,8 +161,6 @@ export interface NamespaceDataTypes {
   [StaticNamespaces.TEMP]: Record<string, any>;
   [StaticNamespaces.GLOBAL_SESSION_REGISTRY]: GlobalSessionRegistry; // Global session index and active session tracking
   [StaticNamespaces.SESSION_SUMMARIES]: SessionSummary; // Recent session summaries for quick access
-  [StaticNamespaces.ARCHIVE_CONFIGURATION]: ArchiveConfiguration; // Archive system configuration settings
-  [StaticNamespaces.MCP_BRIDGE_DATA]: any; // MCP Bridge data storage (MCPBridgeDataEntry from MCPBridgeDataStore)
 
   // Docker Management namespaces
   [StaticNamespaces.DOCKER_CONTAINERS]: ToolContainerState; // Persistent container state

@@ -60,17 +60,17 @@ export default class MenuBuilder {
 
   buildDarwinTemplate(): MenuItemConstructorOptions[] {
     const subMenuAbout: DarwinMenuItemConstructorOptions = {
-      label: 'Specktor',
+      label: 'Principal ADE',
       submenu: [
         {
-          label: 'About Specktor',
+          label: 'About Principal ADE',
           selector: 'orderFrontStandardAboutPanel:',
         },
         { type: 'separator' },
         { label: 'Services', submenu: [] },
         { type: 'separator' },
         {
-          label: 'Hide Specktor',
+          label: 'Hide Principal ADE',
           accelerator: 'Command+H',
           selector: 'hide:',
         },

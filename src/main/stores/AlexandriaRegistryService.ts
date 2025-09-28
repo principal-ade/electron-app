@@ -6,11 +6,11 @@
 import {
   AlexandriaOutpostManager,
   NodeFileSystemAdapter,
-  NodeGlobAdapter,
 } from '@a24z/core-library';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
+import { LocalNodeGlobAdapter } from '../adapters/LocalNodeGlobAdapter';
 
 export class AlexandriaRegistryService {
   private static instance: AlexandriaRegistryService;
@@ -20,7 +20,7 @@ export class AlexandriaRegistryService {
   private constructor() {
     // Create filesystem and glob adapters for outpost manager
     const fsAdapter = new NodeFileSystemAdapter();
-    const globAdapter = new NodeGlobAdapter();
+    const globAdapter = new LocalNodeGlobAdapter(); // Use our local fixed adapter
     this.outpostManager = new AlexandriaOutpostManager(fsAdapter, globAdapter);
   }
 
@@ -197,7 +197,7 @@ export class AlexandriaRegistryService {
       const response = await fetch(apiUrl, {
         headers: {
           Accept: 'application/vnd.github.v3+json',
-          'User-Agent': 'PrincipalAI-Electron',
+          'User-Agent': 'PrincipalADE-Electron',
         },
       });
 
@@ -525,20 +525,21 @@ export class AlexandriaRegistryService {
       throw new Error(`Repository not found: ${name}`);
     }
 
-    const documents = await this.outpostManager.getAlexandriaEntryDocs(entry);
+    // Get ALL markdown documents in the repository (respecting .gitignore)
+    const allDocuments = await this.outpostManager.getAllDocs(entry, true);
+
+    // Get documents that are excluded from tracking requirements
+    // These are still valid documents but don't need to be associated with views
     const excluded = this.outpostManager.getAlexandriaEntryExcludedDocs(entry);
 
     // TODO: Remove deduplication once Alexandria library is fixed to not return duplicates
     // Temporary fix: deduplicate documents array
-    const uniqueDocuments = Array.from(new Set(documents));
+    const uniqueDocuments = Array.from(new Set(allDocuments));
 
-    // Filter out excluded documents
-    const filteredDocuments = uniqueDocuments.filter(
-      (doc) => !excluded.includes(doc),
-    );
-
+    // For search indexing, we want to index ALL documents including excluded ones
+    // The excluded list is returned for informational purposes only
     return {
-      documents: filteredDocuments,
+      documents: uniqueDocuments,
       excluded,
     };
   }

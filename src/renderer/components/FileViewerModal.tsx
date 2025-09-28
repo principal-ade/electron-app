@@ -84,6 +84,7 @@ export const FileViewerModal: React.FC<FileViewerModalProps> = ({
           }}
         >
           <FileViewer
+            key={filePath} // Force remount when file changes
             filePath={filePath}
             displayPath={displayPath}
             className="full-height"

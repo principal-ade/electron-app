@@ -942,7 +942,7 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
           headers: {
             Accept: 'application/vnd.github.v3+json',
             // Add User-Agent header for GitHub API
-            'User-Agent': 'Specktor-Electron-App',
+            'User-Agent': 'Principal-ADE-Electron-App',
           },
         },
       );

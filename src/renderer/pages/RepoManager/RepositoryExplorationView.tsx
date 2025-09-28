@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   GitBranch,
   Layers,
@@ -7,9 +7,10 @@ import {
   Book,
   PanelLeft,
   PanelLeftClose,
+  Palette,
 } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
-import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
+import type { HighlightLayer } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { PackageLayer } from '@principal-ai/codebase-composition';
 import { CityMapManager } from './shared/CityMapManager';
@@ -26,7 +27,7 @@ import { RepositoryNotesService } from '../../main-process-api/RepositoryNotesSe
 import { GitHubWebAdapters } from '../../adapters/GitHubWebAdapters';
 import { ElectronPlatformAdapters } from '../../adapters/ElectronPlatformAdapters';
 import { FileTreeSourceService } from '../../services/FileTreeSourceService';
-import { FileTreeCacheService } from '../../services/FileTreeCacheService';
+import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
 // import { SourceSelectionService } from '../../services/SourceSelectionService'; // TODO: Re-enable when needed
 import { FileTreeSource, FileTreeStats } from '../../types/file-tree-source';
 import {
@@ -44,7 +45,9 @@ import {
 import { RemoteFileViewerModal } from './shared/RemoteFileViewerModal';
 import { HelpModal } from './shared/HelpModal';
 import { useGitChanges } from '../../contexts/GitChangesContext';
+import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 import { RepositorySearchTab } from '../../components/repository-maps/RepositorySearchTab';
+import { FilePanel } from '../../components/FilePanel';
 
 interface RepositoryExplorationViewProps {
   repository: Repository;
@@ -59,7 +62,7 @@ interface RepositoryExplorationViewProps {
   fileTree?: FileTree | null;
   activeFileTreeSource?: FileTreeSource | null;
   fileTreeSourceService?: FileTreeSourceService;
-  cacheService?: FileTreeCacheService;
+  cacheService?: MonitoredFileTreeService;
   cityDataCache?: unknown;
   treeStats?: FileTreeStats | null;
 
@@ -96,7 +99,7 @@ export const RepositoryExplorationView: React.FC<
     [sharedFileTreeService],
   );
   const cacheService = useMemo(
-    () => sharedCacheService || new FileTreeCacheService(),
+    () => sharedCacheService || new MonitoredFileTreeService(),
     [sharedCacheService],
   );
 
@@ -161,6 +164,9 @@ export const RepositoryExplorationView: React.FC<
   const [hoveredSearchLayer, setHoveredSearchLayer] =
     useState<HighlightLayer | null>(null);
 
+  // Folder filter state
+  const [folderFilterHighlightLayers, setFolderFilterHighlightLayers] = useState<HighlightLayer[]>([]);
+
   // File viewer modal state
   const [showFileViewer, setShowFileViewer] = useState(false);
   const [viewerFilePath, setViewerFilePath] = useState<string | null>(null);
@@ -174,6 +180,11 @@ export const RepositoryExplorationView: React.FC<
   // Multi-file editor state
   const [openedFiles, setOpenedFiles] = useState<Set<string>>(new Set());
 
+  // File viewer in right panel state
+  const [selectedCodeFile, setSelectedCodeFile] = useState<string | null>(null);
+  const [codeFileContent, setCodeFileContent] = useState<string | null>(null);
+  const [loadingCodeFile, setLoadingCodeFile] = useState(false);
+
   // Package data state
   const [packageLayers, setPackageLayers] = useState<PackageLayer[] | null>(
     null,
@@ -181,6 +192,9 @@ export const RepositoryExplorationView: React.FC<
 
   // Toolbar state
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
+
+  // File color state - default to showing file colors
+  const [showFileColors, setShowFileColors] = useState(true);
 
   // Package highlight state
   const [highlightedPackages, setHighlightedPackages] = useState<Set<string>>(
@@ -214,7 +228,7 @@ export const RepositoryExplorationView: React.FC<
   >('document');
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  // Git changes from context
+  // Git changes from context (for highlight layers)
   const {
     getGitHighlightLayers,
     checkGitStatus,
@@ -225,6 +239,14 @@ export const RepositoryExplorationView: React.FC<
   const [gitHighlightLayers, setGitHighlightLayers] = useState<
     HighlightLayer[]
   >([]);
+
+  // New git status with file lists from monitoring service
+  const {
+    gitStatusWithFiles,
+    allModifiedFiles,
+  } = useRepositoryGitStatus(
+    activeFileTreeSource?.type === 'local' ? activeFileTreeSource.location : null
+  );
 
   // Auto-initialize git state for local sources (loads HEAD tree)
   useEffect(() => {
@@ -250,6 +272,20 @@ export const RepositoryExplorationView: React.FC<
       setGitHighlightLayers([]);
     }
   }, [activeFileTreeSource, fileTree, checkGitStatus, getGitHighlightLayers]);
+
+  // Separate provider for viewing individual files (not for search)
+  const fileViewerContentProvider = useMemo(() => {
+    return new GitHubContentProvider(
+      remoteData.owner,
+      remoteData.repo,
+      activeFileTreeSource?.metadata?.currentBranch || remoteData.defaultBranch,
+    );
+  }, [
+    remoteData.owner,
+    remoteData.repo,
+    remoteData.defaultBranch,
+    activeFileTreeSource?.metadata?.currentBranch,
+  ]);
 
   // Handle file click to open in multi-tab viewer
   const handleFileClick = useCallback(
@@ -343,35 +379,64 @@ export const RepositoryExplorationView: React.FC<
     [remoteData, openedFiles, activeFileTreeSource],
   );
 
-  // Handle search file selection
+  // Handle search file selection - now opens in right panel
+  // Track the current loading file to prevent race conditions
+  const loadingFileRef = useRef<string | null>(null);
+
   const handleSearchFileSelect = useCallback(
-    (filePath: string, lineNumbers?: number[], searchQuery?: string) => {
+    async (filePath: string, lineNumbers?: number[], searchQuery?: string) => {
+      // Store the file we're loading to check later
+      loadingFileRef.current = filePath;
+
       // Set selected file for highlighting
       setSelectedFile(filePath);
+      setSelectedCodeFile(filePath);
+      setLoadingCodeFile(true);
+      // Clear old content immediately to prevent showing wrong content
+      setCodeFileContent(null);
 
-      // Open file using existing handler
-      handleFileClick(filePath);
+      // Switch right pane to document mode to show the file
+      setRightPaneMode('document');
 
-      // Log search context
-      console.log(
-        '[RepositoryExplorationView] Search file selected:',
-        filePath,
-        'lines:',
-        lineNumbers,
-        'query:',
-        searchQuery,
-      );
+      try {
+        let content: string | null = null;
+
+        if (activeFileTreeSource?.type === 'local') {
+          // For local sources, convert relative path to absolute path
+          const absolutePath = filePath.startsWith('/')
+            ? filePath
+            : `${activeFileTreeSource.location}/${filePath}`;
+
+          const result = await FileSystemService.readFile(absolutePath);
+          content = result?.content || null;
+        } else {
+          // For remote sources, use the content provider
+          const relativePath = filePath.startsWith('/')
+            ? filePath.substring(1)
+            : filePath;
+          content = await fileViewerContentProvider.readFileContent(relativePath);
+        }
+
+        // Only set content if this is still the file we want to load
+        if (loadingFileRef.current === filePath) {
+          setCodeFileContent(content);
+          setLoadingCodeFile(false);
+        }
+      } catch (error) {
+        // Only handle error if this is still the file we want to load
+        if (loadingFileRef.current === filePath) {
+          console.error('[RepositoryExplorationView] Failed to load file:', error);
+          setCodeFileContent(null);
+          setLoadingCodeFile(false);
+        }
+      }
+
     },
-    [handleFileClick],
+    [activeFileTreeSource, fileViewerContentProvider],
   );
 
   // Handle search results change for highlighting
   const handleSearchResultsChange = useCallback((results: string[]) => {
-    console.log(
-      '[RepositoryExplorationView] Search results changed:',
-      results.length,
-      'files',
-    );
     setSearchResults(results);
   }, []);
 
@@ -379,6 +444,41 @@ export const RepositoryExplorationView: React.FC<
   const handleSearchResultHover = useCallback((filePath: string | null) => {
     setHoveredSearchResult(filePath);
   }, []);
+
+  // Handle folder filter changes to create highlight layers
+  const handleFolderFiltersChange = useCallback(
+    (filters: Array<{ id: string; path: string; mode: 'include' | 'exclude' }>) => {
+      if (filters.length === 0) {
+        setFolderFilterHighlightLayers([]);
+        return;
+      }
+
+      // Only create layers for included directories
+      const includedFilters = filters.filter(f => f.mode === 'include');
+
+      if (includedFilters.length === 0) {
+        setFolderFilterHighlightLayers([]);
+        return;
+      }
+
+      const layer: HighlightLayer = {
+        id: 'folder-filters',
+        name: `Filtered Folders (${includedFilters.length})`,
+        enabled: true,
+        color: '#22c55e', // Green for included folders
+        opacity: 0.4,
+        priority: 18, // Below search results but above base layers
+        borderWidth: 2,
+        items: includedFilters.map(filter => ({
+          path: filter.path,
+          type: 'directory' as const,
+        })),
+      };
+
+      setFolderFilterHighlightLayers([layer]);
+    },
+    [],
+  );
 
   // Right pane mode: for remote exploration we default to city and do not show terminal toggle
   const [rightPaneMode, setRightPaneMode] = useState<RightPaneMode>('city');
@@ -413,7 +513,6 @@ export const RepositoryExplorationView: React.FC<
         opacity: 0.9,
         items: [
           { path: packagePath, type: 'directory' as const }, // Highlight the entire package directory
-          { path: packagePath + '/package.json', type: 'file' as const }, // Also highlight the package.json file
         ],
         enabled: true,
         priority: 10,
@@ -443,9 +542,9 @@ export const RepositoryExplorationView: React.FC<
           items: [
             { path: prevAnalyzingPath, type: 'directory' as const }, // Highlight the entire package directory
             {
-              path: prevAnalyzingPath + '/package.json',
+              path: packageData.packageData.manifestPath,
               type: 'file' as const,
-            }, // Also highlight the package.json file
+            }, // Highlight the package manifest file
           ],
           enabled: true,
           priority: 5,
@@ -471,7 +570,6 @@ export const RepositoryExplorationView: React.FC<
         opacity: 0.9,
         items: [
           { path: packagePath, type: 'directory' as const }, // Highlight the entire package directory
-          { path: packagePath + '/package.json', type: 'file' as const }, // Also highlight the package.json file
         ],
         enabled: true,
         priority: 5,
@@ -544,26 +642,7 @@ export const RepositoryExplorationView: React.FC<
       setSearchHighlightLayer(null);
     }
 
-    console.info(
-      '[ExploreView] Search results for "' + searchQuery + '":',
-      results.length,
-      'files found',
-    );
   }, [searchQuery, performSimpleSearch]);
-
-  // Separate provider for viewing individual files (not for search)
-  const fileViewerContentProvider = useMemo(() => {
-    return new GitHubContentProvider(
-      remoteData.owner,
-      remoteData.repo,
-      activeFileTreeSource?.metadata?.currentBranch || remoteData.defaultBranch,
-    );
-  }, [
-    remoteData.owner,
-    remoteData.repo,
-    remoteData.defaultBranch,
-    activeFileTreeSource?.metadata?.currentBranch,
-  ]);
 
   // Initialize sources only if not using shared service
   useEffect(() => {
@@ -828,8 +907,10 @@ export const RepositoryExplorationView: React.FC<
           type: 'directory' as const,
           renderStrategy: 'fill',
         });
+        // Use manifestPath if available, otherwise use package.json
+        const manifestFile = pkg.packageData.manifestPath || 'package.json';
         items.push({
-          path: 'package.json',
+          path: manifestFile,
           type: 'file' as const,
           renderStrategy: 'fill',
         });
@@ -840,11 +921,14 @@ export const RepositoryExplorationView: React.FC<
           type: 'directory' as const,
           renderStrategy: 'fill',
         });
-        items.push({
-          path: `${pkg.packageData.path}/package.json`,
-          type: 'file' as const,
-          renderStrategy: 'fill',
-        });
+        // Use manifestPath if available
+        if (pkg.packageData.manifestPath) {
+          items.push({
+            path: pkg.packageData.manifestPath,
+            type: 'file' as const,
+            renderStrategy: 'fill',
+          });
+        }
       }
 
       const layer: HighlightLayer = {
@@ -988,10 +1072,13 @@ export const RepositoryExplorationView: React.FC<
           activeFileTreeSource={activeFileTreeSource}
           contentProvider={searchContentProvider}
           showEditorSelector={false} // Hide editor selector in explore view
+          gitModifiedFiles={allModifiedFiles}
+          gitStatusWithFiles={gitStatusWithFiles}
           onFileSelect={handleSearchFileSelect}
           selectedFile={selectedFile}
           onSearchResultsChange={handleSearchResultsChange}
           onSearchResultHover={handleSearchResultHover}
+          onFolderFiltersChange={handleFolderFiltersChange}
         />
       ),
     },
@@ -1047,6 +1134,20 @@ export const RepositoryExplorationView: React.FC<
   // Create toolbar items
   const toolbarItems = useMemo<ToolbarItem[]>(() => {
     const items: ToolbarItem[] = [];
+
+    // File colors toggle - always show this first
+    items.push({
+      id: 'file-colors',
+      label: 'File Colors',
+      shortLabel: 'Colors',
+      icon: <Palette />,
+      color: '#6366f1',
+      active: showFileColors,
+      onClick: () => {
+        setShowFileColors(!showFileColors);
+      },
+      tooltip: `${showFileColors ? 'Hide' : 'Show'} file type colors`,
+    });
 
     // Git changes tool (for local sources)
     if (activeFileTreeSource?.type === 'local' && gitState) {
@@ -1130,6 +1231,7 @@ export const RepositoryExplorationView: React.FC<
 
     return items;
   }, [
+    showFileColors,
     searchResults.length,
     selectedNoteIds.size,
     highlightedPackages.size,
@@ -1160,6 +1262,40 @@ export const RepositoryExplorationView: React.FC<
       </div>
     );
   }
+
+  // Create custom right panel content for file viewing (from search results)
+  const fileViewerRightPanel = selectedCodeFile ? (
+    loadingCodeFile ? (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          color: theme.colors.textSecondary,
+        }}
+      >
+        Loading file...
+      </div>
+    ) : (
+      <FilePanel
+        key={selectedCodeFile} // Add key to force remount when file changes
+        filePath={selectedCodeFile}
+        displayPath={selectedCodeFile}
+        repositoryPath={activeFileTreeSource?.type === 'local' ? activeFileTreeSource.location : undefined}
+        editable={false}
+        enableVimMode={true}
+        initialContent={codeFileContent || ''} // Provide empty string as fallback
+        onClose={() => {
+          setSelectedCodeFile(null);
+          setCodeFileContent(null);
+          setSelectedFile(null);
+          // Switch back to city view
+          setRightPaneMode('city');
+        }}
+      />
+    )
+  ) : null;
 
   // Create custom right panel content for document viewing
   const documentRightPanel =
@@ -1343,9 +1479,10 @@ export const RepositoryExplorationView: React.FC<
       </div>
     ) : null;
 
-  // Check if we should show document view instead of city
+  // Check if we should show document view or file viewer instead of city
   const showDocumentView =
     activeTab === 'docs' && selectedDocPath && docContent;
+  const showCodeFileViewer = selectedCodeFile; // Show viewer as soon as file is selected, not waiting for content
 
   return (
     <div
@@ -1444,14 +1581,15 @@ export const RepositoryExplorationView: React.FC<
                   setDocContent(null);
                 }
               }}
-              cityData={showDocumentView ? null : managedCityData}
+              cityData={showDocumentView || showCodeFileViewer ? null : managedCityData}
               onFileClick={handleFileClick}
               highlightLayers={
-                showDocumentView
+                showDocumentView || showCodeFileViewer
                   ? []
                   : [
-                      ...fileColorHighlightLayers, // Add file colors as base layer
+                      ...(showFileColors ? fileColorHighlightLayers : []), // Conditionally add file colors
                       ...noteHighlightLayers,
+                      ...folderFilterHighlightLayers, // Add folder filter highlights
                       ...(searchHighlightLayer ? [searchHighlightLayer] : []),
                       ...(hoveredSearchLayer ? [hoveredSearchLayer] : []),
                       ...(selectedFileLayer ? [selectedFileLayer] : []),
@@ -1460,29 +1598,31 @@ export const RepositoryExplorationView: React.FC<
                       ...gitHighlightLayers,
                     ]
               }
-              loading={showDocumentView ? false : loading || isBuilding}
-              treeStats={showDocumentView ? null : treeStats}
-              sourceBadges={showDocumentView ? null : sourceBadges}
+              loading={(showDocumentView || showCodeFileViewer) ? false : loading || isBuilding}
+              treeStats={(showDocumentView || showCodeFileViewer) ? null : treeStats}
+              sourceBadges={(showDocumentView || showCodeFileViewer) ? null : sourceBadges}
               activeSource={activeFileTreeSource}
               onHelpClick={() => setShowHelpModal(true)}
               cityHeaderExtra={undefined}
               loadingMessage="Loading repository structure"
               emptyMessage="Select a branch to explore"
-              rightPaneMode={showDocumentView ? 'document' : rightPaneMode}
+              rightPaneMode={showDocumentView || showCodeFileViewer ? 'document' : rightPaneMode}
               onRightPaneModeChange={(mode) => {
                 setRightPaneMode(mode);
                 if (mode === 'city') {
-                  // Clear document selection when switching back to map
+                  // Clear document and file viewer selection when switching back to map
                   setSelectedDocPath(null);
                   setDocContent(null);
+                  setSelectedCodeFile(null);
+                  setCodeFileContent(null);
                 }
               }}
               showViewSwitcher={true} // Show switcher to allow going back to map
               // No terminalDirectory passed for remote view
-              toolbarItems={showDocumentView ? [] : toolbarItems}
+              toolbarItems={(showDocumentView || showCodeFileViewer) ? [] : toolbarItems}
               toolbarExpanded={toolbarExpanded}
               onToolbarExpandedChange={setToolbarExpanded}
-              documentContent={documentRightPanel}
+              documentContent={showDocumentView ? documentRightPanel : showCodeFileViewer ? fileViewerRightPanel : null}
             />
           );
         }}

@@ -1,5 +1,5 @@
-appId: com.a24z.specktor
-productName: Specktor
+appId: com.a24z.principal-ade
+productName: Principal ADE
 directories:
   output: release/build
   app: .

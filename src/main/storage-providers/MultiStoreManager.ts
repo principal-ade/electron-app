@@ -849,30 +849,12 @@ export class MultiStoreManager extends EventEmitter {
         },
       },
       {
-        name: StaticNamespaces.ARCHIVE_CONFIGURATION,
-        storageProvider: StorageProviderType.ELECTRON_STORE,
-        category: NamespaceCategory.CORE,
-        config: {
-          path: 'archive-configuration',
-          defaults: {},
-        },
-      },
-      {
         name: StaticNamespaces.GLOBAL_SESSION_REGISTRY,
         storageProvider: StorageProviderType.ELECTRON_STORE,
         category: NamespaceCategory.CORE,
         isPrimary: true,
         config: {
           path: 'global-session-registry',
-          defaults: {},
-        },
-      },
-      {
-        name: StaticNamespaces.MCP_BRIDGE_DATA,
-        storageProvider: StorageProviderType.ELECTRON_STORE,
-        category: NamespaceCategory.CORE,
-        config: {
-          path: 'mcp-bridge-data',
           defaults: {},
         },
       },

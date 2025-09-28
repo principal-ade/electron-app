@@ -8,16 +8,11 @@ import type {
   SecretMetadata,
   SecretStoreRequest,
   SecretOperationResult,
+  SecretMetadataOnly,
+  CopyResult,
 } from '../../shared/main-process-api-interfaces/SecretsAPI';
 
 export class SecretsService {
-  /**
-   * Get a secret by key
-   */
-  static async get(repoId: string): Promise<RepositorySecrets | null> {
-    return window.mainProcess.secrets.get(repoId);
-  }
-
   /**
    * Store a secret
    */
@@ -55,5 +50,34 @@ export class SecretsService {
     request: SecretStoreRequest,
   ): Promise<SecretOperationResult> {
     return window.mainProcess.secrets.update(request);
+  }
+
+  /**
+   * Get only metadata and keys for a repository (no values)
+   */
+  static async getMetadata(repoId: string): Promise<SecretMetadataOnly | null> {
+    return window.mainProcess.secrets.getMetadata(repoId);
+  }
+
+  /**
+   * Get a single secret value on demand
+   */
+  static async getSingle(repoId: string, key: string): Promise<string | null> {
+    return window.mainProcess.secrets.getSingle(repoId, key);
+  }
+
+  /**
+   * Get multiple specific secret values
+   */
+  static async getMultiple(repoId: string, keys: string[]): Promise<Record<string, string>> {
+    return window.mainProcess.secrets.getMultiple(repoId, keys);
+  }
+
+  /**
+   * Copy a secret directly to clipboard without exposing it to renderer
+   * The value never enters the renderer process memory
+   */
+  static async copyToClipboard(repoId: string, key: string): Promise<CopyResult> {
+    return window.mainProcess.secrets.copyToClipboard(repoId, key);
   }
 }

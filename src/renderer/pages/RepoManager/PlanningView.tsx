@@ -43,7 +43,7 @@ import { TerminalService } from '../../main-process-api/TerminalService';
 import { cleanupOrphanedTerminals } from '../../utils/terminalCleanup';
 import { FileTree } from '@principal-ai/repository-abstraction';
 import { FileTreeSourceService } from '../../services/FileTreeSourceService';
-import { FileTreeCacheService } from '../../services/FileTreeCacheService';
+import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
 import { FileTreeSource } from '../../types/file-tree-source';
 import { ExcalidrawWrapper } from '../../components/shared/ExcalidrawWrapper';
 import {
@@ -73,7 +73,7 @@ interface PlanningViewProps {
   fileTree?: FileTree | null;
   activeFileTreeSource?: FileTreeSource | null;
   fileTreeSourceService?: FileTreeSourceService;
-  cacheService?: FileTreeCacheService;
+  cacheService?: MonitoredFileTreeService;
   uiState?: {
     viewMode?: 'slides' | 'document';
     showSegmented?: boolean;
@@ -248,7 +248,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     [sharedFileTreeService],
   );
   const cacheService = useMemo(
-    () => sharedCacheService || new FileTreeCacheService(),
+    () => sharedCacheService || new MonitoredFileTreeService(),
     [sharedCacheService],
   );
   const [fileTree, setFileTree] = useState<FileTree | null>(

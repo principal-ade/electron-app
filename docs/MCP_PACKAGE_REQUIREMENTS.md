@@ -10,7 +10,7 @@ This document outlines the exports and functionality needed in the new `@princip
 #### Constants
 ```typescript
 export const BRANDING: BrandingConfig = {
-  company: 'Principal AI',
+  company: 'Principal ADE',
   product: 'Principal MCP',
   // ... other branding properties
 };

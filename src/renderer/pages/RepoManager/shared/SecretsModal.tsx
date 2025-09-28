@@ -9,6 +9,9 @@ import {
   Save,
   AlertCircle,
   Shield,
+  Copy,
+  Check,
+  Loader2,
 } from 'lucide-react';
 import type { Repository } from '../../../../shared/types/repository.types';
 import type {
@@ -24,6 +27,12 @@ interface SecretsModalProps {
   selectedSource?: { type: string; location: string } | null;
 }
 
+interface SecretValue {
+  value: string;
+  fetchedAt: number;
+  autoHideTimeout?: NodeJS.Timeout;
+}
+
 export const SecretsModal: React.FC<SecretsModalProps> = ({
   isOpen,
   onClose,
@@ -31,17 +40,29 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
   selectedSource,
 }) => {
   const { theme } = useTheme();
-  const [secrets, setSecrets] = useState<RepositorySecrets>({});
+  // State for on-demand secret fetching
+  const [secretKeys, setSecretKeys] = useState<string[]>([]);
+  const [loadedSecrets, setLoadedSecrets] = useState<Record<string, SecretValue>>({});
+  const [showValues, setShowValues] = useState<Record<string, boolean>>({});
+  const [loadingKeys, setLoadingKeys] = useState<Set<string>>(new Set());
+  const [copiedKeys, setCopiedKeys] = useState<Set<string>>(new Set());
+
+  // State for editing and adding
   const [newKey, setNewKey] = useState('');
   const [newValue, setNewValue] = useState('');
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState('');
-  const [showValues, setShowValues] = useState<Record<string, boolean>>({});
+  const [localChanges, setLocalChanges] = useState<RepositorySecrets>({});
+
+  // UI state
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [metadata, setMetadata] = useState<SecretMetadata | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Auto-hide timeout (30 seconds)
+  const AUTO_HIDE_TIMEOUT = 30000;
 
   // Generate repository ID from repository data
   const getRepoId = () => {
@@ -62,56 +83,199 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
     return repository.remoteUrl || '';
   };
 
-  // Load secrets when modal opens
+  // Load only metadata when modal opens
   useEffect(() => {
     if (isOpen) {
-      loadSecrets();
+      loadSecretMetadata();
+    } else {
+      // Clear all loaded secrets when modal closes
+      clearAllLoadedSecrets();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  const loadSecrets = async () => {
+  const loadSecretMetadata = async () => {
     setLoading(true);
     setError(null);
     try {
       const repoId = getRepoId();
-      const storedSecrets = await SecretsService.get(repoId);
+      const metadataOnly = await SecretsService.getMetadata(repoId);
 
-      if (storedSecrets) {
-        setSecrets(storedSecrets);
+      if (metadataOnly) {
+        setSecretKeys(metadataOnly.keys);
 
-        // Get metadata
+        // Get full metadata for display
         const allMetadata = await SecretsService.list();
         const repoMeta = allMetadata.find((m) => m.repoId === repoId);
         setMetadata(repoMeta || null);
       } else {
-        setSecrets({});
+        setSecretKeys([]);
         setMetadata(null);
       }
       setHasChanges(false);
+      setLocalChanges({});
     } catch (err) {
-      console.error('Failed to load secrets:', err);
+      console.error('Failed to load secret metadata:', err);
       setError('Failed to load secrets');
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchSecretValue = async (key: string) => {
+    // Don't refetch if already loaded and recent
+    if (loadedSecrets[key] && Date.now() - loadedSecrets[key].fetchedAt < 5000) {
+      return;
+    }
+
+    setLoadingKeys(prev => new Set(prev).add(key));
+
+    try {
+      const repoId = getRepoId();
+      const value = await SecretsService.getSingle(repoId, key);
+
+      if (value !== null) {
+        // Clear existing timeout if any
+        if (loadedSecrets[key]?.autoHideTimeout) {
+          clearTimeout(loadedSecrets[key].autoHideTimeout);
+        }
+
+        // Set auto-hide timeout
+        const timeout = setTimeout(() => {
+          hideSecretValue(key);
+        }, AUTO_HIDE_TIMEOUT);
+
+        setLoadedSecrets(prev => ({
+          ...prev,
+          [key]: {
+            value,
+            fetchedAt: Date.now(),
+            autoHideTimeout: timeout
+          }
+        }));
+      }
+    } catch (err) {
+      console.error(`Failed to fetch secret ${key}:`, err);
+      setError(`Failed to load secret: ${key}`);
+    } finally {
+      setLoadingKeys(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+    }
+  };
+
+  const toggleShowValue = async (key: string) => {
+    const isShowing = showValues[key];
+
+    if (!isShowing) {
+      // Fetch the value if not already loaded
+      if (!loadedSecrets[key]) {
+        await fetchSecretValue(key);
+      }
+      setShowValues({ ...showValues, [key]: true });
+    } else {
+      // Hide and optionally clear from memory
+      setShowValues({ ...showValues, [key]: false });
+    }
+  };
+
+  const hideSecretValue = (key: string) => {
+    setShowValues(prev => ({ ...prev, [key]: false }));
+    // Clear from memory after hiding
+    clearSecretFromMemory(key);
+  };
+
+  const clearSecretFromMemory = (key: string) => {
+    setLoadedSecrets(prev => {
+      const newSecrets = { ...prev };
+      if (newSecrets[key]?.autoHideTimeout) {
+        clearTimeout(newSecrets[key].autoHideTimeout);
+      }
+      delete newSecrets[key];
+      return newSecrets;
+    });
+  };
+
+  const clearAllLoadedSecrets = () => {
+    // Clear all timeouts
+    Object.values(loadedSecrets).forEach(secret => {
+      if (secret.autoHideTimeout) {
+        clearTimeout(secret.autoHideTimeout);
+      }
+    });
+    setLoadedSecrets({});
+    setShowValues({});
+  };
+
+  const copyToClipboard = async (key: string) => {
+    try {
+      const repoId = getRepoId();
+      const result = await SecretsService.copyToClipboard(repoId, key);
+
+      if (result.success) {
+        // Show success feedback
+        setCopiedKeys(prev => new Set(prev).add(key));
+
+        // Clear success indicator after 2 seconds
+        setTimeout(() => {
+          setCopiedKeys(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(key);
+            return newSet;
+          });
+        }, 2000);
+      } else {
+        setError(result.error || 'Failed to copy to clipboard');
+      }
+    } catch (err) {
+      console.error('Failed to copy secret:', err);
+      setError('Failed to copy secret');
+    }
+  };
+
   const saveSecrets = async () => {
     setSaving(true);
     setError(null);
+
     try {
+      // Build the complete secrets object
+      // Start with existing keys that haven't been modified
+      const keysToFetch = secretKeys.filter(
+        key => !loadedSecrets[key] && !localChanges.hasOwnProperty(key)
+      );
+
+      let allSecrets: RepositorySecrets = {};
+
+      // Fetch unloaded secrets if needed
+      if (keysToFetch.length > 0) {
+        const unloadedSecrets = await SecretsService.getMultiple(getRepoId(), keysToFetch);
+        allSecrets = { ...unloadedSecrets };
+      }
+
+      // Add loaded secrets
+      Object.entries(loadedSecrets).forEach(([key, secretValue]) => {
+        if (secretKeys.includes(key) || localChanges.hasOwnProperty(key)) {
+          allSecrets[key] = secretValue.value;
+        }
+      });
+
+      // Apply local changes (edits and new secrets)
+      allSecrets = { ...allSecrets, ...localChanges };
+
       const result = await SecretsService.store({
         repoId: getRepoId(),
         repoPath: getRepoPath(),
-        secrets,
+        secrets: allSecrets,
       });
 
       if (result.success) {
         setMetadata(result.metadata || null);
         setHasChanges(false);
-        // Show success feedback
-        setError(null);
+        setLocalChanges({});
+        // Reload metadata to get updated keys
+        await loadSecretMetadata();
       } else {
         setError(result.error || 'Failed to save secrets');
       }
@@ -137,12 +301,24 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
       return;
     }
 
-    if (secrets[newKey]) {
+    if (secretKeys.includes(newKey) || localChanges[newKey]) {
       setError('Key already exists');
       return;
     }
 
-    setSecrets({ ...secrets, [newKey]: newValue });
+    // Add to local changes and keys list
+    setLocalChanges({ ...localChanges, [newKey]: newValue });
+    setSecretKeys([...secretKeys, newKey]);
+
+    // Also add to loaded secrets for immediate display
+    setLoadedSecrets(prev => ({
+      ...prev,
+      [newKey]: {
+        value: newValue,
+        fetchedAt: Date.now(),
+      }
+    }));
+
     setNewKey('');
     setNewValue('');
     setError(null);
@@ -150,26 +326,52 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
   };
 
   const updateSecret = (key: string, value: string) => {
-    setSecrets({ ...secrets, [key]: value });
+    // Update local changes
+    setLocalChanges({ ...localChanges, [key]: value });
+
+    // Update loaded secret if it exists
+    if (loadedSecrets[key]) {
+      setLoadedSecrets(prev => ({
+        ...prev,
+        [key]: {
+          ...prev[key],
+          value,
+          fetchedAt: Date.now(),
+        }
+      }));
+    }
+
     setEditingKey(null);
     setEditingValue('');
     setHasChanges(true);
   };
 
   const deleteSecret = (key: string) => {
-    const newSecrets = { ...secrets };
-    delete newSecrets[key];
-    setSecrets(newSecrets);
-    setHasChanges(true);
-  };
+    // Remove from keys list
+    setSecretKeys(secretKeys.filter(k => k !== key));
 
-  const toggleShowValue = (key: string) => {
-    setShowValues({ ...showValues, [key]: !showValues[key] });
+    // Mark for deletion in local changes (empty value)
+    setLocalChanges({ ...localChanges, [key]: '' });
+
+    // Remove from loaded secrets
+    clearSecretFromMemory(key);
+
+    setHasChanges(true);
   };
 
   if (!isOpen) return null;
 
+  // Add CSS animation for spinner
+  const spinnerStyle = `
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  `;
+
   return (
+    <>
+      <style>{spinnerStyle}</style>
     <div
       style={{
         position: 'fixed',
@@ -319,7 +521,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
           ) : (
             <>
               {/* Existing Secrets */}
-              {Object.keys(secrets).length > 0 && (
+              {secretKeys.length > 0 && (
                 <div style={{ marginBottom: '24px' }}>
                   <h3
                     style={{
@@ -338,7 +540,13 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                       gap: '8px',
                     }}
                   >
-                    {Object.entries(secrets).map(([key, value]) => (
+                    {secretKeys.map((key) => {
+                      const isLoading = loadingKeys.has(key);
+                      const secretValue = loadedSecrets[key]?.value;
+                      const isShowing = showValues[key];
+                      const isCopied = copiedKeys.has(key);
+
+                      return (
                       <div
                         key={key}
                         style={{
@@ -437,31 +645,60 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                                 whiteSpace: 'nowrap',
                               }}
                             >
-                              {showValues[key] ? value : '••••••••'}
+                              {isLoading ? (
+                                <span style={{ display: 'inline-flex', animation: 'spin 1s linear infinite' }}>
+                                  <Loader2 size={14} />
+                                </span>
+                              ) : isShowing && secretValue ? (
+                                secretValue
+                              ) : (
+                                '••••••••'
+                              )}
                             </div>
+
+                            {/* Copy button - direct to clipboard without loading in renderer */}
                             <button
-                              onClick={() => toggleShowValue(key)}
+                              onClick={() => copyToClipboard(key)}
                               style={{
                                 padding: '4px',
                                 backgroundColor: 'transparent',
                                 border: 'none',
                                 cursor: 'pointer',
-                                color: theme.colors.textSecondary,
+                                color: isCopied ? theme.colors.success || '#10b981' : theme.colors.textSecondary,
                                 display: 'flex',
                                 alignItems: 'center',
                               }}
-                              title={
-                                showValues[key] ? 'Hide value' : 'Show value'
-                              }
+                              title={isCopied ? 'Copied!' : 'Copy to clipboard'}
                             >
-                              {showValues[key] ? (
-                                <EyeOff size={14} />
-                              ) : (
-                                <Eye size={14} />
-                              )}
+                              {isCopied ? <Check size={14} /> : <Copy size={14} />}
                             </button>
+
+                            {/* View/Hide button - loads value into renderer */}
                             <button
-                              onClick={() => {
+                              onClick={() => toggleShowValue(key)}
+                              disabled={isLoading}
+                              style={{
+                                padding: '4px',
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                cursor: isLoading ? 'not-allowed' : 'pointer',
+                                color: theme.colors.textSecondary,
+                                display: 'flex',
+                                alignItems: 'center',
+                                opacity: isLoading ? 0.5 : 1,
+                              }}
+                              title={isShowing ? 'Hide value' : 'Show value'}
+                            >
+                              {isShowing ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+
+                            {/* Edit button - needs to fetch first */}
+                            <button
+                              onClick={async () => {
+                                if (!secretValue) {
+                                  await fetchSecretValue(key);
+                                }
+                                const value = loadedSecrets[key]?.value || localChanges[key] || '';
                                 setEditingKey(key);
                                 setEditingValue(value);
                               }}
@@ -499,7 +736,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                           </>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -680,5 +918,6 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
         </div>
       </div>
     </div>
+    </>
   );
 };

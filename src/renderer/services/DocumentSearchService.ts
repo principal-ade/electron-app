@@ -139,14 +139,14 @@ export class DocumentSearchService {
   /**
    * Search for documents
    */
-  async search(query: string, options?: any): Promise<SearchResult[]> {
+  async search(query: string, filters?: { repositories?: string[] }): Promise<SearchResult[]> {
     if (!searchAPI) {
       throw new Error('Search API not available');
     }
 
     const request: SearchDocumentsRequest = {
       query,
-      options,
+      repositories: filters?.repositories,
     };
 
     const response = await searchAPI.search(request);

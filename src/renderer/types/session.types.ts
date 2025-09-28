@@ -7,7 +7,7 @@ import { AgentSessionRecord } from '../../shared/sessionTypes';
 import { EventActivityType } from '../../shared/sessionEnums';
 
 /**
- * Generic UI session data that can represent both active and archived sessions
+ * Generic UI session data for active sessions
  * Extends the base session record with UI-specific fields
  */
 export interface UIAgentSessionData extends Partial<AgentSessionRecord> {
@@ -23,11 +23,7 @@ export interface UIAgentSessionData extends Partial<AgentSessionRecord> {
   customName?: string;
   metadata?: any;
 
-  // Archive-specific fields (only present for archived sessions)
-  archivedAt?: number;
-  archivedReason?: string;
-
-  // Last action/event tracking
+// Last action/event tracking
   lastAction?: {
     tool: string;
     filename: string;
@@ -59,12 +55,3 @@ export interface EnhancedUIAgentSessionData extends UIAgentSessionData {
   statusText: string;
 }
 
-/**
- * Archived session specific type
- * Ensures archived sessions have the required archive fields
- */
-export interface ArchivedSessionData extends UIAgentSessionData {
-  archivedAt: number;
-  archivedReason: string;
-  isActive: false; // Archived sessions are never active
-}

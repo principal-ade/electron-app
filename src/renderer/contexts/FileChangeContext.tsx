@@ -8,8 +8,8 @@ import React, {
   useMemo,
 } from 'react';
 import { GitService, GitDetailedChanges } from '../main-process-api/GitService';
-import { GitWatcherService } from '../main-process-api/GitWatcherService';
-import type { GitStatus } from '../../shared/main-process-api-interfaces/GitWatcherAPI';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import type { GitStatus } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { HighlightLayer } from '@principal-ai/code-city-react';
 
 // Source identifier for tracking multiple repositories/directories
@@ -249,7 +249,7 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
 
       // Start git watching for git sources
       if (source.type === 'git') {
-        GitWatcherService.watchRepository(source.path).then((result) => {
+        RepositoryMonitoringService.enableGitWatching(source.path).then((result) => {
           if (!result.success) {
             console.error(
               `[FileChangeProvider] Failed to watch repository ${source.path}:`,
@@ -274,7 +274,7 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
     // Get the source data to stop watching if needed
     const sourceData = sourcesRef.current.get(sourceId);
     if (sourceData && sourceData.source.type === 'git') {
-      GitWatcherService.unwatchRepository(sourceData.source.path);
+      RepositoryMonitoringService.disableGitWatching(sourceData.source.path);
     }
 
     // Remove from state
@@ -313,8 +313,8 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
       });
     };
 
-    // Listen for status updates from GitWatcherService
-    const unsubscribe = GitWatcherService.onStatusUpdate(handleGitStatusUpdate);
+    // Listen for status updates from Repository Monitoring Service
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(handleGitStatusUpdate);
 
     return () => {
       unsubscribe();

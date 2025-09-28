@@ -1,8 +1,25 @@
 // Jest setup file for testing
 // This file is run before all tests
 
-// Add any global test setup here if needed
-// For example: extending Jest matchers, setting up mocks, etc.
+// Mock ES module dependencies that cause issues with Jest
+jest.mock('globby', () => ({
+  globby: jest.fn().mockResolvedValue([]),
+  globbySync: jest.fn().mockReturnValue([]),
+}));
 
-// Currently no setup needed for our tests
+jest.mock('@principal-ai/repository-abstraction', () => ({
+  GitFileTreeBuilder: class {
+    build = jest.fn().mockReturnValue({
+      sha: 'mock-sha',
+      metadata: {},
+      root: {},
+      allFiles: [],
+      allDirectories: [],
+      stats: {},
+    });
+  },
+  FileTree: {},
+  GitSource: {},
+}));
+
 export {};

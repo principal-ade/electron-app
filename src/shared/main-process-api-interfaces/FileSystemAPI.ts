@@ -3,6 +3,7 @@ export enum FileSystemAPIEvent {
   SELECT_DIRECTORY = 'file-system:select-directory',
   READ_FILE = 'file-system:read-file',
   WRITE_FILE = 'file-system:write-file',
+  DELETE_FILE = 'file-system:delete-file',
   WATCH_DIRECTORY = 'file-system:watch-directory',
   WATCH_FILE = 'file-system:watch-file',
   WATCH_FILES = 'file-system:watch-files',
@@ -17,7 +18,6 @@ export enum FileSystemAPIEvent {
   GET_HOME_PATH = 'file-system:get-home-path',
   GET_CURRENT_WORKING_DIRECTORY = 'file-system:get-current-working-directory',
   GET_DIRECTORY_STATS = 'file-system:get-directory-stats',
-  BUILD_FILTERED_FILE_TREE = 'file-system:build-filtered-file-tree',
 }
 
 export interface FileStats {
@@ -61,6 +61,9 @@ export interface FileSystemAPI {
     filePath: string,
     content: string,
   ) => Promise<{ success: boolean; filePath: string; error?: string } | null>;
+  deleteFile: (
+    filePath: string,
+  ) => Promise<{ success: boolean; error?: string }>;
   watchFile: (filePath: string) => Promise<boolean>;
   watchFiles: (options: { filePaths: string[] }) => Promise<boolean>;
   onFileChange: (callback: (event: FileChangeEvent) => void) => () => void;
@@ -108,15 +111,4 @@ export interface FileSystemAPI {
     totalDirectories: number;
     totalSize: number;
   } | null>;
-  buildFilteredFileTree: (
-    directoryPath: string,
-    options?: {
-      gitignore?: boolean;
-      ignorePatterns?: string[];
-      includeStats?: boolean;
-    },
-  ) => Promise<{
-    paths: string[];
-    stats?: SerializedFileStats[];
-  }>;
 }

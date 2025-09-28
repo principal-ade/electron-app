@@ -12,6 +12,7 @@
   "include": [
     "src/main/**/*",
     "src/event-processing-server/**/*",
+    "src/repository-monitoring-server/**/*",
     "src/shared/**/*",
     "src/types/**/*",
     "src/window/main-process-api-implementations/**/*"
@@ -25,11 +26,6 @@
     "release/app/dist",
     ".erb/dll",
     "src/shared/components/**/*",
-    "src/shared/hooks/**/*",
-    // Only exclude specific problematic services temporarily
-    "src/main/services/ai/**/*",
-    // Exclude VS Code extension examples from main process compilation
-    "src/main/planning-mcp/vscode-extension-example/**/*",
-    // Temporarily exclude shared files with TypeScript errors - TO BE FIXED ONE BY ONE
+    "src/shared/hooks/**/*"
   ]
 }

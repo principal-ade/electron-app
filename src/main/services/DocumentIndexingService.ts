@@ -421,8 +421,11 @@ export class DocumentIndexingService {
       // Apply repository filter if specified
       if (request.repositories && request.repositories.length > 0) {
         filtered = filtered.filter((result) => {
-          const [repoId] = result.id.split(':');
-          return request.repositories!.includes(repoId);
+          // The filePath contains the full path to the document
+          // We need to check if it starts with any of the selected repository paths
+          return request.repositories!.some(repoPath =>
+            result.filePath.startsWith(repoPath)
+          );
         });
       }
 

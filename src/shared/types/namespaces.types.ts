@@ -18,8 +18,6 @@ export enum StaticNamespaces {
   TEMP = 'temp',
   GLOBAL_SESSION_REGISTRY = 'global-session-registry',
   SESSION_SUMMARIES = 'session-summaries',
-  ARCHIVE_CONFIGURATION = 'archive-configuration',
-  MCP_BRIDGE_DATA = 'mcp-bridge-data',
 
   // Docker Management
   DOCKER_CONTAINERS = 'docker-containers',

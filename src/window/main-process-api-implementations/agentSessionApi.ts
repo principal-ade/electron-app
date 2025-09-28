@@ -16,12 +16,6 @@ export const agentSessionApi: AgentSessionAPI = {
     ipcRenderer.invoke(AgentSessionAPIEvents.GET_ACTIVE_SESSIONS),
 
   /**
-   * Get archived sessions (potentially slower, from file storage)
-   */
-  getArchivedSessions: () =>
-    ipcRenderer.invoke(AgentSessionAPIEvents.GET_ARCHIVED_SESSIONS),
-
-  /**
    * Get sessions for a specific directory
    */
   getSessionsForDirectory: (directory: string) =>
@@ -123,28 +117,6 @@ export const agentSessionApi: AgentSessionAPI = {
       );
     };
   },
-
-  /**
-   * Listen for session archival
-   */
-  onSessionArchived: (
-    callback: (data: { sessionId: string; directory: string }) => void,
-  ) => {
-    const handler = (_: any, data: any) => callback(data);
-    ipcRenderer.on(AgentSessionAPIEvents.SESSION_ARCHIVED, handler);
-    return () => {
-      ipcRenderer.removeListener(
-        AgentSessionAPIEvents.SESSION_ARCHIVED,
-        handler,
-      );
-    };
-  },
-
-  /**
-   * Delete from active storage only (preserve archive)
-   */
-  deleteFromActive: (sessionId: string) =>
-    ipcRenderer.invoke('sessions:delete-from-active', sessionId),
 
   /**
    * Reprocess events for a session

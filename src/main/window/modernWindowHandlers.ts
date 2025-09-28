@@ -273,50 +273,7 @@ export function registerModernWindowHandlers(): void {
     },
   );
 
-  // Session Details Window
-  ipcMain.handle(
-    WindowEvent.OPEN_SESSION_DETAILS,
-    async (
-      _event,
-      data: {
-        sessionId?: string;
-        directory?: string;
-      },
-    ) => {
-      const { sessionId, directory } = data || {};
-      const windowName = `session-details-${sessionId || 'default'}`;
-
-      const window = createSpecialWindow(
-        windowName,
-        {
-          width: 1200,
-          height: 800,
-          title: `Session Details${sessionId ? ` - ${sessionId.slice(0, 8)}` : ''}`,
-        },
-        {
-          fileSystemAdapter: true,
-          mcpToolsAdapter: true,
-          contentSecurityPolicy: true,
-        },
-      );
-
-      if (!window) return;
-
-      // Load with session data
-      const encodedData = encodeURIComponent(
-        JSON.stringify({
-          mode: 'session-details',
-          sessionId,
-          directory,
-        }),
-      );
-      const url = `${resolveHtmlPath('index.html')}#session-details/${encodedData}`;
-
-      window.window.loadURL(url);
-    },
-  );
-
-  // Markdown File Dialog and Window
+// Markdown File Dialog and Window
   ipcMain.handle(WindowEvent.OPEN_MARKDOWN_FILE_DIALOG, async (_event) => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile'],
@@ -368,17 +325,25 @@ export function registerModernWindowHandlers(): void {
       const fileName = path.basename(filePath);
       const windowName = `markdown-${filePath}`;
 
+      // Get screen dimensions for full-size window
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } =
+        primaryDisplay.workAreaSize;
+
       const window = createSpecialWindow(
         windowName,
         {
           width: 1200,
           height: 800,
+          minWidth: 800,
+          minHeight: 600,
           title: `${projectName}: ${fileName}`,
         },
         {
           fileSystemAdapter: true,
           contentSecurityPolicy: true,
           externalLinkHandler: true,
+          maximizeOnShow: true,
         },
       );
 
@@ -426,30 +391,4 @@ export function registerModernWindowHandlers(): void {
     window.window.loadURL(url);
   });
 
-  // Search Window for Alexandria Repository Search
-  ipcMain.handle(WindowEvent.OPEN_SEARCH_WINDOW, async () => {
-    const windowName = 'alexandria-search';
-
-    const window = createSpecialWindow(
-      windowName,
-      {
-        width: 1200,
-        height: 800,
-        minWidth: 900,
-        minHeight: 600,
-        title: 'Alexandria Search',
-      },
-      {
-        fileSystemAdapter: true,
-        contentSecurityPolicy: true,
-        externalLinkHandler: true,
-        windowManagerAdapter: true,
-      },
-    );
-
-    if (!window) return;
-
-    const url = `${resolveHtmlPath('index.html')}#/search`;
-    window.window.loadURL(url);
-  });
 }

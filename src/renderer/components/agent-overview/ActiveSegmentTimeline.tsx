@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTheme } from 'themed-markdown';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/style.css';
+import { usePanelsTheme } from '../../theme/panelsTheme';
 import { FileText, Wrench, Globe, X, Clipboard, Check } from 'lucide-react';
 import { AnimatedTimelineEvent } from '../landing-page/AnimatedTimelineEvent';
 import { FileViewer } from '../FileViewer';
@@ -20,6 +21,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
   newEventIds,
 }) => {
   const { theme } = useTheme();
+  const panelsTheme = usePanelsTheme();
   const [viewingFile, setViewingFile] = useState<string | null>(null);
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
   const [expandedEdits, setExpandedEdits] = useState<Set<string>>(new Set());
@@ -1125,6 +1127,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
       {viewingFile ? (
         <AnimatedResizableLayout
           minSize={30}
+          theme={panelsTheme}
           leftPanel={
             <div style={{ height: '100%', overflowY: 'auto', padding: '16px' }}>
               <div
@@ -1246,6 +1249,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
               {/* FileViewer Content */}
               <div style={{ flex: 1, overflow: 'hidden' }}>
                 <FileViewer
+                  key={viewingFile} // Force remount when file changes
                   filePath={viewingFile}
                   onClose={() => setViewingFile(null)}
                 />

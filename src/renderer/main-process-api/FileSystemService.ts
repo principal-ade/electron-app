@@ -15,6 +15,10 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.writeFile(filePath, content);
   }
 
+  static async deleteFile(filePath: string): Promise<{ success: boolean; error?: string }> {
+    return window.mainProcess.fileSystem.deleteFile(filePath);
+  }
+
   static async watchFile(filePath: string) {
     console.info(`[FileSystemService] Watching file: ${filePath}`);
     return window.mainProcess.fileSystem.watchFile(filePath);
@@ -74,20 +78,6 @@ export class FileSystemService {
 
   static async getDirectoryStats(dirPath: string) {
     return window.mainProcess.fileSystem.getDirectoryStats(dirPath);
-  }
-
-  static async buildFilteredFileTree(
-    directoryPath: string,
-    options?: {
-      gitignore?: boolean;
-      ignorePatterns?: string[];
-      includeStats?: boolean;
-    },
-  ) {
-    return window.mainProcess.fileSystem.buildFilteredFileTree(
-      directoryPath,
-      options,
-    );
   }
 
   static async getHomePath(): Promise<string> {

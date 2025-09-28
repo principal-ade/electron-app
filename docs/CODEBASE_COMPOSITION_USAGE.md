@@ -228,5 +228,5 @@ The adapter pattern enables seamless operation across:
 
 ## Related Documentation
 - [Quality Hexagon Integration Plan](./quality-hexagon-integration-plan.md)
-- [Bridge Report - Principal AI Codebase Composition](../.bridge-report--principal-ai-codebase-composition.md)
+- [Bridge Report - Principal ADE Codebase Composition](../.bridge-report--principal-ade-codebase-composition.md)
 - [Unified Secure Storage Plan](./UNIFIED_SECURE_STORAGE_PLAN.md)

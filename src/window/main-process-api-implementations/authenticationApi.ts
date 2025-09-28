@@ -16,28 +16,30 @@ import type {
   TokenResult,
   TokenWithMetadata,
 } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
+import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
+import { SecureTokenAPIEvent } from '../../shared/main-process-api-interfaces/SecureTokenAPI';
 
 export const authenticationAPI: AuthenticationAPI = {
   // ===== OAuth Operations =====
 
   login: async (options?: { forceNew?: boolean }): Promise<AuthResult> => {
     // Forward to existing cli-auth:login handler
-    return ipcRenderer.invoke('cli-auth:login', options);
+    return ipcRenderer.invoke(AuthEvent.LOGIN, options);
   },
 
   logout: async (): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing cli-auth:logout handler
-    return ipcRenderer.invoke('cli-auth:logout');
+    return ipcRenderer.invoke(AuthEvent.LOGOUT);
   },
 
   check: async (): Promise<AuthResult> => {
     // Forward to existing cli-auth:check handler
-    return ipcRenderer.invoke('cli-auth:check');
+    return ipcRenderer.invoke(AuthEvent.CHECK);
   },
 
   getStatus: async (): Promise<AuthStatus> => {
     // Forward to existing cli-auth:status handler
-    return ipcRenderer.invoke('cli-auth:status');
+    return ipcRenderer.invoke(AuthEvent.STATUS);
   },
 
   // ===== Token Management =====
@@ -47,22 +49,22 @@ export const authenticationAPI: AuthenticationAPI = {
     user: AuthUser,
   ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:save-github-auth handler
-    return ipcRenderer.invoke('secure-token:save-github-auth', token, user);
+    return ipcRenderer.invoke(SecureTokenAPIEvent.SAVE_GITHUB_AUTH, token, user);
   },
 
   getGitHubAuth: async (): Promise<TokenWithMetadata> => {
     // Forward to existing secure-token:get-github-auth handler
-    return ipcRenderer.invoke('secure-token:get-github-auth');
+    return ipcRenderer.invoke(SecureTokenAPIEvent.GET_GITHUB_AUTH);
   },
 
   clearGitHubAuth: async (): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:clear-github-auth handler
-    return ipcRenderer.invoke('secure-token:clear-github-auth');
+    return ipcRenderer.invoke(SecureTokenAPIEvent.CLEAR_GITHUB_AUTH);
   },
 
   isAuthenticated: async (): Promise<boolean> => {
     // Forward to existing secure-token:is-authenticated handler
-    return ipcRenderer.invoke('secure-token:is-authenticated');
+    return ipcRenderer.invoke(SecureTokenAPIEvent.IS_AUTHENTICATED);
   },
 
   // Generic token operations
@@ -72,50 +74,50 @@ export const authenticationAPI: AuthenticationAPI = {
     metadata?: any,
   ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:set handler
-    return ipcRenderer.invoke('secure-token:set', key, token, metadata);
+    return ipcRenderer.invoke(SecureTokenAPIEvent.SET, key, token, metadata);
   },
 
   getToken: async (key: string): Promise<TokenResult> => {
     // Forward to existing secure-token:get handler
-    return ipcRenderer.invoke('secure-token:get', key);
+    return ipcRenderer.invoke(SecureTokenAPIEvent.GET, key);
   },
 
   deleteToken: async (
     key: string,
   ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:delete handler
-    return ipcRenderer.invoke('secure-token:delete', key);
+    return ipcRenderer.invoke(SecureTokenAPIEvent.DELETE, key);
   },
 
   migrateFromLocalStorage: async (
     tokens: any[],
   ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:migrate-from-localstorage handler
-    return ipcRenderer.invoke('secure-token:migrate-from-localstorage', tokens);
+    return ipcRenderer.invoke(SecureTokenAPIEvent.MIGRATE_FROM_LOCALSTORAGE, tokens);
   },
 
   // ===== State Management =====
 
   getAuthState: async (): Promise<AuthState> => {
     // Forward to existing auth-state:get handler
-    return ipcRenderer.invoke('auth-state:get');
+    return ipcRenderer.invoke(AuthEvent.STATE_GET);
   },
 
   onAuthStateChanged: (callback: (state: AuthState) => void): (() => void) => {
     // Subscribe to auth state changes
-    ipcRenderer.send('auth-state:subscribe');
+    ipcRenderer.send(AuthEvent.STATE_SUBSCRIBE);
 
     // Set up listener for state changes
     const listener = (_event: any, state: AuthState) => {
       callback(state);
     };
 
-    ipcRenderer.on('auth-state:changed', listener);
+    ipcRenderer.on(AuthEvent.STATE_CHANGED, listener);
 
     // Return cleanup function
     return () => {
-      ipcRenderer.send('auth-state:unsubscribe');
-      ipcRenderer.removeListener('auth-state:changed', listener);
+      ipcRenderer.send(AuthEvent.STATE_UNSUBSCRIBE);
+      ipcRenderer.removeListener(AuthEvent.STATE_CHANGED, listener);
     };
   },
 };

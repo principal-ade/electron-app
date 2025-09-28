@@ -80,7 +80,6 @@ interface AgentSessionCardProps {
   onCopySessionId: () => void;
   onOpenTerminal?: () => void;
   onShowContext?: () => void;
-  onArchive: () => void;
   onOpenPackageCommands: (
     project: TouchedProject,
     index: number,
@@ -130,7 +129,6 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
   onCopySessionId,
   onOpenTerminal,
   onShowContext,
-  onArchive,
   onOpenPackageCommands,
   onOpenInEditor,
   onOpenAllInEditor,

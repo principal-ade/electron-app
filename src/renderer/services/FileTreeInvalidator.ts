@@ -1,8 +1,8 @@
-import { FileTreeCacheService } from './FileTreeCacheService';
+import { MonitoredFileTreeService } from './MonitoredFileTreeService';
 import { CityDataCacheService } from './CityDataCacheService';
 import { FileTreeSource } from '../types/file-tree-source';
-import type { FileChangeEvent } from '../../shared/types/git.types';
-import { GitWatcherService } from '../main-process-api/GitWatcherService';
+import type { GitStatus, GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 
 /**
  * Service that listens to file system changes and intelligently invalidates
@@ -14,14 +14,15 @@ import { GitWatcherService } from '../main-process-api/GitWatcherService';
  * - Ignore content-only changes unless they affect the tree structure
  */
 export class FileTreeInvalidator {
-  private cacheService: FileTreeCacheService;
+  private cacheService: MonitoredFileTreeService;
   private cityDataCache?: CityDataCacheService;
   private pendingInvalidations = new Map<string, Set<string>>(); // repoPath -> affected paths
   private invalidationTimer: NodeJS.Timeout | null = null;
-  private structuralChangeTypes = new Set(['add', 'unlink']);
+  private unsubscribe: (() => void) | null = null;
+  private lastStatusByRepo = new Map<string, GitStatus>();
 
   constructor(
-    cacheService: FileTreeCacheService,
+    cacheService: MonitoredFileTreeService,
     cityDataCache?: CityDataCacheService,
   ) {
     this.cacheService = cacheService;
@@ -33,41 +34,78 @@ export class FileTreeInvalidator {
    * Set up IPC listeners for file change events from main process
    */
   private setupListeners(): void {
-    // Listen for file changes from GitRepositoryWatcher using proper service
-    // TODO: GitWatcherService needs to expose file change events
-    // For now, comment out to fix TypeScript errors
-    console.log('[FileTreeInvalidator] File change listeners not yet implemented');
+    // Subscribe to git status changes from repository monitoring service
+    this.unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
+      async (status) => {
+        // Handle the git status change
+        if (status.repoPath) {
+          this.handleGitStatusChange(status);
+        }
+      }
+    );
+
+    console.log('[FileTreeInvalidator] Connected to repository monitoring service');
   }
 
   /**
-   * Handle a file change event
+   * Handle git status change from repository monitoring
    */
-  private handleFileChange(event: FileChangeEvent): void {
-    console.log(
-      '[FileTreeInvalidator] File change:',
-      event.type,
-      event.path,
-      'in',
-      event.repoPath,
-    );
+  private async handleGitStatusChange(status: GitStatus): Promise<void> {
+    const repoPath = status.repoPath;
+    if (!repoPath) return;
 
-    // Only care about structural changes (add/remove)
-    // Content changes don't affect the FileTree structure
-    if (!this.structuralChangeTypes.has(event.type)) {
-      // For 'change' events, only care if it's a directory change
-      if (event.type === 'change' && !event.isDirectory) {
-        return;
+    // Get previous status for this repo
+    const previousStatus = this.lastStatusByRepo.get(repoPath);
+
+    // Store current status
+    this.lastStatusByRepo.set(repoPath, status);
+
+    // Check if there are structural changes (files added/removed)
+    const hasStructuralChanges = this.detectStructuralChanges(previousStatus, status);
+
+    if (hasStructuralChanges) {
+      console.log(
+        '[FileTreeInvalidator] Structural changes detected in',
+        repoPath,
+        '- scheduling invalidation'
+      );
+
+      // Add to pending invalidations
+      if (!this.pendingInvalidations.has(repoPath)) {
+        this.pendingInvalidations.set(repoPath, new Set());
       }
-    }
 
-    // Add to pending invalidations
-    if (!this.pendingInvalidations.has(event.repoPath)) {
-      this.pendingInvalidations.set(event.repoPath, new Set());
-    }
-    this.pendingInvalidations.get(event.repoPath)!.add(event.path);
+      // Add a marker to indicate we need to invalidate this repo
+      this.pendingInvalidations.get(repoPath)!.add('git-status-change');
 
-    // Debounce invalidations to batch changes
-    this.scheduleInvalidation();
+      // Debounce invalidations to batch changes
+      this.scheduleInvalidation();
+    }
+  }
+
+  /**
+   * Detect if there are structural changes between two git statuses
+   */
+  private detectStructuralChanges(
+    previous: GitStatus | undefined,
+    current: GitStatus
+  ): boolean {
+    // If no previous status, consider it a structural change
+    if (!previous) return true;
+
+    // Simple heuristic: if the repository goes from clean to dirty or vice versa,
+    // or if untracked files appear/disappear, it's likely a structural change
+
+    // Check for changes in untracked files (new files added)
+    if (current.hasUntracked !== previous.hasUntracked) return true;
+
+    // Check if repository went from clean to dirty (files added/modified/deleted)
+    if (current.isDirty !== previous.isDirty) return true;
+
+    // For now, be conservative and invalidate on any status change
+    // This ensures the FileTree stays in sync, though it may cause more invalidations than necessary
+    // In the future, we could fetch GitStatusWithFiles for more precise detection
+    return current.isDirty || current.hasUntracked;
   }
 
   /**
@@ -208,8 +246,15 @@ export class FileTreeInvalidator {
       clearTimeout(this.invalidationTimer);
     }
 
-    // Remove IPC listeners
-    // TODO: Implement proper cleanup when GitWatcherService exposes events
-    console.log('[FileTreeInvalidator] Cleanup not yet implemented');
+    // Unsubscribe from repository monitoring events
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+
+    // Clear cached statuses
+    this.lastStatusByRepo.clear();
+
+    console.log('[FileTreeInvalidator] Cleaned up and unsubscribed from monitoring events');
   }
 }

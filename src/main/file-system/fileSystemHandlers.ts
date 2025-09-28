@@ -3,8 +3,6 @@ import chokidar from 'chokidar';
 import { dialog, ipcMain, BrowserWindow, app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import { globby } from 'globby';
-import { universalGitignorePatterns as universalPatternsConfig } from '../../shared/configs';
 
 import { FileSystemAPIEvent } from '../../shared/main-process-api-interfaces/FileSystemAPI';
 import type { IModernApplicationWindow } from '../window/types';
@@ -1017,99 +1015,6 @@ export class ElectronFileSystemAdapter {
     return true;
   }
 
-  /**
-   * Build a filtered file tree using globby with automatic .gitignore support
-   */
-  async buildFilteredFileTree(
-    directoryPath: string,
-    options?: {
-      gitignore?: boolean; // Enable .gitignore parsing (default: true)
-      ignorePatterns?: string[]; // Additional patterns to ignore
-      includeStats?: boolean; // Include file stats (default: false)
-    },
-  ): Promise<{
-    paths: string[];
-    stats?: Array<{
-      path: string;
-      size: number;
-      isDirectory: boolean;
-      lastModified: Date;
-    }>;
-  }> {
-    try {
-      // Default options
-      const gitignore = options?.gitignore !== false; // Default to true
-      const includeStats = options?.includeStats || false;
-
-      // Extract universal patterns from the config
-      const universalPatterns = Object.values(universalPatternsConfig.patterns)
-        .flatMap((category: any) => category.directories || [])
-        .map((dir) => `**/${dir}/**`);
-
-      // Combine with any additional patterns
-      const ignorePatterns = [
-        '.git', // Always exclude .git
-        '**/.git/**', // Exclude .git at any level
-        ...universalPatterns,
-        ...(options?.ignorePatterns || []),
-      ];
-
-      console.log(
-        `[File System] Using globby with gitignore=${gitignore}, ${ignorePatterns.length} ignore patterns`,
-      );
-
-      // Use globby to get all files and directories
-      const paths = await globby('**/*', {
-        cwd: directoryPath,
-        gitignore: gitignore,
-        ignore: ignorePatterns,
-        onlyFiles: false, // Include directories
-        markDirectories: true, // Add trailing slash to directories
-        dot: true, // Include dotfiles (except .git which is ignored)
-        followSymbolicLinks: false,
-      });
-
-      // Optionally gather stats
-      let stats:
-        | Array<{
-            path: string;
-            size: number;
-            isDirectory: boolean;
-            lastModified: Date;
-          }>
-        | undefined;
-
-      if (includeStats) {
-        stats = [];
-        for (const relativePath of paths) {
-          const fullPath = path.join(directoryPath, relativePath);
-          try {
-            const stat = fs.statSync(fullPath);
-            stats.push({
-              path: relativePath,
-              size: stat.size,
-              isDirectory: stat.isDirectory(),
-              lastModified: stat.mtime,
-            });
-          } catch (error) {
-            // Skip files we can't stat
-            console.warn(`[File System] Could not stat ${fullPath}:`, error);
-          }
-        }
-      }
-
-      return {
-        paths,
-        stats,
-      };
-    } catch (error) {
-      console.error(
-        `[File System] Error building filtered file tree for ${directoryPath}:`,
-        error,
-      );
-      return { paths: [] };
-    }
-  }
 }
 
 // New function to register IPC Handlers globally
@@ -1195,6 +1100,37 @@ export function registerFileSystemIpcHandlers(
         `********** GLOBAL IPC HANDLER CALLED: ${FileSystemAPIEvent.WRITE_FILE} for window ${senderWindow.id} **********`,
       );
       return appWindow.fileSystemAdapter.writeFile(filePath, content);
+    },
+  );
+
+  ipcMain.handle(
+    FileSystemAPIEvent.DELETE_FILE,
+    async (event, filePath: string) => {
+      const senderWindow = BrowserWindow.fromWebContents(event.sender);
+      if (!senderWindow) {
+        console.error('DELETE_FILE: No sender window');
+        return { success: false, error: 'No sender window' };
+      }
+      try {
+        // Stop watching the file first if it's being watched
+        const appWindow = appWindows.get(senderWindow.id);
+        if (appWindow && appWindow.fileWatcher) {
+          await appWindow.fileWatcher.stopWatching(filePath);
+        }
+
+        // Delete the file
+        const fs = require('fs').promises;
+        await fs.unlink(filePath);
+
+        console.log(`[FileSystem] File deleted: ${filePath}`);
+        return { success: true };
+      } catch (error) {
+        console.error(`[FileSystem] Failed to delete file: ${filePath}`, error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+      }
     },
   );
 
@@ -1572,39 +1508,6 @@ export function registerFileSystemIpcHandlers(
     },
   );
 
-  // Handler for buildFilteredFileTree
-  ipcMain.handle(
-    FileSystemAPIEvent.BUILD_FILTERED_FILE_TREE,
-    async (
-      event,
-      directoryPath: string,
-      options?: {
-        gitignore?: boolean;
-        ignorePatterns?: string[];
-        includeStats?: boolean;
-      },
-    ) => {
-      const senderWindow = BrowserWindow.fromWebContents(event.sender);
-      if (!senderWindow) {
-        console.error(
-          '[File System] buildFilteredFileTree: No sender window found for IPC event.',
-        );
-        return { paths: [] };
-      }
-      const appWindow = appWindows.get(senderWindow.id);
-      if (!appWindow || !appWindow.fileSystemAdapter) {
-        console.error(
-          '[File System] buildFilteredFileTree: No app window or file system adapter found for window ID:',
-          senderWindow.id,
-        );
-        return { paths: [] };
-      }
-      return appWindow.fileSystemAdapter.buildFilteredFileTree(
-        directoryPath,
-        options,
-      );
-    },
-  );
 
   console.log('[File System] Global IPC handlers registered.');
 }

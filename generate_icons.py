@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Icon generation script for Principal AI Electron app
+Icon generation script for Principal ADE Electron app
 Generates all required icon sizes from a single source image
 """
 

@@ -20,9 +20,9 @@ export const AgentConnectionVisualizer: React.FC<
 > = ({ agentType, isInstalled, hasHooks, hasMCP = false, className = '' }) => {
   const { theme } = useTheme();
   const agentConfig = getAgentInfo(agentType);
-  const [isHoveringSpecktor, setIsHoveringSpecktor] = React.useState(false);
+  const [isHoveringPrincipalADE, setIsHoveringPrincipalADE] = React.useState(false);
   const [selectedComponent, setSelectedComponent] = React.useState<
-    'agent' | 'specktor' | 'mcp' | null
+    'agent' | 'principal-ade' | 'mcp' | null
   >(null);
 
   const AgentIcon = Bot;
@@ -73,10 +73,10 @@ export const AgentConnectionVisualizer: React.FC<
           </foreignObject>
         </g>
 
-        {/* Connection between Agent and Specktor */}
+        {/* Connection between Agent and Principal ADE */}
         {hasHooks && isInstalled && (
           <g>
-            {/* Line from Agent to Specktor */}
+            {/* Line from Agent to Principal ADE */}
             <line
               x1="103"
               y1="135"
@@ -88,7 +88,7 @@ export const AgentConnectionVisualizer: React.FC<
               opacity="0.6"
             />
 
-            {/* Flowing dots animation from Agent to Specktor */}
+            {/* Flowing dots animation from Agent to Principal ADE */}
             {[0, 1, 2].map((index) => (
               <circle
                 key={index}
@@ -106,7 +106,7 @@ export const AgentConnectionVisualizer: React.FC<
               </circle>
             ))}
 
-            {/* Path for dots to follow from Agent to Specktor */}
+            {/* Path for dots to follow from Agent to Principal ADE */}
             <path
               id="agentToSpektorPath"
               d="M 103 135 L 185 70"
@@ -116,12 +116,12 @@ export const AgentConnectionVisualizer: React.FC<
           </g>
         )}
 
-        {/* Specktor Circle (moved to top middle where MCP was) */}
+        {/* Principal ADE Circle (moved to top middle where MCP was) */}
         <g
           transform="translate(225, 60)"
-          onMouseEnter={() => setIsHoveringSpecktor(true)}
-          onMouseLeave={() => setIsHoveringSpecktor(false)}
-          onClick={() => setSelectedComponent('specktor')}
+          onMouseEnter={() => setIsHoveringPrincipalADE(true)}
+          onMouseLeave={() => setIsHoveringPrincipalADE(false)}
+          onClick={() => setSelectedComponent('principal-ade')}
           style={{ cursor: 'pointer' }}
         >
           <circle
@@ -129,7 +129,7 @@ export const AgentConnectionVisualizer: React.FC<
             cy="0"
             r="40"
             fill={
-              isHoveringSpecktor && hasHooks && isInstalled
+              isHoveringPrincipalADE && hasHooks && isInstalled
                 ? `${theme.colors.primary}20`
                 : theme.colors.backgroundSecondary
             }
@@ -139,7 +139,7 @@ export const AgentConnectionVisualizer: React.FC<
                 : theme.colors.border
             }
             strokeWidth={
-              isHoveringSpecktor && hasHooks && isInstalled ? '3' : '2'
+              isHoveringPrincipalADE && hasHooks && isInstalled ? '3' : '2'
             }
             style={{ transition: 'all 0.2s' }}
           />
@@ -155,7 +155,7 @@ export const AgentConnectionVisualizer: React.FC<
               style={{ paddingTop: '4px' }}
             >
               <Database
-                size={isHoveringSpecktor && hasHooks && isInstalled ? 22 : 20}
+                size={isHoveringPrincipalADE && hasHooks && isInstalled ? 22 : 20}
                 className="transition-all duration-200"
                 style={{
                   color:
@@ -163,7 +163,7 @@ export const AgentConnectionVisualizer: React.FC<
                       ? theme.colors.primary
                       : theme.colors.textSecondary,
                   transform:
-                    isHoveringSpecktor && hasHooks && isInstalled
+                    isHoveringPrincipalADE && hasHooks && isInstalled
                       ? 'translateY(-1px)'
                       : 'translateY(0)',
                 }}
@@ -177,10 +177,10 @@ export const AgentConnectionVisualizer: React.FC<
                       ? theme.colors.primary
                       : theme.colors.textSecondary,
                   fontWeight:
-                    isHoveringSpecktor && hasHooks && isInstalled ? 600 : 500,
+                    isHoveringPrincipalADE && hasHooks && isInstalled ? 600 : 500,
                 }}
               >
-                Specktor
+                Principal ADE
               </span>
             </div>
           </foreignObject>
@@ -295,7 +295,7 @@ export const AgentConnectionVisualizer: React.FC<
           </g>
         )}
 
-        {/* MCP Server Circle (moved to right where Specktor was) - shown when hooks are configured */}
+        {/* MCP Server Circle (moved to right where Principal ADE was) - shown when hooks are configured */}
         {showMCPServer && (
           <g
             transform="translate(380, 160)"
@@ -379,7 +379,7 @@ export const AgentConnectionVisualizer: React.FC<
             </>
           )}
 
-          {selectedComponent === 'specktor' && (
+          {selectedComponent === 'principal-ade' && (
             <>
               <text
                 textAnchor="middle"
@@ -387,7 +387,7 @@ export const AgentConnectionVisualizer: React.FC<
                 y="-5"
                 style={{ fill: theme.colors.text }}
               >
-                Specktor
+                Principal ADE
               </text>
               <text
                 textAnchor="middle"

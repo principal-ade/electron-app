@@ -209,6 +209,10 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       webPreferences.experimentalFeatures = false;
     }
 
+    // Add acceptsFirstMouse to webPreferences for better mouse interaction
+    // This helps with mouse events on unfocused windows
+    (webPreferences as any).acceptsFirstMouse = true;
+
     // Platform-specific titlebar configuration
     const isMac = process.platform === 'darwin';
     const isWindows = process.platform === 'win32';
@@ -242,6 +246,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       icon: iconPath,
       show: false, // Prevent white flash
       backgroundColor: '#1e1e1e',
+      acceptsFirstMouse: true, // Allow hover interactions without focusing window
       webPreferences,
       ...titleBarOptions, // Apply platform-specific titlebar settings
     };
@@ -527,8 +532,9 @@ export async function createWindow(
   try {
     const appWindow = new ModernApplicationWindow(options, windowType);
 
-    // Load content
-    const htmlPath = resolveHtmlPath('index.html');
+    // Load content - use principal.html for main window
+    const htmlFileName = isMainWindow ? 'principal.html' : 'index.html';
+    const htmlPath = resolveHtmlPath(htmlFileName);
     appWindow.window.loadURL(htmlPath);
     console.log(`[ModernWindow] Window ${appWindow.id} loading: ${htmlPath}`);
 

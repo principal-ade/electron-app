@@ -39,10 +39,16 @@ class CommandExecutor {
     // Build the full command string
     const fullCommand = this.buildCommand(command, args);
 
-    
+
     // Prepare execSync options
     // For SSH to work, we need to preserve SSH_AUTH_SOCK and other SSH-related env vars
-    const execEnv = options.env ? { ...process.env, ...options.env } : process.env;
+    // Clean up NODE_OPTIONS to avoid ts-node conflicts from the parent process
+    const cleanEnv = { ...process.env };
+    delete cleanEnv.NODE_OPTIONS;
+    delete cleanEnv.TS_NODE_PROJECT;
+    delete cleanEnv.TS_NODE_TRANSPILE_ONLY;
+
+    const execEnv = options.env ? { ...cleanEnv, ...options.env } : cleanEnv;
 
 
     const execOptions = {
