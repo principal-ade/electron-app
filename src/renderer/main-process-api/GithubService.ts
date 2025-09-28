@@ -1,3 +1,5 @@
+import type { RepositoryFetchOptions, GitHubRepository, GitHubOrganization } from '../../shared/main-process-api-interfaces/GitHubAPI';
+
 export class GithubService {
   static async detectRepository(path: string) {
     const result = await window.mainProcess.github.detectRepository(path);
@@ -10,7 +12,7 @@ export class GithubService {
     branch: string,
     path: string,
   ) {
-    const result = await window.mainProcess?.github?.fetchGitHubConfig({
+    const result = await window.mainProcess.github.fetchGitHubConfig({
       owner,
       repo,
       branch,
@@ -20,7 +22,7 @@ export class GithubService {
   }
 
   static async getTree(owner: string, repo: string, branch: string) {
-    const result = await window.mainProcess?.github?.getTree(
+    const result = await window.mainProcess.github.getTree(
       owner,
       repo,
       branch,
@@ -29,17 +31,17 @@ export class GithubService {
   }
 
   static async fetchRemoteConfig(url: string) {
-    const result = await window.mainProcess?.github?.fetchRemoteConfig({ url });
+    const result = await window.mainProcess.github.fetchRemoteConfig({ url });
     return result;
   }
 
   static async getIssues(owner: string, repo: string) {
-    const result = await window.mainProcess?.github?.getIssues(owner, repo);
+    const result = await window.mainProcess.github.getIssues(owner, repo);
     return result || [];
   }
 
   static async createIssue(owner: string, repo: string, issue: any) {
-    const result = await window.mainProcess?.github?.createIssue(
+    const result = await window.mainProcess.github.createIssue(
       owner,
       repo,
       issue,
@@ -53,7 +55,7 @@ export class GithubService {
     path: string,
     branch?: string,
   ) {
-    const result = await window.mainProcess?.github?.getFileContent(
+    const result = await window.mainProcess.github.getFileContent(
       owner,
       repo,
       path,
@@ -63,7 +65,25 @@ export class GithubService {
   }
 
   static async checkAuthStatus() {
-    const result = await window.mainProcess?.github?.checkAuthStatus();
+    const result = await window.mainProcess.github.checkAuthStatus();
     return result;
+  }
+
+  static async getUserRepositories(options?: RepositoryFetchOptions): Promise<GitHubRepository[]> {
+    const result = await window.mainProcess.github.getUserRepositories(options);
+    return result || [];
+  }
+
+  static async getOrgRepositories(
+    org: string,
+    options?: RepositoryFetchOptions
+  ): Promise<GitHubRepository[]> {
+    const result = await window.mainProcess.github.getOrgRepositories(org, options);
+    return result || [];
+  }
+
+  static async getUserOrganizations(): Promise<GitHubOrganization[]> {
+    const result = await window.mainProcess.github.getUserOrganizations();
+    return result || [];
   }
 }

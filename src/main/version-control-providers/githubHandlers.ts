@@ -8,6 +8,9 @@ import {
   ConfigFetchRequest,
   ConfigFetchResponse,
   GitHubConfigRequest,
+  GitHubRepository,
+  GitHubOrganization,
+  RepositoryFetchOptions,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import type { IModernApplicationWindow } from '../window/types';
 
@@ -1061,6 +1064,121 @@ export class GitHubAdapter {
   }
 
   // Fetch GitHub issues
+  // Get user's repositories from GitHub
+  async getUserRepositories(options?: RepositoryFetchOptions): Promise<GitHubRepository[]> {
+    try {
+      const args = ['gh', 'api', '/user/repos'];
+
+      // Add query parameters
+      const params: string[] = [];
+      if (options?.type) params.push(`type=${options.type}`);
+      if (options?.sort) params.push(`sort=${options.sort}`);
+      if (options?.direction) params.push(`direction=${options.direction}`);
+      params.push(`per_page=${options?.perPage || 100}`);
+      if (options?.page) params.push(`page=${options.page}`);
+
+      if (params.length > 0) {
+        args[2] = `/user/repos?${params.join('&')}`;
+      }
+
+      const result = await this.executeCommand(args);
+
+      if (result.success && result.stdout) {
+        const repos = JSON.parse(result.stdout);
+        // Return only the fields we need
+        return repos.map((repo: any) => ({
+          id: repo.id,
+          name: repo.name,
+          full_name: repo.full_name,
+          owner: { login: repo.owner.login },
+          private: repo.private,
+          html_url: repo.html_url,
+          description: repo.description,
+          fork: repo.fork,
+          clone_url: repo.clone_url,
+          updated_at: repo.updated_at,
+          pushed_at: repo.pushed_at,
+          language: repo.language,
+          default_branch: repo.default_branch
+        }));
+      }
+
+      return [];
+    } catch (error) {
+      console.error('[GitHub] Error getting user repositories:', error);
+      return [];
+    }
+  }
+
+  // Get organization repositories
+  async getOrgRepositories(org: string, options?: RepositoryFetchOptions): Promise<GitHubRepository[]> {
+    try {
+      const args = ['gh', 'api', `/orgs/${org}/repos`];
+
+      // Add query parameters
+      const params: string[] = [];
+      if (options?.type) params.push(`type=${options.type}`);
+      if (options?.sort) params.push(`sort=${options.sort}`);
+      if (options?.direction) params.push(`direction=${options.direction}`);
+      params.push(`per_page=${options?.perPage || 100}`);
+      if (options?.page) params.push(`page=${options.page}`);
+
+      if (params.length > 0) {
+        args[2] = `/orgs/${org}/repos?${params.join('&')}`;
+      }
+
+      const result = await this.executeCommand(args);
+
+      if (result.success && result.stdout) {
+        const repos = JSON.parse(result.stdout);
+        // Return only the fields we need
+        return repos.map((repo: any) => ({
+          id: repo.id,
+          name: repo.name,
+          full_name: repo.full_name,
+          owner: { login: repo.owner.login },
+          private: repo.private,
+          html_url: repo.html_url,
+          description: repo.description,
+          fork: repo.fork,
+          clone_url: repo.clone_url,
+          updated_at: repo.updated_at,
+          pushed_at: repo.pushed_at,
+          language: repo.language,
+          default_branch: repo.default_branch
+        }));
+      }
+
+      return [];
+    } catch (error) {
+      console.error(`[GitHub] Error getting org repositories for ${org}:`, error);
+      return [];
+    }
+  }
+
+  // Get user's organizations
+  async getUserOrganizations(): Promise<GitHubOrganization[]> {
+    try {
+      const result = await this.executeCommand(['gh', 'api', '/user/orgs']);
+
+      if (result.success && result.stdout) {
+        const orgs = JSON.parse(result.stdout);
+        // Return only the fields we need
+        return orgs.map((org: any) => ({
+          login: org.login,
+          id: org.id,
+          avatar_url: org.avatar_url,
+          description: org.description
+        }));
+      }
+
+      return [];
+    } catch (error) {
+      console.error('[GitHub] Error getting user organizations:', error);
+      return [];
+    }
+  }
+
   async getIssues(owner: string, repo: string): Promise<any[]> {
     console.log(`[GitHub] Fetching issues for ${owner}/${repo}`);
 
@@ -1645,6 +1763,42 @@ export function registerGitHubIpcHandlers(
         return { success: false, error: 'No adapter found' };
       }
       return adapter.createIssue(owner, repo, issue);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_USER_REPOSITORIES,
+    async (event, options?: RepositoryFetchOptions) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_USER_REPOSITORIES');
+        return [];
+      }
+      return adapter.getUserRepositories(options);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_ORG_REPOSITORIES,
+    async (event, org: string, options?: RepositoryFetchOptions) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_ORG_REPOSITORIES');
+        return [];
+      }
+      return adapter.getOrgRepositories(org, options);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_USER_ORGANIZATIONS,
+    async (event) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_USER_ORGANIZATIONS');
+        return [];
+      }
+      return adapter.getUserOrganizations();
     },
   );
 

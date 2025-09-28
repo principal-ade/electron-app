@@ -11,6 +11,9 @@ export enum GitHubAPIEvent {
   GET_FILE_CONTENT = 'github:get-file-content', // (owner, repo, path, ref?)
   GET_FILE_AGES = 'github:get-file-ages',
   GET_TREE = 'github:get-tree',
+  GET_USER_REPOSITORIES = 'github:get-user-repositories',
+  GET_ORG_REPOSITORIES = 'github:get-org-repositories',
+  GET_USER_ORGANIZATIONS = 'github:get-user-organizations',
   // Config fetching events (formerly ConfigAPI)
   FETCH_REMOTE_CONFIG = 'github:fetch-remote-config',
   FETCH_GITHUB_CONFIG = 'github:fetch-github-config',
@@ -86,6 +89,39 @@ export interface CreateIssueResponse {
   success: boolean;
   issue?: GitHubIssue;
   error?: string;
+}
+
+export interface GitHubRepository {
+  id: number;
+  name: string;
+  full_name: string;
+  owner: {
+    login: string;
+  };
+  private: boolean;
+  html_url: string;
+  description: string | null;
+  fork: boolean;
+  clone_url: string;
+  updated_at: string;
+  pushed_at: string;
+  language: string | null;
+  default_branch: string;
+}
+
+export interface GitHubOrganization {
+  login: string;
+  id: number;
+  avatar_url: string;
+  description: string | null;
+}
+
+export interface RepositoryFetchOptions {
+  type?: 'all' | 'owner' | 'public' | 'private' | 'member';
+  sort?: 'created' | 'updated' | 'pushed' | 'full_name';
+  direction?: 'asc' | 'desc';
+  perPage?: number;
+  page?: number;
 }
 
 export interface GitHubAPI {
@@ -175,4 +211,12 @@ export interface GitHubAPI {
   fetchGitHubConfig: (
     request: GitHubConfigRequest,
   ) => Promise<ConfigFetchResponse>;
+  getUserRepositories: (
+    options?: RepositoryFetchOptions
+  ) => Promise<GitHubRepository[]>;
+  getOrgRepositories: (
+    org: string,
+    options?: RepositoryFetchOptions
+  ) => Promise<GitHubRepository[]>;
+  getUserOrganizations: () => Promise<GitHubOrganization[]>;
 }

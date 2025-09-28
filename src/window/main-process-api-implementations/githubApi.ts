@@ -74,4 +74,16 @@ export const githubAPI: GitHubAPI = {
   fetchGitHubConfig: async (request: GitHubConfigRequest) => {
     return ipcRenderer.invoke(GitHubAPIEvent.FETCH_GITHUB_CONFIG, request);
   },
+
+  getUserRepositories: async (options) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_USER_REPOSITORIES, options);
+  },
+
+  getOrgRepositories: async (org, options) => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_ORG_REPOSITORIES, org, options);
+  },
+
+  getUserOrganizations: async () => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_USER_ORGANIZATIONS);
+  },
 };

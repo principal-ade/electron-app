@@ -11,6 +11,7 @@ interface GitCloneModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRepositoryAdded?: (repo: EnhancedAlexandriaEntry) => void;
+  initialUrl?: string;
 }
 
 type CloneStep = 'input' | 'validating' | 'directory' | 'existing-repo' | 'cloning' | 'complete' | 'error';
@@ -30,6 +31,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   isOpen,
   onClose,
   onRepositoryAdded,
+  initialUrl,
 }) => {
   const { theme } = useTheme();
   const [currentStep, setCurrentStep] = useState<CloneStep>('input');
@@ -48,7 +50,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setCurrentStep('input');
-      setGitUrl('');
+      setGitUrl(initialUrl || '');
       setCloneDirectory('');
       setRepoName('');
       setAuthMethods(null);
@@ -67,7 +69,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
         }
       }, 100);
     }
-  }, [isOpen]);
+  }, [isOpen, initialUrl]);
 
   // Normalize git URL (handle browser URLs, add .git if needed)
   const normalizeGitUrl = (url: string): string => {

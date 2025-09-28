@@ -10,6 +10,8 @@ import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { GitService } from '../../../main-process-api/GitService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { WindowService } from '../../../main-process-api/WindowService';
+import { GithubService } from '../../../main-process-api/GithubService';
+import type { GitHubRepository, GitHubOrganization } from '../../../../shared/main-process-api-interfaces/GitHubAPI';
 import { OrganizationSidebar } from './components/OrganizationSidebar';
 import { RepositoryGrid } from './components/RepositoryGrid';
 import { AuthDetails } from './components/AuthDetails';
@@ -34,6 +36,8 @@ export const AuthView: React.FC = () => {
   } = useAuthState();
 
   const [repositories, setRepositories] = useState<EnhancedAlexandriaEntry[]>([]);
+  const [remoteRepositories, setRemoteRepositories] = useState<GitHubRepository[]>([]);
+  const [githubOrganizations, setGithubOrganizations] = useState<GitHubOrganization[]>([]);
   const [organizations, setOrganizations] = useState<OrganizationInfo[]>([]);
   const [repositoriesByOrg, setRepositoriesByOrg] = useState<Map<string, EnhancedAlexandriaEntry[]>>(new Map());
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
@@ -118,10 +122,12 @@ export const AuthView: React.FC = () => {
     }
   }, []);
 
-  // Load repositories
+  // Load repositories and GitHub data
   const loadRepositories = useCallback(async () => {
     try {
       setLoading(true);
+
+      // Load local repositories
       const repos = await AlexandriaService.getRepositories();
 
       // Enhance repositories with git information
@@ -131,18 +137,120 @@ export const AuthView: React.FC = () => {
 
       setRepositories(enhancedRepos);
 
-      // Group repositories by organization
-      const grouped = groupRepositoriesByOrganization(enhancedRepos);
-      const sortedOrgs = sortOrganizations(Array.from(grouped.organizations.values()));
+      // If user is authenticated, fetch GitHub data
+      if (isAuthenticated) {
+        try {
+          // Fetch GitHub organizations and user repositories in parallel
+          const [githubOrgs, userRepos] = await Promise.all([
+            GithubService.getUserOrganizations(),
+            GithubService.getUserRepositories({ sort: 'pushed', direction: 'desc' })
+          ]);
 
-      setOrganizations(sortedOrgs);
-      setRepositoriesByOrg(grouped.repositoriesByOrg as Map<string, EnhancedAlexandriaEntry[]>);
+          setGithubOrganizations(githubOrgs);
+          setRemoteRepositories(userRepos);
+
+          // Create organization info combining local and remote data
+          const localGrouped = groupRepositoriesByOrganization(enhancedRepos);
+          const allOrgs = new Map<string, OrganizationInfo>();
+
+          // Add organizations from local repos
+          localGrouped.organizations.forEach((org, key) => {
+            allOrgs.set(key, org);
+          });
+
+          // Create a set of local repository identifiers for deduplication
+          const localRepoIdentifiers = new Set<string>();
+          enhancedRepos.forEach(repo => {
+            // Add both owner/name and just name for matching
+            if (repo.github?.owner) {
+              localRepoIdentifiers.add(`${repo.github.owner}/${repo.name}`.toLowerCase());
+            }
+            // Also check remoteUrl for owner
+            if (repo.remoteUrl) {
+              const match = repo.remoteUrl.match(/github\.com[:/]([^/]+)\//);
+              if (match) {
+                localRepoIdentifiers.add(`${match[1]}/${repo.name}`.toLowerCase());
+              }
+            }
+            localRepoIdentifiers.add(repo.name.toLowerCase());
+          });
+
+          // Count unique remote repositories by organization (excluding already cloned ones)
+          const uniqueRemoteRepoCountByOrg = new Map<string, number>();
+          userRepos.forEach(repo => {
+            const orgName = repo.owner.login;
+            const repoKey = `${orgName}/${repo.name}`.toLowerCase();
+
+            // Only count if not already cloned locally
+            const isAlreadyLocal = localRepoIdentifiers.has(repoKey) ||
+                                  localRepoIdentifiers.has(repo.name.toLowerCase());
+
+            if (!isAlreadyLocal) {
+              uniqueRemoteRepoCountByOrg.set(orgName, (uniqueRemoteRepoCountByOrg.get(orgName) || 0) + 1);
+            }
+          });
+
+          // Add GitHub organizations (even if they don't have local repos)
+          githubOrgs.forEach(ghOrg => {
+            const uniqueRemoteCount = uniqueRemoteRepoCountByOrg.get(ghOrg.login) || 0;
+
+            if (!allOrgs.has(ghOrg.login)) {
+              // Org doesn't have local repos, show remote count only
+              allOrgs.set(ghOrg.login, {
+                name: ghOrg.login,
+                type: 'github',
+                avatarUrl: ghOrg.avatar_url,
+                repositoryCount: uniqueRemoteCount,
+                lastActivity: null
+              });
+            } else {
+              // Org has local repos, add unique remote count
+              const org = allOrgs.get(ghOrg.login)!;
+              org.repositoryCount = (org.repositoryCount || 0) + uniqueRemoteCount;
+            }
+          });
+
+          // Add user's own repos section
+          if (authUser) {
+            const userOrgKey = authUser.login;
+            const userUniqueRemoteCount = uniqueRemoteRepoCountByOrg.get(userOrgKey) || 0;
+
+            if (!allOrgs.has(userOrgKey)) {
+              // User doesn't have local repos, show remote count only
+              allOrgs.set(userOrgKey, {
+                name: userOrgKey,
+                type: 'github',
+                avatarUrl: authUser.avatarUrl || '',
+                repositoryCount: userUniqueRemoteCount,
+                lastActivity: null,
+                isUser: true
+              });
+            } else {
+              // User has local repos, add unique remote count
+              const org = allOrgs.get(userOrgKey)!;
+              org.repositoryCount = (org.repositoryCount || 0) + userUniqueRemoteCount;
+            }
+          }
+
+          const sortedOrgs = sortOrganizations(Array.from(allOrgs.values()));
+          setOrganizations(sortedOrgs);
+          setRepositoriesByOrg(localGrouped.repositoriesByOrg as Map<string, EnhancedAlexandriaEntry[]>);
+        } catch (error) {
+          console.error('Failed to load GitHub data:', error);
+        }
+      } else {
+        // Not authenticated, just use local repos
+        const grouped = groupRepositoriesByOrganization(enhancedRepos);
+        const sortedOrgs = sortOrganizations(Array.from(grouped.organizations.values()));
+        setOrganizations(sortedOrgs);
+        setRepositoriesByOrg(grouped.repositoriesByOrg as Map<string, EnhancedAlexandriaEntry[]>);
+      }
     } catch (err) {
       console.error('Failed to load repositories:', err);
     } finally {
       setLoading(false);
     }
-  }, [enhanceRepositoryWithGitInfo]);
+  }, [enhanceRepositoryWithGitInfo, isAuthenticated, authUser]);
 
   useEffect(() => {
     loadRepositories();
@@ -162,15 +270,15 @@ export const AuthView: React.FC = () => {
     await WindowService.openRepositoryDashboard(repo);
   }, []);
 
-  // Get filtered repositories
+  // Get filtered repositories (local repos only, remote repos are passed separately)
   const getFilteredRepositories = useCallback(() => {
     if (selectedOrg === null) {
-      // For "All Repositories", sort by name only
+      // For "All Repositories", return all local repos
       return [...repositories].sort((a, b) =>
         a.name.toLowerCase().localeCompare(b.name.toLowerCase())
       );
     }
-    // For specific org, use the pre-sorted list
+    // For specific org, use the pre-sorted list of local repos
     return repositoriesByOrg.get(selectedOrg) || [];
   }, [selectedOrg, repositories, repositoriesByOrg]);
 
@@ -186,7 +294,31 @@ export const AuthView: React.FC = () => {
         organizations={organizations}
         selectedOrg={selectedOrg}
         onSelectOrg={setSelectedOrg}
-        totalRepositories={repositories.length}
+        totalRepositories={(() => {
+          // Calculate unique total count
+          const localSet = new Set<string>();
+          repositories.forEach(repo => {
+            if (repo.github?.owner) {
+              localSet.add(`${repo.github.owner}/${repo.name}`.toLowerCase());
+            } else if (repo.remoteUrl) {
+              const match = repo.remoteUrl.match(/github\.com[:/]([^/]+)\//);
+              if (match) {
+                localSet.add(`${match[1]}/${repo.name}`.toLowerCase());
+              }
+            }
+            localSet.add(repo.name.toLowerCase());
+          });
+
+          let uniqueRemoteCount = 0;
+          remoteRepositories.forEach(repo => {
+            const key = `${repo.owner.login}/${repo.name}`.toLowerCase();
+            if (!localSet.has(key) && !localSet.has(repo.name.toLowerCase())) {
+              uniqueRemoteCount++;
+            }
+          });
+
+          return repositories.length + uniqueRemoteCount;
+        })()}
         isAuthenticated={isAuthenticated}
         user={authUser}
         showAuthView={showAuthView}
@@ -214,6 +346,7 @@ export const AuthView: React.FC = () => {
     return (
       <RepositoryGrid
         repositories={getFilteredRepositories()}
+        remoteRepositories={remoteRepositories}
         selectedOrg={selectedOrg}
         loading={loading}
         onOpenRepository={handleOpenRepository}

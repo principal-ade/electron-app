@@ -1,11 +1,15 @@
 import type { AlexandriaEntry } from '@a24z/core-library';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 
+export type OrganizationType = 'local' | 'github' | 'remote';
+
 export interface OrganizationInfo {
   name: string;
-  type: 'local' | 'github' | 'remote';
+  type: OrganizationType;
   repositoryCount: number;
   avatarUrl?: string;
+  lastActivity?: string | null;
+  isUser?: boolean;
 }
 
 export interface GroupedRepositories {
@@ -49,7 +53,7 @@ export function extractOrganization(repo: AlexandriaEntry | EnhancedAlexandriaEn
 /**
  * Determine organization type based on repository information
  */
-export function getOrganizationType(repo: AlexandriaEntry | EnhancedAlexandriaEntry): OrganizationInfo['type'] {
+export function getOrganizationType(repo: AlexandriaEntry | EnhancedAlexandriaEntry): OrganizationType {
   if (repo.github?.owner) {
     return 'github';
   }
@@ -128,7 +132,11 @@ export function getRepositoryLastActivity(repo: AlexandriaEntry | EnhancedAlexan
  */
 export function sortOrganizations(organizations: OrganizationInfo[]): OrganizationInfo[] {
   return organizations.sort((a, b) => {
-    // First sort by type: github > remote > local
+    // First priority: User's personal repos (isUser flag) at the top
+    if (a.isUser && !b.isUser) return -1;
+    if (!a.isUser && b.isUser) return 1;
+
+    // Second: Sort by type: github > remote > local
     const typeOrder = { github: 0, remote: 1, local: 2 };
     const typeDiff = typeOrder[a.type] - typeOrder[b.type];
     if (typeDiff !== 0) return typeDiff;

@@ -10,49 +10,13 @@ import {
   convertNormalizedToOpenCode,
   NormalizedHook,
 } from '@principal-ai/agent-monitoring';
+import {
+  DEFAULT_MCP_SERVER_NAME,
+  disableAgentMCP,
+  enableAgentMCP,
+  getAgentMCPStatus,
+} from '@a24z/agent-manager';
 import { AgentSettings } from '../../shared/types/legacy-event.types';
-
-// MOCK IMPLEMENTATIONS - These functions are not exported from @principal-ai/agent-monitoring
-// TODO: These need to be properly implemented or the package needs to be updated
-function configureAgentMCP(
-  _agentType: SupportedAgent,
-  _settings: any,
-  _serverName: string,
-  _serverPath: string,
-): any {
-  throw new Error(
-    'MOCK: configureAgentMCP is not implemented - missing from @principal-ai/agent-monitoring package',
-  );
-}
-
-function removeAgentMCP(
-  _agentType: SupportedAgent,
-  _settings: any,
-  _serverName: string,
-): any {
-  throw new Error(
-    'MOCK: removeAgentMCP is not implemented - missing from @principal-ai/agent-monitoring package',
-  );
-}
-
-function hasAgentMCP(
-  _agentType: SupportedAgent,
-  _settings: any,
-  _serverName: string,
-): boolean {
-  throw new Error(
-    'MOCK: hasAgentMCP is not implemented - missing from @principal-ai/agent-monitoring package',
-  );
-}
-
-function countAgentMCPServers(
-  _agentType: SupportedAgent,
-  _settings: any,
-): number {
-  throw new Error(
-    'MOCK: countAgentMCPServers is not implemented - missing from @principal-ai/agent-monitoring package',
-  );
-}
 import { APP_BRANDING } from '../../shared/config/appBranding';
 
 import {
@@ -71,36 +35,6 @@ function getAgentConfigPath(agent: SupportedAgent): string {
     throw new Error(`Agent ${agent} does not have a settings path`);
   }
   return EnvironmentConfig.expandHome(info.settingsPath);
-}
-
-// Get agent MCP config path
-function getAgentMCPConfigPath(agent: SupportedAgent): string {
-  const info = AGENT_INFO[agent];
-  if (!info.mcpConfigurationPath) {
-    throw new Error(`Agent ${agent} does not have an MCP configuration path`);
-  }
-  return EnvironmentConfig.expandHome(info.mcpConfigurationPath);
-}
-
-// Helper function to read agent settings
-async function readAgentSettings(configPath: string): Promise<AgentSettings> {
-  try {
-    const content = await fs.readFile(configPath, 'utf8');
-    return JSON.parse(content);
-  } catch (_error) {
-    // Return empty settings if file doesn't exist
-    return {};
-  }
-}
-
-// Helper function to write agent settings
-async function writeAgentSettings(
-  configPath: string,
-  settings: AgentSettings,
-): Promise<void> {
-  const configDir = path.dirname(configPath);
-  await fs.mkdir(configDir, { recursive: true });
-  await fs.writeFile(configPath, JSON.stringify(settings, null, 2));
 }
 
 export function setupAgentConfigHandlers() {
@@ -361,44 +295,18 @@ export function setupAgentConfigHandlers() {
       serverName: string = APP_BRANDING.MCP_SERVER_CONFIG_KEY,
     ) => {
       try {
-        const configPath = getAgentMCPConfigPath(agentType);
-        let currentSettings = await readAgentSettings(configPath);
-
-        // Get the MCP server path
-        const mcpServerPath = EnvironmentConfig.getAssetsPath(
-          APP_BRANDING.MCP_SERVER_FILENAME,
-        );
-
-        // Verify MCP server exists
-        if (
-          !(await fs
-            .access(mcpServerPath)
-            .then(() => true)
-            .catch(() => false))
-        ) {
-          return {
-            success: false,
-            error: `MCP server not found at ${mcpServerPath}`,
-          };
-        }
-
-        // Configure our MCP using core library
-        let updatedSettings = configureAgentMCP(
-          agentType,
-          currentSettings,
-          serverName,
-          mcpServerPath,
-        );
-
-
-        // Write updated settings
-        await writeAgentSettings(configPath, updatedSettings);
+        const resolvedServerName = serverName || DEFAULT_MCP_SERVER_NAME;
+        const status = await enableAgentMCP(agentType, {
+          serverName: resolvedServerName,
+        });
 
         return {
           success: true,
           status: {
-            hasMCP: true,
-            mcpCount: countAgentMCPServers(agentType, updatedSettings),
+            hasMCP: status.hasMCP,
+            mcpCount: status.mcpCount,
+            configPath: status.configPath,
+            servers: status.servers,
           },
         };
       } catch (error) {
@@ -419,25 +327,16 @@ export function setupAgentConfigHandlers() {
       serverName: string = APP_BRANDING.MCP_SERVER_CONFIG_KEY,
     ) => {
       try {
-        const configPath = getAgentMCPConfigPath(agentType);
-        let currentSettings = await readAgentSettings(configPath);
-
-        // Remove our MCP using core library
-        let updatedSettings = removeAgentMCP(
-          agentType,
-          currentSettings,
-          serverName,
-        );
-
-
-        // Write updated settings
-        await writeAgentSettings(configPath, updatedSettings);
+        const resolvedServerName = serverName || DEFAULT_MCP_SERVER_NAME;
+        const status = await disableAgentMCP(agentType, resolvedServerName);
 
         return {
           success: true,
           status: {
-            hasMCP: hasAgentMCP(agentType, updatedSettings, serverName),
-            mcpCount: countAgentMCPServers(agentType, updatedSettings),
+            hasMCP: status.hasMCP,
+            mcpCount: status.mcpCount,
+            configPath: status.configPath,
+            servers: status.servers,
           },
         };
       } catch (error) {
@@ -458,14 +357,16 @@ export function setupAgentConfigHandlers() {
       serverName: string = APP_BRANDING.MCP_SERVER_CONFIG_KEY,
     ) => {
       try {
-        const configPath = getAgentMCPConfigPath(agentType);
-        const settings = await readAgentSettings(configPath);
+        const resolvedServerName = serverName || DEFAULT_MCP_SERVER_NAME;
+        const status = await getAgentMCPStatus(agentType, resolvedServerName);
 
         return {
           success: true,
           status: {
-            hasMCP: hasAgentMCP(agentType, settings, serverName),
-            mcpCount: countAgentMCPServers(agentType, settings),
+            hasMCP: status.hasMCP,
+            mcpCount: status.mcpCount,
+            configPath: status.configPath,
+            servers: status.servers,
           },
         };
       } catch (error) {

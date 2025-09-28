@@ -69,6 +69,8 @@ export interface AgentConfigAPI {
     status?: {
       hasMCP: boolean;
       mcpCount: number;
+      configPath?: string;
+      servers?: Record<string, unknown>;
     };
     error?: string;
   }>;
@@ -81,6 +83,8 @@ export interface AgentConfigAPI {
     status?: {
       hasMCP: boolean;
       mcpCount: number;
+      configPath?: string;
+      servers?: Record<string, unknown>;
     };
     error?: string;
   }>;
@@ -93,6 +97,8 @@ export interface AgentConfigAPI {
     status?: {
       hasMCP: boolean;
       mcpCount: number;
+      configPath?: string;
+      servers?: Record<string, unknown>;
     };
     error?: string;
   }>;
