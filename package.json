@@ -180,7 +180,7 @@
     "@principal-ai/codebase-composition": "^0.2.0",
     "@principal-ai/codebase-quality-lenses": "^0.1.5",
     "@principal-ai/repository-abstraction": "^0.2.0",
-    "@principal-ai/repository-monitoring": "^0.1.2",
+    "@principal-ai/repository-monitoring": "^0.1.4",
     "@radix-ui/react-tabs": "^1.1.13",
     "@types/jsonwebtoken": "^9.0.10",
     "@xterm/addon-fit": "^0.10.0",

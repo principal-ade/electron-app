@@ -5,7 +5,12 @@
 
 import { ipcMain, BrowserWindow } from 'electron';
 import { RepositoryMonitoringManager } from './RepositoryMonitoringManager';
-import { RepositoryMonitoringAPIEvent, GitStatusMetadata, type ToolExecutionRequest } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import {
+  RepositoryMonitoringAPIEvent,
+  GitStatusMetadata,
+  type ToolExecutionRequest,
+  type WorkspaceChangeEventPayload,
+} from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { MonitoringInternalEvent } from '../../repository-monitoring-server/types';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 
@@ -245,6 +250,14 @@ export function registerRepositoryMonitoringHandlers(): void {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach(window => {
       window.webContents.send(RepositoryMonitoringAPIEvent.GIT_STATE_EVENT, payload);
+    });
+  });
+
+  manager.on(MonitoringInternalEvent.WORKSPACE_CHANGED, (payload: WorkspaceChangeEventPayload) => {
+    console.log(`[RepositoryMonitoring] Forwarding workspace change to renderer for ${payload.repoPath}`);
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach(window => {
+      window.webContents.send(RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED, payload);
     });
   });
 

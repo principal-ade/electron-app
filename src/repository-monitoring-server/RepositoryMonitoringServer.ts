@@ -10,23 +10,25 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 import { FileTreeBuilder } from './FileTreeBuilder';
 import { PackageProcessor } from './PackageProcessor';
 import { GitCore } from '../shared/repository-core/GitCore';
-import { FSWatcher, watch } from 'chokidar';
-import * as nodePath from 'path';
-import type { RepositoryState, CachedFileTree, GitStatusMetadata, PackageSummary, GitStateEventPayload } from './types';
+import type {
+  RepositoryState,
+  CachedFileTree,
+  GitStatusMetadata,
+  PackageSummary,
+  GitStateEventPayload,
+  WorkspaceChangeEventPayload,
+} from './types';
 import { MonitoringInternalEvent } from './types';
 import { GitWatcherAdapter } from './GitWatcherAdapter';
-import { FileSystemCore } from '../shared/repository-core/FileSystemCore';
 
 export class RepositoryMonitoringServer {
   private repositories: Map<string, RepositoryState> = new Map();
   private fileTreeCache: Map<string, CachedFileTree> = new Map();
   private fileTreeBuilder: FileTreeBuilder;
   private packageProcessor: PackageProcessor;
-  private gitWatchers: Map<string, FSWatcher> = new Map();
-  private fsMonitorStatus: Map<string, boolean> = new Map();
   private packageCache: Map<string, { packages: PackageLayer[]; summary: PackageSummary; timestamp: number }> = new Map();
   private gitWatcherAdapter: GitWatcherAdapter;
-  private watcherRestartTimers: Map<string, NodeJS.Timeout> = new Map();
+  private gitStatusRefreshTimers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
     this.fileTreeBuilder = new FileTreeBuilder();
@@ -41,6 +43,10 @@ export class RepositoryMonitoringServer {
     this.gitWatcherAdapter.on(MonitoringInternalEvent.GIT_STATE_EVENT, (payload: GitStateEventPayload) => {
       this.handleGitStateEvent(payload);
     });
+
+    this.gitWatcherAdapter.on(MonitoringInternalEvent.WORKSPACE_CHANGED, (event: WorkspaceChangeEventPayload) => {
+      this.handleWorkspaceChangeEvent(event);
+    });
   }
 
   /**
@@ -52,6 +58,9 @@ export class RepositoryMonitoringServer {
         path,
         lastUpdated: new Date(),
         isWatching: false,
+        gitWatchingEnabled: false,
+        watchingMode: 'none',
+        fsMonitorEnabled: false,
       };
 
       try {
@@ -289,30 +298,12 @@ export class RepositoryMonitoringServer {
       console.log(`[RepositoryMonitoring] Starting git state event watching for ${repoPath}`);
       await this.gitWatcherAdapter.startWatching(repoPath);
 
-      // Set up file watching for source file changes
-      // Try to enable FSMonitor first
+      // Attempt to enable fsmonitor for improved performance information
       const fsMonitorEnabled = await GitCore.enableFSMonitor(repoPath);
-      this.fsMonitorStatus.set(repoPath, fsMonitorEnabled);
-
-      // Set up file watching based on FSMonitor availability
-      if (fsMonitorEnabled) {
-        try {
-          await this.setupMinimalGitWatching(repoPath);
-          state.watchingMode = 'minimal';
-        } catch (error) {
-          console.warn(`[RepositoryMonitoring] Minimal watcher setup failed for ${repoPath}, falling back:`, error);
-          await this.setupFallbackGitWatching(repoPath);
-          state.watchingMode = 'fallback';
-          state.fsMonitorEnabled = false;
-        }
-      } else {
-        // Fallback to more comprehensive watching
-        await this.setupFallbackGitWatching(repoPath);
-        state.watchingMode = 'fallback';
-      }
-
-      state.gitWatchingEnabled = true;
       state.fsMonitorEnabled = fsMonitorEnabled;
+      state.watchingMode = fsMonitorEnabled ? 'minimal' : 'fallback';
+      state.gitWatchingEnabled = true;
+      state.isWatching = true;
 
       // Do initial status check
       await this.getGitStatus(repoPath);
@@ -330,226 +321,82 @@ export class RepositoryMonitoringServer {
     if (state) {
       state.gitWatchingEnabled = false;
       state.isWatching = false;
+      state.fsMonitorEnabled = false;
+      state.watchingMode = 'none';
     }
 
     // Stop library-based watching
     await this.gitWatcherAdapter.stopWatching(repoPath);
 
-    // Clean up watcher
-    await this.disposeWatcher(repoPath);
-
-    // Clear any pending debounce timers
-    this.clearWatcherRestart(repoPath);
+    const refreshTimer = this.gitStatusRefreshTimers.get(repoPath);
+    if (refreshTimer) {
+      clearTimeout(refreshTimer);
+      this.gitStatusRefreshTimers.delete(repoPath);
+    }
   }
 
-  /**
-   * Setup minimal git watching (when FSMonitor is enabled)
-   * FSMonitor makes git status fast, but we still need to detect working dir changes
-   */
-  private async setupMinimalGitWatching(repoPath: string): Promise<void> {
-    let ignoreGlobs: string[] = [];
-    try {
-      ignoreGlobs = await FileSystemCore.getWatchIgnoreGlobs(repoPath);
-    } catch (error) {
-      console.warn(`[RepositoryMonitoring] Failed to load watch ignore globs for ${repoPath}:`, error);
-    }
+  private handleWorkspaceChangeEvent(event: WorkspaceChangeEventPayload): void {
+    const { repoPath, state: gitState } = event;
 
-    let watcher: FSWatcher;
-    try {
-      watcher = watch(repoPath, {
-        ignoreInitial: true,
-        persistent: true,
-        ignored: FileSystemCore.createWatchIgnorePredicate(repoPath, ignoreGlobs),
-        ignorePermissionErrors: true,
-        awaitWriteFinish: {
-          stabilityThreshold: 300,
-          pollInterval: 100,
-        },
-      });
-    } catch (error) {
-      console.error(`[RepositoryMonitoring] Failed to initialize minimal watcher for ${repoPath}:`, error);
-      throw error;
-    }
-
-    this.registerWatcher(repoPath, watcher);
-  }
-
-  /**
-   * Setup fallback git watching (when FSMonitor is not available)
-   */
-  private async setupFallbackGitWatching(repoPath: string): Promise<void> {
-    let ignoreGlobs: string[] = [];
-    try {
-      ignoreGlobs = await FileSystemCore.getWatchIgnoreGlobs(repoPath);
-    } catch (error) {
-      console.warn(`[RepositoryMonitoring] Failed to load watch ignore globs for ${repoPath}:`, error);
-    }
-
-    let watcher: FSWatcher;
-    try {
-      watcher = watch(repoPath, {
-        ignoreInitial: true,
-        persistent: true,
-        ignored: FileSystemCore.createWatchIgnorePredicate(repoPath, ignoreGlobs),
-        ignorePermissionErrors: true,
-        awaitWriteFinish: {
-          stabilityThreshold: 500,
-          pollInterval: 100,
-        },
-      });
-    } catch (error) {
-      console.error(`[RepositoryMonitoring] Failed to initialize fallback watcher for ${repoPath}:`, error);
-      throw error;
-    }
-
-    this.registerWatcher(repoPath, watcher);
-  }
-
-  /**
-   * Handle file system changes for cache invalidation only
-   * Git status updates are handled by the library watcher
-   */
-  private handleFileChange(repoPath: string, filePath: string, event: string): void {
-    // Clear caches that depend on file contents
     this.fileTreeCache.delete(repoPath);
     this.packageCache.delete(repoPath);
 
-    const gitignorePath = nodePath.join(repoPath, '.gitignore');
-    if (nodePath.resolve(filePath) === nodePath.resolve(gitignorePath)) {
-      this.scheduleWatcherRestart(repoPath, '.gitignore changed');
+    const state = this.repositories.get(repoPath);
+    if (state) {
+      state.lastUpdated = new Date();
+      if (gitState?.lastCommitTime) {
+        state.lastLocalChange = new Date(gitState.lastCommitTime).toISOString();
+      }
+      if (gitState?.timestamp) {
+        state.lastLocalChange = new Date(gitState.timestamp).toISOString();
+      }
     }
 
-    // Note: We don't trigger git status here anymore
-    // The library watcher handles all git state changes
-    console.log(`[RepositoryMonitoring] File change detected in ${repoPath}, caches cleared`);
-  }
-
-  private registerWatcher(repoPath: string, watcher: FSWatcher): void {
-    watcher.on('all', (event, filePath) => {
-      this.handleFileChange(repoPath, filePath, event);
-    });
-
-    watcher.on('error', (error) => {
-      if (this.isIgnorableWatcherError(repoPath, error)) {
-        return;
-      }
-
-      console.error(`[RepositoryMonitoring] Watcher error for ${repoPath}:`, error);
-      this.scheduleWatcherRestart(repoPath, 'watcher error');
-    });
-
-    watcher.on('ready', () => {
-      const state = this.repositories.get(repoPath);
-      if (state) {
-        state.isWatching = true;
-      }
-    });
-
-    watcher.on('close', () => {
-      const state = this.repositories.get(repoPath);
-      if (state) {
-        state.isWatching = false;
-      }
-    });
-
-    this.gitWatchers.set(repoPath, watcher);
-  }
-
-  private async disposeWatcher(repoPath: string): Promise<void> {
-    const watcher = this.gitWatchers.get(repoPath);
-    if (watcher) {
-      try {
-        await watcher.close();
-      } catch (error) {
-        console.warn(`[RepositoryMonitoring] Error closing watcher for ${repoPath}:`, error);
-      }
-      this.gitWatchers.delete(repoPath);
+    if (process.parentPort) {
+      process.parentPort.postMessage({
+        type: 'event',
+        event: {
+          name: MonitoringInternalEvent.WORKSPACE_CHANGED,
+          data: event,
+        },
+      });
     }
+
+    const delay = state?.watchingMode === 'minimal' ? 300 : 500;
+    this.scheduleGitStatusRefresh(repoPath, delay);
   }
 
-  private clearWatcherRestart(repoPath: string): void {
-    const timer = this.watcherRestartTimers.get(repoPath);
-    if (timer) {
-      clearTimeout(timer);
-      this.watcherRestartTimers.delete(repoPath);
-    }
-  }
-
-  private scheduleWatcherRestart(repoPath: string, reason: string): void {
+  private scheduleGitStatusRefresh(repoPath: string, delay: number): void {
     const state = this.repositories.get(repoPath);
     if (!state?.gitWatchingEnabled) {
       return;
     }
 
-    this.clearWatcherRestart(repoPath);
-
-    const timer = setTimeout(() => {
-      this.watcherRestartTimers.delete(repoPath);
-      this.restartWatcher(repoPath, reason).catch((error) => {
-        console.error(`[RepositoryMonitoring] Failed to restart watcher for ${repoPath}:`, error);
-      });
-    }, 300);
-
-    this.watcherRestartTimers.set(repoPath, timer);
-  }
-
-  private async restartWatcher(repoPath: string, reason: string): Promise<void> {
-    console.log(`[RepositoryMonitoring] Restarting watcher for ${repoPath} (${reason})`);
-    const state = this.repositories.get(repoPath);
-    if (!state || !state.gitWatchingEnabled) {
-      return;
+    const existingTimer = this.gitStatusRefreshTimers.get(repoPath);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
     }
 
-    await this.disposeWatcher(repoPath);
-
-    try {
-      if (state.watchingMode === 'minimal' && state.fsMonitorEnabled) {
-        await this.setupMinimalGitWatching(repoPath);
-        state.watchingMode = 'minimal';
-      } else {
-        await this.setupFallbackGitWatching(repoPath);
-        state.watchingMode = 'fallback';
+    const timer = setTimeout(async () => {
+      this.gitStatusRefreshTimers.delete(repoPath);
+      try {
+        const status = await this.getGitStatus(repoPath);
+        if (process.parentPort) {
+          process.parentPort.postMessage({
+            type: 'event',
+            event: {
+              name: MonitoringInternalEvent.GIT_STATUS_CHANGED,
+              data: status,
+            },
+          });
+        }
+      } catch (error) {
+        console.error(`[RepositoryMonitoring] Failed to refresh git status after workspace change for ${repoPath}:`, error);
       }
-    } catch (error) {
-      console.error(`[RepositoryMonitoring] Watcher restart failed for ${repoPath}:`, error);
-      if (state.watchingMode === 'minimal') {
-        console.warn(`[RepositoryMonitoring] Falling back to comprehensive watcher for ${repoPath}`);
-        state.watchingMode = 'fallback';
-        state.fsMonitorEnabled = false;
-        await this.setupFallbackGitWatching(repoPath);
-      } else {
-        throw error;
-      }
-    }
+    }, delay);
+
+    this.gitStatusRefreshTimers.set(repoPath, timer);
   }
-
-  private isIgnorableWatcherError(repoPath: string, error: unknown): boolean {
-    if (!error || typeof error !== 'object') {
-      return false;
-    }
-
-    const err = error as NodeJS.ErrnoException & { filename?: string };
-    if (err.code !== 'UNKNOWN') {
-      return false;
-    }
-
-    const targetPath = err.path || err.filename;
-    if (!targetPath) {
-      return false;
-    }
-
-    const normalize = (value: string) => value.split(nodePath.sep).join('/');
-    const expected = normalize(nodePath.resolve(repoPath, '.git', 'fsmonitor--daemon.ipc'));
-    const actual = normalize(targetPath);
-
-    if (actual === expected) {
-      console.warn(`[RepositoryMonitoring] Ignoring watcher error for fsmonitor socket in ${repoPath}`);
-      return true;
-    }
-
-    return false;
-  }
-
 
   /**
    * Handle git state events from the library-based watcher

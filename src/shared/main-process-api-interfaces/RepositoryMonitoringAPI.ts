@@ -4,6 +4,7 @@
 
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
+import type { GitState } from '@principal-ai/repository-monitoring';
 import type { ToolExecutionRequest, ToolExecutionResponse } from '../../main/quality-lenses/QualityLensService';
 
 // Export the imported types
@@ -37,6 +38,7 @@ export enum RepositoryMonitoringAPIEvent {
   DISABLE_GIT_WATCHING = 'repository-monitoring:disable-git-watching',
   GIT_STATUS_CHANGED = 'repository-monitoring:git-status-changed',
   GIT_STATE_EVENT = 'repository-monitoring:git-state-event',
+  WORKSPACE_CHANGED = 'repository-monitoring:workspace-change',
   EXECUTE_TOOL = 'repository-monitoring:execute-tool',
 }
 
@@ -78,6 +80,11 @@ export interface RepositoryInfo {
   watchingMode: 'minimal' | 'fallback' | 'none';
 }
 
+export interface WorkspaceChangeEventPayload {
+  repoPath: string;
+  state?: GitState;
+}
+
 export interface MonitoringStatus {
   repositories: RepositoryInfo[];  // List of registered repositories with details
   currentMemory: number;   // Current RSS in bytes
@@ -99,5 +106,6 @@ export interface RepositoryMonitoringAPI {
   enableGitWatching(repoPath: string): Promise<RepositoryMonitoringResult>;
   disableGitWatching(repoPath: string): Promise<RepositoryMonitoringResult>;
   onGitStatusChanged(callback: (status: GitStatusMetadata) => void): () => void;
+  onWorkspaceChange(callback: (event: WorkspaceChangeEventPayload) => void): () => void;
   executeTool(request: ToolExecutionRequest): Promise<ToolExecutionResponse>;
 }

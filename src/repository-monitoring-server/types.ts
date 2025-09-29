@@ -5,7 +5,8 @@
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { QualityMetrics, PackageLayer } from '@principal-ai/codebase-composition';
 import type { LensResult } from '@principal-ai/codebase-quality-lenses';
-import type { ToolExecutionRequest, ToolExecutionResponse } from '../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type { GitState } from '@principal-ai/repository-monitoring';
+import type { PackageSummary, ToolExecutionRequest, ToolExecutionResponse } from '../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 // Re-export PackageSummary from shared types
 export type { PackageSummary } from '../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
@@ -17,6 +18,7 @@ export enum MonitoringInternalEvent {
   METRICS_UPDATED = 'metrics-updated',
   GIT_STATUS_CHANGED = 'git-status-changed',
   GIT_STATE_EVENT = 'git-state-event',
+  WORKSPACE_CHANGED = 'workspace-change',
 }
 
 /**
@@ -173,6 +175,11 @@ export interface GitStateEvent {
 export interface GitStateEventPayload {
   event: GitStateEvent;
   affectedCacheFields: string[]; // Which cache fields should be updated
+}
+
+export interface WorkspaceChangeEventPayload {
+  repoPath: string;
+  state?: GitState;
 }
 
 /**

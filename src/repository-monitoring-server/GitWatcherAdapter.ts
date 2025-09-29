@@ -6,6 +6,7 @@
 
 import { RepositoryMonitor } from '@principal-ai/repository-monitoring';
 import type { GitEvent, GitState, RepositoryMonitorOptions } from '@principal-ai/repository-monitoring';
+import type { WorkspaceChangeEventPayload } from './types';
 import { EventEmitter } from 'events';
 import { MonitoringInternalEvent, GitStateEvent, GitStateEventPayload } from './types';
 import type { RepositoryMonitoringServer } from './RepositoryMonitoringServer';
@@ -24,12 +25,10 @@ interface GitWatcherAdapterConfig {
 export class GitWatcherAdapter extends EventEmitter {
   private repositoryMonitors: Map<string, RepositoryMonitor> = new Map();
   private config: GitWatcherAdapterConfig;
-  private server: RepositoryMonitoringServer;
   private lastKnownState: Map<string, GitState> = new Map();
 
-  constructor(server: RepositoryMonitoringServer, config: GitWatcherAdapterConfig = {}) {
+  constructor(_server: RepositoryMonitoringServer, config: GitWatcherAdapterConfig = {}) {
     super();
-    this.server = server;
     this.config = {
       debounceMs: config.debounceMs || 500,
       watchMode: config.watchMode || 'watch',
@@ -76,6 +75,10 @@ export class GitWatcherAdapter extends EventEmitter {
 
       monitor.on('error', (error: Error) => {
         console.error(`[GitWatcherAdapter] Monitor error for ${repoPath}:`, error);
+      });
+
+      monitor.on('workspace-change', (event: WorkspaceChangeEventPayload) => {
+        this.emit(MonitoringInternalEvent.WORKSPACE_CHANGED, event);
       });
 
       // Start watching

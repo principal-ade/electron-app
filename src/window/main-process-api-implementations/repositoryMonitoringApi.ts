@@ -3,6 +3,7 @@ import {
   RepositoryMonitoringAPI,
   RepositoryMonitoringAPIEvent,
   GitStatusMetadata,
+  type WorkspaceChangeEventPayload,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
@@ -59,6 +60,14 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
     ipcRenderer.on(RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED, handler);
     return () => {
       ipcRenderer.removeListener(RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED, handler);
+    };
+  },
+
+  onWorkspaceChange: (callback: (event: WorkspaceChangeEventPayload) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: WorkspaceChangeEventPayload) => callback(payload);
+    ipcRenderer.on(RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED, handler);
+    return () => {
+      ipcRenderer.removeListener(RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED, handler);
     };
   },
 
