@@ -162,11 +162,6 @@ export const StandaloneTerminal: React.FC = () => {
         sessionId={sessionId}
         agentSessionId={terminalInfo.agentSessionId}
         agentSessionName={aiSession?.metadata?.customName}
-        onOpenInExplorer={() => {
-          if (terminalInfo.directory) {
-            window.electron?.shell?.openPath(terminalInfo.directory);
-          }
-        }}
       />
 
       {/* Terminal Panel - uses flex to fill remaining space */}

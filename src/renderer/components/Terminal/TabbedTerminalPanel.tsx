@@ -621,8 +621,8 @@ export const TabbedTerminalPanel = forwardRef<
                 style={{
                   position: 'absolute',
                   inset: 0,
-                  visibility: isActiveTab ? 'visible' : 'hidden',
-                  pointerEvents: isActiveTab ? 'auto' : 'none',
+                  display: isActiveTab ? 'block' : 'none',
+                  zIndex: isActiveTab ? 1 : 0,
                 }}
               >
                 <TerminalPanel

@@ -1,14 +1,12 @@
 import React from 'react';
-import { Terminal, FolderOpen, Cpu } from 'lucide-react';
+import { Terminal, Cpu } from 'lucide-react';
 import { BaseTitlebar } from './BaseTitlebar';
-import { TitlebarButton } from './TitlebarButton';
 
 export interface TerminalTitlebarProps {
   directory?: string;
   sessionId?: string;
   agentSessionId?: string;
   agentSessionName?: string;
-  onOpenInExplorer?: () => void;
 }
 
 export const TerminalTitlebar: React.FC<TerminalTitlebarProps> = ({
@@ -16,7 +14,6 @@ export const TerminalTitlebar: React.FC<TerminalTitlebarProps> = ({
   sessionId,
   agentSessionId,
   agentSessionName,
-  onOpenInExplorer,
 }) => {
   const directoryName = directory?.split('/').pop() || 'Terminal';
 
@@ -47,16 +44,6 @@ export const TerminalTitlebar: React.FC<TerminalTitlebarProps> = ({
   );
 
   return (
-    <BaseTitlebar title={titleContent}>
-      {onOpenInExplorer && directory && (
-        <TitlebarButton
-          onClick={onOpenInExplorer}
-          icon={<FolderOpen size={16} />}
-          ariaLabel="Open in Explorer"
-          title="Open directory in file explorer"
-          position="left"
-        />
-      )}
-    </BaseTitlebar>
+    <BaseTitlebar title={titleContent} />
   );
 };
