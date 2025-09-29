@@ -64,9 +64,6 @@ import { registerRemoteAgentWindowHandlers } from './window/remoteAgentWindowHan
 let planningMCPBridgePort: number | null = null;
 let remoteAgentWindowManager: RemoteAgentWindowManager | null = null;
 
-const agentEventsBridgePort = APP_BRANDING.BRIDGE_PORTS.AGENT_SESSION_EVENTS;
-const planningBridgePort = APP_BRANDING.BRIDGE_PORTS.PLANNING_MCP;
-
 // Setup app version handler
 const setupAppVersionHandler = () => {
   ipcMain.handle(AppVersionManagerAPIEvent.GET_VERSION, () => {

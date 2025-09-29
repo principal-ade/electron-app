@@ -69,7 +69,7 @@ if (!gotTheLock) {
   app.exit(0);
 } else {
   // Handle when another instance tries to start
-  app.on('second-instance', (event, commandLine, workingDirectory) => {
+  app.on('second-instance', (_event, _commandLine, _workingDirectory) => {
     // Someone tried to run a second instance, focus our window instead
     const windows = Array.from(applicationWindows.values());
     if (windows.length > 0 && windows[0].window) {

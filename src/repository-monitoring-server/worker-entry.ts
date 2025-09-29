@@ -20,9 +20,9 @@ type ParentPortLike = {
   on(event: 'message', listener: (value: unknown) => void): void;
 };
 
-interface UtilityProcess extends NodeJS.Process {
+type UtilityProcess = NodeJS.Process & {
   parentPort?: ParentPortLike;
-}
+};
 
 const utilityProcess = process as UtilityProcess;
 

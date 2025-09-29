@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { BrowserWindow, webContents } from 'electron';
+import { webContents } from 'electron';
 import { EventEmitter } from 'events';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 

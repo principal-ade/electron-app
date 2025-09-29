@@ -15,7 +15,6 @@ interface TursoConfig {
 }
 import type {
   RepoNormalizedUniversalAgentSessionEvent,
-  SupportedAgent,
 } from '@principal-ai/agent-monitoring';
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 

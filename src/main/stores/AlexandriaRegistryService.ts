@@ -221,7 +221,16 @@ export class AlexandriaRegistryService {
         };
       }
 
-      const data = await response.json();
+      const data = await response.json() as {
+        owner?: { login: string };
+        name?: string;
+        description?: string;
+        language?: string;
+        stargazers_count?: number;
+        default_branch?: string;
+        topics?: string[];
+        private?: boolean;
+      };
 
       return {
         owner: data.owner?.login || owner,

@@ -7,14 +7,11 @@ import { app, utilityProcess, UtilityProcess, BrowserWindow } from 'electron';
 import { EventEmitter } from 'events';
 import * as path from 'path';
 
-import { getTypedStorageManager } from '../storage-providers';
-import { StaticNamespaces } from '../storage-providers/types';
 import { repositoryCache } from '../stores/RepositoryCache';
 
 import {
   ServerToMainMessage,
   MainToServerMessage,
-  isStorageRequestMessage,
   isRepositoryInfoRequestMessage,
   isWindowBroadcastMessage,
   isProcessedEventMessage,
@@ -223,8 +220,6 @@ export class EventServerManager extends EventEmitter {
 
       if (isProcessedEventMessage(msg)) {
         await this.handleProcessedEvent(msg);
-      } else if (isStorageRequestMessage(msg)) {
-        await this.handleStorageRequest(msg);
       } else if (isRepositoryInfoRequestMessage(msg)) {
         await this.handleRepositoryInfoRequest(msg);
       } else if (isWindowBroadcastMessage(msg)) {
@@ -346,50 +341,6 @@ export class EventServerManager extends EventEmitter {
     });
 
     this.log('info', `Processed and broadcast event for session: ${normalizedSessionId}`);
-  }
-
-  /**
-   * Handle storage requests from server
-   */
-  private async handleStorageRequest(msg: any): Promise<void> {
-    try {
-      const typedStore = await getTypedStorageManager();
-      let response: MainToServerMessage;
-
-      if (msg.operation === 'GET') {
-        const result = await typedStore.get(msg.key, msg.namespace as any);
-        response = {
-          type: 'STORAGE_RESPONSE',
-          id: msg.id,
-          timestamp: Date.now(),
-          success: result.success,
-          data: result.data,
-          error: result.error?.toString(),
-        };
-      } else if (msg.operation === 'SET') {
-        const result = await typedStore.set(msg.key, msg.data, msg.namespace as any);
-        response = {
-          type: 'STORAGE_RESPONSE',
-          id: msg.id,
-          timestamp: Date.now(),
-          success: result.success,
-          error: result.error?.toString(),
-        };
-      } else {
-        throw new Error(`Unknown storage operation: ${msg.operation}`);
-      }
-
-      this.sendToWorker(response);
-
-    } catch (error) {
-      this.sendToWorker({
-        type: 'STORAGE_RESPONSE',
-        id: msg.id,
-        timestamp: Date.now(),
-        success: false,
-        error: (error as Error).message,
-      });
-    }
   }
 
   /**

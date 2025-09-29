@@ -481,16 +481,16 @@ export class GitRepositoryService {
       const status = await gitClientFactory.getGitStatus(directory);
 
       // Process staged, unstaged, and untracked files
-      status.staged.forEach((filePath) => {
-        created.push(filePath);
+      status.staged.forEach((file) => {
+        created.push(file.path);
       });
 
-      status.unstaged.forEach((filePath) => {
-        modified.push(filePath);
+      status.unstaged.forEach((file) => {
+        modified.push(file.path);
       });
 
-      status.untracked.forEach((filePath) => {
-        created.push(filePath);
+      status.untracked.forEach((file) => {
+        created.push(file.path);
       });
 
       // For more detailed analysis, we still need to use git client directly

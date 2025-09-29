@@ -5,7 +5,7 @@
 
 import { BaseExecutor } from './BaseExecutor';
 import type { ExecuteOptions, ExecuteResult } from '../types';
-import type { GitStatus } from '../../shared/types/repository.types';
+import type { GitStatus } from '../../../shared/types/repository.types';
 
 // GitStatus is now imported from repository.types
 

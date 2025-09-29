@@ -1,6 +1,6 @@
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import { MemoryPalace, NodeFileSystemAdapter } from '@a24z/core-library';
-import type { ExcalidrawData, RoomDrawingMetadata } from '@a24z/core-library';
+import type { ExcalidrawData } from '@a24z/core-library';
 import { RoomDrawingAPIEvents } from '../../window/main-process-api-implementations/roomDrawingApi';
 
 /**

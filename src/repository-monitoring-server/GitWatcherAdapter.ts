@@ -77,10 +77,6 @@ export class GitWatcherAdapter extends EventEmitter {
         console.error(`[GitWatcherAdapter] Monitor error for ${repoPath}:`, error);
       });
 
-      monitor.on('workspace-change', (event: WorkspaceChangeEventPayload) => {
-        this.emit(MonitoringInternalEvent.WORKSPACE_CHANGED, event);
-      });
-
       // Start watching
       await monitor.start();
 

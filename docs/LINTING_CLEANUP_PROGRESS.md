@@ -364,10 +364,41 @@ Update this section after each cleanup session:
 
 **Result**: repository-monitoring-server directory is now completely clean - 0 ESLint issues, 0 TypeScript errors!
 
-### [Date] - [Area Cleaned]
-- Before: X ESLint issues, Y TypeScript errors
-- After: X ESLint issues, Y TypeScript errors
-- Fixed: [brief description]
+### 2025-09-29 - Main Directory TypeScript Cleanup
+- **Overall Before**: 1749 total ESLint issues, 316 TypeScript errors
+- **Overall After**: 1749 total ESLint issues, 302 TypeScript errors
+- **Total Improvement**: 14 TypeScript errors fixed (4.4% reduction)
+
+**Directory-specific fixes:**
+- **main**: 14 TypeScript → 0 (all fixed!)
+
+**Key fixes:**
+- Fixed GitExecutor.ts import path for repository.types (corrected relative path from `../../` to `../../../`)
+- Fixed electron-cli-bridge/index.ts GitStatus export to source from shared types
+- Fixed gitRepositoryService.ts type mismatches by extracting `.path` property from status objects (3 fixes)
+- Fixed AlexandriaRegistryService.ts unknown type errors by adding proper GitHub API response type (8 fixes)
+- Fixed githubHandlers.ts unknown error type by adding proper error instanceof check
+
+**Result**: main directory is now completely TypeScript error-free! Remaining errors: 300 renderer, 2 repository-monitoring-server
+
+### 2025-09-29 - Repository Monitoring Server and Main Linting Cleanup
+- **Overall Before**: 1749 total ESLint issues (1154 errors, 595 warnings), 302 TypeScript errors
+- **Overall After**: 1737 total ESLint issues (1142 errors, 595 warnings), 300 TypeScript errors
+- **Total Improvement**: 12 ESLint errors fixed, 2 TypeScript errors fixed
+
+**TypeScript fixes:**
+- **repository-monitoring-server**: 2 TypeScript → 0 (all fixed!)
+  - Fixed GitWatcherAdapter.ts: Removed unsupported 'workspace-change' event listener (library doesn't emit this event)
+  - Fixed worker-entry.ts: Changed `interface UtilityProcess extends` to `type UtilityProcess = NodeJS.Process &` to fix type compatibility
+
+**Linting fixes in main directory:**
+- Removed dead code: `handleStorageRequest` method and `getTypedStorageManager` import in EventServerManager (never actually called by event-processing-server)
+- Removed unused imports: `StaticNamespaces`, `isStorageRequestMessage`, `SessionSummary`, `RoomDrawingMetadata`, `SupportedAgent`, `BrowserWindow`
+- Fixed unused variables: Prefixed unused event handler parameters with `_` in main.ts and OptimizedDockerService.ts
+- Removed unused constants: `agentEventsBridgePort`, `planningBridgePort` in initialization.ts
+- Deleted empty stub test files: fileSystemHandlers.test.js and fileSystemHandlers.test.ts (no actual tests)
+
+**Result**: repository-monitoring-server is now completely TypeScript error-free! Main directory reduced from 92 to 87 files with linting issues. Total TypeScript errors: 300 (all in renderer).
 
 ---
 
