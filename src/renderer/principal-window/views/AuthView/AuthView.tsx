@@ -11,7 +11,7 @@ import { GitService } from '../../../main-process-api/GitService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { GithubService } from '../../../main-process-api/GithubService';
-import type { GitHubRepository, GitHubOrganization } from '../../../../shared/main-process-api-interfaces/GitHubAPI';
+import type { GitHubRepository } from '../../../../shared/main-process-api-interfaces/GitHubAPI';
 import { OrganizationSidebar } from './components/OrganizationSidebar';
 import { RepositoryGrid } from './components/RepositoryGrid';
 import { AuthDetails } from './components/AuthDetails';
@@ -37,7 +37,6 @@ export const AuthView: React.FC = () => {
 
   const [repositories, setRepositories] = useState<EnhancedAlexandriaEntry[]>([]);
   const [remoteRepositories, setRemoteRepositories] = useState<GitHubRepository[]>([]);
-  const [githubOrganizations, setGithubOrganizations] = useState<GitHubOrganization[]>([]);
   const [organizations, setOrganizations] = useState<OrganizationInfo[]>([]);
   const [repositoriesByOrg, setRepositoriesByOrg] = useState<Map<string, EnhancedAlexandriaEntry[]>>(new Map());
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
@@ -147,7 +146,6 @@ export const AuthView: React.FC = () => {
             GithubService.getUserRepositories({ sort: 'pushed', direction: 'desc' })
           ]);
 
-          setGithubOrganizations(githubOrgs);
           setRemoteRepositories(userRepos);
 
           // Create organization info combining local and remote data
@@ -206,8 +204,10 @@ export const AuthView: React.FC = () => {
               });
             } else {
               // Org has local repos, add unique remote count
-              const org = allOrgs.get(ghOrg.login)!;
-              org.repositoryCount = (org.repositoryCount || 0) + uniqueRemoteCount;
+              const org = allOrgs.get(ghOrg.login);
+              if (org) {
+                org.repositoryCount = (org.repositoryCount || 0) + uniqueRemoteCount;
+              }
             }
           });
 
@@ -228,8 +228,10 @@ export const AuthView: React.FC = () => {
               });
             } else {
               // User has local repos, add unique remote count
-              const org = allOrgs.get(userOrgKey)!;
-              org.repositoryCount = (org.repositoryCount || 0) + userUniqueRemoteCount;
+              const org = allOrgs.get(userOrgKey);
+              if (org) {
+                org.repositoryCount = (org.repositoryCount || 0) + userUniqueRemoteCount;
+              }
             }
           }
 

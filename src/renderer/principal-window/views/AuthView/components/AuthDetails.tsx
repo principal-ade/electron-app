@@ -3,7 +3,6 @@ import { useTheme } from 'themed-markdown';
 import { LogIn, LogOut, Loader2, Shield, CheckCircle, XCircle, Key, Building, RefreshCw, ExternalLink } from 'lucide-react';
 import { gitSyncConnectionManager } from '../../../../services/git-sync/GitSyncConnectionManager';
 import { GithubService } from '../../../../main-process-api/GithubService';
-import { AuthenticationService } from '../../../../main-process-api/AuthenticationService';
 import type { TokenInfo } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
 
 // Mapping of GitHub scopes to human-readable descriptions
@@ -90,11 +89,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
   loginError,
   clearLoginError,
 }) => {
-  console.log('[AuthDetails] Component rendering with props:', {
-    isAuthenticated,
-    authUser,
-  });
-
   const { theme } = useTheme();
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [loadingTokenInfo, setLoadingTokenInfo] = useState(false);
@@ -105,17 +99,9 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
 
   // Fetch token info when authenticated
   useEffect(() => {
-    console.log('[AuthDetails] Auth state changed:', {
-      isAuthenticated,
-      hasAuthUser: !!authUser,
-      authUserLogin: authUser?.login,
-    });
-
     if (isAuthenticated && authUser) {
-      console.log('[AuthDetails] Fetching token info...');
       fetchTokenInfo();
     } else {
-      console.log('[AuthDetails] Not authenticated, clearing token info');
       setTokenInfo(null);
     }
   }, [isAuthenticated, authUser]);
@@ -126,10 +112,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     try {
       // Get token info directly from the GithubService
       const info = await GithubService.getTokenInfo();
-        console.log('[AuthDetails] Token info fetched:', {
-          scopes: info?.scopes?.length,
-          orgs: info?.organizations?.length,
-        });
       if (info) {
         setTokenInfo(info);
       } else {
@@ -454,13 +436,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
         </div>
 
         {/* Token Permissions Card */}
-        {console.log('[AuthDetails] Rendering Token Permissions Card:', {
-          isAuthenticated,
-          hasTokenInfo: !!tokenInfo,
-          tokenInfoScopes: tokenInfo?.scopes,
-          loadingTokenInfo,
-          tokenError,
-        })}
         {isAuthenticated && tokenInfo && (
           <div
             style={{
@@ -676,7 +651,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                                 textOverflow: 'ellipsis',
                               }}
                             >
-                              {org.name || org.login}
+                              {org.login}
                             </div>
                             <div
                               style={{
@@ -685,7 +660,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                               }}
                             >
                               @{org.login}
-                              {org.public_repos !== undefined && ` · ${org.public_repos} repos`}
                             </div>
                           </div>
                         </div>

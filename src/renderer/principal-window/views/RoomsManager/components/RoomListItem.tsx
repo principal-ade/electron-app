@@ -7,7 +7,6 @@ interface RoomListItemProps {
   room: RoomInfo;
   isSelected: boolean;
   onSelect: () => void;
-  onRemove: () => void;
   formatTime: (timestamp: number) => string;
   theme: Theme;
 }
@@ -16,7 +15,6 @@ export const RoomListItem: React.FC<RoomListItemProps> = ({
   room,
   isSelected,
   onSelect,
-  onRemove,
   formatTime,
   theme,
 }) => {

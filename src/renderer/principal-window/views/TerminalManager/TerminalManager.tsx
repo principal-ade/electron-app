@@ -72,19 +72,25 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
 
     // Subscribe to terminal window events
     const unsubscribeReady = TerminalService.onWindowReady((data) => {
-      setTerminalWindows(prev => {
-        const newMap = new Map(prev);
-        newMap.set(data.terminalId, data.windowId);
-        return newMap;
-      });
+      if (data.terminalId && data.windowId !== undefined) {
+        const { terminalId, windowId } = data;
+        setTerminalWindows(prev => {
+          const newMap = new Map(prev);
+          newMap.set(terminalId, windowId);
+          return newMap;
+        });
+      }
     });
 
     const unsubscribeClose = TerminalService.onWindowClose((data) => {
-      setTerminalWindows(prev => {
-        const newMap = new Map(prev);
-        newMap.delete(data.terminalId);
-        return newMap;
-      });
+      if (data.terminalId) {
+        const { terminalId } = data;
+        setTerminalWindows(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(terminalId);
+          return newMap;
+        });
+      }
     });
 
     return () => {
@@ -211,7 +217,7 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
               style={{
                 padding: '4px 8px',
                 backgroundColor: theme.colors.primary,
-                color: theme.colors.buttonText,
+                color: theme.colors.background,
                 border: 'none',
                 borderRadius: '4px',
                 cursor: creatingTerminal ? 'not-allowed' : 'pointer',

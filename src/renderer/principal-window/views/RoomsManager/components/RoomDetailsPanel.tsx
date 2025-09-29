@@ -1,12 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Calendar,
   Link2,
   Edit2,
   Check,
   X,
-  Palette,
-  ArrowLeft,
   Copy
 } from 'lucide-react';
 import type { RoomInfo } from '../RoomsManager';
@@ -17,7 +14,6 @@ import { AlexandriaService } from '../../../../main-process-api/AlexandriaServic
 import { AddPortalModal } from './AddPortalModal';
 import { DrawingsList } from './DrawingsList';
 import { ExcalidrawWrapper } from '../../../../components/shared/ExcalidrawWrapper';
-import { ExcalidrawStorageService } from '../../../../main-process-api/ExcalidrawStorageService';
 import { RoomDrawingService } from '../../../../main-process-api/RoomDrawingService';
 
 // View mode enum
@@ -197,7 +193,7 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
   };
 
   // ExcalidrawWrapper now handles saving with room association
-  const handleDrawingSaved = async (diagramId: string) => {
+  const handleDrawingSaved = async (_diagramId: string) => {
     if (!room) return;
 
     // Just refresh the drawings list since the save is handled by RoomDrawingService
@@ -222,7 +218,6 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
 
     try {
       await navigator.clipboard.writeText(fullPath);
-      console.log('Copied drawing path to clipboard:', fullPath);
       // TODO: Add a toast notification for success
     } catch (error) {
       console.error('Failed to copy path to clipboard:', error);

@@ -42,7 +42,7 @@ export const RemoteRepositoryCard: React.FC<RemoteRepositoryCardProps> = ({
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = theme.colors.primary;
         e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.shadow}20`;
+        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.2)`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = theme.colors.border;

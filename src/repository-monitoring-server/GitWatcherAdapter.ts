@@ -6,7 +6,6 @@
 
 import { RepositoryMonitor } from '@principal-ai/repository-monitoring';
 import type { GitEvent, GitState, RepositoryMonitorOptions } from '@principal-ai/repository-monitoring';
-import type { WorkspaceChangeEventPayload } from './types';
 import { EventEmitter } from 'events';
 import { MonitoringInternalEvent, GitStateEvent, GitStateEventPayload } from './types';
 import type { RepositoryMonitoringServer } from './RepositoryMonitoringServer';

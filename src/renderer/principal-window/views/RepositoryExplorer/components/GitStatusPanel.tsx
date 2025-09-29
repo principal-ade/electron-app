@@ -1,7 +1,7 @@
 import React from 'react';
 import { GitBranch } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
-import type { EnhancedAlexandriaEntry, GitStatus } from '../../../shared/types/repository.types';
+import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../../shared/types/repository.types';
 
 interface GitStatusPanelProps {
   repository: EnhancedAlexandriaEntry;

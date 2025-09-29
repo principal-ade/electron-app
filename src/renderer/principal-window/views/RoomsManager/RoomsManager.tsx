@@ -266,7 +266,6 @@ export const RoomsManager: React.FC<RoomsManagerProps> = ({ sidebarCollapsed = f
                     selectedRoom?.repository.path === room.repository.path
                   }
                   onSelect={() => setSelectedRoom(room)}
-                  onRemove={() => handleRemoveRoom(room)}
                   formatTime={formatTime}
                   theme={theme}
                 />

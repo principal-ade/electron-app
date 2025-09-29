@@ -19,8 +19,8 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
   const { theme } = useTheme();
 
   // Helper to determine if it's a GitHub repository type
-  const isGitHubRepo = (repo: any): repo is GitHubRepository => {
-    return 'clone_url' in repo && 'owner' in repo;
+  const isGitHubRepo = (repo: unknown): repo is GitHubRepository => {
+    return typeof repo === 'object' && repo !== null && 'clone_url' in repo && 'owner' in repo;
   };
 
   // Extract common properties
@@ -50,7 +50,7 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
       return repository.fork;
     }
     // Check local repo's GitHub metadata
-    return repository.github?.isFork || false;
+    return false;
   };
 
   const isDirty = () => {
@@ -77,8 +77,6 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
     e.stopPropagation();
     if (isGitHubRepo(repository)) {
       window.open(repository.html_url, '_blank');
-    } else if (repository.github?.url) {
-      window.open(repository.github.url, '_blank');
     } else if (repository.remoteUrl) {
       // Try to construct GitHub URL from remote URL
       const match = repository.remoteUrl.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
@@ -91,7 +89,6 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
 
   const hasGitHubLink = () => {
     if (isGitHubRepo(repository)) return true;
-    if (repository.github?.url) return true;
     if (repository.remoteUrl?.includes('github.com')) return true;
     return false;
   };
@@ -114,7 +111,7 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor = theme.colors.primary;
         e.currentTarget.style.transform = 'translateY(-2px)';
-        e.currentTarget.style.boxShadow = `0 4px 12px ${theme.colors.shadow}20`;
+        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0, 0, 0, 0.2)`;
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = theme.colors.border;
@@ -210,7 +207,7 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
             </div>
           )}
           {isPrivate() && (
-            <Lock size={14} style={{ color: theme.colors.textSecondary }} title="Private repository" />
+            <Lock size={14} color={theme.colors.textSecondary} />
           )}
         </div>
         <p

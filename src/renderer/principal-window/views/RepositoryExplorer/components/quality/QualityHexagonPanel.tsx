@@ -196,9 +196,9 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
           <div style={{ marginTop: '16px' }}>
             <h4 style={{ color: theme.colors.text, marginBottom: '8px' }}>Suggestions:</h4>
             <ul style={{ margin: 0, paddingLeft: '20px' }}>
-              {metrics.suggestions.map((suggestion, i) => (
+              {metrics.suggestions.map((suggestion) => (
                 <li
-                  key={i}
+                  key={`suggestion-${suggestion.priority}-${suggestion.message}`}
                   style={{
                     padding: '8px 0',
                     color: theme.colors.textSecondary,

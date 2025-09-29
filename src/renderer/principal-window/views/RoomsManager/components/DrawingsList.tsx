@@ -28,9 +28,7 @@ export const DrawingsList: React.FC<DrawingsListProps> = ({
     setLoading(true);
     try {
       // Use the new simplified API that handles room associations internally
-      console.log('Loading drawings for room:', roomId);
       const roomDrawings = await RoomDrawingService.listRoomDrawings(repositoryPath, roomId);
-      console.log('Found room drawings:', roomDrawings.length);
 
       setDrawings(roomDrawings);
     } catch (error) {

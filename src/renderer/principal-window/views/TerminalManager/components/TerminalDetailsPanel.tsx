@@ -177,7 +177,7 @@ export const TerminalDetailsPanel: React.FC<TerminalDetailsPanelProps> = ({
             style={{
               padding: '8px 16px',
               backgroundColor: theme.colors.primary,
-              color: theme.colors.buttonText,
+              color: theme.colors.background,
               border: 'none',
               borderRadius: '6px',
               cursor: 'pointer',

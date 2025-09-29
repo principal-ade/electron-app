@@ -79,10 +79,12 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
     const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
     const parts = text.split(regex);
 
-    return parts.map((part, i) =>
-      regex.test(part) ? (
+    return parts.map((part, i) => {
+      // Using index in key is safe here since the parts array order is stable and never reordered
+      const key = `${i}-${part.slice(0, 20)}`;
+      return regex.test(part) ? (
         <mark
-          key={i}
+          key={key}
           style={{
             backgroundColor: `${theme.colors.primary}30`,
             color: theme.colors.text,
@@ -93,9 +95,9 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
           {part}
         </mark>
       ) : (
-        part
-      ),
-    );
+        <span key={key}>{part}</span>
+      );
+    });
   };
 
   const escapeRegex = (str: string): string => {
@@ -255,9 +257,9 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
                         {result.matches
                           .filter(match => match.field === 'content' && (match.context.before.trim() || match.context.after.trim()))
                           .slice(0, 1)
-                          .map((match, i) => (
+                          .map((match) => (
                             <div
-                              key={i}
+                              key={`match-${match.field}-${match.matchedText}-${match.context.before.slice(-10)}`}
                               className="text-xs"
                               style={{
                                 color: theme.colors.textSecondary,

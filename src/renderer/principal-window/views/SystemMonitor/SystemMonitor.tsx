@@ -5,9 +5,7 @@ import { RepositoryMonitoringService } from '../../../main-process-api/Repositor
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import type {
   MonitoringStatus,
-  ResourceSnapshot,
-  GitStatus,
-  RepositoryInfo
+  GitStatus
 } from '../../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 interface SystemMonitorProps {
@@ -865,7 +863,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({ sidebarCollapsed }
                           {/* Get Git Status button */}
                           <button
                             onClick={() => {
-                              console.log('[SystemMonitor] Status button clicked for:', repo.path);
                               fetchGitStatus(repo.path);
                             }}
                             style={{
@@ -899,10 +896,6 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({ sidebarCollapsed }
                           <button
                             onClick={(e) => {
                               e.preventDefault();
-                              console.log('[SystemMonitor] Watch button clicked!');
-                              console.log('[SystemMonitor] Repo:', repo.path);
-                              console.log('[SystemMonitor] gitToggling:', gitToggling);
-                              console.log('[SystemMonitor] Button disabled?', gitToggling !== null);
                               handleToggleGitWatching(repo.path);
                             }}
                             disabled={!!gitToggling}

@@ -834,10 +834,11 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                 style={{ color: theme.colors.textSecondary }}
               >
                 {error.split('\n').map((line, index) => {
+                  const lineKey = `error-line-${index}-${line.slice(0, 20)}`;
                   // Handle markdown-style headers
                   if (line.startsWith('**') && line.endsWith('**')) {
                     return (
-                      <p key={index} className="font-semibold mt-3" style={{ color: theme.colors.text }}>
+                      <p key={lineKey} className="font-semibold mt-3" style={{ color: theme.colors.text }}>
                         {line.replace(/\*\*/g, '')}
                       </p>
                     );
@@ -845,17 +846,17 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                   // Handle list items
                   if (line.startsWith('•') || /^\d+\./.test(line)) {
                     return (
-                      <p key={index} className="ml-4">
+                      <p key={lineKey} className="ml-4">
                         {line}
                       </p>
                     );
                   }
                   // Handle empty lines
                   if (line.trim() === '') {
-                    return <div key={index} className="h-2" />;
+                    return <div key={lineKey} className="h-2" />;
                   }
                   // Regular text
-                  return <p key={index}>{line}</p>;
+                  return <p key={lineKey}>{line}</p>;
                 })}
               </div>
 

@@ -36,7 +36,6 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   const [selectedRepositoryPath, setSelectedRepositoryPath] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyWithChanges, setShowOnlyWithChanges] = useState(false);
-  const [isCheckingAllStatus, setIsCheckingAllStatus] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
   // Use the cache to get all repositories
@@ -96,7 +95,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
     };
 
     loadPreferences();
-  }, [repositories]);
+  }, [repositories, selectedRepositoryPath]);
 
   // Auto-select first repository if none selected
   useEffect(() => {
@@ -178,19 +177,6 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
       setSelectedRepositoryPath(nextRepo?.path || null);
     }
   };
-
-  // Handle checking all repository statuses
-  const handleCheckAllStatus = useCallback(async () => {
-    if (isCheckingAllStatus) return;
-
-    setIsCheckingAllStatus(true);
-    try {
-      // Force refresh all repository data from server
-      await refreshRepos();
-    } finally {
-      setIsCheckingAllStatus(false);
-    }
-  }, [isCheckingAllStatus, refreshRepos]);
 
   // Handle adding GitHub repository
   const handleAddGithubLink = useCallback(() => {

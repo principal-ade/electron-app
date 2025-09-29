@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from 'themed-markdown';
-import { Globe, Palette, FolderOpen, RefreshCw } from 'lucide-react';
+import { Palette, FolderOpen, RefreshCw } from 'lucide-react';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';

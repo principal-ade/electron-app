@@ -6,7 +6,7 @@ import React, {
 } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { useTheme } from 'themed-markdown';
-import { FileText, Tag, Calendar, Filter, Search, Check, FolderOpen } from 'lucide-react';
+import { Calendar, Filter, Search, Check, FolderOpen } from 'lucide-react';
 import type { SearchResult } from '@a24z/markdown-search';
 import { documentSearchService } from '../../../services/DocumentSearchService';
 import type { GetIndexStatusResponse } from '../../../../shared/ipc/DocumentSearchIPC';

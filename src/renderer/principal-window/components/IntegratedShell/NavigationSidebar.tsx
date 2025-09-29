@@ -28,15 +28,15 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   activeView,
   onViewChange,
 }) => {
-  const { theme, colorMode } = useTheme();
+  const { theme, mode } = useTheme();
   const { isAuthenticated, user } = useAuth();
 
-  const backgroundColor = colorMode === 'dark'
-    ? theme.colors.modes?.dark?.backgroundSecondary || theme.colors.backgroundSecondary
+  const backgroundColor = mode === 'dark' && theme.modes?.dark?.backgroundSecondary
+    ? theme.modes.dark.backgroundSecondary
     : theme.colors.backgroundSecondary;
 
-  const accentColor = colorMode === 'dark'
-    ? theme.colors.modes?.dark?.accent || theme.colors.accent
+  const accentColor = mode === 'dark' && theme.modes?.dark?.accent
+    ? theme.modes.dark.accent
     : theme.colors.accent;
 
   // Create auth icon - either avatar or User icon

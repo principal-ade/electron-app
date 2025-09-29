@@ -211,7 +211,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
       return () => clearTimeout(timer);
     }
-  }, [selectedRepository?.path]); // Remove checkForUpdates from deps to prevent cycles
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRepository?.path]); // checkForUpdates intentionally excluded - it updates state causing infinite loop
 
   // Add a separate effect to handle checkForUpdates dependency properly
   useEffect(() => {

@@ -8,7 +8,7 @@ import { remoteAgentService } from '../../../../services/RemoteAgentService';
 
 interface RepositoryHeaderProps {
   repository: EnhancedAlexandriaEntry;
-  gitStatus: any; // Add git status prop for dirty state
+  gitStatus: { staged: unknown[]; unstaged: unknown[]; untracked: unknown[]; deleted: unknown[] }; // Add git status prop for dirty state
   branchStatus: GitBranchStatus | null;
   pushStatus: { safe: boolean; reason?: string; needsUpstream: boolean } | null;
   isCheckingUpdates: boolean;

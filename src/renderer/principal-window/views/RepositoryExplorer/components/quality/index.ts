@@ -4,4 +4,4 @@ export type {
   QualityTier,
   QualitySuggestion,
   AnalysisOptions
-} from '../../services/MockQualityMetricsService';
+} from './MockQualityMetricsService';

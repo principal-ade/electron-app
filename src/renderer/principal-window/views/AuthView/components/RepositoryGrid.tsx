@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from 'themed-markdown';
-import { Package, Search, X, Cloud, HardDrive, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Package, Search, X, Cloud, ToggleLeft, ToggleRight } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import type { GitHubRepository } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
@@ -154,7 +154,7 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
           primaryLanguage: remoteData.language || repo.github?.primaryLanguage,
           url: remoteData.html_url,
           lastCommit: remoteData.pushed_at || repo.github?.lastCommit,
-          owner: owner || repo.github?.owner,
+          owner: owner || repo.github?.owner || '',
           isFork: remoteData.fork,
         };
       }

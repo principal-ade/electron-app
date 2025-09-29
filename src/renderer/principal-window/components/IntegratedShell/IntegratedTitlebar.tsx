@@ -27,7 +27,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   showSidebarControl = false,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
-  const { theme, colorMode } = useTheme();
+  const { theme, mode } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
   useEffect(() => {
@@ -37,8 +37,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
     }
   }, []);
 
-  const accentColor = colorMode === 'dark'
-    ? theme.colors.modes?.dark?.accent || theme.colors.accent
+  const accentColor = mode === 'dark' && theme.modes?.dark?.accent
+    ? theme.modes.dark.accent
     : theme.colors.accent;
 
   // Static title - Principal View

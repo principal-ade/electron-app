@@ -9,7 +9,7 @@ export const ThemeDropdown: React.FC = () => {
   const [selectedTheme, setSelectedTheme] = useState<string>('terminal');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { theme, colorMode } = useTheme();
+  const { theme, mode } = useTheme();
   const availableThemes = getThemeNames();
 
   useEffect(() => {
@@ -53,15 +53,15 @@ export const ThemeDropdown: React.FC = () => {
     await ThemeService.applyTheme(themeName, true);
   };
 
-  const backgroundColor =
-    colorMode === 'dark'
-      ? theme.colors.modes?.dark?.backgroundSecondary || theme.colors.backgroundSecondary
-      : theme.colors.backgroundSecondary;
+  const backgroundColor = mode === 'dark' && theme.modes?.dark?.backgroundSecondary
+    ? theme.modes.dark.backgroundSecondary
+    : theme.colors.backgroundSecondary;
 
-  const accentColor =
-    colorMode === 'dark'
-      ? theme.colors.modes?.dark?.accent || theme.colors.accent
-      : theme.colors.accent;
+  const accentColor = mode === 'dark' && theme.modes?.dark?.accent
+    ? theme.modes.dark.accent
+    : theme.colors.accent;
+
+  const hoverColor = theme.colors.backgroundHover || 'rgba(255, 255, 255, 0.1)';
 
   return (
     <div
@@ -98,7 +98,7 @@ export const ThemeDropdown: React.FC = () => {
           zIndex: 101
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.hover || 'rgba(255, 255, 255, 0.1)';
+          e.currentTarget.style.backgroundColor = hoverColor;
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
@@ -137,7 +137,7 @@ export const ThemeDropdown: React.FC = () => {
                   width: '100%',
                   padding: '10px 16px',
                   backgroundColor: isSelected
-                    ? theme.colors.hover || 'rgba(255, 255, 255, 0.1)'
+                    ? hoverColor
                     : 'transparent',
                   border: 'none',
                   color: isSelected ? accentColor : theme.colors.text,
@@ -153,8 +153,7 @@ export const ThemeDropdown: React.FC = () => {
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.hover || 'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                   }
                 }}
                 onMouseLeave={(e) => {

@@ -40,27 +40,27 @@ npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 ## Current Status (Updated - 2025-09-29)
 
 ### Overall Issues
-- **ESLint**: 1749 issues (1154 errors, 595 warnings) ↓ 371 from baseline
-- **TypeScript**: 302 errors ↓ 101 from baseline (25% reduction!)
-- **Console.log warnings**: 395 ↓ 248 from baseline (39% reduction!)
+- **ESLint**: 1694 issues (1124 errors, 570 warnings) ↓ 426 from baseline
+- **TypeScript**: 270 errors ↓ 133 from baseline (33% reduction!)
+- **Console.log warnings**: 381 ↓ 262 from baseline (41% reduction!)
 
 ### By Top-Level Directory
 
 #### ESLint Issues
 | Directory | Issues | % of Total | Change |
 |-----------|--------|------------| -------|
-| renderer | 219 | 12.5% | - |
-| main | 92 | 5.3% | - |
+| renderer | 203 | 12.0% | ↓ 16 |
+| main | 87 | 5.1% | - |
+| repository-monitoring-server | 0 | 0.0% | ✅ Cleaned |
 | window | 0 | 0.0% | ✅ Cleaned |
 | shared | 0 | 0.0% | ✅ Cleaned |
-| repository-monitoring-server | 0 | 0.0% | ✅ Clean |
 | event-processing-server | 0 | 0.0% | ✅ Clean |
 
 #### TypeScript Errors
 | Directory | Errors | % of Total | Change |
 |-----------|--------|------------| -------|
-| renderer | 300 | 99.3% | ↑ 8 |
-| main | 2 | 0.7% | ↓ 32 |
+| renderer | 270 | 100% | ↓ 30 |
+| main | 0 | 0.0% | ✅ Cleaned |
 | repository-monitoring-server | 0 | 0.0% | ✅ Cleaned |
 | window | 0 | 0.0% | ✅ Cleaned |
 | event-processing-server | 0 | 0.0% | ✅ Clean |
@@ -75,7 +75,6 @@ npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 | components | 83 | - |
 | pages | 36 | - |
 | services | 31 | - |
-| principal-window | 16 | - |
 | main-process-api | 15 | - |
 | utils | 11 | - |
 | hooks | 8 | - |
@@ -88,17 +87,18 @@ npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 | test-scripts | 1 | - |
 | GlobalFeedbackProvider.tsx | 1 | - |
 | App.tsx | 1 | - |
+| principal-window | 0 | ✅ Cleaned |
 
 #### TypeScript Errors
 | Subdirectory | Errors | Change |
 |--------------|--------| -------|
 | components | 107 | - |
-| pages | 71 | ↑ 9 |
-| principal-window | 50 | - |
+| pages | 77 | - |
 | services | 28 | - |
 | utils | 18 | - |
+| principal-window | 14 | ↓ 36 |
 | adapters | 9 | - |
-| main-process-api | 5 | ↓ 2 |
+| main-process-api | 5 | - |
 | hooks | 5 | - |
 | providers | 2 | - |
 | validation | 1 | - |
@@ -399,6 +399,46 @@ Update this section after each cleanup session:
 - Deleted empty stub test files: fileSystemHandlers.test.js and fileSystemHandlers.test.ts (no actual tests)
 
 **Result**: repository-monitoring-server is now completely TypeScript error-free! Main directory reduced from 92 to 87 files with linting issues. Total TypeScript errors: 300 (all in renderer).
+
+### 2025-09-29 - Principal Window Complete Cleanup
+- **Overall Before**: 1727 total ESLint issues (1132 errors, 595 warnings), 272 TypeScript errors
+- **Overall After**: 1694 total ESLint issues (1124 errors, 570 warnings), 270 TypeScript errors
+- **Total Improvement**: 33 ESLint issues fixed (1.9% reduction), 2 TypeScript errors fixed
+- **Console.log warnings**: 392 → 381 (-11)
+
+**Directory-specific fixes:**
+- **repository-monitoring-server**: 1 ESLint → 0 (all fixed!)
+  - Removed unused `WorkspaceChangeEventPayload` import from GitWatcherAdapter.ts
+- **principal-window**: 11 ESLint → 0 (100% clean! ✅), 16 TypeScript → 14 (-2 errors)
+
+**Principal-window fixes (all files now ESLint clean):**
+1. **Unused imports/variables removed:**
+   - AuthView.tsx: Removed unused `GitHubOrganization` import
+   - RoomDetailsPanel.tsx: Removed unused imports (`ArrowLeft`, `ExcalidrawStorageService`)
+   - RepositoryExplorer.tsx: Removed unused state variables (`isCheckingAllStatus`, `setIsCheckingAllStatus`)
+   - RoomListItem.tsx: Removed unused `onRemove` parameter
+   - RoomDetailsPanel.tsx: Prefixed unused `diagramId` parameter with `_`
+
+2. **Non-null assertions fixed (2 in TerminalManager.tsx):**
+   - Replaced `data.terminalId!` and `data.windowId!` with destructured variables after guard checks
+   - Safer code with explicit null checks
+
+3. **Console.log statements removed (6 total):**
+   - AuthDetails.tsx: 2 console.log statements removed
+   - RoomDetailsPanel.tsx: 1 console.log statement removed
+   - SystemMonitor.tsx: 3 console.log statements removed from button click handlers
+
+4. **useEffect dependencies fixed (2 files):**
+   - RepositoryExplorer.tsx: Added `selectedRepositoryPath` to deps (safe - has guard condition)
+   - RepositoryDetailsPanel.tsx: Added eslint-disable comment with explanation for `checkForUpdates` (would cause infinite loop)
+
+5. **Array index keys fixed (5 occurrences across 3 files):**
+   - DocumentSearchResults.tsx: Created content-based keys for text highlighting (2 fixes)
+   - DocumentSearchResults.tsx: Used match properties for unique keys (1 fix)
+   - GitCloneModal.tsx: Created keys using line content for error display (2 fixes)
+   - QualityHexagonPanel.tsx: Used suggestion properties for unique keys (1 fix)
+
+**Result**: Principal-window is now completely ESLint clean (0 issues)! Down from 11 issues, representing a 100% cleanup. TypeScript errors reduced from 16 to 14. All remaining TypeScript errors are in renderer (270 total).
 
 ---
 

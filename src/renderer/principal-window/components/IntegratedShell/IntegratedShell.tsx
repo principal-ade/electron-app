@@ -19,7 +19,7 @@ export const IntegratedShell: React.FC = () => {
   const [activeView, setActiveView] = useState<NavigationView>('rooms');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  const { theme, colorMode } = useTheme();
+  const { theme, mode } = useTheme();
 
   // Load saved navigation view on mount
   useEffect(() => {
@@ -56,8 +56,8 @@ export const IntegratedShell: React.FC = () => {
     }
   };
 
-  const backgroundColor = colorMode === 'dark'
-    ? theme.colors.modes?.dark?.background || theme.colors.background
+  const backgroundColor = mode === 'dark' && theme.modes?.dark?.background
+    ? theme.modes.dark.background
     : theme.colors.background;
 
   return (
@@ -90,8 +90,8 @@ export const IntegratedShell: React.FC = () => {
             left: 0,  // Start at 0 since parent already starts after sidebar
             right: 0,
             bottom: 0,
-            backgroundColor: colorMode === 'dark'
-              ? theme.colors.modes?.dark?.backgroundSecondary || theme.colors.backgroundSecondary
+            backgroundColor: mode === 'dark' && theme.modes?.dark?.backgroundSecondary
+              ? theme.modes.dark.backgroundSecondary
               : theme.colors.backgroundSecondary,
             borderTopLeftRadius: '8px', // Rounded corner creates the cutout effect
             overflow: 'hidden',
@@ -107,8 +107,8 @@ export const IntegratedShell: React.FC = () => {
             overflow: 'auto',
             border: `1px solid ${theme.colors.border}`,
             borderRadius: '8px',
-            backgroundColor: colorMode === 'dark'
-              ? theme.colors.modes?.dark?.background || theme.colors.background
+            backgroundColor: mode === 'dark' && theme.modes?.dark?.background
+              ? theme.modes.dark.background
               : theme.colors.background,
           }}>
             {/* Views will be rendered here based on activeView */}
@@ -119,22 +119,6 @@ export const IntegratedShell: React.FC = () => {
             {activeView === 'monitoring' && <SystemMonitor sidebarCollapsed={sidebarCollapsed} />}
             {activeView === 'settings' && <Settings />}
             {activeView === 'auth' && <AuthView />}
-            {activeView !== 'repository' && activeView !== 'terminal' && activeView !== 'rooms' && activeView !== 'search' && activeView !== 'settings' && activeView !== 'monitoring' && activeView !== 'workspaces' && activeView !== 'auth' && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                fontSize: '24px',
-                opacity: 0.5,
-                flexDirection: 'column',
-              }}>
-                {activeView.charAt(0).toUpperCase() + activeView.slice(1)} View
-                <span style={{ fontSize: '14px', marginTop: '8px' }}>
-                  (Component will be integrated here)
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>
