@@ -75,7 +75,8 @@ const configuration: webpack.Configuration = {
           'source-map-support',
           'debug',
           'ts-json-schema-generator',
-          'fdir' // Fast directory crawler - Node.js only, used in main process
+          'fdir', // Fast directory crawler - Node.js only, used in main process
+          '@principal-ai/repository-monitoring' // Node.js only watcher library
         ];
         
         // Exclude if in the list or contains electron

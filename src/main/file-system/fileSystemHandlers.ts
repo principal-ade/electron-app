@@ -1114,8 +1114,8 @@ export function registerFileSystemIpcHandlers(
       try {
         // Stop watching the file first if it's being watched
         const appWindow = appWindows.get(senderWindow.id);
-        if (appWindow && appWindow.fileWatcher) {
-          await appWindow.fileWatcher.stopWatching(filePath);
+        if (appWindow?.fileSystemAdapter) {
+          await appWindow.fileSystemAdapter.stopWatchingFile(filePath);
         }
 
         // Delete the file

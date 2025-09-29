@@ -1,5 +1,4 @@
-import type { GitStatus } from './GitWatcherAPI';
-import type { Repository } from '../types/repository.types';
+import type { GitStatus, Repository } from '../types/repository.types';
 
 export enum GitEvents {
   GET_REPOSITORY_INFO = 'git:get-repository-info',

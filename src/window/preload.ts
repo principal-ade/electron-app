@@ -8,7 +8,6 @@ import type { MainProcessAPI } from '../shared/main-process-api-interfaces/index
 
 console.log('[Preload] Type imports successful');
 
-import { mcpToolsAPI } from './main-process-api-implementations/mcpToolsApi';
 import { terminalAPI } from './main-process-api-implementations/terminalApi';
 import { typeExtractionApi } from './main-process-api-implementations/typeExtractionApi';
 import { typeSchemaApi } from './main-process-api-implementations/typeSchemaApi';
@@ -122,7 +121,6 @@ const mainProcessExposure: MainProcessAPI = {
   windowManager: windowManagerAPI,
   orbit: orbitAPI,
   a24z: a24zAPI,
-  mcpTools: mcpToolsAPI,
   packageManager: packageManagerApi,
   typeExtraction: typeExtractionApi,
   typeSchema: typeSchemaApi,

@@ -1,10 +1,10 @@
 import React from 'react';
 import { useTheme } from 'themed-markdown';
 import { X, Copy, CheckCircle } from 'lucide-react';
-import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 interface EventDetailsModalProps {
-  event: NormalizedAgentSessionEvent | null;
+  event: RepoNormalizedUniversalAgentSessionEvent | null;
   rawEvent?: any;
   isOpen: boolean;
   onClose: () => void;

@@ -35,7 +35,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
     return 'Just now';
   };
 
-  const hasChanges = gitStatus.staged.length > 0 || gitStatus.unstaged.length > 0 || gitStatus.untracked.length > 0;
+  const hasChanges = gitStatus.staged.length > 0 || gitStatus.unstaged.length > 0 || gitStatus.untracked.length > 0 || gitStatus.deleted.length > 0;
 
   return (
     <div
@@ -266,6 +266,98 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                             style={{
                               fontSize: theme.fontSizes[0],
                               color: theme.colors.warning,
+                              opacity: 0.6,
+                              fontFamily: theme.fonts.monospace,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {directory === 'root' ? 'root' : `${directory}/`}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* Deleted Files */}
+                {gitStatus.deleted.length > 0 && (
+                  <>
+                    <div
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textSecondary,
+                        fontWeight: 600,
+                        marginTop: '4px',
+                      }}
+                    >
+                      DELETED ({gitStatus.deleted.length})
+                    </div>
+                    {gitStatus.deleted.map((file) => {
+                      const filename = file.path.split('/').pop() || file.path;
+                      const directory = file.path.includes('/') ? file.path.substring(0, file.path.lastIndexOf('/')) : 'root';
+
+                      return (
+                        <div
+                          key={`deleted-${file.path}`}
+                          style={{
+                            padding: '10px',
+                            backgroundColor: `${theme.colors.error}10`,
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              `${theme.colors.error}20`;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              `${theme.colors.error}10`;
+                          }}
+                          onClick={() => onFileClick(file.path)}
+                          title={file.path}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'flex-start',
+                              marginBottom: '2px',
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: theme.fontSizes[1],
+                                color: theme.colors.error,
+                                fontWeight: 500,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                flex: 1,
+                              }}
+                            >
+                              ✕ {filename}
+                            </div>
+                            {file.lastModified && (
+                              <div
+                                style={{
+                                  fontSize: theme.fontSizes[0],
+                                  color: theme.colors.error,
+                                  opacity: 0.7,
+                                  whiteSpace: 'nowrap',
+                                  marginLeft: '8px',
+                                }}
+                              >
+                                {getRelativeTime(file.lastModified)}
+                              </div>
+                            )}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: theme.fontSizes[0],
+                              color: theme.colors.error,
                               opacity: 0.6,
                               fontFamily: theme.fonts.monospace,
                               overflow: 'hidden',

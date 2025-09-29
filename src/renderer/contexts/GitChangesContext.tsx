@@ -10,7 +10,7 @@ import { FileTree } from '@principal-ai/repository-abstraction';
 import { HighlightLayer } from '@principal-ai/code-city-react';
 import { GitService, GitDetailedChanges } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import type { GitStatus } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type { GitStatusMetadata } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 // TODO: Implement git commit tree loading in MonitoredFileTreeService
 // import { loadLocalGitCommitTree } from '../utils/loadFileSystemTree';
 import { FileTreeSource } from '../types/file-tree-source';
@@ -621,7 +621,7 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
    * Listen for git status updates from Repository Monitoring Service
    */
   useEffect(() => {
-    const handleGitStatusUpdate = (status: GitStatus) => {
+    const handleGitStatusUpdate = (status: GitStatusMetadata) => {
       // Find matching source by path and refresh
       gitStatesRef.current.forEach((state, sourceId) => {
         if (state.sourcePath === status.repoPath) {

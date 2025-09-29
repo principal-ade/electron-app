@@ -16,7 +16,6 @@ import { resolveHtmlPath } from '../util';
 import { EnvironmentConfig } from '../utils/environmentConfig';
 import { ElectronFileSystemAdapter } from '../file-system/fileSystemHandlers';
 import { ElectronWindowManagerAdapter } from './windowManagerHandlers';
-import { McpToolsAdapter } from '../principal-mcp/mcpToolsHandlers';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 import MenuBuilder from '../menu';
 import AppVersionManager from '../AppVersionManager';
@@ -47,7 +46,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
   // Optional adapters
   public fileSystemAdapter?: ElectronFileSystemAdapter;
   public windowManagerAdapter?: ElectronWindowManagerAdapter;
-  public mcpToolsAdapter?: McpToolsAdapter;
   public githubAdapter?: GitHubAdapter;
   private menuBuilder?: MenuBuilder;
 
@@ -113,7 +111,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     if (
       this.features.fileSystemAdapter ||
       this.features.windowManagerAdapter ||
-      this.features.mcpToolsAdapter ||
       this.features.githubAdapter
     ) {
       console.log(
@@ -150,7 +147,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     // because the adapters require IPC communication that sandbox blocks
     const needsSandboxDisabled =
       this.features.fileSystemAdapter ||
-      this.features.mcpToolsAdapter ||
       this.features.githubAdapter ||
       this.features.windowManagerAdapter;
 
@@ -161,7 +157,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       sandboxValue,
       features: {
         fileSystem: this.features.fileSystemAdapter,
-        mcp: this.features.mcpToolsAdapter,
         github: this.features.githubAdapter,
         windowManager: this.features.windowManagerAdapter,
       },
@@ -287,18 +282,6 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     }
 
     // MCP Tools Adapter
-    if (this.features.mcpToolsAdapter) {
-      try {
-        this.mcpToolsAdapter = new McpToolsAdapter(this.window);
-        console.log(`[ModernWindow] McpToolsAdapter initialized`);
-      } catch (e) {
-        console.error(
-          `[ModernWindow] Failed to initialize McpToolsAdapter:`,
-          e,
-        );
-      }
-    }
-
     // GitHub Adapter
     if (this.features.githubAdapter) {
       try {
@@ -586,7 +569,6 @@ export function createSpecialWindow(
     const hasAdapters =
       features?.fileSystemAdapter ||
       features?.windowManagerAdapter ||
-      features?.mcpToolsAdapter ||
       features?.githubAdapter;
 
     const windowType = hasAdapters ? 'secondary' : 'minimal';

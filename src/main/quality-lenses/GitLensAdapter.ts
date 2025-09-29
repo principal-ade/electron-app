@@ -5,6 +5,7 @@
 
 import { GitLens } from '@principal-ai/codebase-quality-lenses';
 import { ElectronCLIBridgeExecutor } from './ElectronCLIBridgeExecutor';
+import type { GitStatus } from '../../shared/types/repository.types';
 
 // Use the CommitInfo type from GitLens
 export type CommitInfo = {
@@ -124,11 +125,7 @@ export class GitLensAdapter {
    * @param directory - The directory to get git status for
    * @returns Object with staged, unstaged, and untracked file arrays
    */
-  public async getGitStatus(directory: string): Promise<{
-    staged: string[];
-    unstaged: string[];
-    untracked: string[];
-  }> {
+  public async getGitStatus(directory: string): Promise<GitStatus> {
     try {
       // Configure GitLens for this directory
       this.gitLens.configure({
@@ -149,12 +146,13 @@ export class GitLensAdapter {
       // Parse the results
       const gitInfo = this.gitLens.parse(executeResult);
 
-      // Map GitLens results to our expected format
+      // Map GitLens results to our GitStatus format
       // GitLens uses "modified" for unstaged changes
       return {
-        staged: gitInfo.staged || [],
-        unstaged: gitInfo.modified || [],
-        untracked: gitInfo.untracked || [],
+        staged: (gitInfo.staged || []).map((path: string) => ({ path })),
+        unstaged: (gitInfo.modified || []).map((path: string) => ({ path })),
+        untracked: (gitInfo.untracked || []).map((path: string) => ({ path })),
+        deleted: (gitInfo.deleted || []).map((path: string) => ({ path })),
       };
     } catch (error) {
       // Return empty arrays if not a git repo or error
@@ -162,6 +160,7 @@ export class GitLensAdapter {
         staged: [],
         unstaged: [],
         untracked: [],
+        deleted: [],
       };
     }
   }

@@ -11,7 +11,6 @@ import { BrowserWindow } from 'electron';
 export interface WindowFeatures {
   fileSystemAdapter?: boolean;
   windowManagerAdapter?: boolean;
-  mcpToolsAdapter?: boolean;
   githubAdapter?: boolean;
   terminalManager?: boolean;
   menu?: boolean;
@@ -31,7 +30,6 @@ export interface IModernApplicationWindow {
   features: WindowFeatures;
   fileSystemAdapter?: any; // Import types would create circular deps
   windowManagerAdapter?: any;
-  mcpToolsAdapter?: any;
   githubAdapter?: any;
 }
 
@@ -49,7 +47,6 @@ export const WINDOW_FEATURES: Record<string, WindowFeatures> = {
   main: {
     fileSystemAdapter: true,
     windowManagerAdapter: true,
-    mcpToolsAdapter: true,
     githubAdapter: true,
     terminalManager: true,
     menu: true,
@@ -61,7 +58,6 @@ export const WINDOW_FEATURES: Record<string, WindowFeatures> = {
   },
   secondary: {
     fileSystemAdapter: true,
-    mcpToolsAdapter: true,
     contentSecurityPolicy: true,
     externalLinkHandler: true,
     devTools: true,

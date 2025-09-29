@@ -3,7 +3,7 @@
  */
 
 import { useCallback, useRef } from 'react';
-import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import {
   sessionEventProcessor,
   SessionState,
@@ -35,7 +35,7 @@ export function useSessionEventProcessor(
    */
   const processEvent = useCallback(
     (
-      event: NormalizedAgentSessionEvent,
+      event: RepoNormalizedUniversalAgentSessionEvent,
       currentSession?: EnhancedUIAgentSessionData,
     ) => {
       if (!event.sessionId) return;
@@ -54,8 +54,10 @@ export function useSessionEventProcessor(
             isActive: currentSession.isActive !== false,
             fileAccessCount: currentSession.fileAccessCount || 0,
             fileWriteCount: currentSession.fileWriteCount || 0,
-            fileAccesses: {}, // We don't keep the full map in UI
-            fileWrites: {}, // We don't keep the full map in UI
+            fileAccesses: {},
+            fileWrites: {},
+            filesRead: [],
+            filesWritten: [],
             toolCallCount: currentSession.toolCallCount || 0,
             webAccessCount: 0,
             metadata: currentSession.metadata,
@@ -85,7 +87,13 @@ export function useSessionEventProcessor(
         fileAccessCount: newState.fileAccessCount,
         fileWriteCount: newState.fileWriteCount,
         toolCallCount: newState.toolCallCount,
-        lastEvent: newState.lastEvent,
+        lastEvent: newState.lastEvent
+          ? {
+              type: newState.lastEvent.type,
+              fileName: newState.lastEvent.fileName,
+              timestamp: newState.lastEvent.timestamp,
+            }
+          : undefined,
         metadata: newState.metadata,
       };
 

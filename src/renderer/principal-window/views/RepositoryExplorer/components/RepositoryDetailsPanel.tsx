@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from 'themed-markdown';
 import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../../shared/types/repository.types';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
@@ -46,6 +46,14 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const [isPushing, setIsPushing] = useState(false);
   const [pushStatus, setPushStatus] = useState<{ safe: boolean; reason?: string; needsUpstream: boolean } | null>(null);
   const isCheckingRef = useRef(false);
+
+  const sortedMarkdownFiles = useMemo(() => {
+    return [...markdownFiles].sort((a, b) => {
+      const aTime = a.lastModified ? new Date(a.lastModified).getTime() : 0;
+      const bTime = b.lastModified ? new Date(b.lastModified).getTime() : 0;
+      return bTime - aTime;
+    });
+  }, [markdownFiles]);
 
   const handleRemoveClick = () => {
     setShowRemoveDialog(true);
@@ -382,7 +390,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 >
                   <span>Markdown Documents</span>
                   <span style={{ fontSize: theme.fontSizes[1], fontWeight: 'normal', marginRight: '4px' }}>
-                    {isLoadingDocs ? 'Loading...' : markdownFiles.length}
+                    {isLoadingDocs ? 'Loading...' : sortedMarkdownFiles.length}
                   </span>
                 </div>
                 <div
@@ -402,7 +410,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                     >
                       Loading documents...
                     </div>
-                  ) : markdownFiles.length === 0 ? (
+                  ) : sortedMarkdownFiles.length === 0 ? (
                     <div
                       style={{
                         padding: '20px',
@@ -421,7 +429,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                         gap: '4px',
                       }}
                     >
-                      {markdownFiles.map((file) => {
+                      {sortedMarkdownFiles.map((file) => {
                         const filename = file.path.split('/').pop() || file.path;
                         const directory = file.path.includes('/') ? file.path.substring(0, file.path.lastIndexOf('/')) : 'root';
 

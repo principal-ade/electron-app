@@ -3,8 +3,7 @@
  * Receives events directly from external agents via HTTP
  */
 
-import express = require('express');
-import { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import { Server } from 'http';
 import { EventEmitter } from 'events';
 import * as os from 'os';
@@ -27,13 +26,11 @@ import {
 
 const execAsync = promisify(exec);
 
-import { EventQueue } from '../main/agent-session-events/EventQueue';
 
 import {
   EventProcessingServerConfig,
   ServerToMainMessage,
   createStorageRequestMessage,
-  createWindowBroadcastMessage,
   MainToServerMessage,
 } from './types';
 
@@ -222,8 +219,7 @@ export class HttpEventServer extends EventEmitter {
   private port: number = 3043; // Port that claude-hook expects
   private maxPortRetries: number = 10;
 
-  private pipeline: AgentEventPipeline;
-  private eventQueue: EventQueue;
+  private pipeline!: AgentEventPipeline;
   private sendToMain: (message: ServerToMainMessage) => void;
   private config: EventProcessingServerConfig;
 
@@ -252,8 +248,6 @@ export class HttpEventServer extends EventEmitter {
     this.app = express();
 
     // Initialize event queue for serialized processing
-    this.eventQueue = new EventQueue();
-
     // Setup pipeline
     this.setupPipeline();
 
@@ -443,110 +437,6 @@ export class HttpEventServer extends EventEmitter {
   }
 
   /**
-   * Store normalized event via main process
-   */
-  private async storeNormalizedEvent(event: any): Promise<void> {
-    // Validate session ID
-    if (!event.sessionId || typeof event.sessionId !== 'string' || event.sessionId.trim() === '') {
-      this.log('error', `Invalid session ID, skipping event: ${event.sessionId}`);
-      return;
-    }
-
-    const normalizedSessionId = event.sessionId.trim();
-
-    // Queue the storage operation for this session
-    return this.eventQueue.enqueue(normalizedSessionId, async () => {
-      try {
-        const sessionKey = normalizedSessionId;
-
-        // Get existing session data from main process
-        const existingData = await this.requestStorage('GET', sessionKey, 'AGENT_SESSIONS');
-
-        let sessionData: any;
-
-        if (existingData) {
-          // Update existing session
-          sessionData = existingData;
-          sessionData.events.push(event);
-          sessionData.lastUpdateTime = event.timestamp;
-        } else {
-          // Create new session
-          sessionData = {
-            sessionId: normalizedSessionId,
-            provider: event.provider,
-            workingDirectory: event.workingDirectory,
-            startTime: event.timestamp,
-            lastUpdateTime: event.timestamp,
-            events: [event],
-            totalEvents: 0,
-            repositoriesAccessed: [],
-            counters: {
-              fileAccesses: 0,
-              fileWrites: 0,
-              toolCalls: 0,
-              webAccesses: 0,
-            },
-            fileAccesses: {},
-            fileWrites: {},
-            filesRead: [],
-            filesWritten: [],
-            metadata: {},
-          };
-
-          // Notify about new session
-          this.sendToMain(createWindowBroadcastMessage('SESSION_CREATED', {
-            sessionId: normalizedSessionId,
-            directory: event.workingDirectory,
-          }));
-        }
-
-        // Process event through centralized processor
-        const currentState: SessionState = {
-          sessionId: sessionData.sessionId,
-          workingDirectory: sessionData.workingDirectory,
-          firstAccess: sessionData.startTime || Date.now(),
-          lastActivity: sessionData.lastUpdateTime || Date.now(),
-          eventCount: sessionData.totalEvents || 0,
-          isActive: true,
-          fileAccessCount: sessionData.counters?.fileAccesses || 0,
-          fileWriteCount: sessionData.counters?.fileWrites || 0,
-          fileAccesses: sessionData.fileAccesses || {},
-          fileWrites: sessionData.fileWrites || {},
-          filesRead: sessionData.filesRead || [],
-          filesWritten: sessionData.filesWritten || [],
-          toolCallCount: sessionData.counters?.toolCalls || 0,
-          webAccessCount: sessionData.counters?.webAccesses || 0,
-        };
-
-        // Process event
-        const processingResult = sessionEventProcessor.processEvent(event, currentState);
-
-        // Update session data with processing results
-        if (processingResult.session) {
-          sessionData.totalEvents = processingResult.session.eventCount || sessionData.totalEvents;
-          sessionData.counters = {
-            fileAccesses: processingResult.session.fileAccessCount || 0,
-            fileWrites: processingResult.session.fileWriteCount || 0,
-            toolCalls: processingResult.session.toolCallCount || 0,
-            webAccesses: processingResult.session.webAccessCount || 0,
-          };
-          sessionData.fileAccesses = processingResult.session.fileAccesses || sessionData.fileAccesses;
-          sessionData.fileWrites = processingResult.session.fileWrites || sessionData.fileWrites;
-          sessionData.filesRead = processingResult.session.filesRead || sessionData.filesRead;
-          sessionData.filesWritten = processingResult.session.filesWritten || sessionData.filesWritten;
-        }
-
-        // Store updated session data
-        await this.requestStorage('SET', sessionKey, 'AGENT_SESSIONS', sessionData);
-
-      } catch (error) {
-        this.log('error', `Error storing event: ${error}`);
-        throw error;
-      }
-    });
-  }
-
-  /**
    * Log important events
    */
   private logEvent(event: any): void {
@@ -562,18 +452,6 @@ export class HttpEventServer extends EventEmitter {
    */
   private requestRepositoryInfo(absolutePath: string): Promise<RepositoryInfo | null> {
     return this.makeRequest('REPOSITORY_INFO_REQUEST', { absolutePath });
-  }
-
-  /**
-   * Request storage operation from main process
-   */
-  private requestStorage(operation: 'GET' | 'SET', key: string, namespace: string, data?: any): Promise<any> {
-    return this.makeRequest('STORAGE_REQUEST', {
-      operation,
-      key,
-      namespace,
-      data
-    });
   }
 
   /**

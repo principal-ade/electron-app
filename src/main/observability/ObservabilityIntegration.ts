@@ -17,7 +17,6 @@ import type {
   RepoNormalizedUniversalAgentSessionEvent,
   SupportedAgent,
 } from '@principal-ai/agent-monitoring';
-import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 
 export interface ObservabilityConfig {

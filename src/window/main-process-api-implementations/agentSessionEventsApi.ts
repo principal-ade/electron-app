@@ -3,7 +3,7 @@ import {
   type AgentSessionEventsAPI,
   AgentSessionEventsAPIEvent,
 } from '../../shared/main-process-api-interfaces/AgentSessionEventsAPI';
-import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 // Event types for real-time updates
 export type SessionEventType =
@@ -16,7 +16,7 @@ export interface SessionEventUpdate {
   type: SessionEventType;
   sessionId: string;
   workingDirectory: string;
-  event?: NormalizedAgentSessionEvent;
+  event?: RepoNormalizedUniversalAgentSessionEvent;
   timestamp: number;
 }
 

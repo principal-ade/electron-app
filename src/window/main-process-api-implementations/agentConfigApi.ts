@@ -1,8 +1,6 @@
 import { ipcRenderer } from 'electron';
-import {
-  type AgentConfigAPI,
-  AgentConfigAPIEvent,
-} from '../../shared/main-process-api-interfaces/AgentConfigAPI';
+import { SupportedAgent } from '@principal-ai/agent-monitoring';
+import type { AgentSettings } from '../../shared/types/agent-settings.types';
 import type {
   AgentSettings,
   SupportedAgent,

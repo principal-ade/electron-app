@@ -40,7 +40,6 @@ export function registerModernWindowHandlers(): void {
         },
         {
           fileSystemAdapter: true,
-          mcpToolsAdapter: true,
           contentSecurityPolicy: true,
         },
       );
@@ -246,7 +245,6 @@ export function registerModernWindowHandlers(): void {
         {
           fileSystemAdapter: true,
           windowManagerAdapter: true,
-          mcpToolsAdapter: true,
           githubAdapter: true,
           contentSecurityPolicy: true,
           externalLinkHandler: true,

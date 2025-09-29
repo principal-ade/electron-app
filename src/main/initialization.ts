@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import { APP_BRANDING } from '../shared/config/appBranding';
 import { initializeStorage } from './stores/initialization';
-import { ElectronMCPIntegration } from './mcp-app-control/mcp-integration';
 // import { AgentSessionEventsHttpBridge } from './agent-session-events/AgentSessionEventsHttpBridge';
 import { startEventServer, stopEventServer, getEventServerManager } from './agent-session-events/EventServerManager';
 import {
@@ -16,7 +15,6 @@ import { registerAgentSessionSDKHandlers } from './agent-session-events/agentSes
 // Import all IPC handlers
 import { registerWindowManagerIpcHandlers } from './window/windowManagerHandlers';
 import { registerModernWindowHandlers } from './window/modernWindowHandlers';
-import { registerMcpToolsIpcHandlers } from './principal-mcp/mcpToolsHandlers';
 import { registerStoreHandlers } from './stores/storeHandlers';
 import { registerSecretHandlers } from './stores/secretHandlers';
 import { getTypedStorageManager } from './storage-providers';
@@ -39,7 +37,8 @@ import { registerAlexandriaHandlers } from './stores/AlexandriaApiEventHandler';
 import { registerAlexandriaDocsHandlers } from './stores/AlexandriaDocsApiEventHandler';
 import { registerPalaceRoomHandlers } from './stores/PalaceRoomApiEventHandler';
 import { registerRepositoryNotesHandlers } from './principal-mcp/repositoryNotesHandlers';
-import { registerRepositoryMonitoringHandlers } from './repository-monitoring/ipcHandlers';
+import { registerRepositoryMonitoringHandlers, getManager as getRepositoryMonitoringManager } from './repository-monitoring/ipcHandlers';
+import { RepositoryRegistrationManager } from './repository-monitoring/RepositoryRegistrationManager';
 import { registerViolationCollectionHandlers } from './handlers/ViolationCollectionHandlers';
 import { registerTestCoverageHandlers } from './handlers/TestCoverageHandlers';
 import { registerApiProxyHandlers } from './services/ApiProxyService';
@@ -59,36 +58,11 @@ import {
 } from './services/ipc/documentSearchHandlers';
 import { registerObservabilityHandlers } from './observability/observabilityHandlers';
 
-let mcpIntegration: ElectronMCPIntegration | null = null;
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let planningMCPBridgePort: number | null = null;
 
 const agentEventsBridgePort = APP_BRANDING.BRIDGE_PORTS.AGENT_SESSION_EVENTS;
 const planningBridgePort = APP_BRANDING.BRIDGE_PORTS.PLANNING_MCP;
-
-// Setup MCP script path handler
-const setupMCPScriptPathHandler = () => {
-  ipcMain.handle('get-resolved-mcp-script-path', async () => {
-    // Use the same pattern as hooks - assets folder
-    const RESOURCES_PATH = app.isPackaged
-      ? path.join(process.resourcesPath, 'assets')
-      : path.join(__dirname, '../../assets');
-
-    const mcpServerPath = path.join(
-      RESOURCES_PATH,
-      APP_BRANDING.MCP_SERVER_FILENAME,
-    );
-
-    // Verify file exists and log for debugging
-    if (!fs.existsSync(mcpServerPath)) {
-      console.error(
-        `[MCP Server] MCP server file not found at ${mcpServerPath}`,
-      );
-    }
-
-    return mcpServerPath;
-  });
-};
 
 // Setup app version handler
 const setupAppVersionHandler = () => {
@@ -127,9 +101,6 @@ const setupKnipAnalysisHandler = () => {
 
 // Setup HTTP bridges
 const setupHttpBridges = async () => {
-  // Initialize MCP Integration first
-  mcpIntegration = new ElectronMCPIntegration();
-
   // Start the event processing server in utility process
   // This replaces the old AgentSessionEventsHttpBridge
   try {
@@ -169,7 +140,6 @@ const registerAllIpcHandlers = async () => {
   const { registerSecureTokenHandlers } = require('./services/SecureTokenIPC');
   registerSecureTokenHandlers(); // Registers handlers without creating instance
 
-  registerMcpToolsIpcHandlers(applicationWindows);
   registerFileSystemIpcHandlers(applicationWindows);
   registerWindowManagerIpcHandlers(applicationWindows);
   registerModernWindowHandlers(); // Register modern window creation handlers
@@ -287,7 +257,6 @@ const setupTerminalManager = () => {
 // Main initialization function
 export const initializeServices = async () => {
   // Setup basic IPC handlers
-  setupMCPScriptPathHandler();
   setupAppVersionHandler();
   setupDevModeHandler();
   setupKnipAnalysisHandler();
@@ -308,6 +277,22 @@ export const initializeServices = async () => {
     setupTerminalManager();
   }, 1000);
 
+  // Initialize repository monitoring and registration
+  // This registers all repositories with the monitoring server and enables git watching
+  setTimeout(async () => {
+    try {
+      console.log('[Main Process] Initializing repository monitoring registration...');
+      // Use the singleton monitoring manager instance that IPC handlers use
+      const monitoringManager = getRepositoryMonitoringManager();
+
+      const registrationManager = RepositoryRegistrationManager.getInstance(monitoringManager);
+      await registrationManager.initialize();
+      console.log('[Main Process] Repository monitoring registration complete.');
+    } catch (error) {
+      console.error('[Main Process] Failed to initialize repository monitoring:', error);
+    }
+  }, 2000); // Delay to ensure storage is fully initialized
+
   // Agent auto-update removed - agents are installed externally
 };
 
@@ -320,11 +305,6 @@ export const shutdownServices = async () => {
   if (terminalManager) {
     console.log('[Main Process] Cleaning up terminal sessions...');
     terminalManager.destroyAllSessions();
-  }
-
-  if (mcpIntegration) {
-    await mcpIntegration.shutdown();
-    console.log('[Main Process] ElectronMCPIntegration shutdown complete.');
   }
 
   // Stop the event processing server
@@ -348,4 +328,3 @@ export const shutdownServices = async () => {
   console.log('[Main Process] Document search service stopped.');
 };
 
-export { mcpIntegration, agentSessionEventsHttpBridge };

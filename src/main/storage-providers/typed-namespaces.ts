@@ -1,5 +1,3 @@
-import { SupportedAgent } from '@principal-ai/agent-monitoring';
-import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
 
 import { Repository } from '../../shared/types/repository.types';
 import { LLMConfiguration } from '../../shared/main-process-api-interfaces/LLMModelsAPI';
@@ -169,83 +167,6 @@ export interface NamespaceDataTypes {
   // Secrets Management namespace
   [StaticNamespaces.SECRETS_METADATA]: SecretMetadata; // Metadata for encrypted secrets
 
-  // Agent event namespaces - these store individual events by key
-  // The storage system handles key-value pairs, so each event is stored separately
-  [AgentEventNamespaces.CLAUDE]: AgentSessionEvent;
-  [AgentEventNamespaces.OPENCODE]: AgentSessionEvent;
-  [AgentEventNamespaces.CLINE]: AgentSessionEvent;
-}
-
-/**
- * Processed agent session data
- * Stores session metadata and flat list of events
- */
-export interface ProcessedSessionData {
-  // Session identification
-  sessionId: string;
-  provider: SupportedAgent;
-  workingDirectory: string;
-
-  // Timing
-  startTime: number;
-  lastUpdateTime: number;
-
-  // Flat list of all normalized events from core
-  // Events have normalizedWorkingDirectory set to git root when in a repository
-  events: NormalizedAgentSessionEvent[];
-
-  // Aggregates for quick access (optional, for performance)
-  totalEvents: number;
-
-  // Repository tracking with git root paths for efficient detection
-  // Multiple entries can have the same remoteUrl (different clones)
-  repositoriesAccessed?: Array<{
-    remoteUrl: string;
-    gitRoot: string;
-  }>;
-
-  // Basic counters (optional, for performance)
-  counters?: {
-    fileAccesses: number;
-    fileWrites: number;
-    toolCalls: number;
-    webAccesses: number;
-  };
-
-  // File tracking maps for centralized event processor
-  fileAccesses?: Record<
-    string,
-    Array<{
-      timestamp: number;
-      normalizedPath?: string;
-      metadata?: any;
-    }>
-  >;
-  fileWrites?: Record<
-    string,
-    Array<{
-      timestamp: number;
-      operation: string;
-      normalizedPath?: string;
-      metadata?: any;
-    }>
-  >;
-
-  // Additional file tracking arrays
-  filesRead?: string[];
-  filesWritten?: string[];
-
-  // Metadata storage
-  metadata?: Record<string, any>;
-
-  // File context tracking
-  fileContexts?: {
-    repositories: string[]; // Git roots accessed (unique)
-    systemFiles: number; // Count of system files accessed
-    configFiles: number; // Count of config files accessed
-    tempFiles: number; // Count of temp files accessed
-    externalFiles: string[]; // Notable external files accessed (non-repo, non-system)
-  };
 }
 
 /**
@@ -496,7 +417,6 @@ export function isValidNamespace(
 
 /**
  * Helper type for namespace-specific operations
- * Now supports ALL namespaces including agent event namespaces
  */
 export type NamespaceData<K extends keyof NamespaceDataTypes> =
   NamespaceDataTypes[K];

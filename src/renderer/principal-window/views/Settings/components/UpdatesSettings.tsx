@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from 'themed-markdown';
 import { RefreshCw, Sparkles, Info } from 'lucide-react';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
@@ -16,6 +16,16 @@ export const UpdatesSettings: React.FC = () => {
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const [isDownloaded, setIsDownloaded] = useState(false);
+  const isDownloadingRef = useRef(false);
+  const isDownloadedRef = useRef(false);
+
+  useEffect(() => {
+    isDownloadingRef.current = isDownloading;
+  }, [isDownloading]);
+
+  useEffect(() => {
+    isDownloadedRef.current = isDownloaded;
+  }, [isDownloaded]);
 
   useEffect(() => {
     AppVersionManagerService.getVersion().then(setCurrentVersion);
@@ -28,11 +38,15 @@ export const UpdatesSettings: React.FC = () => {
       setLastCheck(new Date());
       setIsChecking(false);
       setIsDownloaded(false);
+      isDownloadedRef.current = false;
       setDownloadProgress(0);
       setDownloadError(null);
     };
 
     const handleUpdateNotAvailable = () => {
+      if (isDownloadedRef.current) {
+        return;
+      }
       setUpdateAvailable(false);
       setAvailableVersion(null);
       setUpdateStatus('You have the latest version');
@@ -42,7 +56,7 @@ export const UpdatesSettings: React.FC = () => {
 
     const handleUpdateError = (err: Error | { message?: string; toString(): string }) => {
       const errorMessage = parseUpdateError(err);
-      if (isDownloading) {
+      if (isDownloadingRef.current) {
         setDownloadError(errorMessage);
         setIsDownloading(false);
         setUpdateStatus('Download failed');
@@ -54,12 +68,25 @@ export const UpdatesSettings: React.FC = () => {
       setIsChecking(false);
     };
 
-    const handleUpdateDownloadProgress = (progress: { percent?: number }) => {
-      setDownloadProgress(progress.percent || 0);
+    const handleUpdateDownloadProgress = (progress: {
+      percent?: number;
+      transferred?: number;
+      total?: number;
+    }) => {
+      const derivedPercent =
+        typeof progress.percent === 'number'
+          ? progress.percent
+          : progress.total
+            ? ((progress.transferred || 0) / progress.total) * 100
+            : 0;
+      setDownloadProgress(Math.max(0, Math.min(100, derivedPercent)));
+      setIsDownloading(true);
+      setUpdateStatus('Downloading update...');
     };
 
     const handleUpdateDownloaded = () => {
       setIsDownloaded(true);
+      isDownloadedRef.current = true;
       setIsDownloading(false);
       setDownloadProgress(100);
       setUpdateStatus('Update downloaded successfully');
@@ -85,7 +112,7 @@ export const UpdatesSettings: React.FC = () => {
     return () => {
       unsubscribe.forEach(fn => fn());
     };
-  }, [isDownloading]);
+  }, []);
 
   const parseUpdateError = (err: Error | { message?: string; toString(): string }): string => {
     let errorMessage = err.message || err.toString();

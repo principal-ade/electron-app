@@ -1,6 +1,7 @@
 import { SupportedAgent } from '@principal-ai/agent-monitoring';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { AgentSetupStatus } from '../../shared/main-process-api-interfaces/AgentConfigAPI';
+import type { AgentSettings } from '../../shared/types/agent-settings.types';
 
 export type AgentInstallationStatus = {
   [key in SupportedAgent]: AgentSetupStatus;

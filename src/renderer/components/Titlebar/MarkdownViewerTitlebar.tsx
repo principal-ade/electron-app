@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit3, ExternalLink, Plus, Minus, Copy, Check, Trash2 } from 'lucide-react';
+import { Edit3, ExternalLink, Plus, Minus, Copy, Check, Trash2, BookOpen, FileText } from 'lucide-react';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarButton } from './TitlebarButton';
 
@@ -8,11 +8,13 @@ export interface MarkdownViewerTitlebarProps {
   filePath?: string;
   projectName?: string;
   fontSizeScale?: number;
+  viewMode?: 'single' | 'book';
   onEdit?: () => void;
   onOpenExternal?: () => void;
   onFontSizeIncrease?: () => void;
   onFontSizeDecrease?: () => void;
   onDelete?: () => void;
+  onViewModeChange?: (mode: 'single' | 'book') => void;
 }
 
 export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
@@ -20,11 +22,13 @@ export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
   filePath,
   projectName,
   fontSizeScale = 1.0,
+  viewMode = 'book',
   onEdit,
   onOpenExternal,
   onFontSizeIncrease,
   onFontSizeDecrease,
   onDelete,
+  onViewModeChange,
 }) => {
   const [copied, setCopied] = useState(false);
   const displayFileName = fileName || filePath || 'Markdown Viewer';
@@ -64,12 +68,13 @@ export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
       )}
       {/* Center content: title with delete button */}
       <div
-        position="center" as any
         style={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
-          marginLeft: '-100px',
           WebkitAppRegion: 'no-drag' as any,
         }}
       >
@@ -111,6 +116,34 @@ export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
           </button>
         )}
       </div>
+      {onViewModeChange && (
+        <>
+          <TitlebarButton
+            onClick={() => onViewModeChange('single')}
+            icon={<FileText size={16} />}
+            ariaLabel="Single Slide View"
+            title="Single Slide View"
+            position="right"
+            style={{
+              right: '220px',
+              opacity: viewMode === 'single' ? 1 : 0.6,
+              backgroundColor: viewMode === 'single' ? 'var(--color-primary-light, rgba(59, 130, 246, 0.1))' : 'transparent',
+            }}
+          />
+          <TitlebarButton
+            onClick={() => onViewModeChange('book')}
+            icon={<BookOpen size={16} />}
+            ariaLabel="Book View"
+            title="Book View (Two Pages)"
+            position="right"
+            style={{
+              right: '190px',
+              opacity: viewMode === 'book' ? 1 : 0.6,
+              backgroundColor: viewMode === 'book' ? 'var(--color-primary-light, rgba(59, 130, 246, 0.1))' : 'transparent',
+            }}
+          />
+        </>
+      )}
       {onFontSizeDecrease && (
         <TitlebarButton
           onClick={onFontSizeDecrease}

@@ -4,10 +4,21 @@
 
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
-import type { PackageSummary } from '../../repository-monitoring-server/types';
+import type { ToolExecutionRequest, ToolExecutionResponse } from '../../main/quality-lenses/QualityLensService';
 
-// Re-export types from QualityLensService
-export type { ToolExecutionRequest, ToolExecutionResponse } from '../../main/quality-lenses/QualityLensService';
+// Export the imported types
+export type { ToolExecutionRequest, ToolExecutionResponse };
+
+// Package summary interface
+export interface PackageSummary {
+  isMonorepo: boolean;
+  rootPackageName?: string;
+  totalPackages: number;
+  workspacePackages: Array<{ name?: string; path: string }>;
+  totalDependencies: number;
+  totalDevDependencies: number;
+  availableScripts: string[];
+}
 
 export enum RepositoryMonitoringAPIEvent {
   GET_FILE_TREE = 'repository-monitoring:get-file-tree',
@@ -25,6 +36,7 @@ export enum RepositoryMonitoringAPIEvent {
   ENABLE_GIT_WATCHING = 'repository-monitoring:enable-git-watching',
   DISABLE_GIT_WATCHING = 'repository-monitoring:disable-git-watching',
   GIT_STATUS_CHANGED = 'repository-monitoring:git-status-changed',
+  GIT_STATE_EVENT = 'repository-monitoring:git-state-event',
   EXECUTE_TOOL = 'repository-monitoring:execute-tool',
 }
 
@@ -33,7 +45,7 @@ export interface RepositoryMonitoringResult {
   error?: string;
 }
 
-export interface GitStatus {
+export interface GitStatusMetadata {
   repoPath: string;
   branch: string;
   isDirty: boolean;
@@ -42,9 +54,10 @@ export interface GitStatus {
   ahead: number;
   behind: number;
   watchingEnabled: boolean;
+  lastChangedAt?: string;
 }
 
-export interface GitStatusWithFiles extends GitStatus {
+export interface GitStatusWithFiles extends GitStatusMetadata {
   modifiedFiles: string[];
   untrackedFiles: string[];
   stagedFiles: string[];
@@ -81,10 +94,10 @@ export interface RepositoryMonitoringAPI {
   getMonitoringStatus(): Promise<MonitoringStatus>;
   startMonitoring(): Promise<void>;
   stopMonitoring(): Promise<void>;
-  getGitStatus(repoPath: string): Promise<GitStatus | null>;
+  getGitStatus(repoPath: string): Promise<GitStatusMetadata | null>;
   getGitStatusWithFiles(repoPath: string): Promise<GitStatusWithFiles | null>;
   enableGitWatching(repoPath: string): Promise<RepositoryMonitoringResult>;
   disableGitWatching(repoPath: string): Promise<RepositoryMonitoringResult>;
-  onGitStatusChanged(callback: (status: GitStatus) => void): () => void;
+  onGitStatusChanged(callback: (status: GitStatusMetadata) => void): () => void;
   executeTool(request: ToolExecutionRequest): Promise<ToolExecutionResponse>;
 }

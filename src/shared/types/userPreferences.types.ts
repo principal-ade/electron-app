@@ -98,6 +98,7 @@ export interface UserPreferences {
   useCustomMarkdownTheme?: boolean; // If true, use customMarkdownTheme instead of app theme
   customMarkdownTheme?: Record<string, unknown>; // Custom theme object for markdown rendering
   markdownFontSizeScale?: number; // Font size scale for markdown viewer (default 1.0)
+  markdownViewMode?: 'single' | 'book'; // View mode for markdown viewer (single slide or book view)
 
   // Agent auto-update preferences
   agentAutoUpdate?: {

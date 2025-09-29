@@ -15,6 +15,7 @@ interface MarkdownDocumentViewerProps {
   theme: Theme;
   showSegmented?: boolean;
   fontSizeScale?: number;
+  bookViewMode?: 'single' | 'book'; // For controlling ThemedSlidePresentationBook view mode
   onContentChange: (content: string) => void;
   onSlideNavigate: (slideNumber: number) => void;
   onCheckboxChange: (
@@ -33,6 +34,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
   theme,
   showSegmented = true,
   fontSizeScale = 1.0,
+  bookViewMode = 'book',
   onContentChange,
   onSlideNavigate,
   onCheckboxChange,
@@ -109,7 +111,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
           showNavigation={true}
           showSlideCounter={true}
           showFullscreenButton={true}
-          viewMode="book"
+          viewMode={bookViewMode}
           slideIdPrefix="planning-book"
           enableHtmlPopout={true}
           enableKeyboardScrolling={true}

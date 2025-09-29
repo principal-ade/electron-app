@@ -5,12 +5,9 @@
 
 import { BaseExecutor } from './BaseExecutor';
 import type { ExecuteOptions, ExecuteResult } from '../types';
+import type { GitStatus } from '../../shared/types/repository.types';
 
-export interface GitStatus {
-  staged: string[];
-  unstaged: string[];
-  untracked: string[];
-}
+// GitStatus is now imported from repository.types
 
 export interface GitRemote {
   name: string;
@@ -160,12 +157,13 @@ export class GitExecutor extends BaseExecutor {
       });
 
       if (!result.success || !result.stdout) {
-        return { staged: [], unstaged: [], untracked: [] };
+        return { staged: [], unstaged: [], untracked: [], deleted: [] };
       }
 
-      const staged: string[] = [];
-      const unstaged: string[] = [];
-      const untracked: string[] = [];
+      const staged: Array<{ path: string; lastModified?: string }> = [];
+      const unstaged: Array<{ path: string; lastModified?: string }> = [];
+      const untracked: Array<{ path: string; lastModified?: string }> = [];
+      const deleted: Array<{ path: string; lastModified?: string }> = [];
 
       this.parseLines(result.stdout).forEach((line) => {
         const status = line.substring(0, 2);
@@ -175,27 +173,32 @@ export class GitExecutor extends BaseExecutor {
         if (
           status[0] === 'M' ||
           status[0] === 'A' ||
-          status[0] === 'D' ||
           status[0] === 'R' ||
           status[0] === 'C'
         ) {
-          staged.push(file);
+          staged.push({ path: file });
+        } else if (status[0] === 'D') {
+          // Staged deletion
+          deleted.push({ path: file });
         }
 
         // Working tree status (second character)
-        if (status[1] === 'M' || status[1] === 'D') {
-          unstaged.push(file);
+        if (status[1] === 'M') {
+          unstaged.push({ path: file });
+        } else if (status[1] === 'D') {
+          // Unstaged deletion
+          deleted.push({ path: file });
         }
 
         // Untracked files
         if (status === '??') {
-          untracked.push(file);
+          untracked.push({ path: file });
         }
       });
 
-      return { staged, unstaged, untracked };
+      return { staged, unstaged, untracked, deleted };
     } catch {
-      return { staged: [], unstaged: [], untracked: [] };
+      return { staged: [], unstaged: [], untracked: [], deleted: [] };
     }
   }
 

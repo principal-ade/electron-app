@@ -26,6 +26,5 @@ export function getAllNamespaces(): StorageNamespaces[] {
  */
 export {
   isStaticNamespace,
-  isAgentEventNamespace,
   isValidNamespace,
 } from '../../shared/types/namespaces.types';

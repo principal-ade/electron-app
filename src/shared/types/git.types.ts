@@ -1,4 +1,4 @@
-export interface GitStatus {
+export interface GitStatusMetadata {
   repoPath: string;
   branch: string;
   isDirty: boolean;

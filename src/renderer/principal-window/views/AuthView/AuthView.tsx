@@ -62,6 +62,7 @@ export const AuthView: React.FC = () => {
         staged: [],
         unstaged: [],
         untracked: [],
+        deleted: [],
       }));
 
       const isDirty = status.staged.length > 0 ||

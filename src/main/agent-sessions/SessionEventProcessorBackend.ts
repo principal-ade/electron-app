@@ -7,7 +7,7 @@ import {
   SessionState,
 } from '../../shared/event-processing/SessionEventProcessor';
 import { AgentSessionRecord } from '../../shared/sessionTypes';
-import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 /**
  * Convert stored session to processor state
@@ -105,7 +105,7 @@ export function updateRecordFromState(
 export async function processEventForSession(
   getSession: (sessionId: string) => Promise<AgentSessionRecord | null>,
   saveSession: (session: AgentSessionRecord) => Promise<void>,
-  event: NormalizedAgentSessionEvent,
+  event: RepoNormalizedUniversalAgentSessionEvent,
 ): Promise<void> {
   if (!event.sessionId) return;
 

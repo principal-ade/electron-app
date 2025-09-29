@@ -35,7 +35,7 @@ import {
 import { AgentSessionsTab } from './shared/AgentSessionsTab';
 import { LocalFileSystemProvider } from '../../services/ContentProviders';
 import { EnhancedUIAgentSessionData } from '../../types/session.types';
-import { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { HelpModal } from './shared/HelpModal';
 import { SessionCardData } from './shared/AgentSessionCard';
 
@@ -216,7 +216,7 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
   const onSessionUpdateRef = useRef(onSessionUpdate);
   const onSessionRefreshRef = useRef(onSessionRefresh);
   const processEventRef = useRef<
-    ((event: NormalizedAgentSessionEvent) => void) | null
+    ((event: RepoNormalizedUniversalAgentSessionEvent) => void) | null
   >(null);
 
   // Use centralized event processor for consistent event handling (must be at top level)
@@ -276,7 +276,7 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
 
   // Subscribe to real-time session events - stable effect with no dependencies
   useEffect(() => {
-    const handleSessionEvent = (event: NormalizedAgentSessionEvent) => {
+    const handleSessionEvent = (event: RepoNormalizedUniversalAgentSessionEvent) => {
       // Use refs to get current values without triggering re-subscriptions
       if (
         !onSessionUpdateRef.current ||
@@ -287,7 +287,7 @@ export const LocalDevelopmentView: React.FC<LocalDevelopmentViewProps> = ({
       }
 
       // Handle both raw and processed event formats
-      const normalizedEvent: NormalizedAgentSessionEvent = event;
+      const normalizedEvent: RepoNormalizedUniversalAgentSessionEvent = event;
 
       if (!normalizedEvent.sessionId) {
         return;

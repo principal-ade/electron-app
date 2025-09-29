@@ -78,7 +78,7 @@ export class GitSyncManager {
     const status = await GitService.getStatus(this.currentRepoPath);
 
     // Combine staged and unstaged files as modified
-    const modifiedFiles = [...new Set([...status.staged, ...status.unstaged])];
+    const modifiedFiles = [...new Set([...status.staged.map(f => f.path), ...status.unstaged.map(f => f.path)])];
 
     const syncData: GitSyncData = {
       type: 'git-sync',
@@ -88,7 +88,7 @@ export class GitSyncManager {
         branch: this.currentBranch,
         commit: commitInfo.hash,
         message: commitInfo.message,
-        files: modifiedFiles.concat(status.untracked),
+        files: modifiedFiles.concat(status.untracked.map(f => f.path)),
         author: commitInfo.author,
         timestamp: Date.now(),
       },
@@ -148,9 +148,9 @@ export class GitSyncManager {
       // Check for potential conflicts
       const localStatus = await GitService.getStatus(this.currentRepoPath);
       const localChangedFiles = new Set([
-        ...localStatus.staged,
-        ...localStatus.unstaged,
-        ...localStatus.untracked,
+        ...localStatus.staged.map(f => f.path),
+        ...localStatus.unstaged.map(f => f.path),
+        ...localStatus.untracked.map(f => f.path),
       ]);
 
       // Check if any remote files conflict with local changes
@@ -237,9 +237,9 @@ export class GitSyncManager {
         // Auto-commit local changes first
         const filesToCommit = [
           ...new Set([
-            ...localStatus.staged,
-            ...localStatus.unstaged,
-            ...localStatus.untracked,
+            ...localStatus.staged.map(f => f.path),
+            ...localStatus.unstaged.map(f => f.path),
+            ...localStatus.untracked.map(f => f.path),
           ]),
         ];
         await GitService.commitChanges(

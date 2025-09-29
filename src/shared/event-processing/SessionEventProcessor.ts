@@ -5,7 +5,7 @@
  * Used by both backend (for storage) and frontend (for real-time updates).
  */
 
-import { NormalizedAgentSessionEvent } from '../types/legacy-event.types';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { EventActivityType } from '../sessionEnums';
 
 /**
@@ -132,9 +132,9 @@ export interface ProcessingResult {
  * Event processor interface - can be extended with plugins
  */
 export interface IEventProcessor {
-  canProcess(event: NormalizedAgentSessionEvent): boolean;
+  canProcess(event: RepoNormalizedUniversalAgentSessionEvent): boolean;
   process(
-    event: NormalizedAgentSessionEvent,
+    event: RepoNormalizedUniversalAgentSessionEvent,
     currentState: SessionState,
   ): ProcessingResult;
 }
@@ -143,12 +143,12 @@ export interface IEventProcessor {
  * Default processors for standard tool events
  */
 export class FileReadProcessor implements IEventProcessor {
-  canProcess(event: NormalizedAgentSessionEvent): boolean {
+  canProcess(event: RepoNormalizedUniversalAgentSessionEvent): boolean {
     return event.toolName === 'Read';
   }
 
   process(
-    event: NormalizedAgentSessionEvent,
+    event: RepoNormalizedUniversalAgentSessionEvent,
     currentState: SessionState,
   ): ProcessingResult {
     if (!event.files || event.files.length === 0) {
@@ -200,12 +200,12 @@ export class FileReadProcessor implements IEventProcessor {
 }
 
 export class FileWriteProcessor implements IEventProcessor {
-  canProcess(event: NormalizedAgentSessionEvent): boolean {
+  canProcess(event: RepoNormalizedUniversalAgentSessionEvent): boolean {
     return ['Write', 'Edit', 'MultiEdit'].includes(event.toolName || '');
   }
 
   process(
-    event: NormalizedAgentSessionEvent,
+    event: RepoNormalizedUniversalAgentSessionEvent,
     currentState: SessionState,
   ): ProcessingResult {
     if (!event.files || event.files.length === 0) {
@@ -264,12 +264,12 @@ export class FileWriteProcessor implements IEventProcessor {
 }
 
 export class BashProcessor implements IEventProcessor {
-  canProcess(event: NormalizedAgentSessionEvent): boolean {
+  canProcess(event: RepoNormalizedUniversalAgentSessionEvent): boolean {
     return event.toolName === 'Bash';
   }
 
   process(
-    event: NormalizedAgentSessionEvent,
+    event: RepoNormalizedUniversalAgentSessionEvent,
     currentState: SessionState,
   ): ProcessingResult {
     const command = (event.toolInput as any)?.command;
@@ -359,12 +359,12 @@ export class BashProcessor implements IEventProcessor {
 }
 
 export class TodoWriteProcessor implements IEventProcessor {
-  canProcess(event: NormalizedAgentSessionEvent): boolean {
+  canProcess(event: RepoNormalizedUniversalAgentSessionEvent): boolean {
     return event.toolName === 'TodoWrite';
   }
 
   process(
-    event: NormalizedAgentSessionEvent,
+    event: RepoNormalizedUniversalAgentSessionEvent,
     currentState: SessionState,
   ): ProcessingResult {
     interface TodoItem {
@@ -436,7 +436,7 @@ export class SessionEventProcessor {
    * Process an event and return session updates
    */
   processEvent(
-    event: NormalizedAgentSessionEvent,
+    event: RepoNormalizedUniversalAgentSessionEvent,
     currentState: SessionState,
   ): ProcessingResult {
     // Find matching processor

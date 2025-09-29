@@ -7,6 +7,8 @@ import type { AlexandriaAPI } from '../../shared/main-process-api-interfaces/Ale
 import { AlexandriaAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
 import type { AlexandriaEntry } from '@a24z/core-library';
+import { RepositoryRegistrationManager } from '../repository-monitoring/RepositoryRegistrationManager';
+import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
 export class AlexandriaApiEventHandler implements AlexandriaAPI {
   private registryService: AlexandriaRegistryService;
@@ -54,16 +56,21 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
     const repo = await this.registryService.registerRepository(name, path);
     // Broadcast the event to all windows
     this.broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_ADDED, repo);
+    await this.registerWithMonitoring(repo);
     return repo;
   }
 
   async removeRepository(name: string, deleteLocal?: boolean) {
+    const existing = await this.registryService.getRepository(name);
     const success = await this.registryService.removeRepository(name, deleteLocal);
     if (success) {
       // Broadcast the event to all windows
       this.broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_REMOVED, {
         name,
       });
+      if (existing?.path) {
+        await this.unregisterFromMonitoring(existing.path as string);
+      }
     }
     return success;
   }
@@ -90,6 +97,30 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
 
   async getRepositoryCount() {
     return this.registryService.getRepositoryCount();
+  }
+
+  private async registerWithMonitoring(repo: AlexandriaEntry): Promise<void> {
+    if (!repo?.path) {
+      return;
+    }
+
+    try {
+      const monitoringManager = getRepositoryMonitoringManager();
+      const registrationManager = RepositoryRegistrationManager.getInstance(monitoringManager);
+      await registrationManager.handleRepositoryAdded(repo);
+    } catch (error) {
+      console.error('[Alexandria] Failed to register repository with monitoring:', error);
+    }
+  }
+
+  private async unregisterFromMonitoring(repoPath: string): Promise<void> {
+    try {
+      const monitoringManager = getRepositoryMonitoringManager();
+      const registrationManager = RepositoryRegistrationManager.getInstance(monitoringManager);
+      await registrationManager.handleRepositoryRemoved(repoPath);
+    } catch (error) {
+      console.error('[Alexandria] Failed to unregister repository from monitoring:', error);
+    }
   }
 
   /**

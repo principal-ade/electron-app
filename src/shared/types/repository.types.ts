@@ -20,6 +20,7 @@ export interface GitStatus {
   staged: Array<{ path: string; lastModified?: string }>;
   unstaged: Array<{ path: string; lastModified?: string }>;
   untracked: Array<{ path: string; lastModified?: string }>;
+  deleted: Array<{ path: string; lastModified?: string }>;
 }
 
 /**

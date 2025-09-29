@@ -5,7 +5,7 @@
 
 import { ipcMain, BrowserWindow } from 'electron';
 import { RepositoryMonitoringManager } from './RepositoryMonitoringManager';
-import { RepositoryMonitoringAPIEvent, GitStatus, type ToolExecutionRequest } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import { RepositoryMonitoringAPIEvent, GitStatusMetadata, type ToolExecutionRequest } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { MonitoringInternalEvent } from '../../repository-monitoring-server/types';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 
@@ -15,7 +15,7 @@ let repositoryMonitoringManager: RepositoryMonitoringManager | null = null;
 /**
  * Get or create the repository monitoring manager instance
  */
-function getManager(): RepositoryMonitoringManager {
+export function getManager(): RepositoryMonitoringManager {
   if (!repositoryMonitoringManager) {
     repositoryMonitoringManager = new RepositoryMonitoringManager({
       autoStart: true,
@@ -232,10 +232,19 @@ export function registerRepositoryMonitoringHandlers(): void {
   });
 
   // Forward git status change events to renderer windows
-  manager.on(MonitoringInternalEvent.GIT_STATUS_CHANGED, (data: GitStatus) => {
+  manager.on(MonitoringInternalEvent.GIT_STATUS_CHANGED, (data: GitStatusMetadata) => {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach(window => {
       window.webContents.send(RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED, data);
+    });
+  });
+
+  // Forward git state events to renderer windows
+  manager.on(MonitoringInternalEvent.GIT_STATE_EVENT, (payload: any) => {
+    console.log('[RepositoryMonitoring] Forwarding git state event to renderer:', payload.event.type);
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach(window => {
+      window.webContents.send(RepositoryMonitoringAPIEvent.GIT_STATE_EVENT, payload);
     });
   });
 

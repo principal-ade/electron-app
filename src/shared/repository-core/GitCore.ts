@@ -5,6 +5,7 @@
 
 import { execSync } from 'child_process';
 import * as path from 'path';
+import type { GitStatus } from '../types/repository.types';
 
 export interface GitInfo {
   currentCommit: string;
@@ -12,11 +13,7 @@ export interface GitInfo {
   isDirty: boolean;
 }
 
-export interface GitStatus {
-  staged: string[];
-  modified: string[];
-  not_added: string[];
-}
+// GitStatus is now imported from repository.types
 
 /**
  * Core git operations shared between processes
@@ -91,35 +88,46 @@ export class GitCore {
     try {
       const statusOutput = this.execGit(['status', '--porcelain'], repoPath);
 
-      const staged: string[] = [];
-      const modified: string[] = [];
-      const not_added: string[] = [];
+      const staged: Array<{ path: string; lastModified?: string }> = [];
+      const unstaged: Array<{ path: string; lastModified?: string }> = [];
+      const untracked: Array<{ path: string; lastModified?: string }> = [];
+      const deleted: Array<{ path: string; lastModified?: string }> = [];
 
       if (statusOutput) {
         const lines = statusOutput.split('\n').filter(line => line.trim());
 
         for (const line of lines) {
           const status = line.substring(0, 2);
-          const file = line.substring(3);
+          // Git porcelain format has either 1 or 2 spaces after the status codes
+          // Find where the filename starts (after the status codes and space(s))
+          const file = line.substring(2).trim();
 
           // First character is staged status
           if (status[0] !== ' ' && status[0] !== '?') {
-            staged.push(file);
+            staged.push({ path: file });
+          }
+
+          // Check for deletions
+          // D  = deleted from index
+          // AD = added to index, deleted in working tree
+          //  D = deleted in working tree
+          if (status[0] === 'D' || status[1] === 'D') {
+            deleted.push({ path: file });
           }
 
           // Second character is working tree status
           if (status[1] === 'M') {
-            modified.push(file);
+            unstaged.push({ path: file });
           } else if (status[0] === '?' && status[1] === '?') {
-            not_added.push(file);
+            untracked.push({ path: file });
           }
         }
       }
 
-      return { staged, modified, not_added };
+      return { staged, unstaged, untracked, deleted };
     } catch (error) {
       console.warn(`[GitCore] Could not get status for ${repoPath}:`, error);
-      return { staged: [], modified: [], not_added: [] };
+      return { staged: [], unstaged: [], untracked: [], deleted: [] };
     }
   }
 
@@ -298,6 +306,19 @@ export class GitCore {
   }
 
   /**
+   * Get ISO timestamp of the most recent commit on current branch
+   */
+  static async getMostRecentCommitTimestamp(repoPath: string): Promise<string | null> {
+    try {
+      const result = this.execGit(['log', '-1', '--format=%cI'], repoPath, { throwOnError: false });
+      return result || null;
+    } catch (error) {
+      console.warn(`[GitCore] Could not get last commit time for ${repoPath}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Get comprehensive git status for watching
    */
   static async getDetailedStatus(repoPath: string): Promise<{
@@ -307,6 +328,7 @@ export class GitCore {
     hasStaged: boolean;
     ahead: number;
     behind: number;
+    files?: GitStatus; // Include the file lists to avoid duplicate calls
   }> {
     try {
       const [branch, status, ahead, behind] = await Promise.all([
@@ -318,11 +340,12 @@ export class GitCore {
 
       return {
         branch,
-        isDirty: status.modified.length > 0 || status.staged.length > 0 || status.not_added.length > 0,
-        hasUntracked: status.not_added.length > 0,
+        isDirty: status.unstaged.length > 0 || status.staged.length > 0 || status.untracked.length > 0 || status.deleted.length > 0,
+        hasUntracked: status.untracked.length > 0,
         hasStaged: status.staged.length > 0,
         ahead,
         behind,
+        files: status, // Return the file status to avoid duplicate calls
       };
     } catch (error) {
       console.warn(`[GitCore] Could not get detailed status for ${repoPath}:`, error);

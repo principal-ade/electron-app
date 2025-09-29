@@ -19,10 +19,20 @@ export class FileTreeBuilder {
    */
   async buildFileTree(repoPath: string): Promise<FileTree> {
     // 1. Get files from file system using shared FileSystemCore
-    const { paths } = await FileSystemCore.buildFilteredFileTree(repoPath, {
+    const { paths, stats } = await FileSystemCore.buildFilteredFileTree(repoPath, {
       gitignore: true,
-      includeStats: false, // We don't need stats for GitFileTreeBuilder
+      includeStats: true,
     });
+
+    const toPosix = (value: string) => value.replace(/\\/g, '/');
+
+    const fileEntries = (stats ?? [])
+      .filter(stat => !stat.isDirectory)
+      .map(stat => ({
+        path: toPosix(stat.path.endsWith('/') ? stat.path.slice(0, -1) : stat.path),
+        size: stat.size,
+        lastModified: stat.lastModified,
+      }));
 
     // 2. Get git information using shared GitCore
     const gitInfo = await GitCore.getGitInfo(repoPath);
@@ -33,9 +43,15 @@ export class FileTreeBuilder {
       branch: gitInfo.branch,
       rootPath: repoPath,
       isDirty: gitInfo.isDirty,
-      files: paths.map((filePath: string) => ({
-        path: path.relative(repoPath, filePath),
-      })),
+      files: (fileEntries.length > 0
+        ? fileEntries
+        : paths.map((filePath: string) => ({
+            path: toPosix(path.relative(repoPath, filePath)),
+          })))
+        .map(file => ({
+          ...file,
+          path: file.path,
+        })),
     };
 
     // 4. Use GitFileTreeBuilder to create properly structured FileTree

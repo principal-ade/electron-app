@@ -1,4 +1,5 @@
-import { SupportedAgent, AgentSettings } from '@principal-ai/agent-monitoring';
+import { SupportedAgent } from '@principal-ai/agent-monitoring';
+import type { AgentSettings } from '../types/agent-settings.types';
 
 export interface AgentSetupStatus {
   isInstalled: boolean;

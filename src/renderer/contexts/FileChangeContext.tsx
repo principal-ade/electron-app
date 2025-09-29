@@ -9,7 +9,7 @@ import React, {
 } from 'react';
 import { GitService, GitDetailedChanges } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import type { GitStatus } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type { GitStatusMetadata } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { HighlightLayer } from '@principal-ai/code-city-react';
 
 // Source identifier for tracking multiple repositories/directories
@@ -300,7 +300,7 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
 
   // Listen for git status updates from GitWatcher
   useEffect(() => {
-    const handleGitStatusUpdate = (status: GitStatus) => {
+    const handleGitStatusUpdate = (status: GitStatusMetadata) => {
       // Find the source matching this repo path
       sourcesRef.current.forEach((sourceData, sourceId) => {
         if (

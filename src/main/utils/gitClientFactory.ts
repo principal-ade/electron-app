@@ -7,6 +7,7 @@ import { electronCLI } from '../electron-cli-bridge';
 import type { GitExecutor, GitRemote } from '../electron-cli-bridge';
 import { gitLensAdapter } from '../quality-lenses/GitLensAdapter';
 import type { CommitInfo } from '../quality-lenses/GitLensAdapter';
+import type { GitStatus } from '../../shared/types/repository.types';
 
 /**
  * Factory for Git operations using electron-cli-bridge
@@ -175,12 +176,8 @@ export class GitClientFactory {
    * Get git status for a directory
    * Now uses GitLens for consistency with other Git operations
    */
-  static async getGitStatus(directory: string): Promise<{
-    staged: string[];
-    unstaged: string[];
-    untracked: string[];
-  }> {
-    // Use GitLens adapter instead of electron-cli-bridge
+  static async getGitStatus(directory: string): Promise<GitStatus> {
+    // Use GitLens adapter which now returns proper GitStatus format
     return await gitLensAdapter.getGitStatus(directory);
   }
 

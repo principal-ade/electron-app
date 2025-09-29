@@ -226,6 +226,24 @@ export class MonitoredFileTreeService {
   }
 
   /**
+   * Invalidate cache entries matching a predicate
+   */
+  invalidateMatching(predicate: (source: FileTreeSource) => boolean): void {
+    const toDelete: string[] = [];
+
+    for (const [id, cached] of this.memoryCache.entries()) {
+      if (predicate(cached.source)) {
+        toDelete.push(id);
+      }
+    }
+
+    for (const id of toDelete) {
+      console.log(`🗑️ [MonitoredFileTreeService] Invalidating matching source: ${id}`);
+      this.memoryCache.delete(id);
+    }
+  }
+
+  /**
    * Clear all cache (for compatibility with FileTreeCacheService)
    */
   clearAll(): void {

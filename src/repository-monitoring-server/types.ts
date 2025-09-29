@@ -5,6 +5,10 @@
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { QualityMetrics, PackageLayer } from '@principal-ai/codebase-composition';
 import type { LensResult } from '@principal-ai/codebase-quality-lenses';
+import type { ToolExecutionRequest, ToolExecutionResponse } from '../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+
+// Re-export PackageSummary from shared types
+export type { PackageSummary } from '../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 /**
  * Internal event names for communication between server and main process
@@ -12,6 +16,7 @@ import type { LensResult } from '@principal-ai/codebase-quality-lenses';
 export enum MonitoringInternalEvent {
   METRICS_UPDATED = 'metrics-updated',
   GIT_STATUS_CHANGED = 'git-status-changed',
+  GIT_STATE_EVENT = 'git-state-event',
 }
 
 /**
@@ -24,24 +29,13 @@ export interface RepositoryState {
   fileTree?: FileTree;
   metrics?: RepositoryMetrics;
   gitWatchingEnabled?: boolean;
-  lastGitStatus?: GitStatus;
+  lastGitStatus?: GitStatusMetadata;
   gitPollInterval?: NodeJS.Timeout;
   fsMonitorEnabled?: boolean;
   watchingMode?: 'minimal' | 'fallback' | 'none';
+  lastLocalChange?: string;
 }
 
-/**
- * Summary of all packages in repository
- */
-export interface PackageSummary {
-  isMonorepo: boolean;
-  rootPackageName?: string;
-  totalPackages: number;
-  workspacePackages: Array<{ name?: string; path: string }>;
-  totalDependencies: number;
-  totalDevDependencies: number;
-  availableScripts: string[];
-}
 
 /**
  * Tool results - stores LensResult for each tool
@@ -137,9 +131,9 @@ export interface GitInfo {
 }
 
 /**
- * Git status information
+ * Git status metadata information (existing status snapshots)
  */
-export interface GitStatus {
+export interface GitStatusMetadata {
   repoPath: string;
   branch: string;
   isDirty: boolean;
@@ -148,6 +142,37 @@ export interface GitStatus {
   ahead: number;
   behind: number;
   watchingEnabled: boolean;
+  lastChangedAt?: string;
+}
+
+/**
+ * Git state event types from the library
+ */
+export type GitStateEventType = 'commit' | 'branch-switch' | 'merge' | 'dirty-state-change';
+
+/**
+ * Git state event - represents a git state transition
+ * This is different from GitStatusMetadata which is a snapshot
+ */
+export interface GitStateEvent {
+  type: GitStateEventType;
+  repoPath: string;
+  branch: string;
+  fullSha: string;
+  shortSha: string;
+  isDirty: boolean;
+  timestamp: number;
+  previousBranch?: string; // For branch-switch events
+  previousSha?: string; // For commit events
+  mergeBase?: string; // For merge events
+}
+
+/**
+ * Git state event payload passed through the system
+ */
+export interface GitStateEventPayload {
+  event: GitStateEvent;
+  affectedCacheFields: string[]; // Which cache fields should be updated
 }
 
 /**
@@ -170,8 +195,7 @@ export type MainToServerMessageType =
   | 'getGitStatus'
   | 'getGitStatusWithFiles'
   | 'enableGitWatching'
-  | 'disableGitWatching'
-  | 'runTool';
+  | 'disableGitWatching';
 
 /**
  * Message types that can be sent from server to main
@@ -189,10 +213,6 @@ export interface MainToServerMessage {
   id: string;
   type: MainToServerMessageType;
   path?: string;
-  // For runTool command
-  packagePath?: string;
-  command?: string;
-  toolName?: string;
 }
 
 /**
@@ -208,3 +228,5 @@ export interface ServerToMainMessage {
     data: any;
   };
 }
+
+export type { ToolExecutionRequest, ToolExecutionResponse };

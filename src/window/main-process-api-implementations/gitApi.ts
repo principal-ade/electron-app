@@ -1,6 +1,6 @@
 import { ipcRenderer } from 'electron';
 import { GitEvents } from '../../shared/main-process-api-interfaces/GitAPI';
-import { Repository } from '../../shared/types/repository.types';
+import { Repository, GitStatus } from '../../shared/types/repository.types';
 
 export interface GitRepositoryInfo {
   root: string;
@@ -14,11 +14,7 @@ export interface GitRepositoryInfo {
   }>;
 }
 
-export interface GitStatus {
-  staged: string[];
-  unstaged: string[];
-  untracked: string[];
-}
+// GitStatus is now imported from repository.types
 
 export interface GitDetailedChanges {
   created: string[];

@@ -28,20 +28,24 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
   const [isDirty, setIsDirty] = useState(false);
   const [fontSizeScale, setFontSizeScale] = useState<number>(1.0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [viewMode, setViewMode] = useState<'single' | 'book'>('book');
 
-  // Load font size preference on mount
+  // Load font size and view mode preferences on mount
   useEffect(() => {
-    const loadFontSize = async () => {
+    const loadPreferences = async () => {
       try {
         const prefs = await UserPreferencesService.getPreferences();
         if (prefs?.markdownFontSizeScale) {
           setFontSizeScale(prefs.markdownFontSizeScale);
         }
+        if (prefs?.markdownViewMode) {
+          setViewMode(prefs.markdownViewMode as 'single' | 'book');
+        }
       } catch (err) {
-        console.error('Error loading font size preference:', err);
+        console.error('Error loading preferences:', err);
       }
     };
-    loadFontSize();
+    loadPreferences();
   }, []);
 
   // Handle font size increase
@@ -69,6 +73,18 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
       console.error('Error saving font size preference:', err);
     }
   }, [fontSizeScale]);
+
+  // Handle view mode change
+  const handleViewModeChange = useCallback(async (mode: 'single' | 'book') => {
+    setViewMode(mode);
+    try {
+      await UserPreferencesService.updatePreferences({
+        markdownViewMode: mode,
+      });
+    } catch (err) {
+      console.error('Error saving view mode preference:', err);
+    }
+  }, []);
 
   useEffect(() => {
     const loadFile = async () => {
@@ -235,9 +251,11 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
           fileName={filePath.split('/').pop()}
           projectName={projectName}
           fontSizeScale={fontSizeScale}
+          viewMode={viewMode}
           onFontSizeIncrease={handleFontSizeIncrease}
           onFontSizeDecrease={handleFontSizeDecrease}
           onDelete={() => setShowDeleteConfirm(true)}
+          onViewModeChange={handleViewModeChange}
         />
         <div
           style={{
@@ -265,9 +283,11 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
           fileName={filePath.split('/').pop()}
           projectName={projectName}
           fontSizeScale={fontSizeScale}
+          viewMode={viewMode}
           onFontSizeIncrease={handleFontSizeIncrease}
           onFontSizeDecrease={handleFontSizeDecrease}
           onDelete={() => setShowDeleteConfirm(true)}
+          onViewModeChange={handleViewModeChange}
         />
         <div
           style={{
@@ -333,7 +353,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
 
         {/* Slide-based viewer with book view support */}
         <MarkdownDocumentViewer
-        viewMode={'book'} // Use book view for better reading experience
+        viewMode={'book'} // Always use book mode wrapper which handles single/book internally
         showEditor={false}
         showSegmented={true}
         content={safeContent}
@@ -351,6 +371,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
         currentSlide={0}
         theme={theme}
         fontSizeScale={fontSizeScale}
+        bookViewMode={viewMode} // Pass the actual view mode for the book component
         onContentChange={(newContent) => {
           setContent(newContent);
           setIsDirty(true);

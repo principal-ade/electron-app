@@ -635,6 +635,65 @@ export const DetailedConfigurationView: React.FC<
       );
     }
 
+    // Special handling for OpenCode - show plugin status instead of hooks
+    if (agentType === 'opencode') {
+      return (
+        <div className="space-y-4">
+          <div
+            className="p-6 rounded-lg"
+            style={{ backgroundColor: theme.colors.backgroundSecondary }}
+          >
+            <div className="flex items-start gap-4">
+              <div
+                className="p-3 rounded-lg"
+                style={{ backgroundColor: `${agentConfig.ui.color}20` }}
+              >
+                <Wand2 size={24} color={agentConfig.ui.color} />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-white mb-2">
+                  OpenCode Plugin System
+                </h4>
+                <p className="text-sm text-slate-400 mb-4">
+                  OpenCode uses a plugin-based monitoring system instead of traditional hooks.
+                  The plugin provides better integration and performance.
+                </p>
+                <div
+                  className="flex items-center gap-2 p-3 rounded-md"
+                  style={{ backgroundColor: theme.colors.background }}
+                >
+                  {agentStatus?.hasHooks ? (
+                    <>
+                      <Unlock size={16} className="text-green-500" />
+                      <span className="text-sm text-green-500">
+                        Plugin is installed and active
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock size={16} className="text-slate-400" />
+                      <span className="text-sm text-slate-400">
+                        Plugin is not installed
+                      </span>
+                    </>
+                  )}
+                </div>
+                {!agentStatus?.hasHooks && (
+                  <p className="text-xs text-slate-500 mt-3">
+                    To install the plugin, use the OpenCode extension manager or run:
+                    <code className="block mt-1 p-2 bg-black/20 rounded text-blue-400">
+                      opencode --install-plugin principal-monitoring
+                    </code>
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Regular hooks UI for Claude and other agents
     return (
       <div className="space-y-4">
         <div

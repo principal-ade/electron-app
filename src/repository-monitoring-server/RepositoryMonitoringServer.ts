@@ -2,6 +2,7 @@
  * Repository Monitoring Server - Main coordinator
  * Milestone 1: Basic structure with FileTree building
  * Enhanced with Git FSMonitor-based watching
+ * Enhanced with @principal-ai/repository-monitoring library for git state events
  */
 
 import type { FileTree } from '@principal-ai/repository-abstraction';
@@ -10,10 +11,10 @@ import { FileTreeBuilder } from './FileTreeBuilder';
 import { PackageProcessor } from './PackageProcessor';
 import { GitCore } from '../shared/repository-core/GitCore';
 import { FSWatcher, watch } from 'chokidar';
-import * as path from 'path';
-import { spawn } from 'child_process';
-import type { RepositoryState, CachedFileTree, GitStatus, PackageSummary, ToolExecutionResult } from './types';
+import * as nodePath from 'path';
+import type { RepositoryState, CachedFileTree, GitStatusMetadata, PackageSummary, GitStateEventPayload } from './types';
 import { MonitoringInternalEvent } from './types';
+import { GitWatcherAdapter } from './GitWatcherAdapter';
 
 export class RepositoryMonitoringServer {
   private repositories: Map<string, RepositoryState> = new Map();
@@ -24,10 +25,21 @@ export class RepositoryMonitoringServer {
   private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
   private fsMonitorStatus: Map<string, boolean> = new Map();
   private packageCache: Map<string, { packages: PackageLayer[]; summary: PackageSummary; timestamp: number }> = new Map();
+  private gitWatcherAdapter: GitWatcherAdapter;
 
   constructor() {
     this.fileTreeBuilder = new FileTreeBuilder();
     this.packageProcessor = new PackageProcessor();
+
+    // Initialize git watcher adapter
+    this.gitWatcherAdapter = new GitWatcherAdapter(this, {
+      debounceMs: parseInt(process.env.GIT_WATCHER_DEBOUNCE_MS || '500', 10),
+    });
+
+    // Subscribe to git state events from the library
+    this.gitWatcherAdapter.on(MonitoringInternalEvent.GIT_STATE_EVENT, (payload: GitStateEventPayload) => {
+      this.handleGitStateEvent(payload);
+    });
   }
 
   /**
@@ -35,11 +47,22 @@ export class RepositoryMonitoringServer {
    */
   async registerRepository(path: string): Promise<void> {
     if (!this.repositories.has(path)) {
-      this.repositories.set(path, {
+      const state: RepositoryState = {
         path,
         lastUpdated: new Date(),
         isWatching: false,
-      });
+      };
+
+      try {
+        const lastCommit = await GitCore.getMostRecentCommitTimestamp(path);
+        if (lastCommit) {
+          state.lastLocalChange = lastCommit;
+        }
+      } catch (error) {
+        console.warn(`[RepositoryMonitoring] Could not determine initial commit time for ${path}:`, error);
+      }
+
+      this.repositories.set(path, state);
     }
   }
 
@@ -136,12 +159,21 @@ export class RepositoryMonitoringServer {
   /**
    * Get git status for a repository
    */
-  async getGitStatus(repoPath: string): Promise<GitStatus> {
+  async getGitStatus(repoPath: string): Promise<GitStatusMetadata> {
+    console.log(`[RepositoryMonitoring] getGitStatus called for ${repoPath}`);
     try {
-      const detailedStatus = await GitCore.getDetailedStatus(repoPath);
       const state = this.repositories.get(repoPath);
 
-      const status: GitStatus = {
+      if (state && !state.lastLocalChange) {
+        const initialCommit = await GitCore.getMostRecentCommitTimestamp(repoPath);
+        if (initialCommit) {
+          state.lastLocalChange = initialCommit;
+        }
+      }
+
+      const detailedStatus = await GitCore.getDetailedStatus(repoPath);
+
+      const status: GitStatusMetadata = {
         repoPath,
         branch: detailedStatus.branch,
         isDirty: detailedStatus.isDirty,
@@ -150,6 +182,7 @@ export class RepositoryMonitoringServer {
         ahead: detailedStatus.ahead,
         behind: detailedStatus.behind,
         watchingEnabled: state?.gitWatchingEnabled || false,
+        lastChangedAt: state?.lastLocalChange || state?.lastGitStatus?.lastChangedAt,
       };
 
       // Cache the status
@@ -160,6 +193,7 @@ export class RepositoryMonitoringServer {
       return status;
     } catch (error) {
       console.error(`[RepositoryMonitoring] Failed to get git status for ${repoPath}:`, error);
+      const state = this.repositories.get(repoPath);
       return {
         repoPath,
         branch: 'unknown',
@@ -169,6 +203,7 @@ export class RepositoryMonitoringServer {
         ahead: 0,
         behind: 0,
         watchingEnabled: false,
+        lastChangedAt: state?.lastLocalChange,
       };
     }
   }
@@ -177,29 +212,45 @@ export class RepositoryMonitoringServer {
    * Get git status with file lists
    */
   async getGitStatusWithFiles(repoPath: string): Promise<any> {
+    console.log(`[RepositoryMonitoring] getGitStatusWithFiles called for ${repoPath}`);
     try {
-      // Get basic status first
-      const basicStatus = await this.getGitStatus(repoPath);
+      const state = this.repositories.get(repoPath);
 
-      // Get detailed file lists from git
-      const fileStatus = await GitCore.getStatus(repoPath);
+      if (state && !state.lastLocalChange) {
+        const initialCommit = await GitCore.getMostRecentCommitTimestamp(repoPath);
+        if (initialCommit) {
+          state.lastLocalChange = initialCommit;
+        }
+      }
 
-      // For now, we'll use the existing categories from getStatus
-      // and derive created/deleted from the untracked/modified lists
-      // In the future, we could enhance GitCore.getStatus to return more categories
+      // Get all status information in a single call - detailedStatus now includes files
+      const detailedStatus = await GitCore.getDetailedStatus(repoPath);
 
+      // Use the file status from detailedStatus to avoid duplicate git calls
+      const fileStatus = detailedStatus.files || { staged: [], unstaged: [], untracked: [], deleted: [] };
+
+      // Build the complete status object
       return {
-        ...basicStatus,
-        modifiedFiles: fileStatus.modified || [],
-        untrackedFiles: fileStatus.not_added || [],
-        stagedFiles: fileStatus.staged || [],
+        repoPath,
+        branch: detailedStatus.branch,
+        isDirty: detailedStatus.isDirty,
+        hasUntracked: detailedStatus.hasUntracked,
+        hasStaged: detailedStatus.hasStaged,
+        ahead: detailedStatus.ahead,
+        behind: detailedStatus.behind,
+        watchingEnabled: state?.gitWatchingEnabled || false,
+        lastChangedAt: state?.lastLocalChange || state?.lastGitStatus?.lastChangedAt,
+        modifiedFiles: fileStatus.unstaged?.map(f => f.path) || [],
+        untrackedFiles: fileStatus.untracked?.map(f => f.path) || [],
+        stagedFiles: fileStatus.staged?.map(f => f.path) || [],
         // For now, treat untracked files as created (new files)
-        createdFiles: fileStatus.not_added || [],
-        // Deleted files would need additional parsing - leaving empty for now
-        deletedFiles: [],
+        createdFiles: fileStatus.untracked?.map(f => f.path) || [],
+        // Now properly returning deleted files from git status
+        deletedFiles: fileStatus.deleted?.map(f => f.path) || [],
       };
     } catch (error) {
       console.error(`[RepositoryMonitoring] Failed to get git status with files for ${repoPath}:`, error);
+      const state = this.repositories.get(repoPath);
       return {
         repoPath,
         branch: 'unknown',
@@ -209,6 +260,7 @@ export class RepositoryMonitoringServer {
         ahead: 0,
         behind: 0,
         watchingEnabled: false,
+        lastChangedAt: state?.lastLocalChange,
         modifiedFiles: [],
         untrackedFiles: [],
         stagedFiles: [],
@@ -232,6 +284,11 @@ export class RepositoryMonitoringServer {
     }
 
     try {
+      // Start library-based git state event watching
+      console.log(`[RepositoryMonitoring] Starting git state event watching for ${repoPath}`);
+      await this.gitWatcherAdapter.startWatching(repoPath);
+
+      // Set up file watching for source file changes
       // Try to enable FSMonitor first
       const fsMonitorEnabled = await GitCore.enableFSMonitor(repoPath);
       this.fsMonitorStatus.set(repoPath, fsMonitorEnabled);
@@ -267,6 +324,9 @@ export class RepositoryMonitoringServer {
       state.gitWatchingEnabled = false;
     }
 
+    // Stop library-based watching
+    await this.gitWatcherAdapter.stopWatching(repoPath);
+
     // Clean up watcher
     const watcher = this.gitWatchers.get(repoPath);
     if (watcher) {
@@ -287,12 +347,12 @@ export class RepositoryMonitoringServer {
    * FSMonitor makes git status fast, but we still need to detect working dir changes
    */
   private async setupMinimalGitWatching(repoPath: string): Promise<void> {
-    const gitDir = path.join(repoPath, '.git');
+    const gitDir = nodePath.join(repoPath, '.git');
 
     // Get gitignore patterns to exclude from watching
     let gitignorePatterns: string[] = [];
     try {
-      const gitignorePath = path.join(repoPath, '.gitignore');
+      const gitignorePath = nodePath.join(repoPath, '.gitignore');
       if (require('fs').existsSync(gitignorePath)) {
         const gitignoreContent = require('fs').readFileSync(gitignorePath, 'utf8');
         gitignorePatterns = gitignoreContent
@@ -337,7 +397,9 @@ export class RepositoryMonitoringServer {
     });
 
     watcher.on('all', (event, filePath) => {
-      this.handleGitChange(repoPath, filePath, event);
+      // Only handle file changes for file tree updates, not git status
+      // Git state events are handled by the library watcher
+      this.handleFileChange(repoPath, filePath, event);
     });
 
     this.gitWatchers.set(repoPath, watcher);
@@ -379,32 +441,72 @@ export class RepositoryMonitoringServer {
     });
 
     watcher.on('all', (event, filePath) => {
-      // Any change in the repo directory triggers a git status check
-      // We don't care about the specific file, just that something changed
-      this.handleGitChange(repoPath, filePath, event);
+      // Only handle file changes for file tree updates, not git status
+      // Git state events are handled by the library watcher
+      this.handleFileChange(repoPath, filePath, event);
     });
 
     this.gitWatchers.set(repoPath, watcher);
   }
 
   /**
-   * Handle file system changes
+   * Handle file system changes for cache invalidation only
+   * Git status updates are handled by the library watcher
    */
-  private handleGitChange(repoPath: string, filePath: string, event: string): void {
-    // Clear existing debounce timer
-    const existingTimer = this.debounceTimers.get(repoPath);
-    if (existingTimer) {
-      clearTimeout(existingTimer);
+  private handleFileChange(repoPath: string, filePath: string, event: string): void {
+    // Clear caches that depend on file contents
+    this.fileTreeCache.delete(repoPath);
+    this.packageCache.delete(repoPath);
+
+    // Note: We don't trigger git status here anymore
+    // The library watcher handles all git state changes
+    console.log(`[RepositoryMonitoring] File change detected in ${repoPath}, caches cleared`);
+  }
+
+
+  /**
+   * Handle git state events from the library-based watcher
+   * These are specific state transitions (commit, branch-switch, merge, etc.)
+   */
+  private async handleGitStateEvent(payload: GitStateEventPayload): Promise<void> {
+    const { event, affectedCacheFields } = payload;
+
+    console.log(`[RepositoryMonitoring] Git state event received:`, {
+      type: event.type,
+      repo: event.repoPath,
+      branch: event.branch,
+      sha: event.shortSha,
+      affectedFields: affectedCacheFields,
+    });
+
+    // Clear affected caches based on event type
+    if (affectedCacheFields.includes('fileTree')) {
+      this.fileTreeCache.delete(event.repoPath);
+    }
+    if (affectedCacheFields.includes('packages')) {
+      this.packageCache.delete(event.repoPath);
     }
 
-    // Determine debounce delay based on FSMonitor status and change type
-    const hasFSMonitor = this.fsMonitorStatus.get(repoPath) || false;
-    const delay = hasFSMonitor ? 800 : 2000; // Reduced delay but still prevent loops
+    // Update repository state with latest info
+    const state = this.repositories.get(event.repoPath);
+    if (state) {
+      state.lastLocalChange = new Date(event.timestamp).toISOString();
+    }
 
-    const timer = setTimeout(async () => {
-      const status = await this.getGitStatus(repoPath);
+    // Forward the git state event to main process
+    if (process.parentPort) {
+      process.parentPort.postMessage({
+        type: 'event',
+        event: {
+          name: MonitoringInternalEvent.GIT_STATE_EVENT,
+          data: payload,
+        },
+      });
+    }
 
-      // Emit status change event to main process
+    // Also trigger a status update if needed for compatibility
+    if (affectedCacheFields.includes('gitStatus')) {
+      const status = await this.getGitStatus(event.repoPath);
       if (process.parentPort) {
         process.parentPort.postMessage({
           type: 'event',
@@ -414,11 +516,7 @@ export class RepositoryMonitoringServer {
           },
         });
       }
-
-      this.debounceTimers.delete(repoPath);
-    }, delay);
-
-    this.debounceTimers.set(repoPath, timer);
+    }
   }
 
 }

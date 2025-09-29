@@ -16,9 +16,7 @@ import { AgentSessionService } from '../main-process-api/AgentSessionService';
 import { AgentSessionEventsService } from '../main-process-api/AgentSessionEventsService';
 import { GitService } from '../main-process-api/GitService';
 import { ShellService } from '../main-process-api/ShellService';
-import { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
-// Type alias for backward compatibility
-type NormalizedAgentSessionEvent = RepoNormalizedUniversalAgentSessionEvent;
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { EditorId } from '../../shared/types/editor.types';
 import {
@@ -194,7 +192,7 @@ export const MultiFileEditorWindow: React.FC<MultiFileEditorWindowProps> = (
         const activities = new Map<string, SessionActivity[]>();
         const tabUpdates = new Map<string, SessionActivity>();
 
-        events.forEach((event: NormalizedAgentSessionEvent) => {
+        events.forEach((event: RepoNormalizedUniversalAgentSessionEvent) => {
           if (
             event.toolName &&
             ['Read', 'Write', 'Edit', 'MultiEdit'].includes(event.toolName)

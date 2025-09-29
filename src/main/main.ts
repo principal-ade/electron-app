@@ -177,8 +177,7 @@ if (isDebug) {
 }
 
 app.on('window-all-closed', async () => {
-  // Services like httpBridge and mcpIntegration are now stopped in 'will-quit'
-  // to support macOS behavior where the app can run without windows.
+  // Services are stopped in 'will-quit' to support macOS behavior where the app can run without windows.
 
   if (process.platform !== 'darwin') {
     app.quit();

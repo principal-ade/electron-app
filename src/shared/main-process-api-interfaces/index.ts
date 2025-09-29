@@ -34,7 +34,6 @@ import type { RoomDrawingAPI } from './RoomDrawingAPI';
 import type { PackageManagerAPI } from './PackageManagerAPI';
 import type { TypeExtractionAPI } from './TypeExtractionAPI';
 import type { TypeSchemaAPI } from './TypeSchemaAPI';
-import type { McpToolsAPI } from './McpToolsAPI';
 import type { KnipAPI } from './KnipAPI';
 import type { TestCoverageAPI } from './TestCoverageAPI';
 import type { DockerAPI } from './DockerAPI';
@@ -104,7 +103,6 @@ export interface MainProcessAPI {
   packageManager: PackageManagerAPI;
   typeExtraction: TypeExtractionAPI;
   typeSchema: TypeSchemaAPI;
-  mcpTools: McpToolsAPI;
   knip: KnipAPI;
   testCoverage: TestCoverageAPI;
   docker: DockerAPI;

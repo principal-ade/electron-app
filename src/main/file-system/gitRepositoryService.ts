@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { gitClientFactory } from '../utils/gitClientFactory';
+import type { GitStatus } from '../../shared/types/repository.types';
 
 export interface GitRepositoryInfo {
   root: string;
@@ -439,12 +440,8 @@ export class GitRepositoryService {
   /**
    * Get git status for a directory
    */
-  async getGitStatus(directory: string): Promise<{
-    staged: string[];
-    unstaged: string[];
-    untracked: string[];
-  }> {
-    // Use simple-git through GitClientFactory
+  async getGitStatus(directory: string): Promise<GitStatus> {
+    // Use GitClientFactory which now returns proper GitStatus format
     return await gitClientFactory.getGitStatus(directory);
   }
 
@@ -453,7 +450,7 @@ export class GitRepositoryService {
    */
   async getUncommittedChanges(directory: string): Promise<string[]> {
     const status = await this.getGitStatus(directory);
-    return [...new Set([...status.staged, ...status.unstaged])];
+    return [...new Set([...status.staged.map(f => f.path), ...status.unstaged.map(f => f.path)])];
   }
 
   /**

@@ -44,21 +44,12 @@ export function isStaticNamespace(
 }
 
 /**
- * Type guard to check if a string is a valid agent event namespace
- */
-export function isAgentEventNamespace(
-  namespace: string,
-): namespace is AgentEventNamespaces {
-  return Object.values(AgentEventNamespaces).includes(
-    namespace as AgentEventNamespaces,
-  );
-}
-
-/**
  * Type guard to check if a string is any valid namespace
+ * Currently only static namespaces are supported.
  */
 export function isValidNamespace(
   namespace: string,
 ): namespace is StorageNamespaces {
-  return isStaticNamespace(namespace) || isAgentEventNamespace(namespace);
+  return isStaticNamespace(namespace);
 }
+

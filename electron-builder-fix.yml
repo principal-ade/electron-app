@@ -32,5 +32,3 @@ asarUnpack:
 extraResources:
   - from: assets
     to: .
-  - from: dist_mcp_server/index.js
-    to: principle-md-mcp-server.js

@@ -16,9 +16,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
-import { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
-// Type alias for backward compatibility
-type NormalizedAgentSessionEvent = RepoNormalizedUniversalAgentSessionEvent;
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
 
 interface SessionEventViewerModalProps {
@@ -32,10 +30,10 @@ export const SessionEventViewerModal: React.FC<
   SessionEventViewerModalProps
 > = ({ sessionId, sessionName, isOpen, onClose }) => {
   const { theme } = useTheme();
-  const [events, setEvents] = useState<NormalizedAgentSessionEvent[]>([]);
+  const [events, setEvents] = useState<RepoNormalizedUniversalAgentSessionEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] =
-    useState<NormalizedAgentSessionEvent | null>(null);
+    useState<RepoNormalizedUniversalAgentSessionEvent | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
 
@@ -122,7 +120,7 @@ export const SessionEventViewerModal: React.FC<
   }, [events, searchQuery, filterType]);
 
   // Get event icon based on type
-  const getEventIcon = (event: NormalizedAgentSessionEvent) => {
+  const getEventIcon = (event: RepoNormalizedUniversalAgentSessionEvent) => {
     if (event.toolName) {
       if (['Read', 'Write', 'Edit', 'MultiEdit'].includes(event.toolName)) {
         return <FileText size={14} />;
@@ -149,7 +147,7 @@ export const SessionEventViewerModal: React.FC<
   };
 
   // Get event color based on type
-  const getEventColor = (event: NormalizedAgentSessionEvent) => {
+  const getEventColor = (event: RepoNormalizedUniversalAgentSessionEvent) => {
     if (event.eventType === 'pre-tool-use') return theme.colors.primary;
     if (event.eventType === 'post-tool-use') return theme.colors.success;
     if (event.eventType === 'stop') return theme.colors.error;
@@ -168,7 +166,7 @@ export const SessionEventViewerModal: React.FC<
   };
 
   // Format event title
-  const getEventTitle = (event: NormalizedAgentSessionEvent) => {
+  const getEventTitle = (event: RepoNormalizedUniversalAgentSessionEvent) => {
     if (event.toolName) {
       if (event.files && event.files.length > 0 && event.files[0].displayPath) {
         const fileName = event.files[0].displayPath.split('/').pop();

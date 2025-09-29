@@ -1,6 +1,6 @@
 {
   "name": "principal-ade-electron",
-  "version": "0.0.21",
+  "version": "0.0.23",
   "description": "Principal ADE - The Agentic Development Environment for your codebase",
   "author": {
     "name": "principle-md",
@@ -26,6 +26,7 @@
     "@principal-ai/codebase-composition": "^0.2.0",
     "@principal-ai/codebase-quality-lenses": "^0.1.5",
     "@principal-ai/repository-abstraction": "^0.2.0",
+    "@principal-ai/repository-monitoring": "^0.1.2",
     "@types/jsonwebtoken": "^9.0.10",
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
@@ -76,7 +77,7 @@
     "simple-peer": "^9.11.1",
     "socket.io-client": "^4.8.1",
     "stream-browserify": "^3.0.0",
-    "themed-markdown": "^0.1.42",
+    "themed-markdown": "^0.1.47",
     "ts-json-schema-generator": "^2.4.0",
     "uuid": "^11.1.0",
     "ws": "^8.18.3",

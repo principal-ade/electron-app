@@ -1,7 +1,6 @@
 import { app } from 'electron';
 import * as path from 'path';
 import * as os from 'os';
-import { APP_BRANDING } from '../../shared/config/appBranding';
 
 /**
  * Environment configuration to ensure dev/prod parity
@@ -67,13 +66,7 @@ export class EnvironmentConfig {
     switch (process.platform) {
       case 'win32':
         // Windows: Use AppData\Local for user-installed binaries
-        return path.join(
-          homeDir,
-          'AppData',
-          'Local',
-          'Programs',
-          APP_BRANDING.MCP_SERVER_CONFIG_KEY,
-        );
+        return path.join(homeDir, 'AppData', 'Local', 'Programs');
       case 'darwin':
         // macOS: Use ~/.local/bin (standard for Homebrew, etc.)
         return path.join(homeDir, '.local', 'bin');

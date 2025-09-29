@@ -25,7 +25,6 @@
     "**/mocks/**",
     ".erb/**",
     "dist/**",
-    "dist_mcp_server/**",
     "release/**",
     "out/**"
   ],

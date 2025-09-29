@@ -1,7 +1,7 @@
 import { DirectorySessions } from '../../shared/main-process-api-interfaces/AgentSessionAPI';
 import { SessionState } from '../../shared/event-processing/SessionEventProcessor';
 import { AgentSessionRecord } from '../../shared/sessionTypes';
-import { NormalizedAgentSessionEvent } from '../../shared/types/legacy-event.types';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 /**
  * File operation types we track
@@ -76,7 +76,7 @@ export class AgentSessionService {
    */
   static async getSessionEvents(
     sessionId: string,
-  ): Promise<NormalizedAgentSessionEvent[] | null> {
+  ): Promise<RepoNormalizedUniversalAgentSessionEvent[] | null> {
     return window.mainProcess.agentSession.getSessionEvents(sessionId);
   }
 
@@ -106,7 +106,7 @@ export class AgentSessionService {
    * @returns Extracted file path info or undefined if no file path found
    */
   static extractFilePath(
-    event: NormalizedAgentSessionEvent,
+    event: RepoNormalizedUniversalAgentSessionEvent,
   ): ExtractedFilePath | undefined {
     // Use new files array structure
     if (event.files && event.files.length > 0) {
@@ -148,7 +148,7 @@ export class AgentSessionService {
    * @param events - Array of normalized events
    * @returns Array of file paths that were written to (using relative paths when available)
    */
-  static extractWrittenFiles(events: NormalizedAgentSessionEvent[]): string[] {
+  static extractWrittenFiles(events: RepoNormalizedUniversalAgentSessionEvent[]): string[] {
     const writtenFiles = new Set<string>();
 
     for (const event of events) {
@@ -174,7 +174,7 @@ export class AgentSessionService {
    * @returns Map of file paths to their operations
    */
   static extractFileOperations(
-    events: NormalizedAgentSessionEvent[],
+    events: RepoNormalizedUniversalAgentSessionEvent[],
   ): Map<string, FileOperation> {
     const fileOps = new Map<string, FileOperation>();
     const TRACKED_TOOLS = new Set(['Read', 'Write', 'Edit', 'MultiEdit']);
@@ -219,7 +219,7 @@ export class AgentSessionService {
    * @returns Last todo list or undefined if no todos found
    */
   static extractLastTodos(
-    events: NormalizedAgentSessionEvent[],
+    events: RepoNormalizedUniversalAgentSessionEvent[],
   ): TodoItem[] | undefined {
     // Find the last TodoWrite event (post-tool-use)
     for (let i = events.length - 1; i >= 0; i--) {

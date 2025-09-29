@@ -161,17 +161,6 @@ async function handleMessage(rawMessage: any): Promise<void> {
         result = { success: true };
         break;
 
-      case 'runTool':
-        if (!message.path) throw new Error('Path required for runTool');
-        if (!message.command) throw new Error('Command required for runTool');
-        result = await server.runTool(
-          message.path,
-          message.packagePath || '',
-          message.command,
-          message.toolName
-        );
-        break;
-
       default:
         throw new Error(`Unknown message type: ${(message as any).type}`);
     }

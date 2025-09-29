@@ -12,7 +12,6 @@ export default [
       '.erb/**',
       'release/**',
       'node_modules/**',
-      'dist_mcp_server/**',
 
       // Config files
       '*.config.js',

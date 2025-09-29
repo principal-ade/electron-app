@@ -1,7 +1,7 @@
 import { MonitoredFileTreeService } from './MonitoredFileTreeService';
 import { CityDataCacheService } from './CityDataCacheService';
 import { FileTreeSource } from '../types/file-tree-source';
-import type { GitStatus, GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type { GitStatusMetadata, GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 
 /**
@@ -19,7 +19,7 @@ export class FileTreeInvalidator {
   private pendingInvalidations = new Map<string, Set<string>>(); // repoPath -> affected paths
   private invalidationTimer: NodeJS.Timeout | null = null;
   private unsubscribe: (() => void) | null = null;
-  private lastStatusByRepo = new Map<string, GitStatus>();
+  private lastStatusByRepo = new Map<string, GitStatusMetadata>();
 
   constructor(
     cacheService: MonitoredFileTreeService,
@@ -50,7 +50,7 @@ export class FileTreeInvalidator {
   /**
    * Handle git status change from repository monitoring
    */
-  private async handleGitStatusChange(status: GitStatus): Promise<void> {
+  private async handleGitStatusChange(status: GitStatusMetadata): Promise<void> {
     const repoPath = status.repoPath;
     if (!repoPath) return;
 
@@ -87,7 +87,7 @@ export class FileTreeInvalidator {
    * Detect if there are structural changes between two git statuses
    */
   private detectStructuralChanges(
-    previous: GitStatus | undefined,
+    previous: GitStatusMetadata | undefined,
     current: GitStatus
   ): boolean {
     // If no previous status, consider it a structural change

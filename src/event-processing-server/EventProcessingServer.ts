@@ -7,18 +7,13 @@ import { EventEmitter } from 'events';
 import * as os from 'os';
 import { machineIdSync } from 'node-machine-id';
 import {
-  isToolEvent,
-  isStopEvent,
   RepositoryInfo,
   PathNormalizationAdapter,
   SystemInfo,
   AgentEventPipeline,
   PipelineMetrics,
+  RepoNormalizedUniversalAgentSessionEvent,
 } from '@principal-ai/agent-monitoring';
-import { NormalizedAgentSessionEvent } from '../shared/types/legacy-event.types';
-
-import { EventMigrationHelper } from '../main/agent-monitoring-pipeline/EventMigrationHelper';
-import { EventQueue } from '../main/agent-session-events/EventQueue';
 
 import {
   EventProcessingServerConfig,
@@ -26,14 +21,10 @@ import {
   PendingRequest,
   ServerStats,
   ProcessEventMessage,
-  StorageRequestMessage,
-  RepositoryInfoRequestMessage,
-  WindowBroadcastMessage,
-  ProcessingCompleteMessage,
-  ServerStatsMessage,
-  ServerErrorMessage,
-  createStorageRequestMessage,
-  createRepositoryInfoRequestMessage,
+  StorageResponseMessage,
+  RepositoryInfoResponseMessage,
+  PingMessage,
+  GetStatsMessage,
   createWindowBroadcastMessage,
   createProcessingCompleteMessage,
   MainToServerMessage,
@@ -42,10 +33,6 @@ import {
 } from './types';
 
 // Import centralized event processor for session state updates
-import {
-  sessionEventProcessor,
-  SessionState,
-} from '../shared/event-processing/SessionEventProcessor';
 
 // Import observability integration types (will be implemented later)
 // import { ObservabilityIntegration } from '../main/observability/ObservabilityIntegration';
@@ -69,7 +56,7 @@ class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
     return {
       homeDir: this.homeDir,
       pathSeparator: path.sep,
-      platform: process.platform as any,
+      platform: process.platform,
       machineId: this.getMachineId(),
       hostname: os.hostname(),
     };
@@ -113,8 +100,6 @@ class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
  */
 export class EventProcessingServer extends EventEmitter {
   private config: EventProcessingServerConfig;
-  private pipeline: AgentEventPipeline;
-  private eventQueue: EventQueue;
   private sendToMain: (message: ServerToMainMessage) => void;
 
   // Statistics tracking
@@ -123,6 +108,7 @@ export class EventProcessingServer extends EventEmitter {
   private errorCount = 0;
   private totalProcessingTime = 0;
   private lastProcessedEvent?: number;
+  private pipeline!: AgentEventPipeline;
 
   // Request management
   private pendingRequests: Map<string, PendingRequest> = new Map();
@@ -139,8 +125,6 @@ export class EventProcessingServer extends EventEmitter {
     this.startTime = Date.now();
 
     // Initialize event queue for serialized session writes
-    this.eventQueue = new EventQueue();
-
     this.log('info', 'EventProcessingServer initializing...');
     this.setupPipeline();
     this.startStatsReporting();
@@ -213,7 +197,7 @@ export class EventProcessingServer extends EventEmitter {
             this.handleGetStats(message);
             break;
           default:
-            this.log('warn', `Unknown message type: ${(message as any).type}`);
+            this.log('warn', 'Unknown message type received');
         }
       }
     } catch (error) {
@@ -242,24 +226,18 @@ export class EventProcessingServer extends EventEmitter {
         message.rawData
       );
 
-      // Step 2: Convert to old format for compatibility
-      const normalizedEvent = EventMigrationHelper.fromRepoNormalizedFormat(repoNormalizedEvent);
+      // Step 2: Log important events
+      this.logEvent(repoNormalizedEvent);
 
-      // Step 3: Log important events
-      this.logEvent(normalizedEvent);
+      // Step 3: Emit window updates (via main process)
+      await this.emitSessionEvents(repoNormalizedEvent);
 
-      // Step 4: Store the event (via main process)
-      await this.storeNormalizedEvent(normalizedEvent);
-
-      // Step 5: Emit window updates (via main process)
-      await this.emitSessionEvents(normalizedEvent);
-
-      // Step 6: Send completion message
+      // Step 4: Send completion message
       const duration = Date.now() - startTime;
       this.sendToMain(createProcessingCompleteMessage(
         message.id,
         true,
-        normalizedEvent
+        repoNormalizedEvent
       ));
 
       this.log('info', `Event processed successfully in ${duration}ms`);
@@ -282,26 +260,14 @@ export class EventProcessingServer extends EventEmitter {
    */
   private requestRepositoryInfo(absolutePath: string): Promise<RepositoryInfo | null> {
     return this.makeRequest('REPOSITORY_INFO_REQUEST', {
-      absolutePath
-    });
-  }
-
-  /**
-   * Request storage operation from main process
-   */
-  private requestStorage(operation: 'GET' | 'SET', key: string, namespace: string, data?: any): Promise<any> {
-    return this.makeRequest('STORAGE_REQUEST', {
-      operation,
-      key,
-      namespace,
-      data
-    });
+      absolutePath,
+    }) as Promise<RepositoryInfo | null>;
   }
 
   /**
    * Generic request handler with timeout and promise management
    */
-  private makeRequest(type: string, data: any): Promise<any> {
+  private makeRequest(type: string, data: Record<string, unknown>): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const id = this.generateRequestId();
 
@@ -317,7 +283,7 @@ export class EventProcessingServer extends EventEmitter {
         timestamp: Date.now(),
         resolve,
         reject,
-        timeoutHandle
+        timeoutHandle,
       });
 
       // Send request
@@ -335,7 +301,7 @@ export class EventProcessingServer extends EventEmitter {
   /**
    * Handle storage response from main process
    */
-  private handleStorageResponse(message: any): void {
+  private handleStorageResponse(message: StorageResponseMessage): void {
     const pending = this.pendingRequests.get(message.id);
     if (!pending) {
       this.log('warn', `Received storage response for unknown request: ${message.id}`);
@@ -359,7 +325,7 @@ export class EventProcessingServer extends EventEmitter {
   /**
    * Handle repository info response from main process
    */
-  private handleRepositoryInfoResponse(message: any): void {
+  private handleRepositoryInfoResponse(message: RepositoryInfoResponseMessage): void {
     const pending = this.pendingRequests.get(message.id);
     if (!pending) {
       this.log('warn', `Received repository info response for unknown request: ${message.id}`);
@@ -384,7 +350,7 @@ export class EventProcessingServer extends EventEmitter {
   /**
    * Log important events (same as V2)
    */
-  private logEvent(event: NormalizedAgentSessionEvent): void {
+  private logEvent(event: RepoNormalizedUniversalAgentSessionEvent): void {
     // Log conversation lifecycle events
     if (event.eventType && event.eventType.toString().includes('start')) {
       this.log('info', `Session started: ${event.sessionId} in ${event.workingDirectory}`);
@@ -393,7 +359,7 @@ export class EventProcessingServer extends EventEmitter {
     }
 
     // Log tool usage
-    if (isToolEvent(event) && event.toolName) {
+    if (event.toolName) {
       const fileCount = event.files?.length || 0;
       if (fileCount > 0) {
         this.log('info', `Tool ${event.toolName} accessed ${fileCount} file(s)`);
@@ -402,120 +368,9 @@ export class EventProcessingServer extends EventEmitter {
   }
 
   /**
-   * Store normalized event via main process storage API
-   */
-  private async storeNormalizedEvent(event: NormalizedAgentSessionEvent): Promise<void> {
-    // Validate session ID
-    if (!event.sessionId || typeof event.sessionId !== 'string' || event.sessionId.trim() === '') {
-      this.log('error', `Invalid session ID, skipping event: ${event.sessionId}`);
-      return;
-    }
-
-    const normalizedSessionId = event.sessionId.trim();
-
-    // Queue the storage operation for this session to prevent concurrent writes
-    return this.eventQueue.enqueue(normalizedSessionId, async () => {
-      try {
-        const sessionKey = normalizedSessionId;
-
-        // Get existing session data
-        const existingData = await this.requestStorage('GET', sessionKey, 'AGENT_SESSIONS');
-
-        let sessionData: any;
-
-        if (existingData) {
-          // Update existing session
-          sessionData = existingData;
-          sessionData.events.push(event);
-          sessionData.lastUpdateTime = event.timestamp;
-        } else {
-          // Create new session
-          sessionData = {
-            sessionId: normalizedSessionId,
-            provider: event.provider,
-            workingDirectory: event.workingDirectory,
-            startTime: event.timestamp,
-            lastUpdateTime: event.timestamp,
-            events: [event],
-            totalEvents: 0,
-            repositoriesAccessed: [],
-            counters: {
-              fileAccesses: 0,
-              fileWrites: 0,
-              toolCalls: 0,
-              webAccesses: 0,
-            },
-            fileAccesses: {},
-            fileWrites: {},
-            filesRead: [],
-            filesWritten: [],
-            metadata: {},
-          };
-        }
-
-        // Use centralized event processor for consistent processing
-        const currentState: SessionState = {
-          sessionId: sessionData.sessionId,
-          workingDirectory: sessionData.workingDirectory,
-          firstAccess: sessionData.startTime || Date.now(),
-          lastActivity: sessionData.lastUpdateTime || Date.now(),
-          eventCount: sessionData.totalEvents || 0,
-          isActive: true,
-          fileAccessCount: sessionData.counters?.fileAccesses || 0,
-          fileWriteCount: sessionData.counters?.fileWrites || 0,
-          fileAccesses: sessionData.fileAccesses || {},
-          fileWrites: sessionData.fileWrites || {},
-          filesRead: sessionData.filesRead || [],
-          filesWritten: sessionData.filesWritten || [],
-          toolCallCount: sessionData.counters?.toolCalls || 0,
-          webAccessCount: sessionData.counters?.webAccesses || 0,
-        };
-
-        // Process event through centralized processor
-        const processingResult = sessionEventProcessor.processEvent(event, currentState);
-
-        // Update session data with processing results
-        if (processingResult.session) {
-          sessionData.totalEvents = processingResult.session.eventCount || sessionData.totalEvents;
-          sessionData.counters = {
-            fileAccesses: processingResult.session.fileAccessCount || sessionData.counters?.fileAccesses || 0,
-            fileWrites: processingResult.session.fileWriteCount || sessionData.counters?.fileWrites || 0,
-            toolCalls: processingResult.session.toolCallCount || sessionData.counters?.toolCalls || 0,
-            webAccesses: processingResult.session.webAccessCount || sessionData.counters?.webAccesses || 0,
-          };
-          sessionData.fileAccesses = processingResult.session.fileAccesses || sessionData.fileAccesses;
-          sessionData.fileWrites = processingResult.session.fileWrites || sessionData.fileWrites;
-          sessionData.filesRead = processingResult.session.filesRead || sessionData.filesRead;
-          sessionData.filesWritten = processingResult.session.filesWritten || sessionData.filesWritten;
-
-          // Handle todos if present in metadata
-          if (processingResult.session.metadata?.lastTodos) {
-            sessionData.metadata = {
-              ...sessionData.metadata,
-              lastTodos: processingResult.session.metadata.lastTodos,
-            };
-          }
-        }
-
-        // Handle stop events
-        if (isStopEvent(event)) {
-          this.log('info', `Session ended: ${normalizedSessionId}`);
-        }
-
-        // Store updated session data
-        await this.requestStorage('SET', sessionKey, 'AGENT_SESSIONS', sessionData);
-
-      } catch (error) {
-        this.log('error', `Error storing event: ${error}`);
-        throw error;
-      }
-    });
-  }
-
-  /**
    * Emit session events via main process
    */
-  private async emitSessionEvents(event: NormalizedAgentSessionEvent): Promise<void> {
+  private async emitSessionEvents(event: RepoNormalizedUniversalAgentSessionEvent): Promise<void> {
     const normalizedSessionId = event.sessionId.trim();
 
     // Send window broadcast messages
@@ -550,7 +405,7 @@ export class EventProcessingServer extends EventEmitter {
   /**
    * Handle ping request
    */
-  private handlePing(message: any): void {
+  private handlePing(message: PingMessage): void {
     this.sendToMain({
       type: 'SERVER_STATS',
       id: message.id,
@@ -562,7 +417,7 @@ export class EventProcessingServer extends EventEmitter {
   /**
    * Handle get stats request
    */
-  private handleGetStats(message: any): void {
+  private handleGetStats(message: GetStatsMessage): void {
     this.sendToMain({
       type: 'SERVER_STATS',
       id: message.id,
@@ -588,15 +443,17 @@ export class EventProcessingServer extends EventEmitter {
    * Start periodic stats reporting
    */
   private startStatsReporting(): void {
-    if (this.config.statsReportingIntervalMs > 0) {
+    const interval = this.config.statsReportingIntervalMs ?? DEFAULT_CONFIG.statsReportingIntervalMs;
+
+    if (interval > 0) {
       setInterval(() => {
         this.sendToMain({
           type: 'SERVER_STATS',
           id: this.generateRequestId(),
           timestamp: Date.now(),
-          stats: this.getStats()
+          stats: this.getStats(),
         });
-      }, this.config.statsReportingIntervalMs);
+      }, interval);
     }
   }
 
@@ -625,9 +482,10 @@ export class EventProcessingServer extends EventEmitter {
   /**
    * Logging utility
    */
-  private log(level: string, message: string, context?: any): void {
-    const levels = ['debug', 'info', 'warn', 'error'];
-    const currentLevelIndex = levels.indexOf(this.config.logLevel);
+  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, context?: unknown): void {
+    const levels: Array<'debug' | 'info' | 'warn' | 'error'> = ['debug', 'info', 'warn', 'error'];
+    const configuredLevel = this.config.logLevel ?? 'info';
+    const currentLevelIndex = levels.indexOf(configuredLevel);
     const messageLevelIndex = levels.indexOf(level);
 
     if (messageLevelIndex >= currentLevelIndex) {

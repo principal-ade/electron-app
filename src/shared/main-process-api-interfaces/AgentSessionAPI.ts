@@ -4,7 +4,7 @@
  */
 
 import type { SessionState } from '../event-processing/SessionEventProcessor';
-import type { NormalizedAgentSessionEvent } from '../types/legacy-event.types';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 export interface SessionSummary {
   sessionId: string;
@@ -66,7 +66,7 @@ export interface AgentSessionAPI {
   // Get normalized events for a session
   getSessionEvents: (
     sessionId: string,
-  ) => Promise<NormalizedAgentSessionEvent[] | null>;
+  ) => Promise<RepoNormalizedUniversalAgentSessionEvent[] | null>;
 
   // Delete a session
   deleteSession: (sessionId: string, directory: string) => Promise<boolean>;

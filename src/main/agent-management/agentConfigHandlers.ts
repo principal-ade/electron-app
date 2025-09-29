@@ -6,9 +6,6 @@ import path from 'path';
 import {
   SupportedAgent,
   AGENT_INFO,
-  convertOpenCodeToNormalized,
-  convertNormalizedToOpenCode,
-  NormalizedHook,
 } from '@principal-ai/agent-monitoring';
 import {
   DEFAULT_MCP_SERVER_NAME,
@@ -16,7 +13,7 @@ import {
   enableAgentMCP,
   getAgentMCPStatus,
 } from '@a24z/agent-manager';
-import { AgentSettings } from '../../shared/types/legacy-event.types';
+import { AgentSettings } from '../../shared/types/agent-settings.types';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 
 import {
@@ -209,18 +206,10 @@ export function setupAgentConfigHandlers() {
       try {
         const configPath = getAgentConfigPath(agentType);
         const content = await fs.readFile(configPath, 'utf8');
-        let settings = JSON.parse(content);
+        const settings = JSON.parse(content);
 
-        // Normalize OpenCode hooks format for UI consumption
-        if (
-          agentType === 'opencode' &&
-          settings?.experimental?.anthropicHooks
-        ) {
-          // Convert OpenCode format to normalized format for UI
-          settings.hooks = convertOpenCodeToNormalized(
-            settings.experimental.anthropicHooks,
-          );
-        }
+        // Note: OpenCode now uses a plugin system, not hooks
+        // The UI should handle OpenCode differently
 
         return {
           success: true,
@@ -242,39 +231,22 @@ export function setupAgentConfigHandlers() {
     AgentConfigAPIEvent.UPDATE_AGENT_SETTINGS,
     async (_event, agentType: SupportedAgent, settings: AgentSettings) => {
       try {
+        // OpenCode should use plugin system, not direct settings updates for hooks
+        if (agentType === 'opencode') {
+          return {
+            success: false,
+            error: 'OpenCode uses a plugin system. Hook configuration is not supported via settings.',
+          };
+        }
+
         const configPath = getAgentConfigPath(agentType);
         const configDir = path.dirname(configPath);
 
         // Ensure directory exists
         await fs.mkdir(configDir, { recursive: true });
 
-        // Convert normalized hooks format back to OpenCode format if needed
-        let settingsToSave = { ...settings };
-        if (agentType === 'opencode' && settings.hooks) {
-          // Remove the normalized hooks field
-          const { hooks, ...restSettings } = settingsToSave;
-          settingsToSave = restSettings;
-
-          // Ensure experimental.anthropicHooks structure exists
-          if (!settingsToSave.experimental) {
-            settingsToSave.experimental = {};
-          }
-          const experimental = settingsToSave.experimental as Record<
-            string,
-            unknown
-          >;
-          if (!experimental.anthropicHooks) {
-            experimental.anthropicHooks = {};
-          }
-
-          // Convert normalized hooks back to OpenCode format
-          experimental.anthropicHooks = convertNormalizedToOpenCode(
-            hooks as Record<string, NormalizedHook[]>,
-          );
-        }
-
         // Write settings
-        await fs.writeFile(configPath, JSON.stringify(settingsToSave, null, 2));
+        await fs.writeFile(configPath, JSON.stringify(settings, null, 2));
 
         return { success: true };
       } catch (error) {

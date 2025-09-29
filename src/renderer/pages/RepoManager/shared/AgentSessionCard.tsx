@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Edit3,
   Activity,
@@ -10,7 +10,6 @@ import {
   Package,
   BookOpen,
   Map,
-  PlayCircle,
   ChevronDown,
   ChevronUp,
   FolderOpen,
@@ -24,9 +23,6 @@ import type {
 } from '../../../main-process-api/AgentSessionService';
 import type { EnhancedUIAgentSessionData } from '../../../types/session.types';
 import type { TouchedProject } from '../../../utils/sessionProjectMapping';
-import type { NormalizedAgentSessionEvent } from '@principal-ai/agent-monitoring';
-import { EventCarousel } from '../../../components/session-history/EventCarousel';
-import { AgentSessionService } from '../../../main-process-api/AgentSessionService';
 
 export interface SessionCardData {
   session: EnhancedUIAgentSessionData;
@@ -138,58 +134,12 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
   onSessionDetailSelect,
   getTimeAgo,
 }) => {
-  // Event carousel state
-  const [showCarousel, setShowCarousel] = useState(false);
-  const [events, setEvents] = useState<NormalizedAgentSessionEvent[]>([]);
-  const [loadingEvents, setLoadingEvents] = useState(false);
   // Current task expanded state
   const [isTaskExpanded, setIsTaskExpanded] = useState(false);
   // Details (header) visibility state
   const [showDetails, setShowDetails] = useState(false);
   // Terminal loading state
   const [isTerminalLoading, setIsTerminalLoading] = useState(false);
-
-  // Load events when carousel is toggled
-  useEffect(() => {
-    if (showCarousel && events.length === 0 && !loadingEvents) {
-      setLoadingEvents(true);
-      AgentSessionService.getSessionEvents(cardData.session.sessionId)
-        .then((sessionEvents) => {
-          if (sessionEvents) {
-            setEvents(sessionEvents);
-          }
-        })
-        .catch((error) => {
-          console.error('Failed to load session events:', error);
-        })
-        .finally(() => {
-          setLoadingEvents(false);
-        });
-    }
-  }, [showCarousel, events.length, loadingEvents, cardData.session.sessionId]);
-
-  // Handle event selection from carousel
-  const handleEventSelect = useCallback(
-    (event: any, files: string[]) => {
-      // Highlight files on the map
-      if (onHighlightFiles) {
-        onHighlightFiles(files, 'single');
-      }
-    },
-    [onHighlightFiles],
-  );
-
-  // Handle highlight mode change from carousel
-  const handleHighlightModeChange = useCallback(
-    (mode: 'single' | 'trail' | 'cumulative') => {
-      // Get current event's files if carousel is showing
-      if (showCarousel && events.length > 0 && onHighlightFiles) {
-        // The carousel will call handleEventSelect with the current event
-        // We just need to update the mode here if needed
-      }
-    },
-    [showCarousel, events, onHighlightFiles],
-  );
 
   return (
     <>
@@ -1021,38 +971,6 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                 gap: '4px',
               }}
             >
-              {/* Event Carousel Toggle Button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowCarousel(!showCarousel);
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '4px 8px',
-                  backgroundColor: showCarousel
-                    ? theme.colors.primary + '20'
-                    : 'transparent',
-                  border: `1px solid ${showCarousel ? theme.colors.primary : theme.colors.border}`,
-                  borderRadius: '4px',
-                  color: showCarousel
-                    ? theme.colors.primary
-                    : theme.colors.text,
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  fontWeight: showCarousel ? 600 : 400,
-                }}
-                title={
-                  showCarousel ? 'Hide event playback' : 'Show event playback'
-                }
-              >
-                <PlayCircle size={12} />
-                Playback
-              </button>
-
               {/* Show on Map Button */}
               {onToggleShowOnMap && (
                 <button
@@ -1088,9 +1006,8 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
           </div>
         )}
 
-        {/* Card Content - Always show if there are file operations or carousel */}
-        {((cardData.fileOperations && cardData.fileOperations.size > 0) ||
-          showCarousel) && (
+        {/* Card Content - show if there are file operations */}
+        {cardData.fileOperations && cardData.fileOperations.size > 0 && (
           <div
             style={{
               padding: '16px',
@@ -1098,120 +1015,78 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
             }}
           >
             {/* Simple Stats Summary - Show if there are any file operations */}
-            {cardData.fileOperations && cardData.fileOperations.size > 0 && (
+            <div>
               <div
                 style={{
-                  marginBottom: showCarousel ? '16px' : 0,
+                  display: 'flex',
+                  gap: '12px',
+                  padding: '8px 12px',
+                  backgroundColor: theme.colors.background,
+                  borderRadius: '6px',
+                  border: `1px solid ${theme.colors.border}`,
                 }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: '12px',
-                    padding: '8px 12px',
-                    backgroundColor: theme.colors.background,
-                    borderRadius: '6px',
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                >
-                  {(cardData.session.fileAccessCount ?? 0) > 0 && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '12px',
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      <BookOpen size={14} />
-                      <span>{cardData.session.fileAccessCount ?? 0} read</span>
-                    </div>
-                  )}
-                  {(cardData.session.fileWriteCount ?? 0) > 0 && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        fontSize: '12px',
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
-                      <Edit3 size={14} />
-                      <span>
-                        {cardData.session.fileWriteCount ?? 0} modified
-                      </span>
-                    </div>
-                  )}
-                  {/* Show click hint if detail select is available */}
-                  {onSessionDetailSelect && (
-                    <div
-                      style={{
-                        marginLeft: 'auto',
-                        fontSize: '11px',
-                        color: theme.colors.textTertiary,
-                        fontStyle: 'italic',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                    >
-                      Click header for details →
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Event Carousel */}
-            {showCarousel && (
-              <div
-                style={{
-                  borderTop:
-                    cardData.fileOperations && cardData.fileOperations.size > 0
-                      ? `1px solid ${theme.colors.border}`
-                      : 'none',
-                  paddingTop:
-                    cardData.fileOperations && cardData.fileOperations.size > 0
-                      ? '12px'
-                      : 0,
-                  paddingBottom: '12px',
-                  paddingLeft: '12px',
-                  paddingRight: '12px',
-                }}
-              >
-                {loadingEvents ? (
+                {(cardData.session.fileAccessCount ?? 0) > 0 && (
                   <div
                     style={{
-                      textAlign: 'center',
-                      padding: '20px',
-                      color: theme.colors.textSecondary,
-                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
                     }}
                   >
-                    Loading events...
+                    <Activity size={12} color={sessionColor} />
+                    <span style={{ fontSize: '11px' }}>
+                      {cardData.session.fileAccessCount} file reads
+                    </span>
                   </div>
-                ) : events.length > 0 ? (
-                  <EventCarousel
-                    events={events}
-                    onEventSelect={handleEventSelect}
-                    onHighlightModeChange={handleHighlightModeChange}
-                  />
-                ) : (
+                )}
+                {(cardData.session.fileWriteCount ?? 0) > 0 && (
                   <div
                     style={{
-                      textAlign: 'center',
-                      padding: '20px',
-                      color: theme.colors.textSecondary,
-                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
                     }}
                   >
-                    No events found for this session
+                    <Edit3 size={12} color={sessionColor} />
+                    <span style={{ fontSize: '11px' }}>
+                      {cardData.session.fileWriteCount} file writes
+                    </span>
+                  </div>
+                )}
+                {(cardData.session.toolCallCount ?? 0) > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Sparkles size={12} color={sessionColor} />
+                    <span style={{ fontSize: '11px' }}>
+                      {cardData.session.toolCallCount} tool calls
+                    </span>
+                  </div>
+                )}
+                {cardData.session.lastActivity && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Clock size={12} color={sessionColor} />
+                    <span style={{ fontSize: '11px' }}>
+                      Last activity at{' '}
+                      {new Date(
+                        cardData.session.lastActivity,
+                      ).toLocaleTimeString()}
+                    </span>
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
         )}
       </div>

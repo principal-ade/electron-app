@@ -3,7 +3,7 @@
  * Provides meaningful segmentation for event history visualization
  */
 
-import { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 export interface TodoInfo {
   id: string;
@@ -126,7 +126,7 @@ export class EventSegmenterService {
    * Segment events based on stop events
    */
   private segmentByStops(
-    events: NormalizedAgentSessionEvent[],
+    events: RepoNormalizedUniversalAgentSessionEvent[],
   ): EventSegment[] {
     const segments: EventSegment[] = [];
     let segmentStart = 0;
@@ -164,7 +164,7 @@ export class EventSegmenterService {
   /**
    * Hybrid segmentation - combines todo and stop events
    */
-  private segmentHybrid(events: NormalizedAgentSessionEvent[]): EventSegment[] {
+  private segmentHybrid(events: RepoNormalizedUniversalAgentSessionEvent[]): EventSegment[] {
     const segments: EventSegment[] = [];
     let currentTodo: TodoInfo | null = null;
     let segmentStart = 0;
@@ -260,7 +260,7 @@ export class EventSegmenterService {
    * Compute statistics for a segment
    */
   private computeStats(
-    events: NormalizedAgentSessionEvent[],
+    events: RepoNormalizedUniversalAgentSessionEvent[],
   ): EventSegment['stats'] {
     const toolCounts: Record<string, number> = {};
     const filesAccessed = new Set<string>();
@@ -302,7 +302,7 @@ export class EventSegmenterService {
    * Generate a human-readable summary for a segment
    */
   private generateSummary(
-    events: NormalizedAgentSessionEvent[],
+    events: RepoNormalizedUniversalAgentSessionEvent[],
     type: 'todo' | 'stop' | 'orphaned' | 'setup',
     todoInfo?: TodoInfo | null,
   ): string {
@@ -333,7 +333,7 @@ export class EventSegmenterService {
    * Get the most frequently used tool in a set of events
    */
   private getMostUsedTool(
-    events: NormalizedAgentSessionEvent[],
+    events: RepoNormalizedUniversalAgentSessionEvent[],
   ): string | null {
     const toolCounts: Record<string, number> = {};
 

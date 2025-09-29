@@ -17,7 +17,6 @@ export interface WindowFeatures {
   // Adapters (heavy features that add IPC handlers)
   fileSystemAdapter?: boolean; // File system operations
   windowManagerAdapter?: boolean; // Window management capabilities
-  mcpToolsAdapter?: boolean; // MCP/AI tools integration
   githubAdapter?: boolean; // GitHub integration
   terminalManager?: boolean; // Terminal management
 
@@ -64,7 +63,6 @@ export const WINDOW_TYPE_CONFIGS: Record<WindowType, WindowFeatures> = {
     devTools: true,
     fileSystemAdapter: true,
     windowManagerAdapter: true,
-    mcpToolsAdapter: true,
     githubAdapter: true,
     terminalManager: true,
     contentSecurityPolicy: true,
@@ -79,7 +77,6 @@ export const WINDOW_TYPE_CONFIGS: Record<WindowType, WindowFeatures> = {
     devTools: true,
     fileSystemAdapter: true,
     windowManagerAdapter: true,
-    mcpToolsAdapter: true,
     githubAdapter: true,
     terminalManager: true,
     contentSecurityPolicy: true,
@@ -104,7 +101,6 @@ export const WINDOW_TYPE_CONFIGS: Record<WindowType, WindowFeatures> = {
     menu: false,
     devTools: true,
     fileSystemAdapter: true,
-    mcpToolsAdapter: true,
     contentSecurityPolicy: true,
     singleton: true,
     persistState: true,

@@ -12,13 +12,12 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
-import { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import {
   eventSegmenter,
   EventSegment,
   SegmentationMode,
 } from '../../services/EventSegmenterService';
-import { EventSegmentView } from './EventSegmentView';
 import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
 
 interface EventHistoryModalProps {
@@ -346,118 +345,211 @@ export const EventHistoryModal: React.FC<EventHistoryModalProps> = ({
             <div
               style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
             >
-              {filteredSegments.map((segment, index) => (
-                <div
-                  key={index}
-                  style={{
-                    border: `1px solid ${theme.colors.border}`,
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    backgroundColor: theme.colors.background,
-                  }}
-                >
-                  {/* Segment Header */}
+              {filteredSegments.map((segment, index) => {
+                const displayedEvents = segment.events.slice(0, 10);
+                const hasExtraEvents = segment.events.length > displayedEvents.length;
+
+                return (
                   <div
-                    onClick={() => toggleSegment(index)}
+                    key={index}
                     style={{
-                      padding: '12px 16px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      borderLeft: `4px solid ${eventSegmenter.getSegmentColor(segment.type)}`,
-                      backgroundColor: expandedSegments.has(index)
-                        ? theme.colors.backgroundSecondary
-                        : theme.colors.background,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      backgroundColor: theme.colors.background,
                     }}
                   >
-                    {expandedSegments.has(index) ? (
-                      <ChevronDown size={16} />
-                    ) : (
-                      <ChevronRight size={16} />
-                    )}
-
+                    {/* Segment Header */}
                     <div
+                      onClick={() => toggleSegment(index)}
                       style={{
-                        color: eventSegmenter.getSegmentColor(segment.type),
+                        padding: '12px 16px',
+                        cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
+                        gap: '12px',
+                        borderLeft: `4px solid ${eventSegmenter.getSegmentColor(segment.type)}`,
+                        backgroundColor: expandedSegments.has(index)
+                          ? theme.colors.backgroundSecondary
+                          : theme.colors.background,
                       }}
                     >
-                      {getSegmentIcon(segment.type)}
-                    </div>
+                      {expandedSegments.has(index) ? (
+                        <ChevronDown size={16} />
+                      ) : (
+                        <ChevronRight size={16} />
+                      )}
 
-                    <div style={{ flex: 1 }}>
                       <div
                         style={{
-                          fontSize: '14px',
-                          fontWeight: 500,
-                          color: theme.colors.text,
+                          color: eventSegmenter.getSegmentColor(segment.type),
+                          display: 'flex',
+                          alignItems: 'center',
                         }}
                       >
-                        {segment.summary}
+                        {getSegmentIcon(segment.type)}
                       </div>
-                      {segment.todoInfo && (
+
+                      <div style={{ flex: 1 }}>
                         <div
                           style={{
-                            fontSize: '12px',
-                            color: theme.colors.textSecondary,
-                            marginTop: '2px',
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            color: theme.colors.text,
                           }}
                         >
-                          Status: {segment.todoInfo.status}
+                          {segment.summary}
                         </div>
-                      )}
+                        {segment.todoInfo && (
+                          <div
+                            style={{
+                              fontSize: '12px',
+                              color: theme.colors.textSecondary,
+                              marginTop: '2px',
+                            }}
+                          >
+                            Status: {segment.todoInfo.status}
+                          </div>
+                        )}
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '16px',
+                          fontSize: '12px',
+                          color: theme.colors.textSecondary,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <Clock size={12} />
+                          {formatDuration(segment.stats.duration)}
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <Wrench size={12} />
+                          {segment.events.length} events
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <FileText size={12} />
+                          {segment.stats.filesAccessed.length} files
+                        </div>
+                      </div>
                     </div>
 
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '16px',
-                        fontSize: '12px',
-                        color: theme.colors.textSecondary,
-                      }}
-                    >
+                    {/* Expanded Content */}
+                    {expandedSegments.has(index) && (
                       <div
                         style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
+                          padding: '12px 16px',
+                          borderTop: `1px solid ${theme.colors.border}`,
+                          backgroundColor: theme.colors.backgroundSecondary,
                         }}
                       >
-                        <Clock size={12} />
-                        {formatDuration(segment.stats.duration)}
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '12px',
+                            fontSize: '12px',
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {Object.keys(segment.stats.toolCounts).length > 0 && (
+                            <div>
+                              <strong style={{ color: theme.colors.text }}>
+                                Tool usage:
+                              </strong>{' '}
+                              {Object.entries(segment.stats.toolCounts)
+                                .map(([tool, count]) => `${tool} (${count})`)
+                                .join(', ')}
+                            </div>
+                          )}
+
+                          <div>
+                            <strong style={{ color: theme.colors.text }}>
+                              Files accessed:
+                            </strong>{' '}
+                            {segment.stats.filesAccessed.length > 0
+                              ? segment.stats.filesAccessed.join(', ')
+                              : 'None'}
+                          </div>
+                          <div>
+                            <strong style={{ color: theme.colors.text }}>
+                              Files written:
+                            </strong>{' '}
+                            {segment.stats.fileWrites.length > 0
+                              ? segment.stats.fileWrites.join(', ')
+                              : 'None'}
+                          </div>
+
+                          <div>
+                            <strong style={{ color: theme.colors.text }}>
+                              Events:
+                            </strong>
+                            <ul
+                              style={{
+                                margin: '8px 0 0 16px',
+                                padding: 0,
+                                listStyle: 'disc',
+                                color: theme.colors.text,
+                              }}
+                            >
+                              {displayedEvents.map((event, eventIndex) => (
+                                <li key={eventIndex} style={{ marginBottom: '6px' }}>
+                                  <div>
+                                    {new Date(event.timestamp).toLocaleTimeString()} –{' '}
+                                    {event.toolName || 'Unknown tool'}
+                                  </div>
+                                  {event.data && 'message' in event.data && event.data.message && (
+                                    <div
+                                      style={{
+                                        color: theme.colors.textSecondary,
+                                        fontSize: '11px',
+                                        marginTop: '2px',
+                                      }}
+                                    >
+                                      {(event.data as any).message}
+                                    </div>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                            {hasExtraEvents && (
+                              <div
+                                style={{
+                                  marginTop: '6px',
+                                  color: theme.colors.textSecondary,
+                                }}
+                              >
+                                + {segment.events.length - displayedEvents.length} more events
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <Wrench size={12} />
-                        {segment.events.length} events
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <FileText size={12} />
-                        {segment.stats.filesAccessed.length} files
-                      </div>
-                    </div>
+                    )}
                   </div>
-
-                  {/* Expanded Content */}
-                  {expandedSegments.has(index) && (
-                    <EventSegmentView segment={segment} theme={theme} />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

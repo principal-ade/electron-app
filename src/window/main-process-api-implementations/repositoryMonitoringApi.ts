@@ -2,7 +2,7 @@ import { ipcRenderer } from 'electron';
 import {
   RepositoryMonitoringAPI,
   RepositoryMonitoringAPIEvent,
-  GitStatus,
+  GitStatusMetadata,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
@@ -54,8 +54,8 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
     return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.DISABLE_GIT_WATCHING, repoPath);
   },
 
-  onGitStatusChanged: (callback: (status: GitStatus) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, status: GitStatus) => callback(status);
+  onGitStatusChanged: (callback: (status: GitStatusMetadata) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, status: GitStatusMetadata) => callback(status);
     ipcRenderer.on(RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED, handler);
     return () => {
       ipcRenderer.removeListener(RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED, handler);

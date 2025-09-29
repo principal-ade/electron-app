@@ -1,5 +1,4 @@
-import { Repository } from '../../shared/types/repository.types';
-import { GitStatus as GitWatcherStatus } from '../../shared/main-process-api-interfaces/GitWatcherAPI';
+import { Repository, GitStatus as GitWatcherStatus } from '../../shared/types/repository.types';
 
 export interface GitRemote {
   name: string;
@@ -26,11 +25,7 @@ export interface GitBranchStatus {
   hasUncommittedChanges?: boolean;
 }
 
-export interface GitStatus {
-  staged: string[];
-  unstaged: string[];
-  untracked: string[];
-}
+// GitStatus is now imported from repository.types
 
 export interface GitDetailedChanges {
   created: string[];
@@ -122,7 +117,7 @@ export class GitService {
     return window.mainProcess.git.forceDeleteGitRepository(repoPath);
   }
 
-  static async getStatus(directory: string): Promise<GitStatus> {
+  static async getStatus(directory: string): Promise<GitWatcherStatus> {
     console.log(`[GitService] Getting git status for: ${directory}`);
     return window.mainProcess.git.getStatus(directory);
   }

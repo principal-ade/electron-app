@@ -5,4 +5,4 @@
  */
 
 export { FileSystemCore, type FileSystemCoreOptions, type FileStats, type FileTreeResult } from './FileSystemCore';
-export { GitCore, type GitInfo, type GitStatus } from './GitCore';
+export { GitCore, type GitInfo } from './GitCore';

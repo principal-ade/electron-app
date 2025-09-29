@@ -14,7 +14,7 @@ import {
   Code,
 } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
-import { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 // Using SDK service with new types directly
 import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
 
@@ -116,7 +116,7 @@ export const SessionEventsView: React.FC<SessionEventsViewProps> = ({
   }, [events, searchQuery, filterType]);
 
   // Get event icon based on type
-  const getEventIcon = (event: NormalizedAgentSessionEvent) => {
+  const getEventIcon = (event: RepoNormalizedUniversalAgentSessionEvent) => {
     if (event.toolName) {
       if (['Read', 'Write', 'Edit', 'MultiEdit'].includes(event.toolName)) {
         return <FileText size={14} />;
@@ -143,7 +143,7 @@ export const SessionEventsView: React.FC<SessionEventsViewProps> = ({
   };
 
   // Get event color based on type
-  const getEventColor = (event: NormalizedAgentSessionEvent) => {
+  const getEventColor = (event: RepoNormalizedUniversalAgentSessionEvent) => {
     if (event.eventType === 'pre-tool-use') return theme.colors.primary;
     if (event.eventType === 'post-tool-use') return theme.colors.success;
     if (event.eventType === 'stop') return theme.colors.error;
@@ -162,7 +162,7 @@ export const SessionEventsView: React.FC<SessionEventsViewProps> = ({
   };
 
   // Format event title
-  const getEventTitle = (event: NormalizedAgentSessionEvent) => {
+  const getEventTitle = (event: RepoNormalizedUniversalAgentSessionEvent) => {
     if (event.toolName) {
       if (event.files && event.files.length > 0 && event.files[0].displayPath) {
         const fileName = event.files[0].displayPath.split('/').pop();
