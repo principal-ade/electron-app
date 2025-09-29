@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useTheme } from 'themed-markdown';
-import { Globe, Bot, RefreshCw, Settings as SettingsIcon } from 'lucide-react';
+import { Globe, Bot, RefreshCw, Settings as SettingsIcon, Activity } from 'lucide-react';
 import { GeneralSettings } from './components/GeneralSettings';
 import { AIAssistantsSettings } from './components/AIAssistantsSettings';
 import { UpdatesSettings } from './components/UpdatesSettings';
+import { ObservabilitySettings } from './components/ObservabilitySettings';
 
-type SettingsCategory = 'general' | 'ai-assistants' | 'updates';
+type SettingsCategory = 'general' | 'ai-assistants' | 'updates' | 'observability';
 
 export const Settings: React.FC = () => {
   const { theme } = useTheme();
@@ -185,6 +186,46 @@ export const Settings: React.FC = () => {
                 />
               )}
             </button>
+
+            <button
+              onClick={() => setActiveCategory('observability')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor:
+                  activeCategory === 'observability'
+                    ? theme.colors.primary + '20'
+                    : 'transparent',
+                color:
+                  activeCategory === 'observability'
+                    ? theme.colors.primary
+                    : theme.colors.text,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontSize: '14px',
+                fontWeight: activeCategory === 'observability' ? 600 : 500,
+                textAlign: 'left',
+                width: '100%',
+              }}
+              onMouseEnter={(e) => {
+                if (activeCategory !== 'observability') {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeCategory !== 'observability') {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <Activity size={18} />
+              Observability
+            </button>
           </div>
         </div>
 
@@ -199,6 +240,7 @@ export const Settings: React.FC = () => {
           {activeCategory === 'general' && <GeneralSettings />}
           {activeCategory === 'ai-assistants' && <AIAssistantsSettings />}
           {activeCategory === 'updates' && <UpdatesSettings />}
+          {activeCategory === 'observability' && <ObservabilitySettings />}
         </div>
       </div>
     </div>

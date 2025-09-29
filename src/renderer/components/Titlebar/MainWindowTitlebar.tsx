@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarButton } from './TitlebarButton';
-import { Sparkles, Activity } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { WindowService } from '../../main-process-api/WindowService';
-import { ObservabilityConfigModal } from '../observability/ObservabilityConfigModal';
 import { UpdateNotification } from '../UpdateNotification';
 
 export interface MainWindowTitlebarProps {
@@ -15,16 +14,10 @@ export const MainWindowTitlebar: React.FC<MainWindowTitlebarProps> = ({
   hasUpdateAvailable,
   onUpdateAvailable,
 }) => {
-  const [showObservabilityModal, setShowObservabilityModal] = useState(false);
   const [localHasUpdate, setLocalHasUpdate] = useState(false);
 
   const handleCallimachusClick = async () => {
     await WindowService.openCallimachusWindow();
-  };
-
-
-  const handleObservabilityClick = () => {
-    setShowObservabilityModal(true);
   };
 
   const handleUpdateAvailable = (hasUpdate: boolean) => {
@@ -41,7 +34,7 @@ export const MainWindowTitlebar: React.FC<MainWindowTitlebarProps> = ({
         <div
           style={{
             position: 'absolute',
-            right: isMac ? '160px' : '195px',
+            right: isMac ? '90px' : '125px',
             top: '50%',
             transform: 'translateY(-50%)',
           }}
@@ -56,14 +49,6 @@ export const MainWindowTitlebar: React.FC<MainWindowTitlebarProps> = ({
           />
         </div>
         <TitlebarButton
-          icon={<Activity size={18} />}
-          ariaLabel="Observability Settings"
-          title="Configure Observability"
-          onClick={handleObservabilityClick}
-          position="right"
-          style={{ right: isMac ? '125px' : '160px' }}
-        />
-        <TitlebarButton
           icon={<Sparkles size={18} />}
           ariaLabel="Pattern Discovery"
           title="Open Pattern Discovery (Callimachus)"
@@ -72,10 +57,6 @@ export const MainWindowTitlebar: React.FC<MainWindowTitlebarProps> = ({
           style={{ right: isMac ? '55px' : '90px' }}
         />
       </BaseTitlebar>
-      <ObservabilityConfigModal
-        open={showObservabilityModal}
-        onClose={() => setShowObservabilityModal(false)}
-      />
     </>
   );
 };
