@@ -4,7 +4,6 @@ import {
   SecretsEvents,
   SecretStoreRequest,
   SecretOperationResult,
-  RepositorySecrets,
   SecretMetadata,
   SecretMetadataOnly,
   CopyResult,

@@ -1,12 +1,12 @@
-console.log('[Preload] Script starting...');
+console.info('[Preload] Script starting...');
 
 import { contextBridge, ipcRenderer } from 'electron';
 
-console.log('[Preload] Electron imports successful');
+console.info('[Preload] Electron imports successful');
 
 import type { MainProcessAPI } from '../shared/main-process-api-interfaces/index';
 
-console.log('[Preload] Type imports successful');
+console.info('[Preload] Type imports successful');
 
 import { terminalAPI } from './main-process-api-implementations/terminalApi';
 import { typeExtractionApi } from './main-process-api-implementations/typeExtractionApi';
@@ -75,7 +75,7 @@ export interface FileChangeEvent {
   type: string;
   path: string;
   extension?: string;
-  stats?: any;
+  stats?: Record<string, unknown>;
   isCurrentFile?: boolean;
 }
 
@@ -86,7 +86,7 @@ export interface MarkdownFileOptions {
 }
 
 // Wrap all exposures in try-catch for debugging
-console.log('[Preload] Starting API exposure...');
+console.info('[Preload] Starting API exposure...');
 
 // Expose the new mainProcess API
 const mainProcessExposure: MainProcessAPI = {
@@ -142,14 +142,14 @@ const mainProcessExposure: MainProcessAPI = {
 // Mermaid removed from preload - will be loaded in renderer instead
 // try {
 //   contextBridge.exposeInMainWorld('mermaid', mermaid);
-//   console.log('[Preload] ✅ Mermaid exposed');
+//   console.info('[Preload] ✅ Mermaid exposed');
 // } catch (error) {
 //   console.error('[Preload] ❌ Failed to expose mermaid:', error);
 // }
 
 try {
   contextBridge.exposeInMainWorld('mainProcess', mainProcessExposure);
-  console.log('[Preload] ✅ MainProcess API exposed');
+  console.info('[Preload] ✅ MainProcess API exposed');
 } catch (error) {
   console.error('[Preload] ❌ Failed to expose mainProcess API:', error);
 }
@@ -167,14 +167,14 @@ try {
       );
     },
   });
-  console.log('[Preload] ✅ Electron Titlebar API exposed');
+  console.info('[Preload] ✅ Electron Titlebar API exposed');
 } catch (error) {
   console.error('[Preload] ❌ Failed to expose titlebar API:', error);
 }
 
 try {
   contextBridge.exposeInMainWorld('appName', 'Principal ADE');
-  console.log('[Preload] ✅ AppName exposed');
+  console.info('[Preload] ✅ AppName exposed');
 } catch (error) {
   console.error('[Preload] ❌ Failed to expose appName:', error);
 }
@@ -185,12 +185,12 @@ try {
   const testObj = { test: 'working' };
   contextBridge.exposeInMainWorld('__preloadTest', testObj);
 
-  console.log('[Preload] ✅ Context bridge is working');
-  console.log('[Preload] ✅ Exposed APIs:', {
+  console.info('[Preload] ✅ Context bridge is working');
+  console.info('[Preload] ✅ Exposed APIs:', {
     mainProcess: Object.keys(mainProcessExposure),
     appName: 'Principal ADE',
   });
-  console.log(
+  console.info(
     '[Preload] 🚀 Preload script executed successfully - APIs exposed to renderer',
   );
 } catch (error) {

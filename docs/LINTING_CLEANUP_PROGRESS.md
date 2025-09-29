@@ -37,76 +37,87 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 ```
 
-## Current Status (Updated - 2025-09-29 Directory Snapshot)
+## Current Status (Updated - 2025-09-29)
 
 ### Overall Issues
-- **ESLint**: 1857 issues (1234 errors, 623 warnings) ↓ 263 from baseline
-- **TypeScript**: 415 errors ↑ 12 from baseline
-- **Console.log warnings**: 421 ↓ 222 from baseline (35% reduction!)
+- **ESLint**: 1749 issues (1154 errors, 595 warnings) ↓ 371 from baseline
+- **TypeScript**: 302 errors ↓ 101 from baseline (25% reduction!)
+- **Console.log warnings**: 395 ↓ 248 from baseline (39% reduction!)
 
 ### By Top-Level Directory
 
 #### ESLint Issues
 | Directory | Issues | % of Total | Change |
 |-----------|--------|------------| -------|
-| renderer | 217 | 11.7% | - |
-| main | 90 | 4.8% | - |
-| window | 23 | 1.2% | - |
-| shared | 0 | 0.0% | - |
-| repository-monitoring-server | 0 | 0.0% | ↓ 6 |
-| event-processing-server | 0 | 0.0% | - |
+| renderer | 219 | 12.5% | - |
+| main | 92 | 5.3% | - |
+| window | 0 | 0.0% | ✅ Cleaned |
+| shared | 0 | 0.0% | ✅ Cleaned |
+| repository-monitoring-server | 0 | 0.0% | ✅ Clean |
+| event-processing-server | 0 | 0.0% | ✅ Clean |
 
 #### TypeScript Errors
 | Directory | Errors | % of Total | Change |
 |-----------|--------|------------| -------|
-| renderer | 291 | 70.1% | - |
-| repository-monitoring-server | 61 | 14.7% | ↑ 33 |
-| main | 34 | 8.2% | - |
-| window | 33 | 7.9% | - |
-| event-processing-server | 0 | 0.0% | - |
-| shared | 0 | 0.0% | - |
-| pure-core | 0 | 0.0% | - |
+| renderer | 300 | 99.3% | ↑ 8 |
+| main | 2 | 0.7% | ↓ 32 |
+| repository-monitoring-server | 0 | 0.0% | ✅ Cleaned |
+| window | 0 | 0.0% | ✅ Cleaned |
+| event-processing-server | 0 | 0.0% | ✅ Clean |
+| shared | 0 | 0.0% | ✅ Cleaned |
+| pure-core | 0 | 0.0% | ✅ Clean |
 
 ### Renderer Subdirectories (Most Problematic)
 
 #### ESLint Issues
 | Subdirectory | Issues | Change |
 |--------------|--------| -------|
-| components | 82 | - |
+| components | 83 | - |
 | pages | 36 | - |
 | services | 31 | - |
 | principal-window | 16 | - |
-| main-process-api | 14 | - |
+| main-process-api | 15 | - |
 | utils | 11 | - |
 | hooks | 8 | - |
 | types | 5 | - |
 | adapters | 5 | - |
+| providers | 2 | - |
+| contexts | 2 | - |
+| validation | 1 | - |
+| themes | 1 | - |
+| test-scripts | 1 | - |
+| GlobalFeedbackProvider.tsx | 1 | - |
+| App.tsx | 1 | - |
 
 #### TypeScript Errors
 | Subdirectory | Errors | Change |
 |--------------|--------| -------|
-| components | 102 | - |
-| pages | 64 | - |
-| principal-window | 47 | - |
-| services | 33 | - |
+| components | 107 | - |
+| pages | 71 | ↑ 9 |
+| principal-window | 50 | - |
+| services | 28 | - |
 | utils | 18 | - |
 | adapters | 9 | - |
-| main-process-api | 7 | - |
+| main-process-api | 5 | ↓ 2 |
 | hooks | 5 | - |
-| providers | 2 | new |
-| contexts | 1 | new |
-| config | 1 | new |
+| providers | 2 | - |
+| validation | 1 | - |
 | types | 1 | - |
+| GlobalFeedbackProvider.tsx | 1 | - |
+| contexts | 1 | - |
+| config | 1 | - |
 
 Additional renderer diagnostics include a single error in `GlobalFeedbackProvider.tsx` reporting an unexpected `additionalData` property.
 
 ## Priority Areas for Cleanup
 
-1. **renderer/components** - Highest TypeScript error count (102) + significant ESLint issues (82)
-2. **renderer/pages** - High TypeScript errors (64) + ESLint issues (36)
-3. **renderer/principal-window** - High TypeScript errors (47), moderate ESLint issues (16)
-4. **renderer/services** - Moderate issues in both (33 TS, 31 ESLint)
-5. **repository-monitoring-server** - TypeScript errors jumped to 61, indicating regressions or newly enabled checks
+1. **renderer/components** - Highest TypeScript error count (107) + significant ESLint issues (83)
+2. **main** - High ESLint issues (92) + minimal TypeScript errors (2)
+3. **renderer/pages** - High TypeScript errors (71) + ESLint issues (36)
+4. **renderer/principal-window** - High TypeScript errors (50), moderate ESLint issues (16)
+5. **renderer/services** - Moderate issues in both (28 TS, 31 ESLint)
+
+✅ **Completed Directories**: window, shared, repository-monitoring-server, event-processing-server, pure-core
 
 ## Cleanup Strategy
 
@@ -299,6 +310,59 @@ Update this section after each cleanup session:
 - Removed duplicated test suites across the `.ts` and `.js` versions to eliminate conflicting declarations picked up by the linter.
 - Consolidated Jest mocks and helper utilities so each file now exports a single coherent suite that matches the current watcher implementation.
 - Verified the cleanup across the entire directory with the command above; repository-monitoring-server now lint-clean, enabling us to focus next on TypeScript diagnostics.
+
+### 2025-09-29 - Current Status Update
+- **Overall Before**: 1857 total issues (1234 errors, 623 warnings)
+- **Overall After**: 1784 total issues (1179 errors, 605 warnings)
+- **Total Improvement**: 73 issues fixed (3.9% reduction)
+- **TypeScript Errors**: 415 → 341 (-74, 17.8% reduction!)
+- **Console.log warnings**: 421 → 405 (-16)
+
+**Observations:**
+- Significant TypeScript error reduction, especially in `repository-monitoring-server` (61 → 14) and `window` (33 → 1)
+- ESLint issues remain relatively stable with slight improvements
+- Window directory shows major improvement in both ESLint (23 → 10) and TypeScript (33 → 1)
+- Renderer remains the highest priority area with 219 ESLint issues and 292 TypeScript errors
+
+### 2025-09-29 - Window and Shared Directories Cleanup
+- **Overall Before**: 1784 total issues (1179 errors, 605 warnings)
+- **Overall After**: 1749 total issues (1154 errors, 595 warnings)
+- **Total Improvement**: 35 issues fixed (2.0% reduction)
+- **TypeScript Errors**: 341 → 314 (-27, 7.9% reduction)
+
+**Directory-specific fixes:**
+- **window**: 10 ESLint → 0 (all fixed), 1 TypeScript → 0 (fixed)
+- **shared**: 2 ESLint → 0 (all fixed), TypeScript errors resolved
+
+**Key fixes:**
+- Replaced all `any` types with proper types (`unknown`, `RemoteAgentMessage`, `ToolExecutionRequest`, etc.)
+- Fixed unused import (removed `RepositorySecrets`)
+- Updated `GitAPI` interface to use correct `GitStatus` type
+- Moved `ToolExecutionRequest/Response` types from main to shared to fix cross-boundary imports
+- Changed console.log to console.info in preload script
+- Fixed type mismatches in API implementations
+
+**Result**: Both window and shared directories are now completely clean - 0 ESLint issues, 0 TypeScript errors!
+
+### 2025-09-29 - Repository Monitoring Server Cleanup
+- **Overall Before**: 1749 total issues (1154 errors, 595 warnings)
+- **Overall After**: 1749 total issues (1154 errors, 595 warnings)
+- **Total Improvement**: 0 ESLint issues (already clean)
+- **TypeScript Errors**: 314 → 302 (-12, 3.8% reduction)
+
+**Directory-specific fixes:**
+- **repository-monitoring-server**: 0 ESLint (already clean), 12 TypeScript → 0 (all fixed)
+
+**Key fixes:**
+- Fixed FileTree mock data in tests to match actual interface (removed invalid `type` properties, added proper FileInfo/DirectoryInfo structure)
+- Added missing `manifestPath` property to PackageLayer test data
+- Added missing `metadata` property to FileTree test objects
+- Added missing `sourceInfo` to FileTree metadata
+- Imported FileInfo and DirectoryInfo types in test file
+- Fixed cross-project import in RepositoryMonitoringService.ts
+- Fixed workspaceHandler invocation type issue in tests
+
+**Result**: repository-monitoring-server directory is now completely clean - 0 ESLint issues, 0 TypeScript errors!
 
 ### [Date] - [Area Cleaned]
 - Before: X ESLint issues, Y TypeScript errors

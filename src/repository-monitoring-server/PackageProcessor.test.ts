@@ -3,7 +3,7 @@
  */
 
 import { PackageProcessor } from './PackageProcessor';
-import type { FileTree } from '@principal-ai/repository-abstraction';
+import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import * as fs from 'fs/promises';
 
@@ -26,21 +26,30 @@ describe('PackageProcessor', () => {
         root: {
           path: '/test/repo',
           name: 'repo',
-          type: 'directory',
-          directories: [],
-          files: [
+          children: [
             {
               path: '/test/repo/package.json',
               name: 'package.json',
-              type: 'file',
-            },
+              extension: '.json',
+              size: 100,
+              lastModified: new Date(),
+              isDirectory: false,
+              relativePath: 'package.json',
+            } as FileInfo,
           ],
+          fileCount: 1,
+          totalSize: 100,
+          depth: 0,
+          relativePath: '',
         },
         allFiles: [
           {
             path: '/test/repo/package.json',
             name: 'package.json',
-            type: 'file',
+            extension: '.json',
+            size: 100,
+            lastModified: new Date(),
+            isDirectory: false,
             relativePath: 'package.json',
           },
         ],
@@ -48,7 +57,10 @@ describe('PackageProcessor', () => {
           {
             path: '/test/repo',
             name: 'repo',
-            type: 'directory',
+            children: [],
+            fileCount: 1,
+            totalSize: 100,
+            depth: 0,
             relativePath: '',
           },
         ],
@@ -57,6 +69,12 @@ describe('PackageProcessor', () => {
           totalDirectories: 1,
           totalSize: 100,
           maxDepth: 1,
+        },
+        metadata: {
+          id: 'test-id',
+          timestamp: new Date(),
+          sourceType: 'test',
+          sourceInfo: {},
         },
       };
 
@@ -102,56 +120,96 @@ describe('PackageProcessor', () => {
         root: {
           path: '/test/monorepo',
           name: 'monorepo',
-          type: 'directory',
-          directories: [
+          children: [
             {
               path: '/test/monorepo/packages',
               name: 'packages',
-              type: 'directory',
-              directories: [
+              children: [
                 {
                   path: '/test/monorepo/packages/ui',
                   name: 'ui',
-                  type: 'directory',
-                  files: [],
-                  directories: [],
-                },
+                  children: [
+                    {
+                      path: '/test/monorepo/packages/ui/package.json',
+                      name: 'package.json',
+                      extension: '.json',
+                      size: 100,
+                      lastModified: new Date(),
+                      isDirectory: false,
+                      relativePath: 'packages/ui/package.json',
+                    } as FileInfo,
+                  ],
+                  fileCount: 1,
+                  totalSize: 100,
+                  depth: 2,
+                  relativePath: 'packages/ui',
+                } as DirectoryInfo,
                 {
                   path: '/test/monorepo/packages/api',
                   name: 'api',
-                  type: 'directory',
-                  files: [],
-                  directories: [],
-                },
+                  children: [
+                    {
+                      path: '/test/monorepo/packages/api/package.json',
+                      name: 'package.json',
+                      extension: '.json',
+                      size: 100,
+                      lastModified: new Date(),
+                      isDirectory: false,
+                      relativePath: 'packages/api/package.json',
+                    } as FileInfo,
+                  ],
+                  fileCount: 1,
+                  totalSize: 100,
+                  depth: 2,
+                  relativePath: 'packages/api',
+                } as DirectoryInfo,
               ],
-              files: [],
-            },
-          ],
-          files: [
+              fileCount: 2,
+              totalSize: 200,
+              depth: 1,
+              relativePath: 'packages',
+            } as DirectoryInfo,
             {
               path: '/test/monorepo/package.json',
               name: 'package.json',
-              type: 'file',
-            },
+              extension: '.json',
+              size: 100,
+              lastModified: new Date(),
+              isDirectory: false,
+              relativePath: 'package.json',
+            } as FileInfo,
           ],
+          fileCount: 3,
+          totalSize: 300,
+          depth: 0,
+          relativePath: '',
         },
         allFiles: [
           {
             path: '/test/monorepo/package.json',
             name: 'package.json',
-            type: 'file',
+            extension: '.json',
+            size: 100,
+            lastModified: new Date(),
+            isDirectory: false,
             relativePath: 'package.json',
           },
           {
             path: '/test/monorepo/packages/ui/package.json',
             name: 'package.json',
-            type: 'file',
+            extension: '.json',
+            size: 100,
+            lastModified: new Date(),
+            isDirectory: false,
             relativePath: 'packages/ui/package.json',
           },
           {
             path: '/test/monorepo/packages/api/package.json',
             name: 'package.json',
-            type: 'file',
+            extension: '.json',
+            size: 100,
+            lastModified: new Date(),
+            isDirectory: false,
             relativePath: 'packages/api/package.json',
           },
         ],
@@ -161,6 +219,12 @@ describe('PackageProcessor', () => {
           totalDirectories: 4,
           totalSize: 300,
           maxDepth: 3,
+        },
+        metadata: {
+          id: 'monorepo-id',
+          timestamp: new Date(),
+          sourceType: 'test',
+          sourceInfo: {},
         },
       };
 
@@ -207,6 +271,7 @@ describe('PackageProcessor', () => {
             name: 'test-package',
             version: '1.0.0',
             path: '',
+            manifestPath: '/test/repo/package.json',
             packageManager: 'npm',
             dependencies: {
               'express': '^4.18.0',
@@ -253,6 +318,7 @@ describe('PackageProcessor', () => {
           packageData: {
             name: 'monorepo-root',
             path: '',
+            manifestPath: '/test/monorepo/package.json',
             packageManager: 'npm',
             dependencies: {},
             devDependencies: {},
@@ -274,6 +340,7 @@ describe('PackageProcessor', () => {
           packageData: {
             name: '@monorepo/ui',
             path: 'packages/ui',
+            manifestPath: '/test/monorepo/packages/ui/package.json',
             packageManager: 'npm',
             dependencies: {
               'react': '^18.0.0',

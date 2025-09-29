@@ -13,7 +13,7 @@ export const userPromptAPI: UserPromptAPI = {
 
   // Event listeners for UI components
   onShowPrompt: (callback: (request: UserPromptRequest) => void) => {
-    const handler = (_event: any, request: UserPromptRequest) =>
+    const handler = (_event: Electron.IpcRendererEvent, request: UserPromptRequest) =>
       callback(request);
     ipcRenderer.on(UserPromptAPIEvents.SHOW_PROMPT, handler);
     return () =>

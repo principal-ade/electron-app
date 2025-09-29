@@ -1,4 +1,4 @@
-import { RemoteAgentConfig, RemoteAgentWindowOptions, RemoteAgentWindowState } from '../types/remoteAgent.types';
+import { RemoteAgentConfig, RemoteAgentWindowOptions, RemoteAgentWindowState, RemoteAgentMessage } from '../types/remoteAgent.types';
 
 export enum RemoteAgentWindowEvent {
   OPEN_REMOTE_AGENT = 'remote-agent:open',
@@ -17,7 +17,7 @@ export interface RemoteAgentWindowAPI {
   focusRemoteAgent: (agentId: string) => Promise<void>;
   listRemoteAgents: () => Promise<RemoteAgentConfig[]>;
   getRemoteAgentState: (agentId: string) => Promise<RemoteAgentWindowState>;
-  sendMessageToRemoteAgent: (agentId: string, message: any) => Promise<void>;
+  sendMessageToRemoteAgent: (agentId: string, message: RemoteAgentMessage) => Promise<void>;
   onRemoteAgentStateChanged: (callback: (agentId: string, state: RemoteAgentWindowState) => void) => () => void;
-  onRemoteAgentMessage: (callback: (agentId: string, message: any) => void) => () => void;
+  onRemoteAgentMessage: (callback: (agentId: string, message: RemoteAgentMessage) => void) => () => void;
 }

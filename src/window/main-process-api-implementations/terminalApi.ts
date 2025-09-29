@@ -59,7 +59,7 @@ export const terminalAPI: TerminalAPI = {
   },
 
   onData: (callback: (data: TerminalData) => void) => {
-    const listener = (_event: any, data: TerminalData) => callback(data);
+    const listener = (_event: Electron.IpcRendererEvent, data: TerminalData) => callback(data);
     ipcRenderer.on(TerminalAPIEvents.ON_DATA, listener);
     return () => {
       ipcRenderer.removeListener(TerminalAPIEvents.ON_DATA, listener);
@@ -67,7 +67,7 @@ export const terminalAPI: TerminalAPI = {
   },
 
   onExit: (callback: (exit: TerminalExit) => void) => {
-    const listener = (_event: any, exit: TerminalExit) => callback(exit);
+    const listener = (_event: Electron.IpcRendererEvent, exit: TerminalExit) => callback(exit);
     ipcRenderer.on(TerminalAPIEvents.ON_EXIT, listener);
     return () => {
       ipcRenderer.removeListener(TerminalAPIEvents.ON_EXIT, listener);
@@ -82,7 +82,7 @@ export const terminalAPI: TerminalAPI = {
     }) => void,
   ) => {
     const listener = (
-      _event: any,
+      _event: Electron.IpcRendererEvent,
       data: { terminalId: string; agentSessionId?: string; windowId: number },
     ) => callback(data);
     ipcRenderer.on(TerminalAPIEvents.ON_WINDOW_READY, listener);
@@ -99,7 +99,7 @@ export const terminalAPI: TerminalAPI = {
     }) => void,
   ) => {
     const listener = (
-      _event: any,
+      _event: Electron.IpcRendererEvent,
       data: { terminalId: string; agentSessionId?: string; windowId: number },
     ) => callback(data);
     ipcRenderer.on(TerminalAPIEvents.ON_WINDOW_CLOSE, listener);

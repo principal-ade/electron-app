@@ -14,30 +14,7 @@ import {
   type ExecuteResult,
 } from '@principal-ai/codebase-quality-lenses';
 import { ElectronCLIBridgeExecutor } from './ElectronCLIBridgeExecutor';
-
-/**
- * Tool execution request
- */
-export interface ToolExecutionRequest {
-  repoPath: string;
-  packagePath?: string;
-  toolName: string;
-  command: string;
-  args?: string[];
-}
-
-/**
- * Tool execution response with lens analysis
- */
-export interface ToolExecutionResponse {
-  success: boolean;
-  toolName: string;
-  command: string;
-  packagePath?: string;
-  exitCode: number;
-  duration: number;
-  stdout: string;
-  stderr: string;
+import type { ToolExecutionRequest, ToolExecutionResponse } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
   lensResult?: LensResult; // Parsed and analyzed result from lens
 }
 

@@ -5,10 +5,27 @@
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type { GitState } from '@principal-ai/repository-monitoring';
-import type { ToolExecutionRequest, ToolExecutionResponse } from '../../main/quality-lenses/QualityLensService';
+// Tool execution types (moved from main/quality-lenses/QualityLensService.ts)
+export interface ToolExecutionRequest {
+  repoPath: string;
+  packagePath?: string;
+  toolName: string;
+  command: string;
+  args?: string[];
+}
 
-// Export the imported types
-export type { ToolExecutionRequest, ToolExecutionResponse };
+export interface ToolExecutionResponse {
+  success: boolean;
+  toolName: string;
+  command: string;
+  packagePath?: string;
+  exitCode: number;
+  duration: number;
+  stdout: string;
+  stderr: string;
+  lensResult?: unknown;
+  error?: string;
+}
 
 // Package summary interface
 export interface PackageSummary {

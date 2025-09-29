@@ -7,7 +7,7 @@ export interface RemoteAgentConfig {
   icon?: string;                  // Optional icon URL
   capabilities?: string[];        // Remote agent capabilities
   requiresAuth?: boolean;         // Whether auth is required
-  metadata?: Record<string, any>; // Additional metadata
+  metadata?: Record<string, unknown>; // Additional metadata
 }
 
 export interface RemoteAgentWindow {
@@ -36,3 +36,5 @@ export interface RemoteAgentWindowOptions {
   position?: { x: number; y: number };
   parentWindow?: BrowserWindow;
 }
+
+export type RemoteAgentMessage = Record<string, unknown>;

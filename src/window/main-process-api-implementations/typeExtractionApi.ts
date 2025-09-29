@@ -28,7 +28,11 @@ export const typeExtractionApi: TypeExtractionAPI = {
     );
   },
 
-  generateDefinitionFile: async (packagePath: string): Promise<any> => {
+  generateDefinitionFile: async (packagePath: string): Promise<{
+    success: boolean;
+    filePath?: string;
+    error?: string;
+  }> => {
     return ipcRenderer.invoke(
       TypeExtractionAPIEvent.GENERATE_DEFINITION_FILE,
       packagePath,

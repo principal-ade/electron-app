@@ -26,11 +26,7 @@ export interface GitAPI {
     }>;
   } | null>;
   checkIfPrivateRepo: (remoteUrl: string) => Promise<boolean>;
-  getStatus: (directory: string) => Promise<{
-    staged: string[];
-    unstaged: string[];
-    untracked: string[];
-  }>;
+  getStatus: (directory: string) => Promise<GitStatus>;
   getDetailedChanges: (
     directory: string,
     files?: string[],

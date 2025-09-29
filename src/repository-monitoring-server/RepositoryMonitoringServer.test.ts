@@ -246,7 +246,9 @@ describe('RepositoryMonitoringServer', () => {
         watchingEnabled: true,
       });
 
-      workspaceHandler?.({ repoPath: testRepoPath, state: undefined });
+      if (workspaceHandler) {
+        (workspaceHandler as any)({ repoPath: testRepoPath, state: undefined });
+      }
 
       expect(fileTreeCache.has(testRepoPath)).toBe(false);
       expect(packageCache.has(testRepoPath)).toBe(false);

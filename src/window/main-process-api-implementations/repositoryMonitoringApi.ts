@@ -4,6 +4,7 @@ import {
   RepositoryMonitoringAPIEvent,
   GitStatusMetadata,
   type WorkspaceChangeEventPayload,
+  type ToolExecutionRequest,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
@@ -71,7 +72,7 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
     };
   },
 
-  executeTool: async (request: any) => {
+  executeTool: async (request: ToolExecutionRequest) => {
     return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.EXECUTE_TOOL, request);
   },
 };

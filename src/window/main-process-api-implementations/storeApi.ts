@@ -15,7 +15,7 @@ import {
 import { StorageNamespaces } from '../../shared/types/namespaces.types';
 
 export const storeAPI: StoreAPI = {
-  get: <T = any>(
+  get: <T = unknown>(
     key: string,
     namespace?: StorageNamespaces,
     defaultValue?: T,
@@ -23,7 +23,7 @@ export const storeAPI: StoreAPI = {
     return ipcRenderer.invoke(StoreEvents.GET, key, namespace, defaultValue);
   },
 
-  set: <T = any>(
+  set: <T = unknown>(
     key: string,
     value: T,
     namespace?: StorageNamespaces,
@@ -97,8 +97,8 @@ export const storeAPI: StoreAPI = {
     _callback: (event: {
       namespace: StorageNamespaces;
       key: string;
-      value: any;
-      oldValue: any;
+      value: unknown;
+      oldValue: unknown;
     }) => void,
   ): (() => void) => {
     console.warn('onStorageChanged has been removed for performance reasons');

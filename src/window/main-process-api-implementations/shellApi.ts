@@ -20,7 +20,7 @@ export const shellAPI = {
     path?: string;
     glob?: string;
     output_mode?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }) => ipcRenderer.invoke(ShellAPIEvent.RUN_GREP, params),
 
   // Run bash command (simplified)

@@ -39,7 +39,7 @@ export const systemAPI: SystemAPI = {
 
   // Event listeners
   onUpdateCheckComplete: (callback: (result: UpdateCheckResult) => void) => {
-    const subscription = (_event: any, result: UpdateCheckResult) =>
+    const subscription = (_event: Electron.IpcRendererEvent, result: UpdateCheckResult) =>
       callback(result);
     ipcRenderer.on(SystemEvents.UPDATE_CHECK_COMPLETE, subscription);
     return () =>

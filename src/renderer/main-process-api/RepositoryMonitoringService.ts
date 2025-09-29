@@ -12,9 +12,9 @@ import type {
   GitStatus,
   GitStatusWithFiles,
   ToolExecutionRequest,
-  ToolExecutionResponse
+  ToolExecutionResponse,
+  PackageSummary
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
-import type { PackageSummary } from '../../repository-monitoring-server/types';
 
 export class RepositoryMonitoringService {
   /**

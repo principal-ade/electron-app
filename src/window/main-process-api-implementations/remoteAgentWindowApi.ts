@@ -10,6 +10,7 @@ import type {
   RemoteAgentConfig,
   RemoteAgentWindowOptions,
   RemoteAgentWindowState,
+  RemoteAgentMessage,
 } from '../../shared/types/remoteAgent.types';
 
 /**
@@ -96,7 +97,7 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
   /**
    * Send a message to a remote agent
    */
-  sendMessageToRemoteAgent: async (agentId: string, message: any): Promise<void> => {
+  sendMessageToRemoteAgent: async (agentId: string, message: RemoteAgentMessage): Promise<void> => {
     const result = await ipcRenderer.invoke(
       RemoteAgentWindowEvent.SEND_MESSAGE_TO_REMOTE_AGENT,
       agentId,
@@ -115,7 +116,7 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
     callback: (agentId: string, state: RemoteAgentWindowState) => void
   ): (() => void) => {
     const listener = (
-      _event: any,
+      _event: Electron.IpcRendererEvent,
       data: { agentId: string; state: RemoteAgentWindowState }
     ) => {
       callback(data.agentId, data.state);
@@ -136,9 +137,9 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
    * Subscribe to messages from remote agents
    */
   onRemoteAgentMessage: (
-    callback: (agentId: string, message: any) => void
+    callback: (agentId: string, message: RemoteAgentMessage) => void
   ): (() => void) => {
-    const listener = (_event: any, data: { agentId: string; message: any }) => {
+    const listener = (_event: Electron.IpcRendererEvent, data: { agentId: string; message: RemoteAgentMessage }) => {
       callback(data.agentId, data.message);
     };
 

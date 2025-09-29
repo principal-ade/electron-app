@@ -199,7 +199,9 @@ describe('RepositoryMonitoringServer', () => {
                 behind: 0,
                 watchingEnabled: true,
             });
-            workspaceHandler?.({ repoPath: testRepoPath, state: undefined });
+            if (workspaceHandler) {
+                workspaceHandler({ repoPath: testRepoPath, state: undefined });
+            }
             expect(fileTreeCache.has(testRepoPath)).toBe(false);
             expect(packageCache.has(testRepoPath)).toBe(false);
             expect(gitStatusSpy).not.toHaveBeenCalled();
