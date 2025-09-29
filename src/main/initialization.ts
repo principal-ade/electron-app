@@ -57,9 +57,12 @@ import {
   shutdownDocumentSearch,
 } from './services/ipc/documentSearchHandlers';
 import { registerObservabilityHandlers } from './observability/observabilityHandlers';
+import { RemoteAgentWindowManager } from './window/remoteAgentWindowManager';
+import { registerRemoteAgentWindowHandlers } from './window/remoteAgentWindowHandlers';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let planningMCPBridgePort: number | null = null;
+let remoteAgentWindowManager: RemoteAgentWindowManager | null = null;
 
 const agentEventsBridgePort = APP_BRANDING.BRIDGE_PORTS.AGENT_SESSION_EVENTS;
 const planningBridgePort = APP_BRANDING.BRIDGE_PORTS.PLANNING_MCP;
@@ -222,6 +225,10 @@ const registerAllIpcHandlers = async () => {
   registerDocumentSearchHandlers();
   registerObservabilityHandlers();
 
+  // Initialize remote agent window manager
+  remoteAgentWindowManager = new RemoteAgentWindowManager();
+  registerRemoteAgentWindowHandlers(remoteAgentWindowManager);
+
   // LLM Models handlers have been removed
   const typedStore = await getTypedStorageManager();
 
@@ -326,5 +333,11 @@ export const shutdownServices = async () => {
   // Shutdown document search service
   shutdownDocumentSearch();
   console.log('[Main Process] Document search service stopped.');
+
+  // Close all remote agent windows
+  if (remoteAgentWindowManager) {
+    await remoteAgentWindowManager.closeAllRemoteAgents();
+    console.log('[Main Process] Remote agent windows closed.');
+  }
 };
 

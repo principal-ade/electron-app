@@ -43,6 +43,7 @@ import type { PlanningAPI } from './PlanningAPI';
 import type { FeedbackAPI } from './FeedbackAPI';
 import type { DocumentSearchAPI } from '../ipc/DocumentSearchIPC';
 import type { ObservabilityAPI } from './ObservabilityAPI';
+import type { RemoteAgentWindowAPI } from './RemoteAgentWindowAPI';
 
 // Re-export for convenience
 export type {
@@ -114,6 +115,7 @@ export interface MainProcessAPI {
   testDebug: TestDebugAPI;
   documentSearch: DocumentSearchAPI;
   observability: ObservabilityAPI;
+  remoteAgentWindow: RemoteAgentWindowAPI;
 }
 
 /**

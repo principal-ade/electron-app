@@ -1,9 +1,10 @@
 import React, { useCallback } from 'react';
-import { GitBranch, Trash2, ExternalLink, Terminal, RefreshCw, GitPullRequest, Upload } from 'lucide-react';
+import { GitBranch, Trash2, ExternalLink, Terminal, RefreshCw, GitPullRequest, Upload, Bot } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import { GitBranchStatus } from '../../../../main-process-api/GitService';
 import { TerminalService } from '../../../../main-process-api/TerminalService';
+import { remoteAgentService } from '../../../../services/RemoteAgentService';
 
 interface RepositoryHeaderProps {
   repository: EnhancedAlexandriaEntry;
@@ -80,6 +81,20 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
       console.error('Error opening terminal:', error);
     }
   }, [repository, terminalWindows, onTerminalWindowsUpdate]);
+
+  const handleOpenJules = useCallback(async () => {
+    if (!repository?.path) return;
+
+    try {
+      await remoteAgentService.openRemoteAgent({
+        id: `jules-${repository.name}`,
+        name: `Jules - ${repository.name}`,
+        url: 'https://jules.google.com',
+      });
+    } catch (error) {
+      console.error('Error opening Jules:', error);
+    }
+  }, [repository]);
 
 
   return (
@@ -309,6 +324,34 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               {isPushing ? 'Pushing...' : pushStatus.needsUpstream ? 'Push & Set Upstream' : 'Push'}
             </button>
           )}
+
+          <button
+            onClick={handleOpenJules}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              backgroundColor: theme.colors.primary,
+              color: theme.colors.background,
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+            title="Open Jules AI Agent"
+          >
+            <Bot size={14} />
+            Open Jules
+          </button>
 
           <button
             onClick={handleOpenTerminal}

@@ -657,3 +657,14 @@ export const setIsRestarting = (value: boolean) => {
 
 // Type alias for compatibility
 export type OldApplicationWindow = ModernApplicationWindow;
+
+/**
+ * Helper method to send messages to all windows
+ */
+export function sendToAllWindows(channel: string, ...args: any[]): void {
+  applicationWindows.forEach((appWindow) => {
+    if (appWindow && appWindow.window && !appWindow.window.isDestroyed()) {
+      appWindow.window.webContents.send(channel, ...args);
+    }
+  });
+}
