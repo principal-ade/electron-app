@@ -387,7 +387,7 @@ export class EventProcessingServer extends EventEmitter {
     this.log('info', 'Shutdown requested');
 
     // Cancel all pending requests
-    for (const [id, pending] of this.pendingRequests.entries()) {
+    for (const pending of this.pendingRequests.values()) {
       if (pending.timeoutHandle) {
         clearTimeout(pending.timeoutHandle);
       }
@@ -491,7 +491,14 @@ export class EventProcessingServer extends EventEmitter {
     if (messageLevelIndex >= currentLevelIndex) {
       const timestamp = new Date().toISOString();
       const contextStr = context ? ` ${JSON.stringify(context)}` : '';
-      console.log(`[${timestamp}] [EventProcessingServer] [${level.toUpperCase()}] ${message}${contextStr}`);
+      const formattedMessage = `[${timestamp}] [EventProcessingServer] [${level.toUpperCase()}] ${message}${contextStr}`;
+      if (level === 'error') {
+        console.error(formattedMessage);
+      } else if (level === 'warn') {
+        console.warn(formattedMessage);
+      } else {
+        console.info(formattedMessage);
+      }
     }
   }
 }

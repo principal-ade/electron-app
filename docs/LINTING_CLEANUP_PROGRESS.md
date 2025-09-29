@@ -37,34 +37,35 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 ```
 
-## Current Status (Updated - 2025-09-28)
+## Current Status (Updated - 2025-09-28 Evening Refresh)
 
 ### Overall Issues
-- **ESLint**: 1956 issues (1318 errors, 638 warnings) ↓ 164 from baseline
-- **TypeScript**: 402 errors ↓ 1 from baseline
-- **Console.log warnings**: 435 ↓ 208 from baseline (32% reduction!)
+- **ESLint**: 1906 issues (1282 errors, 624 warnings) ↓ 214 from baseline
+- **TypeScript**: 383 errors ↓ 20 from baseline
+- **Console.log warnings**: 422 ↓ 221 from baseline (34% reduction!)
 
 ### By Top-Level Directory
 
 #### ESLint Issues
 | Directory | Issues | % of Total | Change |
 |-----------|--------|------------| -------|
-| renderer | 218 | 11.1% | ↓ 1 |
-| main | 89 | 4.5% | ↓ 7 |
-| window | 27 | 1.4% | ↑ 2 |
-| shared | 15 | 0.8% | ↓ 2 |
-| repository-monitoring-server | 5 | 0.3% | ↑ 2 |
-| event-processing-server | 5 | 0.3% | ↓ 1 |
+| renderer | 218 | 11.4% | - |
+| main | 90 | 4.7% | - |
+| window | 27 | 1.4% | - |
+| shared | 15 | 0.8% | - |
+| repository-monitoring-server | 5 | 0.3% | - |
+| event-processing-server | 0 | 0.0% | ↓ 5 |
 
 #### TypeScript Errors
 | Directory | Errors | % of Total | Change |
 |-----------|--------|------------| -------|
-| renderer | 289 | 71.9% | ↓ 62 |
-| main | 39 | 9.7% | ↑ 20 |
-| window | 35 | 8.7% | ↑ 31 |
-| repository-monitoring-server | 26 | 6.5% | ↑ 26 |
-| shared | 9 | 2.2% | ↓ 3 |
-| pure-core | 4 | 1.0% | new |
+| renderer | 289 | 75.5% | - |
+| main | 34 | 8.9% | ↓ 5 |
+| window | 33 | 8.6% | ↓ 2 |
+| repository-monitoring-server | 27 | 7.0% | ↑ 1 |
+| event-processing-server | 0 | 0.0% | - |
+| shared | 0 | 0.0% | ↓ 9 |
+| pure-core | 0 | 0.0% | ↓ 4 |
 
 ### Renderer Subdirectories (Most Problematic)
 
@@ -73,25 +74,25 @@ npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 |--------------|--------| -------|
 | components | 82 | ↓ 5 |
 | pages | 36 | - |
-| services | 31 | ↑ 1 |
-| main-process-api | 17 | ↓ 6 |
-| principal-window | 14 | ↑ 7 |
+| services | 31 | - |
+| main-process-api | 17 | - |
+| principal-window | 14 | - |
 | utils | 11 | - |
-| hooks | 8 | ↑ 1 |
+| hooks | 8 | - |
 | types | 5 | - |
 | adapters | 5 | - |
 
 #### TypeScript Errors
 | Subdirectory | Errors | Change |
 |--------------|--------| -------|
-| components | 102 | ↓ 31 |
-| pages | 64 | ↓ 14 |
-| principal-window | 47 | ↓ 17 |
-| services | 32 | ↓ 4 |
-| utils | 18 | ↑ 1 |
+| components | 102 | - |
+| pages | 64 | - |
+| principal-window | 47 | - |
+| services | 32 | - |
+| utils | 18 | - |
 | adapters | 9 | - |
-| main-process-api | 6 | new |
-| hooks | 5 | ↓ 2 |
+| main-process-api | 6 | - |
+| hooks | 5 | - |
 
 ## Priority Areas for Cleanup
 
@@ -103,7 +104,7 @@ npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 ## Cleanup Strategy
 
 ### Phase 1: Quick Wins
-- [ ] Fix console.log performance issues (643 warnings)
+- [ ] Fix console.log performance issues (422 warnings)
 - [ ] Fix unused variable warnings (prefix with `_`)
 - [ ] Remove unused imports
 
@@ -227,6 +228,19 @@ Update this section after each cleanup session:
 - Updated build configurations (eslint.config.mjs, knip.json)
 - Cleaned up imports and dependencies
 - Improved type safety in many files
+
+### 2025-09-28 - Event Processing Server Cleanup
+- **Overall Before**: 1956 total issues (1318 errors, 638 warnings)
+- **Overall After**: 1906 total issues (1282 errors, 624 warnings)
+- **Total Improvement**: 50 issues fixed (2.6% reduction)
+- **Console.log warnings**: 435 → 422 (13 additional cleaned)
+- **Event-processing-server**: ESLint 5 → 0, TypeScript stay at 0
+
+**Key fixes:**
+- Eliminated chokidar watcher leaks by resetting tracked file paths and ensuring clean shutdowns
+- Replaced console logging with level-aware `info/warn/error` helpers to satisfy lint policy
+- Typed pending request management and IPC payloads for safer message handling
+- Hardened the utility worker bridge with validation around incoming/outgoing messages
 
 ### [Date] - [Area Cleaned]
 - Before: X ESLint issues, Y TypeScript errors

@@ -2,7 +2,7 @@
  * Message types for communication between main process and event processing server
  */
 
-import { SupportedAgent } from '@principal-ai/agent-monitoring';
+import type { RepositoryInfo, RepoNormalizedUniversalAgentSessionEvent, SupportedAgent } from '@principal-ai/agent-monitoring';
 
 // Base message interface
 export interface BaseMessage {
@@ -21,13 +21,13 @@ export interface ProcessEventMessage extends BaseMessage {
 export interface StorageResponseMessage extends BaseMessage {
   type: 'STORAGE_RESPONSE';
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
 }
 
 export interface RepositoryInfoResponseMessage extends BaseMessage {
   type: 'REPOSITORY_INFO_RESPONSE';
-  repositoryInfo: any | null;
+  repositoryInfo: RepositoryInfo | null;
   error?: string;
 }
 
@@ -40,7 +40,7 @@ export interface StorageRequestMessage extends BaseMessage {
   type: 'STORAGE_REQUEST';
   operation: 'GET' | 'SET';
   key: string;
-  data?: any;
+  data?: unknown;
   namespace: string;
 }
 
@@ -52,13 +52,13 @@ export interface RepositoryInfoRequestMessage extends BaseMessage {
 export interface WindowBroadcastMessage extends BaseMessage {
   type: 'WINDOW_BROADCAST';
   event: string;
-  data: any;
+  data: unknown;
 }
 
 export interface ProcessingCompleteMessage extends BaseMessage {
   type: 'PROCESSING_COMPLETE';
   success: boolean;
-  eventData?: any;
+  eventData?: RepoNormalizedUniversalAgentSessionEvent;
   error?: string;
 }
 
@@ -76,7 +76,7 @@ export interface ServerStatsMessage extends BaseMessage {
 export interface ServerErrorMessage extends BaseMessage {
   type: 'SERVER_ERROR';
   error: string;
-  context?: any;
+  context?: Record<string, unknown>;
 }
 
 // Union types for type safety
@@ -114,7 +114,7 @@ export function createStorageRequestMessage(
   operation: 'GET' | 'SET',
   key: string,
   namespace: string,
-  data?: any
+  data?: unknown
 ): StorageRequestMessage {
   return {
     type: 'STORAGE_REQUEST',
@@ -129,7 +129,7 @@ export function createStorageRequestMessage(
 
 export function createWindowBroadcastMessage(
   event: string,
-  data: any
+  data: unknown
 ): WindowBroadcastMessage {
   return {
     type: 'WINDOW_BROADCAST',
@@ -143,7 +143,7 @@ export function createWindowBroadcastMessage(
 export function createProcessingCompleteMessage(
   requestId: string,
   success: boolean,
-  eventData?: any,
+  eventData?: RepoNormalizedUniversalAgentSessionEvent,
   error?: string
 ): ProcessingCompleteMessage {
   return {
@@ -158,22 +158,43 @@ export function createProcessingCompleteMessage(
 
 // Utility function to generate unique message IDs
 function generateMessageId(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 // Type guards for message validation
-export function isProcessEventMessage(msg: any): msg is ProcessEventMessage {
-  return msg && msg.type === 'PROCESS_EVENT' && msg.provider && msg.rawData !== undefined;
+export function isProcessEventMessage(msg: unknown): msg is ProcessEventMessage {
+  if (!msg || typeof msg !== 'object') {
+    return false;
+  }
+  const candidate = msg as Partial<ProcessEventMessage>;
+  return candidate.type === 'PROCESS_EVENT' && candidate.provider !== undefined && candidate.rawData !== undefined;
 }
 
-export function isStorageRequestMessage(msg: any): msg is StorageRequestMessage {
-  return msg && msg.type === 'STORAGE_REQUEST' && msg.operation && msg.key && msg.namespace;
+export function isStorageRequestMessage(msg: unknown): msg is StorageRequestMessage {
+  if (!msg || typeof msg !== 'object') {
+    return false;
+  }
+  const candidate = msg as Partial<StorageRequestMessage>;
+  return (
+    candidate.type === 'STORAGE_REQUEST' &&
+    candidate.operation !== undefined &&
+    candidate.key !== undefined &&
+    candidate.namespace !== undefined
+  );
 }
 
-export function isWindowBroadcastMessage(msg: any): msg is WindowBroadcastMessage {
-  return msg && msg.type === 'WINDOW_BROADCAST' && msg.event && msg.data !== undefined;
+export function isWindowBroadcastMessage(msg: unknown): msg is WindowBroadcastMessage {
+  if (!msg || typeof msg !== 'object') {
+    return false;
+  }
+  const candidate = msg as Partial<WindowBroadcastMessage>;
+  return candidate.type === 'WINDOW_BROADCAST' && candidate.event !== undefined && candidate.data !== undefined;
 }
 
-export function isProcessingCompleteMessage(msg: any): msg is ProcessingCompleteMessage {
-  return msg && msg.type === 'PROCESSING_COMPLETE' && typeof msg.success === 'boolean';
+export function isProcessingCompleteMessage(msg: unknown): msg is ProcessingCompleteMessage {
+  if (!msg || typeof msg !== 'object') {
+    return false;
+  }
+  const candidate = msg as Partial<ProcessingCompleteMessage>;
+  return candidate.type === 'PROCESSING_COMPLETE' && typeof candidate.success === 'boolean';
 }

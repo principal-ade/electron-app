@@ -11,12 +11,8 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { machineIdSync } from 'node-machine-id';
 import {
-  getAgentInfo,
   SUPPORTED_AGENTS,
   type SupportedAgent,
-  type ClaudeHookInput,
-  type OpenCodeHookInput,
-  type ClineHookInput,
   AgentEventPipeline,
   PipelineMetrics,
   RepositoryInfo,
@@ -28,14 +24,14 @@ const execAsync = promisify(exec);
 
 
 import {
+  DEFAULT_CONFIG,
   EventProcessingServerConfig,
-  ServerToMainMessage,
-  createStorageRequestMessage,
   MainToServerMessage,
+  PendingRequest,
+  RepositoryInfoResponseMessage,
+  ServerToMainMessage,
+  StorageResponseMessage,
 } from './types';
-
-// Union type for all possible hook inputs
-type AgentHookInput = ClaudeHookInput | OpenCodeHookInput | ClineHookInput;
 
 /**
  * Server-side implementation of PathNormalizationAdapter
@@ -171,7 +167,7 @@ class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
     return {
       homeDir: this.homeDir,
       pathSeparator: path.sep,
-      platform: process.platform as any,
+      platform: process.platform,
       machineId: this.getMachineId(),
       hostname: os.hostname(),
     };
@@ -231,7 +227,7 @@ export class HttpEventServer extends EventEmitter {
   private lastProcessedEvent?: number;
 
   // Request management for main process communication
-  private pendingRequests: Map<string, any> = new Map();
+  private pendingRequests: Map<string, PendingRequest> = new Map();
   private requestCounter = 0;
 
   constructor(
@@ -241,7 +237,7 @@ export class HttpEventServer extends EventEmitter {
     super();
 
     this.sendToMain = sendToMain;
-    this.config = { ...config };
+    this.config = { ...DEFAULT_CONFIG, ...config };
     this.startTime = Date.now();
 
     // Initialize Express app
@@ -336,7 +332,6 @@ export class HttpEventServer extends EventEmitter {
 
     // Setup routes for each supported agent
     SUPPORTED_AGENTS.forEach((agent) => {
-      const agentInfo = getAgentInfo(agent);
       // hookPath includes the full path like "hooks/claude-hook.cjs", we just want the base name
       const routePath = agent === 'claude' ? 'claude-hook' :
                         agent === 'cline' ? 'cline-hook' :
@@ -349,8 +344,8 @@ export class HttpEventServer extends EventEmitter {
         const startTime = Date.now();
 
         try {
-          this.log('info', `Received ${agent} event at /${routePath}`);
-          this.log('debug', `Event body: ${JSON.stringify(req.body).substring(0, 200)}`);
+      this.log('info', `Received ${agent} event at /${routePath}`);
+      this.log('debug', `Event body: ${JSON.stringify(req.body).substring(0, 200)}`);
 
           // Process the event
           await this.processAgentEvent(agent, req.body);
@@ -439,38 +434,36 @@ export class HttpEventServer extends EventEmitter {
   /**
    * Log important events
    */
-  private logEvent(event: any): void {
-    if (event.eventType && event.eventType.toString().includes('start')) {
-      this.log('info', `Session started: ${event.sessionId} in ${event.workingDirectory}`);
-    } else if (event.eventType && event.eventType.toString().includes('stop')) {
-      this.log('info', `Session stopped: ${event.sessionId}`);
-    }
-  }
-
   /**
    * Request repository info from main process
    */
   private requestRepositoryInfo(absolutePath: string): Promise<RepositoryInfo | null> {
-    return this.makeRequest('REPOSITORY_INFO_REQUEST', { absolutePath });
+    return this.makeRequest<RepositoryInfo | null>('REPOSITORY_INFO_REQUEST', { absolutePath });
   }
 
   /**
    * Generic request handler with timeout
    */
-  private makeRequest(type: string, data: any): Promise<any> {
-    return new Promise((resolve, reject) => {
+  private makeRequest<T>(type: string, data: Record<string, unknown>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
       const id = this.generateRequestId();
 
       // Set up timeout
       const timeoutHandle = setTimeout(() => {
         this.pendingRequests.delete(id);
         reject(new Error(`Request timeout: ${type}`));
-      }, 30000);
+      }, this.config.requestTimeoutMs);
 
       // Store pending request
       this.pendingRequests.set(id, {
-        resolve,
-        reject,
+        id,
+        timestamp: Date.now(),
+        resolve: (value) => {
+          resolve(value as T);
+        },
+        reject: (error: Error) => {
+          reject(error);
+        },
         timeoutHandle
       });
 
@@ -492,6 +485,7 @@ export class HttpEventServer extends EventEmitter {
   handleMainResponse(message: MainToServerMessage): void {
     const pending = this.pendingRequests.get(message.id);
     if (!pending) {
+      this.log('warn', `Received response for unknown request: ${message.id}`);
       return;
     }
 
@@ -503,13 +497,17 @@ export class HttpEventServer extends EventEmitter {
 
     // Handle response based on type
     if (message.type === 'STORAGE_RESPONSE') {
-      if ((message as any).success) {
-        pending.resolve((message as any).data);
+      const storageMessage = message as StorageResponseMessage;
+      if (storageMessage.success) {
+        pending.resolve(storageMessage.data ?? null);
       } else {
-        pending.reject(new Error((message as any).error || 'Storage operation failed'));
+        pending.reject(new Error(storageMessage.error || 'Storage operation failed'));
       }
     } else if (message.type === 'REPOSITORY_INFO_RESPONSE') {
-      pending.resolve((message as any).repositoryInfo);
+      const repoMessage = message as RepositoryInfoResponseMessage;
+      pending.resolve(repoMessage.repositoryInfo);
+    } else {
+      pending.reject(new Error(`Unhandled response type: ${message.type}`));
     }
   }
 
@@ -525,8 +523,8 @@ export class HttpEventServer extends EventEmitter {
           resolve();
         });
 
-        this.server.on('error', (err: any) => {
-          if (err.code === 'EADDRINUSE' && retries > 0) {
+        this.server.on('error', (err: NodeJS.ErrnoException) => {
+          if (err && err.code === 'EADDRINUSE' && retries > 0) {
             this.log('warn', `Port ${port} in use, trying ${port + 1}`);
             tryPort(port + 1, retries - 1);
           } else {
@@ -544,8 +542,9 @@ export class HttpEventServer extends EventEmitter {
    */
   async stop(): Promise<void> {
     if (this.server) {
+      const server = this.server;
       return new Promise((resolve) => {
-        this.server!.close(() => {
+        server.close(() => {
           this.log('info', 'HTTP server stopped');
           resolve();
         });
@@ -577,9 +576,9 @@ export class HttpEventServer extends EventEmitter {
   /**
    * Logging utility
    */
-  private log(level: string, message: string, context?: any): void {
+  private log(level: string, message: string, context?: Record<string, unknown>): void {
     const timestamp = new Date().toISOString();
     const contextStr = context ? ` ${JSON.stringify(context)}` : '';
-    console.log(`[${timestamp}] [HttpEventServer] [${level.toUpperCase()}] ${message}${contextStr}`);
+    console.info(`[${timestamp}] [HttpEventServer] [${level.toUpperCase()}] ${message}${contextStr}`);
   }
 }

@@ -3,39 +3,68 @@
  * This file runs in an Electron utility process and communicates with the main process
  */
 
-import { HttpEventServer } from './HttpEventServer';
+import { parentPort } from 'worker_threads';
 
-console.log('[EventProcessingWorker] Script loaded, HttpEventServer:', typeof HttpEventServer);
+import { HttpEventServer } from './HttpEventServer';
+import type { MainToServerMessage, ServerToMainMessage } from './types';
+
+interface ReadyMessage {
+  type: 'ready';
+  timestamp: number;
+  port: number;
+}
+
+type OutgoingMessage = ServerToMainMessage | ReadyMessage;
+
+console.info('[EventProcessingWorker] Script loaded, HttpEventServer:', typeof HttpEventServer);
 
 // Track if we've sent the ready signal
 let readySent = false;
 
+function extractMessage(raw: unknown): unknown {
+  if (raw && typeof raw === 'object' && 'data' in raw) {
+    return (raw as { data: unknown }).data;
+  }
+  return raw;
+}
+
+function isMainToServerMessage(message: unknown): message is MainToServerMessage {
+  return Boolean(
+    message &&
+    typeof message === 'object' &&
+    'type' in message &&
+    typeof (message as { type: unknown }).type === 'string'
+  );
+}
+
 // Message handler for communication with main process
-function handleMessage(message: any): void {
-  if (!message) return;
+function handleMessage(rawMessage: unknown): void {
+  const message = extractMessage(rawMessage);
+  if (!isMainToServerMessage(message)) {
+    console.warn('[EventProcessingWorker] Ignoring message with unexpected shape:', rawMessage);
+    return;
+  }
 
-  console.log('[EventProcessingWorker] Received message from main:', message.type);
+  console.info('[EventProcessingWorker] Received message from main:', message.type);
 
-  // Handle responses from main process (storage, repository info, etc.)
   if (server) {
     server.handleMainResponse(message);
   }
 }
 
 // Function to send messages to main process
-function sendToMain(message: any): void {
-  console.log('[EventProcessingWorker] Attempting to send message to main:', message.type);
+function sendToMain(message: OutgoingMessage): void {
+  console.info('[EventProcessingWorker] Attempting to send message to main:', message.type);
   try {
-    // In Electron utility process, we use parentPort for IPC
-    if ((process as any).parentPort) {
-      console.log('[EventProcessingWorker] Using parentPort.postMessage');
-      (process as any).parentPort.postMessage(message);
-      console.log('[EventProcessingWorker] Message sent via parentPort');
+    if (parentPort) {
+      console.info('[EventProcessingWorker] Using parentPort.postMessage');
+      parentPort.postMessage(message);
+      console.info('[EventProcessingWorker] Message sent via parentPort');
     } else if (process.send) {
       // Fallback to process.send if available
-      console.log('[EventProcessingWorker] Using process.send');
+      console.info('[EventProcessingWorker] Using process.send');
       process.send(message);
-      console.log('[EventProcessingWorker] Message sent via process.send');
+      console.info('[EventProcessingWorker] Message sent via process.send');
     } else {
       console.error('[EventProcessingWorker] No IPC mechanism available');
     }
@@ -49,8 +78,8 @@ let server: HttpEventServer;
 
 async function initialize(): Promise<void> {
   try {
-    console.log('[EventProcessingWorker] Initializing HTTP event processing server...');
-    console.log('[EventProcessingWorker] HttpEventServer available:', typeof HttpEventServer);
+    console.info('[EventProcessingWorker] Initializing HTTP event processing server...');
+    console.info('[EventProcessingWorker] HttpEventServer available:', typeof HttpEventServer);
 
     server = new HttpEventServer(sendToMain, {
       logLevel: process.env.DEBUG_EVENT_SERVER === 'true' ? 'debug' : 'info',
@@ -63,7 +92,7 @@ async function initialize(): Promise<void> {
     // Start the HTTP server
     await server.start();
 
-    console.log('[EventProcessingWorker] HTTP server started successfully');
+    console.info('[EventProcessingWorker] HTTP server started successfully');
 
     // Send ready signal to main process with port info
     if (!readySent) {
@@ -74,7 +103,7 @@ async function initialize(): Promise<void> {
         port: stats.port
       });
       readySent = true;
-      console.log('[EventProcessingWorker] Ready signal sent to main process, listening on port', stats.port);
+      console.info('[EventProcessingWorker] Ready signal sent to main process, listening on port', stats.port);
     }
 
   } catch (error) {
@@ -87,10 +116,9 @@ async function initialize(): Promise<void> {
 initialize();
 
 // Set up message handling for utility process
-if ((process as any).parentPort) {
-  // Utility process uses parentPort for IPC
-  (process as any).parentPort.on('message', (e: any) => {
-    handleMessage(e.data);
+if (parentPort) {
+  parentPort.on('message', (message) => {
+    handleMessage(message);
   });
 } else {
   // Fallback to process.on for other contexts
@@ -99,7 +127,7 @@ if ((process as any).parentPort) {
 
 // Handle process termination gracefully
 process.on('SIGTERM', () => {
-  console.log('[EventProcessingWorker] Received SIGTERM, shutting down...');
+  console.info('[EventProcessingWorker] Received SIGTERM, shutting down...');
   if (server) {
     server.stop().then(() => {
       process.exit(0);
@@ -113,7 +141,7 @@ process.on('SIGTERM', () => {
 });
 
 process.on('SIGINT', () => {
-  console.log('[EventProcessingWorker] Received SIGINT, shutting down...');
+  console.info('[EventProcessingWorker] Received SIGINT, shutting down...');
   if (server) {
     server.stop().then(() => {
       process.exit(0);
@@ -139,7 +167,7 @@ process.on('uncaughtException', (error) => {
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
   console.error('[EventProcessingWorker] Unhandled promise rejection:', reason);
   sendToMain({
     type: 'SERVER_ERROR',
@@ -150,4 +178,4 @@ process.on('unhandledRejection', (reason, promise) => {
   });
 });
 
-console.log('[EventProcessingWorker] Worker entry point initialized');
+console.info('[EventProcessingWorker] Worker entry point initialized');

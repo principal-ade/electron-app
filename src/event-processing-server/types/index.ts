@@ -26,7 +26,7 @@ export const DEFAULT_CONFIG: EventProcessingServerConfig = {
 export interface PendingRequest {
   id: string;
   timestamp: number;
-  resolve: (value: any) => void;
+  resolve: (value: unknown) => void;
   reject: (error: Error) => void;
   timeoutHandle?: NodeJS.Timeout;
 }
