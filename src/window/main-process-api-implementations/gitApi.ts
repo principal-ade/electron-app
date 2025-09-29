@@ -1,6 +1,6 @@
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, type IpcRendererEvent } from 'electron';
 import { GitEvents } from '../../shared/main-process-api-interfaces/GitAPI';
-import { Repository, GitStatus } from '../../shared/types/repository.types';
+import type { Repository, GitStatus } from '../../shared/types/repository.types';
 
 export interface GitRepositoryInfo {
   root: string;
@@ -107,8 +107,9 @@ export const gitAPI = {
   },
 
   // Add listener for git status updates from GitRepositoryWatcher
-  onStatusUpdate: (callback: (status: any) => void) => {
-    const handler = (_event: any, status: any) => callback(status);
+  onStatusUpdate: (callback: (status: GitStatus) => void) => {
+    const handler = (_event: IpcRendererEvent, status: GitStatus) =>
+      callback(status);
     ipcRenderer.on('git:status-update', handler);
 
     // Return cleanup function
@@ -119,7 +120,7 @@ export const gitAPI = {
 
   // Event listeners for repository changes
   onRepositoryUpdated: (callback: (updatedRepo: Repository) => void) => {
-    const handler = (_event: any, updatedRepo: Repository) =>
+    const handler = (_event: IpcRendererEvent, updatedRepo: Repository) =>
       callback(updatedRepo);
     ipcRenderer.on('repository:updated', handler);
 
@@ -132,7 +133,7 @@ export const gitAPI = {
     callback: (data: { repository: Repository; clonePath: string }) => void,
   ) => {
     const handler = (
-      _event: any,
+      _event: IpcRendererEvent,
       data: { repository: Repository; clonePath: string },
     ) => callback(data);
     ipcRenderer.on('repository:clone-added', handler);
@@ -146,7 +147,7 @@ export const gitAPI = {
     callback: (data: { repository: Repository; clonePath: string }) => void,
   ) => {
     const handler = (
-      _event: any,
+      _event: IpcRendererEvent,
       data: { repository: Repository; clonePath: string },
     ) => callback(data);
     ipcRenderer.on('repository:clone-removed', handler);
@@ -157,7 +158,10 @@ export const gitAPI = {
   },
 
   onLocalCloneMissing: (callback: (data: { repoPath: string }) => void) => {
-    const handler = (_event: any, data: { repoPath: string }) => callback(data);
+    const handler = (
+      _event: IpcRendererEvent,
+      data: { repoPath: string },
+    ) => callback(data);
     ipcRenderer.on('git:local-clone-missing', handler);
 
     return () => {

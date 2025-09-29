@@ -1,8 +1,9 @@
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, type IpcRendererEvent } from 'electron';
 import {
   PackageManagerAPI,
   PackageManagerAPIEvent,
   CheckVersionsParams,
+  CheckProgressData,
 } from '../../shared/main-process-api-interfaces/PackageManagerAPI';
 
 export const packageManagerApi: PackageManagerAPI = {
@@ -21,8 +22,9 @@ export const packageManagerApi: PackageManagerAPI = {
     return ipcRenderer.invoke(PackageManagerAPIEvent.CHECK_LICENSES, params);
   },
 
-  onVersionCheckProgress: (callback: (data: any) => void) => {
-    const handler = (_event: any, data: any) => callback(data);
+  onVersionCheckProgress: (callback: (data: CheckProgressData) => void) => {
+    const handler = (_event: IpcRendererEvent, data: CheckProgressData) =>
+      callback(data);
     ipcRenderer.on(PackageManagerAPIEvent.VERSION_CHECK_PROGRESS, handler);
     return () => {
       ipcRenderer.removeListener(
@@ -32,8 +34,13 @@ export const packageManagerApi: PackageManagerAPI = {
     };
   },
 
-  onVulnerabilityCheckProgress: (callback: (data: any) => void) => {
-    const handler = (_event: any, data: any) => callback(data);
+  onVulnerabilityCheckProgress: (
+    callback: (data: CheckProgressData) => void,
+  ) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      data: CheckProgressData,
+    ) => callback(data);
     ipcRenderer.on(
       PackageManagerAPIEvent.VULNERABILITY_CHECK_PROGRESS,
       handler,
@@ -46,8 +53,11 @@ export const packageManagerApi: PackageManagerAPI = {
     };
   },
 
-  onLicenseCheckProgress: (callback: (data: any) => void) => {
-    const handler = (_event: any, data: any) => callback(data);
+  onLicenseCheckProgress: (callback: (data: CheckProgressData) => void) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      data: CheckProgressData,
+    ) => callback(data);
     ipcRenderer.on(PackageManagerAPIEvent.LICENSE_CHECK_PROGRESS, handler);
     return () => {
       ipcRenderer.removeListener(

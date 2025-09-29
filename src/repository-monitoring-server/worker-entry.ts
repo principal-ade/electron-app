@@ -7,7 +7,7 @@
 import { RepositoryMonitoringServer } from './RepositoryMonitoringServer';
 import type { MainToServerMessage, ServerToMainMessage } from './types';
 
-console.log('[RepositoryMonitoring] Worker script loaded');
+console.info('[RepositoryMonitoring] Worker script loaded');
 
 // Track if we've sent the ready signal
 let readySent = false;
@@ -15,11 +15,49 @@ let readySent = false;
 // The server instance
 let server: RepositoryMonitoringServer;
 
+type ParentPortLike = {
+  postMessage(message: ServerToMainMessage): void;
+  on(event: 'message', listener: (value: unknown) => void): void;
+};
+
+interface UtilityProcess extends NodeJS.Process {
+  parentPort?: ParentPortLike;
+}
+
+const utilityProcess = process as UtilityProcess;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isMainToServerMessage = (value: unknown): value is MainToServerMessage => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const candidate = value as Partial<MainToServerMessage>;
+  return typeof candidate.type === 'string';
+};
+
+const extractMainToServerMessage = (rawMessage: unknown): MainToServerMessage | null => {
+  if (isRecord(rawMessage) && 'data' in rawMessage) {
+    const nested = (rawMessage as { data: unknown }).data;
+    if (isMainToServerMessage(nested)) {
+      return nested;
+    }
+  }
+
+  if (isMainToServerMessage(rawMessage)) {
+    return rawMessage;
+  }
+
+  return null;
+};
+
 /**
  * Initialize the repository monitoring server
  */
 async function initialize(): Promise<void> {
-  console.log('[RepositoryMonitoring] Initializing worker process...');
+  console.info('[RepositoryMonitoring] Initializing worker process...');
 
   try {
     // Create the server instance
@@ -29,7 +67,7 @@ async function initialize(): Promise<void> {
     if (!readySent) {
       sendToMain({ type: 'ready' });
       readySent = true;
-      console.log('[RepositoryMonitoring] Worker ready signal sent');
+      console.info('[RepositoryMonitoring] Worker ready signal sent');
     }
   } catch (error) {
     console.error('[RepositoryMonitoring] Failed to initialize:', error);
@@ -43,16 +81,15 @@ async function initialize(): Promise<void> {
 /**
  * Handle messages from the main process
  */
-async function handleMessage(rawMessage: any): Promise<void> {
-  // Electron utility process wraps messages in a data property
-  const message: MainToServerMessage = rawMessage.data || rawMessage;
+async function handleMessage(rawMessage: unknown): Promise<void> {
+  const message = extractMainToServerMessage(rawMessage);
 
-  if (!message || !message.type) {
+  if (!message) {
     console.warn('[RepositoryMonitoring] Received invalid message:', rawMessage);
     return;
   }
 
-  console.log('[RepositoryMonitoring] Received message:', message.type, message.id);
+  console.info('[RepositoryMonitoring] Received message:', message.type, message.id);
 
   // Ensure server is initialized
   if (!server) {
@@ -66,7 +103,7 @@ async function handleMessage(rawMessage: any): Promise<void> {
   }
 
   try {
-    let result: any;
+    let result: unknown;
 
     switch (message.type) {
       case 'getFileTree':
@@ -115,7 +152,7 @@ async function handleMessage(rawMessage: any): Promise<void> {
         result = Array.from(server['repositories'].keys());
         break;
 
-      case 'getRepositoryDetails':
+      case 'getRepositoryDetails': {
         // Return detailed repository information
         const details: Array<{ path: string; gitWatchingEnabled: boolean; fsMonitorEnabled: boolean; watchingMode: 'minimal' | 'fallback' | 'none' }> = [];
         for (const [path, state] of server['repositories'].entries()) {
@@ -128,16 +165,18 @@ async function handleMessage(rawMessage: any): Promise<void> {
         }
         result = details;
         break;
+      }
 
-      case 'getResourceMetrics':
+      case 'getResourceMetrics': {
         // Return current process metrics
         const memUsage = process.memoryUsage();
         const cpuUsage = process.cpuUsage();
         result = {
           memory: memUsage.rss, // Resident Set Size
-          cpu: 0, // CPU calculation would need previous sample
+          cpu: (cpuUsage.user + cpuUsage.system) / 1000,
         };
         break;
+      }
 
       case 'getGitStatus':
         if (!message.path) throw new Error('Path required for getGitStatus');
@@ -161,8 +200,10 @@ async function handleMessage(rawMessage: any): Promise<void> {
         result = { success: true };
         break;
 
-      default:
-        throw new Error(`Unknown message type: ${(message as any).type}`);
+      default: {
+        const exhaustiveType: never = message.type;
+        throw new Error(`Unknown message type: ${exhaustiveType}`);
+      }
     }
 
     // Send successful response
@@ -185,17 +226,17 @@ async function handleMessage(rawMessage: any): Promise<void> {
  * Send a message to the main process
  */
 function sendToMain(message: ServerToMainMessage): void {
-  console.log('[RepositoryMonitoring] Sending message to main:', message.type);
+  console.info('[RepositoryMonitoring] Sending message to main:', message.type);
 
   try {
     // In Electron utility process, we use parentPort for IPC
-    if ((process as any).parentPort) {
-      console.log('[RepositoryMonitoring] Using parentPort.postMessage');
-      (process as any).parentPort.postMessage(message);
-    } else if (process.send) {
+    if (utilityProcess.parentPort) {
+      console.info('[RepositoryMonitoring] Using parentPort.postMessage');
+      utilityProcess.parentPort.postMessage(message);
+    } else if (typeof utilityProcess.send === 'function') {
       // Fallback to process.send if available
-      console.log('[RepositoryMonitoring] Using process.send');
-      process.send(message);
+      console.info('[RepositoryMonitoring] Using process.send');
+      utilityProcess.send(message);
     } else {
       console.error('[RepositoryMonitoring] No IPC mechanism available');
     }
@@ -208,17 +249,17 @@ function sendToMain(message: ServerToMainMessage): void {
  * Handle process shutdown
  */
 function handleShutdown(): void {
-  console.log('[RepositoryMonitoring] Worker shutting down...');
+  console.info('[RepositoryMonitoring] Worker shutting down...');
   sendToMain({ type: 'event', event: { name: 'shutdown', data: {} } });
   process.exit(0);
 }
 
 // Set up IPC listeners
-if ((process as any).parentPort) {
-  console.log('[RepositoryMonitoring] Setting up parentPort listener');
-  (process as any).parentPort.on('message', handleMessage);
+if (utilityProcess.parentPort) {
+  console.info('[RepositoryMonitoring] Setting up parentPort listener');
+  utilityProcess.parentPort.on('message', handleMessage);
 } else {
-  console.log('[RepositoryMonitoring] Setting up process message listener');
+  console.info('[RepositoryMonitoring] Setting up process message listener');
   process.on('message', handleMessage);
 }
 
@@ -244,7 +285,7 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // Initialize the server
-console.log('[RepositoryMonitoring] Starting initialization...');
+console.info('[RepositoryMonitoring] Starting initialization...');
 initialize().catch((error) => {
   console.error('[RepositoryMonitoring] Fatal initialization error:', error);
   process.exit(1);

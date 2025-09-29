@@ -147,6 +147,14 @@ export interface GitStatusMetadata {
   lastChangedAt?: string;
 }
 
+export interface GitStatusWithFiles extends GitStatusMetadata {
+  modifiedFiles: string[];
+  untrackedFiles: string[];
+  stagedFiles: string[];
+  createdFiles: string[];
+  deletedFiles: string[];
+}
+
 /**
  * Git state event types from the library
  */
@@ -228,11 +236,11 @@ export interface MainToServerMessage {
 export interface ServerToMainMessage {
   type: ServerToMainMessageType;
   id?: string;
-  result?: any;
+  result?: unknown;
   error?: string;
   event?: {
     name: string;
-    data: any;
+    data: unknown;
   };
 }
 

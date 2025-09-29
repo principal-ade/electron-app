@@ -2,11 +2,13 @@
  * SDK-based Agent Session API implementation for the renderer
  */
 
+import { ipcRenderer, type IpcRendererEvent } from 'electron';
+
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import {
   AgentSessionSDKAPIEvents,
   AgentSessionSDKAPI,
 } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
-import { ipcRenderer } from 'electron';
 
 /**
  * SDK Session API implementation that calls IPC methods
@@ -46,8 +48,13 @@ export const agentSessionSDKApi: AgentSessionSDKAPI = {
   /**
    * Subscribe to processed events
    */
-  onProcessedEvent: (callback: (event: any) => void) => {
-    const handler = (_event: any, data: any) => callback(data);
+  onProcessedEvent: (
+    callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
+  ) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      data: RepoNormalizedUniversalAgentSessionEvent,
+    ) => callback(data);
     ipcRenderer.on(AgentSessionSDKAPIEvents.PROCESSED_EVENT, handler);
 
     // Return unsubscribe function

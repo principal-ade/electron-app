@@ -84,7 +84,8 @@ class AgentSessionEventsAPIExtended implements AgentSessionEventsAPI {
       ipcRenderer.send('watch-session-events', directory);
     }
 
-    this.eventListeners.get(directory)!.add(callback);
+    const listeners = this.eventListeners.get(directory);
+    listeners?.add(callback);
 
     // Return unsubscribe function
     return () => {

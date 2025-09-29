@@ -3,7 +3,7 @@
  * Provides type-safe access to feedback operations
  */
 
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, type IpcRendererEvent } from 'electron';
 import type {
   FeedbackAPI,
   ContextMenuParams,
@@ -28,7 +28,10 @@ export const feedbackAPI: FeedbackAPI = {
    * Listen for feedback modal show events
    */
   onShowModal: (callback: (data: FeedbackModalData) => void) => {
-    const subscription = (_event: any, data: FeedbackModalData) =>
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: FeedbackModalData,
+    ) =>
       callback(data);
     ipcRenderer.on(FeedbackEvent.SHOW_MODAL, subscription);
     return () =>

@@ -1,10 +1,10 @@
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, type IpcRendererEvent } from 'electron';
 import {
   AgentUpdateAPI,
   UpdateCheckResult,
   AgentUpdatePreferences,
 } from '../../shared/main-process-api-interfaces/AgentUpdateAPI';
-import { SupportedAgent } from '@principal-ai/agent-monitoring';
+import type { SupportedAgent } from '@principal-ai/agent-monitoring';
 
 export const agentUpdateAPI: AgentUpdateAPI = {
   checkAllForUpdates: () => ipcRenderer.invoke('agent-auto-update:check-all'),
@@ -25,7 +25,7 @@ export const agentUpdateAPI: AgentUpdateAPI = {
     ipcRenderer.invoke('agent-auto-update:clear-stored-info', agentType),
 
   onUpdateAvailable: (callback: (update: UpdateCheckResult) => void) => {
-    const handler = (_event: any, update: UpdateCheckResult) =>
+    const handler = (_event: IpcRendererEvent, update: UpdateCheckResult) =>
       callback(update);
     ipcRenderer.on('agent-update-available', handler);
     return () => ipcRenderer.removeListener('agent-update-available', handler);

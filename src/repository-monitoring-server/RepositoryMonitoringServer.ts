@@ -14,6 +14,7 @@ import type {
   RepositoryState,
   CachedFileTree,
   GitStatusMetadata,
+  GitStatusWithFiles,
   PackageSummary,
   GitStateEventPayload,
   WorkspaceChangeEventPayload,
@@ -170,7 +171,7 @@ export class RepositoryMonitoringServer {
    * Get git status for a repository
    */
   async getGitStatus(repoPath: string): Promise<GitStatusMetadata> {
-    console.log(`[RepositoryMonitoring] getGitStatus called for ${repoPath}`);
+    console.info(`[RepositoryMonitoring] getGitStatus called for ${repoPath}`);
     try {
       const state = this.repositories.get(repoPath);
 
@@ -221,8 +222,8 @@ export class RepositoryMonitoringServer {
   /**
    * Get git status with file lists
    */
-  async getGitStatusWithFiles(repoPath: string): Promise<any> {
-    console.log(`[RepositoryMonitoring] getGitStatusWithFiles called for ${repoPath}`);
+  async getGitStatusWithFiles(repoPath: string): Promise<GitStatusWithFiles> {
+    console.info(`[RepositoryMonitoring] getGitStatusWithFiles called for ${repoPath}`);
     try {
       const state = this.repositories.get(repoPath);
 
@@ -295,7 +296,7 @@ export class RepositoryMonitoringServer {
 
     try {
       // Start library-based git state event watching
-      console.log(`[RepositoryMonitoring] Starting git state event watching for ${repoPath}`);
+      console.info(`[RepositoryMonitoring] Starting git state event watching for ${repoPath}`);
       await this.gitWatcherAdapter.startWatching(repoPath);
 
       // Attempt to enable fsmonitor for improved performance information
@@ -405,7 +406,7 @@ export class RepositoryMonitoringServer {
   private async handleGitStateEvent(payload: GitStateEventPayload): Promise<void> {
     const { event, affectedCacheFields } = payload;
 
-    console.log(`[RepositoryMonitoring] Git state event received:`, {
+    console.info(`[RepositoryMonitoring] Git state event received:`, {
       type: event.type,
       repo: event.repoPath,
       branch: event.branch,

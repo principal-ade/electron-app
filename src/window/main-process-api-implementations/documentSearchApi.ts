@@ -2,7 +2,7 @@
  * Document Search API implementation for preload/renderer
  */
 
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, type IpcRendererEvent } from 'electron';
 import { DocumentSearchChannel } from '../../shared/ipc/DocumentSearchIPC';
 
 import type {
@@ -81,7 +81,10 @@ export const documentSearchAPI: DocumentSearchAPI = {
   onIndexUpdate: (
     callback: (event: IndexUpdateEvent) => void,
   ): (() => void) => {
-    const handler = (_event: any, data: IndexUpdateEvent) => callback(data);
+    const handler = (
+      _event: IpcRendererEvent,
+      data: IndexUpdateEvent,
+    ) => callback(data);
     ipcRenderer.on(DocumentSearchChannel.INDEX_UPDATE, handler);
     return () => {
       ipcRenderer.removeListener(DocumentSearchChannel.INDEX_UPDATE, handler);
@@ -91,7 +94,10 @@ export const documentSearchAPI: DocumentSearchAPI = {
   onDocumentChanged: (
     callback: (event: DocumentChangedEvent) => void,
   ): (() => void) => {
-    const handler = (_event: any, data: DocumentChangedEvent) => callback(data);
+    const handler = (
+      _event: IpcRendererEvent,
+      data: DocumentChangedEvent,
+    ) => callback(data);
     ipcRenderer.on(DocumentSearchChannel.DOCUMENT_CHANGED, handler);
     return () => {
       ipcRenderer.removeListener(
@@ -102,7 +108,10 @@ export const documentSearchAPI: DocumentSearchAPI = {
   },
 
   onIndexError: (callback: (event: IndexErrorEvent) => void): (() => void) => {
-    const handler = (_event: any, data: IndexErrorEvent) => callback(data);
+    const handler = (
+      _event: IpcRendererEvent,
+      data: IndexErrorEvent,
+    ) => callback(data);
     ipcRenderer.on(DocumentSearchChannel.INDEX_ERROR, handler);
     return () => {
       ipcRenderer.removeListener(DocumentSearchChannel.INDEX_ERROR, handler);
@@ -110,7 +119,7 @@ export const documentSearchAPI: DocumentSearchAPI = {
   },
 
   onSearchReady: (callback: () => void): (() => void) => {
-    const handler = () => callback();
+    const handler = (_event: IpcRendererEvent) => callback();
     ipcRenderer.on(DocumentSearchChannel.SEARCH_READY, handler);
     return () => {
       ipcRenderer.removeListener(DocumentSearchChannel.SEARCH_READY, handler);
@@ -120,7 +129,10 @@ export const documentSearchAPI: DocumentSearchAPI = {
   onRepositoryIndexed: (
     callback: (repo: RepositoryIndexStatus) => void,
   ): (() => void) => {
-    const handler = (_event: any, data: RepositoryIndexStatus) =>
+    const handler = (
+      _event: IpcRendererEvent,
+      data: RepositoryIndexStatus,
+    ) =>
       callback(data);
     ipcRenderer.on(DocumentSearchChannel.REPOSITORY_INDEXED, handler);
     return () => {

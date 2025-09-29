@@ -7,7 +7,6 @@
 import { GitFileTreeBuilder, type FileTree, type GitSource } from '@principal-ai/repository-abstraction';
 import { FileSystemCore } from '../shared/repository-core/FileSystemCore';
 import { GitCore } from '../shared/repository-core/GitCore';
-import type { GitInfo } from './types';
 import * as path from 'path';
 
 export class FileTreeBuilder {

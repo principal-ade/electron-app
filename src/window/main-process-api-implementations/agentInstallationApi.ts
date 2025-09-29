@@ -1,6 +1,6 @@
 import { ipcRenderer, IpcRendererEvent } from 'electron';
 
-import { SupportedAgent } from '@principal-ai/agent-monitoring';
+import type { SupportedAgent } from '@principal-ai/agent-monitoring';
 
 import {
   AgentInstallationAPI,
@@ -35,7 +35,7 @@ export const agentInstallationAPI: AgentInstallationAPI = {
   },
   onInstallComplete: (
     agentType: SupportedAgent,
-    callback: (status: any) => void,
+    callback: (status: AgentInstallStatus) => void,
   ) => {
     const subscription = (
       _event: IpcRendererEvent,

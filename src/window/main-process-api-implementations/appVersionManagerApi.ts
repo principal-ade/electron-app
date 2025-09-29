@@ -1,5 +1,5 @@
-import { ipcRenderer } from 'electron';
-import { AppVersionManagerAPI } from '../../shared/main-process-api-interfaces/AppVersionManagerAPI';
+import { ipcRenderer, type IpcRendererEvent } from 'electron';
+import type { AppVersionManagerAPI } from '../../shared/main-process-api-interfaces/AppVersionManagerAPI';
 
 export enum AppVersionManagerAPIEvent {
   GET_VERSION = 'get-app-version',
@@ -19,6 +19,30 @@ export enum AppVersionManagerAPIEvent {
   ON_UPDATE_DOWNLOADED = 'update-downloaded',
 }
 
+type UpdateInfo = Parameters<AppVersionManagerAPI['onUpdateAvailable']>[0] extends (
+  info: infer Info,
+) => void
+  ? Info
+  : never;
+
+type UpdateError = Parameters<AppVersionManagerAPI['onUpdateError']>[0] extends (
+  error: infer Err,
+) => void
+  ? Err
+  : never;
+
+type UpdateProgress = Parameters<
+  AppVersionManagerAPI['onUpdateDownloadProgress']
+>[0] extends (progress: infer Progress) => void
+  ? Progress
+  : never;
+
+type UpdateDownloaded = Parameters<
+  AppVersionManagerAPI['onUpdateDownloaded']
+>[0] extends (info: infer Info) => void
+  ? Info
+  : never;
+
 export const appVersionManagerApi: AppVersionManagerAPI = {
   getVersion: async (): Promise<string> =>
     ipcRenderer.invoke(AppVersionManagerAPIEvent.GET_VERSION),
@@ -35,8 +59,9 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
   checkForUpdateSilently: (): void =>
     ipcRenderer.send(AppVersionManagerAPIEvent.CHECK_FOR_UPDATE_SILENTLY),
 
-  onUpdateAvailable: (callback: (info: any) => void): (() => void) => {
-    const handler = (_event: any, info: any) => callback(info);
+  onUpdateAvailable: callback => {
+    const handler = (_event: IpcRendererEvent, info: UpdateInfo) =>
+      callback(info);
     ipcRenderer.on(AppVersionManagerAPIEvent.ON_UPDATE_AVAILABLE, handler);
     return () => {
       ipcRenderer.removeListener(
@@ -46,8 +71,9 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
     };
   },
 
-  onUpdateNotAvailable: (callback: (info: any) => void): (() => void) => {
-    const handler = (_event: any, info: any) => callback(info);
+  onUpdateNotAvailable: callback => {
+    const handler = (_event: IpcRendererEvent, info: UpdateInfo) =>
+      callback(info);
     ipcRenderer.on(AppVersionManagerAPIEvent.ON_UPDATE_NOT_AVAILABLE, handler);
     return () => {
       ipcRenderer.removeListener(
@@ -57,8 +83,9 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
     };
   },
 
-  onUpdateError: (callback: (error: any) => void): (() => void) => {
-    const handler = (_event: any, error: any) => callback(error);
+  onUpdateError: callback => {
+    const handler = (_event: IpcRendererEvent, error: UpdateError) =>
+      callback(error);
     ipcRenderer.on(AppVersionManagerAPIEvent.ON_UPDATE_ERROR, handler);
     return () => {
       ipcRenderer.removeListener(
@@ -68,8 +95,8 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
     };
   },
 
-  onUpdateCheckComplete: (callback: () => void): (() => void) => {
-    const handler = (_event: any) => callback();
+  onUpdateCheckComplete: callback => {
+    const handler = (_event: IpcRendererEvent) => callback();
     ipcRenderer.on(AppVersionManagerAPIEvent.ON_UPDATE_CHECK_COMPLETE, handler);
     return () => {
       ipcRenderer.removeListener(
@@ -106,10 +133,11 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
     ipcRenderer.send(AppVersionManagerAPIEvent.INSTALL_UPDATE);
   },
 
-  onUpdateDownloadProgress: (
-    callback: (progress: any) => void,
-  ): (() => void) => {
-    const handler = (_event: any, progress: any) => callback(progress);
+  onUpdateDownloadProgress: callback => {
+    const handler = (
+      _event: IpcRendererEvent,
+      progress: UpdateProgress,
+    ) => callback(progress);
     ipcRenderer.on(
       AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOAD_PROGRESS,
       handler,
@@ -122,8 +150,11 @@ export const appVersionManagerApi: AppVersionManagerAPI = {
     };
   },
 
-  onUpdateDownloaded: (callback: (info: any) => void): (() => void) => {
-    const handler = (_event: any, info: any) => callback(info);
+  onUpdateDownloaded: callback => {
+    const handler = (
+      _event: IpcRendererEvent,
+      info: UpdateDownloaded,
+    ) => callback(info);
     ipcRenderer.on(AppVersionManagerAPIEvent.ON_UPDATE_DOWNLOADED, handler);
     return () => {
       ipcRenderer.removeListener(

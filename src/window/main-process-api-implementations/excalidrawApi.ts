@@ -2,6 +2,7 @@ import { ipcRenderer } from 'electron';
 import type {
   ExcalidrawAPI,
   ExcalidrawDiagram,
+  ExcalidrawDiagramData,
 } from '../../shared/main-process-api-interfaces/ExcalidrawAPI';
 
 export enum ExcalidrawAPIEvents {
@@ -29,7 +30,11 @@ export const excalidrawAPI: ExcalidrawAPI = {
   exportDiagram: (diagramId: string, format: 'png' | 'svg' | 'json') =>
     ipcRenderer.invoke(ExcalidrawAPIEvents.EXPORT_DIAGRAM, diagramId, format),
   // Alexandria storage methods
-  saveAlexandriaDiagram: (name: string, data: any, repositoryPath: string) =>
+  saveAlexandriaDiagram: (
+    name: string,
+    data: ExcalidrawDiagramData,
+    repositoryPath: string,
+  ) =>
     ipcRenderer.invoke(ExcalidrawAPIEvents.SAVE_ALEXANDRIA_DIAGRAM, name, data, repositoryPath),
   loadAlexandriaDiagram: (fileName: string, repositoryPath: string) =>
     ipcRenderer.invoke(ExcalidrawAPIEvents.LOAD_ALEXANDRIA_DIAGRAM, fileName, repositoryPath),

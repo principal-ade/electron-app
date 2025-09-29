@@ -3,7 +3,7 @@
  * Provides type-safe access to planning event listeners
  */
 
-import { ipcRenderer } from 'electron';
+import { ipcRenderer, type IpcRendererEvent } from 'electron';
 import type {
   PlanningAPI,
   SlideUpdatedEvent,
@@ -22,7 +22,10 @@ export const planningAPI: PlanningAPI = {
    * Listen for slide update events
    */
   onSlideUpdated: (callback: (data: SlideUpdatedEvent) => void) => {
-    const subscription = (_event: any, data: SlideUpdatedEvent) =>
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: SlideUpdatedEvent,
+    ) =>
       callback(data);
     ipcRenderer.on(PlanningEvent.SLIDE_UPDATED, subscription);
     return () =>
@@ -33,7 +36,10 @@ export const planningAPI: PlanningAPI = {
    * Listen for slide navigation events
    */
   onSlideNavigated: (callback: (data: SlideNavigatedEvent) => void) => {
-    const subscription = (_event: any, data: SlideNavigatedEvent) =>
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: SlideNavigatedEvent,
+    ) =>
       callback(data);
     ipcRenderer.on(PlanningEvent.SLIDE_NAVIGATED, subscription);
     return () =>
@@ -44,7 +50,10 @@ export const planningAPI: PlanningAPI = {
    * Listen for document load events
    */
   onDocumentLoaded: (callback: (data: DocumentLoadedEvent) => void) => {
-    const subscription = (_event: any, data: DocumentLoadedEvent) =>
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: DocumentLoadedEvent,
+    ) =>
       callback(data);
     ipcRenderer.on(PlanningEvent.DOCUMENT_LOADED, subscription);
     return () =>
@@ -55,7 +64,10 @@ export const planningAPI: PlanningAPI = {
    * Listen for agent document requests
    */
   onAgentDocumentRequest: (callback: (data: AgentDocumentRequest) => void) => {
-    const subscription = (_event: any, data: AgentDocumentRequest) =>
+    const subscription = (
+      _event: IpcRendererEvent,
+      data: AgentDocumentRequest,
+    ) =>
       callback(data);
     ipcRenderer.on(PlanningEvent.AGENT_DOCUMENT_REQUEST, subscription);
     return () =>
