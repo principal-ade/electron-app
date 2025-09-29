@@ -82,6 +82,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           color: accentColor,
           fontFamily: theme.fonts.heading,
           WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+          marginRight: '100px',
         }}
       >
         Principal View

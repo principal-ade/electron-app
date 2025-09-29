@@ -141,6 +141,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                               justifyContent: 'space-between',
                               alignItems: 'flex-start',
                               marginBottom: '2px',
+                              minWidth: 0,
                             }}
                           >
                             <div
@@ -151,7 +152,8 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
-                                flex: 1,
+                                flex: '1 1 auto',
+                                minWidth: 0,
                               }}
                             >
                               ✓ {filename}
@@ -164,6 +166,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                                   opacity: 0.7,
                                   whiteSpace: 'nowrap',
                                   marginLeft: '8px',
+                                  flex: '0 0 auto',
                                 }}
                               >
                                 {getRelativeTime(file.lastModified)}
@@ -179,6 +182,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
+                              width: '100%',
                             }}
                           >
                             {directory === 'root' ? 'root' : `${directory}/`}
@@ -233,6 +237,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                               justifyContent: 'space-between',
                               alignItems: 'flex-start',
                               marginBottom: '2px',
+                              minWidth: 0,
                             }}
                           >
                             <div
@@ -243,7 +248,8 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
-                                flex: 1,
+                                flex: '1 1 auto',
+                                minWidth: 0,
                               }}
                             >
                               ✎ {filename}
@@ -256,6 +262,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                                   opacity: 0.7,
                                   whiteSpace: 'nowrap',
                                   marginLeft: '8px',
+                                  flex: '0 0 auto',
                                 }}
                               >
                                 {getRelativeTime(file.lastModified)}
@@ -271,6 +278,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
+                              width: '100%',
                             }}
                           >
                             {directory === 'root' ? 'root' : `${directory}/`}
@@ -325,6 +333,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                               justifyContent: 'space-between',
                               alignItems: 'flex-start',
                               marginBottom: '2px',
+                              minWidth: 0,
                             }}
                           >
                             <div
@@ -335,7 +344,8 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
-                                flex: 1,
+                                flex: '1 1 auto',
+                                minWidth: 0,
                               }}
                             >
                               ✕ {filename}
@@ -348,6 +358,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                                   opacity: 0.7,
                                   whiteSpace: 'nowrap',
                                   marginLeft: '8px',
+                                  flex: '0 0 auto',
                                 }}
                               >
                                 {getRelativeTime(file.lastModified)}
@@ -363,6 +374,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
+                              width: '100%',
                             }}
                           >
                             {directory === 'root' ? 'root' : `${directory}/`}
@@ -420,6 +432,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                               justifyContent: 'space-between',
                               alignItems: 'flex-start',
                               marginBottom: '2px',
+                              minWidth: 0,
                             }}
                           >
                             <div
@@ -430,7 +443,8 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
-                                flex: 1,
+                                flex: '1 1 auto',
+                                minWidth: 0,
                               }}
                             >
                               ? {filename}
@@ -442,6 +456,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                                   opacity: 0.7,
                                   whiteSpace: 'nowrap',
                                   marginLeft: '8px',
+                                  flex: '0 0 auto',
                                 }}
                               >
                                 {getRelativeTime(file.lastModified)}
@@ -456,6 +471,7 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
+                              width: '100%',
                             }}
                           >
                             {directory === 'root' ? 'root' : `${directory}/`}

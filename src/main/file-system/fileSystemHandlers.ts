@@ -418,13 +418,18 @@ export class ElectronFileSystemAdapter {
           `[File System] 📝 File CHANGED: ${changedPath}`,
           stats ? `(size: ${stats.size})` : '',
         );
-        targetWindow.webContents.send('file-change', {
-          type: 'change',
-          path: changedPath,
-          extension: path.extname(changedPath).toLowerCase(),
-          stats: stats ? { size: stats.size, mtime: stats.mtime } : null,
-          isCurrentFile: true,
-        });
+        // Check if window is still valid before sending
+        if (!targetWindow.isDestroyed()) {
+          targetWindow.webContents.send('file-change', {
+            type: 'change',
+            path: changedPath,
+            extension: path.extname(changedPath).toLowerCase(),
+            stats: stats ? { size: stats.size, mtime: stats.mtime } : null,
+            isCurrentFile: true,
+          });
+        } else {
+          console.warn('[File System] Target window destroyed, skipping file-change event');
+        }
       });
     return fileWatcher;
   }
@@ -475,11 +480,16 @@ export class ElectronFileSystemAdapter {
                 `[File System] Found ${changedFiles.length} changed files`,
               );
 
-              targetWindow.webContents.send('git-status-change', {
-                repoPath,
-                changedFiles,
-                timestamp: new Date().toISOString(),
-              });
+              // Check if window is still valid before sending
+              if (!targetWindow.isDestroyed()) {
+                targetWindow.webContents.send('git-status-change', {
+                  repoPath,
+                  changedFiles,
+                  timestamp: new Date().toISOString(),
+                });
+              } else {
+                console.warn('[File System] Target window destroyed, skipping git-status-change event');
+              }
             } catch (error) {
               console.error('[File System] Error getting git status:', error);
             }
@@ -514,35 +524,55 @@ export class ElectronFileSystemAdapter {
       .on('add', (addedPath, stats) => {
         if (isRelevantFileType(addedPath)) {
           console.log(`[File System] ✨ File ADDED: ${addedPath}`);
-          targetWindow.webContents.send('directory-change', {
-            type: 'add',
-            path: addedPath,
-            stats,
-          });
+          // Check if window is still valid before sending
+          if (!targetWindow.isDestroyed()) {
+            targetWindow.webContents.send('directory-change', {
+              type: 'add',
+              path: addedPath,
+              stats,
+            });
+          } else {
+            console.warn('[File System] Target window destroyed, skipping directory add event');
+          }
         }
       })
       .on('unlink', (unlinkedPath) => {
         if (isRelevantFileType(unlinkedPath)) {
           console.log(`[File System] 🗑️ File DELETED: ${unlinkedPath}`);
-          targetWindow.webContents.send('directory-change', {
-            type: 'unlink',
-            path: unlinkedPath,
-          });
+          // Check if window is still valid before sending
+          if (!targetWindow.isDestroyed()) {
+            targetWindow.webContents.send('directory-change', {
+              type: 'unlink',
+              path: unlinkedPath,
+            });
+          } else {
+            console.warn('[File System] Target window destroyed, skipping directory unlink event');
+          }
         }
       })
       .on('addDir', (addedDirPath) => {
         console.log(`[File System] 📁 Directory ADDED: ${addedDirPath}`);
-        targetWindow.webContents.send('directory-change', {
-          type: 'addDir',
-          path: addedDirPath,
-        });
+        // Check if window is still valid before sending
+        if (!targetWindow.isDestroyed()) {
+          targetWindow.webContents.send('directory-change', {
+            type: 'addDir',
+            path: addedDirPath,
+          });
+        } else {
+          console.warn('[File System] Target window destroyed, skipping directory addDir event');
+        }
       })
       .on('unlinkDir', (unlinkedDirPath) => {
         console.log(`[File System] 🗑️ Directory DELETED: ${unlinkedDirPath}`);
-        targetWindow.webContents.send('directory-change', {
-          type: 'unlinkDir',
-          path: unlinkedDirPath,
-        });
+        // Check if window is still valid before sending
+        if (!targetWindow.isDestroyed()) {
+          targetWindow.webContents.send('directory-change', {
+            type: 'unlinkDir',
+            path: unlinkedDirPath,
+          });
+        } else {
+          console.warn('[File System] Target window destroyed, skipping directory unlinkDir event');
+        }
       });
   }
 
@@ -576,12 +606,17 @@ export class ElectronFileSystemAdapter {
 
         // Send initial git status
         const changedFiles = await this.githubAdapter.getChangedFiles(repoPath);
-        this.mainWindow.webContents.send('git-status-change', {
-          repoPath,
-          changedFiles,
-          timestamp: new Date().toISOString(),
-          initial: true,
-        });
+        // Check if window is still valid before sending
+        if (!this.mainWindow.isDestroyed()) {
+          this.mainWindow.webContents.send('git-status-change', {
+            repoPath,
+            changedFiles,
+            timestamp: new Date().toISOString(),
+            initial: true,
+          });
+        } else {
+          console.warn('[File System] Main window destroyed, skipping initial git status');
+        }
 
         return true;
       }
@@ -994,10 +1029,15 @@ export class ElectronFileSystemAdapter {
           console.log(
             `[File System Adapter WID-${this.mainWindow!.id}] File DELETED by filesWatcher: ${unlinkedPath}`,
           );
-          this.mainWindow!.webContents.send('files-change', {
-            type: 'unlink',
-            path: unlinkedPath,
-          });
+          // Check if window is still valid before sending
+          if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            this.mainWindow.webContents.send('files-change', {
+              type: 'unlink',
+              path: unlinkedPath,
+            });
+          } else {
+            console.warn('[File System] Main window destroyed or null, skipping files-change event');
+          }
         })
         .on('error', (error) => {
           console.error(

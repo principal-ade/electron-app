@@ -63,10 +63,10 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
 
   // Sync local status with prop changes
   useEffect(() => {
-    if (agentStatus.isInstalled && localInstallStatus === null) {
-      setLocalInstallStatus(agentStatus.isInstalled);
+    if (agentStatus?.isInstalled && localInstallStatus === null) {
+      setLocalInstallStatus(agentStatus?.isInstalled ?? true);
     }
-  }, [agentStatus.isInstalled, localInstallStatus]);
+  }, [agentStatus?.isInstalled, localInstallStatus]);
 
   // Check MCP status using the new unified API
   useEffect(() => {
@@ -89,7 +89,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
       }
     };
 
-    if (agentStatus.isInstalled && agentStatus.hasHooks) {
+    if (agentStatus?.isInstalled && agentStatus?.hasHooks) {
       checkMCPStatus();
     }
   }, [agentType, agentStatus]);
@@ -217,11 +217,11 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
     const isInstalled =
       localInstallStatus !== null
         ? localInstallStatus
-        : agentStatus.isInstalled;
+        : agentStatus?.isInstalled ?? true;
 
     if (!isInstalled) return 'install';
-    if (!agentStatus.hasHooks) return 'configure';
-    if (agentStatus.hasHooks && !mcpStatus.enabled) return 'mcp';
+    if (!agentStatus?.hasHooks) return 'configure';
+    if (agentStatus?.hasHooks && !mcpStatus.enabled) return 'mcp';
     return 'complete';
   };
 
@@ -320,7 +320,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
                 className="flex-1 p-4 rounded-lg"
                 style={{
                   backgroundColor: theme.colors.backgroundTertiary,
-                  //opacity: !agentStatus.isInstalled ? 1 : 0.5,
+                  //opacity: !agentStatus?.isInstalled ? 1 : 0.5,
                 }}
               >
                 <InstallStep
@@ -332,12 +332,12 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
                   onCheckStatus={checkAgentStatus}
                   onInstallComplete={() => setLocalInstallStatus(true)}
                   onUninstall={handleUninstallAgent}
-                  hasHooks={agentStatus.hasHooks}
+                  hasHooks={agentStatus?.hasHooks || false}
                   handleClaudeTourButtonClick={handleClaudeTourButtonClick}
                   isClaudeTourActive={isClaudeTourActive}
                   claudeTourStepIndex={claudeTourStepIndex}
                   isCurrentStep={currentStep === 'install'}
-                  isInstalled={agentStatus.isInstalled}
+                  isInstalled={agentStatus?.isInstalled ?? true}
                 />
               </div>
 
@@ -356,32 +356,32 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
                     <Check
                       size={32}
                       style={{
-                        color: agentStatus.hasHooks
+                        color: agentStatus?.hasHooks
                           ? agentConfig.ui.color
                           : theme.colors.textSecondary,
                       }}
                     />
                   }
                   title={
-                    agentStatus.hasHooks ? 'Configured' : 'Configure Hooks'
+                    agentStatus?.hasHooks ? 'Configured' : 'Configure Hooks'
                   }
                   titleColor={
-                    agentStatus.hasHooks ? agentConfig.ui.color : undefined
+                    agentStatus?.hasHooks ? agentConfig.ui.color : undefined
                   }
                   description={
-                    agentStatus.hasHooks
+                    agentStatus?.hasHooks
                       ? 'Activity tracking enabled'
                       : 'Enable activity tracking'
                   }
                   iconBackgroundColor={
-                    agentStatus.hasHooks
+                    agentStatus?.hasHooks
                       ? `${agentConfig.ui.color}20`
                       : theme.colors.backgroundLight
                   }
                   dataTour="configure-step"
                 >
                   <div className="flex justify-center">
-                    {!agentStatus.hasHooks ? (
+                    {!agentStatus?.hasHooks ? (
                       <button
                         onClick={() => {
                           if (
@@ -460,7 +460,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
                     currentStep === 'mcp' || currentStep === 'complete'
                       ? theme.colors.backgroundTertiary
                       : 'transparent',
-                  opacity: agentStatus.hasHooks ? 1 : 0.5,
+                  opacity: agentStatus?.hasHooks ? 1 : 0.5,
                 }}
               >
                 <WizardStep
@@ -564,9 +564,9 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
               isInstalled={
                 localInstallStatus !== null
                   ? localInstallStatus
-                  : agentStatus.isInstalled || false
+                  : agentStatus?.isInstalled ?? true
               }
-              hasHooks={agentStatus.hasHooks || false}
+              hasHooks={agentStatus?.hasHooks || false}
               hasMCP={mcpStatus.enabled}
             />
           </div>

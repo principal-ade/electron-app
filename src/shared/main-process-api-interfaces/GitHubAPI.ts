@@ -14,6 +14,9 @@ export enum GitHubAPIEvent {
   GET_USER_REPOSITORIES = 'github:get-user-repositories',
   GET_ORG_REPOSITORIES = 'github:get-org-repositories',
   GET_USER_ORGANIZATIONS = 'github:get-user-organizations',
+  GET_TOKEN_SCOPES = 'github:get-token-scopes',
+  GET_CURRENT_USER = 'github:get-current-user',
+  GET_TOKEN_INFO = 'github:get-token-info',
   // Config fetching events (formerly ConfigAPI)
   FETCH_REMOTE_CONFIG = 'github:fetch-remote-config',
   FETCH_GITHUB_CONFIG = 'github:fetch-github-config',
@@ -114,6 +117,39 @@ export interface GitHubOrganization {
   id: number;
   avatar_url: string;
   description: string | null;
+}
+
+export interface GitHubUser {
+  login: string;
+  id: number;
+  avatar_url: string;
+  name: string | null;
+  company: string | null;
+  location: string | null;
+  email: string | null;
+  bio: string | null;
+  public_repos: number;
+  public_gists: number;
+  followers: number;
+  following: number;
+  created_at: string;
+  updated_at: string;
+  private_repos?: number;
+  total_private_repos?: number;
+  owned_private_repos?: number;
+  collaborators?: number;
+  two_factor_authentication?: boolean;
+}
+
+export interface TokenInfo {
+  scopes: string[];
+  organizations: GitHubOrganization[];
+  user: GitHubUser;
+  rateLimit: {
+    limit: number;
+    remaining: number;
+    reset: Date;
+  };
 }
 
 export interface RepositoryFetchOptions {
@@ -219,4 +255,7 @@ export interface GitHubAPI {
     options?: RepositoryFetchOptions
   ) => Promise<GitHubRepository[]>;
   getUserOrganizations: () => Promise<GitHubOrganization[]>;
+  getTokenScopes: () => Promise<string[]>;
+  getCurrentUser: () => Promise<GitHubUser | null>;
+  getTokenInfo: () => Promise<TokenInfo | null>;
 }

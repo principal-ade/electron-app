@@ -396,7 +396,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
                 gap: '16px',
               }}
             >
@@ -406,6 +406,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '16px',
+                  minWidth: 0,
                 }}
               >
                 {/* Git Changes List or Last Commit */}
@@ -432,6 +433,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   flexDirection: 'column',
                   gap: '16px',
                   height: 'fit-content',
+                  minWidth: 0,
                 }}
               >
                 {/* Markdown Files List */}

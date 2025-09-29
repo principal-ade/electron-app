@@ -86,4 +86,16 @@ export const githubAPI: GitHubAPI = {
   getUserOrganizations: async () => {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_USER_ORGANIZATIONS);
   },
+
+  getTokenScopes: async () => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_TOKEN_SCOPES);
+  },
+
+  getCurrentUser: async () => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_CURRENT_USER);
+  },
+
+  getTokenInfo: async () => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_TOKEN_INFO);
+  },
 };

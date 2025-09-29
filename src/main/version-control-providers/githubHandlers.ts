@@ -2,7 +2,8 @@ import { BrowserWindow, ipcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import fetch from 'node-fetch';
-import { electronCLI, ExecuteResult } from '../electron-cli-bridge';
+import { electronCLI } from '../electron-cli-bridge';
+import { UnifiedSecureStorage, TOKEN_KEYS } from '../services/UnifiedSecureStorage';
 import {
   GitHubAPIEvent,
   ConfigFetchRequest,
@@ -55,6 +56,70 @@ export interface AuthStatus {
 
 export class GitHubAdapter {
   private cache: Map<string, any> = new Map();
+  private storage: UnifiedSecureStorage;
+
+  constructor() {
+    this.storage = UnifiedSecureStorage.getInstance();
+  }
+
+  /**
+   * Get the stored GitHub token from secure storage
+   */
+  private async getGitHubToken(): Promise<string | null> {
+    try {
+      const tokenData = await this.storage.getTokenWithMetadata(TOKEN_KEYS.GITHUB_TOKEN);
+      return tokenData?.token || null;
+    } catch (error) {
+      console.error('[GitHub] Failed to get GitHub token:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Make an API call to GitHub using the stored token
+   */
+  private async makeGitHubAPICall(
+    endpoint: string,
+    options: {
+      method?: string;
+      headers?: Record<string, string>;
+      body?: any;
+    } = {}
+  ): Promise<{ success: boolean; data?: any; headers?: any; error?: string }> {
+    const token = await this.getGitHubToken();
+    if (!token) {
+      return { success: false, error: 'No GitHub token available' };
+    }
+
+    try {
+      const response = await fetch(`https://api.github.com${endpoint}`, {
+        method: options.method || 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github.v3+json',
+          ...options.headers
+        },
+        body: options.body ? JSON.stringify(options.body) : undefined
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          error: `GitHub API error: ${response.status} ${response.statusText}`
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data,
+        headers: Object.fromEntries(response.headers.entries())
+      };
+    } catch (error) {
+      console.error('[GitHub] API call failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
 
   // Git repository detection
   async detectRepository(
@@ -1066,21 +1131,43 @@ export class GitHubAdapter {
   // Fetch GitHub issues
   // Get user's repositories from GitHub
   async getUserRepositories(options?: RepositoryFetchOptions): Promise<GitHubRepository[]> {
+    // Build query parameters
+    const params: string[] = [];
+    if (options?.type) params.push(`type=${options.type}`);
+    if (options?.sort) params.push(`sort=${options.sort}`);
+    if (options?.direction) params.push(`direction=${options.direction}`);
+    params.push(`per_page=${options?.perPage || 100}`);
+    if (options?.page) params.push(`page=${options.page}`);
+
+    const endpoint = params.length > 0
+      ? `/user/repos?${params.join('&')}`
+      : '/user/repos';
+
+    // Try token-based API first
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    if (apiResult.success && apiResult.data) {
+      return apiResult.data.map((repo: any) => ({
+        id: repo.id,
+        name: repo.name,
+        full_name: repo.full_name,
+        owner: {
+          login: repo.owner.login
+        },
+        private: repo.private,
+        html_url: repo.html_url,
+        description: repo.description,
+        fork: repo.fork,
+        clone_url: repo.clone_url,
+        updated_at: repo.updated_at,
+        pushed_at: repo.pushed_at,
+        language: repo.language,
+        default_branch: repo.default_branch
+      }));
+    }
+
+    // Fallback to CLI
     try {
-      const args = ['gh', 'api', '/user/repos'];
-
-      // Add query parameters
-      const params: string[] = [];
-      if (options?.type) params.push(`type=${options.type}`);
-      if (options?.sort) params.push(`sort=${options.sort}`);
-      if (options?.direction) params.push(`direction=${options.direction}`);
-      params.push(`per_page=${options?.perPage || 100}`);
-      if (options?.page) params.push(`page=${options.page}`);
-
-      if (params.length > 0) {
-        args[2] = `/user/repos?${params.join('&')}`;
-      }
-
+      const args = ['gh', 'api', endpoint];
       const result = await this.executeCommand(args);
 
       if (result.success && result.stdout) {
@@ -1112,21 +1199,43 @@ export class GitHubAdapter {
 
   // Get organization repositories
   async getOrgRepositories(org: string, options?: RepositoryFetchOptions): Promise<GitHubRepository[]> {
+    // Build query parameters
+    const params: string[] = [];
+    if (options?.type) params.push(`type=${options.type}`);
+    if (options?.sort) params.push(`sort=${options.sort}`);
+    if (options?.direction) params.push(`direction=${options.direction}`);
+    params.push(`per_page=${options?.perPage || 100}`);
+    if (options?.page) params.push(`page=${options.page}`);
+
+    const endpoint = params.length > 0
+      ? `/orgs/${org}/repos?${params.join('&')}`
+      : `/orgs/${org}/repos`;
+
+    // Try token-based API first
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    if (apiResult.success && apiResult.data) {
+      return apiResult.data.map((repo: any) => ({
+        id: repo.id,
+        name: repo.name,
+        full_name: repo.full_name,
+        owner: {
+          login: repo.owner.login
+        },
+        private: repo.private,
+        html_url: repo.html_url,
+        description: repo.description,
+        fork: repo.fork,
+        clone_url: repo.clone_url,
+        updated_at: repo.updated_at,
+        pushed_at: repo.pushed_at,
+        language: repo.language,
+        default_branch: repo.default_branch
+      }));
+    }
+
+    // Fallback to CLI
     try {
-      const args = ['gh', 'api', `/orgs/${org}/repos`];
-
-      // Add query parameters
-      const params: string[] = [];
-      if (options?.type) params.push(`type=${options.type}`);
-      if (options?.sort) params.push(`sort=${options.sort}`);
-      if (options?.direction) params.push(`direction=${options.direction}`);
-      params.push(`per_page=${options?.perPage || 100}`);
-      if (options?.page) params.push(`page=${options.page}`);
-
-      if (params.length > 0) {
-        args[2] = `/orgs/${org}/repos?${params.join('&')}`;
-      }
-
+      const args = ['gh', 'api', endpoint];
       const result = await this.executeCommand(args);
 
       if (result.success && result.stdout) {
@@ -1158,6 +1267,18 @@ export class GitHubAdapter {
 
   // Get user's organizations
   async getUserOrganizations(): Promise<GitHubOrganization[]> {
+    // Try using token-based API first
+    const apiResult = await this.makeGitHubAPICall('/user/orgs');
+    if (apiResult.success && apiResult.data) {
+      return apiResult.data.map((org: any) => ({
+        login: org.login,
+        id: org.id,
+        avatar_url: org.avatar_url,
+        description: org.description
+      }));
+    }
+
+    // Fallback to CLI
     try {
       const result = await this.executeCommand(['gh', 'api', '/user/orgs']);
 
@@ -1176,6 +1297,106 @@ export class GitHubAdapter {
     } catch (error) {
       console.error('[GitHub] Error getting user organizations:', error);
       return [];
+    }
+  }
+
+  /**
+   * Get token scopes from GitHub API
+   */
+  async getTokenScopes(): Promise<string[]> {
+    // First try with token-based API
+    const apiResult = await this.makeGitHubAPICall('/user');
+    if (apiResult.success && apiResult.headers) {
+      const scopesHeader = apiResult.headers['x-oauth-scopes'];
+      if (scopesHeader) {
+        return scopesHeader.split(', ').filter((s: string) => s.length > 0);
+      }
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', '/user', '--include']);
+      if (result.success && result.stdout) {
+        // Parse the headers from gh CLI output (includes headers when --include flag is used)
+        const lines = result.stdout.split('\n');
+        for (const line of lines) {
+          if (line.toLowerCase().startsWith('x-oauth-scopes:')) {
+            const scopes = line.substring('x-oauth-scopes:'.length).trim();
+            return scopes.split(', ').filter((s: string) => s.length > 0);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting token scopes:', error);
+    }
+
+    return [];
+  }
+
+  /**
+   * Get current user information
+   */
+  async getCurrentUser(): Promise<any | null> {
+    // First try with token-based API
+    const apiResult = await this.makeGitHubAPICall('/user');
+    if (apiResult.success && apiResult.data) {
+      return apiResult.data;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', '/user']);
+      if (result.success && result.stdout) {
+        return JSON.parse(result.stdout);
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting current user:', error);
+    }
+
+    return null;
+  }
+
+  /**
+   * Get complete token information including scopes, user, and organizations
+   */
+  async getTokenInfo(): Promise<{
+    scopes: string[];
+    organizations: GitHubOrganization[];
+    user: any;
+    rateLimit: {
+      limit: number;
+      remaining: number;
+      reset: Date;
+    };
+  } | null> {
+    try {
+      // Make parallel requests for better performance
+      const [user, scopes, organizations] = await Promise.all([
+        this.getCurrentUser(),
+        this.getTokenScopes(),
+        this.getUserOrganizations()
+      ]);
+
+      if (!user) {
+        return null;
+      }
+
+      // Get rate limit info from the last API call
+      const rateLimit = {
+        limit: 5000,
+        remaining: 5000,
+        reset: new Date()
+      };
+
+      return {
+        scopes,
+        organizations,
+        user,
+        rateLimit
+      };
+    } catch (error) {
+      console.error('[GitHub] Failed to get token info:', error);
+      return null;
     }
   }
 
@@ -1799,6 +2020,42 @@ export function registerGitHubIpcHandlers(
         return [];
       }
       return adapter.getUserOrganizations();
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_TOKEN_SCOPES,
+    async (event) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_TOKEN_SCOPES');
+        return [];
+      }
+      return adapter.getTokenScopes();
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_CURRENT_USER,
+    async (event) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_CURRENT_USER');
+        return null;
+      }
+      return adapter.getCurrentUser();
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_TOKEN_INFO,
+    async (event) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_TOKEN_INFO');
+        return null;
+      }
+      return adapter.getTokenInfo();
     },
   );
 

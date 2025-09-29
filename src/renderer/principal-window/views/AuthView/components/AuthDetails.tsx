@@ -2,8 +2,66 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from 'themed-markdown';
 import { LogIn, LogOut, Loader2, Shield, CheckCircle, XCircle, Key, Building, RefreshCw, ExternalLink } from 'lucide-react';
 import { gitSyncConnectionManager } from '../../../../services/git-sync/GitSyncConnectionManager';
-import { GitHubAPIService, TokenInfo, SCOPE_DESCRIPTIONS } from '../../../../services/GitHubAPIService';
+import { GithubService } from '../../../../main-process-api/GithubService';
 import { AuthenticationService } from '../../../../main-process-api/AuthenticationService';
+import type { TokenInfo } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
+
+// Mapping of GitHub scopes to human-readable descriptions
+export const SCOPE_DESCRIPTIONS: Record<string, string> = {
+  // Repository scopes
+  'repo': 'Full control of private repositories',
+  'repo:status': 'Access commit status',
+  'repo_deployment': 'Access deployment status',
+  'public_repo': 'Access public repositories',
+  'repo:invite': 'Access repository invitations',
+  'security_events': 'Read and write security events',
+  'delete_repo': 'Delete repositories',
+
+  // Workflow scope
+  'workflow': 'Update GitHub Actions workflows',
+
+  // Package scopes
+  'write:packages': 'Upload packages to GitHub Package Registry',
+  'read:packages': 'Download packages from GitHub Package Registry',
+  'delete:packages': 'Delete packages from GitHub Package Registry',
+
+  // Organization scopes
+  'admin:org': 'Full control of organizations',
+  'write:org': 'Read and write organization data',
+  'read:org': 'Read organization data',
+  'manage_runners:org': 'Manage organization runners',
+
+  // User scopes
+  'user': 'Update all user data',
+  'read:user': 'Read all user profile data',
+  'user:email': 'Access user email addresses',
+  'user:follow': 'Follow and unfollow users',
+
+  // GPG key scopes
+  'admin:gpg_key': 'Full control of user GPG keys',
+  'write:gpg_key': 'Write user GPG keys',
+  'read:gpg_key': 'Read user GPG keys',
+
+  // SSH key scopes
+  'admin:ssh_signing_key': 'Full control of user SSH signing keys',
+  'write:ssh_signing_key': 'Write user SSH signing keys',
+  'read:ssh_signing_key': 'Read user SSH signing keys',
+
+  // Gist scope
+  'gist': 'Create gists',
+
+  // Notifications scope
+  'notifications': 'Access notifications',
+
+  // Project scopes
+  'admin:project': 'Full control of projects',
+  'read:project': 'Read projects',
+  'write:project': 'Write projects',
+
+  // Discussion scopes
+  'read:discussion': 'Read discussions',
+  'write:discussion': 'Write discussions',
+};
 import { ShellService } from '../../../../main-process-api/ShellService';
 
 interface GitHubUser {
@@ -66,25 +124,17 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     setLoadingTokenInfo(true);
     setTokenError(null);
     try {
-      // Get the GitHub token from secure storage
-      const tokenData = await AuthenticationService.getGitHubAuth();
-      console.log('[AuthDetails] Token data received:', {
-        authenticated: tokenData?.authenticated,
-        hasToken: !!tokenData?.token,
-        hasUser: !!tokenData?.user,
-      });
-
-      if (tokenData && tokenData.authenticated && tokenData.token) {
-        const githubAPI = new GitHubAPIService(tokenData.token);
-        const info = await githubAPI.getTokenInfo();
+      // Get token info directly from the GithubService
+      const info = await GithubService.getTokenInfo();
         console.log('[AuthDetails] Token info fetched:', {
           scopes: info?.scopes?.length,
           orgs: info?.organizations?.length,
         });
+      if (info) {
         setTokenInfo(info);
       } else {
-        console.warn('[AuthDetails] No valid token data:', tokenData);
-        setTokenError('No GitHub token found');
+        console.warn('[AuthDetails] Failed to get token info');
+        setTokenError('Failed to fetch token information');
       }
     } catch (error) {
       console.error('[AuthDetails] Failed to fetch token info:', error);

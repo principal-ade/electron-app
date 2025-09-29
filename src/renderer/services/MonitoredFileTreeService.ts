@@ -284,6 +284,13 @@ export class MonitoredFileTreeService {
   }
 
   /**
+   * Remove analysis cache for a source
+   */
+  removeAnalysis(sourceId: string): void {
+    this.analysisCache.delete(sourceId);
+  }
+
+  /**
    * Get from memory cache if not expired
    */
   private getFromMemoryCache(sourceId: string): CachedFileTree | null {

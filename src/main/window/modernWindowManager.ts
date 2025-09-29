@@ -129,8 +129,19 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     }
 
     // Handle cleanup on close
-    this.window.on('closed', () => {
+    this.window.on('closed', async () => {
       console.log(`[ModernWindow] Window ${this.window.id} closed`);
+
+      // Clean up file system watchers before removing from map
+      if (this.fileSystemAdapter) {
+        console.log(`[ModernWindow] Cleaning up file system watchers for window ${this.window.id}`);
+        try {
+          await this.fileSystemAdapter.stopWatching();
+        } catch (error) {
+          console.error(`[ModernWindow] Error stopping file system watchers:`, error);
+        }
+      }
+
       applicationWindows.delete(this.window.id);
 
       // Clean up special window tracking
@@ -241,7 +252,7 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
       icon: iconPath,
       show: false, // Prevent white flash
       backgroundColor: '#1e1e1e',
-      acceptsFirstMouse: true, // Allow hover interactions without focusing window
+      acceptFirstMouse: true, // Allow hover interactions without focusing window
       webPreferences,
       ...titleBarOptions, // Apply platform-specific titlebar settings
     };

@@ -1,4 +1,10 @@
-import type { RepositoryFetchOptions, GitHubRepository, GitHubOrganization } from '../../shared/main-process-api-interfaces/GitHubAPI';
+import type {
+  RepositoryFetchOptions,
+  GitHubRepository,
+  GitHubOrganization,
+  GitHubUser,
+  TokenInfo
+} from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export class GithubService {
   static async detectRepository(path: string) {
@@ -85,5 +91,20 @@ export class GithubService {
   static async getUserOrganizations(): Promise<GitHubOrganization[]> {
     const result = await window.mainProcess.github.getUserOrganizations();
     return result || [];
+  }
+
+  static async getTokenScopes(): Promise<string[]> {
+    const result = await window.mainProcess.github.getTokenScopes();
+    return result || [];
+  }
+
+  static async getCurrentUser(): Promise<GitHubUser | null> {
+    const result = await window.mainProcess.github.getCurrentUser();
+    return result;
+  }
+
+  static async getTokenInfo(): Promise<TokenInfo | null> {
+    const result = await window.mainProcess.github.getTokenInfo();
+    return result;
   }
 }
