@@ -124,7 +124,7 @@ export class GitSyncService {
    * @returns Unsubscribe function
    */
   static onMessage(
-    callback: (connectionKey: string, message: any) => void,
+    callback: (connectionKey: string, message: unknown) => void,
   ): () => void {
     try {
       return window.mainProcess.gitSync.onMessage(callback);

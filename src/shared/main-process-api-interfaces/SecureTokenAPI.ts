@@ -5,6 +5,8 @@
  * using Electron's safeStorage API with OS keychain integration.
  */
 
+import type { AuthUser } from './AuthenticationAPI';
+
 export enum SecureTokenAPIEvent {
   // GitHub-specific operations
   SAVE_GITHUB_AUTH = 'secure-token:save-github-auth',
@@ -30,5 +32,5 @@ export interface SecureTokenResult {
 export interface AuthTokenWithMetadata {
   authenticated: boolean;
   token?: string;
-  user?: any;
+  user?: AuthUser;
 }

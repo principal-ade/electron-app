@@ -34,8 +34,12 @@ export const gitSyncAPI: GitSyncAPI = {
   checkRepoAccess: (repoUrl, token) =>
     ipcRenderer.invoke(GitSyncEvent.CHECK_REPO_ACCESS, repoUrl, token),
 
-  onMessage: (callback: (connectionKey: string, message: any) => void) => {
-    const subscription = (_event: any, connectionKey: string, message: any) =>
+  onMessage: (callback: (connectionKey: string, message: unknown) => void) => {
+    const subscription = (
+      _event: unknown,
+      connectionKey: string,
+      message: unknown,
+    ) =>
       callback(connectionKey, message);
     ipcRenderer.on(GitSyncEvent.ON_MESSAGE, subscription);
     return () =>

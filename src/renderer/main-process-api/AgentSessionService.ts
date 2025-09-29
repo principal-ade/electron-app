@@ -2,6 +2,7 @@ import { DirectorySessions } from '../../shared/main-process-api-interfaces/Agen
 import { SessionState } from '../../shared/event-processing/SessionEventProcessor';
 import { AgentSessionRecord } from '../../shared/sessionTypes';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import type { AgentSessionEvent } from '../../shared/main-process-api-interfaces/AgentSessionEventsAPI';
 
 /**
  * File operation types we track
@@ -247,7 +248,9 @@ export class AgentSessionService {
    * @param sessionId - The session ID to get raw events for
    * @returns Promise with array of raw events or null if not found
    */
-  static getRawSessionEvents(sessionId: string): Promise<any[] | null> {
+  static getRawSessionEvents(
+    sessionId: string,
+  ): Promise<AgentSessionEvent[] | null> {
     return window.mainProcess.agentSession.getRawSessionEvents(sessionId);
   }
 

@@ -15,6 +15,7 @@ import type {
   AuthUser,
   TokenResult,
   TokenWithMetadata,
+  TokenMigrationEntry,
 } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 import { SecureTokenAPIEvent } from '../../shared/main-process-api-interfaces/SecureTokenAPI';
@@ -71,7 +72,7 @@ export const authenticationAPI: AuthenticationAPI = {
   saveToken: async (
     key: string,
     token: string,
-    metadata?: any,
+    metadata?: Record<string, unknown>,
   ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:set handler
     return ipcRenderer.invoke(SecureTokenAPIEvent.SET, key, token, metadata);
@@ -90,7 +91,7 @@ export const authenticationAPI: AuthenticationAPI = {
   },
 
   migrateFromLocalStorage: async (
-    tokens: any[],
+    tokens: TokenMigrationEntry[],
   ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:migrate-from-localstorage handler
     return ipcRenderer.invoke(SecureTokenAPIEvent.MIGRATE_FROM_LOCALSTORAGE, tokens);
@@ -108,7 +109,7 @@ export const authenticationAPI: AuthenticationAPI = {
     ipcRenderer.send(AuthEvent.STATE_SUBSCRIBE);
 
     // Set up listener for state changes
-    const listener = (_event: any, state: AuthState) => {
+    const listener = (_event: unknown, state: AuthState) => {
       callback(state);
     };
 

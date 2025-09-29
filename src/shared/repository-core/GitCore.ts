@@ -4,7 +4,6 @@
  */
 
 import { execSync } from 'child_process';
-import * as path from 'path';
 import type { GitStatus } from '../types/repository.types';
 
 export interface GitInfo {
@@ -38,7 +37,7 @@ export class GitCore {
         maxBuffer: 10 * 1024 * 1024, // 10MB
       });
       return result.trim();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (throwOnError) {
         throw error;
       }
@@ -215,7 +214,7 @@ export class GitCore {
         if (!status.includes('is watching')) {
           this.execGit(['fsmonitor--daemon', 'start'], repoPath);
         }
-      } catch (error) {
+      } catch {
         // Status command returns non-zero if daemon is not running, so try to start it
         try {
           this.execGit(['fsmonitor--daemon', 'start'], repoPath);
@@ -232,7 +231,7 @@ export class GitCore {
           // Try to stop and restart the daemon
           try {
             this.execGit(['fsmonitor--daemon', 'stop'], repoPath);
-          } catch (e) {
+          } catch {
             // Ignore stop errors
           }
 
@@ -257,7 +256,7 @@ export class GitCore {
         try {
           this.execGit(['config', '--unset', 'core.fsmonitor'], repoPath);
           this.execGit(['fsmonitor--daemon', 'stop'], repoPath);
-        } catch (e) {
+        } catch {
           // Ignore cleanup errors
         }
 

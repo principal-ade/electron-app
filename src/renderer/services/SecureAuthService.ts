@@ -5,7 +5,10 @@
  * Now uses the unified AuthenticationAPI instead of direct IPC calls.
  */
 
-import type { AuthUser } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
+import type {
+  AuthUser,
+  TokenMigrationEntry,
+} from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 import { AuthenticationService } from '../main-process-api/AuthenticationService';
 
 // Map the legacy GitHubUser interface to AuthUser
@@ -155,7 +158,7 @@ export class SecureAuthService {
     if (this.migrationDone) return;
 
     try {
-      const tokensToMigrate = [];
+      const tokensToMigrate: TokenMigrationEntry[] = [];
 
       // Check for orbit_auth
       const orbitAuth = localStorage.getItem('orbit_auth');

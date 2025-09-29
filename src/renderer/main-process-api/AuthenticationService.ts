@@ -10,6 +10,7 @@ import {
   AuthState,
   TokenResult,
   TokenWithMetadata,
+  TokenMigrationEntry,
 } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 
 export class AuthenticationService {
@@ -81,7 +82,7 @@ export class AuthenticationService {
   static async saveToken(
     key: string,
     value: string,
-    metadata?: any,
+    metadata?: Record<string, unknown>,
   ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.authentication.saveToken(key, value, metadata);
   }
@@ -106,7 +107,7 @@ export class AuthenticationService {
    * Migrate tokens from localStorage
    */
   static async migrateFromLocalStorage(
-    tokens: any[],
+    tokens: TokenMigrationEntry[],
   ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.authentication.migrateFromLocalStorage(tokens);
   }

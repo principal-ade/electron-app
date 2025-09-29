@@ -26,7 +26,7 @@ export const dockerAPI: DockerAPI = {
 
   onPullProgress: (callback) => {
     const subscription = (
-      _event: any,
+      _event: unknown,
       data: { imageName: string; message: string },
     ) => callback(data);
     ipcRenderer.on('docker:pull-progress', subscription);

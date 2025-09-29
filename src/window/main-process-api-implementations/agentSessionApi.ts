@@ -3,6 +3,8 @@ import {
   AgentSessionAPI,
 } from '../../shared/main-process-api-interfaces/AgentSessionAPI';
 import { ipcRenderer } from 'electron';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import type { AgentSessionEvent } from '../../shared/main-process-api-interfaces/AgentSessionEventsAPI';
 
 /**
  * Clean Session Service for the renderer
@@ -76,7 +78,10 @@ export const agentSessionApi: AgentSessionAPI = {
   onSessionCreated: (
     callback: (data: { sessionId: string; directory: string }) => void,
   ) => {
-    const handler = (_: any, data: any) => callback(data);
+    const handler = (
+      _event: unknown,
+      data: { sessionId: string; directory: string },
+    ) => callback(data);
     ipcRenderer.on(AgentSessionAPIEvents.SESSION_CREATED, handler);
     return () => {
       ipcRenderer.removeListener(
@@ -92,7 +97,10 @@ export const agentSessionApi: AgentSessionAPI = {
   onSessionUpdated: (
     callback: (data: { sessionId: string; directory: string }) => void,
   ) => {
-    const handler = (_: any, data: any) => callback(data);
+    const handler = (
+      _event: unknown,
+      data: { sessionId: string; directory: string },
+    ) => callback(data);
     ipcRenderer.on(AgentSessionAPIEvents.SESSION_UPDATED, handler);
     return () => {
       ipcRenderer.removeListener(
@@ -108,7 +116,10 @@ export const agentSessionApi: AgentSessionAPI = {
   onSessionDeleted: (
     callback: (data: { sessionId: string; directory: string }) => void,
   ) => {
-    const handler = (_: any, data: any) => callback(data);
+    const handler = (
+      _event: unknown,
+      data: { sessionId: string; directory: string },
+    ) => callback(data);
     ipcRenderer.on(AgentSessionAPIEvents.SESSION_DELETED, handler);
     return () => {
       ipcRenderer.removeListener(
@@ -128,13 +139,20 @@ export const agentSessionApi: AgentSessionAPI = {
    * Get raw session events (from agent-session-events API)
    */
   getRawSessionEvents: (sessionId: string) =>
-    ipcRenderer.invoke('sessions:get-raw-events', sessionId),
+    ipcRenderer.invoke('sessions:get-raw-events', sessionId) as Promise<
+      AgentSessionEvent[] | null
+    >,
 
   /**
    * Listen for CLI provider events (real-time)
    */
-  onCliProviderEvent: (callback: (event: any) => void) => {
-    const handler = (_: any, event: any) => callback(event);
+  onCliProviderEvent: (
+    callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
+  ) => {
+    const handler = (
+      _event: unknown,
+      event: RepoNormalizedUniversalAgentSessionEvent,
+    ) => callback(event);
     ipcRenderer.on('cli-provider:event', handler);
     return () => {
       ipcRenderer.removeListener('cli-provider:event', handler);
@@ -144,8 +162,13 @@ export const agentSessionApi: AgentSessionAPI = {
   /**
    * Listen for processed events (real-time)
    */
-  onProcessedEvent: (callback: (event: any) => void) => {
-    const handler = (_: any, event: any) => callback(event);
+  onProcessedEvent: (
+    callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
+  ) => {
+    const handler = (
+      _event: unknown,
+      event: RepoNormalizedUniversalAgentSessionEvent,
+    ) => callback(event);
     ipcRenderer.on('agent-session:processed-event', handler);
     return () => {
       ipcRenderer.removeListener('agent-session:processed-event', handler);

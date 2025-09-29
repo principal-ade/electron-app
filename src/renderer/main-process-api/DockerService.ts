@@ -4,6 +4,7 @@ import {
   DockerImageCheckResponse,
   DockerPullResponse,
   DockerInstallInstructions,
+  KnipRunOptions,
 } from '../../shared/main-process-api-interfaces/DockerAPI';
 
 /**
@@ -53,7 +54,10 @@ export class DockerService {
   /**
    * Run Knip analysis in Docker
    */
-  static async runKnip(projectPath: string, options?: any): Promise<any> {
+  static async runKnip(
+    projectPath: string,
+    options?: KnipRunOptions,
+  ): Promise<unknown> {
     try {
       const response = await window.mainProcess.docker.runKnip(
         projectPath,
@@ -96,7 +100,7 @@ export class DockerService {
   /**
    * Execute command in Knip container
    */
-  static async execInContainer(command: string): Promise<any> {
+  static async execInContainer(command: string): Promise<unknown> {
     try {
       const response = await window.mainProcess.docker.execInContainer(command);
       return response.success ? response.data : null;

@@ -17,20 +17,42 @@ export interface GitSyncConnectionResult {
   message?: string;
 }
 
+export interface GitSyncLockOwner {
+  agentId: string;
+  userId: string;
+}
+
+export interface GitSyncLockInfo {
+  id: string;
+  resource: string;
+  type: 'file' | 'directory';
+  branch: string;
+  owner: GitSyncLockOwner;
+  exclusive: boolean;
+  acquiredAt: number;
+  expiresAt: number;
+}
+
+export interface GitSyncPeer {
+  agentId: string;
+  userId: string;
+  branch: string;
+}
+
 export interface GitSyncStatus {
   connected: boolean;
   authenticated: boolean;
   repoId: string;
   branch: string;
-  activeLocks: any[];
+  activeLocks: GitSyncLockInfo[];
   queuedLocks: number;
-  peers: any[];
+  peers: GitSyncPeer[];
 }
 
 export interface GitSyncMessage {
   connectionId: string;
   type: string;
-  data: any;
+  data: unknown;
 }
 
 export interface GitSyncRoomTokenRequest {
@@ -92,6 +114,6 @@ export interface GitSyncAPI {
    * @returns Unsubscribe function
    */
   onMessage(
-    callback: (connectionKey: string, message: any) => void,
+    callback: (connectionKey: string, message: unknown) => void,
   ): () => void;
 }

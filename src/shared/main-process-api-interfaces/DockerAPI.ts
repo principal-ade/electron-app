@@ -30,7 +30,7 @@ export interface DockerStatus {
   error?: string;
 }
 
-export interface DockerResponse<T = any> {
+export interface DockerResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -51,6 +51,12 @@ export interface DockerInstallInstructions {
   platform: string;
   steps: string[];
   downloadUrl: string;
+}
+
+export interface KnipRunOptions {
+  reporter?: string;
+  fix?: boolean;
+  config?: string;
 }
 
 /**
@@ -75,7 +81,10 @@ export interface DockerAPI {
   /**
    * Run Knip analysis in Docker
    */
-  runKnip(projectPath: string, options?: any): Promise<DockerResponse>;
+  runKnip(
+    projectPath: string,
+    options?: KnipRunOptions,
+  ): Promise<DockerResponse>;
 
   /**
    * Create custom Knip image

@@ -3,8 +3,9 @@
  * Imports from @a24z/core-library package - the standard for repository management
  */
 
-import type {
-  AlexandriaEntry,
+import type { AlexandriaEntry } from '@a24z/core-library';
+
+export type {
   AlexandriaRepositoryRegistry,
   GithubRepository,
   CodebaseViewSummary,

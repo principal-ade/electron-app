@@ -8,6 +8,9 @@
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { EventActivityType } from '../sessionEnums';
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 /**
  * Metadata types for different contexts
  */
@@ -272,7 +275,11 @@ export class BashProcessor implements IEventProcessor {
     event: RepoNormalizedUniversalAgentSessionEvent,
     currentState: SessionState,
   ): ProcessingResult {
-    const command = (event.toolInput as any)?.command;
+    const toolInput = event.toolInput;
+    const command =
+      isRecord(toolInput) && typeof toolInput.command === 'string'
+        ? toolInput.command
+        : undefined;
     if (!command) {
       return { session: {} };
     }

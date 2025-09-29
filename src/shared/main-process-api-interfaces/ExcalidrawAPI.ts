@@ -61,7 +61,7 @@ export interface ExcalidrawAPI {
   ) => Promise<{ success: boolean; data?: ExcalidrawDiagramData; error?: string }>;
   listAlexandriaDiagrams: (repositoryPath: string) => Promise<{
     success: boolean;
-    data?: any[];
+    data?: ExcalidrawDiagram[];
     error?: string;
   }>;
   deleteAlexandriaDiagram: (

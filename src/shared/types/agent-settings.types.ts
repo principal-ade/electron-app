@@ -6,5 +6,5 @@ import type { SupportedAgent } from '@principal-ai/agent-monitoring';
 export interface AgentSettings {
   provider: SupportedAgent;
   enabled: boolean;
-  settings?: Record<string, any>;
+  settings?: Record<string, unknown>;
 }

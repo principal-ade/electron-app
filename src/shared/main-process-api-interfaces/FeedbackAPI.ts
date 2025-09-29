@@ -16,7 +16,7 @@ export interface FeedbackModalData {
   componentPath: string;
   elementInfo: string;
   screenshot?: string;
-  additionalData?: Record<string, any>;
+  additionalData?: Record<string, unknown>;
 }
 
 export interface FeedbackSubmissionData {
@@ -26,7 +26,7 @@ export interface FeedbackSubmissionData {
   feedbackText: string;
   feedbackType: 'bug' | 'feature' | 'improvement' | 'other';
   screenshot?: string;
-  additionalData?: Record<string, any>;
+  additionalData?: Record<string, unknown>;
 }
 
 export interface FeedbackSubmissionResult {

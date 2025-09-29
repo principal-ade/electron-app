@@ -4,6 +4,7 @@
  */
 
 import type { SessionState } from '../event-processing/SessionEventProcessor';
+import type { AgentSessionEvent } from './AgentSessionEventsAPI';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 export interface SessionSummary {
@@ -87,7 +88,9 @@ export interface AgentSessionAPI {
   ) => Promise<{ success: boolean; processedCount?: number; error?: string }>;
 
   // Get raw session events (from agent-session-events API)
-  getRawSessionEvents: (sessionId: string) => Promise<any[] | null>;
+  getRawSessionEvents: (
+    sessionId: string,
+  ) => Promise<AgentSessionEvent[] | null>;
 
   // Event listeners
   onSessionCreated: (
@@ -101,6 +104,10 @@ export interface AgentSessionAPI {
   ) => () => void;
 
   // Real-time event listeners
-  onCliProviderEvent: (callback: (event: any) => void) => () => void;
-  onProcessedEvent: (callback: (event: any) => void) => () => void;
+  onCliProviderEvent: (
+    callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
+  ) => () => void;
+  onProcessedEvent: (
+    callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
+  ) => () => void;
 }

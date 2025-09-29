@@ -477,7 +477,7 @@ export interface IndexErrorEvent {
   /**
    * Error details
    */
-  details?: any;
+  details?: unknown;
 
   /**
    * Affected repository
@@ -540,33 +540,62 @@ export interface DocumentSearchAPI {
 // Type Guards
 // ============================================================================
 
-export function isIndexUpdateEvent(event: any): event is IndexUpdateEvent {
-  return (
-    event &&
-    typeof event.type === 'string' &&
-    ['started', 'progress', 'completed', 'failed'].includes(event.type) &&
-    event.repository &&
-    typeof event.repository.id === 'string'
-  );
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+export function isIndexUpdateEvent(event: unknown): event is IndexUpdateEvent {
+  if (!isRecord(event)) {
+    return false;
+  }
+
+  if (
+    typeof event.type !== 'string' ||
+    !['started', 'progress', 'completed', 'failed'].includes(event.type)
+  ) {
+    return false;
+  }
+
+  const repository = 'repository' in event ? event.repository : undefined;
+  if (!isRecord(repository) || typeof repository.id !== 'string') {
+    return false;
+  }
+
+  return true;
 }
 
 export function isDocumentChangedEvent(
-  event: any,
+  event: unknown,
 ): event is DocumentChangedEvent {
-  return (
-    event &&
-    typeof event.type === 'string' &&
-    ['added', 'modified', 'deleted'].includes(event.type) &&
-    event.document &&
-    typeof event.document.id === 'string'
-  );
+  if (!isRecord(event)) {
+    return false;
+  }
+
+  if (
+    typeof event.type !== 'string' ||
+    !['added', 'modified', 'deleted'].includes(event.type)
+  ) {
+    return false;
+  }
+
+  const document = 'document' in event ? event.document : undefined;
+  if (!isRecord(document) || typeof document.id !== 'string') {
+    return false;
+  }
+
+  return true;
 }
 
-export function isIndexErrorEvent(event: any): event is IndexErrorEvent {
-  return (
-    event &&
-    typeof event.severity === 'string' &&
-    ['warning', 'error', 'critical'].includes(event.severity) &&
-    typeof event.message === 'string'
-  );
+export function isIndexErrorEvent(event: unknown): event is IndexErrorEvent {
+  if (!isRecord(event)) {
+    return false;
+  }
+
+  if (
+    typeof event.severity !== 'string' ||
+    !['warning', 'error', 'critical'].includes(event.severity)
+  ) {
+    return false;
+  }
+
+  return typeof event.message === 'string';
 }

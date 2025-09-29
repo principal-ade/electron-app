@@ -63,6 +63,7 @@ export type {
   AuthState,
   TokenResult,
   TokenWithMetadata,
+  TokenMigrationEntry,
 } from './AuthenticationAPI';
 export type { KnipAPI, KnipAnalysisResult } from './KnipAPI';
 

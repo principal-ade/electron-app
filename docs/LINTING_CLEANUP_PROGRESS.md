@@ -37,35 +37,35 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 ```
 
-## Current Status (Updated - 2025-09-28 Evening Refresh)
+## Current Status (Updated - 2025-09-29 Shared API Cleanup)
 
 ### Overall Issues
-- **ESLint**: 1906 issues (1282 errors, 624 warnings) ↓ 214 from baseline
-- **TypeScript**: 383 errors ↓ 20 from baseline
-- **Console.log warnings**: 422 ↓ 221 from baseline (34% reduction!)
+- **ESLint**: 1849 issues (1224 errors, 625 warnings) ↓ 271 from baseline
+- **TypeScript**: 386 errors ↓ 17 from baseline
+- **Console.log warnings**: 423 ↓ 220 from baseline (34% reduction!)
 
 ### By Top-Level Directory
 
 #### ESLint Issues
 | Directory | Issues | % of Total | Change |
 |-----------|--------|------------| -------|
-| renderer | 218 | 11.4% | - |
-| main | 90 | 4.7% | - |
-| window | 27 | 1.4% | - |
-| shared | 15 | 0.8% | - |
+| renderer | 217 | 11.7% | ↓ 3 |
+| main | 90 | 4.9% | - |
+| window | 23 | 1.2% | ↓ 4 |
+| shared | 0 | 0.0% | ↓ 15 |
 | repository-monitoring-server | 5 | 0.3% | - |
-| event-processing-server | 0 | 0.0% | ↓ 5 |
+| event-processing-server | 0 | 0.0% | - |
 
 #### TypeScript Errors
 | Directory | Errors | % of Total | Change |
 |-----------|--------|------------| -------|
-| renderer | 289 | 75.5% | - |
-| main | 34 | 8.9% | ↓ 5 |
-| window | 33 | 8.6% | ↓ 2 |
-| repository-monitoring-server | 27 | 7.0% | ↑ 1 |
+| renderer | 291 | 75.4% | ↑ 2 |
+| main | 34 | 8.8% | - |
+| window | 33 | 8.6% | - |
+| repository-monitoring-server | 28 | 7.3% | ↑ 1 |
 | event-processing-server | 0 | 0.0% | - |
-| shared | 0 | 0.0% | ↓ 9 |
-| pure-core | 0 | 0.0% | ↓ 4 |
+| shared | 0 | 0.0% | - |
+| pure-core | 0 | 0.0% | - |
 
 ### Renderer Subdirectories (Most Problematic)
 
@@ -75,8 +75,8 @@ npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 | components | 82 | ↓ 5 |
 | pages | 36 | - |
 | services | 31 | - |
-| main-process-api | 17 | - |
-| principal-window | 14 | - |
+| main-process-api | 14 | ↓ 3 |
+| principal-window | 16 | ↑ 2 |
 | utils | 11 | - |
 | hooks | 8 | - |
 | types | 5 | - |
@@ -88,23 +88,23 @@ npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 | components | 102 | - |
 | pages | 64 | - |
 | principal-window | 47 | - |
-| services | 32 | - |
+| services | 33 | ↑ 1 |
 | utils | 18 | - |
 | adapters | 9 | - |
-| main-process-api | 6 | - |
+| main-process-api | 7 | ↑ 1 |
 | hooks | 5 | - |
 
 ## Priority Areas for Cleanup
 
-1. **renderer/components** - Highest TypeScript error count (133) + significant ESLint issues (87)
-2. **renderer/pages** - High TypeScript errors (78) + ESLint issues (36)
-3. **renderer/principal-window** - High TypeScript errors (64), moderate ESLint issues (7)
-4. **renderer/services** - Moderate issues in both (36 TS, 30 ESLint)
+1. **renderer/components** - Highest TypeScript error count (102) + significant ESLint issues (82)
+2. **renderer/pages** - High TypeScript errors (64) + ESLint issues (36)
+3. **renderer/principal-window** - High TypeScript errors (47), moderate ESLint issues (16)
+4. **renderer/services** - Moderate issues in both (33 TS, 31 ESLint)
 
 ## Cleanup Strategy
 
 ### Phase 1: Quick Wins
-- [ ] Fix console.log performance issues (422 warnings)
+- [ ] Fix console.log performance issues (423 warnings)
 - [ ] Fix unused variable warnings (prefix with `_`)
 - [ ] Remove unused imports
 
@@ -241,6 +241,35 @@ Update this section after each cleanup session:
 - Replaced console logging with level-aware `info/warn/error` helpers to satisfy lint policy
 - Typed pending request management and IPC payloads for safer message handling
 - Hardened the utility worker bridge with validation around incoming/outgoing messages
+
+### 2025-09-29 - Status Verification
+- **Overall Before**: 1906 total issues (1282 errors, 624 warnings)
+- **Overall After**: 1912 total issues (1285 errors, 627 warnings)
+- **Total Change**: +6 issues (0.3% regression)
+- **TypeScript Errors**: 383 → 384 (+1)
+- **Console.log warnings**: 422 → 424 (+2)
+
+**Observations:**
+- Renderer ESLint issues rose slightly (218 → 220), while other top-level directories remained steady.
+- Repository monitoring server TypeScript diagnostics increased by one, suggesting recent changes or stricter checks in that area.
+- No cleanup actions were taken during this snapshot; counts reflect organic drift since the previous session.
+
+### 2025-09-29 - Shared API Cleanup
+- **Overall Before**: 1912 total issues (1285 errors, 627 warnings)
+- **Overall After**: 1849 total issues (1224 errors, 625 warnings)
+- **Total Improvement**: 63 issues fixed (3.3% reduction)
+- **TypeScript Errors**: 384 → 386 (+2)
+- **Console.log warnings**: 424 → 423 (-1)
+
+**Directory-level improvements:**
+- shared: 15 → 0 (all shared ESLint errors cleared)
+- renderer: 220 → 217 (3 issues resolved via API type updates)
+- window: 27 → 23 (4 issues resolved by aligning preload adapters with new types)
+
+**Key fixes:**
+- Replaced `any` usages across shared main-process API interfaces with explicit, reusable types (e.g., `KnipRunOptions`, `GitSyncLockInfo`, `ViolationPackageSummary`).
+- Hardened shared repository utilities by removing unsafe casts and tightening pattern handling in `FileSystemCore` and `GitCore`.
+- Updated renderer and preload API clients to consume the new types, eliminating stale casts and ensuring raw session events use structured data.
 
 ### [Date] - [Area Cleaned]
 - Before: X ESLint issues, Y TypeScript errors

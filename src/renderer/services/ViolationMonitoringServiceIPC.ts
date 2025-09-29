@@ -6,6 +6,7 @@
 import { FileTree } from '@principal-ai/repository-abstraction';
 import { FileTreeSource } from '../types/file-tree-source';
 import { ViolationsService } from '../main-process-api/ViolationsService';
+import type { ViolationPackageSummary } from '../../shared/main-process-api-interfaces/ViolationsAPI';
 import * as path from 'path';
 
 export type ViolationType = 'typescript' | 'eslint';
@@ -208,26 +209,54 @@ class ViolationMonitoringServiceIPC {
       );
 
       // Call main process via ViolationsService
-      const result = (await ViolationsService.collect(
-        source.location,
-        packages,
-        {
-          includeTypescript: options.includeTypescript ?? true,
-          includeEslint: options.includeEslint ?? true,
-          maxFiles: options.maxFilesToProcess ?? 500,
-        },
-      )) as any;
-
+      const result = await ViolationsService.collect(source.location, packages, {
+        includeTypescript: options.includeTypescript ?? tsEnabled,
+        includeEslint: options.includeEslint ?? eslintEnabled,
+        maxFiles: options.maxFilesToProcess ?? 500,
+      });
       // Check if aborted
       if (abortController.signal.aborted) {
         return this.emptyResult(source);
       }
 
       // Convert arrays back to Maps for each package
-      const processedPackages = result.packages.map((pkg: any) => ({
-        ...pkg,
-        fileViolations: new Map<string, FileViolations>(pkg.fileViolations),
-      }));
+      const processedPackages = result.packages.map(
+        (pkg: ViolationPackageSummary): PackageViolations => ({
+          packageName: pkg.packageName,
+          packagePath: pkg.packagePath,
+          absolutePath: pkg.absolutePath,
+          fileViolations: new Map<string, FileViolations>(
+            pkg.fileViolations.map(([relativePath, summary]) => {
+              const violations: Violation[] = summary.violations.map((violation) => ({
+                type: violation.type,
+                severity: violation.severity,
+                message: violation.message,
+                rule: violation.rule,
+                line: violation.line,
+                column: violation.column,
+                endLine: violation.endLine,
+                endColumn: violation.endColumn,
+              }));
+
+              const fileSummary: FileViolations = {
+                filePath: summary.filePath,
+                relativePath: summary.relativePath,
+                violations,
+                errorCount: summary.errorCount,
+                warningCount: summary.warningCount,
+                infoCount: summary.infoCount,
+              };
+
+              return [relativePath, fileSummary];
+            }),
+          ),
+          totalFiles: pkg.totalFiles,
+          totalViolations: pkg.totalViolations,
+          totalErrors: pkg.totalErrors,
+          totalWarnings: pkg.totalWarnings,
+          totalInfo: pkg.totalInfo,
+        }),
+      );
 
       const monitoringResult: ViolationMonitoringResult = {
         timestamp: result.timestamp,

@@ -32,9 +32,12 @@ export interface FileTreeResult {
  */
 export class FileSystemCore {
   private static getUniversalDirectories(): string[] {
-    return Object.values(universalPatternsConfig.patterns)
-      .flatMap((category: any) => category.directories || [])
-      .map((dir: string) => dir.replace(/\\/g, '/'));
+    const patternGroups = Object.values(universalPatternsConfig.patterns);
+    return patternGroups
+      .flatMap((category) =>
+        category.directories ? [...category.directories] : [],
+      )
+      .map((dir) => dir.replace(/\\/g, '/'));
   }
 
   private static normalizeToPosix(target: string): string {
@@ -81,7 +84,10 @@ export class FileSystemCore {
     }
 
     const results: string[] = [];
-    const hasGlobChars = /[*?\[\]]/.test(normalized);
+    const globCharacters = ['*', '?', '[', ']'];
+    const hasGlobChars = globCharacters.some((char) =>
+      normalized.includes(char),
+    );
     const isAbsolute = normalized.startsWith('/');
 
     const addDirectoryVariants = (basePattern: string) => {
@@ -236,7 +242,7 @@ export class FileSystemCore {
         ...(options?.ignorePatterns || []),
       ];
 
-      console.log(
+      console.info(
         `[FileSystemCore] Using globby with gitignore=${gitignore}, ${ignorePatterns.length} ignore patterns`
       );
 

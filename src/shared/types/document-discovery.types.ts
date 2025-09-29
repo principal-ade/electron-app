@@ -11,6 +11,8 @@
  * 4. Respect ignore patterns and repository configuration
  */
 
+import type { AlexandriaEntry } from '@a24z/core-library';
+
 // ============================================================================
 // Core Types for Document Discovery
 // ============================================================================
@@ -127,7 +129,7 @@ export interface DocumentMetadata {
   /**
    * Custom frontmatter fields
    */
-  custom?: Record<string, any>;
+  custom?: Record<string, unknown>;
 
   /**
    * Whether document is marked as draft
@@ -381,7 +383,7 @@ export interface AlexandriaIntegration {
   /**
    * Get documents for an Alexandria entry
    */
-  getDocumentsForEntry(entry: any): Promise<IndexableDocument[]>;
+  getDocumentsForEntry(entry: AlexandriaEntry): Promise<IndexableDocument[]>;
 
   /**
    * Map document to Alexandria context
