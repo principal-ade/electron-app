@@ -15,8 +15,6 @@ import {
 } from '@principal-ai/codebase-quality-lenses';
 import { ElectronCLIBridgeExecutor } from './ElectronCLIBridgeExecutor';
 import type { ToolExecutionRequest, ToolExecutionResponse } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
-  lensResult?: LensResult; // Parsed and analyzed result from lens
-}
 
 /**
  * Singleton service for executing quality tools through lenses
