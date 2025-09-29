@@ -1,12 +1,16 @@
 import React from 'react';
 import { Terminal, Cpu } from 'lucide-react';
 import { BaseTitlebar } from './BaseTitlebar';
+import { TitlebarGitChanges } from './TitlebarGitChanges';
+import type { GitStatusWithFiles } from '../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 export interface TerminalTitlebarProps {
   directory?: string;
   sessionId?: string;
   agentSessionId?: string;
   agentSessionName?: string;
+  gitStatusWithFiles?: GitStatusWithFiles | null;
+  onFileClick?: (filePath: string) => void;
 }
 
 export const TerminalTitlebar: React.FC<TerminalTitlebarProps> = ({
@@ -14,6 +18,8 @@ export const TerminalTitlebar: React.FC<TerminalTitlebarProps> = ({
   sessionId,
   agentSessionId,
   agentSessionName,
+  gitStatusWithFiles,
+  onFileClick,
 }) => {
   const directoryName = directory?.split('/').pop() || 'Terminal';
 
@@ -44,6 +50,15 @@ export const TerminalTitlebar: React.FC<TerminalTitlebarProps> = ({
   );
 
   return (
-    <BaseTitlebar title={titleContent} />
+    <BaseTitlebar title={titleContent}>
+      {directory && gitStatusWithFiles && onFileClick && (
+        <TitlebarGitChanges
+          directory={directory}
+          gitStatusWithFiles={gitStatusWithFiles}
+          onFileClick={onFileClick}
+          position="right"
+        />
+      )}
+    </BaseTitlebar>
   );
 };

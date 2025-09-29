@@ -13,11 +13,13 @@ import { MarkdownDocumentViewer } from './RepoManager/shared/MarkdownDocumentVie
 interface MarkdownViewProps {
   filePath: string;
   projectName?: string;
+  initialViewMode?: 'single' | 'book';
 }
 
 export const MarkdownView: React.FC<MarkdownViewProps> = ({
   filePath,
   projectName,
+  initialViewMode,
 }) => {
   const { theme } = useTheme();
   const [content, setContent] = useState<string>(
@@ -28,7 +30,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
   const [isDirty, setIsDirty] = useState(false);
   const [fontSizeScale, setFontSizeScale] = useState<number>(1.0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [viewMode, setViewMode] = useState<'single' | 'book'>('book');
+  const [viewMode, setViewMode] = useState<'single' | 'book'>(initialViewMode || 'book');
 
   // Load font size and view mode preferences on mount
   useEffect(() => {
@@ -38,7 +40,8 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
         if (prefs?.markdownFontSizeScale) {
           setFontSizeScale(prefs.markdownFontSizeScale);
         }
-        if (prefs?.markdownViewMode) {
+        // Only use saved preference if no initialViewMode was provided
+        if (!initialViewMode && prefs?.markdownViewMode) {
           setViewMode(prefs.markdownViewMode as 'single' | 'book');
         }
       } catch (err) {
@@ -46,7 +49,7 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
       }
     };
     loadPreferences();
-  }, []);
+  }, [initialViewMode]);
 
   // Handle font size increase
   const handleFontSizeIncrease = useCallback(async () => {

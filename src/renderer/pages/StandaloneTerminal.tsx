@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTheme } from 'themed-markdown';
+import * as path from 'path';
 
 import TerminalPanel from '../components/Terminal/TerminalPanel';
 import { TerminalTitlebar } from '../components/Titlebar';
 import { TerminalService } from '../main-process-api/TerminalService';
 import { AgentSessionService } from '../main-process-api/AgentSessionService';
+import { WindowService } from '../main-process-api/WindowService';
+import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
 import { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
 
 interface AgentSessionInfo {
@@ -22,6 +25,8 @@ export const StandaloneTerminal: React.FC = () => {
   const [aiSession, setAiSession] = useState<AgentSessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const { gitStatusWithFiles } = useRepositoryGitStatus(terminalInfo?.directory || null);
 
   useEffect(() => {
     if (!sessionId) {
@@ -74,6 +79,24 @@ export const StandaloneTerminal: React.FC = () => {
 
     loadTerminalInfo();
   }, [sessionId]);
+
+  const handleFileClick = async (filePath: string) => {
+    if (!terminalInfo?.directory) return;
+
+    if (filePath.endsWith('.md')) {
+      const fullPath = path.join(terminalInfo.directory, filePath);
+
+      try {
+        await WindowService.openMarkdownView(
+          fullPath,
+          terminalInfo.directory,
+          { viewMode: 'single' }
+        );
+      } catch (error) {
+        console.error('Failed to open markdown view:', error);
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -162,6 +185,8 @@ export const StandaloneTerminal: React.FC = () => {
         sessionId={sessionId}
         agentSessionId={terminalInfo.agentSessionId}
         agentSessionName={aiSession?.metadata?.customName}
+        gitStatusWithFiles={gitStatusWithFiles}
+        onFileClick={handleFileClick}
       />
 
       {/* Terminal Panel - uses flex to fill remaining space */}

@@ -77,8 +77,13 @@ export interface WindowAPI {
    * Unlike the dialog-based flow, this accepts a specific absolute file path.
    * @param filePath - Absolute path to the markdown file to open
    * @param projectName - Name of the project/repository this file belongs to
+   * @param options - Optional configuration for the markdown viewer
    */
-  openMarkdownView(filePath: string, projectName: string): Promise<void>;
+  openMarkdownView(
+    filePath: string,
+    projectName: string,
+    options?: { viewMode?: 'single' | 'book' }
+  ): Promise<void>;
 
   /**
    * Open Repository Dashboard for Alexandria repositories

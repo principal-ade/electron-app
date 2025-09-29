@@ -67,10 +67,15 @@ export class WindowService {
    * with the given absolute file path.
    * @param filePath - Absolute path to the markdown file to open
    * @param projectName - Name of the project/repository this file belongs to
+   * @param options - Optional configuration for the markdown viewer
    */
-  static async openMarkdownView(filePath: string, projectName: string): Promise<void> {
+  static async openMarkdownView(
+    filePath: string,
+    projectName: string,
+    options?: { viewMode?: 'single' | 'book' }
+  ): Promise<void> {
     try {
-      await window.mainProcess.window.openMarkdownView(filePath, projectName);
+      await window.mainProcess.window.openMarkdownView(filePath, projectName, options);
     } catch (error) {
       console.error('[WindowService] Failed to open markdown view:', error);
       throw new Error('Failed to open markdown view window');

@@ -316,7 +316,7 @@ export function registerModernWindowHandlers(): void {
   });
 
   // Open a markdown view window for a specific file path (renderer can call this directly)
-  ipcMain.handle(WindowEvent.OPEN_MARKDOWN_VIEW, async (_event, filePath: string, projectName: string) => {
+  ipcMain.handle(WindowEvent.OPEN_MARKDOWN_VIEW, async (_event, filePath: string, projectName: string, options?: { viewMode?: 'single' | 'book' }) => {
     if (!filePath || typeof filePath !== 'string') return;
 
     try {
@@ -328,20 +328,34 @@ export function registerModernWindowHandlers(): void {
       const { width: screenWidth, height: screenHeight } =
         primaryDisplay.workAreaSize;
 
+      // If viewMode is 'single', position window on right half of screen
+      const isRightHalf = options?.viewMode === 'single';
+      const windowConfig = isRightHalf
+        ? {
+            width: Math.floor(screenWidth / 2),
+            height: screenHeight,
+            x: Math.floor(screenWidth / 2),
+            y: 0,
+            minWidth: 600,
+            minHeight: 400,
+            title: `${projectName}: ${fileName}`,
+          }
+        : {
+            width: 1200,
+            height: 800,
+            minWidth: 800,
+            minHeight: 600,
+            title: `${projectName}: ${fileName}`,
+          };
+
       const window = createSpecialWindow(
         windowName,
-        {
-          width: 1200,
-          height: 800,
-          minWidth: 800,
-          minHeight: 600,
-          title: `${projectName}: ${fileName}`,
-        },
+        windowConfig,
         {
           fileSystemAdapter: true,
           contentSecurityPolicy: true,
           externalLinkHandler: true,
-          maximizeOnShow: true,
+          maximizeOnShow: !isRightHalf, // Don't maximize if positioning on right half
         },
       );
 
@@ -353,6 +367,7 @@ export function registerModernWindowHandlers(): void {
           mode: 'markdown-view',
           filePath,
           projectName,
+          viewMode: options?.viewMode,
         }),
       );
       const url = `${resolveHtmlPath('index.html')}#markdown-view/${encodedData}`;

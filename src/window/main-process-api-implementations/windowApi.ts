@@ -38,8 +38,8 @@ export const windowAPI: WindowAPI = {
   /**
    * Open a markdown viewer window for a single file path
    */
-  openMarkdownView: (filePath: string, projectName: string) =>
-    ipcRenderer.invoke(WindowEvent.OPEN_MARKDOWN_VIEW, filePath, projectName),
+  openMarkdownView: (filePath: string, projectName: string, options?: { viewMode?: 'single' | 'book' }) =>
+    ipcRenderer.invoke(WindowEvent.OPEN_MARKDOWN_VIEW, filePath, projectName, options),
 
   /**
    * Open Repository Dashboard for Alexandria repositories

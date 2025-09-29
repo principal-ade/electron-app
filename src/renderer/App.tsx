@@ -241,6 +241,7 @@ function AppContent({
       <MarkdownView
         filePath={(windowInitData as any)?.filePath || ''}
         projectName={projectName}
+        initialViewMode={(windowInitData as any)?.viewMode}
       />
     );
   }
