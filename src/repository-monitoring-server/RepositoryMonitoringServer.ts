@@ -15,6 +15,7 @@ import * as nodePath from 'path';
 import type { RepositoryState, CachedFileTree, GitStatusMetadata, PackageSummary, GitStateEventPayload } from './types';
 import { MonitoringInternalEvent } from './types';
 import { GitWatcherAdapter } from './GitWatcherAdapter';
+import { FileSystemCore } from '../shared/repository-core/FileSystemCore';
 
 export class RepositoryMonitoringServer {
   private repositories: Map<string, RepositoryState> = new Map();
@@ -22,10 +23,10 @@ export class RepositoryMonitoringServer {
   private fileTreeBuilder: FileTreeBuilder;
   private packageProcessor: PackageProcessor;
   private gitWatchers: Map<string, FSWatcher> = new Map();
-  private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
   private fsMonitorStatus: Map<string, boolean> = new Map();
   private packageCache: Map<string, { packages: PackageLayer[]; summary: PackageSummary; timestamp: number }> = new Map();
   private gitWatcherAdapter: GitWatcherAdapter;
+  private watcherRestartTimers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
     this.fileTreeBuilder = new FileTreeBuilder();
@@ -295,9 +296,15 @@ export class RepositoryMonitoringServer {
 
       // Set up file watching based on FSMonitor availability
       if (fsMonitorEnabled) {
-        // Minimal watching - just watch key git files
-        await this.setupMinimalGitWatching(repoPath);
-        state.watchingMode = 'minimal';
+        try {
+          await this.setupMinimalGitWatching(repoPath);
+          state.watchingMode = 'minimal';
+        } catch (error) {
+          console.warn(`[RepositoryMonitoring] Minimal watcher setup failed for ${repoPath}, falling back:`, error);
+          await this.setupFallbackGitWatching(repoPath);
+          state.watchingMode = 'fallback';
+          state.fsMonitorEnabled = false;
+        }
       } else {
         // Fallback to more comprehensive watching
         await this.setupFallbackGitWatching(repoPath);
@@ -322,24 +329,17 @@ export class RepositoryMonitoringServer {
     const state = this.repositories.get(repoPath);
     if (state) {
       state.gitWatchingEnabled = false;
+      state.isWatching = false;
     }
 
     // Stop library-based watching
     await this.gitWatcherAdapter.stopWatching(repoPath);
 
     // Clean up watcher
-    const watcher = this.gitWatchers.get(repoPath);
-    if (watcher) {
-      await watcher.close();
-      this.gitWatchers.delete(repoPath);
-    }
+    await this.disposeWatcher(repoPath);
 
     // Clear any pending debounce timers
-    const timer = this.debounceTimers.get(repoPath);
-    if (timer) {
-      clearTimeout(timer);
-      this.debounceTimers.delete(repoPath);
-    }
+    this.clearWatcherRestart(repoPath);
   }
 
   /**
@@ -347,106 +347,62 @@ export class RepositoryMonitoringServer {
    * FSMonitor makes git status fast, but we still need to detect working dir changes
    */
   private async setupMinimalGitWatching(repoPath: string): Promise<void> {
-    const gitDir = nodePath.join(repoPath, '.git');
-
-    // Get gitignore patterns to exclude from watching
-    let gitignorePatterns: string[] = [];
+    let ignoreGlobs: string[] = [];
     try {
-      const gitignorePath = nodePath.join(repoPath, '.gitignore');
-      if (require('fs').existsSync(gitignorePath)) {
-        const gitignoreContent = require('fs').readFileSync(gitignorePath, 'utf8');
-        gitignorePatterns = gitignoreContent
-          .split('\n')
-          .filter((line: string) => line.trim() && !line.startsWith('#'))
-          .map((pattern: string) => `**/${pattern.trim()}`);
-      }
+      ignoreGlobs = await FileSystemCore.getWatchIgnoreGlobs(repoPath);
     } catch (error) {
-      // Ignore .gitignore read errors
+      console.warn(`[RepositoryMonitoring] Failed to load watch ignore globs for ${repoPath}:`, error);
     }
 
-    // Watch the repository directory (shallow) to detect any changes
-    const watcher = watch(repoPath, {
-      depth: 2, // Shallow watching to avoid too many file handles
-      ignoreInitial: true,
-      persistent: true,
-      // Use a function for ignored to handle paths more precisely
-      ignored: (path: string) => {
-        // Ignore .git directory and everything in it
-        if (path.includes('/.git/') || path.endsWith('/.git')) {
-          return true;
-        }
-        // Ignore common large directories
-        if (path.includes('/node_modules/') || path.endsWith('/node_modules')) {
-          return true;
-        }
-        if (path.includes('/.next/') || path.includes('/dist/') || path.includes('/build/')) {
-          return true;
-        }
-        // Check gitignore patterns
-        for (const pattern of gitignorePatterns) {
-          if (path.includes(pattern.replace('**/', '/'))) {
-            return true;
-          }
-        }
-        return false;
-      },
-      awaitWriteFinish: {
-        stabilityThreshold: 300, // Fast since FSMonitor helps git status
-        pollInterval: 100,
-      },
-    });
+    let watcher: FSWatcher;
+    try {
+      watcher = watch(repoPath, {
+        ignoreInitial: true,
+        persistent: true,
+        ignored: FileSystemCore.createWatchIgnorePredicate(repoPath, ignoreGlobs),
+        ignorePermissionErrors: true,
+        awaitWriteFinish: {
+          stabilityThreshold: 300,
+          pollInterval: 100,
+        },
+      });
+    } catch (error) {
+      console.error(`[RepositoryMonitoring] Failed to initialize minimal watcher for ${repoPath}:`, error);
+      throw error;
+    }
 
-    watcher.on('all', (event, filePath) => {
-      // Only handle file changes for file tree updates, not git status
-      // Git state events are handled by the library watcher
-      this.handleFileChange(repoPath, filePath, event);
-    });
-
-    this.gitWatchers.set(repoPath, watcher);
+    this.registerWatcher(repoPath, watcher);
   }
 
   /**
    * Setup fallback git watching (when FSMonitor is not available)
    */
   private async setupFallbackGitWatching(repoPath: string): Promise<void> {
-    // Watch the repository directory efficiently - just detect any changes, don't track individual files
-    const watcher = watch(repoPath, {
-      // Only watch directories, not individual files, and limit depth
-      depth: 2, // Watch repo root + immediate subdirectories
-      ignoreInitial: true,
-      persistent: true,
-      // Use a function for ignored to handle paths more precisely
-      ignored: (path: string) => {
-        // Ignore .git directory and everything in it
-        if (path.includes('/.git/') || path.endsWith('/.git')) {
-          return true;
-        }
-        // Ignore common large directories
-        if (path.includes('/node_modules/') || path.endsWith('/node_modules')) {
-          return true;
-        }
-        if (path.includes('/.next/') || path.includes('/dist/') || path.includes('/build/')) {
-          return true;
-        }
-        if (path.includes('/target/') || path.includes('/venv/') || path.includes('/__pycache__/')) {
-          return true;
-        }
-        return false;
-      },
-      // More aggressive debouncing for efficiency
-      awaitWriteFinish: {
-        stabilityThreshold: 500,
-        pollInterval: 100,
-      },
-    });
+    let ignoreGlobs: string[] = [];
+    try {
+      ignoreGlobs = await FileSystemCore.getWatchIgnoreGlobs(repoPath);
+    } catch (error) {
+      console.warn(`[RepositoryMonitoring] Failed to load watch ignore globs for ${repoPath}:`, error);
+    }
 
-    watcher.on('all', (event, filePath) => {
-      // Only handle file changes for file tree updates, not git status
-      // Git state events are handled by the library watcher
-      this.handleFileChange(repoPath, filePath, event);
-    });
+    let watcher: FSWatcher;
+    try {
+      watcher = watch(repoPath, {
+        ignoreInitial: true,
+        persistent: true,
+        ignored: FileSystemCore.createWatchIgnorePredicate(repoPath, ignoreGlobs),
+        ignorePermissionErrors: true,
+        awaitWriteFinish: {
+          stabilityThreshold: 500,
+          pollInterval: 100,
+        },
+      });
+    } catch (error) {
+      console.error(`[RepositoryMonitoring] Failed to initialize fallback watcher for ${repoPath}:`, error);
+      throw error;
+    }
 
-    this.gitWatchers.set(repoPath, watcher);
+    this.registerWatcher(repoPath, watcher);
   }
 
   /**
@@ -458,9 +414,140 @@ export class RepositoryMonitoringServer {
     this.fileTreeCache.delete(repoPath);
     this.packageCache.delete(repoPath);
 
+    const gitignorePath = nodePath.join(repoPath, '.gitignore');
+    if (nodePath.resolve(filePath) === nodePath.resolve(gitignorePath)) {
+      this.scheduleWatcherRestart(repoPath, '.gitignore changed');
+    }
+
     // Note: We don't trigger git status here anymore
     // The library watcher handles all git state changes
     console.log(`[RepositoryMonitoring] File change detected in ${repoPath}, caches cleared`);
+  }
+
+  private registerWatcher(repoPath: string, watcher: FSWatcher): void {
+    watcher.on('all', (event, filePath) => {
+      this.handleFileChange(repoPath, filePath, event);
+    });
+
+    watcher.on('error', (error) => {
+      if (this.isIgnorableWatcherError(repoPath, error)) {
+        return;
+      }
+
+      console.error(`[RepositoryMonitoring] Watcher error for ${repoPath}:`, error);
+      this.scheduleWatcherRestart(repoPath, 'watcher error');
+    });
+
+    watcher.on('ready', () => {
+      const state = this.repositories.get(repoPath);
+      if (state) {
+        state.isWatching = true;
+      }
+    });
+
+    watcher.on('close', () => {
+      const state = this.repositories.get(repoPath);
+      if (state) {
+        state.isWatching = false;
+      }
+    });
+
+    this.gitWatchers.set(repoPath, watcher);
+  }
+
+  private async disposeWatcher(repoPath: string): Promise<void> {
+    const watcher = this.gitWatchers.get(repoPath);
+    if (watcher) {
+      try {
+        await watcher.close();
+      } catch (error) {
+        console.warn(`[RepositoryMonitoring] Error closing watcher for ${repoPath}:`, error);
+      }
+      this.gitWatchers.delete(repoPath);
+    }
+  }
+
+  private clearWatcherRestart(repoPath: string): void {
+    const timer = this.watcherRestartTimers.get(repoPath);
+    if (timer) {
+      clearTimeout(timer);
+      this.watcherRestartTimers.delete(repoPath);
+    }
+  }
+
+  private scheduleWatcherRestart(repoPath: string, reason: string): void {
+    const state = this.repositories.get(repoPath);
+    if (!state?.gitWatchingEnabled) {
+      return;
+    }
+
+    this.clearWatcherRestart(repoPath);
+
+    const timer = setTimeout(() => {
+      this.watcherRestartTimers.delete(repoPath);
+      this.restartWatcher(repoPath, reason).catch((error) => {
+        console.error(`[RepositoryMonitoring] Failed to restart watcher for ${repoPath}:`, error);
+      });
+    }, 300);
+
+    this.watcherRestartTimers.set(repoPath, timer);
+  }
+
+  private async restartWatcher(repoPath: string, reason: string): Promise<void> {
+    console.log(`[RepositoryMonitoring] Restarting watcher for ${repoPath} (${reason})`);
+    const state = this.repositories.get(repoPath);
+    if (!state || !state.gitWatchingEnabled) {
+      return;
+    }
+
+    await this.disposeWatcher(repoPath);
+
+    try {
+      if (state.watchingMode === 'minimal' && state.fsMonitorEnabled) {
+        await this.setupMinimalGitWatching(repoPath);
+        state.watchingMode = 'minimal';
+      } else {
+        await this.setupFallbackGitWatching(repoPath);
+        state.watchingMode = 'fallback';
+      }
+    } catch (error) {
+      console.error(`[RepositoryMonitoring] Watcher restart failed for ${repoPath}:`, error);
+      if (state.watchingMode === 'minimal') {
+        console.warn(`[RepositoryMonitoring] Falling back to comprehensive watcher for ${repoPath}`);
+        state.watchingMode = 'fallback';
+        state.fsMonitorEnabled = false;
+        await this.setupFallbackGitWatching(repoPath);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  private isIgnorableWatcherError(repoPath: string, error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+      return false;
+    }
+
+    const err = error as NodeJS.ErrnoException & { filename?: string };
+    if (err.code !== 'UNKNOWN') {
+      return false;
+    }
+
+    const targetPath = err.path || err.filename;
+    if (!targetPath) {
+      return false;
+    }
+
+    const normalize = (value: string) => value.split(nodePath.sep).join('/');
+    const expected = normalize(nodePath.resolve(repoPath, '.git', 'fsmonitor--daemon.ipc'));
+    const actual = normalize(targetPath);
+
+    if (actual === expected) {
+      console.warn(`[RepositoryMonitoring] Ignoring watcher error for fsmonitor socket in ${repoPath}`);
+      return true;
+    }
+
+    return false;
   }
 
 

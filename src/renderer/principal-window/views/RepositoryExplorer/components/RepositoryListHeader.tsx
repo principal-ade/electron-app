@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Plus, FolderOpen, Github, RefreshCw, GitBranch } from 'lucide-react';
+import { Search, Plus, FolderOpen, Github } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 
 interface RepositoryListHeaderProps {
@@ -8,10 +8,6 @@ interface RepositoryListHeaderProps {
   onAddLocalRepository: () => void;
   onAddGithubLink: () => void;
   repositoryCount: number;
-  onCheckAllStatus?: () => void;
-  isCheckingStatus?: boolean;
-  showOnlyWithChanges?: boolean;
-  onToggleChangesFilter?: (show: boolean) => void;
 }
 
 export const RepositoryListHeader: React.FC<RepositoryListHeaderProps> = ({
@@ -20,10 +16,6 @@ export const RepositoryListHeader: React.FC<RepositoryListHeaderProps> = ({
   onAddLocalRepository,
   onAddGithubLink,
   repositoryCount,
-  onCheckAllStatus,
-  isCheckingStatus = false,
-  showOnlyWithChanges = false,
-  onToggleChangesFilter,
 }) => {
   const { theme } = useTheme();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -102,92 +94,6 @@ export const RepositoryListHeader: React.FC<RepositoryListHeaderProps> = ({
         </h2>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {/* Filter Changes Button */}
-          {onToggleChangesFilter && (
-            <button
-              onClick={() => onToggleChangesFilter(!showOnlyWithChanges)}
-              style={{
-                height: '32px',
-                padding: '0 12px',
-                borderRadius: '6px',
-                backgroundColor: showOnlyWithChanges ? theme.colors.primary : theme.colors.backgroundTertiary,
-                color: showOnlyWithChanges ? theme.colors.background : theme.colors.text,
-                border: `1px solid ${showOnlyWithChanges ? theme.colors.primary : theme.colors.border}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontSize: '12px',
-                fontWeight: showOnlyWithChanges ? 600 : 500,
-              }}
-              onMouseEnter={(e) => {
-                if (!showOnlyWithChanges) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                } else {
-                  e.currentTarget.style.opacity = '0.9';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!showOnlyWithChanges) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                } else {
-                  e.currentTarget.style.opacity = '1';
-                }
-              }}
-              title={showOnlyWithChanges ? 'Show all repositories' : 'Show only repositories with changes'}
-              aria-label="Filter repositories with changes"
-            >
-              <GitBranch size={14} />
-              {showOnlyWithChanges ? 'With Changes' : 'All'}
-            </button>
-          )}
-
-          {/* Check All Status Button */}
-          {onCheckAllStatus && (
-            <button
-              onClick={onCheckAllStatus}
-              disabled={isCheckingStatus}
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '6px',
-                backgroundColor: theme.colors.backgroundTertiary,
-                color: theme.colors.text,
-                border: `1px solid ${theme.colors.border}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: isCheckingStatus ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s',
-                position: 'relative',
-                opacity: isCheckingStatus ? 0.6 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!isCheckingStatus) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                e.currentTarget.style.borderColor = theme.colors.border;
-              }}
-              title="Check status of all repositories"
-              aria-label="Check all repository status"
-            >
-              <RefreshCw
-                size={16}
-                style={{
-                  animation: isCheckingStatus ? 'spin 1s linear infinite' : 'none',
-                }}
-              />
-            </button>
-          )}
-
           {/* Add Repository Button */}
           <div ref={dropdownRef} style={{ position: 'relative' }}>
             <button

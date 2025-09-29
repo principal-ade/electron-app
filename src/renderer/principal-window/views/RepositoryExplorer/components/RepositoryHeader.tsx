@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import { GitBranch, Trash2, ExternalLink, Terminal, RefreshCw, GitPullRequest, Upload, Github } from 'lucide-react';
+import { GitBranch, Trash2, ExternalLink, Terminal, RefreshCw, GitPullRequest, Upload } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import { GitBranchStatus } from '../../../../main-process-api/GitService';
@@ -7,6 +7,7 @@ import { TerminalService } from '../../../../main-process-api/TerminalService';
 
 interface RepositoryHeaderProps {
   repository: EnhancedAlexandriaEntry;
+  gitStatus: any; // Add git status prop for dirty state
   branchStatus: GitBranchStatus | null;
   pushStatus: { safe: boolean; reason?: string; needsUpstream: boolean } | null;
   isCheckingUpdates: boolean;
@@ -33,6 +34,7 @@ const spinAnimation = `
 
 export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
   repository,
+  gitStatus,
   branchStatus,
   pushStatus,
   isCheckingUpdates,
@@ -46,14 +48,6 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
   onTerminalWindowsUpdate,
 }) => {
   const { theme } = useTheme();
-
-
-  const handleOpenGitHub = useCallback(() => {
-    if (!repository?.github?.owner || !repository?.github?.name) return;
-
-    const githubUrl = `https://github.com/${repository.github.owner}/${repository.github.name}`;
-    window.open(githubUrl, '_blank');
-  }, [repository]);
 
   const handleOpenTerminal = useCallback(async () => {
     if (!repository?.path) return;
@@ -124,36 +118,23 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               {repository.name}
             </h2>
 
-            {/* GitHub Button */}
-            {repository?.github?.owner && repository?.github?.name && (
-              <button
-                onClick={handleOpenGitHub}
+            {/* Dirty State Indicator */}
+            {gitStatus?.isDirty && (
+              <span
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '28px',
-                  height: '28px',
-                  padding: 0,
-                  backgroundColor: 'transparent',
-                  color: theme.colors.text,
-                  border: `1px solid ${theme.colors.border}`,
+                  gap: '4px',
+                  padding: '4px 8px',
+                  backgroundColor: `${theme.colors.warning}15`,
+                  color: theme.colors.warning,
                   borderRadius: '4px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
+                  fontSize: '12px',
+                  fontWeight: 600,
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.borderColor = theme.colors.border;
-                }}
-                title={`Open on GitHub: ${repository.github.owner}/${repository.github.name}`}
               >
-                <Github size={14} />
-              </button>
+                ● {(gitStatus.staged || 0) + (gitStatus.unstaged || 0) + (gitStatus.untracked || 0)}
+              </span>
             )}
 
             {/* Branch Status Indicator */}

@@ -271,10 +271,6 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
           onAddLocalRepository={handleAddLocalRepository}
           onAddGithubLink={handleAddGithubLink}
           repositoryCount={repositories.length}
-          onCheckAllStatus={handleCheckAllStatus}
-          isCheckingStatus={isCheckingAllStatus}
-          showOnlyWithChanges={showOnlyWithChanges}
-          onToggleChangesFilter={setShowOnlyWithChanges}
         />
 
         <div
@@ -464,6 +460,8 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         isLoadingGitStatus={false}
         onOpenDashboard={handleSelectRepository}
         onRepositoryRemoved={handleRepositoryRemoved}
+        onRefresh={refreshRepos}
+        isRefreshing={isLoadingRepos}
       />
     );
   };

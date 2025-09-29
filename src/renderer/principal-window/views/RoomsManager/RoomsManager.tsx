@@ -292,6 +292,7 @@ export const RoomsManager: React.FC<RoomsManagerProps> = ({ sidebarCollapsed = f
       <RoomDetailsPanel
         room={selectedRoom}
         theme={theme}
+        onRemoveRoom={handleRemoveRoom}
       />
     );
   };

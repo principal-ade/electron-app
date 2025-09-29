@@ -1,7 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from 'themed-markdown';
+import { RefreshCw } from 'lucide-react';
 import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../../shared/types/repository.types';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
+import { RepositoryMonitoringService } from '../../../../main-process-api/RepositoryMonitoringService';
 import { WindowService } from '../../../../main-process-api/WindowService';
 import { RemoveRepositoryDialog } from './RemoveRepositoryDialog';
 import { TerminalService } from '../../../../main-process-api/TerminalService';
@@ -20,6 +22,8 @@ interface RepositoryDetailsPanelProps {
   isLoadingGitStatus: boolean;
   onOpenDashboard: (repo: EnhancedAlexandriaEntry) => void;
   onRepositoryRemoved?: (removedRepoName: string) => void;
+  onRefresh?: () => Promise<void>;
+  isRefreshing?: boolean;
 }
 
 
@@ -32,6 +36,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   isLoadingGitStatus,
   onOpenDashboard,
   onRepositoryRemoved,
+  onRefresh,
+  isRefreshing = false,
 }) => {
   const { theme } = useTheme();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
@@ -126,8 +132,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       });
 
       if (result.success) {
-        // Successfully pushed to remote
-        // Refresh branch status after push
+        // Successfully pushed - refresh repository monitoring to update sidebar
+        await RepositoryMonitoringService.refreshRepository(selectedRepository.path);
+
+        // Refresh local branch status
         await checkForUpdates();
       } else {
         console.error('Push failed:', result.message);
@@ -148,8 +156,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       const result = await GitService.fastForwardMerge(selectedRepository.path);
 
       if (result.success) {
-        // Fast-forward successful
-        // Refresh branch status after merge
+        // Fast-forward successful - refresh repository monitoring to update sidebar
+        await RepositoryMonitoringService.refreshRepository(selectedRepository.path);
+
+        // Refresh local branch status
         await checkForUpdates();
       } else {
         console.error('Fast-forward failed:', result.message);
@@ -287,6 +297,12 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     return 'Just now';
   };
 
+  const handleRefresh = async () => {
+    if (onRefresh && !isRefreshing) {
+      await onRefresh();
+    }
+  };
+
   return (
     <div
       style={{
@@ -295,13 +311,64 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        position: 'relative',
       }}
     >
+      {/* Refresh Button - Always visible in the top-right corner */}
+      <button
+        onClick={handleRefresh}
+        disabled={isRefreshing}
+        style={{
+          position: 'absolute',
+          top: '12px',
+          right: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '32px',
+          height: '32px',
+          padding: 0,
+          backgroundColor: theme.colors.backgroundSecondary,
+          color: isRefreshing ? theme.colors.textSecondary : theme.colors.text,
+          border: `1px solid ${theme.colors.border}`,
+          borderRadius: '6px',
+          cursor: isRefreshing ? 'not-allowed' : 'pointer',
+          transition: 'all 0.2s',
+          zIndex: 10,
+        }}
+        onMouseEnter={(e) => {
+          if (!isRefreshing) {
+            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            e.currentTarget.style.borderColor = theme.colors.primary;
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+          e.currentTarget.style.borderColor = theme.colors.border;
+        }}
+        title="Refresh repository data and invalidate cache"
+      >
+        <RefreshCw
+          size={14}
+          style={{
+            animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+          }}
+        />
+      </button>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
       {selectedRepository ? (
         <>
           {/* Repository Header */}
           <RepositoryHeader
             repository={selectedRepository}
+            gitStatus={gitStatus}
             branchStatus={branchStatus}
             pushStatus={pushStatus}
             isCheckingUpdates={isCheckingUpdates}

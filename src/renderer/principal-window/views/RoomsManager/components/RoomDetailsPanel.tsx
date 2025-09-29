@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Folder,
   Calendar,
-  FolderOpen,
   Link2,
   Edit2,
   Check,
@@ -31,12 +29,14 @@ enum RoomView {
 interface RoomDetailsPanelProps {
   room: RoomInfo | null;
   theme: Theme;
+  onRemoveRoom?: (room: RoomInfo) => void;
 }
 
 
 export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
   room,
   theme,
+  onRemoveRoom,
 }) => {
   // Disk space feature removed - getDiskUsage method not available in FileSystemService
   const [portals, setPortals] = useState<PalacePortal[]>([]);
@@ -247,24 +247,16 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
           gap: '12px',
           backgroundColor: theme.colors.backgroundSecondary,
         }}>
-          <button
-            onClick={handleBackToRoom}
-            style={{
-              padding: '6px 12px',
-              backgroundColor: 'transparent',
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '4px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
+          <div style={{ flex: 1 }}>
+            <h3 style={{
+              margin: 0,
+              fontSize: theme.fontSizes[2],
+              fontWeight: 600,
               color: theme.colors.text,
-              fontSize: theme.fontSizes[1],
-            }}
-          >
-            <ArrowLeft size={16} />
-            Back to Room
-          </button>
+            }}>
+              {room?.room.name || ''} - {editingDrawingName}
+            </h3>
+          </div>
 
           <button
             onClick={handleCopyDrawingPath}
@@ -286,16 +278,24 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
             Copy Path
           </button>
 
-          <div style={{ flex: 1 }}>
-            <h3 style={{
-              margin: 0,
-              fontSize: theme.fontSizes[2],
-              fontWeight: 600,
+          <button
+            onClick={handleBackToRoom}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: 'transparent',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '4px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
               color: theme.colors.text,
-            }}>
-              {room?.room.name || ''} - {editingDrawingName}
-            </h3>
-          </div>
+              fontSize: theme.fontSizes[1],
+            }}
+          >
+            <X size={16} />
+            Close
+          </button>
         </div>
 
         {/* Excalidraw Editor */}
@@ -327,7 +327,6 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
         flexDirection: 'column',
         color: theme.colors.textSecondary,
       }}>
-        <Folder size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
         <div style={{ fontSize: theme.fontSizes[2], marginBottom: '8px' }}>
           No room selected
         </div>
@@ -358,9 +357,7 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
         padding: '20px',
         borderBottom: `1px solid ${theme.colors.border}`,
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-          <FolderOpen size={32} style={{ color: theme.colors.primary, marginTop: '4px' }} />
-
+        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
           <div style={{ flex: 1 }}>
             {isEditMode ? (
               <>
@@ -434,45 +431,29 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
                     <Edit2 size={16} />
                   </button>
 
-                  <button
-                    onClick={() => setShowAddPortalModal(true)}
-                    style={{
-                      padding: '4px 8px',
-                      backgroundColor: theme.colors.primary,
-                      color: theme.colors.background,
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: theme.fontSizes[1],
-                    }}
-                    title="Add Portal"
-                  >
-                    <Link2 size={14} />
-                    Add Portal
-                  </button>
-
-                  <button
-                    onClick={handleNewDrawing}
-                    style={{
-                      padding: '4px 8px',
-                      backgroundColor: theme.colors.primary,
-                      color: theme.colors.background,
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: theme.fontSizes[1],
-                    }}
-                    title="Add Drawing"
-                  >
-                    <Palette size={14} />
-                    Add Drawing
-                  </button>
+                  {/* Remove Room Button */}
+                  {onRemoveRoom && (
+                    <button
+                      onClick={() => onRemoveRoom(room)}
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: 'transparent',
+                        color: theme.colors.error,
+                        border: `1px solid ${theme.colors.error}`,
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontSize: theme.fontSizes[1],
+                        marginLeft: 'auto',
+                      }}
+                      title="Remove Room"
+                    >
+                      <X size={14} />
+                      Remove
+                    </button>
+                  )}
                 </div>
 
                 {room.room.description && (
@@ -537,29 +518,6 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
           </div>
         </div>
 
-        {/* Stats Row */}
-        <div style={{
-          marginTop: '16px',
-          display: 'flex',
-          gap: '24px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Calendar size={16} style={{ color: theme.colors.textSecondary }} />
-            <span style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-              Created: {new Date(room.room.createdAt).toLocaleDateString()}
-            </span>
-          </div>
-
-          {room.room.portals && room.room.portals.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Link2 size={16} style={{ color: theme.colors.textSecondary }} />
-              <span style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-                {room.room.portals.length} portal{room.room.portals.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-          )}
-
-        </div>
       </div>
 
 
@@ -571,14 +529,39 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
           padding: '16px',
         }}>
           {/* Drawings Section */}
-          <h3 style={{
-            fontSize: theme.fontSizes[2],
-            fontWeight: 600,
-            color: theme.colors.text,
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
             marginBottom: '12px',
           }}>
-            Drawings
-          </h3>
+            <h3 style={{
+              fontSize: theme.fontSizes[2],
+              fontWeight: 600,
+              color: theme.colors.text,
+              margin: 0,
+            }}>
+              Drawings
+            </h3>
+            <button
+              onClick={handleNewDrawing}
+              style={{
+                padding: '4px 8px',
+                backgroundColor: theme.colors.primary,
+                color: theme.colors.background,
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: theme.fontSizes[1],
+              }}
+              title="Add Drawing"
+            >
+              +
+            </button>
+          </div>
 
           <DrawingsList
             key={drawingsKey}
@@ -589,15 +572,40 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
           />
 
           {/* Portals Section */}
-          <h3 style={{
-            fontSize: theme.fontSizes[2],
-            fontWeight: 600,
-            color: theme.colors.text,
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
             marginTop: '24px',
             marginBottom: '12px',
           }}>
-            Portals to Other Repositories
-          </h3>
+            <h3 style={{
+              fontSize: theme.fontSizes[2],
+              fontWeight: 600,
+              color: theme.colors.text,
+              margin: 0,
+            }}>
+              Portals to Other Repositories
+            </h3>
+            <button
+              onClick={() => setShowAddPortalModal(true)}
+              style={{
+                padding: '4px 8px',
+                backgroundColor: theme.colors.primary,
+                color: theme.colors.background,
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: theme.fontSizes[1],
+              }}
+              title="Add Portal"
+            >
+              +
+            </button>
+          </div>
 
           {isLoadingPortals ? (
             <div style={{

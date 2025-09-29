@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.23",
+  "version": "0.0.25",
   "description": "Principal ADE - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -166,7 +166,7 @@
     "@a24z/agent-manager": "^1.0.10",
     "@a24z/alexandria-ui": "^0.0.3",
     "@a24z/callimachus": "^0.1.4",
-    "@a24z/core-library": "^0.1.21",
+    "@a24z/core-library": "^0.1.25",
     "@a24z/markdown-search": "^2.0.6",
     "@a24z/observability-sdk": "^0.4.6",
     "@a24z/panels": "^1.0.6",
@@ -210,6 +210,7 @@
     "lucide-react": "^0.534.0",
     "marked": "^15.0.11",
     "mermaid": "^11.6.0",
+    "minimatch": "^10.0.3",
     "monaco-editor": "^0.52.2",
     "monaco-vim": "^0.4.2",
     "node-fetch": "^3.3.2",

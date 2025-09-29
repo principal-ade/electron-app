@@ -6,6 +6,7 @@
 import { globby } from 'globby';
 import * as path from 'path';
 import * as fs from 'fs';
+import { Minimatch } from 'minimatch';
 import { universalGitignorePatterns as universalPatternsConfig } from '../configs';
 
 export interface FileSystemCoreOptions {
@@ -30,6 +31,185 @@ export interface FileTreeResult {
  * Core file system operations shared between processes
  */
 export class FileSystemCore {
+  private static getUniversalDirectories(): string[] {
+    return Object.values(universalPatternsConfig.patterns)
+      .flatMap((category: any) => category.directories || [])
+      .map((dir: string) => dir.replace(/\\/g, '/'));
+  }
+
+  private static normalizeToPosix(target: string): string {
+    return target.split(path.sep).join('/');
+  }
+
+  private static getDirectoryGlobVariants(dirName: string): string[] {
+    const normalized = dirName.replace(/\\/g, '/');
+    return [`**/${normalized}`, `**/${normalized}/**`];
+  }
+
+  private static addDirectoryIgnorePatterns(
+    accumulator: Set<string>,
+    dirName: string,
+    repoPosixPath: string
+  ): void {
+    FileSystemCore.getDirectoryGlobVariants(dirName).forEach((pattern) => accumulator.add(pattern));
+    const absoluteBase = `${repoPosixPath}/${dirName}`.replace(/\\/g, '/');
+    accumulator.add(absoluteBase);
+    accumulator.add(`${absoluteBase}/**`);
+  }
+
+  private static convertGitignorePatternToGlobs(pattern: string, repoPosixPath: string): string[] {
+    const trimmed = pattern.trim();
+
+    if (!trimmed || trimmed.startsWith('#')) {
+      return [];
+    }
+
+    if (trimmed.startsWith('!')) {
+      // Negated patterns are not supported by chokidar ignore globs
+      return [];
+    }
+
+    let normalized = trimmed.replace(/\\ /g, ' ').replace(/\\/g, '/');
+    const isDirectoryPattern = normalized.endsWith('/');
+
+    if (isDirectoryPattern) {
+      normalized = normalized.replace(/\/+/g, '/').replace(/\/+$/g, '');
+    }
+
+    if (!normalized) {
+      return [];
+    }
+
+    const results: string[] = [];
+    const hasGlobChars = /[*?\[\]]/.test(normalized);
+    const isAbsolute = normalized.startsWith('/');
+
+    const addDirectoryVariants = (basePattern: string) => {
+      results.push(basePattern);
+      results.push(`${basePattern}/**`);
+    };
+
+    if (isAbsolute) {
+      const absoluteBase = `${repoPosixPath}/${normalized.replace(/^\/+/, '')}`;
+      if (isDirectoryPattern && !hasGlobChars) {
+        addDirectoryVariants(absoluteBase);
+      } else {
+        results.push(absoluteBase);
+      }
+      return results;
+    }
+
+    if (isDirectoryPattern && !hasGlobChars) {
+      const base = `**/${normalized}`;
+      addDirectoryVariants(base);
+      return results;
+    }
+
+    if (!normalized.includes('/') && !hasGlobChars) {
+      results.push(`**/${normalized}`);
+      return results;
+    }
+
+    results.push(`**/${normalized}`);
+    return results;
+  }
+
+  private static async getGitignoreGlobPatterns(repoPath: string): Promise<string[]> {
+    try {
+      const gitignorePath = path.join(repoPath, '.gitignore');
+      if (!fs.existsSync(gitignorePath)) {
+        return [];
+      }
+
+      const fileContents = await fs.promises.readFile(gitignorePath, 'utf8');
+      if (!fileContents) {
+        return [];
+      }
+
+      const repoPosixPath = FileSystemCore.normalizeToPosix(path.resolve(repoPath));
+
+      return fileContents
+        .split(/\r?\n/)
+        .flatMap((line) => FileSystemCore.convertGitignorePatternToGlobs(line, repoPosixPath))
+        .filter(Boolean);
+    } catch (error) {
+      console.warn('[FileSystemCore] Failed to read .gitignore patterns:', error);
+      return [];
+    }
+  }
+
+  static async getWatchIgnoreGlobs(
+    repoPath: string,
+    options?: { additionalPatterns?: string[] }
+  ): Promise<string[]> {
+    const patterns = new Set<string>();
+    const repoPosixPath = FileSystemCore.normalizeToPosix(path.resolve(repoPath));
+
+    // Always ignore .git directories
+    FileSystemCore.addDirectoryIgnorePatterns(patterns, '.git', repoPosixPath);
+    patterns.add(`${repoPosixPath}/.git/fsmonitor--daemon.ipc`);
+
+    // Include universal directories
+    for (const dirName of FileSystemCore.getUniversalDirectories()) {
+      FileSystemCore.addDirectoryIgnorePatterns(patterns, dirName, repoPosixPath);
+    }
+
+    // Merge additional patterns (already globbed)
+    options?.additionalPatterns?.forEach((pattern) => {
+      if (pattern) {
+        patterns.add(pattern);
+      }
+    });
+
+    // Merge .gitignore-derived globs
+    const gitignoreGlobs = await FileSystemCore.getGitignoreGlobPatterns(repoPath);
+    gitignoreGlobs.forEach((pattern) => patterns.add(pattern));
+
+    return Array.from(patterns);
+  }
+
+  private static compileGlobMatchers(patterns: string[]): Minimatch[] {
+    return patterns.map((pattern) => new Minimatch(pattern.replace(/\\/g, '/'), {
+      dot: true,
+      nocase: false,
+      matchBase: !pattern.includes('/'),
+    }));
+  }
+
+  static createWatchIgnorePredicate(
+    repoPath: string,
+    patterns: string[]
+  ): (targetPath: string, stats?: fs.Stats) => boolean {
+    const matchers = FileSystemCore.compileGlobMatchers(patterns);
+    const repoPosixPath = FileSystemCore.normalizeToPosix(path.resolve(repoPath));
+
+    return (targetPath: string | undefined): boolean => {
+      if (!targetPath) {
+        return false;
+      }
+
+      const normalizedTarget = FileSystemCore.normalizeToPosix(targetPath);
+      const isInsideRepo = normalizedTarget === repoPosixPath || normalizedTarget.startsWith(`${repoPosixPath}/`);
+      const relativeTarget = isInsideRepo && normalizedTarget.length > repoPosixPath.length
+        ? normalizedTarget.slice(repoPosixPath.length + 1)
+        : undefined;
+
+      if (normalizedTarget.startsWith(`${repoPosixPath}/.git`)) {
+        return true;
+      }
+
+      return matchers.some((matcher) => {
+        if (matcher.match(normalizedTarget)) {
+          return true;
+        }
+        if (relativeTarget && matcher.match(relativeTarget)) {
+          return true;
+        }
+        return false;
+      });
+    };
+  }
+
   /**
    * Build a filtered file tree using globby with automatic .gitignore support
    * This is the exact same logic as ElectronFileSystemAdapter.buildFilteredFileTree
@@ -44,9 +224,9 @@ export class FileSystemCore {
       const includeStats = options?.includeStats || false;
 
       // Extract universal patterns from the config
-      const universalPatterns = Object.values(universalPatternsConfig.patterns)
-        .flatMap((category: any) => category.directories || [])
-        .map((dir) => `**/${dir}/**`);
+      const universalPatterns = FileSystemCore.getUniversalDirectories().map(
+        (dir) => `**/${dir}/**`
+      );
 
       // Combine with any additional patterns
       const ignorePatterns = [

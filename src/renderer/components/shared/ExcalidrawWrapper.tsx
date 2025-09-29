@@ -414,6 +414,19 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleManualSave]);
 
+  // Auto-save on unmount
+  useEffect(() => {
+    return () => {
+      // Save when the component is unmounting
+      if (excalidrawAPI) {
+        console.log('[ExcalidrawWrapper] Auto-saving on unmount');
+        // Set initial load flag to false to ensure save happens
+        isInitialLoadRef.current = false;
+        handleSave();
+      }
+    };
+  }, [excalidrawAPI, handleSave]);
+
   // Handle name editing
   const handleStartEditingName = () => {
     setIsEditingName(true);

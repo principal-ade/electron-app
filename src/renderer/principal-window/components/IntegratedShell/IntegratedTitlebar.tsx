@@ -61,6 +61,16 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         zIndex: 100,
       }}
     >
+      {/* Left controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '10px' }}>
+        {showSidebarControl && onToggleSidebar && (
+          <ViewSidebarControls
+            isCollapsed={sidebarCollapsed}
+            onToggle={onToggleSidebar}
+          />
+        )}
+      </div>
+
       {/* Left spacer */}
       <div style={{ flex: 1 }} />
 
@@ -72,20 +82,13 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           color: accentColor,
           fontFamily: theme.fonts.heading,
           WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-          marginRight: '55px', // TODO: investigate why 50px works better than expected 34px (68px/2)
         }}
       >
         Principal View
       </div>
 
-      {/* Right spacer with controls */}
+      {/* Right spacer with theme dropdown */}
       <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
-        {showSidebarControl && onToggleSidebar && (
-          <ViewSidebarControls
-            isCollapsed={sidebarCollapsed}
-            onToggle={onToggleSidebar}
-          />
-        )}
         <ThemeDropdown />
       </div>
 
