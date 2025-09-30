@@ -6,6 +6,8 @@ This directory contains encapsulated city visualization components that can be e
 
 The city visualization functionality has been extracted from the deprecated RepoManager and encapsulated into reusable components that provide 3D repository structure visualization using the `@principal-ai/code-city-react` package.
 
+**Important**: These components use the **modern Repository Monitoring Server** for FileTree data, ensuring consistency with the rest of the application. This is different from the deprecated RepoManager which used the old FileTreeSourceService.
+
 ## Components
 
 ### SimpleCityVisualization
@@ -137,7 +139,7 @@ The components are designed with the following principles:
 - `@principal-ai/code-city-react`: Core city visualization components
 - `@principal-ai/repository-abstraction`: FileTree types and builders
 - `themed-markdown`: Theme integration
-- Local services: `FileTreeSourceService`, `MonitoredFileTreeService`
+- `RepositoryMonitoringService`: Modern FileTree data source (replaces old FileTreeSourceService)
 
 ## Migration from RepoManager
 
@@ -147,6 +149,7 @@ If you're migrating from the deprecated RepoManager components:
 2. Replace `RightPaneContainer` city view with `SimpleCityVisualization`
 3. Use `RepositoryCityService` for city data building instead of inline logic
 4. Update import paths to use the new component location
+5. **Key Advantage**: Automatically uses the modern Repository Monitoring Server for consistent, cached FileTree data
 
 ## File Structure
 

@@ -3,9 +3,7 @@ import { MultiVersionCityBuilder } from '@principal-ai/code-city-react';
 import { FileTree } from '@principal-ai/repository-abstraction';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import type { AlexandriaEntry } from '@a24z/core-library';
-import { FileTreeSourceService } from '../../../../services/FileTreeSourceService';
-import { MonitoredFileTreeService } from '../../../../services/MonitoredFileTreeService';
-import { createFileTreeSource } from '../../../../types/file-tree-source';
+import { RepositoryMonitoringService } from '../../../../main-process-api/RepositoryMonitoringService';
 
 export interface CityBuildResult {
   cityData: CityData | null;
@@ -23,13 +21,13 @@ export interface CityBuildOptions {
 /**
  * Service for building city data from repository information.
  * Provides a simplified interface for the RepositoryExplorer components.
+ * Uses the modern RepositoryMonitoringService for consistent FileTree data.
  */
 export class RepositoryCityService {
-  private fileTreeService: FileTreeSourceService;
   private static instance: RepositoryCityService | null = null;
 
   constructor() {
-    this.fileTreeService = new FileTreeSourceService(new MonitoredFileTreeService());
+    // No services needed - we use RepositoryMonitoringService directly
   }
 
   /**
@@ -60,53 +58,27 @@ export class RepositoryCityService {
 
       console.log('[RepositoryCityService] Building city for:', repository.name);
 
-      // Create repository representation compatible with FileTreeSourceService
-      const repoForService = {
-        ...repository,
-        localClones: repository.path ? [{ path: repository.path }] : [],
-        // Ensure we have required fields
-        owner: (repository as any).github?.owner || (repository as any).owner || 'local',
-        name: repository.name || 'unknown',
-        remoteUrl: (repository as any).github?.htmlUrl || (repository as any).remoteUrl || repository.path,
-        vcsType: 'git' as const,
-        addedAt: new Date().toISOString(),
-      };
+      // Register repository with monitoring service (idempotent)
+      await RepositoryMonitoringService.registerRepository(repository.path);
 
-      // Initialize sources from repository
-      const sources = this.fileTreeService.initializeFromRepository(repoForService);
-
-      if (sources.length === 0) {
+      // Get FileTree from the monitoring server
+      const fileTree = await RepositoryMonitoringService.getFileTree(repository.path);
+      if (!fileTree) {
         return {
           cityData: null,
           treeStats: null,
-          error: 'No valid sources found for repository',
+          error: 'Failed to get file tree from monitoring service',
         };
       }
 
-      const primarySource = sources[0];
-      console.log('[RepositoryCityService] Using source:', primarySource.id);
-
-      // Load the file tree
-      const loadedSource = await this.fileTreeService.loadSourceTree(primarySource.id);
-      if (!loadedSource) {
-        return {
-          cityData: null,
-          treeStats: null,
-          error: 'Failed to load file tree',
-        };
-      }
-
-      // Calculate tree stats
-      const treeStats = {
-        fileCount: loadedSource.treeStats.fileCount,
-        directoryCount: loadedSource.treeStats.directoryCount,
-      };
-
+      // Calculate tree stats from the FileTree
+      const treeStats = this.calculateTreeStats(fileTree);
       console.log('[RepositoryCityService] Tree stats:', treeStats);
 
       // Prepare trees for city building
       const versions = new Map<string, FileTree>();
-      versions.set(primarySource.id, loadedSource.tree);
+      const sourceId = `monitoring-${repository.path}`;
+      versions.set(sourceId, fileTree);
 
       // TODO: Optionally add HEAD tree for git changes
       if (options.includeGitHead) {
@@ -123,13 +95,13 @@ export class RepositoryCityService {
       );
       const buildTime = performance.now() - startTime;
 
-      // Get presence data for primary source
-      const presence = presenceByVersion.get(primarySource.id);
+      // Get presence data for our source
+      const presence = presenceByVersion.get(sourceId);
       if (!presence) {
         return {
           cityData: null,
           treeStats,
-          error: 'No presence data for primary source',
+          error: 'No presence data for repository tree',
         };
       }
 
@@ -162,19 +134,37 @@ export class RepositoryCityService {
   }
 
   /**
-   * Create a file tree source for testing/validation
+   * Calculate file and directory statistics from a FileTree
    */
-  createSourceForRepository(repository: EnhancedAlexandriaEntry) {
-    if (!repository.path) {
-      throw new Error('Repository path is required');
+  private calculateTreeStats(fileTree: FileTree): { fileCount: number; directoryCount: number } {
+    let fileCount = 0;
+    let directoryCount = 0;
+
+    const traverse = (node: any) => {
+      if (!node) return;
+
+      if (node.type === 'file') {
+        fileCount++;
+      } else if (node.type === 'directory') {
+        directoryCount++;
+        
+        // Traverse children
+        if (node.children) {
+          for (const child of Object.values(node.children)) {
+            traverse(child);
+          }
+        }
+      }
+    };
+
+    // Start traversal from root
+    if (fileTree.children) {
+      for (const child of Object.values(fileTree.children)) {
+        traverse(child);
+      }
     }
 
-    return createFileTreeSource.localWorkingCopy(
-      repository.path,
-      (repository as any).github?.owner || (repository as any).owner || 'local',
-      (repository as any).github?.name || repository.name,
-      (repository as any).github?.htmlUrl || (repository as any).remoteUrl || repository.path,
-    );
+    return { fileCount, directoryCount };
   }
 
   /**
@@ -186,13 +176,16 @@ export class RepositoryCityService {
         return false;
       }
 
-      // Try to create a source
-      const source = this.createSourceForRepository(repository);
+      // Try to get file tree from monitoring service
+      const fileTree = await RepositoryMonitoringService.getFileTree(repository.path);
       
-      // Try to load just the file tree (without building city)
-      const loadedSource = await this.fileTreeService.loadSourceTree(source.id);
-      
-      return loadedSource !== null && loadedSource.treeStats.fileCount > 0;
+      if (!fileTree) {
+        return false;
+      }
+
+      // Check if there are any files
+      const stats = this.calculateTreeStats(fileTree);
+      return stats.fileCount > 0;
     } catch (error) {
       console.warn('[RepositoryCityService] Cannot visualize repository:', error);
       return false;
@@ -208,17 +201,14 @@ export class RepositoryCityService {
         return null;
       }
 
-      const source = this.createSourceForRepository(repository);
-      const loadedSource = await this.fileTreeService.loadSourceTree(source.id);
+      // Get file tree from monitoring service
+      const fileTree = await RepositoryMonitoringService.getFileTree(repository.path);
       
-      if (!loadedSource) {
+      if (!fileTree) {
         return null;
       }
 
-      return {
-        fileCount: loadedSource.treeStats.fileCount,
-        directoryCount: loadedSource.treeStats.directoryCount,
-      };
+      return this.calculateTreeStats(fileTree);
     } catch (error) {
       console.warn('[RepositoryCityService] Cannot get repository stats:', error);
       return null;

@@ -4,6 +4,8 @@
 
 This guide explains how to integrate the new encapsulated city visualization functionality into the RepositoryDetailsPanel and other components in the RepositoryExplorer views.
 
+**Key Architectural Change**: Unlike the deprecated RepoManager, these components use the **modern Repository Monitoring Server** for FileTree data, ensuring consistency with the rest of the application and providing better performance through centralized caching.
+
 ## What Was Created
 
 ### 1. Core Components
@@ -21,9 +23,10 @@ This guide explains how to integrate the new encapsulated city visualization fun
 ### 2. Service Layer
 
 **RepositoryCityService** (`services/RepositoryCityService.ts`)
-- Handles city data building from repository information
+- Handles city data building from repository information using RepositoryMonitoringService
 - Singleton pattern for shared state management
 - Provides methods for building city data, checking visualization capability, and getting repository stats
+- Automatically registers repositories with the monitoring service for consistent data
 
 ### 3. Integration Example
 
@@ -161,11 +164,13 @@ If migrating from the deprecated RepoManager:
 
 ## Key Benefits
 
-1. **Encapsulation**: All city functionality is contained in reusable components
-2. **Clean Dependencies**: Components have minimal external dependencies
-3. **Type Safety**: Full TypeScript support with proper type definitions
-4. **Performance**: City data is cached and building is optimized
-5. **Flexibility**: Multiple integration approaches to suit different needs
+1. **Modern Architecture**: Uses Repository Monitoring Server for consistent FileTree data
+2. **Encapsulation**: All city functionality is contained in reusable components
+3. **Clean Dependencies**: Components have minimal external dependencies
+4. **Type Safety**: Full TypeScript support with proper type definitions
+5. **Performance**: City data leverages centralized caching from the monitoring server
+6. **Consistency**: Same FileTree data source as the rest of the application
+7. **Flexibility**: Multiple integration approaches to suit different needs
 
 ## Error Handling
 
@@ -183,7 +188,8 @@ The components depend on:
 - `@principal-ai/code-city-react`: Core visualization components
 - `@principal-ai/repository-abstraction`: FileTree types
 - `themed-markdown`: Theme integration
-- Local services: FileTreeSourceService, MonitoredFileTreeService
+- `RepositoryMonitoringService`: Modern FileTree data source
+- **No dependency on deprecated FileTreeSourceService/MonitoredFileTreeService**
 
 ## Testing
 
