@@ -6,9 +6,9 @@ import { initializeStorage } from './stores/initialization';
 // import { AgentSessionEventsHttpBridge } from './agent-session-events/AgentSessionEventsHttpBridge';
 import { startEventServer, stopEventServer, getEventServerManager } from './agent-session-events/EventServerManager';
 import {
-  startPlanningMCPBridge,
-  stopPlanningMCPBridge,
-} from './planning-mcp/PlanningMCPBridge';
+  startPrincipalMCPBridge,
+  stopPrincipalMCPBridge,
+} from './principal-mcp/PrincipalMCPBridge';
 import { applicationWindows } from './window/modernWindowManager';
 import { registerAgentSessionSDKHandlers } from './agent-session-events/agentSessionSDKHandlers';
 
@@ -51,7 +51,7 @@ import { registerDockerHandlers } from './services/ipc/docker/dockerHandlers';
 import { registerOptimizedDockerHandlers } from './services/ipc/docker/optimizedDockerHandlers';
 import { registerKnipAnalysisHandlers } from './services/ipc/knip/knipAnalysisHandlers';
 import { registerKnipHandlers } from './services/ipc/knip/knipHandlers';
-import { registerPlanningHandlers } from './planning-mcp/planningHandlers';
+import { registerPrincipalHandlers } from './principal-mcp/principalHandlers';
 import {
   registerDocumentSearchHandlers,
   shutdownDocumentSearch,
@@ -61,7 +61,7 @@ import { RemoteAgentWindowManager } from './window/remoteAgentWindowManager';
 import { registerRemoteAgentWindowHandlers } from './window/remoteAgentWindowHandlers';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
-let planningMCPBridgePort: number | null = null;
+let principalMCPBridgePort: number | null = null;
 let remoteAgentWindowManager: RemoteAgentWindowManager | null = null;
 
 // Setup app version handler
@@ -123,14 +123,14 @@ const setupHttpBridges = async () => {
     console.error('Event Processing Server failed to start:', err);
   }
 
-  // Start Planning MCP Bridge
+  // Start Principal MCP Bridge
   try {
-    planningMCPBridgePort = await startPlanningMCPBridge();
+    principalMCPBridgePort = await startPrincipalMCPBridge();
     console.log(
-      `[Main Process] Planning MCP Bridge started on port ${planningMCPBridgePort}`,
+      `[Main Process] Principal MCP Bridge started on port ${principalMCPBridgePort}`,
     );
   } catch (err) {
-    console.error('Planning MCP Bridge failed to start:', err);
+    console.error('Principal MCP Bridge failed to start:', err);
   }
 };
 
@@ -218,7 +218,7 @@ const registerAllIpcHandlers = async () => {
   registerOptimizedDockerHandlers();
   registerKnipAnalysisHandlers();
   registerKnipHandlers();
-  registerPlanningHandlers();
+  registerPrincipalHandlers();
   registerDocumentSearchHandlers();
   registerObservabilityHandlers();
 
@@ -319,9 +319,9 @@ export const shutdownServices = async () => {
     console.error('[Main Process] Failed to stop event server:', err);
   }
 
-  // Stop Planning MCP Bridge
-  stopPlanningMCPBridge();
-  console.log('[Main Process] Planning MCP Bridge stopped.');
+  // Stop Principal MCP Bridge
+  stopPrincipalMCPBridge();
+  console.log('[Main Process] Principal MCP Bridge stopped.');
 
   // Shutdown agent auto-update service
   // Auto-update removed - agents are no longer installed by this app

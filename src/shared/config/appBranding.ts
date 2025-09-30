@@ -10,7 +10,7 @@ export const APP_BRANDING = {
   // Bridge ports for HTTP communication
   BRIDGE_PORTS: {
     AGENT_SESSION_EVENTS: 3043, // Port for claude-hook, opencode-hook
-    PLANNING_MCP: 3045, // Port for planning document operations
+    PRINCIPAL_MCP: 3043, // Port for principal MCP operations (matches API spec)
   },
 
   // MCP Server configuration

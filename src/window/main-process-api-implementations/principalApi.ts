@@ -1,23 +1,23 @@
 /**
- * PlanningAPI preload implementation
- * Provides type-safe access to planning event listeners
+ * PrincipalAPI preload implementation
+ * Provides type-safe access to principal MCP event listeners
  */
 
 import { ipcRenderer, type IpcRendererEvent } from 'electron';
 import type {
-  PlanningAPI,
+  PrincipalAPI,
   SlideUpdatedEvent,
   SlideNavigatedEvent,
   DocumentLoadedEvent,
   AgentDocumentRequest,
   AgentDocumentResponse,
-} from '../../shared/main-process-api-interfaces/PlanningAPI';
-import { PlanningEvent } from '../../shared/ipc-events/PlanningEvents';
+} from '../../shared/main-process-api-interfaces/PrincipalAPI';
+import { PrincipalEvent } from '../../shared/ipc-events/PrincipalEvents';
 
 /**
- * Planning API implementation for preload script
+ * Principal API implementation for preload script
  */
-export const planningAPI: PlanningAPI = {
+export const principalAPI: PrincipalAPI = {
   /**
    * Listen for slide update events
    */
@@ -27,9 +27,9 @@ export const planningAPI: PlanningAPI = {
       data: SlideUpdatedEvent,
     ) =>
       callback(data);
-    ipcRenderer.on(PlanningEvent.SLIDE_UPDATED, subscription);
+    ipcRenderer.on(PrincipalEvent.SLIDE_UPDATED, subscription);
     return () =>
-      ipcRenderer.removeListener(PlanningEvent.SLIDE_UPDATED, subscription);
+      ipcRenderer.removeListener(PrincipalEvent.SLIDE_UPDATED, subscription);
   },
 
   /**
@@ -41,9 +41,9 @@ export const planningAPI: PlanningAPI = {
       data: SlideNavigatedEvent,
     ) =>
       callback(data);
-    ipcRenderer.on(PlanningEvent.SLIDE_NAVIGATED, subscription);
+    ipcRenderer.on(PrincipalEvent.SLIDE_NAVIGATED, subscription);
     return () =>
-      ipcRenderer.removeListener(PlanningEvent.SLIDE_NAVIGATED, subscription);
+      ipcRenderer.removeListener(PrincipalEvent.SLIDE_NAVIGATED, subscription);
   },
 
   /**
@@ -55,9 +55,9 @@ export const planningAPI: PlanningAPI = {
       data: DocumentLoadedEvent,
     ) =>
       callback(data);
-    ipcRenderer.on(PlanningEvent.DOCUMENT_LOADED, subscription);
+    ipcRenderer.on(PrincipalEvent.DOCUMENT_LOADED, subscription);
     return () =>
-      ipcRenderer.removeListener(PlanningEvent.DOCUMENT_LOADED, subscription);
+      ipcRenderer.removeListener(PrincipalEvent.DOCUMENT_LOADED, subscription);
   },
 
   /**
@@ -69,10 +69,10 @@ export const planningAPI: PlanningAPI = {
       data: AgentDocumentRequest,
     ) =>
       callback(data);
-    ipcRenderer.on(PlanningEvent.AGENT_DOCUMENT_REQUEST, subscription);
+    ipcRenderer.on(PrincipalEvent.AGENT_DOCUMENT_REQUEST, subscription);
     return () =>
       ipcRenderer.removeListener(
-        PlanningEvent.AGENT_DOCUMENT_REQUEST,
+        PrincipalEvent.AGENT_DOCUMENT_REQUEST,
         subscription,
       );
   },
@@ -85,7 +85,7 @@ export const planningAPI: PlanningAPI = {
     response: AgentDocumentResponse,
   ) => {
     await ipcRenderer.invoke(
-      PlanningEvent.AGENT_DOCUMENT_RESPONSE,
+      PrincipalEvent.AGENT_DOCUMENT_RESPONSE,
       requestId,
       response,
     );
