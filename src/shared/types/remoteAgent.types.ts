@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, BrowserView } from 'electron';
 
 export interface RemoteAgentConfig {
   id: string;                    // Unique identifier for the remote agent
@@ -14,6 +14,8 @@ export interface RemoteAgentWindow {
   id: string;                    // Remote agent ID
   windowId: number;               // Electron window ID
   window: BrowserWindow;          // Window instance
+  view?: BrowserView;             // Optional BrowserView when flag enabled
+  webContents: Electron.WebContents; // Unified webContents for window or view
   config: RemoteAgentConfig;      // Remote agent configuration
   state: RemoteAgentWindowState;  // Current state
   createdAt: Date;               // Creation timestamp
