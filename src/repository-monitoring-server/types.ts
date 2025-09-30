@@ -210,7 +210,8 @@ export type MainToServerMessageType =
   | 'getGitStatus'
   | 'getGitStatusWithFiles'
   | 'enableGitWatching'
-  | 'disableGitWatching';
+  | 'disableGitWatching'
+  | 'resolveDependency';
 
 /**
  * Message types that can be sent from server to main
@@ -222,12 +223,50 @@ export type ServerToMainMessageType =
   | 'event';
 
 /**
+ * Dependency resolution request
+ */
+export interface DependencyResolutionRequest {
+  dependencyId: string;
+  repositoryRoot?: string;
+}
+
+/**
+ * Dependency resolution result
+ */
+export interface DependencyResolutionResult {
+  dependencyId: string;
+  found: boolean;
+  alexandriaEntry?: {
+    name: string;
+    path: string;
+    description?: string;
+    remoteUrl?: string;
+    lastCommit?: string;
+    lastCommitMessage?: string;
+    lastCommitAuthor?: string;
+    lastCommitHash?: string;
+  };
+  packageInfo?: {
+    name: string;
+    version?: string;
+    packagePath: string;
+    isDevDependency: boolean;
+  };
+  suggestions?: {
+    installCommands: string[];
+    targetPackage?: string;
+    packageManager?: string;
+  };
+}
+
+/**
  * IPC Message Types - Main to Server
  */
 export interface MainToServerMessage {
   id: string;
   type: MainToServerMessageType;
   path?: string;
+  dependencyRequest?: DependencyResolutionRequest;
 }
 
 /**

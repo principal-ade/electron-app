@@ -14,6 +14,7 @@ import type {
   ExtendedQualityMetrics,
   PackageSummary,
   PackageWithMetrics,
+  DependencyResolutionResult,
 } from '../../repository-monitoring-server/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
@@ -573,5 +574,15 @@ export class RepositoryMonitoringManager extends EventEmitter {
       ready: this.isReady,
       restartAttempts: this.restartAttempts,
     };
+  }
+
+  /**
+   * Resolve dependency information using the repository monitoring server
+   */
+  async resolveDependency(dependencyId: string, repositoryRoot?: string): Promise<DependencyResolutionResult> {
+    return this.sendRequest({ 
+      type: 'resolveDependency', 
+      dependencyRequest: { dependencyId, repositoryRoot } 
+    });
   }
 }

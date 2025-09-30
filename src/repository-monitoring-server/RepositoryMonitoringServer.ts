@@ -18,6 +18,8 @@ import type {
   PackageSummary,
   GitStateEventPayload,
   WorkspaceChangeEventPayload,
+  DependencyResolutionRequest,
+  DependencyResolutionResult,
 } from './types';
 import { MonitoringInternalEvent } from './types';
 import { GitWatcherAdapter } from './GitWatcherAdapter';
@@ -451,6 +453,247 @@ export class RepositoryMonitoringServer {
           },
         });
       }
+    }
+  }
+
+  /**
+   * Resolve dependency information by checking registered repositories
+   * Returns AlexandriaEntry-like information if the dependency is found as a registered repository
+   */
+  async resolveDependency(request: DependencyResolutionRequest): Promise<DependencyResolutionResult> {
+    const { dependencyId, repositoryRoot } = request;
+    
+    console.info(`[RepositoryMonitoring] Resolving dependency: ${dependencyId}`);
+
+    const result: DependencyResolutionResult = {
+      dependencyId,
+      found: false,
+    };
+
+    try {
+      // First, check if the dependency exists in the current repository (if provided)
+      if (repositoryRoot && this.repositories.has(repositoryRoot)) {
+        const packageInfo = await this.checkDependencyInRepository(dependencyId, repositoryRoot);
+        if (packageInfo) {
+          result.found = true;
+          result.packageInfo = packageInfo;
+          
+          // Generate installation suggestions based on package structure
+          const suggestions = await this.generateInstallationSuggestions(dependencyId, repositoryRoot);
+          if (suggestions) {
+            result.suggestions = suggestions;
+          }
+        }
+      }
+
+      // Check if the dependency matches any registered repository by name
+      const matchingRepo = await this.findRepositoryByDependencyId(dependencyId);
+      if (matchingRepo) {
+        result.found = true;
+        result.alexandriaEntry = matchingRepo;
+      }
+
+      console.info(`[RepositoryMonitoring] Dependency resolution result:`, {
+        dependencyId,
+        found: result.found,
+        hasPackageInfo: !!result.packageInfo,
+        hasAlexandriaEntry: !!result.alexandriaEntry,
+        hasSuggestions: !!result.suggestions,
+      });
+
+      return result;
+    } catch (error) {
+      console.error(`[RepositoryMonitoring] Error resolving dependency ${dependencyId}:`, error);
+      return result;
+    }
+  }
+
+  /**
+   * Check if a dependency exists in a specific repository's packages
+   */
+  private async checkDependencyInRepository(
+    dependencyId: string, 
+    repositoryPath: string
+  ): Promise<DependencyResolutionResult['packageInfo'] | null> {
+    try {
+      const packagesResult = await this.getPackages(repositoryPath);
+      if (!packagesResult) return null;
+
+      // Search through all packages for the dependency
+      for (const pkg of packagesResult.packages) {
+        const { dependencies, devDependencies } = pkg.packageData;
+        
+        // Check regular dependencies
+        if (dependencies && dependencies[dependencyId]) {
+          return {
+            name: dependencyId,
+            version: dependencies[dependencyId],
+            packagePath: pkg.packageData.path,
+            isDevDependency: false,
+          };
+        }
+
+        // Check dev dependencies
+        if (devDependencies && devDependencies[dependencyId]) {
+          return {
+            name: dependencyId,
+            version: devDependencies[dependencyId],
+            packagePath: pkg.packageData.path,
+            isDevDependency: true,
+          };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`[RepositoryMonitoring] Error checking dependency in repository:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Find a registered repository that matches the dependency ID
+   * This helps identify if the dependency is actually a local/internal package
+   */
+  private async findRepositoryByDependencyId(
+    dependencyId: string
+  ): Promise<DependencyResolutionResult['alexandriaEntry'] | null> {
+    try {
+      // Check all registered repositories
+      for (const [repoPath, state] of this.repositories.entries()) {
+        // Get package information for this repository
+        const packagesResult = await this.getPackages(repoPath);
+        if (!packagesResult) continue;
+
+        // Check if any package in this repo matches the dependency ID
+        for (const pkg of packagesResult.packages) {
+          if (pkg.packageData.name === dependencyId) {
+            // Found a matching package! Create AlexandriaEntry-like info
+            const gitInfo = await this.getBasicGitInfo(repoPath);
+            
+            return {
+              name: pkg.packageData.name || dependencyId,
+              path: repoPath,
+              description: `Local package: ${dependencyId}`,
+              remoteUrl: gitInfo?.remoteUrl,
+              lastCommit: gitInfo?.lastCommit,
+              lastCommitMessage: gitInfo?.lastCommitMessage,
+              lastCommitAuthor: gitInfo?.lastCommitAuthor,
+              lastCommitHash: gitInfo?.lastCommitHash,
+            };
+          }
+        }
+
+        // Also check if the repository name/folder matches the dependency
+        const repoName = repoPath.split('/').pop() || '';
+        if (repoName === dependencyId || repoName.includes(dependencyId)) {
+          const gitInfo = await this.getBasicGitInfo(repoPath);
+          
+          return {
+            name: repoName,
+            path: repoPath,
+            description: `Repository: ${repoName}`,
+            remoteUrl: gitInfo?.remoteUrl,
+            lastCommit: gitInfo?.lastCommit,
+            lastCommitMessage: gitInfo?.lastCommitMessage,
+            lastCommitAuthor: gitInfo?.lastCommitAuthor,
+            lastCommitHash: gitInfo?.lastCommitHash,
+          };
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`[RepositoryMonitoring] Error finding repository by dependency ID:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Generate installation suggestions based on repository structure
+   */
+  private async generateInstallationSuggestions(
+    dependencyId: string,
+    repositoryPath: string
+  ): Promise<DependencyResolutionResult['suggestions'] | null> {
+    try {
+      const packagesResult = await this.getPackages(repositoryPath);
+      if (!packagesResult) return null;
+
+      const { packages, summary } = packagesResult;
+      
+      // Determine package manager from available scripts
+      let packageManager = 'npm'; // default
+      if (summary.availableScripts.some(script => script.includes('yarn'))) {
+        packageManager = 'yarn';
+      } else if (summary.availableScripts.some(script => script.includes('pnpm'))) {
+        packageManager = 'pnpm';
+      }
+
+      // Generate install commands
+      const installCommands: string[] = [];
+      
+      if (summary.isMonorepo && packages.length > 1) {
+        // For monorepos, suggest workspace-specific installation
+        const workspacePackages = packages.filter(p => p.packageData.path !== '');
+        
+        if (workspacePackages.length > 0) {
+          // Suggest the first workspace package as target
+          const targetPackage = workspacePackages[0];
+          installCommands.push(`${packageManager} add ${dependencyId} --workspace=${targetPackage.packageData.name || targetPackage.packageData.path}`);
+        }
+        
+        // Also suggest root installation
+        installCommands.push(`${packageManager} add ${dependencyId}`);
+      } else {
+        // Single package repository
+        installCommands.push(`${packageManager} add ${dependencyId}`);
+      }
+
+      // Add dev dependency option
+      installCommands.push(`${packageManager} add ${dependencyId} --save-dev`);
+
+      return {
+        installCommands,
+        targetPackage: summary.isMonorepo ? packages.find(p => p.packageData.path !== '')?.packageData.name : undefined,
+        packageManager,
+      };
+    } catch (error) {
+      console.error(`[RepositoryMonitoring] Error generating installation suggestions:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get basic git information for a repository
+   */
+  private async getBasicGitInfo(repoPath: string): Promise<{
+    remoteUrl?: string;
+    lastCommit?: string;
+    lastCommitMessage?: string;
+    lastCommitAuthor?: string;
+    lastCommitHash?: string;
+  } | null> {
+    try {
+      const gitCore = new GitCore(repoPath);
+      
+      // Get remote URL
+      const remotes = await gitCore.getRemotes();
+      const originRemote = remotes.find(r => r.name === 'origin');
+      
+      // Get last commit info
+      const commitInfo = await gitCore.getLastCommitInfo();
+      
+      return {
+        remoteUrl: originRemote?.url,
+        lastCommit: commitInfo?.date,
+        lastCommitMessage: commitInfo?.message,
+        lastCommitAuthor: commitInfo?.author,
+        lastCommitHash: commitInfo?.shortHash || commitInfo?.hash,
+      };
+    } catch (error) {
+      console.error(`[RepositoryMonitoring] Error getting git info for ${repoPath}:`, error);
+      return null;
     }
   }
 

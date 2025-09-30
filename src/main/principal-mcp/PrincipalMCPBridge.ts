@@ -4,6 +4,7 @@ import * as path from 'path';
 import { webContents } from 'electron';
 import { EventEmitter } from 'events';
 import { APP_BRANDING } from '../../shared/config/appBranding';
+import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
 interface SlideDocument {
   filePath: string;
@@ -148,29 +149,6 @@ export class PrincipalMCPBridge extends EventEmitter {
     }
   }
 
-  private async saveTaskToMemoryPalace(
-    repositoryRoot: string,
-    taskId: string,
-    request: SubmitDependencyTaskRequest
-  ): Promise<void> {
-    const palaceDir = path.join(repositoryRoot, '.palace-work', 'tasks', 'active');
-    await fs.mkdir(palaceDir, { recursive: true });
-
-    const taskFile = path.join(palaceDir, `${taskId}.task.md`);
-    const taskContent = `# ${request.taskSummary}
-
-${request.taskDetails}
-
----
-Status: pending
-Priority: ${request.priority || 'normal'}
-Tags: ${request.tags?.join(', ') || ''}
-Anchors: ${request.anchors?.join(', ') || ''}
-Sender: ${request.dependencyId}
-`;
-
-    await fs.writeFile(taskFile, taskContent, 'utf-8');
-  }
 
   private recordOperation(operation: SlideOperation) {
     this.operationHistory.push(operation);
@@ -225,30 +203,96 @@ Sender: ${request.dependencyId}
 
         const taskId = `task-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-        // If repositoryRoot is provided and this is a fallback scenario, save to Memory Palace
-        if (request.repositoryRoot) {
-          try {
-            await this.saveTaskToMemoryPalace(request.repositoryRoot, taskId, request);
-            res.json({
-              success: true,
-              taskId,
-              repository: request.repositoryRoot,
-              persistedOffline: true,
-              message: 'Task saved to Memory Palace (offline mode)'
-            });
-            return;
-          } catch (error) {
-            console.error('[Principal MCP Bridge] Failed to save to Memory Palace:', error);
-          }
+        // Resolve dependency using repository monitoring server
+        let dependencyResolution = null;
+        try {
+          const repositoryMonitoring = getRepositoryMonitoringManager();
+          dependencyResolution = await repositoryMonitoring.resolveDependency(
+            request.dependencyId, 
+            request.repositoryRoot
+          );
+          
+          console.log('[Principal MCP Bridge] Dependency resolution result:', dependencyResolution);
+        } catch (error) {
+          console.error('[Principal MCP Bridge] Failed to resolve dependency:', error);
         }
 
-        // Default response for successful submission
-        res.json({
+        // Build response with resolution information
+        const response: any = {
           success: true,
           taskId,
           repository: request.repositoryRoot,
-          message: 'Task submitted successfully'
+          message: 'Dependency task submitted successfully',
+          resolution: dependencyResolution || {
+            dependencyId: request.dependencyId,
+            found: false,
+            message: 'Dependency resolution unavailable'
+          }
+        };
+
+        // Add specific information based on resolution results
+        if (dependencyResolution?.found) {
+          if (dependencyResolution.alexandriaEntry) {
+            response.message = `Found registered repository: ${dependencyResolution.alexandriaEntry.name}`;
+            response.alexandriaEntry = dependencyResolution.alexandriaEntry;
+          } else if (dependencyResolution.packageInfo) {
+            response.message = `Dependency already exists in ${dependencyResolution.packageInfo.packagePath}`;
+            response.existingPackage = dependencyResolution.packageInfo;
+          }
+          
+          if (dependencyResolution.suggestions) {
+            response.installationSuggestions = dependencyResolution.suggestions;
+          }
+        } else {
+          response.message = `Dependency '${request.dependencyId}' not found in registered repositories`;
+        }
+
+        res.json(response);
+
+      } catch (error: any) {
+        res.status(500).json({ 
+          success: false, 
+          message: error.message 
         });
+      }
+    });
+
+    // Resolve Dependency (without submitting task)
+    this.app.post('/dependencies/resolve', async (req: Request, res: Response) => {
+      try {
+        const { dependencyId, repositoryRoot } = req.body;
+        
+        // Validate required fields
+        if (!dependencyId) {
+          res.status(400).json({ 
+            success: false, 
+            message: 'dependencyId is required' 
+          });
+          return;
+        }
+
+        // Resolve dependency using repository monitoring server
+        try {
+          const repositoryMonitoring = getRepositoryMonitoringManager();
+          const dependencyResolution = await repositoryMonitoring.resolveDependency(
+            dependencyId, 
+            repositoryRoot
+          );
+          
+          console.log('[Principal MCP Bridge] Dependency resolution result:', dependencyResolution);
+          
+          res.json({
+            success: true,
+            ...dependencyResolution
+          });
+        } catch (error) {
+          console.error('[Principal MCP Bridge] Failed to resolve dependency:', error);
+          res.status(500).json({
+            success: false,
+            message: 'Failed to resolve dependency',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
 
       } catch (error: any) {
         res.status(500).json({ 

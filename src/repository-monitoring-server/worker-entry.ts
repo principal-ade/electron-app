@@ -200,6 +200,11 @@ async function handleMessage(rawMessage: unknown): Promise<void> {
         result = { success: true };
         break;
 
+      case 'resolveDependency':
+        if (!message.dependencyRequest) throw new Error('Dependency request required for resolveDependency');
+        result = await server.resolveDependency(message.dependencyRequest);
+        break;
+
       default: {
         const exhaustiveType: never = message.type;
         throw new Error(`Unknown message type: ${exhaustiveType}`);
