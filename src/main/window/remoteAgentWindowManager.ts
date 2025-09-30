@@ -1,4 +1,4 @@
-import { BrowserWindow, app } from 'electron';
+import { BrowserWindow, BrowserView, app } from 'electron';
 import {
   RemoteAgentConfig,
   RemoteAgentWindow,
@@ -22,6 +22,10 @@ export const REMOTE_AGENT_WINDOW_CONFIG = {
     'https://cloud-agent.service.com',
   ],
 };
+
+// Feature flag: when true, load remote agents in a BrowserView inside a host window
+// Enables custom chrome/titlebar experimentation without changing default behavior
+const USE_BROWSER_VIEW = process.env.REMOTE_AGENT_USE_BROWSER_VIEW === 'true';
 
 export class RemoteAgentWindowManager {
   private remoteAgentWindows: Map<string, RemoteAgentWindow> = new Map();
@@ -55,14 +59,59 @@ export class RemoteAgentWindowManager {
     // Validate URL
     this.validateUrl(config.url);
 
-    // Create the window
+    // Create the host window
     const window = this.createRemoteAgentWindow(config, options);
+
+    // Optionally create a BrowserView for the remote agent content
+    let view: BrowserView | undefined;
+    let webContents: Electron.WebContents = window.webContents;
+
+    if (USE_BROWSER_VIEW) {
+      view = new BrowserView({
+        webPreferences: {
+          sandbox: false,
+          contextIsolation: true,
+          nodeIntegration: false,
+          webSecurity: false,
+          allowRunningInsecureContent: false,
+        },
+      });
+
+      window.setBrowserView(view);
+      view.setAutoResize({ width: true, height: true });
+      // Fill the content area
+      const bounds = window.getContentBounds();
+      view.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
+
+      // Use the view's webContents for all operations
+      webContents = view.webContents;
+
+      // Keep view sized with window
+      window.on('resize', () => {
+        const b = window.getContentBounds();
+        view?.setBounds({ x: 0, y: 0, width: b.width, height: b.height });
+      });
+
+      console.log('[RemoteAgent] BrowserView mode enabled for', config.name);
+    }
+
+    // Set a standard browser user agent on chosen webContents
+    const userAgent = webContents.getUserAgent().replace(/Electron\/[^\s]+/, '').trim();
+    webContents.setUserAgent(userAgent);
+
+    // Disable CSP/XFO on the chosen session to allow target sites to function
+    this.configureResponseHeaderRelaxation(webContents);
+
+    // Apply navigation/permissions policy on the chosen webContents
+    this.applySecurityPolicy(webContents, config);
 
     // Create remote agent window object
     const remoteAgentWindow: RemoteAgentWindow = {
       id: config.id,
       windowId: window.id,
       window,
+      view,
+      webContents,
       config,
       state: RemoteAgentWindowState.LOADING,
       createdAt: new Date(),
@@ -75,9 +124,9 @@ export class RemoteAgentWindowManager {
     // Setup event handlers
     this.setupWindowHandlers(remoteAgentWindow);
 
-    // Load the URL
+    // Load the URL on the chosen webContents
     try {
-      await window.loadURL(config.url);
+      await webContents.loadURL(config.url);
       this.updateRemoteAgentState(config.id, RemoteAgentWindowState.READY);
     } catch (error) {
       console.error(`Failed to load remote agent URL: ${config.url}`, error);
@@ -184,7 +233,7 @@ export class RemoteAgentWindowManager {
   }
 
   /**
-   * Create a BrowserWindow for the remote agent
+   * Create a BrowserWindow host for the remote agent
    */
   private createRemoteAgentWindow(
     config: RemoteAgentConfig,
@@ -221,25 +270,6 @@ export class RemoteAgentWindowManager {
     }
 
     const window = new BrowserWindow(windowOptions);
-
-    // Set a standard browser user agent
-    const userAgent = window.webContents.getUserAgent().replace(/Electron\/[^\s]+/, '').trim();
-    window.webContents.setUserAgent(userAgent);
-
-    // Disable CSP for remote agent windows to allow Google sites to load properly
-    window.webContents.session.webRequest.onHeadersReceived((details, callback) => {
-      // Remove CSP headers that would block Google's scripts, fonts, etc.
-      if (details.responseHeaders) {
-        delete details.responseHeaders['content-security-policy'];
-        delete details.responseHeaders['content-security-policy-report-only'];
-        delete details.responseHeaders['x-frame-options'];
-      }
-      callback({ responseHeaders: details.responseHeaders });
-    });
-
-    // Apply security policy
-    this.applySecurityPolicy(window, config);
-
     return window;
   }
 
@@ -247,7 +277,7 @@ export class RemoteAgentWindowManager {
    * Setup event handlers for a remote agent window
    */
   private setupWindowHandlers(remoteAgentWindow: RemoteAgentWindow): void {
-    const { window, id } = remoteAgentWindow;
+    const { window, id, webContents } = remoteAgentWindow;
 
     // Window closed
     window.on('closed', () => {
@@ -260,18 +290,18 @@ export class RemoteAgentWindowManager {
     });
 
     // Page loaded
-    window.webContents.on('did-finish-load', () => {
+    webContents.on('did-finish-load', () => {
       this.updateRemoteAgentState(id, RemoteAgentWindowState.READY);
     });
 
     // Page failed to load
-    window.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
+    webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
       console.error(`Remote agent failed to load: ${errorDescription} (${errorCode})`);
       this.updateRemoteAgentState(id, RemoteAgentWindowState.ERROR);
     });
 
     // Handle messages from remote agent
-    window.webContents.on('ipc-message', (event, channel, ...args) => {
+    webContents.on('ipc-message', (event, channel, ...args) => {
       if (channel === 'remote-agent:message-to-host') {
         this.handleRemoteAgentMessage(id, args[0]);
       }
@@ -281,12 +311,12 @@ export class RemoteAgentWindowManager {
   /**
    * Apply security policy to window
    */
-  private applySecurityPolicy(window: BrowserWindow, config: RemoteAgentConfig): void {
+  private applySecurityPolicy(webContents: Electron.WebContents, config: RemoteAgentConfig): void {
     // For remote agent windows, we allow more flexibility to support OAuth flows
     // and other authentication mechanisms
 
     // Allow navigation within the same domain and to auth providers
-    window.webContents.on('will-navigate', (event, url) => {
+    webContents.on('will-navigate', (event, url) => {
       const parsedUrl = new URL(url);
       const allowedAuthDomains = [
         'accounts.google.com',
@@ -305,7 +335,7 @@ export class RemoteAgentWindowManager {
     });
 
     // Allow new windows to open in external browser (for OAuth, etc.)
-    window.webContents.setWindowOpenHandler(({ url }) => {
+    webContents.setWindowOpenHandler(({ url }) => {
       const parsedUrl = new URL(url);
       const allowedAuthDomains = [
         'accounts.google.com',
@@ -319,8 +349,8 @@ export class RemoteAgentWindowManager {
       );
 
       if (isAuthDomain) {
-        // Load in the current window instead of blocking
-        window.webContents.loadURL(url);
+        // Load in the current webContents instead of blocking
+        webContents.loadURL(url);
         return { action: 'deny' };
       }
 
@@ -332,7 +362,7 @@ export class RemoteAgentWindowManager {
     });
 
     // Allow more permissions for remote agent functionality
-    window.webContents.session.setPermissionRequestHandler(
+    webContents.session.setPermissionRequestHandler(
       (webContents, permission, callback) => {
         const allowedPermissions = [
           'notifications',
@@ -347,6 +377,20 @@ export class RemoteAgentWindowManager {
         }
       }
     );
+  }
+
+  /**
+   * Configure response header relaxation (CSP/XFO removal) on given webContents session
+   */
+  private configureResponseHeaderRelaxation(webContents: Electron.WebContents): void {
+    webContents.session.webRequest.onHeadersReceived((details, callback) => {
+      if (details.responseHeaders) {
+        delete details.responseHeaders['content-security-policy'];
+        delete details.responseHeaders['content-security-policy-report-only'];
+        delete details.responseHeaders['x-frame-options'];
+      }
+      callback({ responseHeaders: details.responseHeaders });
+    });
   }
 
   /**
