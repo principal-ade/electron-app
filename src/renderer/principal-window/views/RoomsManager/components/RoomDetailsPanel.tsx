@@ -50,6 +50,7 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
   const [editingDrawingName, setEditingDrawingName] = useState('');
   const [initialDrawingData, setInitialDrawingData] = useState(null);
   const [drawingsKey, setDrawingsKey] = useState(0); // For refreshing drawings list
+  const excalidrawSaveRef = React.useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
     if (room) {
@@ -201,6 +202,10 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
   };
 
   const handleBackToRoom = () => {
+    // Auto-save handles saving on changes, no need to explicitly save here
+    // Refresh drawings list when returning to room view
+    setDrawingsKey(prev => prev + 1);
+
     setViewMode(RoomView.DETAILS);
     setEditingDrawing(null);
     setEditingDrawingName('');
@@ -306,6 +311,7 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
             showNameEditor={true}
             useAlexandriaStorage={true}
             onSave={handleDrawingSaved}
+            saveRef={excalidrawSaveRef}
           />
         </div>
       </div>

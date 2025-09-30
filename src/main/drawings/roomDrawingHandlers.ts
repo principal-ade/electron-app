@@ -100,6 +100,7 @@ class RoomDrawingHandlers {
       }
 
       const drawingData = memory.loadRoomDrawing(roomId, drawingId);
+
       if (!drawingData) {
         return { success: false, error: 'Drawing not found' };
       }

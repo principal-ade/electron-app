@@ -43,6 +43,8 @@ interface ExcalidrawWrapperProps {
   useAlexandriaStorage?: boolean;
   // Room-aware drawing support
   roomId?: string;
+  // Expose save function to parent
+  saveRef?: React.MutableRefObject<(() => Promise<void>) | null>;
 }
 
 export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
@@ -61,6 +63,7 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
   showNameEditor = true, // Default to true for backward compatibility
   useAlexandriaStorage = false, // Default to false for backward compatibility
   roomId,
+  saveRef,
 }) => {
   const { theme } = useTheme();
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
@@ -75,6 +78,9 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState(diagramName);
   const nameInputRef = useRef<HTMLInputElement>(null);
+
+  // Track last saved content hash to avoid unnecessary saves
+  const lastSavedContentRef = useRef<string>('');
 
   // Update refs when props change (when loading a different diagram)
   useEffect(() => {
@@ -238,8 +244,9 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
       projectPath,
       currentLibraryItems,
       useAlexandriaStorage,
+      roomId,
     };
-  }, [excalidrawAPI, currentDiagramName, projectPath, currentLibraryItems, useAlexandriaStorage]);
+  }, [excalidrawAPI, currentDiagramName, projectPath, currentLibraryItems, useAlexandriaStorage, roomId]);
 
   // Track if this is the first save for draft naming
   const [draftNumber, setDraftNumber] = useState<number | null>(null);
@@ -247,7 +254,7 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
 
   // Auto-save functionality using refs to avoid re-renders
   const handleSave = useCallback(async () => {
-    const { excalidrawAPI, projectPath, currentLibraryItems, useAlexandriaStorage } =
+    const { excalidrawAPI, projectPath, currentLibraryItems, useAlexandriaStorage, roomId } =
       saveDataRef.current;
     const { diagramName } = saveDataRef.current;
 
@@ -257,12 +264,6 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
 
     try {
       const elements = excalidrawAPI.getSceneElements();
-
-      // Don't save empty diagrams
-      // if (!elements || elements.length === 0) {
-      //   console.log('Skipping save - no elements');
-      //   return;
-      // }
 
       setIsSaving(true);
       const appState = excalidrawAPI.getAppState();
@@ -383,7 +384,7 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
         });
       }
     } catch (error) {
-      console.error('Failed to save diagram:', error);
+      console.error('[ExcalidrawWrapper] Failed to save diagram:', error);
     } finally {
       setIsSaving(false);
     }
@@ -394,12 +395,17 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
 
   // Handle manual save
   const handleManualSave = useCallback(async () => {
-    console.log('[ExcalidrawWrapper] Manual save triggered');
     // Manual save should always work, regardless of initial load state
     isInitialLoadRef.current = false;
     await handleSave();
-    // Show save confirmation (you can add a toast notification here)
   }, [handleSave]);
+
+  // Expose save function to parent through ref
+  useEffect(() => {
+    if (saveRef) {
+      saveRef.current = handleManualSave;
+    }
+  }, [saveRef, handleManualSave]);
 
   // Keyboard shortcut for save
   useEffect(() => {
@@ -414,18 +420,11 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleManualSave]);
 
-  // Auto-save on unmount
-  useEffect(() => {
-    return () => {
-      // Save when the component is unmounting
-      if (excalidrawAPI) {
-        console.log('[ExcalidrawWrapper] Auto-saving on unmount');
-        // Set initial load flag to false to ensure save happens
-        isInitialLoadRef.current = false;
-        handleSave();
-      }
-    };
-  }, [excalidrawAPI, handleSave]);
+  // Auto-save on unmount removed - it was causing issues where it would
+  // save empty canvas after component cleanup. Instead we rely on:
+  // 1. Auto-save on changes (debounced)
+  // 2. Manual save button
+  // 3. Parent component calling saveRef before unmounting if needed
 
   // Handle name editing
   const handleStartEditingName = () => {
@@ -545,10 +544,27 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
           if (onChange && !isLoadingDiagram) {
             onChange(elements, appState);
           }
-          // Auto-save disabled - manual save only
-          // if (!isInitialLoadRef.current && !isLoadingDiagram) {
-          //   debouncedSave();
-          // }
+
+          // Auto-save only if content actually changed (not just selection/viewport)
+          if (!isInitialLoadRef.current && !isLoadingDiagram) {
+            // Create a simple hash of elements to detect actual content changes
+            const contentHash = JSON.stringify(elements.map(el => ({
+              id: el.id,
+              type: el.type,
+              x: el.x,
+              y: el.y,
+              width: el.width,
+              height: el.height,
+              // Include other properties that indicate actual content changes
+              text: 'text' in el ? el.text : undefined,
+              points: 'points' in el ? el.points : undefined,
+            })));
+
+            if (contentHash !== lastSavedContentRef.current) {
+              lastSavedContentRef.current = contentHash;
+              debouncedSave();
+            }
+          }
         }}
         onLibraryChange={(items) => {
           setCurrentLibraryItems(items);
