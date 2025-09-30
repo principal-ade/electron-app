@@ -62,8 +62,8 @@ import { PlanningAgentGuide } from './shared/PlanningAgentGuide';
 import { PlanningStartOverlay } from './shared/PlanningStartOverlay';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { SupportedAgent, AGENT_INFO } from '@principal-ai/agent-monitoring';
-import { PlanningService } from '../../main-process-api/PlanningService';
-import type { AgentDocumentRequest } from '../../../shared/main-process-api-interfaces/PlanningAPI';
+import { PrincipalService } from '../../main-process-api/PrincipalService';
+import type { AgentDocumentRequest } from '../../../shared/main-process-api-interfaces/PrincipalAPI';
 
 interface PlanningViewProps {
   repository: Repository;
@@ -233,7 +233,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     };
 
     // Subscribe to planning service event
-    const unsubscribe = PlanningService.onAgentDocumentRequest(
+    const unsubscribe = PrincipalService.onAgentDocumentRequest(
       handleAgentDocumentRequest,
     );
 
@@ -1103,7 +1103,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     setIsDirty(true);
   }, []);
 
-  // Listen for updates from the Planning MCP Bridge (when agents make changes)
+  // Listen for updates from the Principal MCP Bridge (when agents make changes)
   useEffect(() => {
     const currentDocumentPath = slideDocument.metadata.filePath;
     console.info(
@@ -1131,7 +1131,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
 
       if (isCurrentDocument) {
         console.info(
-          '[PlanningView] Updating slides from MCP bridge for file:',
+          '[PlanningView] Updating slides from Principal MCP bridge for file:',
           data.filePath,
         );
 
@@ -1284,14 +1284,14 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
       }
     };
 
-    // Register planning event listeners using PlanningService
-    const unsubscribeSlideUpdated = PlanningService.onSlideUpdated(
+    // Register planning event listeners using PrincipalService
+    const unsubscribeSlideUpdated = PrincipalService.onSlideUpdated(
       handleSlideUpdatedFromBridge,
     );
-    const unsubscribeSlideNavigated = PlanningService.onSlideNavigated(
+    const unsubscribeSlideNavigated = PrincipalService.onSlideNavigated(
       handleSlideNavigatedFromBridge,
     );
-    const unsubscribeDocumentLoaded = PlanningService.onDocumentLoaded(
+    const unsubscribeDocumentLoaded = PrincipalService.onDocumentLoaded(
       handleDocumentLoadedFromBridge,
     );
 
@@ -3578,7 +3578,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                   // Create new markdown document
                   createNewDocument('markdown');
                   // Send response to agent
-                  PlanningService.sendAgentDocumentResponse(
+                  PrincipalService.sendAgentDocumentResponse(
                     agentDocumentRequest.requestId,
                     {
                       success: true,
@@ -3633,7 +3633,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                   // Create new excalidraw document
                   createNewDocument('excalidraw');
                   // Send response to agent
-                  PlanningService.sendAgentDocumentResponse(
+                  PrincipalService.sendAgentDocumentResponse(
                     agentDocumentRequest.requestId,
                     {
                       success: true,
@@ -3745,7 +3745,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
               <button
                 onClick={() => {
                   // Send cancellation response
-                  PlanningService.sendAgentDocumentResponse(
+                  PrincipalService.sendAgentDocumentResponse(
                     agentDocumentRequest.requestId,
                     {
                       success: true,

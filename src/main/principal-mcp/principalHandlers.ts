@@ -14,10 +14,10 @@ interface SlideDocument {
   };
 }
 
-// Simple IPC handlers for planning operations
-export function registerPlanningHandlers() {
-  // Load or create planning document
-  ipcMain.handle('planning:load-document', async (event, filePath: string) => {
+// Simple IPC handlers for principal MCP operations
+export function registerPrincipalHandlers() {
+  // Load or create principal document
+  ipcMain.handle('principal:load-document', async (event, filePath: string) => {
     try {
       let content = '';
       let exists = false;
@@ -46,14 +46,14 @@ export function registerPlanningHandlers() {
         },
       } as SlideDocument;
     } catch (error) {
-      console.error('[Planning] Error loading document:', error);
+      console.error('[Principal] Error loading document:', error);
       throw error;
     }
   });
 
-  // Save planning document
+  // Save principal document
   ipcMain.handle(
-    'planning:save-document',
+    'principal:save-document',
     async (event, filePath: string, content: string) => {
       try {
         // Ensure directory exists
@@ -65,7 +65,7 @@ export function registerPlanningHandlers() {
 
         return { success: true };
       } catch (error) {
-        console.error('[Planning] Error saving document:', error);
+        console.error('[Principal] Error saving document:', error);
         return { success: false, error: (error as Error).message };
       }
     },

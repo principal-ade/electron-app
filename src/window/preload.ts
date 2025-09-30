@@ -47,7 +47,7 @@ import { testCoverageAPI } from './main-process-api-implementations/testCoverage
 import { dockerAPI } from './main-process-api-implementations/dockerApi';
 import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
-import { planningAPI } from './main-process-api-implementations/planningApi';
+import { principalAPI } from './main-process-api-implementations/principalApi';
 import { feedbackAPI } from './main-process-api-implementations/feedbackApi';
 import { roomDrawingAPI } from './main-process-api-implementations/roomDrawingApi';
 import { llmModelsAPI } from './main-process-api-implementations/llmModelsApi';
@@ -130,7 +130,7 @@ const mainProcessExposure: MainProcessAPI = {
   docker: dockerAPI,
   gitSync: gitSyncAPI,
   window: windowAPI,
-  planning: planningAPI,
+  principal: principalAPI,
   feedback: feedbackAPI,
   llmModels: llmModelsAPI,
   testDebug: testDebugAPI,

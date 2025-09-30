@@ -1,10 +1,10 @@
 /**
- * PlanningService - Service layer for planning event subscriptions
+ * PrincipalService - Service layer for principal MCP event subscriptions
  *
- * This service encapsulates all window.mainProcess.planning calls to maintain
+ * This service encapsulates all window.mainProcess.principal calls to maintain
  * clean architecture and separation of concerns.
  *
- * ALL calls to window.mainProcess.planning MUST be made through this service.
+ * ALL calls to window.mainProcess.principal MUST be made through this service.
  */
 
 import type {
@@ -13,14 +13,14 @@ import type {
   DocumentLoadedEvent,
   AgentDocumentRequest,
   AgentDocumentResponse,
-} from '../../shared/main-process-api-interfaces/PlanningAPI';
+} from '../../shared/main-process-api-interfaces/PrincipalAPI';
 
 /**
- * Service for managing planning event subscriptions
+ * Service for managing principal MCP event subscriptions
  */
-export class PlanningService {
+export class PrincipalService {
   /**
-   * Subscribe to slide update events from the planning MCP bridge
+   * Subscribe to slide update events from the principal MCP bridge
    * @param callback - Function to handle slide update events
    * @returns Cleanup function to remove the listener
    */
@@ -28,10 +28,10 @@ export class PlanningService {
     callback: (data: SlideUpdatedEvent) => void,
   ): () => void {
     try {
-      return window.mainProcess.planning.onSlideUpdated(callback);
+      return window.mainProcess.principal.onSlideUpdated(callback);
     } catch (error) {
       console.error(
-        '[PlanningService] Failed to subscribe to slide updates:',
+        '[PrincipalService] Failed to subscribe to slide updates:',
         error,
       );
       // Return a no-op cleanup function
@@ -40,7 +40,7 @@ export class PlanningService {
   }
 
   /**
-   * Subscribe to slide navigation events from the planning MCP bridge
+   * Subscribe to slide navigation events from the principal MCP bridge
    * @param callback - Function to handle slide navigation events
    * @returns Cleanup function to remove the listener
    */
@@ -48,10 +48,10 @@ export class PlanningService {
     callback: (data: SlideNavigatedEvent) => void,
   ): () => void {
     try {
-      return window.mainProcess.planning.onSlideNavigated(callback);
+      return window.mainProcess.principal.onSlideNavigated(callback);
     } catch (error) {
       console.error(
-        '[PlanningService] Failed to subscribe to slide navigation:',
+        '[PrincipalService] Failed to subscribe to slide navigation:',
         error,
       );
       // Return a no-op cleanup function
@@ -60,7 +60,7 @@ export class PlanningService {
   }
 
   /**
-   * Subscribe to document load events from the planning MCP bridge
+   * Subscribe to document load events from the principal MCP bridge
    * @param callback - Function to handle document load events
    * @returns Cleanup function to remove the listener
    */
@@ -68,10 +68,10 @@ export class PlanningService {
     callback: (data: DocumentLoadedEvent) => void,
   ): () => void {
     try {
-      return window.mainProcess.planning.onDocumentLoaded(callback);
+      return window.mainProcess.principal.onDocumentLoaded(callback);
     } catch (error) {
       console.error(
-        '[PlanningService] Failed to subscribe to document loads:',
+        '[PrincipalService] Failed to subscribe to document loads:',
         error,
       );
       // Return a no-op cleanup function
@@ -88,10 +88,10 @@ export class PlanningService {
     callback: (data: AgentDocumentRequest) => void,
   ): () => void {
     try {
-      return window.mainProcess.planning.onAgentDocumentRequest(callback);
+      return window.mainProcess.principal.onAgentDocumentRequest(callback);
     } catch (error) {
       console.error(
-        '[PlanningService] Failed to subscribe to agent document requests:',
+        '[PrincipalService] Failed to subscribe to agent document requests:',
         error,
       );
       // Return a no-op cleanup function
@@ -109,13 +109,13 @@ export class PlanningService {
     response: AgentDocumentResponse,
   ): Promise<void> {
     try {
-      await window.mainProcess.planning.sendAgentDocumentResponse(
+      await window.mainProcess.principal.sendAgentDocumentResponse(
         requestId,
         response,
       );
     } catch (error) {
       console.error(
-        '[PlanningService] Failed to send agent document response:',
+        '[PrincipalService] Failed to send agent document response:',
         error,
       );
       throw new Error('Failed to send agent document response');

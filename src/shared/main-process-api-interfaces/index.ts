@@ -39,7 +39,7 @@ import type { TestCoverageAPI } from './TestCoverageAPI';
 import type { DockerAPI } from './DockerAPI';
 import type { GitSyncAPI } from './GitSyncAPI';
 import type { WindowAPI } from './WindowAPI';
-import type { PlanningAPI } from './PlanningAPI';
+import type { PrincipalAPI } from './PrincipalAPI';
 import type { FeedbackAPI } from './FeedbackAPI';
 import type { DocumentSearchAPI } from '../ipc/DocumentSearchIPC';
 import type { ObservabilityAPI } from './ObservabilityAPI';
@@ -110,7 +110,7 @@ export interface MainProcessAPI {
   docker: DockerAPI;
   gitSync: GitSyncAPI;
   window: WindowAPI;
-  planning: PlanningAPI;
+  principal: PrincipalAPI;
   feedback: FeedbackAPI;
   testDebug: TestDebugAPI;
   documentSearch: DocumentSearchAPI;
