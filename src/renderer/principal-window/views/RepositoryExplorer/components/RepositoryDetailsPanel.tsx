@@ -21,6 +21,8 @@ interface RepositoryDetailsPanelProps {
   isLoadingGitStatus: boolean;
   onOpenDashboard: (repo: EnhancedAlexandriaEntry) => void;
   onRepositoryRemoved?: (removedRepoName: string) => void;
+  onRefresh?: () => Promise<void> | void;
+  isRefreshing?: boolean;
 }
 
 
@@ -33,6 +35,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   isLoadingGitStatus,
   onOpenDashboard,
   onRepositoryRemoved,
+  onRefresh,
+  isRefreshing: _isRefreshing,
 }) => {
   const { theme } = useTheme();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
@@ -130,6 +134,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         // Successfully pushed - refresh repository monitoring to update sidebar
         await RepositoryMonitoringService.refreshRepository(selectedRepository.path);
 
+        if (onRefresh) {
+          await onRefresh();
+        }
+
         // Refresh local branch status
         await checkForUpdates();
       } else {
@@ -140,7 +148,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     } finally {
       setIsPushing(false);
     }
-  }, [selectedRepository, isPushing, pushStatus, checkForUpdates]);
+  }, [selectedRepository, isPushing, pushStatus, checkForUpdates, onRefresh]);
 
   const performFastForward = useCallback(async () => {
     if (!selectedRepository?.path || isFastForwarding || !branchStatus?.canFastForward) return;
@@ -154,6 +162,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         // Fast-forward successful - refresh repository monitoring to update sidebar
         await RepositoryMonitoringService.refreshRepository(selectedRepository.path);
 
+        if (onRefresh) {
+          await onRefresh();
+        }
+
         // Refresh local branch status
         await checkForUpdates();
       } else {
@@ -164,7 +176,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     } finally {
       setIsFastForwarding(false);
     }
-  }, [selectedRepository, isFastForwarding, branchStatus, checkForUpdates]);
+  }, [selectedRepository, isFastForwarding, branchStatus, checkForUpdates, onRefresh]);
 
 
 
