@@ -404,4 +404,33 @@ export function registerModernWindowHandlers(): void {
     window.window.loadURL(url);
   });
 
+  // Palace Room Workspace Window
+  ipcMain.handle(WindowEvent.OPEN_PALACE_ROOM_WORKSPACE, async () => {
+    const windowName = 'palace-room-workspace';
+
+    const window = createSpecialWindow(
+      windowName,
+      {
+        width: 1280,
+        height: 832,
+        minWidth: 1024,
+        minHeight: 720,
+        title: 'Palace Room Workspace',
+      },
+      {
+        fileSystemAdapter: true,
+        windowManagerAdapter: true,
+        githubAdapter: true,
+        contentSecurityPolicy: true,
+        externalLinkHandler: true,
+        menu: true,
+      },
+    );
+
+    if (!window) return;
+
+    const url = resolveHtmlPath('palace-room-workspace.html');
+    window.window.loadURL(url);
+  });
+
 }

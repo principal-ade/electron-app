@@ -24,8 +24,17 @@ const entryPoints: { [key: string]: string } = {};
 const htmlPlugins: HtmlWebpackPlugin[] = [];
 
 // Check if principal-window entry exists
-const principalEntryPath = path.join(webpackPaths.srcRendererPath, 'principal-window', 'index.tsx');
+const principalEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'principal-window',
+  'index.tsx',
+);
 const legacyEntryPath = path.join(webpackPaths.srcRendererPath, 'index.tsx');
+const palaceRoomWorkspaceEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'palace-room-workspace',
+  'index.tsx',
+);
 
 // Use principal entry if it exists, otherwise fall back to legacy
 if (fs.existsSync(principalEntryPath)) {
@@ -35,6 +44,25 @@ if (fs.existsSync(principalEntryPath)) {
       filename: 'principal.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['principal'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    })
+  );
+}
+
+// Register Palace Room Workspace entry when present
+if (fs.existsSync(palaceRoomWorkspaceEntryPath)) {
+  entryPoints['palace-room-workspace'] = palaceRoomWorkspaceEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'palace-room-workspace.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['palace-room-workspace'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,

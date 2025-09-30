@@ -13,4 +13,5 @@ export enum WindowEvent {
   // Open the markdown file selection dialog (existing)
   OPEN_MARKDOWN_FILE_DIALOG = 'window:open-markdown-file-dialog',
   OPEN_CALLIMACHUS_WINDOW = 'window:open-callimachus',
+  OPEN_PALACE_ROOM_WORKSPACE = 'window:open-palace-room-workspace',
 }
