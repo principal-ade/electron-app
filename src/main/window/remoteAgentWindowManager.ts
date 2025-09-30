@@ -15,6 +15,9 @@ export const REMOTE_AGENT_WINDOW_CONFIG = {
   minHeight: 400,
   allowedDomains: [
     'https://jules.google.com',
+    'https://chatgpt.com',
+    'https://auth.openai.com',
+    'https://github.com',
     'https://remote-agent.example.com',
     'https://cloud-agent.service.com',
   ],

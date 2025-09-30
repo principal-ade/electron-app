@@ -1,12 +1,15 @@
 import {
-  Theme,
-  defaultTheme,
+  type Theme,
   terminalTheme,
   regalTheme,
   glassmorphismTheme,
   matrixTheme,
-  matrixMinimalTheme
-} from 'themed-markdown';
+  matrixMinimalTheme,
+  slateTheme,
+  defaultMarkdownTheme,
+  defaultEditorTheme,
+  defaultTerminalTheme,
+} from '@a24z/industry-theme';
 
 // Icon theme configurations for each theme
 export const iconThemes = {
@@ -29,6 +32,22 @@ export const iconThemes = {
   matrixMinimal: {
     eyeColor: '#00ff00', // Classic matrix green
     style: 'solid' as const,
+  },
+  slate: {
+    eyeColor: '#94a3b8', // Slate blue-gray
+    style: 'solid' as const,
+  },
+  defaultMarkdown: {
+    eyeColor: '#66b3ff', // Standard blue
+    style: 'gradient' as const,
+  },
+  defaultEditor: {
+    eyeColor: '#66b3ff', // Standard blue
+    style: 'gradient' as const,
+  },
+  defaultTerminal: {
+    eyeColor: '#66b3ff', // Terminal blue
+    style: 'gradient' as const,
   },
 };
 
@@ -71,6 +90,30 @@ export const predefinedThemes: Record<
     description: 'Clean matrix theme without visual effects',
     theme: matrixMinimalTheme,
     iconTheme: iconThemes.matrixMinimal,
+  },
+  slate: {
+    name: 'Slate',
+    description: 'Professional slate gray theme',
+    theme: slateTheme,
+    iconTheme: iconThemes.slate,
+  },
+  defaultMarkdown: {
+    name: 'Default Markdown',
+    description: 'Standard markdown theme',
+    theme: defaultMarkdownTheme,
+    iconTheme: iconThemes.defaultMarkdown,
+  },
+  defaultEditor: {
+    name: 'Default Editor',
+    description: 'Standard editor theme',
+    theme: defaultEditorTheme,
+    iconTheme: iconThemes.defaultEditor,
+  },
+  defaultTerminal: {
+    name: 'Default Terminal',
+    description: 'Standard terminal theme',
+    theme: defaultTerminalTheme,
+    iconTheme: iconThemes.defaultTerminal,
   },
 };
 

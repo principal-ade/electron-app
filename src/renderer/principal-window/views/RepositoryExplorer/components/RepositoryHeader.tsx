@@ -96,6 +96,20 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
     }
   }, [repository]);
 
+  const handleOpenChatGPT = useCallback(async () => {
+    if (!repository?.path) return;
+
+    try {
+      await remoteAgentService.openRemoteAgent({
+        id: `chatgpt-${repository.name}`,
+        name: `ChatGPT - ${repository.name}`,
+        url: 'https://chatgpt.com/codex',
+      });
+    } catch (error) {
+      console.error('Error opening ChatGPT:', error);
+    }
+  }, [repository]);
+
 
   return (
     <div
@@ -351,6 +365,34 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
           >
             <Bot size={14} />
             Open Jules
+          </button>
+
+          <button
+            onClick={handleOpenChatGPT}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              backgroundColor: theme.colors.secondary,
+              color: theme.colors.background,
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+            title="Open ChatGPT Codex"
+          >
+            <Bot size={14} />
+            ChatGPT
           </button>
 
           <button
