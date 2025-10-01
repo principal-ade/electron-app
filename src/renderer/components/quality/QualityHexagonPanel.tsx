@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   QualityHexagon,
   QualityHexagonCompact,
@@ -11,14 +11,12 @@ import type { ExtendedQualityMetrics, QualityTier } from '../../services/MockQua
 
 interface QualityHexagonPanelProps {
   directory: string;
-  autoAnalyze?: boolean;
   size?: 'sm' | 'md' | 'lg';
   compact?: boolean;
 }
 
 export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   directory,
-  autoAnalyze = false,
   size = 'md',
   compact = false,
 }) => {
@@ -27,13 +25,7 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (autoAnalyze && directory) {
-      analyzeQuality();
-    }
-  }, [directory, autoAnalyze]);
-
-  const analyzeQuality = async () => {
+  const analyzeQuality = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -48,7 +40,15 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [directory]);
+
+  useEffect(() => {
+    if (directory) {
+      setMetrics(null);
+      setError(null);
+      analyzeQuality();
+    }
+  }, [directory, analyzeQuality]);
 
   const renderContent = () => {
     if (loading) {

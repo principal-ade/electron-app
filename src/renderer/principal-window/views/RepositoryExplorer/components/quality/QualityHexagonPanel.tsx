@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   QualityHexagonCompact,
   QualityHexagonDetailed
@@ -9,13 +9,11 @@ import type { ExtendedQualityMetrics } from './MockQualityMetricsService';
 
 interface QualityHexagonPanelProps {
   directory: string;
-  autoAnalyze?: boolean;
   compact?: boolean;
 }
 
 export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   directory,
-  autoAnalyze = false,
   compact = false,
 }) => {
   const { theme } = useTheme();
@@ -23,14 +21,7 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (autoAnalyze && directory) {
-      analyzeQuality();
-    }
-  }, [directory, autoAnalyze]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Note: analyzeQuality is not memoized, adding it would cause infinite re-renders
-
-  const analyzeQuality = async () => {
+  const analyzeQuality = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -43,7 +34,15 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [directory]);
+
+  useEffect(() => {
+    if (directory) {
+      setMetrics(null);
+      setError(null);
+      analyzeQuality();
+    }
+  }, [directory, analyzeQuality]);
 
   const renderContent = () => {
     if (loading) {
