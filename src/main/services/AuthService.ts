@@ -150,7 +150,7 @@ class AuthService {
       try {
         // Use the OAuth client from dev-collab-cli
         const authClient = new OAuthServerClient({
-          serverUrl: process.env.AUTH_SERVER_URL || 'https://principle-md.com',
+          serverUrl: process.env.AUTH_SERVER_URL || 'https://principal-ade.com',
           forceReauth: options.forceNew || false,
         });
 

@@ -33,7 +33,7 @@ export class OAuthServerClient {
     this.serverUrl =
       config?.serverUrl ||
       process.env.AUTH_SERVER_URL ||
-      'http://localhost:3002';
+      'https://principal-ade.com';
     this.forceReauth = config?.forceReauth || false;
 
     // Generate random state for session tracking

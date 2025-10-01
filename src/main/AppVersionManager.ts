@@ -79,7 +79,7 @@ export default class AppVersionManager {
     try {
       autoUpdater.setFeedURL({
         provider: 'generic',
-        url: 'https://principle-md.com/api/updates',
+        url: 'https://principal-ade.com/api/updates',
         channel: 'latest',
       });
       log.info('[AppUpdater] Update feed URL configured successfully');
