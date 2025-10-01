@@ -1,4 +1,5 @@
-import { BrowserWindow, BrowserView, app } from 'electron';
+import { BrowserWindow, BrowserView, app, screen } from 'electron';
+import path from 'path';
 import {
   RemoteAgentConfig,
   RemoteAgentWindow,
@@ -8,11 +9,12 @@ import {
 import { sendToAllWindows } from './modernWindowManager';
 
 export const REMOTE_AGENT_WINDOW_CONFIG = {
-  maxConcurrentWindows: 10,
+  maxConcurrentAgents: 10,
   defaultWidth: 1200,
   defaultHeight: 800,
   minWidth: 600,
   minHeight: 400,
+  titlebarHeight: 40,
   allowedDomains: [
     'https://jules.google.com',
     'https://chatgpt.com',
@@ -23,93 +25,81 @@ export const REMOTE_AGENT_WINDOW_CONFIG = {
   ],
 };
 
-// Feature flag: when true, load remote agents in a BrowserView inside a host window
-// Enables custom chrome/titlebar experimentation without changing default behavior
-const USE_BROWSER_VIEW = process.env.REMOTE_AGENT_USE_BROWSER_VIEW === 'true';
-
 export class RemoteAgentWindowManager {
-  private remoteAgentWindows: Map<string, RemoteAgentWindow> = new Map();
+  private hostWindow: BrowserWindow | null = null;
+  private remoteAgents: Map<string, RemoteAgentWindow> = new Map();
+  private activeAgentId: string | null = null;
 
   constructor() {
     // No dependencies needed
   }
 
   /**
-   * Open a remote agent in a new window
+   * Open a remote agent in the shared window
    */
   async openRemoteAgent(
     config: RemoteAgentConfig,
     options?: RemoteAgentWindowOptions
   ): Promise<string> {
-    // Check if window already exists
-    const existingWindow = this.remoteAgentWindows.get(config.id);
-    if (existingWindow && !existingWindow.window.isDestroyed()) {
-      existingWindow.window.focus();
-      existingWindow.lastActiveAt = new Date();
+    // Check if agent already exists
+    const existingAgent = this.remoteAgents.get(config.id);
+    if (existingAgent) {
+      this.switchToAgent(config.id);
+      if (this.hostWindow && !this.hostWindow.isDestroyed()) {
+        this.hostWindow.focus();
+      }
+      existingAgent.lastActiveAt = new Date();
       return config.id;
     }
 
-    // Check concurrent window limit
-    if (this.remoteAgentWindows.size >= REMOTE_AGENT_WINDOW_CONFIG.maxConcurrentWindows) {
+    // Check concurrent agent limit
+    if (this.remoteAgents.size >= REMOTE_AGENT_WINDOW_CONFIG.maxConcurrentAgents) {
       throw new Error(
-        `Maximum number of remote agent windows (${REMOTE_AGENT_WINDOW_CONFIG.maxConcurrentWindows}) reached`
+        `Maximum number of remote agents (${REMOTE_AGENT_WINDOW_CONFIG.maxConcurrentAgents}) reached`
       );
     }
 
     // Validate URL
     this.validateUrl(config.url);
 
-    // Create the host window
-    const window = this.createRemoteAgentWindow(config, options);
-
-    // Optionally create a BrowserView for the remote agent content
-    let view: BrowserView | undefined;
-    let webContents: Electron.WebContents = window.webContents;
-
-    if (USE_BROWSER_VIEW) {
-      view = new BrowserView({
-        webPreferences: {
-          sandbox: false,
-          contextIsolation: true,
-          nodeIntegration: false,
-          webSecurity: false,
-          allowRunningInsecureContent: false,
-        },
-      });
-
-      window.setBrowserView(view);
-      view.setAutoResize({ width: true, height: true });
-      // Fill the content area
-      const bounds = window.getContentBounds();
-      view.setBounds({ x: 0, y: 0, width: bounds.width, height: bounds.height });
-
-      // Use the view's webContents for all operations
-      webContents = view.webContents;
-
-      // Keep view sized with window
-      window.on('resize', () => {
-        const b = window.getContentBounds();
-        view?.setBounds({ x: 0, y: 0, width: b.width, height: b.height });
-      });
-
-      console.log('[RemoteAgent] BrowserView mode enabled for', config.name);
+    // Create host window if it doesn't exist
+    if (!this.hostWindow || this.hostWindow.isDestroyed()) {
+      this.hostWindow = this.createHostWindow(options);
+      this.setupHostWindowHandlers();
     }
 
-    // Set a standard browser user agent on chosen webContents
+    // Create a BrowserView for this agent
+    const view = new BrowserView({
+      webPreferences: {
+        sandbox: false,
+        contextIsolation: true,
+        nodeIntegration: false,
+        webSecurity: false,
+        allowRunningInsecureContent: false,
+      },
+    });
+
+    // Add the view to the window
+    this.hostWindow.addBrowserView(view);
+
+    // Use the view's webContents for all operations
+    const webContents = view.webContents;
+
+    // Set a standard browser user agent
     const userAgent = webContents.getUserAgent().replace(/Electron\/[^\s]+/, '').trim();
     webContents.setUserAgent(userAgent);
 
-    // Disable CSP/XFO on the chosen session to allow target sites to function
+    // Disable CSP/XFO to allow target sites to function
     this.configureResponseHeaderRelaxation(webContents);
 
-    // Apply navigation/permissions policy on the chosen webContents
+    // Apply navigation/permissions policy
     this.applySecurityPolicy(webContents, config);
 
-    // Create remote agent window object
+    // Create remote agent object
     const remoteAgentWindow: RemoteAgentWindow = {
       id: config.id,
-      windowId: window.id,
-      window,
+      windowId: this.hostWindow.id,
+      window: this.hostWindow,
       view,
       webContents,
       config,
@@ -118,13 +108,13 @@ export class RemoteAgentWindowManager {
       lastActiveAt: new Date(),
     };
 
-    // Track the window
-    this.remoteAgentWindows.set(config.id, remoteAgentWindow);
+    // Track the agent
+    this.remoteAgents.set(config.id, remoteAgentWindow);
 
-    // Setup event handlers
-    this.setupWindowHandlers(remoteAgentWindow);
+    // Setup event handlers for this agent
+    this.setupAgentHandlers(remoteAgentWindow);
 
-    // Load the URL on the chosen webContents
+    // Load the URL
     try {
       await webContents.loadURL(config.url);
       this.updateRemoteAgentState(config.id, RemoteAgentWindowState.READY);
@@ -134,80 +124,167 @@ export class RemoteAgentWindowManager {
       throw error;
     }
 
+    // Switch to this agent
+    this.switchToAgent(config.id);
+
+    // Focus the host window
+    if (this.hostWindow && !this.hostWindow.isDestroyed()) {
+      this.hostWindow.focus();
+    }
+
+    // Notify that agent list changed
+    this.notifyAgentListChanged();
+
+    console.log('[RemoteAgent] BrowserView loaded for', config.name);
+
     return config.id;
   }
 
   /**
-   * Close a remote agent window
+   * Switch to a different remote agent
    */
-  async closeRemoteAgent(agentId: string): Promise<void> {
-    const remoteAgentWindow = this.remoteAgentWindows.get(agentId);
-    if (!remoteAgentWindow) {
+  switchToAgent(agentId: string): void {
+    const agent = this.remoteAgents.get(agentId);
+    if (!agent || !this.hostWindow || this.hostWindow.isDestroyed()) {
       return;
     }
 
-    if (!remoteAgentWindow.window.isDestroyed()) {
-      remoteAgentWindow.window.close();
+    // Hide all views first
+    for (const [id, otherAgent] of this.remoteAgents.entries()) {
+      if (otherAgent.view) {
+        otherAgent.view.setBounds({ x: 0, y: 0, width: 0, height: 0 });
+      }
     }
 
-    this.remoteAgentWindows.delete(agentId);
+    // Show the selected view
+    if (agent.view) {
+      const bounds = this.hostWindow.getContentBounds();
+      const titlebarHeight = REMOTE_AGENT_WINDOW_CONFIG.titlebarHeight;
+      agent.view.setBounds({
+        x: 0,
+        y: titlebarHeight,
+        width: bounds.width,
+        height: bounds.height - titlebarHeight,
+      });
+    }
+
+    this.activeAgentId = agentId;
+    agent.lastActiveAt = new Date();
+
+    // Notify active agent changed
+    sendToAllWindows('remote-agent:active-changed', { agentId });
   }
 
   /**
-   * Close all remote agent windows
+   * Close a remote agent
+   */
+  async closeRemoteAgent(agentId: string): Promise<void> {
+    const agent = this.remoteAgents.get(agentId);
+    if (!agent) {
+      return;
+    }
+
+    // Remove the view from the window
+    if (agent.view && this.hostWindow && !this.hostWindow.isDestroyed()) {
+      this.hostWindow.removeBrowserView(agent.view);
+    }
+
+    // Destroy the view's webContents
+    if (agent.view && !agent.view.webContents.isDestroyed()) {
+      agent.view.webContents.close();
+    }
+
+    this.remoteAgents.delete(agentId);
+
+    // If this was the active agent, switch to another or close window
+    if (this.activeAgentId === agentId) {
+      const remainingAgents = Array.from(this.remoteAgents.keys());
+      if (remainingAgents.length > 0) {
+        this.switchToAgent(remainingAgents[0]);
+      } else {
+        this.activeAgentId = null;
+        // Close the host window if no agents remain
+        if (this.hostWindow && !this.hostWindow.isDestroyed()) {
+          this.hostWindow.close();
+        }
+      }
+    }
+
+    this.notifyAgentListChanged();
+  }
+
+  /**
+   * Close all remote agents
    */
   async closeAllRemoteAgents(): Promise<void> {
-    const closePromises = Array.from(this.remoteAgentWindows.keys()).map((agentId) =>
-      this.closeRemoteAgent(agentId)
-    );
-    await Promise.all(closePromises);
-  }
-
-  /**
-   * Focus a remote agent window
-   */
-  focusRemoteAgent(agentId: string): void {
-    const remoteAgentWindow = this.remoteAgentWindows.get(agentId);
-    if (remoteAgentWindow && !remoteAgentWindow.window.isDestroyed()) {
-      remoteAgentWindow.window.focus();
-      remoteAgentWindow.lastActiveAt = new Date();
+    const agentIds = Array.from(this.remoteAgents.keys());
+    for (const agentId of agentIds) {
+      await this.closeRemoteAgent(agentId);
     }
   }
 
   /**
-   * Get a remote agent window
+   * Focus a remote agent (switch to it and focus the window)
+   */
+  focusRemoteAgent(agentId: string): void {
+    const agent = this.remoteAgents.get(agentId);
+    if (agent) {
+      this.switchToAgent(agentId);
+      if (this.hostWindow && !this.hostWindow.isDestroyed()) {
+        this.hostWindow.focus();
+      }
+      agent.lastActiveAt = new Date();
+    }
+  }
+
+  /**
+   * Get a remote agent
    */
   getRemoteAgent(agentId: string): RemoteAgentWindow | undefined {
-    return this.remoteAgentWindows.get(agentId);
+    return this.remoteAgents.get(agentId);
+  }
+
+  /**
+   * Get the active agent ID
+   */
+  getActiveAgentId(): string | null {
+    return this.activeAgentId;
   }
 
   /**
    * List all remote agents
    */
   listRemoteAgents(): RemoteAgentConfig[] {
-    return Array.from(this.remoteAgentWindows.values()).map((window) => window.config);
+    return Array.from(this.remoteAgents.values()).map((agent) => agent.config);
   }
 
   /**
    * Get the state of a remote agent
    */
   getRemoteAgentState(agentId: string): RemoteAgentWindowState | undefined {
-    const remoteAgentWindow = this.remoteAgentWindows.get(agentId);
-    return remoteAgentWindow?.state;
+    const agent = this.remoteAgents.get(agentId);
+    return agent?.state;
   }
 
   /**
    * Update remote agent state
    */
   updateRemoteAgentState(agentId: string, state: RemoteAgentWindowState): void {
-    const remoteAgentWindow = this.remoteAgentWindows.get(agentId);
-    if (remoteAgentWindow) {
-      remoteAgentWindow.state = state;
+    const agent = this.remoteAgents.get(agentId);
+    if (agent) {
+      agent.state = state;
       // Emit state change event to all windows
       sendToAllWindows('remote-agent:state-changed', {
         agentId,
         state,
       });
+      // Also notify the titlebar in the host window
+      if (this.hostWindow && !this.hostWindow.isDestroyed()) {
+        this.hostWindow.webContents.send('remote-agent:state-changed', {
+          agentId,
+          state,
+        });
+      }
     }
   }
 
@@ -215,9 +292,9 @@ export class RemoteAgentWindowManager {
    * Send a message to a remote agent
    */
   sendMessage(agentId: string, message: any): void {
-    const remoteAgentWindow = this.remoteAgentWindows.get(agentId);
-    if (remoteAgentWindow && !remoteAgentWindow.window.isDestroyed()) {
-      remoteAgentWindow.window.webContents.send('remote-agent:message-from-host', message);
+    const agent = this.remoteAgents.get(agentId);
+    if (agent && agent.webContents && !agent.webContents.isDestroyed()) {
+      agent.webContents.send('remote-agent:message-from-host', message);
     }
   }
 
@@ -233,33 +310,62 @@ export class RemoteAgentWindowManager {
   }
 
   /**
-   * Create a BrowserWindow host for the remote agent
+   * Notify all windows that the agent list has changed
    */
-  private createRemoteAgentWindow(
-    config: RemoteAgentConfig,
-    options?: RemoteAgentWindowOptions
-  ): BrowserWindow {
+  private notifyAgentListChanged(): void {
+    const agentList = this.listRemoteAgents();
+    sendToAllWindows('remote-agent:list-changed', {
+      agents: agentList,
+      activeAgentId: this.activeAgentId,
+    });
+    // Also notify the titlebar
+    if (this.hostWindow && !this.hostWindow.isDestroyed()) {
+      this.hostWindow.webContents.send('remote-agent:list-changed', {
+        agents: agentList,
+        activeAgentId: this.activeAgentId,
+      });
+    }
+  }
+
+  /**
+   * Create the host window for remote agents with custom titlebar
+   */
+  private createHostWindow(options?: RemoteAgentWindowOptions): BrowserWindow {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+
+    // Calculate left half dimensions
+    const windowWidth = options?.width ?? Math.floor(screenWidth / 2);
+    const windowHeight = options?.height ?? screenHeight;
+
+    // TODO: Consider creating a minimal preload script for titlebar that only exposes
+    // remoteAgentWindow API instead of using the full preload with all APIs
+    const preloadPath = app.isPackaged
+      ? path.join(__dirname, 'preload.js')
+      : path.join(__dirname, '../../.erb/dll/preload.js');
+
     const windowOptions: Electron.BrowserWindowConstructorOptions = {
-      width: options?.width ?? REMOTE_AGENT_WINDOW_CONFIG.defaultWidth,
-      height: options?.height ?? REMOTE_AGENT_WINDOW_CONFIG.defaultHeight,
+      width: windowWidth,
+      height: windowHeight,
+      x: 0, // Position at left edge
+      y: 0,
       minWidth: REMOTE_AGENT_WINDOW_CONFIG.minWidth,
       minHeight: REMOTE_AGENT_WINDOW_CONFIG.minHeight,
       alwaysOnTop: options?.alwaysOnTop ?? false,
       resizable: options?.resizable ?? true,
-      title: config.name,
+      title: 'Remote Agents',
+      titleBarStyle: 'hidden',
+      trafficLightPosition: { x: 10, y: 10 },
       webPreferences: {
-        // For remote agent windows (like Jules), we need less restrictive settings
-        // to allow the site to function properly as if it's a standalone browser
         sandbox: false,
         contextIsolation: true,
         nodeIntegration: false,
-        webSecurity: false, // Disabled to allow Google sites to load properly
-        allowRunningInsecureContent: false,
-        // Set a standard Chrome user agent to avoid detection
-        // This helps bypass some restrictions Google places on embedded views
+        webSecurity: true,
+        preload: preloadPath,
       },
     };
 
+    // Allow custom position to override default left-half positioning
     if (options?.position) {
       windowOptions.x = options.position.x;
       windowOptions.y = options.position.y;
@@ -270,24 +376,77 @@ export class RemoteAgentWindowManager {
     }
 
     const window = new BrowserWindow(windowOptions);
+
+    // Load the titlebar HTML
+    const titlebarPath = app.isPackaged
+      ? `file://${app.getAppPath()}/dist/titlebar/index.html`
+      : `http://localhost:${process.env.PORT || 1212}/titlebar.html`;
+
+    window.loadURL(titlebarPath).catch((error) => {
+      console.error('[RemoteAgent] Failed to load titlebar:', error);
+      // Fallback to minimal HTML if titlebar fails to load
+      window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { margin: 0; padding: 0; background: #1e1e1e; color: #fff; }
+              #titlebar {
+                height: ${REMOTE_AGENT_WINDOW_CONFIG.titlebarHeight}px;
+                background: #2d2d2d;
+                -webkit-app-region: drag;
+                display: flex;
+                align-items: center;
+                padding: 0 10px 0 80px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+              }
+            </style>
+          </head>
+          <body>
+            <div id="titlebar">Remote Agents</div>
+          </body>
+        </html>
+      `)}`);
+    });
+
     return window;
   }
 
   /**
-   * Setup event handlers for a remote agent window
+   * Setup event handlers for the host window
    */
-  private setupWindowHandlers(remoteAgentWindow: RemoteAgentWindow): void {
-    const { window, id, webContents } = remoteAgentWindow;
+  private setupHostWindowHandlers(): void {
+    if (!this.hostWindow) return;
 
-    // Window closed
-    window.on('closed', () => {
-      this.remoteAgentWindows.delete(id);
+    // Window closed - clean up all agents
+    this.hostWindow.on('closed', () => {
+      this.remoteAgents.clear();
+      this.activeAgentId = null;
+      this.hostWindow = null;
     });
 
-    // Window focused
-    window.on('focus', () => {
-      remoteAgentWindow.lastActiveAt = new Date();
+    // Handle window resize - update active view bounds
+    this.hostWindow.on('resize', () => {
+      if (!this.hostWindow || !this.activeAgentId) return;
+      const agent = this.remoteAgents.get(this.activeAgentId);
+      if (agent && agent.view) {
+        const bounds = this.hostWindow.getContentBounds();
+        const titlebarHeight = REMOTE_AGENT_WINDOW_CONFIG.titlebarHeight;
+        agent.view.setBounds({
+          x: 0,
+          y: titlebarHeight,
+          width: bounds.width,
+          height: bounds.height - titlebarHeight,
+        });
+      }
     });
+  }
+
+  /**
+   * Setup event handlers for a remote agent
+   */
+  private setupAgentHandlers(remoteAgent: RemoteAgentWindow): void {
+    const { id, webContents } = remoteAgent;
 
     // Page loaded
     webContents.on('did-finish-load', () => {
@@ -380,7 +539,7 @@ export class RemoteAgentWindowManager {
   }
 
   /**
-   * Configure response header relaxation (CSP/XFO removal) on given webContents session
+   * Configure response header relaxation (CSP/XFO removal)
    */
   private configureResponseHeaderRelaxation(webContents: Electron.WebContents): void {
     webContents.session.webRequest.onHeadersReceived((details, callback) => {

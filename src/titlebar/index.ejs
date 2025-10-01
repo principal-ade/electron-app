@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Remote Agents</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #1e1e1e;
+        height: 100%;
+        overflow: hidden;
+      }
+      #root {
+        height: 100%;
+        width: 100%;
+      }
+    </style>
+    <script>
+      // Define global before any other scripts load
+      window.global = window.global || window;
+      if (typeof process === "undefined") {
+        window.process = {
+          env: {},
+          version: 'v16.0.0',
+          platform: 'browser',
+          arch: 'browser'
+        };
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

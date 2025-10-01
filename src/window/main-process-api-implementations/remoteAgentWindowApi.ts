@@ -150,4 +150,70 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
       ipcRenderer.removeListener(RemoteAgentWindowEvent.REMOTE_AGENT_MESSAGE, listener);
     };
   },
+
+  /**
+   * Switch to a different remote agent
+   */
+  switchToAgent: async (agentId: string): Promise<void> => {
+    const result = await ipcRenderer.invoke(
+      RemoteAgentWindowEvent.SWITCH_TO_AGENT,
+      agentId
+    );
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to switch to agent');
+    }
+  },
+
+  /**
+   * Get the active agent ID
+   */
+  getActiveAgentId: async (): Promise<string | null> => {
+    const result = await ipcRenderer.invoke(RemoteAgentWindowEvent.GET_ACTIVE_AGENT_ID);
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to get active agent ID');
+    }
+
+    return result.agentId;
+  },
+
+  /**
+   * Subscribe to agent list changes
+   */
+  onRemoteAgentListChanged: (
+    callback: (agents: RemoteAgentConfig[], activeAgentId: string | null) => void
+  ): (() => void) => {
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      data: { agents: RemoteAgentConfig[]; activeAgentId: string | null }
+    ) => {
+      callback(data.agents, data.activeAgentId);
+    };
+
+    ipcRenderer.on(RemoteAgentWindowEvent.REMOTE_AGENT_LIST_CHANGED, listener);
+
+    // Return unsubscribe function
+    return () => {
+      ipcRenderer.removeListener(RemoteAgentWindowEvent.REMOTE_AGENT_LIST_CHANGED, listener);
+    };
+  },
+
+  /**
+   * Subscribe to active agent changes
+   */
+  onRemoteAgentActiveChanged: (
+    callback: (agentId: string) => void
+  ): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, data: { agentId: string }) => {
+      callback(data.agentId);
+    };
+
+    ipcRenderer.on(RemoteAgentWindowEvent.REMOTE_AGENT_ACTIVE_CHANGED, listener);
+
+    // Return unsubscribe function
+    return () => {
+      ipcRenderer.removeListener(RemoteAgentWindowEvent.REMOTE_AGENT_ACTIVE_CHANGED, listener);
+    };
+  },
 };

@@ -172,9 +172,9 @@ def generate_electron_icons(source_img, output_dir):
     print(f"    ✓ Created: icon.ico")
 
 def main():
-    # Default source icon path - using the principal-ai-icon.png in current directory
+    # Default source icon path - using the principal-ade-icon.png in current directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    source_icon = os.path.join(script_dir, "principal-ai-icon.png")
+    source_icon = os.path.join(script_dir, "principal-ade-icon.png")
 
     # Allow custom source path as argument
     if len(sys.argv) > 1:
@@ -184,7 +184,7 @@ def main():
     if not os.path.exists(source_icon):
         print(f"Error: Source icon not found at {source_icon}")
         print(f"\nUsage: {sys.argv[0]} [source-icon-path]")
-        print(f"Default source: principal-ai-icon.png in the same directory")
+        print(f"Default source: principal-ade-icon.png in the same directory")
         sys.exit(1)
 
     print(f"Processing icon: {source_icon}")

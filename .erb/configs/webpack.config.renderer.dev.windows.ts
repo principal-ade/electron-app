@@ -50,6 +50,11 @@ const palaceRoomWorkspaceEntryPath = path.join(
   'palace-room-workspace',
   'index.tsx',
 );
+const titlebarEntryPath = path.join(
+  webpackPaths.srcPath,
+  'titlebar',
+  'index.tsx',
+);
 
 // Define entry points - use object format for multiple named entries
 const entryPoints: { [key: string]: string } = {};
@@ -90,6 +95,25 @@ if (fs.existsSync(palaceRoomWorkspaceEntryPath)) {
       isBrowser: false,
       isDevelopment: true,
     })
+  );
+}
+
+// Add titlebar entry if it exists
+if (fs.existsSync(titlebarEntryPath)) {
+  entryPoints.titlebar = titlebarEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'titlebar.html',
+      template: path.join(webpackPaths.srcPath, 'titlebar', 'index.ejs'),
+      chunks: ['titlebar'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: true,
+    }),
   );
 }
 

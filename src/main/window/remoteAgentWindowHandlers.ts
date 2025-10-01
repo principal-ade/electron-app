@@ -110,6 +110,37 @@ export function registerRemoteAgentWindowHandlers(
       }
     }
   );
+
+  // Switch to agent
+  ipcMain.handle(
+    RemoteAgentWindowEvent.SWITCH_TO_AGENT,
+    async (event, agentId: string) => {
+      try {
+        remoteAgentWindowManager.switchToAgent(agentId);
+        return { success: true };
+      } catch (error) {
+        console.error('Failed to switch to agent:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    }
+  );
+
+  // Get active agent ID
+  ipcMain.handle(RemoteAgentWindowEvent.GET_ACTIVE_AGENT_ID, async () => {
+    try {
+      const agentId = remoteAgentWindowManager.getActiveAgentId();
+      return { success: true, agentId };
+    } catch (error) {
+      console.error('Failed to get active agent ID:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  });
 }
 
 /**
@@ -119,7 +150,9 @@ export function unregisterRemoteAgentWindowHandlers(): void {
   ipcMain.removeHandler(RemoteAgentWindowEvent.OPEN_REMOTE_AGENT);
   ipcMain.removeHandler(RemoteAgentWindowEvent.CLOSE_REMOTE_AGENT);
   ipcMain.removeHandler(RemoteAgentWindowEvent.FOCUS_REMOTE_AGENT);
+  ipcMain.removeHandler(RemoteAgentWindowEvent.SWITCH_TO_AGENT);
   ipcMain.removeHandler(RemoteAgentWindowEvent.LIST_REMOTE_AGENTS);
   ipcMain.removeHandler(RemoteAgentWindowEvent.GET_REMOTE_AGENT_STATE);
+  ipcMain.removeHandler(RemoteAgentWindowEvent.GET_ACTIVE_AGENT_ID);
   ipcMain.removeHandler(RemoteAgentWindowEvent.SEND_MESSAGE_TO_REMOTE_AGENT);
 }
