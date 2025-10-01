@@ -75,3 +75,7 @@ For detailed information about hooks, rules, and configuration options, see [doc
 
 For projects with GitHub integration, codebase views are automatically published to:
 `https://a24z-ai.github.io/Alexandria/repo/?owner=<owner>&name=<repo>`
+
+### Additional Documentation
+
+- **GitHub OAuth and PKCE**: For details on how GitHub OAuth and PKCE are configured, see [docs/OAUTH_AND_PKCE_GUIDE.md](docs/OAUTH_AND_PKCE_GUIDE.md).

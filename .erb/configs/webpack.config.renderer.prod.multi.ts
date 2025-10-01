@@ -341,7 +341,6 @@ const configuration: webpack.Configuration = {
     new webpack.ProvidePlugin({
       process: require.resolve('process/browser.js'),
       Buffer: ['buffer', 'Buffer'],
-      global: 'globalThis',
     }),
 
     // Define window.require for webpack's HMR
