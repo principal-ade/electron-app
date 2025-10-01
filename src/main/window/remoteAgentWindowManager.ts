@@ -1,5 +1,6 @@
 import { BrowserWindow, BrowserView, app, screen } from 'electron';
 import path from 'path';
+import { pathToFileURL } from 'url';
 import {
   RemoteAgentConfig,
   RemoteAgentWindow,
@@ -379,7 +380,7 @@ export class RemoteAgentWindowManager {
 
     // Load the titlebar HTML
     const titlebarPath = app.isPackaged
-      ? `file://${app.getAppPath()}/dist/titlebar/index.html`
+      ? pathToFileURL(path.join(app.getAppPath(), 'dist', 'renderer', 'titlebar.html')).toString()
       : `http://localhost:${process.env.PORT || 1212}/titlebar.html`;
 
     window.loadURL(titlebarPath).catch((error) => {
