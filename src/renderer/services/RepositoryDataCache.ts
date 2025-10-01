@@ -505,7 +505,7 @@ export class RepositoryDataCache extends EventEmitter {
       gitBranch: 'main',
       isDirty: false,
       dirtyFileCount: 0,
-      mostRecentChange: repo.registeredAt,
+      mostRecentChange: repo.github?.lastCommit || repo.registeredAt,
     } as EnhancedAlexandriaEntry;
   }
 
@@ -521,7 +521,7 @@ export class RepositoryDataCache extends EventEmitter {
         (gitStatus?.modifiedFiles?.length || 0) +
         (gitStatus?.untrackedFiles?.length || 0) +
         (gitStatus?.stagedFiles?.length || 0),
-      mostRecentChange: repo.mostRecentChange || repo.registeredAt,
+      mostRecentChange: repo.github?.lastCommit || repo.mostRecentChange || repo.registeredAt,
     };
   }
 
