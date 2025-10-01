@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from 'themed-markdown';
+import type { CityData } from '@principal-ai/code-city-react';
 import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../../shared/types/repository.types';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
 import { RepositoryMonitoringService } from '../../../../main-process-api/RepositoryMonitoringService';
@@ -11,6 +12,7 @@ import { GitService, GitBranchStatus } from '../../../../main-process-api/GitSer
 import { RepositoryHeader } from './RepositoryHeader';
 import { GitStatusPanel } from './GitStatusPanel';
 import { QualityHexagonPanel } from './quality';
+import { SimpleCityVisualization, RepositoryCityService } from './city';
 
 interface RepositoryDetailsPanelProps {
   selectedRepository: EnhancedAlexandriaEntry | null;
@@ -52,6 +54,15 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const [pushStatus, setPushStatus] = useState<{ safe: boolean; reason?: string; needsUpstream: boolean } | null>(null);
   const isCheckingRef = useRef(false);
 
+  // City visualization state
+  const [cityData, setCityData] = useState<CityData | null>(null);
+  const [isBuildingCity, setIsBuildingCity] = useState(false);
+  const [cityError, setCityError] = useState<string | null>(null);
+  const [treeStats, setTreeStats] = useState<{ fileCount: number; directoryCount: number } | null>(null);
+  const [showCityVisualization, setShowCityVisualization] = useState(false);
+
+  const cityService = useMemo(() => RepositoryCityService.getInstance(), []);
+
   const sortedMarkdownFiles = useMemo(() => {
     return [...markdownFiles].sort((a, b) => {
       const aTime = a.lastModified ? new Date(a.lastModified).getTime() : 0;
@@ -90,6 +101,43 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const handleRemoveCancel = () => {
     setShowRemoveDialog(false);
   };
+
+  const buildCityData = useCallback(async () => {
+    if (!selectedRepository) {
+      return;
+    }
+
+    setIsBuildingCity(true);
+    setCityError(null);
+
+    try {
+      const result = await cityService.buildCityData(selectedRepository);
+
+      if (result.error) {
+        setCityError(result.error);
+        setCityData(null);
+        setTreeStats(null);
+      } else {
+        setCityData(result.cityData);
+        setTreeStats(result.treeStats);
+        setCityError(null);
+      }
+    } catch (error) {
+      console.error('[RepositoryDetailsPanel] Error building city:', error);
+      setCityError(error instanceof Error ? error.message : 'Unknown error');
+      setCityData(null);
+      setTreeStats(null);
+    } finally {
+      setIsBuildingCity(false);
+    }
+  }, [selectedRepository, cityService]);
+
+  useEffect(() => {
+    setCityData(null);
+    setTreeStats(null);
+    setCityError(null);
+    setIsBuildingCity(false);
+  }, [selectedRepository?.path]);
 
 
   const checkForUpdates = useCallback(async () => {
@@ -140,6 +188,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
         // Refresh local branch status
         await checkForUpdates();
+
+        if (showCityVisualization) {
+          await buildCityData();
+        }
       } else {
         console.error('Push failed:', result.message);
       }
@@ -148,7 +200,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     } finally {
       setIsPushing(false);
     }
-  }, [selectedRepository, isPushing, pushStatus, checkForUpdates, onRefresh]);
+  }, [selectedRepository, isPushing, pushStatus, checkForUpdates, onRefresh, showCityVisualization, buildCityData]);
 
   const performFastForward = useCallback(async () => {
     if (!selectedRepository?.path || isFastForwarding || !branchStatus?.canFastForward) return;
@@ -168,6 +220,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
         // Refresh local branch status
         await checkForUpdates();
+
+        if (showCityVisualization) {
+          await buildCityData();
+        }
       } else {
         console.error('Fast-forward failed:', result.message);
       }
@@ -176,7 +232,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     } finally {
       setIsFastForwarding(false);
     }
-  }, [selectedRepository, isFastForwarding, branchStatus, checkForUpdates, onRefresh]);
+  }, [selectedRepository, isFastForwarding, branchStatus, checkForUpdates, onRefresh, showCityVisualization, buildCityData]);
 
 
 
@@ -343,6 +399,57 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
               padding: '20px',
             }}
           >
+            {/* City Visualization Toggle */}
+            <div
+              style={{
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
+              <button
+                onClick={() => setShowCityVisualization(!showCityVisualization)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: showCityVisualization
+                    ? theme.colors.primary
+                    : theme.colors.background,
+                  color: showCityVisualization ? '#fff' : theme.colors.text,
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {showCityVisualization ? 'Hide' : 'Show'} Repository Structure
+              </button>
+
+              {treeStats && (
+                <span style={{ fontSize: '12px', color: theme.colors.textSecondary }}>
+                  {treeStats.fileCount.toLocaleString()} files • {treeStats.directoryCount.toLocaleString()} directories
+                </span>
+              )}
+            </div>
+
+            {/* City Visualization */}
+            {showCityVisualization && selectedRepository && (
+              <div style={{ marginBottom: '24px' }}>
+                <SimpleCityVisualization
+                  repository={selectedRepository}
+                  cityData={cityData}
+                  isBuilding={isBuildingCity}
+                  treeStats={treeStats}
+                  height="400px"
+                  onFileClick={handleFileClick}
+                  onRequestCityData={buildCityData}
+                  loadingMessage="Building repository structure visualization..."
+                  emptyMessage={cityError || 'Repository structure not available'}
+                />
+              </div>
+            )}
 
             {/* Main Content Grid */}
             <div
