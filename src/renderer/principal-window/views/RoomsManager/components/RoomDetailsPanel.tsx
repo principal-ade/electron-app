@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import type { RoomInfo } from '../RoomsManager';
 import type { Theme } from 'themed-markdown';
-import type { PalacePortal, AlexandriaEntry } from '@a24z/core-library';
+import type { PalacePortal, AlexandriaEntry, ExcalidrawData } from '@a24z/core-library';
 import { PalaceRoomService } from '../../../../main-process-api/PalaceRoomService';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
 import { AddPortalModal } from './AddPortalModal';
@@ -48,7 +48,7 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
   const [viewMode, setViewMode] = useState<RoomView>(RoomView.DETAILS);
   const [editingDrawing, setEditingDrawing] = useState<string | null>(null);
   const [editingDrawingName, setEditingDrawingName] = useState('');
-  const [initialDrawingData, setInitialDrawingData] = useState(null);
+  const [initialDrawingData, setInitialDrawingData] = useState<ExcalidrawData | null>(null);
   const [drawingsKey, setDrawingsKey] = useState(0); // For refreshing drawings list
   const excalidrawSaveRef = React.useRef<(() => Promise<void>) | null>(null);
 
@@ -302,7 +302,7 @@ export const RoomDetailsPanel: React.FC<RoomDetailsPanelProps> = ({
         <div style={{ flex: 1 }}>
           <ExcalidrawWrapper
             initialData={initialDrawingData}
-            diagramId={editingDrawing}
+            diagramId={editingDrawing || undefined}
             diagramName={editingDrawingName}
             projectPath={room?.repository.path || ''}
             roomId={room?.room.id}

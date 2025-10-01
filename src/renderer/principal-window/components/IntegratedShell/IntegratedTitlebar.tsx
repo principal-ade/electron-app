@@ -19,12 +19,18 @@ interface IntegratedTitlebarProps {
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
   showSidebarControl?: boolean;
+  rightSidebarCollapsed?: boolean;
+  onToggleRightSidebar?: () => void;
+  showRightSidebarControl?: boolean;
 }
 
 export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
   sidebarCollapsed = false,
   onToggleSidebar,
   showSidebarControl = false,
+  rightSidebarCollapsed = false,
+  onToggleRightSidebar,
+  showRightSidebarControl = false,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const { theme, mode } = useTheme();
@@ -88,8 +94,15 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         Principal View
       </div>
 
-      {/* Right spacer with theme dropdown */}
+      {/* Right spacer with theme dropdown and right sidebar control */}
       <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '8px' }}>
+        {showRightSidebarControl && onToggleRightSidebar && (
+          <ViewSidebarControls
+            isCollapsed={rightSidebarCollapsed}
+            onToggle={onToggleRightSidebar}
+            side="right"
+          />
+        )}
         <ThemeDropdown />
       </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'themed-markdown';
 import { RefreshCw, Plus } from 'lucide-react';
-import { AnimatedResizableLayout } from '@a24z/panels';
+import { ThreePanelLayout } from '@a24z/panels';
 import '@a24z/panels/style.css';
 import { usePanelsTheme } from '../../../theme/panelsTheme';
 import type { PalaceRoom, AlexandriaEntry } from '@a24z/core-library';
@@ -18,9 +18,13 @@ export interface RoomInfo {
 
 interface RoomsManagerProps {
   sidebarCollapsed?: boolean;
+  rightSidebarCollapsed?: boolean;
 }
 
-export const RoomsManager: React.FC<RoomsManagerProps> = ({ sidebarCollapsed = false }) => {
+export const RoomsManager: React.FC<RoomsManagerProps> = ({
+  sidebarCollapsed = false,
+  rightSidebarCollapsed = false,
+}) => {
   const { theme } = useTheme();
   const panelsTheme = usePanelsTheme();
   const [rooms, setRooms] = useState<RoomInfo[]>([]);
@@ -285,14 +289,42 @@ export const RoomsManager: React.FC<RoomsManagerProps> = ({ sidebarCollapsed = f
     );
   };
 
-  // Render right panel - Room details
-  const renderRightPanel = () => {
+  // Render middle panel - Room details with drawings and portals
+  const renderMiddlePanel = () => {
     return (
       <RoomDetailsPanel
         room={selectedRoom}
         theme={theme}
         onRemoveRoom={handleRemoveRoom}
       />
+    );
+  };
+
+  // Render right panel - Terminal placeholder
+  const renderRightPanel = () => {
+    return (
+      <div style={{
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        color: theme.colors.textSecondary,
+        padding: '20px',
+        textAlign: 'center',
+      }}>
+        <div style={{
+          fontSize: theme.fontSizes[3],
+          fontWeight: 600,
+          marginBottom: '12px',
+          color: theme.colors.text,
+        }}>
+          Terminal
+        </div>
+        <div style={{ fontSize: theme.fontSizes[1] }}>
+          Terminal integration coming soon
+        </div>
+      </div>
     );
   };
 
@@ -304,15 +336,17 @@ export const RoomsManager: React.FC<RoomsManagerProps> = ({ sidebarCollapsed = f
         repositories={repositories}
         onCreate={handleCreateRoom}
       />
-      <AnimatedResizableLayout
+      <ThreePanelLayout
         leftPanel={renderLeftPanel()}
+        middlePanel={renderMiddlePanel()}
         rightPanel={renderRightPanel()}
-        minSize={15}
-        defaultSize={25}
-        collapsibleSide="left"
-        collapsed={sidebarCollapsed}
+        collapsiblePanels={{ left: true, right: true }}
+        defaultSizes={{ left: 20, middle: 50, right: 30 }}
+        minSizes={{ left: 15, middle: 30, right: 20 }}
+        collapsed={{ left: sidebarCollapsed, right: rightSidebarCollapsed }}
         style={{ height: '100%', width: '100%' }}
         theme={panelsTheme}
+        showCollapseButtons={false}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { GitBranch } from 'lucide-react';
-import { AnimatedResizableLayout } from '@a24z/panels';
+import { ThreePanelLayout } from '@a24z/panels';
 import '@a24z/panels/style.css';
 import { usePanelsTheme } from '../../../theme/panelsTheme';
 import { useTheme } from 'themed-markdown';
@@ -20,10 +20,12 @@ import { RepositoryListHeader } from './components/RepositoryListHeader';
 
 interface RepositoryExplorerProps {
   sidebarCollapsed?: boolean;
+  rightSidebarCollapsed?: boolean;
 }
 
 export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
-  sidebarCollapsed = false
+  sidebarCollapsed = false,
+  rightSidebarCollapsed = false,
 }) => {
   const { theme } = useTheme();
   const panelsTheme = usePanelsTheme();
@@ -434,8 +436,8 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
     );
   };
 
-  // Render right panel - Repository details
-  const renderRightPanel = () => {
+  // Render middle panel - Repository details
+  const renderMiddlePanel = () => {
     return (
       <RepositoryDetailsPanel
         selectedRepository={selectedRepository}
@@ -449,6 +451,34 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         onRefresh={refreshRepos}
         isRefreshing={isLoadingRepos}
       />
+    );
+  };
+
+  // Render right panel - Terminal placeholder
+  const renderRightPanel = () => {
+    return (
+      <div style={{
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column',
+        color: theme.colors.textSecondary,
+        padding: '20px',
+        textAlign: 'center',
+      }}>
+        <div style={{
+          fontSize: theme.fontSizes[3],
+          fontWeight: 600,
+          marginBottom: '12px',
+          color: theme.colors.text,
+        }}>
+          Terminal
+        </div>
+        <div style={{ fontSize: theme.fontSizes[1] }}>
+          Terminal integration coming soon
+        </div>
+      </div>
     );
   };
 
@@ -494,15 +524,17 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
             position: 'relative',
           }}
         >
-          <AnimatedResizableLayout
+          <ThreePanelLayout
             leftPanel={renderLeftPanel()}
+            middlePanel={renderMiddlePanel()}
             rightPanel={renderRightPanel()}
-            minSize={20}
-            defaultSize={25}
-            collapsibleSide="left"
-            collapsed={sidebarCollapsed}
+            collapsiblePanels={{ left: true, right: true }}
+            defaultSizes={{ left: 20, middle: 50, right: 30 }}
+            minSizes={{ left: 15, middle: 30, right: 20 }}
+            collapsed={{ left: sidebarCollapsed, right: rightSidebarCollapsed }}
             style={{ height: '100%', width: '100%' }}
             theme={panelsTheme}
+            showCollapseButtons={false}
           />
         </div>
 

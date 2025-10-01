@@ -1,24 +1,39 @@
 import React from 'react';
-import { PanelLeft, PanelLeftClose } from 'lucide-react';
+import { PanelLeft, PanelLeftClose, PanelRight, PanelRightClose } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 
 interface ViewSidebarControlsProps {
   isCollapsed: boolean;
   onToggle: () => void;
   style?: React.CSSProperties;
+  side?: 'left' | 'right';
 }
 
 export const ViewSidebarControls: React.FC<ViewSidebarControlsProps> = ({
   isCollapsed,
   onToggle,
   style,
+  side = 'left',
 }) => {
   const { theme } = useTheme();
+
+  const getIcon = () => {
+    if (side === 'right') {
+      return isCollapsed ? <PanelRight size={18} /> : <PanelRightClose size={18} />;
+    }
+    return isCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />;
+  };
+
+  const getTitle = () => {
+    const action = isCollapsed ? 'Show' : 'Hide';
+    const sideLabel = side === 'right' ? 'Right Panel' : 'Sidebar';
+    return `${action} ${sideLabel} (Cmd/Ctrl+B)`;
+  };
 
   return (
     <button
       onClick={onToggle}
-      title={isCollapsed ? 'Show Sidebar (Cmd/Ctrl+B)' : 'Hide Sidebar (Cmd/Ctrl+B)'}
+      title={getTitle()}
       style={{
         WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
         background: 'transparent',
@@ -44,7 +59,7 @@ export const ViewSidebarControls: React.FC<ViewSidebarControlsProps> = ({
         e.currentTarget.style.color = isCollapsed ? theme.colors.textSecondary : theme.colors.primary;
       }}
     >
-      {isCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+      {getIcon()}
     </button>
   );
 };

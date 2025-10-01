@@ -18,6 +18,7 @@ export type NavigationView = InteractiveShellNavigationView;
 export const IntegratedShell: React.FC = () => {
   const [activeView, setActiveView] = useState<NavigationView>('rooms');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(true);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const { theme, mode } = useTheme();
 
@@ -79,6 +80,9 @@ export const IntegratedShell: React.FC = () => {
           showSidebarControl={activeView === 'repository' || activeView === 'terminal' || activeView === 'rooms'}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+          showRightSidebarControl={activeView === 'rooms' || activeView === 'repository'}
+          rightSidebarCollapsed={rightSidebarCollapsed}
+          onToggleRightSidebar={() => setRightSidebarCollapsed(!rightSidebarCollapsed)}
         />
 
         {/* Main content area with rounded corners for Slack-style cutout */}
@@ -112,9 +116,9 @@ export const IntegratedShell: React.FC = () => {
               : theme.colors.background,
           }}>
             {/* Views will be rendered here based on activeView */}
-            {activeView === 'repository' && <RepositoryExplorer sidebarCollapsed={sidebarCollapsed} />}
+            {activeView === 'repository' && <RepositoryExplorer sidebarCollapsed={sidebarCollapsed} rightSidebarCollapsed={rightSidebarCollapsed} />}
             {activeView === 'terminal' && <TerminalManager sidebarCollapsed={sidebarCollapsed} />}
-            {activeView === 'rooms' && <RoomsManager sidebarCollapsed={sidebarCollapsed} />}
+            {activeView === 'rooms' && <RoomsManager sidebarCollapsed={sidebarCollapsed} rightSidebarCollapsed={rightSidebarCollapsed} />}
             {activeView === 'search' && <MarkdownSearch />}
             {activeView === 'monitoring' && <SystemMonitor sidebarCollapsed={sidebarCollapsed} />}
             {activeView === 'settings' && <Settings />}

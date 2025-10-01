@@ -54,7 +54,6 @@ export const RepositoryDetailsPanelWithCity: React.FC<RepositoryDetailsPanelWith
   const [isBuildingCity, setIsBuildingCity] = useState(false);
   const [cityError, setCityError] = useState<string | null>(null);
   const [treeStats, setTreeStats] = useState<{ fileCount: number; directoryCount: number } | null>(null);
-  const [showCityVisualization, setShowCityVisualization] = useState(false);
   
   // Get city service instance
   const cityService = useMemo(() => RepositoryCityService.getInstance(), []);
@@ -374,60 +373,6 @@ export const RepositoryDetailsPanelWithCity: React.FC<RepositoryDetailsPanelWith
               padding: '20px',
             }}
           >
-            {/* City Visualization Toggle */}
-            <div
-              style={{
-                marginBottom: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-              }}
-            >
-              <button
-                onClick={() => setShowCityVisualization(!showCityVisualization)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  border: `1px solid ${theme.colors.border}`,
-                  backgroundColor: showCityVisualization 
-                    ? theme.colors.primary 
-                    : theme.colors.background,
-                  color: showCityVisualization 
-                    ? '#fff' 
-                    : theme.colors.text,
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {showCityVisualization ? 'Hide' : 'Show'} Repository Structure
-              </button>
-              
-              {treeStats && (
-                <span style={{ fontSize: '12px', color: theme.colors.textSecondary }}>
-                  {treeStats.fileCount.toLocaleString()} files • {treeStats.directoryCount.toLocaleString()} directories
-                </span>
-              )}
-            </div>
-
-            {/* City Visualization */}
-            {showCityVisualization && (
-              <div style={{ marginBottom: '24px' }}>
-                <SimpleCityVisualization
-                  repository={selectedRepository}
-                  cityData={cityData}
-                  isBuilding={isBuildingCity}
-                  treeStats={treeStats}
-                  height="400px"
-                  onFileClick={handleFileClick}
-                  onRequestCityData={buildCityData}
-                  loadingMessage="Building repository structure visualization..."
-                  emptyMessage={cityError || "Repository structure not available"}
-                />
-              </div>
-            )}
-
             {/* Main Content Grid */}
             <div
               style={{
@@ -436,7 +381,7 @@ export const RepositoryDetailsPanelWithCity: React.FC<RepositoryDetailsPanelWith
                 gap: '16px',
               }}
             >
-              {/* Left Column - Git Status and Quality Panel */}
+              {/* Left Column - City Visualization, Git Status and Quality Panel */}
               <div
                 style={{
                   display: 'flex',
@@ -445,6 +390,21 @@ export const RepositoryDetailsPanelWithCity: React.FC<RepositoryDetailsPanelWith
                   minWidth: 0,
                 }}
               >
+                {/* City Visualization - Always Visible */}
+                <div>
+                  <SimpleCityVisualization
+                    repository={selectedRepository}
+                    cityData={cityData}
+                    isBuilding={isBuildingCity}
+                    treeStats={treeStats}
+                    height="400px"
+                    onFileClick={handleFileClick}
+                    onRequestCityData={buildCityData}
+                    loadingMessage="Building repository structure visualization..."
+                    emptyMessage={cityError || "Repository structure not available"}
+                  />
+                </div>
+
                 {/* Git Changes List or Last Commit */}
                 <GitStatusPanel
                   repository={selectedRepository}
@@ -455,7 +415,7 @@ export const RepositoryDetailsPanelWithCity: React.FC<RepositoryDetailsPanelWith
 
                 {/* Quality Hexagon Panel */}
                 <QualityHexagonPanel
-                  directory={selectedRepository.path}
+                  repository={selectedRepository.path}
                   autoAnalyze={false}
                   size="lg"
                   compact={false}
