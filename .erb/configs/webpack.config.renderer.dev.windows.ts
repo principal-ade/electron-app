@@ -165,7 +165,7 @@ const configuration: webpack.Configuration = {
     rules: [
       {
         test: /\.[jt]sx?$/,
-        exclude: /node_modules/,
+        exclude: /node_modules\/(?!@a24z\/panels)/,
         use: {
           loader: 'ts-loader',
           options: {

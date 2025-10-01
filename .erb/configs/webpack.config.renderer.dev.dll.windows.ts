@@ -22,7 +22,10 @@ const configuration: webpack.Configuration = {
   target: 'web',
 
   // Bundle everything except observability SDK (which uses Node.js modules)
-  externals: ['@a24z/observability-sdk'],
+  externals: [
+    '@a24z/observability-sdk',
+    /^@types\/.*$/,  // Exclude all @types packages (TypeScript type definitions)
+  ],
 
   stats: 'errors-only',
 
@@ -62,7 +65,7 @@ const configuration: webpack.Configuration = {
           '@modelcontextprotocol/sdk',
           'simple-git', // Git operations library - Node.js only, uses child_process
           'electron-debug',
-          'electron-devtools-installer', 
+          'electron-devtools-installer',
           'electron-updater',
           'electron-log',
           'electron-store',
@@ -76,7 +79,12 @@ const configuration: webpack.Configuration = {
           'debug',
           'ts-json-schema-generator',
           'fdir', // Fast directory crawler - Node.js only, used in main process
-          '@principal-ai/repository-monitoring' // Node.js only watcher library
+          '@principal-ai/repository-monitoring', // Node.js only watcher library
+          '@a24z/core-library', // Has Node.js adapters, globby is a devDep not bundled
+          'globby', // Node.js file globbing library
+          'glob', // Node.js file globbing library
+          'keytar', // Native Node.js module for credential storage
+          'jsonwebtoken' // Uses Node.js crypto module
         ];
         
         // Exclude if in the list or contains electron
