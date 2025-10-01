@@ -111,11 +111,14 @@ export const DependenciesPanel: React.FC<DependenciesPanelProps> = ({
 
   // Update selectedPackage when packageLayers changes to single package
   React.useEffect(() => {
-    if (packageLayers && packageLayers.length === 1 && selectedPackage === '') {
+    if (packageLayers && packageLayers.length === 1) {
       const singlePackagePath = packageLayers[0].packageData.path;
-      setSelectedPackage(singlePackagePath);
-      // Notify parent about auto-selection
-      onPackageSelected?.(singlePackagePath, packageLayers[0].packageData.name);
+      // Check if we need to update - avoid infinite loop by checking if it's already set correctly
+      if (selectedPackage !== singlePackagePath) {
+        setSelectedPackage(singlePackagePath);
+        // Notify parent about auto-selection
+        onPackageSelected?.(singlePackagePath, packageLayers[0].packageData.name);
+      }
     }
   }, [packageLayers, selectedPackage, onPackageSelected]);
 
