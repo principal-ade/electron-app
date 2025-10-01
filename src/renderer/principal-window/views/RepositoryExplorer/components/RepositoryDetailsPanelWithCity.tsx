@@ -415,9 +415,7 @@ export const RepositoryDetailsPanelWithCity: React.FC<RepositoryDetailsPanelWith
 
                 {/* Quality Hexagon Panel */}
                 <QualityHexagonPanel
-                  repository={selectedRepository.path}
-                  autoAnalyze={false}
-                  size="lg"
+                  directory={selectedRepository.path}
                   compact={false}
                 />
               </div>

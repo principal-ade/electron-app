@@ -147,7 +147,7 @@ Wrapper component that integrates with the service.
 
 **File:** `src/renderer/components/quality/QualityHexagonPanel.tsx`
 ```typescript
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { QualityHexagon } from '@a24z/alexandria-ui';
 import { MockQualityMetricsService } from '../../services/MockQualityMetricsService';
 import { QualityMetrics } from '../../types/quality.types';
@@ -155,26 +155,18 @@ import './QualityHexagonPanel.css';
 
 interface QualityHexagonPanelProps {
   directory: string;
-  autoAnalyze?: boolean;
   size?: 'sm' | 'md' | 'lg';
 }
 
 export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   directory,
-  autoAnalyze = false,
   size = 'md'
 }) => {
   const [metrics, setMetrics] = useState<QualityMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (autoAnalyze && directory) {
-      analyzeQuality();
-    }
-  }, [directory, autoAnalyze]);
-
-  const analyzeQuality = async () => {
+  const analyzeQuality = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -189,7 +181,15 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [directory]);
+
+  useEffect(() => {
+    if (directory) {
+      setMetrics(null);
+      setError(null);
+      analyzeQuality();
+    }
+  }, [directory, analyzeQuality]);
 
   const renderContent = () => {
     if (loading) {
@@ -447,7 +447,6 @@ const LandingPage: React.FC = () => {
         <div className="quality-section">
           <QualityHexagonPanel
             directory={currentRepository.path}
-            autoAnalyze={false}
             size="md"
           />
         </div>
@@ -662,24 +661,23 @@ class PackageProcessor {
 **File:** `src/renderer/principal-window/views/RepositoryExplorer/components/quality/QualityHexagonPanel.tsx`
 Update to fetch quality metrics from package data:
 ```typescript
+import React, { useState, useEffect, useCallback } from 'react';
 import { RepositoryMonitoringService } from '../../../../main-process-api/RepositoryMonitoringService';
 
 interface QualityHexagonPanelProps {
   directory: string;
-  autoAnalyze?: boolean;
   compact?: boolean;
 }
 
 export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   directory,
-  autoAnalyze = false,
   compact = false,
 }) => {
   const [metrics, setMetrics] = useState<ExtendedQualityMetrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchQualityMetrics = async () => {
+  const fetchQualityMetrics = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -714,13 +712,15 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [directory]);
 
   useEffect(() => {
-    if (autoAnalyze && directory) {
+    if (directory) {
+      setMetrics(null);
+      setError(null);
       fetchQualityMetrics();
     }
-  }, [directory, autoAnalyze]);
+  }, [directory, fetchQualityMetrics]);
 
   // Rest of component remains the same...
 }
