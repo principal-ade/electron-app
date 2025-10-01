@@ -3,6 +3,29 @@
 ## Objective
 Introduce an event-driven refresh path so the markdown search index automatically re-processes repositories when markdown files change, using the repository monitoring infrastructure instead of manual re-index operations.
 
+## Architecture Overview
+
+```mermaid
+flowchart TD
+    A[Markdown File Change] -->|Detected by| B[GitWatcherAdapter]
+    B -->|File deltas| C[RepositoryMonitoringServer]
+    C -->|WorkspaceChangeEvent<br/>+ FileChange list| D{Filter Markdown<br/>Files}
+    D -->|Has .md changes| E[DocumentIndexingService]
+    D -->|No .md changes| F[Skip Indexing]
+    E -->|Debounce/Batch| G{Change Type}
+    G -->|Small set| H[Incremental Update<br/>updateFiles/removeFiles]
+    G -->|Large/Unknown| I[Full Repository<br/>Refresh]
+    H --> J[Updated Search Index]
+    I --> J
+    J -->|Optional| K[Broadcast DOCUMENT_CHANGED<br/>to Renderer]
+
+    style A fill:#e1f5ff
+    style C fill:#fff4e1
+    style E fill:#e8f5e9
+    style J fill:#f3e5f5
+    style K fill:#fce4ec
+```
+
 ## Current State Summary
 - `DocumentIndexingService` exposes a `MarkdownFileProvider.watchFiles` hook but currently returns a no-op disposable, so the search engine never receives file change notifications. 【F:src/main/services/DocumentIndexingService.ts†L192-L195】
 - The repository monitoring stack already forwards git and workspace change notifications from the worker process to the main process and renderer via `MonitoringInternalEvent.WORKSPACE_CHANGED`. 【F:src/main/repository-monitoring/ipcHandlers.ts†L240-L262】
