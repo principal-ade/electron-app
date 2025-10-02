@@ -36,7 +36,8 @@ export class GitCore {
         stdio: 'pipe',
         maxBuffer: 10 * 1024 * 1024, // 10MB
       });
-      return result.trim();
+      // Preserve leading whitespace while removing trailing newlines added by git
+      return result.replace(/[\r\n]+$/, '');
     } catch (error: unknown) {
       if (throwOnError) {
         throw error;
