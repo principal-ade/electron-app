@@ -100,7 +100,6 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
 
   // Cache duration constants
   const STATUS_CACHE_DURATION = 30 * 1000; // 30 seconds for status
-  const HEAD_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes for HEAD tree
 
   // Update ref when state changes
   useEffect(() => {
@@ -133,7 +132,7 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
           errorMessage.includes('unknown revision') ||
           errorMessage.includes('ambiguous argument')
         ) {
-          console.log(`[GitChangesProvider] Repository has no commits yet`);
+          console.info(`[GitChangesProvider] Repository has no commits yet`);
           return false;
         }
         // Other errors are real errors

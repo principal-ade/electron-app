@@ -25,6 +25,7 @@ interface RepositoryDetailsPanelProps {
   onRepositoryRemoved?: (removedRepoName: string) => void;
   onRefresh?: () => Promise<void> | void;
   isRefreshing?: boolean;
+  onFileSelect?: (filePath: string | null) => void;
 }
 
 
@@ -39,6 +40,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   onRepositoryRemoved,
   onRefresh,
   isRefreshing: _isRefreshing,
+  onFileSelect,
 }) => {
   const { theme } = useTheme();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
@@ -278,49 +280,55 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   }, [checkForUpdates]);
 
 
-  // Handle file click to open in multi-file editor window
+  // Handle file click to show in preview panel
   const handleFileClick = useCallback(
     async (filePath: string) => {
       if (!selectedRepository) return;
 
-      try {
-        // Get the absolute file path
-        const absolutePath = `${selectedRepository.path}/${filePath}`;
+      // If we have an onFileSelect handler, use it for preview
+      if (onFileSelect) {
+        onFileSelect(filePath);
+      } else {
+        // Fallback to original behavior: open in editor window
+        try {
+          // Get the absolute file path
+          const absolutePath = `${selectedRepository.path}/${filePath}`;
 
-        // Prepare file info for the multi-file editor
-        const files = [
-          {
-            path: absolutePath,
-            relativePath: filePath,
-            lastModified: Date.now(),
-          },
-        ];
+          // Prepare file info for the multi-file editor
+          const files = [
+            {
+              path: absolutePath,
+              relativePath: filePath,
+              lastModified: Date.now(),
+            },
+          ];
 
-        // Parse owner and repo from repository name or github info
-        let owner = 'local';
-        let repo = selectedRepository.name;
+          // Parse owner and repo from repository name or github info
+          let owner = 'local';
+          let repo = selectedRepository.name;
 
-        if (selectedRepository.github?.owner) {
-          owner = selectedRepository.github.owner;
+          if (selectedRepository.github?.owner) {
+            owner = selectedRepository.github.owner;
+          }
+          if (selectedRepository.github?.name) {
+            repo = selectedRepository.github.name;
+          }
+
+          // Open the local files editor window
+          await WindowService.openLocalFiles({
+            windowId: `view-${owner}-${repo}-${Date.now()}`,
+            windowTitle: `View ${filePath}`,
+            files,
+          });
+        } catch (error) {
+          console.error(
+            '[RepositoryDetailsPanel] Error opening file:',
+            error,
+          );
         }
-        if (selectedRepository.github?.name) {
-          repo = selectedRepository.github.name;
-        }
-
-        // Open the local files editor window
-        await WindowService.openLocalFiles({
-          windowId: `view-${owner}-${repo}-${Date.now()}`,
-          windowTitle: `View ${filePath}`,
-          files,
-        });
-      } catch (error) {
-        console.error(
-          '[RepositoryDetailsPanel] Error opening file:',
-          error,
-        );
       }
     },
-    [selectedRepository],
+    [selectedRepository, onFileSelect],
   );
 
   // Handle clicking a markdown file from the Markdown Documents list.

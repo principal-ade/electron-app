@@ -39,8 +39,6 @@ import { registerPalaceRoomHandlers } from './stores/PalaceRoomApiEventHandler';
 import { registerRepositoryNotesHandlers } from './principal-mcp/repositoryNotesHandlers';
 import { registerRepositoryMonitoringHandlers, getManager as getRepositoryMonitoringManager } from './repository-monitoring/ipcHandlers';
 import { RepositoryRegistrationManager } from './repository-monitoring/RepositoryRegistrationManager';
-import { registerViolationCollectionHandlers } from './handlers/ViolationCollectionHandlers';
-import { registerTestCoverageHandlers } from './handlers/TestCoverageHandlers';
 import { registerApiProxyHandlers } from './services/ApiProxyService';
 import { JWTService } from './services/JWTService';
 import { registerGitHubIpcHandlers } from './version-control-providers/githubHandlers';
@@ -49,8 +47,6 @@ import { A24zHandler } from './stores/a24zHandler';
 import { AppVersionManagerAPIEvent } from '../window/main-process-api-implementations/appVersionManagerApi';
 import { registerDockerHandlers } from './services/ipc/docker/dockerHandlers';
 import { registerOptimizedDockerHandlers } from './services/ipc/docker/optimizedDockerHandlers';
-import { registerKnipAnalysisHandlers } from './services/ipc/knip/knipAnalysisHandlers';
-import { registerKnipHandlers } from './services/ipc/knip/knipHandlers';
 import { registerPrincipalHandlers } from './principal-mcp/principalHandlers';
 import {
   registerDocumentSearchHandlers,
@@ -86,16 +82,6 @@ const setupAppVersionHandler = () => {
 const setupDevModeHandler = () => {
   ipcMain.handle(AppVersionManagerAPIEvent.IS_DEV_MODE, () => {
     return !app.isPackaged;
-  });
-};
-
-// Setup knip analysis handler
-const setupKnipAnalysisHandler = () => {
-  ipcMain.handle('run-knip-analysis', async (_event, directoryPath: string) => {
-    const { KnipAnalysisService } = await import(
-      './services/knipAnalysisService'
-    );
-    return KnipAnalysisService.runAnalysis(directoryPath);
   });
 };
 
@@ -152,8 +138,6 @@ const registerAllIpcHandlers = async () => {
   registerAlexandriaDocsHandlers();
   registerPalaceRoomHandlers();
   registerRepositoryNotesHandlers();
-  registerViolationCollectionHandlers();
-  registerTestCoverageHandlers();
   registerApiProxyHandlers();
   JWTService.registerHandlers();
 
@@ -216,8 +200,6 @@ const registerAllIpcHandlers = async () => {
   setupShellHandlers();
   registerDockerHandlers();
   registerOptimizedDockerHandlers();
-  registerKnipAnalysisHandlers();
-  registerKnipHandlers();
   registerPrincipalHandlers();
   registerDocumentSearchHandlers();
   registerObservabilityHandlers();
@@ -263,7 +245,6 @@ export const initializeServices = async () => {
   // Setup basic IPC handlers
   setupAppVersionHandler();
   setupDevModeHandler();
-  setupKnipAnalysisHandler();
 
   // Initialize storage before setting up bridges
   await initializeStorage();

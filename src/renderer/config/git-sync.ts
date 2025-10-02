@@ -4,8 +4,20 @@
 
 const isDevelopment = process.env.NODE_ENV === 'development';
 
+// Define the config type
+interface GitSyncConfig {
+  SERVER_URL: string;
+  getWebSocketUrl: (serverUrl?: string) => string;
+  RECONNECT_DELAY: number;
+  PING_INTERVAL: number;
+  AUTH_TIMEOUT: number;
+  USE_SECURE_STORAGE: boolean;
+  AUTO_RECONNECT: boolean;
+  DEBUG_MODE: boolean;
+}
+
 // Server URLs based on environment
-export const GIT_SYNC_CONFIG = {
+export const GIT_SYNC_CONFIG: GitSyncConfig = {
   // Use local server in development, production server otherwise
   SERVER_URL:
     process.env.GIT_SYNC_SERVER_URL ||

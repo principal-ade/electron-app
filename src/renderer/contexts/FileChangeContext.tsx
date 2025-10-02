@@ -127,7 +127,6 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
   const [collisions, setCollisions] = useState<Map<string, FileCollision[]>>(
     new Map(),
   );
-  const [isPaused, setIsPaused] = useState(false);
 
   // Use ref to store sources for use in callbacks without causing re-renders
   const sourcesRef = useRef<Map<string, SourceFileChanges>>(new Map());
@@ -149,7 +148,7 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
 
     if (source.type === 'git') {
       try {
-        console.log(
+        console.info(
           `[FileChangeProvider] Fetching git changes for ${source.path}`,
         );
 
@@ -322,7 +321,7 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
   }, [refreshSource]);
 
   // Detect collisions needs to be defined before registerSessionActivity
-  const detectCollisionsRef = useRef<(sourceId: string) => void>();
+  const detectCollisionsRef = useRef<((sourceId: string) => void) | undefined>(undefined);
 
   // Register session file activity
   const registerSessionActivity = useCallback(
@@ -700,7 +699,6 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
 
   // Pause all watchers
   const pauseAllWatchers = useCallback(() => {
-    setIsPaused(true);
     setSources((prev) => {
       const newSources = new Map(prev);
       newSources.forEach((value, key) => {
@@ -715,7 +713,6 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
 
   // Resume all watchers
   const resumeAllWatchers = useCallback(() => {
-    setIsPaused(false);
     // Trigger immediate refresh for all sources
     sourcesRef.current.forEach((_, sourceId) => {
       refreshSource(sourceId);

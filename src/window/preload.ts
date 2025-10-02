@@ -23,7 +23,6 @@ import { clipboardAPI } from './main-process-api-implementations/clipboardApi';
 import { excalidrawAPI } from './main-process-api-implementations/excalidrawApi';
 import { fileSystemAPI } from './main-process-api-implementations/fileSystemApi';
 import { gitAPI } from './main-process-api-implementations/gitApi';
-import { violationsAPI } from './main-process-api-implementations/violationsApi';
 import { githubAPI } from './main-process-api-implementations/githubApi';
 import { storeAPI } from './main-process-api-implementations/storeApi';
 import { repositoryAPI } from './main-process-api-implementations/repositoryApi';
@@ -42,8 +41,6 @@ import { secretsAPI } from './main-process-api-implementations/secretsApi';
 import { apiProxyApi } from './main-process-api-implementations/apiProxyApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
 import { orbitAPI } from './main-process-api-implementations/orbitApi';
-import { knipAPI } from './main-process-api-implementations/knipApi';
-import { testCoverageAPI } from './main-process-api-implementations/testCoverageApi';
 import { dockerAPI } from './main-process-api-implementations/dockerApi';
 import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
@@ -107,7 +104,6 @@ const mainProcessExposure: MainProcessAPI = {
   repository: repositoryAPI,
   github: githubAPI,
   git: gitAPI,
-  violations: violationsAPI,
   fileSystem: fileSystemAPI,
   store: storeAPI,
   repositoryNotes: repositoryNotesApi,
@@ -125,8 +121,6 @@ const mainProcessExposure: MainProcessAPI = {
   packageManager: packageManagerApi,
   typeExtraction: typeExtractionApi,
   typeSchema: typeSchemaApi,
-  knip: knipAPI,
-  testCoverage: testCoverageAPI,
   docker: dockerAPI,
   gitSync: gitSyncAPI,
   window: windowAPI,

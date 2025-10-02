@@ -318,6 +318,47 @@ export class GitCore {
   }
 
   /**
+   * Get remote URL for origin
+   */
+  static async getRemoteUrl(repoPath: string): Promise<string | null> {
+    try {
+      const result = this.execGit(['remote', 'get-url', 'origin'], repoPath, { throwOnError: false });
+      return result || null;
+    } catch (error) {
+      console.warn(`[GitCore] Could not get remote URL for ${repoPath}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get last commit details
+   */
+  static async getLastCommitDetails(repoPath: string): Promise<{
+    hash: string;
+    author: string;
+    message: string;
+    timestamp: string;
+  } | null> {
+    try {
+      const result = this.execGit(['log', '-1', '--format=%H%n%an%n%s%n%cI'], repoPath, { throwOnError: false });
+      if (!result) return null;
+
+      const lines = result.split('\n');
+      if (lines.length < 4) return null;
+
+      return {
+        hash: lines[0],
+        author: lines[1],
+        message: lines[2],
+        timestamp: lines[3],
+      };
+    } catch (error) {
+      console.warn(`[GitCore] Could not get last commit details for ${repoPath}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Get comprehensive git status for watching
    */
   static async getDetailedStatus(repoPath: string): Promise<{

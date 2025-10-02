@@ -1,6 +1,6 @@
 {
   "name": "principal-ade-electron",
-  "version": "0.0.40",
+  "version": "0.0.41",
   "description": "Principal ADE - The Agentic Development Environment for your codebase",
   "author": {
     "name": "principle-md",
@@ -22,6 +22,7 @@
     "@excalidraw/excalidraw": "^0.18.0",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
+    "@principal-ade/industry-themed-monaco-editor": "^0.1.2",
     "@principal-ai/agent-monitoring": "^0.3.8",
     "@principal-ai/code-city-react": "^0.1.1",
     "@principal-ai/codebase-composition": "^0.2.0",

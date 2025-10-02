@@ -12,6 +12,7 @@
   },
   "include": [
     "src/renderer/**/*",
+    "src/titlebar/**/*",
     "src/window/**/*",
     "src/shared/**/*",
     "src/types/**/*",

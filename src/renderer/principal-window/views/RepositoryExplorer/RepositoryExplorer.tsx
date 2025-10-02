@@ -18,6 +18,7 @@ import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 import { RepositoryDetailsPanel } from './components/RepositoryDetailsPanel';
 import { GitCloneModal } from './components/GitCloneModal';
 import { RepositoryListHeader } from './components/RepositoryListHeader';
+import { FilePreviewPanel } from './components/FilePreviewPanel';
 
 interface RepositoryExplorerProps {
   sidebarCollapsed?: boolean;
@@ -41,6 +42,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   const [showOnlyWithChanges, setShowOnlyWithChanges] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [panelSizes, setPanelSizes] = useState({ left: 20, middle: 50, right: 30 });
+  const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
 
   // Use panel persistence hook
   const panelState = usePanelPersistence({
@@ -121,6 +123,11 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
       setSelectedRepositoryPath(repositories[0].path);
     }
   }, [repositories, selectedRepositoryPath, preferencesLoaded]);
+
+  // Clear selected file when repository changes
+  useEffect(() => {
+    setSelectedFilePath(null);
+  }, [selectedRepositoryPath]);
 
   // Save preferences when selection changes
   useEffect(() => {
@@ -466,35 +473,19 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         onRepositoryRemoved={handleRepositoryRemoved}
         onRefresh={refreshRepos}
         isRefreshing={isLoadingRepos}
+        onFileSelect={setSelectedFilePath}
       />
     );
   };
 
-  // Render right panel - Terminal placeholder
+  // Render right panel - File Preview
   const renderRightPanel = () => {
     return (
-      <div style={{
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexDirection: 'column',
-        color: theme.colors.textSecondary,
-        padding: '20px',
-        textAlign: 'center',
-      }}>
-        <div style={{
-          fontSize: theme.fontSizes[3],
-          fontWeight: 600,
-          marginBottom: '12px',
-          color: theme.colors.text,
-        }}>
-          Terminal
-        </div>
-        <div style={{ fontSize: theme.fontSizes[1] }}>
-          Terminal integration coming soon
-        </div>
-      </div>
+      <FilePreviewPanel
+        filePath={selectedFilePath}
+        repositoryPath={selectedRepositoryPath || ''}
+        onClose={() => setSelectedFilePath(null)}
+      />
     );
   };
 

@@ -5,9 +5,10 @@ import {
   enableComponentNameDisplay,
 } from './utils/componentDetection';
 import { FeedbackService } from './main-process-api/FeedbackService';
+import type { FeedbackModalData } from '../shared/main-process-api-interfaces/FeedbackAPI';
 
 interface FeedbackContextValue {
-  showFeedback: (componentInfo: any) => void;
+  showFeedback: (componentInfo: FeedbackModalData) => void;
 }
 
 const FeedbackContext = createContext<FeedbackContextValue | null>(null);
@@ -27,7 +28,10 @@ interface GlobalFeedbackProviderProps {
 export const GlobalFeedbackProvider: React.FC<GlobalFeedbackProviderProps> = ({
   children,
 }) => {
-  const [modalState, setModalState] = useState({
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    componentInfo: FeedbackModalData;
+  }>({
     isOpen: false,
     componentInfo: {
       componentName: '',
@@ -92,7 +96,7 @@ export const GlobalFeedbackProvider: React.FC<GlobalFeedbackProviderProps> = ({
     setModalState((prev) => ({ ...prev, isOpen: false }));
   };
 
-  const showFeedback = (componentInfo: any) => {
+  const showFeedback = (componentInfo: FeedbackModalData) => {
     setModalState({
       isOpen: true,
       componentInfo,

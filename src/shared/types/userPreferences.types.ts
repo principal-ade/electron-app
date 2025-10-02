@@ -64,6 +64,8 @@ export interface UserPreferences {
   // Editor preferences
   /** Default editor for opening local repositories */
   defaultEditor?: EditorId;
+  /** Enable vim mode in Monaco editors */
+  enableVimMode?: boolean;
 
   // Terminal preferences
   /** Default terminal for opening shells */

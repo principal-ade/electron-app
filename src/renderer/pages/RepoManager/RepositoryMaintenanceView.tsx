@@ -14,7 +14,6 @@ import {
   BarChart3,
   FileCode,
   Zap,
-  Activity,
   Palette,
 } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
@@ -43,9 +42,7 @@ import {
 } from '../../services/ContentProviders';
 import { RemoteFileViewerModal } from './shared/RemoteFileViewerModal';
 import { HelpModal } from './shared/HelpModal';
-import { ValidationsTab } from './shared/ValidationsTab';
 import { ToolsTab } from './shared/ToolsTab';
-import { useViolationMonitoring } from '../../hooks/useViolationMonitoring';
 
 interface RepositoryMaintenanceViewProps {
   repository: Repository;
@@ -216,13 +213,6 @@ export const RepositoryMaintenanceView: React.FC<
     setDependencyAnalysisHighlightLayer,
   ] = useState<HighlightLayer[]>([]);
 
-  // Knip analysis state
-  const [knipHighlightLayers, setKnipHighlightLayers] = useState<
-    HighlightLayer[]
-  >([]);
-
-  // Violation monitoring state
-  // Removed - using violationLayer from hook instead
 
   // Test coverage state
   const [testCoverageLayers, setTestCoverageLayers] = useState<
@@ -236,101 +226,7 @@ export const RepositoryMaintenanceView: React.FC<
     HighlightLayer[]
   >([]);
 
-  // Use violation monitoring hook for local sources
-  const _fileTreeForMonitoring = useMemo(() => {
-    if (!fileTree) return null;
-    // Convert FileTree to FileTree format if needed
-    return fileTree as unknown; // Type casting for now
-  }, [fileTree]);
 
-  // State for controlled violation monitoring
-  const [selectedPackageForAnalysis, setSelectedPackageForAnalysis] = useState<
-    string | null
-  >(null);
-  const [shouldMonitor, setShouldMonitor] = useState(false);
-
-  // Filter packageLayers to only the selected package when monitoring
-  const packagesForMonitoring = useMemo(() => {
-    if (!shouldMonitor || !selectedPackageForAnalysis || !packageLayers) {
-      return null;
-    }
-    // Filter to only the selected package
-    const filtered = packageLayers.filter(
-      (pkg) => pkg.packageData.path === selectedPackageForAnalysis,
-    );
-    console.log(
-      '[RepositoryMaintenanceView] Packages for monitoring updated:',
-      {
-        selectedPackage: selectedPackageForAnalysis,
-        filteredCount: filtered.length,
-        filteredPackages: filtered.map((p) => ({
-          name: p.packageData?.name,
-          path: p.packageData?.path,
-        })),
-      },
-    );
-    return filtered;
-  }, [shouldMonitor, selectedPackageForAnalysis, packageLayers]);
-
-  // Track what validation types to include (controlled by ValidationsTab)
-  const [includeTypescript, setIncludeTypescript] = useState(false);
-  const [includeEslint, setIncludeEslint] = useState(true); // Default to ESLint to match ValidationsTab
-
-  // Violation monitoring - only runs when shouldMonitor is true and has selected package
-  const {
-    violationResult,
-    violationLayer,
-    isMonitoring,
-    error: _violationError,
-    refresh: refreshViolationsInternal,
-    toggleTypeScript: _toggleTypeScript,
-    toggleESLint: _toggleESLint,
-    getSummaryForFile: _getSummaryForFile,
-  } = useViolationMonitoring(activeFileTreeSource, packagesForMonitoring, {
-    enabled: shouldMonitor && !!selectedPackageForAnalysis, // Only enable when explicitly requested
-    includeTypescript,
-    includeEslint,
-    useCache: false, // No caching - run on demand
-    autoRefresh: false,
-  });
-
-  // Manual refresh for violations - ValidationsTab controls what gets run
-  const refreshViolations = useCallback(
-    (packagePath?: string, validationType?: string) => {
-      console.log('[RepositoryMaintenanceView] Manual refresh triggered:', {
-        packagePath,
-        validationType,
-        currentSelectedPackage: selectedPackageForAnalysis,
-      });
-
-      if (packagePath) {
-        // Update the selected package if provided
-        setSelectedPackageForAnalysis(packagePath);
-      }
-
-      // Set which validation types to run based on ValidationsTab's selection
-      if (validationType === 'eslint') {
-        setIncludeEslint(true);
-        setIncludeTypescript(false);
-      } else if (validationType === 'typescript') {
-        setIncludeEslint(false);
-        setIncludeTypescript(true);
-      } else {
-        // If no specific type, don't run anything
-        return;
-      }
-
-      // Enable monitoring and trigger refresh
-      setShouldMonitor(true);
-      // Small delay to ensure state updates are processed
-      setTimeout(() => {
-        refreshViolationsInternal();
-      }, 100);
-    },
-    [refreshViolationsInternal, selectedPackageForAnalysis],
-  );
-
-  // No automatic refresh - only manual triggers
 
   // Toolbar state
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
@@ -391,35 +287,11 @@ export const RepositoryMaintenanceView: React.FC<
       });
     }
 
-    // Knip issues
-    if (knipHighlightLayers.length > 0) {
-      const issueCount = knipHighlightLayers.reduce(
-        (acc, layer) => acc + (layer.items?.length || 0),
-        0,
-      );
-      if (issueCount > 0) {
-        items.push({
-          id: 'knip-issues',
-          label: 'Knip Issues',
-          shortLabel: 'Knip',
-          icon: <Container />,
-          count: issueCount,
-          color: '#ef4444',
-          active: true,
-          onClick: () => {
-            setKnipHighlightLayers([]);
-          },
-          tooltip: `Clear knip issues (${issueCount} issues)`,
-        });
-      }
-    }
-
     return items;
   }, [
     showFileColors,
     searchResults.length,
     selectedNoteIds.size,
-    knipHighlightLayers,
     activeFileTreeSource,
   ]);
 
@@ -1115,36 +987,6 @@ export const RepositoryMaintenanceView: React.FC<
       />,
     },
     {
-      id: 'validations',
-      label: 'Validations',
-      icon: <Activity size={14} />,
-      visible: true,
-      content: (
-        <ValidationsTab
-          repository={repository}
-          fileTree={fileTree}
-          packageLayers={packageLayers}
-          violationResult={violationResult}
-          isMonitoring={isMonitoring}
-          selectedPackage={selectedPackageForAnalysis}
-          onPackageSelect={(packagePath) => {
-            console.log(
-              '[RepositoryMaintenanceView] Package selected in ValidationsTab:',
-              packagePath,
-            );
-            setSelectedPackageForAnalysis(packagePath);
-          }}
-          onRefresh={(packagePath?: string, validationType?: string) =>
-            refreshViolations(
-              packagePath || (selectedPackageForAnalysis ?? undefined),
-              validationType,
-            )
-          }
-          onHighlightChange={setKnipHighlightLayers}
-        />
-      ),
-    },
-    {
       id: 'runbook',
       label: 'Runbook',
       icon: <ClipboardList size={14} />,
@@ -1466,8 +1308,6 @@ export const RepositoryMaintenanceView: React.FC<
                 ...(selectedFileLayer ? [selectedFileLayer] : []),
                 ...dependencyAnalysisHighlightLayer,
                 ...packageHighlightLayers,
-                ...knipHighlightLayers,
-                ...(violationLayer ? [violationLayer] : []),
                 ...testCoverageLayers,
                 ...toolsHighlightLayers,
               ];

@@ -17,6 +17,7 @@ export const GeneralSettings: React.FC = () => {
   const [isDevMode, setIsDevMode] = useState(false);
   const [defaultEditor, setDefaultEditor] = useState<EditorId>('vscode');
   const [defaultCloneDirectory, setDefaultCloneDirectory] = useState<string>('');
+  const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
   const [selectedTheme, setSelectedTheme] = useState<string>('default');
   const [pendingTheme, setPendingTheme] = useState<string | null>(null);
   const [isApplyingTheme, setIsApplyingTheme] = useState(false);
@@ -36,9 +37,11 @@ export const GeneralSettings: React.FC = () => {
         const editor = (prefs.defaultEditor ?? 'vscode') as EditorId;
         setDefaultEditor(editor);
         setDefaultCloneDirectory(prefs.defaultCloneDirectory || '');
+        setEnableVimMode(prefs.enableVimMode ?? false);
       })
       .catch(() => {
         setDefaultEditor('vscode');
+        setEnableVimMode(false);
       });
 
     const currentTheme = ThemeService.getCurrentThemeName();
@@ -213,6 +216,67 @@ export const GeneralSettings: React.FC = () => {
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      {/* Vim Mode */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Vim Mode
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <p
+            style={{
+              fontSize: '14px',
+              color: theme.colors.textSecondary,
+              marginBottom: '12px',
+            }}
+          >
+            Enable vim key bindings in Monaco code editors
+          </p>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer',
+              fontSize: '14px',
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={enableVimMode}
+              onChange={async (e) => {
+                const enabled = e.target.checked;
+                setEnableVimMode(enabled);
+                await UserPreferencesService.updatePreferences({
+                  enableVimMode: enabled,
+                });
+              }}
+              style={{
+                marginRight: '8px',
+                width: '18px',
+                height: '18px',
+                cursor: 'pointer',
+              }}
+            />
+            <span style={{ color: theme.colors.text }}>
+              Enable Vim mode for file preview and code editors
+            </span>
+          </label>
         </div>
       </div>
 

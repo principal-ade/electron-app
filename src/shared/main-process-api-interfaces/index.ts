@@ -23,7 +23,6 @@ import type { StoreAPI } from './StoreAPI';
 import type { SystemAPI } from './SystemAPI';
 import type { TerminalAPI } from './TerminalService';
 import type { UserPreferencesAPI } from './UserPreferencesAPI';
-import type { ViolationsAPI } from './ViolationsAPI';
 import type { UserPromptAPI } from './UserPromptAPI';
 import type { WindowManagerAPI } from './WindowManagerAPI';
 import { AgentSessionEventsAPI } from './AgentSessionEventsAPI';
@@ -34,8 +33,6 @@ import type { RoomDrawingAPI } from './RoomDrawingAPI';
 import type { PackageManagerAPI } from './PackageManagerAPI';
 import type { TypeExtractionAPI } from './TypeExtractionAPI';
 import type { TypeSchemaAPI } from './TypeSchemaAPI';
-import type { KnipAPI } from './KnipAPI';
-import type { TestCoverageAPI } from './TestCoverageAPI';
 import type { DockerAPI } from './DockerAPI';
 import type { GitSyncAPI } from './GitSyncAPI';
 import type { WindowAPI } from './WindowAPI';
@@ -66,7 +63,6 @@ export type {
   TokenWithMetadata,
   TokenMigrationEntry,
 } from './AuthenticationAPI';
-export type { KnipAPI, KnipAnalysisResult } from './KnipAPI';
 
 export interface MainProcessAPI {
   a24z: A24zAPI;
@@ -97,7 +93,6 @@ export interface MainProcessAPI {
   system: SystemAPI;
   terminal: TerminalAPI;
   userPreferences: UserPreferencesAPI;
-  violations: ViolationsAPI;
   windowManager: WindowManagerAPI;
   userPrompt: UserPromptAPI;
   orbit: OrbitAPI;
@@ -105,8 +100,6 @@ export interface MainProcessAPI {
   packageManager: PackageManagerAPI;
   typeExtraction: TypeExtractionAPI;
   typeSchema: TypeSchemaAPI;
-  knip: KnipAPI;
-  testCoverage: TestCoverageAPI;
   docker: DockerAPI;
   gitSync: GitSyncAPI;
   window: WindowAPI;

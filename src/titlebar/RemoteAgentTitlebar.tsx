@@ -104,7 +104,7 @@ export const RemoteAgentTitlebar: React.FC = () => {
             }}
             onMouseEnter={(e) => {
               if (activeAgentId !== agent.id) {
-                e.currentTarget.style.background = theme.colors?.hover || '#333';
+                e.currentTarget.style.background = theme.colors?.secondary || '#333';
               }
             }}
             onMouseLeave={(e) => {

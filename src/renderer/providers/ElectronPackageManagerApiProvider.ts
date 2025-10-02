@@ -9,6 +9,7 @@ import {
   DependencyCheckProgress,
 } from '@principal-ai/codebase-composition';
 import { PackageManagerService } from '../main-process-api/PackageManagerService';
+import type { CheckProgressData } from '../../shared/main-process-api-interfaces/PackageManagerAPI';
 
 /**
  * Electron implementation of PackageManagerApiProvider that uses IPC
@@ -45,7 +46,7 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
       let progressResolver: (() => void) | null = null;
 
       const cleanup = PackageManagerService.onVersionCheckProgress(
-        (data: any) => {
+        (data: CheckProgressData) => {
           progressUpdates.push(data.result);
           if (progressResolver) {
             progressResolver();
@@ -124,12 +125,14 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
       // TODO: Implement vulnerability checking in PackageManagerService
       throw new Error('Vulnerability checking not yet implemented');
 
+      // The following code is temporarily disabled until vulnerability checking is implemented
+      /*
       // Set up progress listener first
       const progressUpdates: VulnerabilityCheckResult[] = [];
       let progressResolver: (() => void) | null = null;
 
       const cleanup = PackageManagerService.onVulnerabilityCheckProgress(
-        (data: any) => {
+        (data: CheckProgressData) => {
           progressUpdates.push(data.result);
           if (progressResolver) {
             progressResolver();
@@ -174,6 +177,7 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
 
       // Clean up the listener
       cleanup();
+      */
     } catch (error) {
       console.error('Error checking vulnerabilities:', error);
       // Yield error results for remaining packages

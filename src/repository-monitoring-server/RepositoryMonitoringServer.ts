@@ -171,8 +171,8 @@ export class RepositoryMonitoringServer {
     // Also fetch fresh git status to update ahead/behind indicators
     try {
       const gitStatus = await this.getGitStatus(path);
-      // Emit git status changed event to trigger cache update
-      this.emit(MonitoringInternalEvent.GIT_STATUS_CHANGED, gitStatus);
+      // Notify adapter about git status change
+      this.gitWatcherAdapter.emit(MonitoringInternalEvent.GIT_STATUS_CHANGED, gitStatus);
     } catch (error) {
       console.error(`[RepositoryMonitoring] Failed to refresh git status for ${path}:`, error);
     }
@@ -569,7 +569,7 @@ export class RepositoryMonitoringServer {
   ): Promise<DependencyResolutionResult['alexandriaEntry'] | null> {
     try {
       // Check all registered repositories
-      for (const [repoPath, state] of this.repositories.entries()) {
+      for (const [repoPath, _state] of this.repositories.entries()) {
         // Get package information for this repository
         const packagesResult = await this.getPackages(repoPath);
         if (!packagesResult) continue;
@@ -684,21 +684,18 @@ export class RepositoryMonitoringServer {
     lastCommitHash?: string;
   } | null> {
     try {
-      const gitCore = new GitCore(repoPath);
-      
-      // Get remote URL
-      const remotes = await gitCore.getRemotes();
-      const originRemote = remotes.find(r => r.name === 'origin');
-      
-      // Get last commit info
-      const commitInfo = await gitCore.getLastCommitInfo();
-      
+      // Get remote URL and commit details using GitCore static methods
+      const [remoteUrl, commitDetails] = await Promise.all([
+        GitCore.getRemoteUrl(repoPath),
+        GitCore.getLastCommitDetails(repoPath),
+      ]);
+
       return {
-        remoteUrl: originRemote?.url,
-        lastCommit: commitInfo?.date,
-        lastCommitMessage: commitInfo?.message,
-        lastCommitAuthor: commitInfo?.author,
-        lastCommitHash: commitInfo?.shortHash || commitInfo?.hash,
+        remoteUrl: remoteUrl || undefined,
+        lastCommit: commitDetails?.timestamp,
+        lastCommitMessage: commitDetails?.message,
+        lastCommitAuthor: commitDetails?.author,
+        lastCommitHash: commitDetails?.hash,
       };
     } catch (error) {
       console.error(`[RepositoryMonitoring] Error getting git info for ${repoPath}:`, error);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ThemeProvider } from 'themed-markdown';
+import { ThemeProvider, type Theme } from 'themed-markdown';
 import { ThemeService, ThemeChangeEvent } from '../services/ThemeService';
 import { getThemeByName } from '../themes/predefinedThemes';
 
@@ -10,7 +10,7 @@ interface CustomThemeProviderProps {
 export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
   children,
 }) => {
-  const [selectedTheme, setSelectedTheme] = useState<any>(undefined);
+  const [selectedTheme, setSelectedTheme] = useState<Theme | undefined>(undefined);
   const [colorMode, setColorMode] = useState<'light' | 'dark'>('dark');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -29,7 +29,7 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
       setColorMode(mode);
       setIsLoading(false);
 
-      console.log(
+      console.info(
         '[CustomThemeProvider] Initial theme loaded:',
         themeName,
         mode,
@@ -41,7 +41,7 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
     // Subscribe to theme changes for live switching
     const unsubscribe = ThemeService.onThemeChange(
       (event: ThemeChangeEvent) => {
-        console.log(
+        console.info(
           '[CustomThemeProvider] Theme change event received:',
           event.themeName,
         );
@@ -61,7 +61,7 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
   if (isLoading || !selectedTheme) {
     const defaultTheme = getThemeByName('default');
     return (
-      <ThemeProvider theme={defaultTheme} initialColorMode={colorMode}>
+      <ThemeProvider theme={defaultTheme}>
         {children}
       </ThemeProvider>
     );
@@ -69,7 +69,7 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
 
   // Render with the selected theme
   return (
-    <ThemeProvider theme={selectedTheme} initialColorMode={colorMode}>
+    <ThemeProvider theme={selectedTheme}>
       {children}
     </ThemeProvider>
   );
