@@ -56,11 +56,45 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
   const [sizes, setSizes] = useState(defaultSizes);
   const [collapsed, setCollapsed] = useState(options.collapsed);
   const prevCollapsedRef = useRef(options.collapsed);
+  const lastNonZeroSizesRef = useRef<Partial<PanelSizes & TwoPanelSizes>>({});
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const updateLastNonZeroSizes = useCallback((incomingSizes: PanelSizes | TwoPanelSizes) => {
+    if ('left' in incomingSizes && incomingSizes.left > 0) {
+      lastNonZeroSizesRef.current.left = incomingSizes.left;
+    }
+
+    if ('middle' in incomingSizes && incomingSizes.middle > 0) {
+      lastNonZeroSizesRef.current.middle = incomingSizes.middle;
+    }
+
+    if ('right' in incomingSizes && incomingSizes.right > 0) {
+      lastNonZeroSizesRef.current.right = incomingSizes.right;
+    }
+  }, []);
+
+  const getFallbackSize = useCallback((panel: 'left' | 'right') => {
+    const storedSize = lastNonZeroSizesRef.current[panel];
+    if (storedSize && storedSize > 0) {
+      return storedSize;
+    }
+
+    if (panel === 'left' && 'left' in defaultSizes && defaultSizes.left > 0) {
+      return defaultSizes.left;
+    }
+
+    if (panel === 'right' && 'right' in defaultSizes && defaultSizes.right > 0) {
+      return defaultSizes.right;
+    }
+
+    return undefined;
+  }, [defaultSizes]);
 
   // Update sizes when defaultSizes changes (parent has loaded preferences)
   useEffect(() => {
     setSizes(defaultSizes);
-  }, [defaultSizes]);
+    updateLastNonZeroSizes(defaultSizes);
+  }, [defaultSizes, updateLastNonZeroSizes]);
 
   // Sync with parent's collapsed state (e.g., from titlebar buttons)
   // This will now properly detect changes since we're using options.collapsed
@@ -95,14 +129,65 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
   // Handle panel resize (debounced)
   const handlePanelResize = useCallback((newSizes: typeof sizes) => {
     setSizes(newSizes);
+    updateLastNonZeroSizes(newSizes);
 
-    // Debounce saving to preferences
-    const timeoutId = setTimeout(() => {
-      savePreferences(newSizes);
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    const sanitizedSizes = { ...newSizes } as typeof newSizes;
+    let shouldPersist = true;
+
+    if ('left' in newSizes) {
+      const leftCollapsed = Boolean((collapsed as PanelCollapsed)?.left);
+      const leftSize = newSizes.left;
+
+      if (leftCollapsed) {
+        const fallback = getFallbackSize('left');
+        if (fallback !== undefined && fallback > 0) {
+          sanitizedSizes.left = fallback;
+        } else {
+          shouldPersist = false;
+        }
+      } else if (leftSize === 0) {
+        shouldPersist = false;
+      }
+    }
+
+    if (panelType === 'three-panel' && 'right' in newSizes) {
+      const rightCollapsed = Boolean((collapsed as PanelCollapsed)?.right);
+      const rightSize = newSizes.right;
+
+      if (rightCollapsed) {
+        const fallback = getFallbackSize('right');
+        if (fallback !== undefined && fallback > 0) {
+          sanitizedSizes.right = fallback;
+        } else {
+          shouldPersist = false;
+        }
+      } else if (rightSize === 0) {
+        shouldPersist = false;
+      }
+    }
+
+    if (!shouldPersist) {
+      return;
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      savePreferences(sanitizedSizes);
+      saveTimeoutRef.current = null;
     }, 500);
+  }, [collapsed, getFallbackSize, panelType, savePreferences, updateLastNonZeroSizes]);
 
-    return () => clearTimeout(timeoutId);
-  }, [savePreferences]);
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Collapse/expand handlers - no-ops because state is controlled by parent (IntegratedShell)
   // The parent manages collapsed state via titlebar buttons and passes it down as props
