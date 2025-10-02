@@ -128,14 +128,6 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
 
   // Handle panel resize (debounced)
   const handlePanelResize = useCallback((newSizes: typeof sizes) => {
-    setSizes(newSizes);
-    updateLastNonZeroSizes(newSizes);
-
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
-
     const sanitizedSizes = { ...newSizes } as typeof newSizes;
     let shouldPersist = true;
 
@@ -169,6 +161,14 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
       } else if (rightSize === 0) {
         shouldPersist = false;
       }
+    }
+
+    setSizes(sanitizedSizes);
+    updateLastNonZeroSizes(sanitizedSizes);
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
     }
 
     if (!shouldPersist) {
