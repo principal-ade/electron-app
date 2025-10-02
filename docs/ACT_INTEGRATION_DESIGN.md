@@ -62,6 +62,45 @@ graph TB
 
 ---
 
+## UI Integration Plan (Phase 1)
+
+The first UI milestone focuses on surfacing workflow actions inside the Repository Explorer without wiring them to the main-process runner yet. The key goals are to make the UI contract explicit and to verify that repositories have the required secrets before a run attempt.
+
+### Data Retrieval Strategy
+
+1. **Source of truth** – Workflow definitions (and their action entries) will be read through a forthcoming `ActWorkflowService`. In this phase, the UI expects an `actions` collection supplied by the parent `RepositoryDetailsPanel`.
+2. **Repository context** – Each action is scoped by the repository that owns the workflow. The UI only needs the `repoId` (Alexandria ID) to evaluate prerequisites such as secret availability.
+3. **Secrets status** – The renderer calls `SecretsService.exists(repoId)` via a dedicated hook (`useRepositorySecretsStatus`) to decide whether the "Configure" or "Run" affordance should be displayed. This keeps secret verification centralized and testable.
+4. **Future wiring** – When the execution service is ready, the panel will request data through a `RepositoryActionsProvider` context that combines workflow metadata, execution status, and telemetry.
+
+### RepositoryActionsPanel Responsibilities
+
+- Display the list of available repository actions (name, description, and optional metadata such as estimated duration).
+- Show a call-to-action:
+  - "Configure" when secrets are missing. Clicking it opens the existing `SecretsModal` for the repository.
+  - "Run" when secrets are configured. For now this opens a confirmation dialog; later it will dispatch an IPC request to `ActRunnerService`.
+- Surface loading and error states for the secrets check.
+- Provide a refresh affordance so users can re-check the secrets status after closing the modal.
+
+### File Layout for UI Panel
+
+```
+src/
+└── renderer/
+    └── principal-window/
+        └── views/
+            └── RepositoryExplorer/
+                ├── components/
+                │   ├── RepositoryActionsPanel.tsx  # New UI panel (Phase 1)
+                │   └── RepositoryDetailsPanel.tsx  # Imports panel in Phase 2
+                └── hooks/
+                    └── useRepositorySecretsStatus.ts  # Secrets verification hook
+```
+
+The panel remains self-contained until the execution plumbing is available. Once the runner APIs land, only the `onRun` handler wiring in `RepositoryDetailsPanel` needs to change.
+
+---
+
 ## Component Design
 
 ### 1. ActRunnerService (Main Process)
