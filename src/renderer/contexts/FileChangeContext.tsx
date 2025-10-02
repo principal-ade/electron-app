@@ -167,7 +167,7 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
 
         const changes = await GitService.getDetailedChanges(source.path);
 
-        console.log(`[FileChangeProvider] Git changes for ${source.path}:`, {
+        console.info(`[FileChangeProvider] Git changes for ${source.path}:`, {
           created: changes.created.length,
           modified: changes.modified.length,
           deleted: changes.deleted.length,
@@ -223,13 +223,13 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
     (source: FileChangeSource) => {
       // Check if already registered using ref to avoid dependency issues
       if (sourcesRef.current.has(source.id)) {
-        console.log(
+        console.info(
           `[FileChangeProvider] Source ${source.id} already registered, skipping`,
         );
         return;
       }
 
-      console.log(
+      console.info(
         `[FileChangeProvider] Registering source: ${source.id} at ${source.path}`,
       );
 
@@ -268,7 +268,7 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
 
   // Unregister a source
   const unregisterSource = useCallback((sourceId: string) => {
-    console.log(`[FileChangeProvider] Unregistering source: ${sourceId}`);
+    console.info(`[FileChangeProvider] Unregistering source: ${sourceId}`);
 
     // Get the source data to stop watching if needed
     const sourceData = sourcesRef.current.get(sourceId);
@@ -535,7 +535,7 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
 
         activities.forEach((activity) => {
           if (opts.activeSessionOnly && !activity.isActive) {
-            console.log(
+            console.info(
               '[FileChangeProvider] Skipping inactive session:',
               activity.sessionId,
             );
@@ -554,10 +554,11 @@ export const FileChangeProvider: React.FC<FileChangeProviderProps> = ({
           }
 
           activity.operations.forEach((op) => {
+            if (!group) return;
             if (op.type === 'read') {
-              group!.reads.add(activity.filePath);
+              group.reads.add(activity.filePath);
             } else {
-              group!.writes.add(activity.filePath);
+              group.writes.add(activity.filePath);
             }
           });
         });

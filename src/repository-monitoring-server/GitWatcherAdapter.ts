@@ -175,7 +175,7 @@ export class GitWatcherAdapter extends EventEmitter {
       repoPath,
       mode,
       debounceMs: this.config.debounceMs ?? 500,
-      onChange: (event, filePath) => {
+      onChange: (event: string, filePath: string) => {
         this.handleWorkspaceChange(repoPath, event, filePath);
       },
       onReady: () => {
@@ -185,15 +185,15 @@ export class GitWatcherAdapter extends EventEmitter {
         console.info(`[GitWatcherAdapter] Workspace watcher closed for ${repoPath}`);
         this.workspaceWatchers.delete(repoPath);
       },
-      onRestart: reason => {
+      onRestart: (reason: string) => {
         console.info(`[GitWatcherAdapter] Workspace watcher restarting for ${repoPath}: ${reason}`);
       },
-      onError: error => {
+      onError: (error: unknown) => {
         console.warn(`[GitWatcherAdapter] Workspace watcher error for ${repoPath}:`, error);
       },
-      onFatalError: error => {
+      onFatalError: (error: unknown) => {
         console.error(`[GitWatcherAdapter] Workspace watcher fatal error for ${repoPath}:`, error);
-        void watcher.stop().catch(stopError => {
+        void watcher.stop().catch((stopError: unknown) => {
           console.error(`[GitWatcherAdapter] Failed to stop workspace watcher after fatal error for ${repoPath}:`, stopError);
         });
         this.workspaceWatchers.delete(repoPath);

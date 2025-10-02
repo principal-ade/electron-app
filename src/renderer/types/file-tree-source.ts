@@ -55,7 +55,7 @@ export interface FileTreeSource {
     commitSha?: string; // Specific commit if locked to one
     isDirty?: boolean; // For local sources with uncommitted changes
     subdir?: string; // If focusing on a subdirectory (monorepo support)
-    [key: string]: any; // Extensible for future needs
+    [key: string]: unknown; // Extensible for future needs
   };
 }
 

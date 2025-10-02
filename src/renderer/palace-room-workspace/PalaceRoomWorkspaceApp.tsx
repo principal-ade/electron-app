@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function PalaceRoomWorkspaceApp(): JSX.Element {
+export function PalaceRoomWorkspaceApp(): React.ReactElement {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
       <div className="max-w-2xl space-y-4 text-center">

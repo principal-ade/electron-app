@@ -11,7 +11,6 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
   children,
 }) => {
   const [selectedTheme, setSelectedTheme] = useState<Theme | undefined>(undefined);
-  const [colorMode, setColorMode] = useState<'light' | 'dark'>('dark');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -21,18 +20,15 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
 
       const themeName = ThemeService.getCurrentThemeName();
       const theme = await ThemeService.getActiveTheme(themeName);
-      const mode = ThemeService.getCurrentColorMode();
 
       if (theme) {
         setSelectedTheme(theme);
       }
-      setColorMode(mode);
       setIsLoading(false);
 
       console.info(
         '[CustomThemeProvider] Initial theme loaded:',
         themeName,
-        mode,
       );
     };
 
@@ -46,9 +42,6 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
           event.themeName,
         );
         setSelectedTheme(event.theme);
-        if (event.colorMode) {
-          setColorMode(event.colorMode);
-        }
       },
     );
 

@@ -47,7 +47,9 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
 
       const cleanup = PackageManagerService.onVersionCheckProgress(
         (data: CheckProgressData) => {
-          progressUpdates.push(data.result);
+          if (data.result) {
+            progressUpdates.push(data.result as VersionCheckResult);
+          }
           if (progressResolver) {
             progressResolver();
             progressResolver = null;
@@ -110,8 +112,6 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
 
   async *checkVulnerabilities(
     packages: PackageVersionInfo[],
-    packageManager: PackageManager,
-    options?: BatchCheckOptions,
   ): AsyncGenerator<VulnerabilityCheckResult, void, unknown> {
     this.progress = {
       phase: 'checking-vulnerabilities',
@@ -120,88 +120,12 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
       message: 'Scanning for vulnerabilities...',
     };
 
-    try {
-      // Use proper service layer instead of direct window.electron access
-      // TODO: Implement vulnerability checking in PackageManagerService
-      throw new Error('Vulnerability checking not yet implemented');
-
-      // The following code is temporarily disabled until vulnerability checking is implemented
-      /*
-      // Set up progress listener first
-      const progressUpdates: VulnerabilityCheckResult[] = [];
-      let progressResolver: (() => void) | null = null;
-
-      const cleanup = PackageManagerService.onVulnerabilityCheckProgress(
-        (data: CheckProgressData) => {
-          progressUpdates.push(data.result);
-          if (progressResolver) {
-            progressResolver();
-            progressResolver = null;
-          }
-        },
-      );
-
-      // Call the main process to check vulnerabilities
-      const allResultsPromise =
-        PackageManagerService.invokeCheckVulnerabilities({
-          packages,
-          packageManager,
-          options,
-        });
-
-      // Yield results as they come in via progress updates
-      let lastYieldedIndex = 0;
-      while (this.progress.current < packages.length) {
-        // Wait for new progress updates
-        if (lastYieldedIndex >= progressUpdates.length) {
-          await new Promise<void>((resolve) => {
-            progressResolver = resolve;
-            // Check if we already have updates while setting up the promise
-            if (lastYieldedIndex < progressUpdates.length) {
-              resolve();
-            }
-          });
-        }
-
-        // Yield any new results
-        while (lastYieldedIndex < progressUpdates.length) {
-          const result = progressUpdates[lastYieldedIndex];
-          this.progress.current++;
-          yield result;
-          lastYieldedIndex++;
-        }
-      }
-
-      // Wait for the final results to ensure everything completed
-      await allResultsPromise;
-
-      // Clean up the listener
-      cleanup();
-      */
-    } catch (error) {
-      console.error('Error checking vulnerabilities:', error);
-      // Yield error results for remaining packages
-      for (let i = this.progress.current; i < packages.length; i++) {
-        yield {
-          packageName: packages[i].name,
-          version: packages[i].currentVersion,
-          vulnerabilities: [],
-          error:
-            error instanceof Error
-              ? error.message
-              : 'Failed to check vulnerabilities',
-        };
-        this.progress.current++;
-      }
-    } finally {
-      this.progress.phase = 'complete';
-    }
+    // TODO: Implement vulnerability checking in PackageManagerService
+    throw new Error('Vulnerability checking not yet implemented');
   }
 
   async *checkLicenses(
     packages: PackageVersionInfo[],
-    packageManager: PackageManager,
-    options?: BatchCheckOptions,
   ): AsyncGenerator<LicenseCheckResult, void, unknown> {
     this.progress = {
       phase: 'checking-licenses',
@@ -210,75 +134,8 @@ export class ElectronPackageManagerApiProvider extends PackageManagerApiProvider
       message: 'Checking package licenses...',
     };
 
-    try {
-      // Use proper service layer instead of direct window.electron access
-      // TODO: Implement license checking in PackageManagerService
-      throw new Error('License checking not yet implemented');
-
-      // Set up progress listener first
-      const progressUpdates: LicenseCheckResult[] = [];
-      let progressResolver: (() => void) | null = null;
-
-      const cleanup = PackageManagerService.onLicenseCheckProgress(
-        (data: any) => {
-          progressUpdates.push(data.result);
-          if (progressResolver) {
-            progressResolver();
-            progressResolver = null;
-          }
-        },
-      );
-
-      // Call the main process to check licenses
-      const allResultsPromise = PackageManagerService.invokeCheckLicenses({
-        packages,
-        packageManager,
-        options,
-      });
-
-      // Yield results as they come in via progress updates
-      let lastYieldedIndex = 0;
-      while (this.progress.current < packages.length) {
-        // Wait for new progress updates
-        if (lastYieldedIndex >= progressUpdates.length) {
-          await new Promise<void>((resolve) => {
-            progressResolver = resolve;
-            // Check if we already have updates while setting up the promise
-            if (lastYieldedIndex < progressUpdates.length) {
-              resolve();
-            }
-          });
-        }
-
-        // Yield any new results
-        while (lastYieldedIndex < progressUpdates.length) {
-          const result = progressUpdates[lastYieldedIndex];
-          this.progress.current++;
-          yield result;
-          lastYieldedIndex++;
-        }
-      }
-
-      // Wait for the final results to ensure everything completed
-      await allResultsPromise;
-
-      // Clean up the listener
-      cleanup();
-    } catch (error) {
-      console.error('Error checking licenses:', error);
-      // Yield error results for remaining packages
-      for (let i = this.progress.current; i < packages.length; i++) {
-        yield {
-          packageName: packages[i].name,
-          version: packages[i].currentVersion,
-          error:
-            error instanceof Error ? error.message : 'Failed to check license',
-        };
-        this.progress.current++;
-      }
-    } finally {
-      this.progress.phase = 'complete';
-    }
+    // TODO: Implement license checking in PackageManagerService
+    throw new Error('License checking not yet implemented');
   }
 
   getProgress(): DependencyCheckProgress {

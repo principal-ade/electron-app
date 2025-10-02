@@ -158,7 +158,7 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
       if (existingState?.gitStatus && existingState.lastStatusCheck) {
         const age = Date.now() - existingState.lastStatusCheck;
         if (age < STATUS_CACHE_DURATION) {
-          console.log(
+          console.info(
             `[GitChangesProvider] Using cached git status for ${source.id}`,
           );
           return existingState.gitStatus;
@@ -166,7 +166,7 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
       }
 
       try {
-        console.log(
+        console.info(
           `[GitChangesProvider] Checking git status for ${source.location}`,
         );
 
@@ -244,7 +244,7 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
           throw new Error('No HEAD commit found');
         }
 
-        console.log(
+        console.info(
           `[GitChangesProvider] Loading HEAD tree for ${source.id} at ${commitSha.substring(0, 7)}`,
         );
 
@@ -306,7 +306,8 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
             // No commits yet - mark as such but still enable to show all files as "new"
             setGitStates((prev) => {
               const newStates = new Map(prev);
-              const existing = newStates.get(sourceId)!;
+              const existing = newStates.get(sourceId);
+              if (!existing) return prev;
               newStates.set(sourceId, {
                 ...existing,
                 hasNoCommits: true,
@@ -332,7 +333,8 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
           // Update state with loaded HEAD
           setGitStates((prev) => {
             const newStates = new Map(prev);
-            const existing = newStates.get(sourceId)!;
+            const existing = newStates.get(sourceId);
+            if (!existing) return prev;
             newStates.set(sourceId, {
               ...existing,
               headTree: headTree || undefined,
@@ -349,7 +351,8 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
           // Update state with error
           setGitStates((prev) => {
             const newStates = new Map(prev);
-            const existing = newStates.get(sourceId)!;
+            const existing = newStates.get(sourceId);
+            if (!existing) return prev;
             newStates.set(sourceId, {
               ...existing,
               loading: false,
@@ -405,19 +408,19 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
         const allFiles: string[] = [];
 
         // Collect all file paths from the working tree
-        const collectFiles = (tree: any, path = '') => {
-          if (tree.files) {
-            tree.files.forEach((file: any) => {
+        const collectFiles = (tree: FileTree, path = '') => {
+          if ('files' in tree && tree.files) {
+            tree.files.forEach((file: { path?: string }) => {
               if (file.path) {
                 allFiles.push(file.path);
               }
             });
           }
-          if (tree.children) {
+          if ('children' in tree && tree.children) {
             Object.entries(tree.children).forEach(
-              ([name, child]: [string, any]) => {
+              ([name, child]) => {
                 if (child && typeof child === 'object') {
-                  collectFiles(child, path ? `${path}/${name}` : name);
+                  collectFiles(child as FileTree, path ? `${path}/${name}` : name);
                 }
               },
             );
@@ -581,13 +584,13 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
 
       // If already initialized with HEAD tree, skip
       if (existingState?.headTree || existingState?.hasNoCommits) {
-        console.log(
+        console.info(
           `[GitChangesProvider] Source ${sourceId} already initialized`,
         );
         return;
       }
 
-      console.log(`[GitChangesProvider] Initializing local source ${sourceId}`);
+      console.info(`[GitChangesProvider] Initializing local source ${sourceId}`);
 
       // Enable git changes which will load HEAD tree
       await toggleGitChanges(source, true);
