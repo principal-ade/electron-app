@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'themed-markdown';
 import { AnimatedResizableLayout } from '@a24z/panels';
-import '@a24z/panels/style.css';
+import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../../../theme/panelsTheme';
 import { useAuthState } from '../../../hooks/useAuthState';
 import type { AlexandriaEntry } from '@a24z/core-library';
@@ -11,6 +11,7 @@ import { GitService } from '../../../main-process-api/GitService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { GithubService } from '../../../main-process-api/GithubService';
+import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import type { GitHubRepository } from '../../../../shared/main-process-api-interfaces/GitHubAPI';
 import { OrganizationSidebar } from './components/OrganizationSidebar';
 import { RepositoryGrid } from './components/RepositoryGrid';
@@ -20,6 +21,7 @@ import {
   sortOrganizations,
   type OrganizationInfo,
 } from './utils/repositoryOrganizer';
+import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 import './AuthView.css';
 
 export const AuthView: React.FC = () => {
@@ -42,6 +44,15 @@ export const AuthView: React.FC = () => {
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAuthView, setShowAuthView] = useState(false);
+  const [panelSizes, setPanelSizes] = useState({ left: 25, right: 75 });
+
+  // Use panel persistence hook
+  const panelState = usePanelPersistence({
+    viewKey: 'authView',
+    defaultSizes: panelSizes,
+    collapsed: { left: false },
+    panelType: 'two-panel',
+  });
 
   const backgroundColor = theme.colors.background;
 
@@ -256,6 +267,19 @@ export const AuthView: React.FC = () => {
   }, [enhanceRepositoryWithGitInfo, isAuthenticated, authUser]);
 
   useEffect(() => {
+    // Load panel preferences
+    const loadPreferences = async () => {
+      try {
+        const preferences = await UserPreferencesService.getPreferences();
+        if (preferences.panelLayouts?.authView?.sizes) {
+          setPanelSizes(preferences.panelLayouts.authView.sizes);
+        }
+      } catch (err) {
+        console.error('Failed to load panel preferences:', err);
+      }
+    };
+
+    loadPreferences();
     loadRepositories();
 
     // Subscribe to repository changes
@@ -371,10 +395,13 @@ export const AuthView: React.FC = () => {
         leftPanel={renderLeftPanel()}
         rightPanel={renderRightPanel()}
         minSize={20}
-        defaultSize={25}
+        defaultSize={panelState.type === 'two-panel' ? panelState.sizes.left : 25}
         collapsibleSide="left"
+        collapsed={panelState.collapsed.left}
         style={{ height: '100%', width: '100%' }}
         theme={panelsTheme}
+        onCollapseComplete={panelState.handleLeftCollapseComplete}
+        onExpandComplete={panelState.handleLeftExpandComplete}
       />
     </div>
   );

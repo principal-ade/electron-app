@@ -40,12 +40,36 @@ export class UserPreferencesHandler {
     updates: Partial<UserPreferences>,
   ): Promise<void> {
     const current = await this.getOrCreatePreferences();
-    const updated = { ...current, ...updates };
+    const updated = this.deepMerge(current, updates);
     await this.typedStore.set(
       USER_PREFERENCES_KEY,
       updated,
       StaticNamespaces.USER_PREFERENCES,
     );
+  }
+
+  private deepMerge(target: any, source: any): any {
+    const output = { ...target };
+
+    if (this.isObject(target) && this.isObject(source)) {
+      Object.keys(source).forEach(key => {
+        if (this.isObject(source[key])) {
+          if (!(key in target)) {
+            output[key] = source[key];
+          } else {
+            output[key] = this.deepMerge(target[key], source[key]);
+          }
+        } else {
+          output[key] = source[key];
+        }
+      });
+    }
+
+    return output;
+  }
+
+  private isObject(item: any): boolean {
+    return item && typeof item === 'object' && !Array.isArray(item);
   }
 
   registerHandlers(): void {

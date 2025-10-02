@@ -2,7 +2,6 @@ import { EventEmitter } from 'events';
 import { Theme } from 'themed-markdown';
 import { getThemeByName } from '../themes/predefinedThemes';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
-import { IconThemeService } from './IconThemeService';
 
 export interface ThemeChangeEvent {
   themeName: string;
@@ -10,10 +9,32 @@ export interface ThemeChangeEvent {
   colorMode?: 'light' | 'dark';
 }
 
+/**
+ * Deep merge utility for merging theme overrides
+ */
+function deepMerge<T extends object>(target: T, source: Partial<T>): T {
+  const output = { ...target };
+
+  for (const key in source) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      if (key in target && typeof target[key] === 'object') {
+        (output as any)[key] = deepMerge(target[key] as any, source[key] as any);
+      } else {
+        (output as any)[key] = source[key];
+      }
+    } else {
+      (output as any)[key] = source[key];
+    }
+  }
+
+  return output;
+}
+
 class ThemeServiceClass extends EventEmitter {
   private static instance: ThemeServiceClass;
   private currentThemeName: string = 'default';
   private currentColorMode: 'light' | 'dark' = 'dark';
+  private currentThemeCache: Theme | null = null;
 
   private constructor() {
     super();
@@ -41,25 +62,164 @@ class ThemeServiceClass extends EventEmitter {
   }
 
   /**
+   * Get the base theme (without overrides)
+   */
+  getBaseTheme(themeName: string): Theme | undefined {
+    return getThemeByName(themeName);
+  }
+
+  /**
+   * Get the active theme (with overrides applied)
+   */
+  async getActiveTheme(themeName?: string): Promise<Theme | undefined> {
+    const name = themeName || this.currentThemeName;
+    const baseTheme = this.getBaseTheme(name);
+
+    if (!baseTheme) {
+      return undefined;
+    }
+
+    // Check for customizations
+    try {
+      const preferences = await UserPreferencesService.getPreferences();
+      const customizations = preferences.customThemeOverrides?.[name];
+
+      if (customizations) {
+        return deepMerge(baseTheme, customizations.overrides as Partial<Theme>);
+      }
+    } catch (error) {
+      console.error('[ThemeService] Failed to load theme overrides:', error);
+    }
+
+    return baseTheme;
+  }
+
+  /**
+   * Update a single color in the theme
+   */
+  async updateThemeColor(
+    themeName: string,
+    colorPath: string,
+    newValue: string,
+  ): Promise<void> {
+    try {
+      const preferences = await UserPreferencesService.getPreferences();
+      const existingOverrides = preferences.customThemeOverrides || {};
+      const themeOverrides = existingOverrides[themeName] || {
+        baseTheme: themeName,
+        overrides: {},
+        lastModified: Date.now(),
+      };
+
+      // Parse color path (e.g., "colors.primary")
+      const parts = colorPath.split('.');
+      let current: any = themeOverrides.overrides;
+
+      // Navigate/create nested structure
+      for (let i = 0; i < parts.length - 1; i++) {
+        if (!current[parts[i]]) {
+          current[parts[i]] = {};
+        }
+        current = current[parts[i]];
+      }
+
+      // Set the value
+      current[parts[parts.length - 1]] = newValue;
+      themeOverrides.lastModified = Date.now();
+
+      // Save back to preferences
+      await UserPreferencesService.updatePreferences({
+        customThemeOverrides: {
+          ...existingOverrides,
+          [themeName]: themeOverrides,
+        },
+      });
+
+      // If this is the current theme, reload it
+      if (themeName === this.currentThemeName) {
+        await this.applyTheme(themeName, false);
+      }
+
+      console.log(`[ThemeService] Updated ${colorPath} in ${themeName} theme`);
+    } catch (error) {
+      console.error('[ThemeService] Failed to update theme color:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Restore theme from snapshot
+   */
+  async restoreThemeSnapshot(
+    themeName: string,
+    snapshot: Theme,
+  ): Promise<void> {
+    try {
+      const baseTheme = this.getBaseTheme(themeName);
+      if (!baseTheme) {
+        throw new Error(`Base theme ${themeName} not found`);
+      }
+
+      // Clear all overrides for this theme
+      const preferences = await UserPreferencesService.getPreferences();
+      const existingOverrides = preferences.customThemeOverrides || {};
+      delete existingOverrides[themeName];
+
+      await UserPreferencesService.updatePreferences({
+        customThemeOverrides: existingOverrides,
+      });
+
+      // If this is the current theme, reload it
+      if (themeName === this.currentThemeName) {
+        await this.applyTheme(themeName, false);
+      }
+
+      console.log(`[ThemeService] Restored ${themeName} theme from snapshot`);
+    } catch (error) {
+      console.error('[ThemeService] Failed to restore theme snapshot:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clear all overrides for a theme
+   */
+  async clearThemeOverrides(themeName: string): Promise<void> {
+    try {
+      const preferences = await UserPreferencesService.getPreferences();
+      const existingOverrides = preferences.customThemeOverrides || {};
+      delete existingOverrides[themeName];
+
+      await UserPreferencesService.updatePreferences({
+        customThemeOverrides: existingOverrides,
+      });
+
+      // If this is the current theme, reload it
+      if (themeName === this.currentThemeName) {
+        await this.applyTheme(themeName, false);
+      }
+
+      console.log(`[ThemeService] Cleared overrides for ${themeName} theme`);
+    } catch (error) {
+      console.error('[ThemeService] Failed to clear theme overrides:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Apply a theme by name
    */
   async applyTheme(themeName: string, persist: boolean = true): Promise<void> {
     console.log('[ThemeService] Applying theme:', themeName);
 
-    const theme = getThemeByName(themeName);
+    const theme = await this.getActiveTheme(themeName);
     if (!theme) {
       console.error('[ThemeService] Theme not found:', themeName);
       return;
     }
 
     this.currentThemeName = themeName;
-
-    // Generate themed icon for common sizes
-    // This happens asynchronously to not block theme switching
-    IconThemeService.generateThemedIcon(themeName, 32).catch(console.error);
-    IconThemeService.generateThemedIcon(themeName, 48).catch(console.error);
-    IconThemeService.generateThemedIcon(themeName, 64).catch(console.error);
-    IconThemeService.generateThemedIcon(themeName, 128).catch(console.error);
+    this.currentThemeCache = theme;
 
     // Emit theme change event
     this.emit('themeChange', {

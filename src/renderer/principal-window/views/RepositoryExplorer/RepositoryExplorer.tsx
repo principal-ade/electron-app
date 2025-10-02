@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { GitBranch } from 'lucide-react';
 import { ThreePanelLayout } from '@a24z/panels';
-import '@a24z/panels/style.css';
+import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../../../theme/panelsTheme';
 import { useTheme } from 'themed-markdown';
 
@@ -13,6 +13,7 @@ import { FileSystemService } from '../../../main-process-api/FileSystemService';
 
 import { useRepositoryData, useAllRepositories } from '../../../hooks/useRepositoryData';
 import { useComponentTracking } from './components/withComponentTracking';
+import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 
 import { RepositoryDetailsPanel } from './components/RepositoryDetailsPanel';
 import { GitCloneModal } from './components/GitCloneModal';
@@ -39,6 +40,15 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyWithChanges, setShowOnlyWithChanges] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [panelSizes, setPanelSizes] = useState({ left: 20, middle: 50, right: 30 });
+
+  // Use panel persistence hook
+  const panelState = usePanelPersistence({
+    viewKey: 'repositoryExplorer',
+    defaultSizes: panelSizes,
+    collapsed: { left: sidebarCollapsed, right: rightSidebarCollapsed },
+    panelType: 'three-panel',
+  });
 
   // Use the cache to get all repositories
   // Note: autoLoad is set to true, but the cache will check if data already exists
@@ -81,10 +91,14 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   useEffect(() => {
     const loadPreferences = async () => {
       const preferences = await UserPreferencesService.getPreferences();
-      setPreferencesLoaded(true);
 
       if (preferences.landingPage?.showOnlyWithChanges !== undefined) {
         setShowOnlyWithChanges(preferences.landingPage.showOnlyWithChanges);
+      }
+
+      // Restore panel sizes
+      if (preferences.panelLayouts?.repositoryExplorer?.sizes) {
+        setPanelSizes(preferences.panelLayouts.repositoryExplorer.sizes);
       }
 
       // Restore previously selected repository
@@ -94,6 +108,8 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
           setSelectedRepositoryPath(savedRepo.path);
         }
       }
+
+      setPreferencesLoaded(true);
     };
 
     loadPreferences();
@@ -483,7 +499,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }} {...trackingProps}>
       <style>{`
         @keyframes flashHighlight {
           0%, 100% {
@@ -502,48 +518,29 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         }
       `}</style>
 
-      <div
-        {...trackingProps}
-        style={{
-          flex: 1,
-          backgroundColor: theme.colors.background,
-          color: theme.colors.text,
-          fontFamily: theme.fonts.body,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            flex: 1,
-            width: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            position: 'relative',
-          }}
-        >
-          <ThreePanelLayout
-            leftPanel={renderLeftPanel()}
-            middlePanel={renderMiddlePanel()}
-            rightPanel={renderRightPanel()}
-            collapsiblePanels={{ left: true, right: true }}
-            defaultSizes={{ left: 20, middle: 50, right: 30 }}
-            minSizes={{ left: 15, middle: 30, right: 20 }}
-            collapsed={{ left: sidebarCollapsed, right: rightSidebarCollapsed }}
-            style={{ height: '100%', width: '100%' }}
-            theme={panelsTheme}
-            showCollapseButtons={false}
-          />
-        </div>
+      <GitCloneModal
+        isOpen={showGitCloneModal}
+        onClose={() => setShowGitCloneModal(false)}
+        onRepositoryAdded={handleRepositoryAdded}
+      />
 
-        <GitCloneModal
-          isOpen={showGitCloneModal}
-          onClose={() => setShowGitCloneModal(false)}
-          onRepositoryAdded={handleRepositoryAdded}
-        />
-      </div>
+      <ThreePanelLayout
+        leftPanel={renderLeftPanel()}
+        middlePanel={renderMiddlePanel()}
+        rightPanel={renderRightPanel()}
+        collapsiblePanels={{ left: true, right: true }}
+        defaultSizes={panelState.type === 'three-panel' ? panelState.sizes : { left: 20, middle: 50, right: 30 }}
+        minSizes={{ left: 15, middle: 30, right: 20 }}
+        collapsed={panelState.collapsed}
+        style={{ height: '100%', width: '100%' }}
+        theme={panelsTheme}
+        showCollapseButtons={false}
+        onPanelResize={panelState.type === 'three-panel' ? panelState.handlePanelResize : undefined}
+        onLeftCollapseComplete={panelState.handleLeftCollapseComplete}
+        onLeftExpandComplete={panelState.handleLeftExpandComplete}
+        onRightCollapseComplete={panelState.type === 'three-panel' ? panelState.handleRightCollapseComplete : undefined}
+        onRightExpandComplete={panelState.type === 'three-panel' ? panelState.handleRightExpandComplete : undefined}
+      />
     </div>
   );
 };

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from 'themed-markdown';
 import { AnimatedResizableLayout } from '@a24z/panels';
-import '@a24z/panels/style.css';
+import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../../theme/panelsTheme';
 import { FileText, Wrench, Globe, X, Clipboard, Check } from 'lucide-react';
 import { AnimatedTimelineEvent } from '../landing-page/AnimatedTimelineEvent';

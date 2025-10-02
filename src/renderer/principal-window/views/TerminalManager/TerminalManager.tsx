@@ -2,13 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'themed-markdown';
 import { RefreshCw, Plus } from 'lucide-react';
 import { AnimatedResizableLayout } from '@a24z/panels';
-import '@a24z/panels/style.css';
+import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../../../theme/panelsTheme';
 import { TerminalService } from '../../../main-process-api/TerminalService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
+import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { TerminalInfo } from '../../../../shared/main-process-api-interfaces/TerminalService';
 import { TerminalListItem } from './components/TerminalListItem';
 import { TerminalDetailsPanel } from './components/TerminalDetailsPanel';
+import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 
 interface TerminalManagerProps {
   sidebarCollapsed?: boolean;
@@ -24,6 +26,15 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
   const [refreshing, setRefreshing] = useState(false);
   const [terminalWindows, setTerminalWindows] = useState<Map<string, number>>(new Map());
   const [creatingTerminal, setCreatingTerminal] = useState(false);
+  const [panelSizes, setPanelSizes] = useState({ left: 25, right: 75 });
+
+  // Use panel persistence hook
+  const panelState = usePanelPersistence({
+    viewKey: 'terminalManager',
+    defaultSizes: panelSizes,
+    collapsed: { left: sidebarCollapsed },
+    panelType: 'two-panel',
+  });
 
   const loadTerminals = useCallback(async () => {
     try {
@@ -47,6 +58,16 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
   useEffect(() => {
     // Load initial data
     const initialize = async () => {
+      // Load panel preferences
+      try {
+        const preferences = await UserPreferencesService.getPreferences();
+        if (preferences.panelLayouts?.terminalManager?.sizes) {
+          setPanelSizes(preferences.panelLayouts.terminalManager.sizes);
+        }
+      } catch (err) {
+        console.error('Failed to load panel preferences:', err);
+      }
+
       // Load terminals
       await loadTerminals();
 
@@ -344,11 +365,13 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
         leftPanel={renderLeftPanel()}
         rightPanel={renderRightPanel()}
         minSize={15}
-        defaultSize={25}
+        defaultSize={panelState.type === 'two-panel' ? panelState.sizes.left : 25}
         collapsibleSide="left"
-        collapsed={sidebarCollapsed}
+        collapsed={panelState.collapsed.left}
         style={{ height: '100%', width: '100%' }}
         theme={panelsTheme}
+        onCollapseComplete={panelState.handleLeftCollapseComplete}
+        onExpandComplete={panelState.handleLeftExpandComplete}
       />
     </div>
   );

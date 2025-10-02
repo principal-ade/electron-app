@@ -402,7 +402,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 gap: '16px',
               }}
             >
-              {/* Left Column - City Visualization, Git Status and Quality Panel */}
+              {/* Left Column - City Visualization and Quality Panel */}
               <div
                 style={{
                   display: 'flex',
@@ -428,14 +428,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   </div>
                 )}
 
-                {/* Git Changes List or Last Commit */}
-                <GitStatusPanel
-                  repository={selectedRepository}
-                  gitStatus={gitStatus}
-                  isLoadingGitStatus={isLoadingGitStatus}
-                  onFileClick={handleFileClick}
-                />
-
                 {/* Quality Hexagon Panel */}
                 <QualityHexagonPanel
                   directory={selectedRepository.path}
@@ -443,7 +435,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 />
               </div>
 
-              {/* Right Column - Markdown and Notes */}
+              {/* Right Column - Git Changes, Markdown and Notes */}
               <div
                 style={{
                   display: 'flex',
@@ -453,6 +445,14 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   minWidth: 0,
                 }}
               >
+                {/* Git Changes List or Last Commit */}
+                <GitStatusPanel
+                  repository={selectedRepository}
+                  gitStatus={gitStatus}
+                  isLoadingGitStatus={isLoadingGitStatus}
+                  onFileClick={handleFileClick}
+                />
+
                 {/* Markdown Files List */}
                 <div
                   style={{

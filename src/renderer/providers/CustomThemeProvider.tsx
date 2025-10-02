@@ -20,7 +20,7 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
       await ThemeService.loadPreferences();
 
       const themeName = ThemeService.getCurrentThemeName();
-      const theme = getThemeByName(themeName);
+      const theme = await ThemeService.getActiveTheme(themeName);
       const mode = ThemeService.getCurrentColorMode();
 
       if (theme) {

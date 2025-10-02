@@ -137,34 +137,19 @@ export class RepositoryCityService {
    * Calculate file and directory statistics from a FileTree
    */
   private calculateTreeStats(fileTree: FileTree): { fileCount: number; directoryCount: number } {
-    let fileCount = 0;
-    let directoryCount = 0;
-
-    const traverse = (node: any) => {
-      if (!node) return;
-
-      if (node.type === 'file') {
-        fileCount++;
-      } else if (node.type === 'directory') {
-        directoryCount++;
-        
-        // Traverse children
-        if (node.children) {
-          for (const child of Object.values(node.children)) {
-            traverse(child);
-          }
-        }
-      }
-    };
-
-    // Start traversal from root
-    if (fileTree.children) {
-      for (const child of Object.values(fileTree.children)) {
-        traverse(child);
-      }
+    // FileTree already includes stats, so we can use them directly
+    if (fileTree.stats) {
+      return {
+        fileCount: fileTree.stats.totalFiles,
+        directoryCount: fileTree.stats.totalDirectories,
+      };
     }
 
-    return { fileCount, directoryCount };
+    // Fallback: manually count if stats are not available
+    return {
+      fileCount: fileTree.allFiles?.length || 0,
+      directoryCount: fileTree.allDirectories?.length || 0,
+    };
   }
 
   /**

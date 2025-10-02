@@ -15,21 +15,90 @@ import './IntegratedShell.css';
 
 export type NavigationView = InteractiveShellNavigationView;
 
+// Helper to map view to panel layout key
+const getViewKey = (view: NavigationView): 'repositoryExplorer' | 'roomsManager' | 'terminalManager' | 'authView' | null => {
+  switch (view) {
+    case 'repository':
+      return 'repositoryExplorer';
+    case 'rooms':
+      return 'roomsManager';
+    case 'terminal':
+      return 'terminalManager';
+    case 'auth':
+      return 'authView';
+    default:
+      return null;
+  }
+};
+
+// Default collapsed states per view
+const getViewDefaults = (view: NavigationView): { left: boolean; right: boolean } => {
+  switch (view) {
+    case 'repository':
+      return { left: false, right: true };
+    case 'rooms':
+      return { left: false, right: true };
+    case 'terminal':
+      return { left: false, right: false }; // No right panel for terminal
+    case 'auth':
+      return { left: false, right: false }; // No right panel for auth
+    default:
+      return { left: false, right: false };
+  }
+};
+
 export const IntegratedShell: React.FC = () => {
   const [activeView, setActiveView] = useState<NavigationView>('rooms');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(true);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const { theme, mode } = useTheme();
 
-  // Load saved navigation view on mount
+  // Store collapsed states per view to avoid animation glitches when switching
+  const [viewCollapsedStates, setViewCollapsedStates] = useState<Record<string, { left: boolean; right: boolean }>>({
+    repository: { left: false, right: true },
+    rooms: { left: false, right: true },
+    terminal: { left: false, right: false },
+    auth: { left: false, right: false },
+    monitoring: { left: false, right: false },
+    search: { left: false, right: false },
+    settings: { left: false, right: false },
+  });
+
+  // Get current view's collapsed states
+  const sidebarCollapsed = viewCollapsedStates[activeView]?.left ?? false;
+  const rightSidebarCollapsed = viewCollapsedStates[activeView]?.right ?? false;
+
+  // Load saved navigation view and panel states on mount
   useEffect(() => {
     const loadPreferences = async () => {
       try {
         const prefs = await UserPreferencesService.getPreferences();
+
+        // Load active view
         if (prefs.interactiveShell?.activeNavigationView) {
           setActiveView(prefs.interactiveShell.activeNavigationView);
         }
+
+        // Load collapsed states for all views
+        const newViewStates = { ...viewCollapsedStates };
+
+        // Load each view's collapsed state
+        const views: NavigationView[] = ['repository', 'rooms', 'terminal', 'auth'];
+        for (const view of views) {
+          const viewKey = getViewKey(view);
+          const defaults = getViewDefaults(view);
+
+          if (viewKey && prefs.panelLayouts?.[viewKey]?.collapsed) {
+            const collapsed = prefs.panelLayouts[viewKey].collapsed;
+            newViewStates[view] = {
+              left: collapsed.left ?? defaults.left,
+              right: collapsed.right ?? defaults.right,
+            };
+          } else {
+            newViewStates[view] = defaults;
+          }
+        }
+
+        setViewCollapsedStates(newViewStates);
       } catch (error) {
         console.error('Failed to load navigation preference:', error);
       } finally {
@@ -37,7 +106,7 @@ export const IntegratedShell: React.FC = () => {
       }
     };
     loadPreferences();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Save navigation view when it changes
   const handleViewChange = async (view: NavigationView) => {
@@ -53,6 +122,73 @@ export const IntegratedShell: React.FC = () => {
         });
       } catch (error) {
         console.error('Failed to save navigation preference:', error);
+      }
+    }
+  };
+
+  // Save collapsed states when they change
+  const handleToggleSidebar = async () => {
+    const newCollapsed = !sidebarCollapsed;
+
+    // Update state for current view
+    setViewCollapsedStates(prev => ({
+      ...prev,
+      [activeView]: {
+        ...prev[activeView],
+        left: newCollapsed,
+      },
+    }));
+
+    if (preferencesLoaded) {
+      try {
+        const viewKey = getViewKey(activeView);
+        if (viewKey) {
+          await UserPreferencesService.updatePreferences({
+            panelLayouts: {
+              [viewKey]: {
+                collapsed: {
+                  left: newCollapsed,
+                  right: viewCollapsedStates[activeView]?.right, // Preserve right state
+                },
+              },
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Failed to save sidebar collapsed state:', error);
+      }
+    }
+  };
+
+  const handleToggleRightSidebar = async () => {
+    const newCollapsed = !rightSidebarCollapsed;
+
+    // Update state for current view
+    setViewCollapsedStates(prev => ({
+      ...prev,
+      [activeView]: {
+        ...prev[activeView],
+        right: newCollapsed,
+      },
+    }));
+
+    if (preferencesLoaded) {
+      try {
+        const viewKey = getViewKey(activeView);
+        if (viewKey) {
+          await UserPreferencesService.updatePreferences({
+            panelLayouts: {
+              [viewKey]: {
+                collapsed: {
+                  left: viewCollapsedStates[activeView]?.left, // Preserve left state
+                  right: newCollapsed,
+                },
+              },
+            },
+          });
+        }
+      } catch (error) {
+        console.error('Failed to save right sidebar collapsed state:', error);
       }
     }
   };
@@ -79,10 +215,10 @@ export const IntegratedShell: React.FC = () => {
         <IntegratedTitlebar
           showSidebarControl={activeView === 'repository' || activeView === 'terminal' || activeView === 'rooms'}
           sidebarCollapsed={sidebarCollapsed}
-          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onToggleSidebar={handleToggleSidebar}
           showRightSidebarControl={activeView === 'rooms' || activeView === 'repository'}
           rightSidebarCollapsed={rightSidebarCollapsed}
-          onToggleRightSidebar={() => setRightSidebarCollapsed(!rightSidebarCollapsed)}
+          onToggleRightSidebar={handleToggleRightSidebar}
         />
 
         {/* Main content area with rounded corners for Slack-style cutout */}

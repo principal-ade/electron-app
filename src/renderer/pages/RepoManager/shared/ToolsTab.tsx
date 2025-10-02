@@ -216,7 +216,7 @@ export const ToolsTab: React.FC<ToolsTabProps> = ({ packageLayers, repositoryPat
   const runTool = useCallback(async (packagePath: string, command: string, toolName: string, scriptName?: string) => {
     // Use script name for key if provided, otherwise use command
     const key = scriptName ? `${packagePath}:${scriptName}` : `${packagePath}:${command}`;
-    // eslint-disable-next-line no-console
+     
     console.info(`[ToolsTab] Running tool: ${toolName} with command: ${command} in package: ${packagePath}`);
 
     // Mark tool as running
@@ -236,7 +236,7 @@ export const ToolsTab: React.FC<ToolsTabProps> = ({ packageLayers, repositoryPat
       const result = await RepositoryMonitoringService.executeTool(request);
 
       if (result) {
-        // eslint-disable-next-line no-console
+         
         console.info(`[ToolsTab] Tool execution result for key "${key}":`, result);
         setToolResults(prev => {
           const newMap = new Map(prev);
@@ -248,11 +248,11 @@ export const ToolsTab: React.FC<ToolsTabProps> = ({ packageLayers, repositoryPat
         // Show result modal for any execution (success or failure) to display output
         setShowingResult(key);
       } else {
-        // eslint-disable-next-line no-console
+         
         console.info(`[ToolsTab] No result returned from tool execution`);
       }
     } catch (error) {
-      // eslint-disable-next-line no-console
+       
       console.error('Error running tool:', error);
     } finally {
       setRunningTools(prev => {

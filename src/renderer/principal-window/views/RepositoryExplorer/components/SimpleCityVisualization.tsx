@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Map as MapIcon, Layers } from 'lucide-react';
+import { Map as MapIcon, Layers, File, Folder } from 'lucide-react';
 import { useTheme } from 'themed-markdown';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import { ArchitectureMapHighlightLayers } from '@principal-ai/code-city-react';
@@ -128,8 +128,15 @@ export const SimpleCityVisualization: React.FC<SimpleCityVisualizationProps> = (
         >
           {loadingMessage}
           {treeStats && (
-            <div style={{ marginTop: '8px', fontSize: '12px' }}>
-              {treeStats.fileCount.toLocaleString()} files • {treeStats.directoryCount.toLocaleString()} directories
+            <div style={{ marginTop: '8px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <File size={12} />
+                <span>{treeStats.fileCount.toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Folder size={12} />
+                <span>{treeStats.directoryCount.toLocaleString()}</span>
+              </div>
             </div>
           )}
         </div>
@@ -214,18 +221,23 @@ export const SimpleCityVisualization: React.FC<SimpleCityVisualizationProps> = (
             >
               Repository Structure
             </h3>
-            {treeStats && (
-              <span
-                style={{ fontSize: '13px', color: theme.colors.textSecondary }}
-              >
-                {treeStats.fileCount.toLocaleString()} files •{' '}
-                {treeStats.directoryCount.toLocaleString()} directories
-              </span>
-            )}
           </div>
-          
-          {highlightLayers.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {treeStats && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: theme.colors.textSecondary }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <File size={14} />
+                  <span>{treeStats.fileCount.toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Folder size={14} />
+                  <span>{treeStats.directoryCount.toLocaleString()}</span>
+                </div>
+              </div>
+            )}
+
+            {highlightLayers.length > 0 && (
               <div
                 style={{
                   display: 'flex',
@@ -242,8 +254,8 @@ export const SimpleCityVisualization: React.FC<SimpleCityVisualizationProps> = (
                 <Layers size={12} />
                 <span>{highlightLayers.length} layer{highlightLayers.length !== 1 ? 's' : ''}</span>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
 

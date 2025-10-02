@@ -89,9 +89,14 @@ export interface UserPreferences {
   selectedTheme?: string; // Name of the selected theme (built-in or custom)
   customThemes?: Record<string, Record<string, unknown>>; // User-defined custom themes
   colorMode?: 'light' | 'dark'; // Override for color mode
-  iconTheme?: {
-    eyeColor?: string; // Custom eye color for owl icon
-    style?: 'gradient' | 'solid' | 'glow'; // Icon style preference
+  // Theme customization overrides
+  customThemeOverrides?: {
+    [themeId: string]: {
+      baseTheme: string; // Original theme name
+      overrides: Record<string, unknown>; // Color overrides (partial Theme object)
+      customName?: string; // Optional custom name
+      lastModified: number; // Timestamp
+    };
   };
 
   // Markdown rendering preferences
@@ -122,6 +127,26 @@ export interface UserPreferences {
   // Interactive shell preferences
   interactiveShell?: {
     activeNavigationView?: InteractiveShellNavigationView;
+  };
+
+  // Panel layout preferences (sizes and collapsed state)
+  panelLayouts?: {
+    repositoryExplorer?: {
+      sizes?: { left: number; middle: number; right: number };
+      collapsed?: { left?: boolean; right?: boolean };
+    };
+    roomsManager?: {
+      sizes?: { left: number; middle: number; right: number };
+      collapsed?: { left?: boolean; right?: boolean };
+    };
+    terminalManager?: {
+      sizes?: { left: number; right: number };
+      collapsed?: { left?: boolean };
+    };
+    authView?: {
+      sizes?: { left: number; right: number };
+      collapsed?: { left?: boolean };
+    };
   };
 
   // TODO: Add these fields that are currently using direct storage.get/set calls:

@@ -8,9 +8,11 @@ Implementation plan for allowing users to customize existing themes through a co
 1. User opens Settings and navigates to theme dropdown
 2. User selects any predefined theme (Default, Professional, Ocean, Sunset, Minimal, High Contrast)
 3. User clicks "Customize Selected Theme" button/option in dropdown
-4. Theme customization panel opens showing color pickers for all theme colors
-5. User edits colors with live preview
-6. User saves customized theme (overwrites selected theme or saves as new variant)
+4. Theme customization panel opens and captures the current theme state as a snapshot
+5. User edits colors - changes are applied and saved immediately to preferences
+6. User can continue editing and see changes reflected throughout the app
+7. If user clicks "Revert", theme returns to the snapshot from when modal opened
+8. When modal closes, the snapshot is discarded (changes remain unless reverted)
 
 ## Implementation
 
@@ -35,12 +37,50 @@ Create a new component: `ThemeCustomizationPanel`
   - Border colors
   - Accent colors
   - Status colors (success, warning, error, info)
-- Live preview of changes
-- Reset to default button for each color
-- Reset all to original theme
-- Save options:
-  - "Save Changes" - Overwrites current theme
-  - "Save As New" - Creates a custom variant
+- Auto-save: Changes are applied and saved immediately
+- Live preview: Changes reflect throughout the entire app
+- Reset to default button for each color (resets to base theme color)
+- Revert button: Returns to the snapshot taken when modal opened
+- Close button: Keeps current changes and discards snapshot
+
+**Implementation Pattern**:
+```typescript
+function ThemeCustomizationPanel({ themeId, onClose }) {
+  // Capture snapshot when modal opens
+  const snapshotRef = useRef(null);
+
+  useEffect(() => {
+    const currentTheme = ThemeService.getActiveTheme(themeId);
+    snapshotRef.current = deepClone(currentTheme);
+  }, [themeId]);
+
+  // Auto-save on color change
+  const handleColorChange = async (colorKey: string, newValue: string) => {
+    await ThemeService.updateThemeColor(themeId, colorKey, newValue);
+    // Changes are immediately visible app-wide
+  };
+
+  // Reset to base theme default for one color
+  const handleResetColor = async (colorKey: string) => {
+    const baseTheme = ThemeService.getBaseTheme(themeId);
+    await ThemeService.updateThemeColor(themeId, colorKey, baseTheme[colorKey]);
+  };
+
+  // Revert all changes to snapshot
+  const handleRevertAll = async () => {
+    await ThemeService.restoreThemeSnapshot(themeId, snapshotRef.current);
+    onClose();
+  };
+
+  // Close without reverting
+  const handleClose = () => {
+    snapshotRef.current = null; // Discard snapshot
+    onClose();
+  };
+
+  return (/* UI */)
+}
+```
 
 **UI Layout**:
 ```
@@ -48,25 +88,26 @@ Create a new component: `ThemeCustomizationPanel`
 │ Customizing: Ocean Theme            │
 ├─────────────────────────────────────┤
 │ Primary Colors                       │
-│ ├─ Primary      [#0891B2] [picker]  │
-│ ├─ Secondary    [#0E7490] [picker]  │
-│ └─ Accent       [#06B6D4] [picker]  │
+│ ├─ Primary      [#0891B2] [picker] [↺]│
+│ ├─ Secondary    [#0E7490] [picker] [↺]│
+│ └─ Accent       [#06B6D4] [picker] [↺]│
 │                                      │
 │ Background Colors                    │
-│ ├─ Background   [#FFFFFF] [picker]  │
-│ ├─ Surface      [#F0F9FF] [picker]  │
-│ └─ Paper        [#FFFFFF] [picker]  │
+│ ├─ Background   [#FFFFFF] [picker] [↺]│
+│ ├─ Surface      [#F0F9FF] [picker] [↺]│
+│ └─ Paper        [#FFFFFF] [picker] [↺]│
 │                                      │
 │ Text Colors                          │
-│ ├─ Primary Text [#0F172A] [picker]  │
-│ ├─ Secondary    [#475569] [picker]  │
-│ └─ Disabled     [#94A3B8] [picker]  │
+│ ├─ Primary Text [#0F172A] [picker] [↺]│
+│ ├─ Secondary    [#475569] [picker] [↺]│
+│ └─ Disabled     [#94A3B8] [picker] [↺]│
 │                                      │
-│ [Live Preview Panel]                 │
+│ Note: Changes are saved automatically │
 │                                      │
-│ [Reset All] [Cancel] [Save Changes]  │
+│ [Revert All Changes] [Close]         │
 └─────────────────────────────────────┘
 ```
+Note: [↺] = Reset individual color to base theme default
 
 ### 3. Theme Storage
 
@@ -178,23 +219,41 @@ Show warnings (not errors) for:
 - Colors too similar to each other
 - Unusual color choices
 
+## Modal State Management
+
+The customization panel uses a snapshot-based workflow:
+
+1. **On Modal Open**:
+   - Capture current theme state (base + any existing overrides) as a snapshot
+   - Store snapshot in modal component state (not persisted)
+   - Display current colors in pickers
+
+2. **During Editing**:
+   - Each color change is immediately saved to UserPreferences
+   - ThemeService applies changes instantly throughout the app
+   - User sees real-time feedback across all UI
+
+3. **On Modal Close**:
+   - If "Close" button clicked: Keep all changes, discard snapshot
+   - If "Revert All Changes" clicked: Restore snapshot to UserPreferences, then close
+   - Snapshot is discarded in both cases
+
 ## Reset Options
 
-1. **Reset Single Color**: Revert one color to base theme default
-2. **Reset All Colors**: Discard all customizations, return to base theme
-3. **Reset to Last Saved**: Undo unsaved changes
+1. **Reset Single Color** (↺ button):
+   - Reverts one color to the base theme's default value
+   - Saves change immediately to UserPreferences
+   - Does not affect the snapshot
 
-## Save Options
+2. **Revert All Changes**:
+   - Restores the entire theme to the snapshot taken when modal opened
+   - Undoes all edits made during this session
+   - Closes the modal after reverting
 
-1. **Save Changes**:
-   - Overwrites customizations for current theme
-   - Keeps same theme name
-   - Updates lastModified timestamp
-
-2. **Save As New** (Future):
-   - Creates a new custom theme variant
-   - Prompts for custom name
-   - Adds to theme dropdown as separate option
+3. **Close**:
+   - Keeps all current changes
+   - Discards the snapshot
+   - No further undo possible after closing
 
 ## Integration Points
 

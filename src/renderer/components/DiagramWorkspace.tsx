@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { AnimatedResizableLayout } from '@a24z/panels';
-import '@a24z/panels/style.css';
+import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../theme/panelsTheme';
 import { ExcalidrawWrapper } from './shared/ExcalidrawWrapper';
 import {

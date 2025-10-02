@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from 'themed-markdown';
-import { Palette, FolderOpen, RefreshCw } from 'lucide-react';
+import { Palette, FolderOpen, RefreshCw, Settings } from 'lucide-react';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
@@ -8,6 +8,7 @@ import { ThemeService } from '../../../../services/ThemeService';
 import type { EditorId } from '../../../../../shared/types/editor.types';
 import { EDITOR_LABELS } from '../../../../../shared/types/editor.types';
 import { predefinedThemes, getThemeNames } from '../../../../themes/predefinedThemes';
+import { ThemeCustomizationPanel } from '../../../components/themes/ThemeCustomizationPanel';
 import AppIcon from '../../../../../../assets/icons/icon-48x48.png';
 
 export const GeneralSettings: React.FC = () => {
@@ -19,6 +20,7 @@ export const GeneralSettings: React.FC = () => {
   const [selectedTheme, setSelectedTheme] = useState<string>('default');
   const [pendingTheme, setPendingTheme] = useState<string | null>(null);
   const [isApplyingTheme, setIsApplyingTheme] = useState(false);
+  const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
 
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
@@ -459,6 +461,33 @@ export const GeneralSettings: React.FC = () => {
                 )}
               </button>
             )}
+
+            <button
+              onClick={() => setShowCustomizationPanel(true)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }}
+            >
+              <Settings size={14} />
+              Customize
+            </button>
           </div>
           <div
             style={{
@@ -483,6 +512,14 @@ export const GeneralSettings: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Theme Customization Panel */}
+      {showCustomizationPanel && (
+        <ThemeCustomizationPanel
+          themeName={selectedTheme}
+          onClose={() => setShowCustomizationPanel(false)}
+        />
+      )}
     </div>
   );
 };

@@ -161,12 +161,21 @@ export class RepositoryMonitoringServer {
   }
 
   /**
-   * Refresh repository data (clear cache)
+   * Refresh repository data (clear cache and trigger git status update)
    */
   async refreshRepository(path: string): Promise<void> {
     this.fileTreeCache.delete(path);
     this.packageCache.delete(path);
     await this.getFileTree(path);
+
+    // Also fetch fresh git status to update ahead/behind indicators
+    try {
+      const gitStatus = await this.getGitStatus(path);
+      // Emit git status changed event to trigger cache update
+      this.emit(MonitoringInternalEvent.GIT_STATUS_CHANGED, gitStatus);
+    } catch (error) {
+      console.error(`[RepositoryMonitoring] Failed to refresh git status for ${path}:`, error);
+    }
   }
 
   /**

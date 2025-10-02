@@ -2,14 +2,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from 'themed-markdown';
 import { RefreshCw, Plus } from 'lucide-react';
 import { ThreePanelLayout } from '@a24z/panels';
-import '@a24z/panels/style.css';
+import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../../../theme/panelsTheme';
 import type { PalaceRoom, AlexandriaEntry } from '@a24z/core-library';
 import { PalaceRoomService } from '../../../main-process-api/PalaceRoomService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
+import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { RoomListItem } from './components/RoomListItem';
 import { RoomDetailsPanel } from './components/RoomDetailsPanel';
 import { CreateRoomModal } from './components/CreateRoomModal';
+import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 
 export interface RoomInfo {
   room: PalaceRoom;
@@ -34,6 +36,15 @@ export const RoomsManager: React.FC<RoomsManagerProps> = ({
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [repositories, setRepositories] = useState<AlexandriaEntry[]>([]);
+  const [panelSizes, setPanelSizes] = useState({ left: 20, middle: 50, right: 30 });
+
+  // Use panel persistence hook
+  const panelState = usePanelPersistence({
+    viewKey: 'roomsManager',
+    defaultSizes: panelSizes,
+    collapsed: { left: sidebarCollapsed, right: rightSidebarCollapsed },
+    panelType: 'three-panel',
+  });
 
   const loadRooms = useCallback(async () => {
     try {
@@ -66,17 +77,26 @@ export const RoomsManager: React.FC<RoomsManagerProps> = ({
   }, [selectedRoom]);
 
   useEffect(() => {
-    // Load repositories on mount
-    const loadRepos = async () => {
+    // Load repositories and preferences on mount
+    const initialize = async () => {
       try {
         const repos = await AlexandriaService.getRepositories();
         setRepositories(repos);
       } catch (err) {
         console.error('Failed to load repositories:', err);
       }
+
+      try {
+        const preferences = await UserPreferencesService.getPreferences();
+        if (preferences.panelLayouts?.roomsManager?.sizes) {
+          setPanelSizes(preferences.panelLayouts.roomsManager.sizes);
+        }
+      } catch (err) {
+        console.error('Failed to load panel preferences:', err);
+      }
     };
 
-    loadRepos();
+    initialize();
     loadRooms();
   }, [loadRooms]);
 
@@ -341,12 +361,17 @@ export const RoomsManager: React.FC<RoomsManagerProps> = ({
         middlePanel={renderMiddlePanel()}
         rightPanel={renderRightPanel()}
         collapsiblePanels={{ left: true, right: true }}
-        defaultSizes={{ left: 20, middle: 50, right: 30 }}
+        defaultSizes={panelState.type === 'three-panel' ? panelState.sizes : { left: 20, middle: 50, right: 30 }}
         minSizes={{ left: 15, middle: 30, right: 20 }}
-        collapsed={{ left: sidebarCollapsed, right: rightSidebarCollapsed }}
+        collapsed={panelState.collapsed}
         style={{ height: '100%', width: '100%' }}
         theme={panelsTheme}
         showCollapseButtons={false}
+        onPanelResize={panelState.type === 'three-panel' ? panelState.handlePanelResize : undefined}
+        onLeftCollapseComplete={panelState.handleLeftCollapseComplete}
+        onLeftExpandComplete={panelState.handleLeftExpandComplete}
+        onRightCollapseComplete={panelState.type === 'three-panel' ? panelState.handleRightCollapseComplete : undefined}
+        onRightExpandComplete={panelState.type === 'three-panel' ? panelState.handleRightExpandComplete : undefined}
       />
     </div>
   );

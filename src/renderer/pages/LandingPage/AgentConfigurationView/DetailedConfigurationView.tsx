@@ -9,7 +9,7 @@ import {
 
 import { Theme, useTheme } from 'themed-markdown';
 import { AnimatedResizableLayout } from '@a24z/panels';
-import '@a24z/panels/style.css';
+import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../../../theme/panelsTheme';
 
 import { AgentSetupStatus } from '../../../../shared/main-process-api-interfaces/AgentConfigAPI';
