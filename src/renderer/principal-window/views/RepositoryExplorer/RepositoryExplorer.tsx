@@ -23,11 +23,13 @@ import { FilePreviewPanel } from './components/FilePreviewPanel';
 interface RepositoryExplorerProps {
   sidebarCollapsed?: boolean;
   rightSidebarCollapsed?: boolean;
+  onEnsureRightPanelOpen?: () => void;
 }
 
 export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   sidebarCollapsed = false,
   rightSidebarCollapsed = false,
+  onEnsureRightPanelOpen,
 }) => {
   const { theme } = useTheme();
   const panelsTheme = usePanelsTheme();
@@ -43,6 +45,16 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [panelSizes, setPanelSizes] = useState({ left: 20, middle: 50, right: 30 });
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+
+  const handleFileSelect = useCallback(
+    (filePath: string | null) => {
+      setSelectedFilePath(filePath);
+      if (filePath) {
+        onEnsureRightPanelOpen?.();
+      }
+    },
+    [onEnsureRightPanelOpen],
+  );
 
   // Use panel persistence hook
   const panelState = usePanelPersistence({
@@ -473,7 +485,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         onRepositoryRemoved={handleRepositoryRemoved}
         onRefresh={refreshRepos}
         isRefreshing={isLoadingRepos}
-        onFileSelect={setSelectedFilePath}
+        onFileSelect={handleFileSelect}
       />
     );
   };

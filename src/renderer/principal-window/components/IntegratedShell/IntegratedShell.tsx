@@ -193,6 +193,41 @@ export const IntegratedShell: React.FC = () => {
     }
   };
 
+  const ensureRightSidebarOpen = () => {
+    if (!rightSidebarCollapsed) {
+      return;
+    }
+
+    const currentLeftCollapsed =
+      viewCollapsedStates[activeView]?.left ?? getViewDefaults(activeView).left;
+
+    setViewCollapsedStates(prev => ({
+      ...prev,
+      [activeView]: {
+        ...prev[activeView],
+        right: false,
+      },
+    }));
+
+    if (preferencesLoaded) {
+      const viewKey = getViewKey(activeView);
+      if (viewKey) {
+        void UserPreferencesService.updatePreferences({
+          panelLayouts: {
+            [viewKey]: {
+              collapsed: {
+                left: currentLeftCollapsed,
+                right: false,
+              },
+            },
+          },
+        }).catch(error => {
+          console.error('Failed to save right sidebar collapsed state:', error);
+        });
+      }
+    }
+  };
+
   const backgroundColor = mode === 'dark' && theme.modes?.dark?.background
     ? theme.modes.dark.background
     : theme.colors.background;
@@ -252,7 +287,13 @@ export const IntegratedShell: React.FC = () => {
               : theme.colors.background,
           }}>
             {/* Views will be rendered here based on activeView */}
-            {activeView === 'repository' && <RepositoryExplorer sidebarCollapsed={sidebarCollapsed} rightSidebarCollapsed={rightSidebarCollapsed} />}
+            {activeView === 'repository' && (
+              <RepositoryExplorer
+                sidebarCollapsed={sidebarCollapsed}
+                rightSidebarCollapsed={rightSidebarCollapsed}
+                onEnsureRightPanelOpen={ensureRightSidebarOpen}
+              />
+            )}
             {activeView === 'terminal' && <TerminalManager sidebarCollapsed={sidebarCollapsed} />}
             {activeView === 'rooms' && <RoomsManager sidebarCollapsed={sidebarCollapsed} rightSidebarCollapsed={rightSidebarCollapsed} />}
             {activeView === 'search' && <MarkdownSearch />}
