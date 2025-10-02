@@ -121,7 +121,7 @@ describe('RepositoryMonitoringServer', () => {
 
       expect(mockedGitCore.enableFSMonitor).toHaveBeenCalledWith(testRepoPath);
       const gitWatcher = gitWatcherAdapterInstances[0];
-      expect(gitWatcher.startWatching).toHaveBeenCalledWith(testRepoPath);
+      expect(gitWatcher.startWatching).toHaveBeenCalledWith(testRepoPath, 'minimal');
 
       const state = getRepositoryState(testRepoPath);
       expect(state?.gitWatchingEnabled).toBe(true);
@@ -145,7 +145,7 @@ describe('RepositoryMonitoringServer', () => {
 
       expect(mockedGitCore.enableFSMonitor).toHaveBeenCalledWith(testRepoPath);
       const gitWatcher = gitWatcherAdapterInstances[0];
-      expect(gitWatcher.startWatching).toHaveBeenCalledWith(testRepoPath);
+      expect(gitWatcher.startWatching).toHaveBeenCalledWith(testRepoPath, 'fallback');
 
       const state = getRepositoryState(testRepoPath);
       expect(state?.gitWatchingEnabled).toBe(true);

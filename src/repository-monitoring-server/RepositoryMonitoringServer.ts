@@ -306,14 +306,15 @@ export class RepositoryMonitoringServer {
     }
 
     try {
-      // Start library-based git state event watching
-      console.info(`[RepositoryMonitoring] Starting git state event watching for ${repoPath}`);
-      await this.gitWatcherAdapter.startWatching(repoPath);
-
       // Attempt to enable fsmonitor for improved performance information
       const fsMonitorEnabled = await GitCore.enableFSMonitor(repoPath);
       state.fsMonitorEnabled = fsMonitorEnabled;
-      state.watchingMode = fsMonitorEnabled ? 'minimal' : 'fallback';
+      const workspaceMode: 'minimal' | 'fallback' = fsMonitorEnabled ? 'minimal' : 'fallback';
+      state.watchingMode = workspaceMode;
+
+      // Start library-based git state and workspace event watching
+      console.info(`[RepositoryMonitoring] Starting git state event watching for ${repoPath}`);
+      await this.gitWatcherAdapter.startWatching(repoPath, workspaceMode);
       state.gitWatchingEnabled = true;
       state.isWatching = true;
 
