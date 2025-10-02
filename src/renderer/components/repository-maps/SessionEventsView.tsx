@@ -13,7 +13,7 @@ import {
   Info,
   Code,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 // Using SDK service with new types directly
 import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';

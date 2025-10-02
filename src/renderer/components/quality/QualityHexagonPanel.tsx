@@ -5,7 +5,7 @@ import {
   QualityHexagonDetailed,
   type QualityMetrics
 } from '@a24z/alexandria-ui';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { MockQualityMetricsService } from '../../services/MockQualityMetricsService';
 import type { ExtendedQualityMetrics, QualityTier } from '../../services/MockQualityMetricsService';
 

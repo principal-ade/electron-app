@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { X, ExternalLink } from 'lucide-react';
 import { FileViewer } from '../../../components/FileViewer';
 import { ContentProvider } from '../../../services/ContentProviders';

@@ -8,7 +8,7 @@ import {
   Globe,
   Edit3,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 
 interface HookTypeCardProps {
   type: string;

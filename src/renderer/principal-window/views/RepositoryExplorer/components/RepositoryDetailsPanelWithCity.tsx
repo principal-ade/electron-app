@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { CityData } from '@principal-ai/code-city-react';
 import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../../shared/types/repository.types';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ThemeProvider, type Theme } from 'themed-markdown';
+import { ThemeProvider } from '@a24z/industry-theme';
+import type { Theme } from '@a24z/industry-theme';
 import { ThemeService, ThemeChangeEvent } from '../services/ThemeService';
 import { getThemeByName } from '../themes/predefinedThemes';
 

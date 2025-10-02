@@ -1,5 +1,4 @@
-import React from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Cloud, GitBranch, Download, ExternalLink, Lock, Unlock } from 'lucide-react';
 import type { GitHubRepository } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
 import { getRelativeTime } from '../utils/repositoryOrganizer';

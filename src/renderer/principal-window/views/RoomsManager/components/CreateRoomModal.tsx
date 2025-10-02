@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 
 interface CreateRoomModalProps {
   isOpen: boolean;

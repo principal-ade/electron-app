@@ -48,8 +48,7 @@ src/renderer/principal-window/
 3. **Create main view component:**
    ```tsx
    // src/renderer/principal-window/views/[ViewName]/[ViewName].tsx
-   import React from 'react';
-   import { useTheme } from 'themed-markdown';
+   import { useTheme } from '@a24z/industry-theme';
 
    export const [ViewName]: React.FC = () => {
      const { theme } = useTheme();
@@ -346,7 +345,7 @@ Here's a complete example of migrating the AllRepositoryMarkdownSearch:
    ```tsx
    // src/renderer/principal-window/views/MarkdownSearch/MarkdownSearch.tsx
    import React from 'react';
-   import { useTheme } from 'themed-markdown';
+  import { useTheme } from '@a24z/industry-theme';
    // Update import paths (3 levels up)
    import { DocumentSearchService } from '../../../services/DocumentSearchService';
 

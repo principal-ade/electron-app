@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Activity, Plus } from 'lucide-react';
 import { EnhancedUIAgentSessionData } from '../../types/session.types';
 

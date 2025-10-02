@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { usePanelsTheme } from '../theme/panelsTheme';
 
 import { FileViewer } from '../components/FileViewer';

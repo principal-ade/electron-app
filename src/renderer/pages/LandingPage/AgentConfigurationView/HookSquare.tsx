@@ -7,7 +7,7 @@ import {
   ToggleRight,
   Settings,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 
 interface HookSquareProps {
   command: string;

@@ -10,7 +10,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
 import { TerminalService } from '../../main-process-api/TerminalService';

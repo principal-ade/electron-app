@@ -7,7 +7,7 @@ import {
   Copy
 } from 'lucide-react';
 import type { RoomInfo } from '../RoomsManager';
-import type { Theme } from 'themed-markdown';
+import type { Theme } from '@a24z/industry-theme';
 import type { PalacePortal, AlexandriaEntry, ExcalidrawData } from '@a24z/core-library';
 import { PalaceRoomService } from '../../../../main-process-api/PalaceRoomService';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';

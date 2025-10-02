@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Search, FileText, Book, Loader, Eye, EyeOff } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';

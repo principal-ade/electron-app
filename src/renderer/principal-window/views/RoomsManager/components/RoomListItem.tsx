@@ -1,7 +1,7 @@
 import React from 'react';
 import { GitBranch } from 'lucide-react';
 import type { RoomInfo } from '../RoomsManager';
-import type { Theme } from 'themed-markdown';
+import type { Theme } from '@a24z/industry-theme';
 
 interface RoomListItemProps {
   room: RoomInfo;

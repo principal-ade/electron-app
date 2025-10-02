@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Package, Search, X, Cloud, ToggleLeft, ToggleRight } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';

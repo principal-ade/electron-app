@@ -13,7 +13,7 @@ import {
   WifiOff,
   UserPlus,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { GitSyncClient } from '../../services/git-sync/GitSyncClient';
 import { gitSyncConnectionManager } from '../../services/git-sync/GitSyncConnectionManager';
 import { AuthenticationService } from '../../main-process-api/AuthenticationService';

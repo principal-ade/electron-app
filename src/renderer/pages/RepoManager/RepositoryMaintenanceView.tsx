@@ -16,7 +16,7 @@ import {
   Zap,
   Palette,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { PackageLayer } from '@principal-ai/codebase-composition';

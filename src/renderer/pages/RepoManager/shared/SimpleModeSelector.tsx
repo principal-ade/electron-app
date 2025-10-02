@@ -1,5 +1,4 @@
-import React from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { RepositoryViewType } from '../../../../shared/types/userPreferences.types';
 
 export type RepositoryMode = RepositoryViewType;

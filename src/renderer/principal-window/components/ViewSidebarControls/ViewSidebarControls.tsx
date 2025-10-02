@@ -1,6 +1,6 @@
 import React from 'react';
 import { PanelLeft, PanelLeftClose, PanelRight, PanelRightClose } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 
 interface ViewSidebarControlsProps {
   isCollapsed: boolean;

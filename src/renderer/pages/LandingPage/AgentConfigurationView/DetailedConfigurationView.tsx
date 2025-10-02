@@ -2,12 +2,10 @@ import React, { useEffect } from 'react';
 import { Bot, Lock, Unlock, Wand2 } from 'lucide-react';
 
 import {
-  AgentInfo,
-  getAgentInfo,
-  SupportedAgent,
-} from '@principal-ai/agent-monitoring';
+  AgentInfo, getAgentInfo, SupportedAgent, } from '@principal-ai/agent-monitoring';
 
-import { Theme, useTheme } from 'themed-markdown';
+import type { Theme } from '@a24z/industry-theme';
+import { useTheme } from '@a24z/industry-theme';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../../../theme/panelsTheme';

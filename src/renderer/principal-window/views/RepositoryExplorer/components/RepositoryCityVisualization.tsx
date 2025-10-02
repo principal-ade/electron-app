@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Map as MapIcon, Layers, HelpCircle } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import { ArchitectureMapHighlightLayers, MultiVersionCityBuilder } from '@principal-ai/code-city-react';
 import { FileTree } from '@principal-ai/repository-abstraction';

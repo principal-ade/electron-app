@@ -6,7 +6,7 @@ import React, {
   useRef,
 } from 'react';
 import { FileTree } from '@principal-ai/repository-abstraction';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Code, Check, AlertCircle, GitBranch, Search } from 'lucide-react';
 import { LocalSearchPanel } from '../shared/LocalSearchPanel';
 import { FileTreeSource } from '../../types/file-tree-source';

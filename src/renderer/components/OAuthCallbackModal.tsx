@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Github, Key, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 
 interface OAuthCallbackModalProps {

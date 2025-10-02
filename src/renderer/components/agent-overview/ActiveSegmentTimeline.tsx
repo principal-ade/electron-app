@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../../theme/panelsTheme';

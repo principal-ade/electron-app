@@ -13,7 +13,7 @@ import {
   X,
   Info,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { PackageLayer, ConfigFile, PackageCommand } from '@principal-ai/codebase-composition';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
 import type { LensResult, Issue } from '@principal-ai/codebase-quality-lenses';

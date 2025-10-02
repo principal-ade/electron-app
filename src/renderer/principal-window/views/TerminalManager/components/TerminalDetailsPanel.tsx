@@ -1,6 +1,6 @@
 import React from 'react';
 import { Terminal, ExternalLink, Folder, Clock, Cpu, AlertCircle } from 'lucide-react';
-import type { Theme } from 'themed-markdown';
+import type { Theme } from '@a24z/industry-theme';
 import { TerminalInfo } from '../../../../../shared/main-process-api-interfaces/TerminalService';
 import TerminalPanel from '../../../../components/Terminal/TerminalPanel';
 

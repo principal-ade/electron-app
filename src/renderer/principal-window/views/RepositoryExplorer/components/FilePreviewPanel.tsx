@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { ThemedMonacoWithProvider } from '@principal-ade/industry-themed-monaco-editor';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';

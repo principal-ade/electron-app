@@ -1,4 +1,4 @@
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { useMemo } from 'react';
 import type { PanelTheme } from '@a24z/panels';
 

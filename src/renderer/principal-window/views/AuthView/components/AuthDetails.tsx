@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { LogIn, LogOut, Loader2, Shield, CheckCircle, XCircle, Key, Building, RefreshCw, ExternalLink } from 'lucide-react';
 import { gitSyncConnectionManager } from '../../../../services/git-sync/GitSyncConnectionManager';
 import { GithubService } from '../../../../main-process-api/GithubService';

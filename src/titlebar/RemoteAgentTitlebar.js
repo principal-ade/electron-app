@@ -1,6 +1,6 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useState } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 export const RemoteAgentTitlebar = () => {
     const { theme } = useTheme();
     const [agents, setAgents] = useState([]);

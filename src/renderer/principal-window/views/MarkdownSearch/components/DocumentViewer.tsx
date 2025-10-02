@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { FileText, ExternalLink, Copy, Check } from 'lucide-react';
 import type { SearchResult } from '@a24z/markdown-search';
 import { MarkdownDocumentViewer } from '../../../../pages/RepoManager/shared/MarkdownDocumentViewer';

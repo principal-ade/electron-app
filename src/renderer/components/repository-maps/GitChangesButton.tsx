@@ -6,7 +6,7 @@ import {
   GitPullRequest,
   AlertCircle,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { FileTreeSource } from '../../types/file-tree-source';
 import { useGitChanges } from '../../contexts/GitChangesContext';
 

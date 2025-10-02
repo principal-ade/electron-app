@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileImage, Trash2 } from 'lucide-react';
-import type { Theme } from 'themed-markdown';
+import type { Theme } from '@a24z/industry-theme';
 import { RoomDrawingService } from '../../../../main-process-api/RoomDrawingService';
 import type { RoomDrawingMetadata } from '@a24z/core-library';
 

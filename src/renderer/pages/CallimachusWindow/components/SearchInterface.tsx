@@ -1,6 +1,6 @@
 import React, { useState, KeyboardEvent } from 'react';
 import { Search, Loader2 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 
 interface SearchInterfaceProps {
   onSearch: (query: string) => void;

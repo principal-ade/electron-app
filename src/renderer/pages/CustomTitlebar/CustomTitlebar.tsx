@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Settings } from 'lucide-react';
 import './CustomTitlebar.css';
 

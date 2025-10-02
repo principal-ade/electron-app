@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Globe, Bot, RefreshCw, Settings as SettingsIcon, Activity } from 'lucide-react';
 import { GeneralSettings } from './components/GeneralSettings';
 import { AIAssistantsSettings } from './components/AIAssistantsSettings';

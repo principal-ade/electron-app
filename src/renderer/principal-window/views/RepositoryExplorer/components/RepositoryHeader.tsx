@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { GitBranch, Trash2, ExternalLink, Terminal, RefreshCw, GitPullRequest, Upload, Bot } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import { GitBranchStatus } from '../../../../main-process-api/GitService';
 import { TerminalService } from '../../../../main-process-api/TerminalService';

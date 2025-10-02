@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { RefreshCw, Loader2 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { documentSearchService } from '../../../../services/DocumentSearchService';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
 

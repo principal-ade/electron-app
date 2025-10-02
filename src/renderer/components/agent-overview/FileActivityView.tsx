@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Check, Clipboard } from 'lucide-react';
 import { FileActionButtons } from './SessionDetailCards';
 import type { AgentSessionRecord } from '../../../shared/sessionTypes';

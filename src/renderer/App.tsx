@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 
 // import { ElectronPlatformAdapters } from './adapters'; // No longer needed
 

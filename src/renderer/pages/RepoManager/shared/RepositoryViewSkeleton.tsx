@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';

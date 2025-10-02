@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Github, FolderOpen, CheckCircle, AlertCircle, Loader } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../main-process-api/FileSystemService';

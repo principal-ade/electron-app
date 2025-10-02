@@ -8,7 +8,7 @@ import React, {
 import { Excalidraw, MainMenu, exportToBlob } from '@excalidraw/excalidraw';
 import { AppState as ExcalidrawAppState } from '@excalidraw/excalidraw/types';
 import '@excalidraw/excalidraw/index.css';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { debounce } from 'lodash';
 import { ExcalidrawStorageService } from '../../main-process-api/ExcalidrawStorageService';
 import { AlexandriaDrawingService } from '../../main-process-api/AlexandriaDrawingService';

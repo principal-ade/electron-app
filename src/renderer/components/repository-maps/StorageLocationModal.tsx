@@ -1,5 +1,4 @@
-import React from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Database, FolderOpen, X, Info } from 'lucide-react';
 import { StorageLocation } from '../../types/planning-storage.types';
 

@@ -15,7 +15,7 @@ import {
   CheckCircle,
   Info,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
 

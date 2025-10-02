@@ -8,7 +8,7 @@ import {
   Scale,
   HelpCircle,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 
 interface DependencyInfoModalProps {
   isOpen: boolean;

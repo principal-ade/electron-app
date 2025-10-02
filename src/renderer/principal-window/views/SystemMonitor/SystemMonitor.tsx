@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Activity, HardDrive, Folder, Power, AlertCircle, Plus, X, FileSearch, GitBranch, Eye, EyeOff } from 'lucide-react';
 import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';

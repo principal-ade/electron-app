@@ -81,7 +81,7 @@ export class RepositoryMonitoringService {
 // src/renderer/principal-window/views/SystemMonitor/SystemMonitor.tsx
 
 import React, { useEffect, useState } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Activity, HardDrive } from 'lucide-react';
 import './SystemMonitor.css';
 
@@ -345,7 +345,7 @@ repositoryMonitoring: {
 
 ## Notes
 
-- **Theme Integration**: Uses `useTheme()` hook from `themed-markdown` for consistent styling
+- **Theme Integration**: Uses `useTheme()` hook from `@a24z/industry-theme` for consistent styling
 - **IPC Pattern**: Follows codebase convention with event enums in `src/shared/ipc-events/`
 - **Service Layer**: Uses existing service pattern in `main-process-api/`
 - **Simple Sparklines**: Inline SVG implementation to avoid additional dependencies

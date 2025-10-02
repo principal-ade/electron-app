@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { initVimMode } from 'monaco-vim';

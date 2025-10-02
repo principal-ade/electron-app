@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Trash2, AlertTriangle } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 

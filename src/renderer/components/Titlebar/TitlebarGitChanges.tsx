@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GitBranch } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { GitStatusWithFiles } from '../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { GitChangesDropdown } from '../GitChanges/GitChangesDropdown';
 

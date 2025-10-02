@@ -7,7 +7,7 @@ import {
   CheckCircle,
   Trash2,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { TerminalService } from '../../main-process-api/TerminalService';
 
 interface TerminalSessionInfo {
