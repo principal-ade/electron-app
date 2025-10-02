@@ -58,6 +58,7 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
   const prevCollapsedRef = useRef(options.collapsed);
   const lastNonZeroSizesRef = useRef<Partial<PanelSizes & TwoPanelSizes>>({});
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingPersistSizesRef = useRef<typeof sizes | null>(null);
 
   const updateLastNonZeroSizes = useCallback((incomingSizes: PanelSizes | TwoPanelSizes) => {
     if ('left' in incomingSizes && incomingSizes.left > 0) {
@@ -172,11 +173,17 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
     }
 
     if (!shouldPersist) {
+      pendingPersistSizesRef.current = null;
       return;
     }
 
+    pendingPersistSizesRef.current = sanitizedSizes;
     saveTimeoutRef.current = setTimeout(() => {
-      savePreferences(sanitizedSizes);
+      const pendingSizes = pendingPersistSizesRef.current;
+      if (pendingSizes) {
+        savePreferences(pendingSizes);
+        pendingPersistSizesRef.current = null;
+      }
       saveTimeoutRef.current = null;
     }, 500);
   }, [collapsed, getFallbackSize, panelType, savePreferences, updateLastNonZeroSizes]);
@@ -184,10 +191,16 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
+        const pendingSizes = pendingPersistSizesRef.current;
+        if (pendingSizes) {
+          savePreferences(pendingSizes);
+          pendingPersistSizesRef.current = null;
+        }
         clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
       }
     };
-  }, []);
+  }, [savePreferences]);
 
   // Collapse/expand handlers - no-ops because state is controlled by parent (IntegratedShell)
   // The parent manages collapsed state via titlebar buttons and passes it down as props
