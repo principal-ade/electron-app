@@ -188,6 +188,7 @@ export interface GitStateEventPayload {
 export interface WorkspaceChangeEventPayload {
   repoPath: string;
   state?: GitState;
+  changes?: FileChange[];
 }
 
 /**

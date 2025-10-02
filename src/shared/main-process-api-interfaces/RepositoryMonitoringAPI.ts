@@ -64,6 +64,13 @@ export interface RepositoryMonitoringResult {
   error?: string;
 }
 
+export type FileChangeType = 'add' | 'change' | 'unlink';
+
+export interface FileChange {
+  type: FileChangeType;
+  path: string;
+}
+
 export interface GitStatusMetadata {
   repoPath: string;
   branch: string;
@@ -100,6 +107,7 @@ export interface RepositoryInfo {
 export interface WorkspaceChangeEventPayload {
   repoPath: string;
   state?: GitState;
+  changes?: FileChange[];
 }
 
 export interface MonitoringStatus {
