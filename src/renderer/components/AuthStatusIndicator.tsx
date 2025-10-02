@@ -8,7 +8,7 @@ import {
   RefreshCw,
   Clock,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { GitHubAuth } from '../services/p2p/GitHubAuthDirect';
 
 interface AuthStatusIndicatorProps {

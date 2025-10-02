@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Map as MapIcon, HelpCircle, FileText, Layers } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import {
   RepositoryToolbar,

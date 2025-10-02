@@ -1,5 +1,4 @@
-import React from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { LogIn, LogOut, Loader2 } from 'lucide-react';
 import { useAuthState } from '../../hooks/useAuthState';
 import { gitSyncConnectionManager } from '../../services/git-sync/GitSyncConnectionManager';

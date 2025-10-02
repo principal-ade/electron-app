@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { Activity, GitBranch, Brain, Search, FileText } from 'lucide-react';
 import { FileTree } from '@principal-ai/repository-abstraction';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import { CityMapManager } from './shared/CityMapManager';
 import { ToolbarItem } from './shared/RepositoryToolbar';

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { FileTree } from '@principal-ai/repository-abstraction';
 import { FileText, Sparkles, Search, ExternalLink } from 'lucide-react';
 import {

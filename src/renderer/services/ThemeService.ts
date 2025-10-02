@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { Theme } from 'themed-markdown';
+import type { Theme } from '@a24z/industry-theme';
 import { getThemeByName } from '../themes/predefinedThemes';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 

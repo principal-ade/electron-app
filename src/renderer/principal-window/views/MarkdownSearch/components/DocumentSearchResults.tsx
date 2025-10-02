@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { FileText, Code, Hash, ChevronRight, ChevronDown, File } from 'lucide-react';
 import type { SearchResult, DocumentType } from '@a24z/markdown-search';
 

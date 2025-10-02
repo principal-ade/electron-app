@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Download, RefreshCw, Sparkles } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { AppVersionManagerService } from '../main-process-api/AppVersionManagerService';
 
 interface UpdateInfo {

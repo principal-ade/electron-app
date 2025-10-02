@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Search, Plus, RefreshCw, Filter } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { AlexandriaRepositoryCard } from './AlexandriaRepositoryCard';

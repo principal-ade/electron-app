@@ -1,5 +1,4 @@
-import React from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Star } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { IndustryMarkdownSlide } from 'themed-markdown';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 
 /**

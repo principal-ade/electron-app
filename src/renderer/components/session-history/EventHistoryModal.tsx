@@ -11,7 +11,7 @@ import {
   Settings,
   HelpCircle,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import {
   eventSegmenter,

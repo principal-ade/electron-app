@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FileText, PenTool, FolderOpen, Plus, Database, HardDrive, BookOpen } from 'lucide-react';
-import type { Theme } from 'themed-markdown';
+import type { Theme } from '@a24z/industry-theme';
 
 interface PlanningStartOverlayProps {
   theme: Theme;

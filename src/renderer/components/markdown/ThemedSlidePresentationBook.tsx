@@ -1,6 +1,7 @@
 import React from 'react';
-import { SlidePresentationBook, SlidePresentationBookProps, ThemeProvider, useTheme } from 'themed-markdown';
-import type { Theme } from 'themed-markdown';
+import { SlidePresentationBook, SlidePresentationBookProps } from 'themed-markdown';
+import { ThemeProvider, useTheme } from '@a24z/industry-theme';
+import type { Theme } from '@a24z/industry-theme';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 
 /**

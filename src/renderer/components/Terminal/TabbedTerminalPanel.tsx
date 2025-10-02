@@ -13,7 +13,7 @@ import {
   Bug,
   ExternalLink,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import TerminalPanel from './TerminalPanel';
 import { TerminalService } from '../../main-process-api/TerminalService';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';

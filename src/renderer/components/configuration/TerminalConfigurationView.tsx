@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Terminal, Check, TestTube, FolderOpen } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import {
   TerminalId,
   TERMINAL_LABELS,

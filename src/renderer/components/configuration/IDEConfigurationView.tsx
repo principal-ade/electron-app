@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Code2, Check, TestTube, FolderOpen } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import {
   EditorId,
   EDITOR_LABELS,

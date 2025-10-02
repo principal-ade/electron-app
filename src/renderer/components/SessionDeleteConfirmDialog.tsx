@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { AgentSessionRecord } from '../../shared/sessionTypes';
 import { CustomLayersStorageService } from '../services/storage/CustomLayersStorageService';
 

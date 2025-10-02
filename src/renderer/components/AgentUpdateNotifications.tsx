@@ -1,5 +1,4 @@
-import React from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { X, Download, Info } from 'lucide-react';
 import { useAgentUpdateNotifications } from '../hooks/useAgentUpdateNotifications';
 

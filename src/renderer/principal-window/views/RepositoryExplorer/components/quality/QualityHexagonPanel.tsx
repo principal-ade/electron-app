@@ -3,7 +3,7 @@ import {
   QualityHexagonCompact,
   QualityHexagonDetailed
 } from '@a24z/alexandria-ui';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { MockQualityMetricsService } from './MockQualityMetricsService';
 import type { ExtendedQualityMetrics } from './MockQualityMetricsService';
 

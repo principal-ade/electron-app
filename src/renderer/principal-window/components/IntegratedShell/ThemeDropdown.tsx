@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Palette } from 'lucide-react';
 import { predefinedThemes, getThemeNames } from '../../../themes/predefinedThemes';
 import { ThemeService } from '../../../services/ThemeService';

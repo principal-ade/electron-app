@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Map as MapIcon, Layers, File, Folder } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import { ArchitectureMapHighlightLayers } from '@principal-ai/code-city-react';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';

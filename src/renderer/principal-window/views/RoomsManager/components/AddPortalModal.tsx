@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Link2 } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 
 interface AddPortalModalProps {
   isOpen: boolean;

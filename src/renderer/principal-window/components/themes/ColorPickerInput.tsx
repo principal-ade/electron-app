@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { HexColorPicker } from 'react-colorful';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { RotateCcw } from 'lucide-react';
 
 interface ColorPickerInputProps {

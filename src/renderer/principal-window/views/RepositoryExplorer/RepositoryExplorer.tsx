@@ -3,7 +3,7 @@ import { GitBranch } from 'lucide-react';
 import { ThreePanelLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../../../theme/panelsTheme';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 
 import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../shared/types/repository.types';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';

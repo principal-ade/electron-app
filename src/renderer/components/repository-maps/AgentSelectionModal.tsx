@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Bot, Terminal, Download } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { SupportedAgent, getAgentInfo } from '@principal-ai/agent-monitoring';
 import {
   AgentConfigurationService,

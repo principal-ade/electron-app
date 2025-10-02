@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Code, ChevronDown } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { ShellService } from '../../main-process-api/ShellService';
 import type { Repository } from '../../../shared/types/repository.types';
 

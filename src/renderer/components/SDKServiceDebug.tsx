@@ -1,6 +1,6 @@
 import React from 'react';
 import { Activity, RefreshCw } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { printCallStats } from '../main-process-api/AgentSessionSDKService';
 
 /**

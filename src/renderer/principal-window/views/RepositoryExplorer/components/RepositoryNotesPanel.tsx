@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, Calendar, Plus, FileText } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { RepositoryNotesService } from '../../../../main-process-api/RepositoryNotesService';
 import type { RepositoryNote } from '../../../../../shared/main-process-api-interfaces/RepositoryNotesAPI';
 import { AddNoteModal } from './AddNoteModal';

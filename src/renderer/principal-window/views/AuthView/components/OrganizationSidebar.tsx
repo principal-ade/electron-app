@@ -1,5 +1,4 @@
-import React from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Building, Folder, Github, GitBranch, Users, User, Settings } from 'lucide-react';
 import type { OrganizationInfo } from '../utils/repositoryOrganizer';
 

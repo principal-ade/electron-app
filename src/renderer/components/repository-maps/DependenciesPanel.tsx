@@ -18,7 +18,7 @@ import {
   Square,
   CheckSquare,
 } from 'lucide-react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import { DependencyInfoModal } from './DependencyInfoModal';
 import { PackageManagerService } from '../../main-process-api/PackageManagerService';

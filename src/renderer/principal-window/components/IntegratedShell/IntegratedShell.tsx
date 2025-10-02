@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavigationSidebar } from './NavigationSidebar';
 import { IntegratedTitlebar } from './IntegratedTitlebar';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { RepositoryExplorer } from '../../views/RepositoryExplorer';
 import { MarkdownSearch } from '../../views/MarkdownSearch';
 import { Settings } from '../../views/Settings';

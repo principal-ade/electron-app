@@ -1,5 +1,4 @@
-import React from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Cloud, HardDrive, ExternalLink, Lock, FolderOpen, Download, GitFork } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';

@@ -1,5 +1,4 @@
-import React from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { HardDrive, AlertTriangle, Info } from 'lucide-react';
 import { SystemService } from '../../main-process-api/SystemService';
 

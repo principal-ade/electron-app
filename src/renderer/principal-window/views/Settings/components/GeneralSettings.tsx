@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Palette, FolderOpen, RefreshCw, Settings } from 'lucide-react';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';

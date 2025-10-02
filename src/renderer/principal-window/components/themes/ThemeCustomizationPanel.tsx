@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useTheme, Theme } from 'themed-markdown';
+import type { Theme } from '@a24z/industry-theme';
+import { useTheme } from '@a24z/industry-theme';
 import { X, RotateCcw } from 'lucide-react';
 import { ColorPickerInput } from './ColorPickerInput';
 import { ThemeService } from '../../../services/ThemeService';

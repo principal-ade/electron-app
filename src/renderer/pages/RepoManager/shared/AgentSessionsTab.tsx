@@ -5,7 +5,7 @@ import React, {
   useRef,
   useMemo,
 } from 'react';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
 import { Layers, Package, Bot, Play } from 'lucide-react';
 import {

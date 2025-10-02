@@ -5,7 +5,7 @@ import React, {
   useRef,
 } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { useTheme } from 'themed-markdown';
+import { useTheme } from '@a24z/industry-theme';
 import { Calendar, Filter, Search, Check, FolderOpen } from 'lucide-react';
 import type { SearchResult } from '@a24z/markdown-search';
 import { documentSearchService } from '../../../services/DocumentSearchService';
