@@ -174,6 +174,13 @@ export class RemoteAgentWindowManager {
 
     // Notify active agent changed
     sendToAllWindows('remote-agent:active-changed', { agentId });
+
+    // Also notify the host window which renders the titlebar controls
+    if (this.hostWindow && !this.hostWindow.isDestroyed()) {
+      this.hostWindow.webContents.send('remote-agent:active-changed', {
+        agentId,
+      });
+    }
   }
 
   /**

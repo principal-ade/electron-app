@@ -6,6 +6,71 @@ export const RemoteAgentTitlebar: React.FC = () => {
   const { theme } = useTheme();
   const [agents, setAgents] = useState<RemoteAgentConfig[]>([]);
   const [activeAgentId, setActiveAgentId] = useState<string | null>(null);
+  const [hoveredAgentId, setHoveredAgentId] = useState<string | null>(null);
+
+  const accentColor = theme.colors?.primary || '#007acc';
+  const surfaceColor = theme.colors?.surface || '#1e1e1e';
+  const borderColor = theme.colors?.border || '#444';
+  const textColor = theme.colors?.text || '#fff';
+
+  const buildAgentButtonStyle = (
+    agentId: string,
+  ): React.CSSProperties => {
+    const isSelected = activeAgentId === agentId;
+    const isHovered = hoveredAgentId === agentId;
+
+    return {
+      padding: '6px 12px',
+      background: surfaceColor,
+      borderRadius: '6px',
+      border: `1px solid ${
+        isSelected || isHovered ? accentColor : borderColor
+      }`,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      transition: 'color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+      fontSize: '13px',
+      color: isSelected ? accentColor : textColor,
+      boxShadow: isSelected
+        ? `0 0 0 1px ${accentColor}40`
+        : isHovered
+          ? `0 0 0 1px ${accentColor}20`
+          : 'none',
+      fontWeight: isSelected ? 600 : 500,
+      WebkitAppRegion: 'no-drag',
+    };
+  };
+
+  const buildCloseButtonStyle = (
+    agentId: string,
+  ): React.CSSProperties => {
+    const isSelected = activeAgentId === agentId;
+
+    return {
+      background: 'transparent',
+      border: 'none',
+      color: isSelected ? accentColor : textColor,
+      cursor: 'pointer',
+      padding: '2px 4px',
+      fontSize: '16px',
+      lineHeight: '1',
+      opacity: isSelected ? 0.8 : 0.6,
+      transition: 'opacity 0.2s ease, color 0.2s ease',
+      display: 'flex',
+      alignItems: 'center',
+    };
+  };
+
+  useEffect(() => {
+    if (
+      hoveredAgentId &&
+      !agents.some((agent) => agent.id === hoveredAgentId)
+    ) {
+      setHoveredAgentId(null);
+    }
+  }, [agents, hoveredAgentId]);
 
   useEffect(() => {
     // Subscribe to agent list changes
@@ -89,49 +154,26 @@ export const RemoteAgentTitlebar: React.FC = () => {
           <div
             key={agent.id}
             onClick={() => handleSwitchAgent(agent.id)}
-            style={{
-              padding: '6px 12px',
-              background: activeAgentId === agent.id
-                ? (theme.colors?.primary || '#007acc')
-                : (theme.colors?.surface || '#1e1e1e'),
-              borderRadius: '4px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'background 0.2s',
-              fontSize: '13px',
-            }}
-            onMouseEnter={(e) => {
-              if (activeAgentId !== agent.id) {
-                e.currentTarget.style.background = theme.colors?.secondary || '#333';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeAgentId !== agent.id) {
-                e.currentTarget.style.background = theme.colors?.surface || '#1e1e1e';
-              }
+            style={buildAgentButtonStyle(agent.id)}
+            onMouseEnter={() => setHoveredAgentId(agent.id)}
+            onMouseLeave={() => {
+              setHoveredAgentId((current) => (
+                current === agent.id ? null : current
+              ));
             }}
           >
             <span>{agent.name}</span>
             <button
               onClick={(e) => handleCloseAgent(agent.id, e)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: theme.colors?.text || '#fff',
-                cursor: 'pointer',
-                padding: '2px 4px',
-                fontSize: '16px',
-                lineHeight: '1',
-                opacity: 0.6,
-                transition: 'opacity 0.2s',
-              }}
+              style={buildCloseButtonStyle(agent.id)}
               onMouseEnter={(e) => {
                 e.currentTarget.style.opacity = '1';
+                e.currentTarget.style.color = accentColor;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '0.6';
+                const style = buildCloseButtonStyle(agent.id);
+                e.currentTarget.style.opacity = `${style.opacity}`;
+                e.currentTarget.style.color = `${style.color}`;
               }}
             >
               ×
