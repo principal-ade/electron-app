@@ -274,7 +274,15 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
     setRepositories(prev => {
       const index = prev.findIndex(entry => entry.repository.path === repoPath);
       if (index === -1) {
-        return prev;
+        // Repository not in array yet, add it with minimal cache data
+        return [...prev, {
+          repository: repo,
+          gitStatus: null,
+          gitBranch: null,
+          branchStatus: { ahead: 0, behind: 0, canFastForward: false, needsUpstream: false },
+          markdownFiles: [],
+          lastFullRefresh: Date.now(),
+        }];
       }
 
       const updated = [...prev];
@@ -322,43 +330,51 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
 
       const repos = await alexandriaServiceRef.current.getRepositories();
 
-      await Promise.all(
-        repos.map(async (repo) => {
-          const repoPath = repo.path as string | undefined;
-          if (!repoPath) {
-            return;
+      // Add all repos immediately and set loading to false so UI shows them
+      repos.forEach((repo) => {
+        const repoPath = repo.path as string | undefined;
+        if (repoPath) {
+          const cachedData = cache.current.get(repoPath, componentId.current);
+          if (cachedData) {
+            upsertRepositoryData(cachedData);
+            updateRepositoryInfo(repo);
+          } else {
+            updateRepositoryInfo(repo);
           }
+          ensureSubscription(repoPath);
+        }
+      });
 
-          try {
-            const cachedData = cache.current.get(repoPath, componentId.current);
-            if (cachedData) {
-              upsertRepositoryData(cachedData);
-              updateRepositoryInfo(repo);
-              markRepoLoaded();
-              ensureSubscription(repoPath);
+      setLoading(false);
+
+      // Load cache data in background if autoLoad is enabled
+      if (options.autoLoad !== false) {
+        Promise.all(
+          repos.map(async (repo) => {
+            const repoPath = repo.path as string | undefined;
+            if (!repoPath) {
               return;
             }
 
-            if (options.autoLoad === false) {
-              updateRepositoryInfo(repo);
-              markRepoLoaded();
-              ensureSubscription(repoPath);
-              return;
-            }
+            try {
+              const cachedData = cache.current.get(repoPath, componentId.current);
+              if (cachedData) {
+                // Already have cached data, skip
+                return;
+              }
 
-            const freshData = await cache.current.load(repoPath);
-            upsertRepositoryData(freshData);
-            updateRepositoryInfo(repo);
-            markRepoLoaded();
-            ensureSubscription(repoPath);
-          } catch (err) {
-            console.error(`[useAllRepositories] Failed to load repository ${repoPath}:`, err);
-            updateRepositoryInfo(repo);
-            markRepoLoaded();
-            ensureSubscription(repoPath);
-          }
-        })
-      );
+              // Load cache data in background to enrich the repo
+              const freshData = await cache.current.load(repoPath);
+              upsertRepositoryData(freshData);
+              updateRepositoryInfo(repo);
+            } catch (err) {
+              console.error(`[useAllRepositories] Failed to load repository ${repoPath}:`, err);
+            }
+          })
+        ).catch(err => {
+          console.error('[useAllRepositories] Error loading cache data:', err);
+        });
+      }
     } catch (err) {
       console.error('[useAllRepositories] Error loading repositories:', err);
       setError(err instanceof Error ? err : new Error('Failed to load repositories'));
