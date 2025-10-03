@@ -217,7 +217,7 @@ Until `@principal-ai/agent-mcp` is available, you'll need to handle these missin
 
 ### MCP-Dependent Files
 1. `src/renderer/services/MCPService.ts` - BRANDING
-2. `src/main/planning-mcp/PlanningMCPBridge.ts` - BRANDING
+2. `src/main/principal-mcp/PrincipalMCPBridge.ts` - BRANDING
 3. `src/main/mcp-app-control/mcp-integration.ts` - BRANDING
 4. `src/main/initialization.ts` - BRANDING
 

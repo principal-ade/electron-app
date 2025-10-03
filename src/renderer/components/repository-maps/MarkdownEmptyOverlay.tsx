@@ -59,7 +59,7 @@ export const MarkdownEmptyOverlay: React.FC<MarkdownEmptyOverlayProps> = ({
             lineHeight: 1.6,
           }}
         >
-          Start typing in the editor to begin creating your planning document
+          Start typing in the editor to begin creating your document
         </p>
       </div>
     </div>

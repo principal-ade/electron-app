@@ -88,7 +88,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
           theme={theme}
           fontSizeScale={fontSizeScale}
           onCheckboxChange={onCheckboxChange}
-          slideIdPrefix="planning-doc"
+          slideIdPrefix="repository-doc"
           showSectionHeaders={showSegmented}
           showSeparators={showSegmented}
         />
@@ -112,7 +112,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
           showSlideCounter={true}
           showFullscreenButton={true}
           viewMode={bookViewMode}
-          slideIdPrefix="planning-book"
+          slideIdPrefix="repository-book"
           enableHtmlPopout={true}
           enableKeyboardScrolling={true}
         />
@@ -134,7 +134,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
         showNavigation={true}
         showSlideCounter={true}
         showFullscreenButton={true}
-        slideIdPrefix="planning-slide"
+        slideIdPrefix="repository-slide"
         enableHtmlPopout={true}
         enableKeyboardScrolling={true}
       />

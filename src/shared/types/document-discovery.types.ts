@@ -77,7 +77,6 @@ export type DocumentCategory =
   | 'api' // API documentation
   | 'changelog' // CHANGELOG files
   | 'contributing' // CONTRIBUTING files
-  | 'planning' // Planning documents (.principleMD)
   | 'wiki' // Wiki pages
   | 'notes' // General notes
   | 'blog' // Blog posts

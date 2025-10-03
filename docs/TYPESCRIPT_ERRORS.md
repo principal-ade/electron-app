@@ -21,19 +21,19 @@
   - Fixed A24zNote type mismatches (removed duplicate interface, imported from API)
   - Resolved RepositoryMode conflicts (updated ModeSelector to use RepositoryViewType)
   - Fixed type issues in RepositoryExplorationView
-  - Removed extra props (cityDataCache) from PlanningView
+  - Removed extra props (cityDataCache) from the former planning view (now retired)
 
 ## 🏢 Architectural Improvements Made
 
 ### Repository View Type System Unification
 **Problem:** Dual type system causing confusion and errors
-- UI used: `'explore' | 'develop' | 'planning' | 'maintain'`
-- Persistence used: `'exploration' | 'collaboration' | 'planning' | 'deployment'`
+- UI used: `'explore' | 'develop' | 'maintain'`
+- Persistence used: `'exploration' | 'collaboration' | 'deployment'`
 - Required constant mapping and type casting with potential for mismatches
 
 **Solution:** Unified on persistence naming
 - ✅ Created shared `RepositoryViewType` in `userPreferences.types.ts`
-- ✅ Updated all components to use: `'exploration' | 'planning' | 'collaboration' | 'deployment'`
+- ✅ Updated all components to use: `'exploration' | 'deployment'`
 - ✅ Eliminated mapping logic and type casting
 - ✅ Consistent naming throughout the entire application stack
 
@@ -99,7 +99,6 @@ Common issues:
 - `RepoManager/LocalDevelopmentView.tsx` (removed) - No longer applicable
 - `LandingPage/AgentConfigurationView/*.tsx` - Status type mismatches
 - `LandingPage/LandingPage.tsx` - Property name mismatches (running vs isRunning)
-- `RepoManager/PlanningView.tsx` - Type mismatches with MarkdownPresentation
 
 #### Most Common Error Patterns:
 1. **TS2339**: Property does not exist on type

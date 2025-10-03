@@ -1,6 +1,6 @@
 import { useTheme } from '@a24z/industry-theme';
 
-export type RepositoryMode = 'explore' | 'planning' | 'maintain';
+export type RepositoryMode = 'explore' | 'maintain';
 
 interface ModeSwitchProps {
   mode: RepositoryMode;
@@ -17,23 +17,23 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
 }) => {
   const { theme } = useTheme();
 
+  const effectiveMode: RepositoryMode =
+    !hasLocalClones && mode === 'maintain' ? 'explore' : mode;
+
   // Define the modes available based on whether we have local clones
   const modes: { value: RepositoryMode; label: string }[] = hasLocalClones
     ? [
         { value: 'explore', label: 'Explore' },
-        { value: 'planning', label: 'Plan' },
         { value: 'maintain', label: 'Maintain' },
       ]
     : [{ value: 'explore', label: 'Explore' }];
 
   // Get the index of the current mode
-  const currentIndex = modes.findIndex((m) => m.value === mode);
+  const currentIndex = modes.findIndex((m) => m.value === effectiveMode);
 
   // Calculate the slider position
-  const sliderWidth = hasLocalClones ? `${100 / modes.length}%` : '100%';
-  const sliderLeft = hasLocalClones
-    ? `${(currentIndex * 100) / modes.length}%`
-    : '0%';
+  const sliderWidth = `${100 / modes.length}%`;
+  const sliderLeft = `${(Math.max(currentIndex, 0) * 100) / modes.length}%`;
 
   // If only one mode available (Explore for remote-only), render a simpler version
   if (!hasLocalClones) {
@@ -112,7 +112,7 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
             fontSize: '12px',
             fontWeight: 600,
             color:
-              mode === modeOption.value
+              effectiveMode === modeOption.value
                 ? theme.colors.primary
                 : theme.colors.textSecondary,
             cursor: disabled ? 'not-allowed' : 'pointer',
@@ -127,12 +127,12 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
             justifyContent: 'center',
           }}
           onMouseEnter={(e) => {
-            if (!disabled && mode !== modeOption.value) {
+            if (!disabled && effectiveMode !== modeOption.value) {
               e.currentTarget.style.color = theme.colors.text;
             }
           }}
           onMouseLeave={(e) => {
-            if (!disabled && mode !== modeOption.value) {
+            if (!disabled && effectiveMode !== modeOption.value) {
               e.currentTarget.style.color = theme.colors.textSecondary;
             }
           }}

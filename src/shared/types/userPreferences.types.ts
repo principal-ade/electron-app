@@ -2,7 +2,7 @@ import { EditorId } from './editor.types';
 import { TerminalId } from './terminal.types';
 
 // Repository view types - unified naming
-export type RepositoryViewType = 'exploration' | 'planning' | 'deployment';
+export type RepositoryViewType = 'exploration' | 'deployment';
 
 // Interactive shell navigation view types
 export type InteractiveShellNavigationView =
@@ -14,9 +14,6 @@ export type InteractiveShellNavigationView =
   | 'monitoring'
   | 'auth';
 
-// Planning view left tab types
-export type PlanningLeftTabType = 'terminal' | 'search' | 'editor' | 'storage';
-
 // Repository view right pane modes
 export type RightPaneMode = 'city' | 'terminal' | 'session-detail' | 'document';
 
@@ -24,14 +21,6 @@ export type RightPaneMode = 'city' | 'terminal' | 'session-detail' | 'document';
 export interface RepositoryUIState {
   // Current active view/tab
   activeView?: RepositoryViewType;
-
-  // Planning view specific state
-  planningState?: {
-    viewMode?: 'slides' | 'document';
-    showSegmented?: boolean;
-    showEditor?: boolean;
-    activeLeftTab?: PlanningLeftTabType;
-  };
 
   // Exploration view specific state
   explorationState?: {
@@ -74,10 +63,6 @@ export interface UserPreferences {
   // Agent session preferences
   /** Automatically commit changes when stopping agent sessions */
   autoCommitOnStop?: boolean;
-
-  // Planning document preferences
-  /** Directory for storing planning documents (relative to repository root or absolute path) */
-  planningDocumentsDirectory?: string;
 
   // UI preferences
   defaultView?: 'projects' | 'customization';

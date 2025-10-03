@@ -1,6 +1,6 @@
 import { useTheme } from '@a24z/industry-theme';
 import { Database, FolderOpen, X, Info } from 'lucide-react';
-import { StorageLocation } from '../../types/planning-storage.types';
+type StorageLocation = 'repository' | 'app-data';
 
 interface StorageLocationModalProps {
   isOpen: boolean;

@@ -19,7 +19,7 @@ interface RepositorySwitcherModalProps {
   currentRepository: Repository;
   onSelectRepository: (
     repository: Repository,
-    mode: 'explore' | 'planning',
+    mode: 'explore' | 'maintain',
     openInNewWindow: boolean,
   ) => void;
 }
@@ -69,7 +69,7 @@ export const RepositorySwitcherModal: React.FC<
 
   const handleSelectRepository = (
     repo: Repository,
-    mode: 'explore' | 'planning',
+    mode: 'explore' | 'maintain',
     openInNewWindow: boolean = true,
   ) => {
     onSelectRepository(repo, mode, openInNewWindow);
@@ -291,10 +291,7 @@ export const RepositorySwitcherModal: React.FC<
                     }}
                     onClick={() => {
                       // Default action: open in explore mode when clicking the card
-                      const defaultMode: 'explore' | 'planning' = hasLocalClones
-                        ? 'planning'
-                        : 'explore';
-                      handleSelectRepository(repo, defaultMode, true);
+                      handleSelectRepository(repo, 'explore', true);
                     }}
                     onMouseEnter={() => setHoveredRepo(repo.remoteUrl)}
                     onMouseLeave={() => setHoveredRepo(null)}
@@ -382,15 +379,11 @@ export const RepositorySwitcherModal: React.FC<
                         >
                           {hasLocalClones ? (
                             <>
-                              {/* Plan button */}
+                              {/* Maintain button */}
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleSelectRepository(
-                                    repo,
-                                    'planning',
-                                    true,
-                                  );
+                                  handleSelectRepository(repo, 'maintain', true);
                                 }}
                                 style={{
                                   display: 'flex',
@@ -420,7 +413,7 @@ export const RepositorySwitcherModal: React.FC<
                                 }}
                               >
                                 <NotebookPen size={12} />
-                                Plan
+                                Maintain
                               </button>
 
                               {/* Explore button */}
@@ -462,7 +455,7 @@ export const RepositorySwitcherModal: React.FC<
                                 }}
                               >
                                 <FolderSearch size={12} />
-                                Evaluate
+                                Explore
                               </button>
                             </>
                           ) : (
@@ -499,7 +492,7 @@ export const RepositorySwitcherModal: React.FC<
                               }}
                             >
                               <FolderSearch size={12} />
-                              Evaluate
+                              Explore
                             </button>
                           )}
                         </div>
