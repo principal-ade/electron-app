@@ -65,10 +65,10 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   });
 
   // Use the cache to get all repositories
-  // Note: autoLoad is set to true, but the cache will check if data already exists
-  // from the registration process before making new calls
+  // Note: autoLoad is set to false so we defer the expensive repository load
+  // (which includes remote status checks) until the user explicitly selects a repo
   const { repositories: cachedRepos, loading: isLoadingRepos, refresh: refreshRepos } = useAllRepositories({
-    autoLoad: true,
+    autoLoad: false,
     subscribe: true,
   });
 
