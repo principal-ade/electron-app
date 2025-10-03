@@ -18,12 +18,8 @@ The old GitWatcherService has been completely removed and all components have be
 - **Location**: `src/renderer/contexts/GitChangesContext.tsx`
 
 ### 3. FileChangeContext Migration ✅
-- **Changed**:
-  - `GitWatcherService.watchRepository()` → `RepositoryMonitoringService.enableGitWatching()`
-  - `GitWatcherService.unwatchRepository()` → `RepositoryMonitoringService.disableGitWatching()`
-  - `GitWatcherService.onStatusUpdate()` → `RepositoryMonitoringService.onGitStatusChanged()`
-- **Preserved**: Session activity tracking and collision detection
-- **Location**: `src/renderer/contexts/FileChangeContext.tsx`
+- **Changed**: FileChangeContext removed with Local Development panel retirement
+- **Follow-up**: Session activity visualizations now handled by specialized views when needed
 
 ### 4. Infrastructure Removed 🗑️
 

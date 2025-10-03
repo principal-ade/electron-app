@@ -1,6 +1,6 @@
 import { useTheme } from '@a24z/industry-theme';
 
-export type RepositoryMode = 'explore' | 'develop' | 'planning' | 'maintain';
+export type RepositoryMode = 'explore' | 'planning' | 'maintain';
 
 interface ModeSwitchProps {
   mode: RepositoryMode;
@@ -22,7 +22,6 @@ export const ModeSwitch: React.FC<ModeSwitchProps> = ({
     ? [
         { value: 'explore', label: 'Explore' },
         { value: 'planning', label: 'Plan' },
-        { value: 'develop', label: 'Develop' },
         { value: 'maintain', label: 'Maintain' },
       ]
     : [{ value: 'explore', label: 'Explore' }];

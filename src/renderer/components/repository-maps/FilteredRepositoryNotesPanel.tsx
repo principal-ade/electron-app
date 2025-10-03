@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { RepositoryNote } from '../../../shared/main-process-api-interfaces/RepositoryNotesAPI';
 import { EnhancedUIAgentSessionData } from '../../types/session.types';
-import { SessionFileActivity } from '../../contexts/FileChangeContext';
+import type { SessionFileActivity } from '../../types/file-activity.types';
 import {
   filterNotesBySession,
   filterNotesByPath,

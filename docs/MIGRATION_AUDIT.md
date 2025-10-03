@@ -105,9 +105,8 @@ This document provides a comprehensive audit of all files using `NormalizedAgent
   - **Status**: Has type alias `type NormalizedAgentSessionEvent = RepoNormalizedUniversalAgentSessionEvent`
   - **Action**: Update import to use new type directly
 
-- `src/renderer/pages/RepoManager/LocalDevelopmentView.tsx`
-  - Session event handling
-  - Real-time event processing
+- `src/renderer/pages/RepoManager/LocalDevelopmentView.tsx` (removed)
+  - Legacy session event handling (retired with Local Development panel)
 
 - `src/renderer/components/repository-maps/SessionEventViewerModal.tsx`
   - **Status**: Has type alias
