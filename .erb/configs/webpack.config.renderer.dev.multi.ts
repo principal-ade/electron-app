@@ -48,6 +48,11 @@ const principalEntryPath = path.join(
   'principal-window',
   'index.tsx',
 );
+const repoManagerEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'repo-manager',
+  'index.tsx',
+);
 const legacyEntryPath = path.join(webpackPaths.srcRendererPath, 'index.tsx');
 const palaceRoomWorkspaceEntryPath = path.join(
   webpackPaths.srcRendererPath,
@@ -76,6 +81,24 @@ if (fs.existsSync(principalEntryPath)) {
       isBrowser: false,
       isDevelopment: true,
     })
+  );
+}
+
+if (fs.existsSync(repoManagerEntryPath)) {
+  entryPoints['repo-manager'] = repoManagerEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'repo-manager.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['repo-manager'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: true,
+    }),
   );
 }
 

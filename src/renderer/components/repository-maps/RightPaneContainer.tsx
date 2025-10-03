@@ -5,7 +5,7 @@ import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import {
   RepositoryToolbar,
   ToolbarItem,
-} from '../../pages/RepoManager/shared/RepositoryToolbar';
+} from '../../repo-manager/shared/RepositoryToolbar';
 
 import { RepositoryNote } from '../../../shared/main-process-api-interfaces/RepositoryNotesAPI';
 import { EnhancedUIAgentSessionData } from '../../types/session.types';
@@ -16,7 +16,7 @@ import { ArchitectureMapHighlightLayers } from '@principal-ai/code-city-react';
 import { EmptyState } from './EmptyState';
 import { LoadingAnimation } from './LoadingAnimation';
 import { AgentSessionDetailView } from './AgentSessionDetailView';
-import { SessionCardData } from '../../pages/RepoManager/shared/AgentSessionCard';
+import { SessionCardData } from '../../repo-manager/shared/AgentSessionCard';
 import { GitChangesHelpModal } from './GitChangesHelpModal';
 import { FileTreeSource } from '../../types/file-tree-source';
 

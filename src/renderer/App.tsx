@@ -52,7 +52,7 @@ const StoreViewer = React.lazy(() =>
   import('./pages/StoreViewer').then((m) => ({ default: m.StoreViewer })),
 );
 const RepositoryManager = React.lazy(() =>
-  import('./pages/RepoManager/RepositoryManager').then((m) => ({
+  import('./repo-manager/RepositoryManager').then((m) => ({
     default: m.RepositoryManager,
   })),
 );

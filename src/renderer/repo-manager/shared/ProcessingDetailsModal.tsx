@@ -12,9 +12,9 @@ import {
 import type {
   FileTreeSource,
   FileTreeStats,
-} from '../../../types/file-tree-source';
+} from '../../types/file-tree-source';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
-import { FileSystemService } from '../../../main-process-api/FileSystemService';
+import { FileSystemService } from '../../main-process-api/FileSystemService';
 
 interface ProcessingDetailsModalProps {
   isOpen: boolean;

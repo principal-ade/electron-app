@@ -26,20 +26,20 @@ import '@a24z/panels/panels.css';
 import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { MarkdownDocumentViewer } from './shared/MarkdownDocumentViewer';
-import { ExcalidrawWrapper } from '../../components/shared/ExcalidrawWrapper';
-import { FileSystemService } from '../../main-process-api/FileSystemService';
-import { WindowService } from '../../main-process-api/WindowService';
+import { ExcalidrawWrapper } from '../components/shared/ExcalidrawWrapper';
+import { FileSystemService } from '../main-process-api/FileSystemService';
+import { WindowService } from '../main-process-api/WindowService';
 
-import type { Repository } from '../../../shared/types/repository.types';
-import { RightPaneMode } from '../../../shared/types/userPreferences.types';
-import { RepositoryNote } from '../../../shared/main-process-api-interfaces/RepositoryNotesAPI';
-import { RepositoryNotesService } from '../../main-process-api/RepositoryNotesService';
-import { GitHubWebAdapters } from '../../adapters/GitHubWebAdapters';
-import { ElectronPlatformAdapters } from '../../adapters/ElectronPlatformAdapters';
-import { FileTreeSourceService } from '../../services/FileTreeSourceService';
-import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
-// import { SourceSelectionService } from '../../services/SourceSelectionService'; // TODO: Re-enable when needed
-import { FileTreeSource, FileTreeStats } from '../../types/file-tree-source';
+import type { Repository } from '../../shared/types/repository.types';
+import { RightPaneMode } from '../../shared/types/userPreferences.types';
+import { RepositoryNote } from '../../shared/main-process-api-interfaces/RepositoryNotesAPI';
+import { RepositoryNotesService } from '../main-process-api/RepositoryNotesService';
+import { GitHubWebAdapters } from '../adapters/GitHubWebAdapters';
+import { ElectronPlatformAdapters } from '../adapters/ElectronPlatformAdapters';
+import { FileTreeSourceService } from '../services/FileTreeSourceService';
+import { MonitoredFileTreeService } from '../services/MonitoredFileTreeService';
+// import { SourceSelectionService } from '../services/SourceSelectionService'; // TODO: Re-enable when needed
+import { FileTreeSource, FileTreeStats } from '../types/file-tree-source';
 import { usePanelsTheme } from '../theme/panelsTheme';
 import type { ToolbarItem } from './shared/RepositoryToolbar';
 import { RepoSourceArchitecturePanelSimple } from './shared/RepoSourceArchitecturePanelSimple';
@@ -48,18 +48,18 @@ import {
   GitHubContentProvider,
   ContentProvider,
   LocalFileSystemProvider,
-} from '../../services/ContentProviders';
+} from '../services/ContentProviders';
 import { RemoteFileViewerModal } from './shared/RemoteFileViewerModal';
 import { HelpModal } from './shared/HelpModal';
-import { useGitChanges } from '../../contexts/GitChangesContext';
-import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
-import { RepositorySearchTab } from '../../components/repository-maps/RepositorySearchTab';
-import { FilePanel } from '../../components/FilePanel';
+import { useGitChanges } from '../contexts/GitChangesContext';
+import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
+import { RepositorySearchTab } from '../components/repository-maps/RepositorySearchTab';
+import { FilePanel } from '../components/FilePanel';
 import { ToolsTab } from './shared/ToolsTab';
 import {
   RightPaneContainer,
   RightPaneView,
-} from '../../components/repository-maps/RightPaneContainer';
+} from '../components/repository-maps/RightPaneContainer';
 
 interface TabConfig {
   id: string;

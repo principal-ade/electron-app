@@ -258,7 +258,7 @@ export function registerModernWindowHandlers(): void {
       // Build URL with the mapped repository data
       const payload = { repository: repoData };
       const encodedData = encodeURIComponent(JSON.stringify(payload));
-      const url = `${resolveHtmlPath('index.html')}#repository-maps/${encodedData}`;
+      const url = `${resolveHtmlPath('repo-manager.html')}#repository-maps/${encodedData}`;
 
       // Wait for adapters to initialize before loading URL
       setTimeout(() => {

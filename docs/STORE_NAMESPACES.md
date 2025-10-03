@@ -19,7 +19,7 @@ This document lists the storage namespaces registered by the app, groups them by
 - repositories — "Repository configurations and metadata" (provider: electron-store)  
   - Registered: [`src/main/storage-providers/typed-namespaces.ts:367`](src/main/storage-providers/typed-namespaces.ts:367)  
   - Landing page / repo lists: [`src/renderer/pages/LandingPage/LandingPage.tsx:61`](src/renderer/pages/LandingPage/LandingPage.tsx:61)  
-  - Repo manager & switcher: [`src/renderer/pages/RepoManager/RepositoryManager.tsx:339`](src/renderer/pages/RepoManager/RepositoryManager.tsx:339), [`src/renderer/pages/RepoManager/shared/RepositorySwitcherModal.tsx:33`](src/renderer/pages/RepoManager/shared/RepositorySwitcherModal.tsx:33)
+  - Repo manager & switcher: [`src/renderer/repo-manager/RepositoryManager.tsx:339`](src/renderer/repo-manager/RepositoryManager.tsx:339), [`src/renderer/repo-manager/shared/RepositorySwitcherModal.tsx:33`](src/renderer/repo-manager/shared/RepositorySwitcherModal.tsx:33)
 
 - agent-sessions — "Agent session data with flat event list" (provider: electron-store)
   - Registered: [`src/main/storage-providers/typed-namespaces.ts:389`](src/main/storage-providers/typed-namespaces.ts:389)
@@ -28,13 +28,13 @@ This document lists the storage namespaces registered by the app, groups them by
 
 - secrets-metadata — "Metadata for encrypted secrets" (provider: electron-store)  
   - Registered: [`src/main/storage-providers/typed-namespaces.ts:251`](src/main/storage-providers/typed-namespaces.ts:251)  
-  - Secrets UI (store secret): [`src/renderer/pages/RepoManager/shared/SecretsModal.tsx:103`](src/renderer/pages/RepoManager/shared/SecretsModal.tsx:103)  
+  - Secrets UI (store secret): [`src/renderer/repo-manager/shared/SecretsModal.tsx:103`](src/renderer/repo-manager/shared/SecretsModal.tsx:103)  
   - Main manager/tests: [`src/main/stores/SecretManager.ts:228`](src/main/stores/SecretManager.ts:228)
 
 - cache / temp (memory-backed) — in-memory caches the renderer relies on for performance (not persisted)  
   - Registered: [`src/main/storage-providers/typed-namespaces.ts:399`](src/main/storage-providers/typed-namespaces.ts:399) and [`src/main/storage-providers/typed-namespaces.ts:406`](src/main/storage-providers/typed-namespaces.ts:406)  
   - File-tree / analysis caches: [`src/renderer/services/FileTreeCacheService.ts:38`](src/renderer/services/FileTreeCacheService.ts:38)  
-  - Renderer listens for invalidation events: [`src/renderer/pages/RepoManager/RepositoryManager.tsx:606`](src/renderer/pages/RepoManager/RepositoryManager.tsx:606)  
+  - Renderer listens for invalidation events: [`src/renderer/repo-manager/RepositoryManager.tsx:606`](src/renderer/repo-manager/RepositoryManager.tsx:606)  
   - Store Viewer shows cache categories: [`src/renderer/pages/StoreViewer.tsx:406`](src/renderer/pages/StoreViewer.tsx:406)
 
 - session-summaries & global-session-registry — backing data for session UIs and quick summaries  

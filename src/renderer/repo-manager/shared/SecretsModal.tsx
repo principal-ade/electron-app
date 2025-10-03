@@ -13,12 +13,12 @@ import {
   Check,
   Loader2,
 } from 'lucide-react';
-import type { Repository } from '../../../../shared/types/repository.types';
+import type { Repository } from '../../../shared/types/repository.types';
 import type {
   RepositorySecrets,
   SecretMetadata,
-} from '../../../../shared/main-process-api-interfaces/SecretsAPI';
-import { SecretsService } from '../../../main-process-api/SecretsService';
+} from '../../../shared/main-process-api-interfaces/SecretsAPI';
+import { SecretsService } from '../../main-process-api/SecretsService';
 
 interface SecretsModalProps {
   isOpen: boolean;

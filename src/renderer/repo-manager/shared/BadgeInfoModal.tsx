@@ -13,9 +13,9 @@ import {
   HardDrive,
   Cloud,
 } from 'lucide-react';
-import type { Repository } from '../../../../shared/types/repository.types';
-import type { GitBranchStatus } from '../../../main-process-api/GitService';
-import { GitService } from '../../../main-process-api/GitService';
+import type { Repository } from '../../../shared/types/repository.types';
+import type { GitBranchStatus } from '../../main-process-api/GitService';
+import { GitService } from '../../main-process-api/GitService';
 
 interface BadgeInfoModalProps {
   isOpen: boolean;

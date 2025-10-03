@@ -8,7 +8,7 @@ This document describes how to integrate the new Repository Monitoring Service w
 
 ### How FileTree Loading Currently Works
 
-1. **RepositoryManager Component** (`src/renderer/pages/RepoManager/RepositoryManager.tsx`)
+1. **RepositoryManager Component** (`src/renderer/repo-manager/RepositoryManager.tsx`)
    - Creates `FileTreeSourceService` and `FileTreeCacheService` instances
    - Initializes sources from repository (local clones and remote branches)
 
@@ -55,7 +55,7 @@ See: `src/renderer/services/MonitoredFileTreeService.ts`
 Replace `FileTreeCacheService` with `MonitoredFileTreeService` in the RepositoryManager component:
 
 ```typescript
-// src/renderer/pages/RepoManager/RepositoryManager.tsx
+// src/renderer/repo-manager/RepositoryManager.tsx
 import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 
@@ -142,7 +142,7 @@ Components to update:
 Subscribe to file tree changes for automatic UI updates:
 
 ```typescript
-// src/renderer/pages/RepoManager/RepositoryManager.tsx
+// src/renderer/repo-manager/RepositoryManager.tsx
 useEffect(() => {
   if (visibleClonePath) {
     // Subscribe to file tree updates
@@ -321,7 +321,7 @@ describe('MonitoringFileTreeSource', () => {
 ## Key Files to Modify
 
 1. `src/renderer/main-process-api/RepositoryMonitoringService.ts` (new)
-2. `src/renderer/pages/RepoManager/RepositoryManager.tsx`
+2. `src/renderer/repo-manager/RepositoryManager.tsx`
 3. `src/renderer/services/FileTreeCacheService.ts`
 4. `src/renderer/services/MonitoringFileTreeSource.ts` (new)
 5. `src/main/initialization.ts` (already updated)

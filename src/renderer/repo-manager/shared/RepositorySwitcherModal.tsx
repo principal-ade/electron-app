@@ -8,10 +8,10 @@ import {
   FolderSearch,
   NotebookPen,
 } from 'lucide-react';
-import type { Repository } from '../../../../shared/types/repository.types';
-import { RepositoryService } from '../../../main-process-api/RepositoryService';
-import { RepositoryAvatar } from '../../../components/repository-maps/RepositoryAvatar';
-import { LicenseBadge } from '../../../components/common/LicenseBadge';
+import type { Repository } from '../../../shared/types/repository.types';
+import { RepositoryService } from '../../main-process-api/RepositoryService';
+import { RepositoryAvatar } from '../../components/repository-maps/RepositoryAvatar';
+import { LicenseBadge } from '../../components/common/LicenseBadge';
 
 interface RepositorySwitcherModalProps {
   isOpen: boolean;

@@ -7,13 +7,13 @@ import {
   PackageLayer,
 } from '@principal-ai/codebase-composition';
 
-import { MonitoredFileTreeService } from '../../../services/MonitoredFileTreeService';
-import { GitHubWebAdapters } from '../../../adapters/GitHubWebAdapters';
-import { ElectronPlatformAdapters } from '../../../adapters';
-import { loadManifestContents } from '../../../utils/loadManifestContents';
-import { FileTreeSource } from '../../../types/file-tree-source';
-import { DependenciesPanel } from '../../../components/repository-maps/DependenciesPanel';
-import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
+import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
+import { GitHubWebAdapters } from '../../adapters/GitHubWebAdapters';
+import { ElectronPlatformAdapters } from '../../adapters';
+import { loadManifestContents } from '../../utils/loadManifestContents';
+import { FileTreeSource } from '../../types/file-tree-source';
+import { DependenciesPanel } from '../../components/repository-maps/DependenciesPanel';
+import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 
 interface RepoSourceArchitecturePanelSimpleProps {
   source: FileTreeSource;

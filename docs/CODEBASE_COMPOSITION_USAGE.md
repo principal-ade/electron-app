@@ -77,10 +77,10 @@ const result = await fileSystemModule.loadFileSystemTree();
 #### Implementation Files
 
 ##### Repository Management UI
-- `src/renderer/pages/RepoManager/RepositoryManager.tsx:13-15` - Central orchestration of package discovery
-- `src/renderer/pages/RepoManager/RepositoryMaintenanceView.tsx:22` - Maintenance operations on packages
-- `src/renderer/pages/RepoManager/RepositoryExplorationView.tsx:14` - Package exploration interface
-- `src/renderer/pages/RepoManager/RepositoryManagerHeader.tsx:46` - Header with package info display
+- `src/renderer/repo-manager/RepositoryManager.tsx:13-15` - Central orchestration of package discovery
+- `src/renderer/repo-manager/RepositoryMaintenanceView.tsx:22` - Maintenance operations on packages
+- `src/renderer/repo-manager/RepositoryExplorationView.tsx:14` - Package exploration interface
+- `src/renderer/repo-manager/RepositoryManagerHeader.tsx:46` - Header with package info display
 
 ##### Component Libraries
 - `src/renderer/components/repository-maps/PackageCommandPanel.tsx:22` - Display and execute package commands
@@ -88,10 +88,10 @@ const result = await fileSystemModule.loadFileSystemTree();
 - `src/renderer/components/repository-maps/CloneManagementModal.tsx` - Clone management with package context
 
 ##### Processing & Validation
-- `src/renderer/pages/RepoManager/shared/ProcessingPipelineModal.tsx:23` - Pipeline processing for packages
-- `src/renderer/pages/RepoManager/shared/ProcessingDetailsModal.tsx:16` - Detailed processing view
-- `src/renderer/pages/RepoManager/shared/ValidationsTab.tsx:15` - Package validation results
-- `src/renderer/pages/RepoManager/shared/AgentSessionsTab.tsx:29` (removed) - Legacy agent session management UI
+- `src/renderer/repo-manager/shared/ProcessingPipelineModal.tsx:23` - Pipeline processing for packages
+- `src/renderer/repo-manager/shared/ProcessingDetailsModal.tsx:16` - Detailed processing view
+- `src/renderer/repo-manager/shared/ValidationsTab.tsx:15` - Package validation results
+- `src/renderer/repo-manager/shared/AgentSessionsTab.tsx:29` (removed) - Legacy agent session management UI
 
 #### Usage Example
 ```typescript

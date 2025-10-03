@@ -85,7 +85,7 @@ OS Keychain (macOS) / Credential Manager (Windows)
 ## Repository Secrets Management
 
 ### 7. SecretsModal Component
-**Location**: `src/renderer/pages/RepoManager/shared/SecretsModal.tsx`
+**Location**: `src/renderer/repo-manager/shared/SecretsModal.tsx`
 **Purpose**: Manage repository-specific environment secrets
 **Secure Storage Interactions**:
 - Stores/retrieves repository-specific secrets via `SecretsService`

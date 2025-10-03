@@ -1,35 +1,35 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { parseGitHubUrl } from '../../../shared/utils/githubUrlParser';
+import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import { createFileColorHighlightLayers } from '@principal-ai/code-city-react';
 import {
   PackageLayerModule,
   PackageLayer,
 } from '@principal-ai/codebase-composition';
-import { SourceFileSystemAdapter } from '../../adapters/SourceFileSystemAdapter';
-import { RepositoryTitlebar } from '../../components/Titlebar';
+import { SourceFileSystemAdapter } from '../adapters/SourceFileSystemAdapter';
+import { RepositoryTitlebar } from '../components/Titlebar';
 import { RepositoryLoadingState } from './components/RepositoryLoadingState';
 
-import type { Repository } from '../../../shared/types/repository.types';
+import type { Repository } from '../../shared/types/repository.types';
 import { RepositoryExplorationView } from './RepositoryExplorationView';
 import { SecretsModal } from './shared/SecretsModal';
 import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
 import { BadgeInfoModal } from './shared/BadgeInfoModal';
-import { GitChangesProvider } from '../../contexts/GitChangesContext';
-import { GitService } from '../../main-process-api/GitService';
-import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
+import { GitChangesProvider } from '../contexts/GitChangesContext';
+import { GitService } from '../main-process-api/GitService';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { FileTree } from '@principal-ai/repository-abstraction';
-import { FileTreeSourceService } from '../../services/FileTreeSourceService';
-import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
-import { FileTreeInvalidator } from '../../services/FileTreeInvalidator';
-import { CityDataCacheService } from '../../services/CityDataCacheService';
-import { FileTreeSource, FileTreeStats } from '../../types/file-tree-source';
-import { SourceSelectionService } from '../../services/SourceSelectionService';
-import { CloneVisibilityService } from '../../services/CloneVisibilityService';
-import { AgentConfigurationService } from '../../main-process-api/AgentConfigurationService';
+import { FileTreeSourceService } from '../services/FileTreeSourceService';
+import { MonitoredFileTreeService } from '../services/MonitoredFileTreeService';
+import { FileTreeInvalidator } from '../services/FileTreeInvalidator';
+import { CityDataCacheService } from '../services/CityDataCacheService';
+import { FileTreeSource, FileTreeStats } from '../types/file-tree-source';
+import { SourceSelectionService } from '../services/SourceSelectionService';
+import { CloneVisibilityService } from '../services/CloneVisibilityService';
+import { AgentConfigurationService } from '../main-process-api/AgentConfigurationService';
 import { SupportedAgent } from '@principal-ai/agent-monitoring';
-import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
 interface RepositoryManagerProps {
   repository: Repository;
