@@ -2,7 +2,7 @@ import { EditorId } from './editor.types';
 import { TerminalId } from './terminal.types';
 
 // Repository view types - unified naming
-export type RepositoryViewType = 'exploration' | 'deployment';
+export type RepositoryViewType = 'exploration';
 
 // Interactive shell navigation view types
 export type InteractiveShellNavigationView =

@@ -31,11 +31,6 @@ export const SimpleModeSelector: React.FC<SimpleModeSelectorProps> = ({
       label: 'Explore',
       color: '#3b82f6',
     },
-    {
-      value: 'deployment',
-      label: 'Maintain',
-      color: '#8b5cf6',
-    },
   ];
 
   return (
