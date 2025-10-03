@@ -1,23 +1,21 @@
 import React, { useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { AlertCircle, CheckCircle2, Loader2, Play, RefreshCcw, Settings } from 'lucide-react';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 
 import { useRepositorySecretsStatus } from '../hooks/useRepositorySecretsStatus';
 import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
 
 interface RepositoryActionsPanelProps {
   repoId: string | null | undefined;
-  actions?: ActWorkflowAction[];
+  fileTree: FileTree | null;
   onConfigure?: () => void;
   onRun?: (action: ActWorkflowAction) => void;
   /**
    * Allows parents to skip work when the panel is collapsed or hidden.
    */
   isVisible?: boolean;
-  isLoadingActions?: boolean;
-  actionsError?: string | null;
   runningActionId?: string | null;
-  onRefreshActions?: () => void;
 }
 
 const formatDuration = (seconds?: number) => {
@@ -33,24 +31,57 @@ const formatDuration = (seconds?: number) => {
   return `${minutes} min${minutes === 1 ? '' : 's'}`;
 };
 
+/**
+ * Extract workflow actions from FileTree by filtering for .github/workflows/*.{yml,yaml} files
+ */
+const extractWorkflowActionsFromTree = (fileTree: FileTree | null): ActWorkflowAction[] => {
+  if (!fileTree?.allFiles) {
+    return [];
+  }
+
+  const workflowFiles = fileTree.allFiles.filter(file => {
+    const path = file.path.toLowerCase();
+    return path.includes('.github/workflows/') && (path.endsWith('.yml') || path.endsWith('.yaml'));
+  });
+
+  return workflowFiles.map(file => {
+    const fileName = file.path.split('/').pop() || file.path;
+    const baseName = fileName.replace(/\.(yml|yaml)$/i, '');
+
+    // Generate a readable label from the filename
+    const label = baseName
+      .split(/[-_]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+
+    return {
+      id: file.path,
+      label,
+      description: `Workflow defined in ${fileName}`,
+      workflowPath: file.path,
+      requiresSecrets: true, // Conservative default - assume secrets needed
+    };
+  });
+};
+
 export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
   repoId,
-  actions = [],
+  fileTree,
   onConfigure,
   onRun,
   isVisible = true,
-  isLoadingActions = false,
-  actionsError,
   runningActionId,
-  onRefreshActions,
 }) => {
   const { theme } = useTheme();
   const { isConfigured, isLoading, error, refresh } = useRepositorySecretsStatus(repoId, {
     skip: !isVisible,
   });
 
+  // Extract actions from the FileTree
+  const actions = useMemo(() => extractWorkflowActionsFromTree(fileTree), [fileTree]);
+
   const hasActions = actions.length > 0;
-  const isBusy = isLoading || isLoadingActions;
+  const isBusy = isLoading;
 
   const statusIndicator = useMemo(() => {
     if (!repoId) {
@@ -140,7 +171,6 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
             type="button"
             onClick={() => {
               void refresh();
-              onRefreshActions?.();
             }}
             disabled={isBusy}
             style={{
@@ -174,19 +204,6 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
         <span>{statusIndicator.text}</span>
       </div>
 
-      {actionsError ? (
-        <div
-          style={{
-            color: theme.colors.danger,
-            backgroundColor: `${theme.colors.danger}10`,
-            padding: '12px',
-            borderRadius: '10px',
-          }}
-        >
-          {actionsError}
-        </div>
-      ) : null}
-
       {!hasActions ? (
         <div
           style={{
@@ -201,10 +218,10 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
             padding: '24px',
           }}
         >
-          {isLoadingActions
-            ? 'Discovering workflow actions…'
+          {!fileTree
+            ? 'Loading repository files…'
             : repoId
-              ? 'No workflow actions detected yet. Actions will appear here after ACT integration discovers workflow jobs.'
+              ? 'No workflow files found in .github/workflows/'
               : 'Select a repository to preview available workflow actions.'}
         </div>
       ) : (

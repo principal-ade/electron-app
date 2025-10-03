@@ -7,6 +7,7 @@ import { RepositoryMonitoringService } from '../../../../main-process-api/Reposi
 
 export interface CityBuildResult {
   cityData: CityData | null;
+  fileTree: FileTree | null;
   treeStats: { fileCount: number; directoryCount: number } | null;
   error?: string;
 }
@@ -51,6 +52,7 @@ export class RepositoryCityService {
       if (!repository?.path) {
         return {
           cityData: null,
+          fileTree: null,
           treeStats: null,
           error: 'Repository path is required',
         };
@@ -66,6 +68,7 @@ export class RepositoryCityService {
       if (!fileTree) {
         return {
           cityData: null,
+          fileTree: null,
           treeStats: null,
           error: 'Failed to get file tree from monitoring service',
         };
@@ -100,6 +103,7 @@ export class RepositoryCityService {
       if (!presence) {
         return {
           cityData: null,
+          fileTree,
           treeStats,
           error: 'No presence data for repository tree',
         };
@@ -120,6 +124,7 @@ export class RepositoryCityService {
 
       return {
         cityData,
+        fileTree,
         treeStats,
       };
 
@@ -127,6 +132,7 @@ export class RepositoryCityService {
       console.error('[RepositoryCityService] Error building city:', error);
       return {
         cityData: null,
+        fileTree: null,
         treeStats: null,
         error: error instanceof Error ? error.message : 'Unknown error occurred',
       };

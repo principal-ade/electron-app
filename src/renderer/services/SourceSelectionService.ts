@@ -1,7 +1,7 @@
 import type { Repository } from '../../shared/types/repository.types';
 import type { FileTreeSource } from '../types/file-tree-source';
 import { createFileTreeSource } from '../types/file-tree-source';
-import { parseGitHubUrl } from '@principal-ai/repository-abstraction';
+import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 
 /**
  * Service for managing which source is selected for a repository

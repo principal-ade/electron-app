@@ -10,7 +10,7 @@
 
 Next phase will wire the panel into `RepositoryDetailsPanel`, connect the run confirmation to the real execution path, and hydrate the panel with workflow metadata from the forthcoming `ActWorkflowService`.
 
-## Phase 2 (Runner Wiring Kickoff)
+## Phase 2 (Runner Wiring & Optimization)
 
 - Drafted the integration steps required to compose `RepositoryActionsPanel` into `RepositoryDetailsPanel`, including the prop additions (`actions`, `onConfigureSecrets`, `onRunAction`) and ensuring the existing repository summary layout remains unchanged behind a feature flag.
 - Sketched the IPC surface for triggering runs by defining a `runRepositoryAction` channel that forwards `{ repoId, workflowPath, actionId }` to the main-process `ActRunnerService`, paving the way for the confirmation dialog to dispatch real executions.
@@ -19,3 +19,24 @@ Next phase will wire the panel into `RepositoryDetailsPanel`, connect the run co
 - Documented outstanding dependencies (runner service scaffolding, secure secret file management) so coordination with the main-process team can happen before the wiring lands.
 - Wired the `RepositoryActionsPanel` into `RepositoryDetailsPanel` behind the `PLASMA_ENABLE_ACT_INTEGRATION` feature flag, hydrated by the new renderer-side `ActWorkflowService`, and surfaced refined loading/error states while workflows are discovered.
 - Added shared ACT integration types alongside renderer/main-process service wrappers and IPC handlers so run confirmations now dispatch through `ActRunnerService` (currently stubbed) after validating prerequisites.
+
+## Phase 3 (FileTree Integration & Feature Flag Removal)
+
+- **Removed `PLASMA_ENABLE_ACT_INTEGRATION` feature flag** - ACT integration is now always enabled in the repository explorer.
+- **Refactored workflow discovery to use cached FileTree** instead of separate IPC calls:
+  - Updated `RepositoryActionsPanel` to accept `fileTree: FileTree | null` prop instead of pre-computed `actions` array.
+  - Added `extractWorkflowActionsFromTree()` function that filters FileTree for `.github/workflows/*.{yml,yaml}` files client-side.
+  - Removed `ActWorkflowService.listRepositoryActions()` IPC call and all related loading/error state management.
+  - Workflow actions are now computed via `useMemo` whenever the FileTree changes, ensuring automatic updates.
+- **Enhanced `RepositoryCityService.CityBuildResult`** to include `fileTree: FileTree | null` so the FileTree is available to consumers.
+- **Simplified `RepositoryDetailsPanel`**:
+  - Removed `ActWorkflowService` dependency entirely.
+  - Modified `buildCityData()` to capture and expose the FileTree from city building process.
+  - Passed `fileTree` directly to `RepositoryActionsPanel` instead of loading actions separately.
+
+### Benefits of FileTree Integration:
+- ✅ **Eliminates redundant IPC round-trip** - No longer scanning filesystem separately for workflow files.
+- ✅ **Reuses already-cached data** - FileTree is already loaded by the repository monitoring service.
+- ✅ **Automatic updates** - Workflow list updates whenever FileTree refreshes (e.g., on git operations).
+- ✅ **Simpler architecture** - Client-side filtering is more straightforward than maintaining a separate main-process service.
+- ✅ **Better performance** - One less IPC call and leverages existing monitoring infrastructure.

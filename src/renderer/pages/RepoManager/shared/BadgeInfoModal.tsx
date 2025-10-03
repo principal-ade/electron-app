@@ -1,3 +1,4 @@
+import React from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import {
   Layers,

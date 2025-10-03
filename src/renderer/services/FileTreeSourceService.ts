@@ -1,4 +1,4 @@
-import { parseGitHubUrl } from '@principal-ai/repository-abstraction';
+import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import {
   PackageLayerModule,
   PackageLayer,

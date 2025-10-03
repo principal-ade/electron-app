@@ -1,14 +1,37 @@
 {
   "version": "1.0.0",
-  "lastUpdated": 1759093879846,
-  "tasks": {},
+  "lastUpdated": 1759465397898,
+  "tasks": {
+    "task-1759465397897-aly1hgdfn": {
+      "id": "task-1759465397897-aly1hgdfn",
+      "status": "pending",
+      "priority": "normal",
+      "directoryPath": "",
+      "senderId": "electron-app",
+      "tags": [
+        "test",
+        "handoff",
+        "mcp",
+        "themed-markdown"
+      ],
+      "receivedAt": 1759465397897,
+      "updatedAt": 1759465397897,
+      "filePath": "active/task-1759465397897-aly1hgdfn.task.md"
+    }
+  },
   "byStatus": {
-    "pending": [],
+    "pending": [
+      "task-1759465397897-aly1hgdfn"
+    ],
     "acknowledged": [],
     "in_progress": [],
     "completed": [],
     "failed": []
   },
-  "bySender": {},
+  "bySender": {
+    "electron-app": [
+      "task-1759465397897-aly1hgdfn"
+    ]
+  },
   "byADE": {}
 }

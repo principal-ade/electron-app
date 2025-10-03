@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import type { CityData } from '@principal-ai/code-city-react';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../../shared/types/repository.types';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
 import { RepositoryMonitoringService } from '../../../../main-process-api/RepositoryMonitoringService';
@@ -15,7 +16,6 @@ import { RepositoryFilesPanel } from './RepositoryFilesPanel';
 import { QualityHexagonPanel } from './quality';
 import { SimpleCityVisualization, RepositoryCityService } from './city';
 import { RepositoryActionsPanel } from './RepositoryActionsPanel';
-import { ActWorkflowService } from '../../../../main-process-api/ActWorkflowService';
 import { ActRunnerService } from '../../../../main-process-api/ActRunnerService';
 import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
 
@@ -32,10 +32,6 @@ interface RepositoryDetailsPanelProps {
   isRefreshing?: boolean;
   onFileSelect?: (filePath: string | null) => void;
 }
-
-
-const ACT_INTEGRATION_ENABLED =
-  process.env.PLASMA_ENABLE_ACT_INTEGRATION === 'true';
 
 
 export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
@@ -67,12 +63,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
   // City visualization state
   const [cityData, setCityData] = useState<CityData | null>(null);
+  const [fileTree, setFileTree] = useState<FileTree | null>(null);
   const [isBuildingCity, setIsBuildingCity] = useState(false);
   const [cityError, setCityError] = useState<string | null>(null);
   const [treeStats, setTreeStats] = useState<{ fileCount: number; directoryCount: number } | null>(null);
-  const [workflowActions, setWorkflowActions] = useState<ActWorkflowAction[]>([]);
-  const [isLoadingActions, setIsLoadingActions] = useState(false);
-  const [actionsError, setActionsError] = useState<string | null>(null);
   const [runningActionId, setRunningActionId] = useState<string | null>(null);
 
   const cityService = useMemo(() => RepositoryCityService.getInstance(), []);
@@ -111,34 +105,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     return null;
   }, [selectedRepository]);
 
-  const loadWorkflowActions = useCallback(async () => {
-    if (!ACT_INTEGRATION_ENABLED) {
-      return;
-    }
-
-    if (!repositoryId) {
-      setWorkflowActions([]);
-      setActionsError(null);
-      return;
-    }
-
-    setIsLoadingActions(true);
-    try {
-      const actions = await ActWorkflowService.listRepositoryActions(repositoryId);
-      setWorkflowActions(actions);
-      setActionsError(null);
-    } catch (error) {
-      console.error('[RepositoryDetailsPanel] Error loading workflow actions:', error);
-      setWorkflowActions([]);
-      setActionsError(
-        error instanceof Error
-          ? error.message
-          : 'Failed to load workflow actions.',
-      );
-    } finally {
-      setIsLoadingActions(false);
-    }
-  }, [repositoryId]);
 
   const sortedMarkdownFiles = useMemo(() => {
     return [...markdownFiles].sort((a, b) => {
@@ -193,9 +159,11 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       if (result.error) {
         setCityError(result.error);
         setCityData(null);
+        setFileTree(null);
         setTreeStats(null);
       } else {
         setCityData(result.cityData);
+        setFileTree(result.fileTree);
         setTreeStats(result.treeStats);
         setCityError(null);
       }
@@ -203,6 +171,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       console.error('[RepositoryDetailsPanel] Error building city:', error);
       setCityError(error instanceof Error ? error.message : 'Unknown error');
       setCityData(null);
+      setFileTree(null);
       setTreeStats(null);
     } finally {
       setIsBuildingCity(false);
@@ -211,21 +180,11 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
   useEffect(() => {
     setCityData(null);
+    setFileTree(null);
     setTreeStats(null);
     setCityError(null);
     setIsBuildingCity(false);
   }, [selectedRepository?.path]);
-
-  useEffect(() => {
-    if (!ACT_INTEGRATION_ENABLED) {
-      setWorkflowActions([]);
-      setActionsError(null);
-      setIsLoadingActions(false);
-      return;
-    }
-
-    void loadWorkflowActions();
-  }, [loadWorkflowActions]);
 
   useEffect(() => {
     setRunningActionId(null);
@@ -446,7 +405,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
   const handleRunRepositoryAction = useCallback(
     async (action: ActWorkflowAction) => {
-      if (!ACT_INTEGRATION_ENABLED || !selectedRepository || !repositoryId) {
+      if (!selectedRepository || !repositoryId) {
         return;
       }
 
@@ -495,8 +454,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         } else {
           window.alert('Workflow run started.');
         }
-
-        await loadWorkflowActions();
       } catch (error) {
         console.error('[RepositoryDetailsPanel] Failed to trigger workflow action:', error);
         window.alert('Failed to start the workflow action. Check the console for details.');
@@ -504,7 +461,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         setRunningActionId(null);
       }
     },
-    [repositoryId, selectedRepository, loadWorkflowActions],
+    [repositoryId, selectedRepository],
   );
 
   // Format relative time
@@ -629,18 +586,13 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   </div>
                 )}
 
-                {ACT_INTEGRATION_ENABLED ? (
-                  <RepositoryActionsPanel
-                    repoId={repositoryId}
-                    actions={workflowActions}
-                    onConfigure={handleConfigureSecrets}
-                    onRun={handleRunRepositoryAction}
-                    isLoadingActions={isLoadingActions}
-                    actionsError={actionsError}
-                    runningActionId={runningActionId}
-                    onRefreshActions={loadWorkflowActions}
-                  />
-                ) : null}
+                <RepositoryActionsPanel
+                  repoId={repositoryId}
+                  fileTree={fileTree}
+                  onConfigure={handleConfigureSecrets}
+                  onRun={handleRunRepositoryAction}
+                  runningActionId={runningActionId}
+                />
                 {/* Package Information Panel */}
                 <QualityHexagonPanel
                   directory={selectedRepository.path}

@@ -6,7 +6,7 @@ import React, {
   useRef,
 } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { parseGitHubUrl } from '@principal-ai/repository-abstraction';
+import { parseGitHubUrl } from '../../../shared/utils/githubUrlParser';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import { createFileColorHighlightLayers } from '@principal-ai/code-city-react';
 import {
