@@ -10,7 +10,7 @@ import {
 } from '../../../components/repository-maps/RightPaneContainer';
 import type { ToolbarItem } from './RepositoryToolbar';
 import { EnhancedUIAgentSessionData } from '../../../types/session.types';
-import { SessionFileActivity } from '../../../contexts/FileChangeContext';
+import type { SessionFileActivity } from '../../../types/file-activity.types';
 import { SessionCardData } from './AgentSessionCard';
 import { FileTreeSource } from '../../../types/file-tree-source';
 import { RightPaneMode } from '../../../../shared/types/userPreferences.types';

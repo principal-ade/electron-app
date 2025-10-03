@@ -5,11 +5,8 @@ import {
   Search,
   FolderOpen,
   GitFork,
-  Code2,
   FolderSearch,
   NotebookPen,
-  ExternalLink,
-  Replace,
 } from 'lucide-react';
 import type { Repository } from '../../../../shared/types/repository.types';
 import { RepositoryService } from '../../../main-process-api/RepositoryService';
@@ -22,7 +19,7 @@ interface RepositorySwitcherModalProps {
   currentRepository: Repository;
   onSelectRepository: (
     repository: Repository,
-    mode: 'explore' | 'develop' | 'planning',
+    mode: 'explore' | 'planning',
     openInNewWindow: boolean,
   ) => void;
 }
@@ -72,7 +69,7 @@ export const RepositorySwitcherModal: React.FC<
 
   const handleSelectRepository = (
     repo: Repository,
-    mode: 'explore' | 'develop' | 'planning',
+    mode: 'explore' | 'planning',
     openInNewWindow: boolean = true,
   ) => {
     onSelectRepository(repo, mode, openInNewWindow);
@@ -294,8 +291,8 @@ export const RepositorySwitcherModal: React.FC<
                     }}
                     onClick={() => {
                       // Default action: open in explore mode when clicking the card
-                      const defaultMode = hasLocalClones
-                        ? 'develop'
+                      const defaultMode: 'explore' | 'planning' = hasLocalClones
+                        ? 'planning'
                         : 'explore';
                       handleSelectRepository(repo, defaultMode, true);
                     }}
@@ -424,37 +421,6 @@ export const RepositorySwitcherModal: React.FC<
                               >
                                 <NotebookPen size={12} />
                                 Plan
-                              </button>
-
-                              {/* Develop button */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSelectRepository(repo, 'develop', true);
-                                }}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                  padding: '6px 12px',
-                                  borderRadius: '6px',
-                                  backgroundColor: theme.colors.primary,
-                                  color: 'white',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  fontSize: '12px',
-                                  fontWeight: 500,
-                                  transition: 'opacity 0.2s',
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.opacity = '0.9';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.opacity = '1';
-                                }}
-                              >
-                                <Code2 size={12} />
-                                Develop
                               </button>
 
                               {/* Explore button */}

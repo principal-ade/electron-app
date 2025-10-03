@@ -91,7 +91,7 @@ const result = await fileSystemModule.loadFileSystemTree();
 - `src/renderer/pages/RepoManager/shared/ProcessingPipelineModal.tsx:23` - Pipeline processing for packages
 - `src/renderer/pages/RepoManager/shared/ProcessingDetailsModal.tsx:16` - Detailed processing view
 - `src/renderer/pages/RepoManager/shared/ValidationsTab.tsx:15` - Package validation results
-- `src/renderer/pages/RepoManager/shared/AgentSessionsTab.tsx:29` - Agent session management
+- `src/renderer/pages/RepoManager/shared/AgentSessionsTab.tsx:29` (removed) - Legacy agent session management UI
 
 #### Usage Example
 ```typescript

@@ -10,7 +10,7 @@ import { SourceSelectionService } from '../../../services/SourceSelectionService
 /**
  * View modes that affect how the city and badges are displayed
  */
-export type CityViewMode = 'explore' | 'develop' | 'maintain';
+export type CityViewMode = 'explore' | 'maintain';
 
 /**
  * Props for the CityMapManager component
@@ -28,12 +28,6 @@ export interface CityMapManagerProps {
   // View mode
   viewMode: CityViewMode;
 
-  // Toggles for develop view
-  showWorkingTree?: boolean;
-  showHeadTree?: boolean;
-  onToggleWorkingTree?: (show: boolean) => void;
-  onToggleHeadTree?: (show: boolean) => void;
-
   // Render props for custom badge content
   renderCustomBadges?: () => ReactNode;
 
@@ -47,7 +41,7 @@ export interface CityMapManagerProps {
 
 /**
  * Centralized component for managing city data building and source badges
- * across different repository views (explore, develop, maintain)
+ * across different repository views (explore, maintain)
  */
 export const CityMapManager: React.FC<CityMapManagerProps> = ({
   fileTree,
@@ -56,10 +50,6 @@ export const CityMapManager: React.FC<CityMapManagerProps> = ({
   headTree = null,
   hasNoCommits = false,
   viewMode,
-  showWorkingTree = true,
-  showHeadTree = true,
-  onToggleWorkingTree,
-  onToggleHeadTree,
   renderCustomBadges,
   children,
 }) => {
@@ -78,84 +68,31 @@ export const CityMapManager: React.FC<CityMapManagerProps> = ({
       setIsBuilding(true);
 
       try {
-        // Determine which trees to include based on mode and settings
         const versions = new Map<string, FileTree>();
-
-        // Always add the main tree
         versions.set(activeSource.id, fileTree);
 
-        // Add HEAD tree for git-enabled views
         if (gitEnabled && headTree && !hasNoCommits) {
-          if (viewMode === 'explore') {
-            // Explore: Add HEAD when git changes are enabled
-            versions.set(`${activeSource.id}-HEAD`, headTree);
-          } else if (viewMode === 'develop') {
-            // Develop: Always add HEAD for stable layout
-            versions.set(`${activeSource.id}-HEAD`, headTree);
-          }
+          versions.set(`${activeSource.id}-HEAD`, headTree);
         }
 
-        // Build multi-version city using new API
         const { unionCity, presenceByVersion } = MultiVersionCityBuilder.build(
           versions,
           {},
         );
 
-        // Determine which files to show based on mode and toggles
         let finalPresence: Set<string>;
-
-        if (viewMode === 'develop' && headTree) {
-          // Develop mode: Filter based on toggle states
-          finalPresence = new Set<string>();
-
-          // Get all file paths from the union city
-          const allPaths = new Set<string>();
-          unionCity.buildings?.forEach((building) => {
-            if (building.path) allPaths.add(building.path);
-          });
-
-          allPaths.forEach((filePath) => {
-            let shouldShow = false;
-
-            // Check working tree visibility
-            if (
-              showWorkingTree &&
-              presenceByVersion.get(activeSource.id)?.has(filePath)
-            ) {
-              shouldShow = true;
-            }
-
-            // Check HEAD tree visibility
-            if (
-              showHeadTree &&
-              presenceByVersion.get(`${activeSource.id}-HEAD`)?.has(filePath)
-            ) {
-              shouldShow = true;
-            }
-
-            if (shouldShow) {
-              finalPresence.add(filePath);
-            }
-          });
-        } else if (gitEnabled && headTree) {
-          // Git-enabled explore mode: Show union of both trees
+        if (gitEnabled && headTree && !hasNoCommits) {
           finalPresence = new Set<string>();
 
           const workingPresence = presenceByVersion.get(activeSource.id);
           const headPresence = presenceByVersion.get(`${activeSource.id}-HEAD`);
 
-          if (workingPresence) {
-            workingPresence.forEach((path) => finalPresence.add(path));
-          }
-          if (headPresence) {
-            headPresence.forEach((path) => finalPresence.add(path));
-          }
+          workingPresence?.forEach((path) => finalPresence.add(path));
+          headPresence?.forEach((path) => finalPresence.add(path));
         } else {
-          // Default: Show only the main tree
           finalPresence = presenceByVersion.get(activeSource.id) || new Set();
         }
 
-        // Get version view with the appropriate presence
         const city = MultiVersionCityBuilder.getVersionView(
           unionCity,
           finalPresence,
@@ -170,16 +107,7 @@ export const CityMapManager: React.FC<CityMapManagerProps> = ({
     };
 
     buildCity();
-  }, [
-    fileTree,
-    activeSource,
-    gitEnabled,
-    headTree,
-    hasNoCommits,
-    viewMode,
-    showWorkingTree,
-    showHeadTree,
-  ]);
+  }, [fileTree, activeSource, gitEnabled, headTree, hasNoCommits, viewMode]);
 
   // Generate source badges based on mode and state
   const sourceBadges = useMemo(() => {
@@ -266,82 +194,6 @@ export const CityMapManager: React.FC<CityMapManagerProps> = ({
       );
     }
 
-    // Develop mode: Toggleable badges
-    if (viewMode === 'develop') {
-      return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* HEAD toggle badge (left - past) */}
-          {activeSource.type === 'local' && headTree && (
-            <button
-              onClick={() => onToggleHeadTree?.(!showHeadTree)}
-              disabled={showHeadTree && !showWorkingTree}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '3px 10px',
-                borderRadius: '6px',
-                backgroundColor: showHeadTree
-                  ? theme.colors.primary + '22'
-                  : theme.colors.backgroundTertiary,
-                color: showHeadTree
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary,
-                fontSize: 12,
-                fontWeight: 600,
-                border: 'none',
-                cursor:
-                  showHeadTree && !showWorkingTree ? 'not-allowed' : 'pointer',
-                opacity: !showHeadTree ? 0.7 : 1,
-                transition: 'all 0.2s',
-              }}
-              title={showHeadTree ? 'Click to hide HEAD' : 'Click to show HEAD'}
-            >
-              <GitBranch size={12} />
-              {getFolderName()} (HEAD)
-            </button>
-          )}
-
-          {/* Working tree toggle badge (right - present) */}
-          <button
-            onClick={() => onToggleWorkingTree?.(!showWorkingTree)}
-            disabled={!showHeadTree && showWorkingTree}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '3px 10px',
-              borderRadius: '6px',
-              backgroundColor: showWorkingTree
-                ? theme.colors.primary + '22'
-                : theme.colors.backgroundTertiary,
-              color: showWorkingTree
-                ? theme.colors.primary
-                : theme.colors.textSecondary,
-              fontSize: 12,
-              fontWeight: 600,
-              border: 'none',
-              cursor:
-                !showHeadTree && showWorkingTree ? 'not-allowed' : 'pointer',
-              opacity: !showWorkingTree ? 0.7 : 1,
-              transition: 'all 0.2s',
-            }}
-            title={
-              showWorkingTree
-                ? 'Click to hide working tree'
-                : 'Click to show working tree'
-            }
-          >
-            <GitBranch size={12} />
-            {activeSource.type === 'local'
-              ? `${getFolderName()} (${activeSource.metadata?.currentBranch || 'Working'})`
-              : SourceSelectionService.getSourceDisplayName(activeSource)}
-          </button>
-          {renderCustomBadges?.()}
-        </div>
-      );
-    }
-
     return null;
   }, [
     activeSource,
@@ -349,10 +201,6 @@ export const CityMapManager: React.FC<CityMapManagerProps> = ({
     gitEnabled,
     headTree,
     hasNoCommits,
-    showWorkingTree,
-    showHeadTree,
-    onToggleWorkingTree,
-    onToggleHeadTree,
     theme,
     renderCustomBadges,
   ]);

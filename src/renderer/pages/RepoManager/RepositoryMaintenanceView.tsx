@@ -577,7 +577,7 @@ export const RepositoryMaintenanceView: React.FC<
       fileTreeSourceService.initializeFromRepository(repository);
 
     // Filter to only remote sources for exploration view
-    // Local clones should be explored through LocalDevelopmentView
+    // Local clones should be managed through planning workflows
     const remoteSources = initialSources.filter(
       (source) => source.type === 'remote',
     );
@@ -1355,7 +1355,7 @@ export const RepositoryMaintenanceView: React.FC<
       <HelpModal
         isOpen={showHelpModal}
         onClose={() => setShowHelpModal(false)}
-        mode="explore"
+        mode="maintain"
       />
     </>
   );

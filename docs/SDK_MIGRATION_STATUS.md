@@ -71,10 +71,10 @@ Example console output:
 ### What's Still Using Legacy Service
 
 These components still need migration:
-- `AgentSessionsTab.tsx` - Uses `updateSessionMetadata()` and event listeners
+- `AgentSessionsTab.tsx` (retired) - Previously used `updateSessionMetadata()` and event listeners
 - `AgentSessionDebugModal.tsx` - Debug features
 - `MultiFileEditorWindow.tsx` - Event listeners
-- `LocalDevelopmentView.tsx` - Event listeners
+- `LocalDevelopmentView.tsx` (retired) - Legacy event listeners removed with Local Development panel
 - Other components listed in UI_SERVICE_USAGE.md
 
 ### Migration Strategy

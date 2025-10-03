@@ -21,7 +21,7 @@ Based on reviewing the UI files, here are the **ONLY** methods from AgentSession
 ### Mutation Methods
 
 4. **`updateSessionMetadata(sessionId, directory, metadata)`**
-   - Used in: AgentSessionsTab
+   - Previously used in: AgentSessionsTab (Local Development UI retired)
    - For: Renaming sessions
 
 5. **`deleteFromActive(sessionId)`**
@@ -41,15 +41,15 @@ Based on reviewing the UI files, here are the **ONLY** methods from AgentSession
 ### Event Listeners (Real-time Updates)
 
 8. **`onSessionUpdated(callback)`**
-   - Used in: AgentSessionsTab
+   - Previously used in: AgentSessionsTab (Local Development UI retired)
    - For: Real-time session updates
 
 9. **`onCliProviderEvent(callback)`**
-   - Used in: AgentConfigCards, MultiFileEditorWindow, LocalDevelopmentView
+   - Used in: AgentConfigCards, MultiFileEditorWindow
    - For: Real-time CLI events
 
 10. **`onProcessedEvent(callback)`**
-    - Used in: AgentConfigCards, MultiFileEditorWindow, LocalDevelopmentView
+    - Used in: AgentConfigCards, MultiFileEditorWindow
     - For: Real-time processed events
 
 ## Methods NOT Actually Used
@@ -109,13 +109,13 @@ Based on usage frequency:
 1. **useAgentSessions** hook - Main session management
 2. **SessionEventsView** - Event display (already using type alias!)
 3. **EventHistoryModal** - Event history
-4. **AgentSessionsTab** - Session list
+4. **AgentSessionsTab** - Session list (retired)
 
 ### Medium Priority (Features)
 5. **TabbedTerminalPanel** - Terminal integration
 6. **MultiFileEditorWindow** - Editor integration
 7. **RepositoryManager** - Repository view
-8. **LocalDevelopmentView** - Development view
+8. **LocalDevelopmentView** - Development view (retired)
 
 ### Low Priority (Debug/Admin)
 9. **AgentSessionDebugModal** - Debug tools

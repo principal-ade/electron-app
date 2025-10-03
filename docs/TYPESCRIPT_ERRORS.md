@@ -20,8 +20,8 @@
   - Resolved RepositoryUIState activeView type conflicts
   - Fixed A24zNote type mismatches (removed duplicate interface, imported from API)
   - Resolved RepositoryMode conflicts (updated ModeSelector to use RepositoryViewType)
-  - Fixed type issues in LocalDevelopmentView and RepositoryExplorationView
-  - Removed extra props (cityDataCache) from PlanningView and LocalDevelopmentView
+  - Fixed type issues in RepositoryExplorationView
+  - Removed extra props (cityDataCache) from PlanningView
 
 ## 🏢 Architectural Improvements Made
 
@@ -75,7 +75,7 @@ Common issues:
 #### Key Files with Issues:
 - `LandingPage/ProjectsView.tsx` - Many missing properties on Repository type
 - `RepoManager/RepositoryExplorationView.tsx` - Errors reduced but still present
-- `RepoManager/LocalDevelopmentView.tsx` - Errors reduced but still present
+- `RepoManager/LocalDevelopmentView.tsx` (removed) - No longer applicable
 - `LandingPage/LandingPage.tsx` - Property name mismatches
 - `RepoManager/RepositoryManagerHeader.tsx` - Type mismatches
 - `renderer/components/agent-overview/*` - Multiple files with various type errors
@@ -96,7 +96,7 @@ Common issues:
 #### Key Files with Issues:
 - `LandingPage/ProjectsView.tsx` - Many missing properties on Repository type
 - `RepoManager/RepositoryExplorationView.tsx` - Errors reduced (A24zNote type fixed)
-- `RepoManager/LocalDevelopmentView.tsx` - Errors reduced (A24zNote type fixed)
+- `RepoManager/LocalDevelopmentView.tsx` (removed) - No longer applicable
 - `LandingPage/AgentConfigurationView/*.tsx` - Status type mismatches
 - `LandingPage/LandingPage.tsx` - Property name mismatches (running vs isRunning)
 - `RepoManager/PlanningView.tsx` - Type mismatches with MarkdownPresentation

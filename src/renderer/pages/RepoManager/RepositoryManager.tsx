@@ -19,23 +19,15 @@ import { RepositoryLoadingState } from './components/RepositoryLoadingState';
 
 import type { Repository } from '../../../shared/types/repository.types';
 import { RepositoryViewType } from '../../../shared/types/userPreferences.types';
-import { LocalDevelopmentView } from './LocalDevelopmentView';
 import { RepositoryExplorationView } from './RepositoryExplorationView';
 import { RepositoryMaintenanceView } from './RepositoryMaintenanceView';
 import { PlanningView } from './PlanningView';
 import { SecretsModal } from './shared/SecretsModal';
 import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
 import { BadgeInfoModal } from './shared/BadgeInfoModal';
-import { FileChangeProvider } from '../../contexts/FileChangeContext';
 import { GitChangesProvider } from '../../contexts/GitChangesContext';
-import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
-import { EventActivityType } from '../../../shared/sessionEnums';
 import { GitService } from '../../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
-import {
-  UIAgentSessionData,
-  EnhancedUIAgentSessionData,
-} from '../../types/session.types';
 import { FileTree } from '@principal-ai/repository-abstraction';
 import { FileTreeSourceService } from '../../services/FileTreeSourceService';
 import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
@@ -139,19 +131,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
       });
       return layers;
     }, [fileTree]);
-
-    // Agent Sessions state - using proper UI types
-    const [agentSessions, setAgentSessions] = useState<
-      EnhancedUIAgentSessionData[]
-    >([]);
-    const [selectedAgentSessions, setSelectedAgentSessions] = useState<
-      EnhancedUIAgentSessionData[]
-    >([]);
-    const [selectedAgentSessionIds, setSelectedAgentSessionIds] = useState<
-      Set<string>
-    >(new Set());
-    const [hasInitializedSelection, setHasInitializedSelection] =
-      useState(false);
 
     // MCP Agent configuration state
     const [agentsWithMCP, setAgentsWithMCP] = useState<SupportedAgent[]>([]);
@@ -723,348 +702,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
       };
     }, [repository.remoteUrl, selectedSource]);
 
-    // Compute session status based on activity and state
-    const computeSessionStatus = useCallback(
-      (
-        session: UIAgentSessionData,
-      ): Pick<
-        EnhancedUIAgentSessionData,
-        'status' | 'statusColor' | 'statusText'
-      > => {
-        // If session is not active (has stop event), it's stopped
-        if (!session.isActive) {
-          return {
-            status: 'stopped',
-            statusColor: theme.colors.textTertiary,
-            statusText: 'Stopped',
-          };
-        }
-
-        // Check if the last event was a notification (waiting for user)
-        // Note: We'd need to check lastEvent type here if we have that data
-        if (
-          session.lastEvent &&
-          (session.lastEvent.type === EventActivityType.NOTIFICATION ||
-            session.lastEvent.fileName === 'Notification')
-        ) {
-          return {
-            status: 'waiting',
-            statusColor: '#f59e0b',
-            statusText: 'Waiting for user',
-          };
-        }
-
-        // Check time since last activity
-        const now = Date.now();
-        const lastActivityMs = session.lastActivity || now;
-        const timeSinceActivity = now - lastActivityMs;
-        const minutesSinceActivity = timeSinceActivity / (60 * 1000);
-
-        if (minutesSinceActivity < 2) {
-          return {
-            status: 'active',
-            statusColor: '#10b981',
-            statusText: 'Active',
-          };
-        } else if (minutesSinceActivity < 30) {
-          return {
-            status: 'idle',
-            statusColor: '#f59e0b',
-            statusText: 'Idle',
-          };
-        } else {
-          // More than 30 minutes, probably stopped even if no stop event
-          return {
-            status: 'inactive',
-            statusColor: theme.colors.textTertiary,
-            statusText: 'Inactive',
-          };
-        }
-      },
-      [theme],
-    );
-
-    // Load active agent sessions
-    const loadAgentSessions = useCallback(async () => {
-      try {
-        const activeSessions: EnhancedUIAgentSessionData[] = [];
-        const pathsToCheck = repository.localClones?.map((c) => c.path) || [];
-
-        // Get active sessions from the SDK service
-        const projectSessions = await AgentSessionSDKService.getActiveSessionsByProject();
-
-        if (projectSessions && projectSessions.length > 0) {
-          for (const projectSession of projectSessions) {
-            // Check if this session's repository is within any of the repository's clones
-            const isRelevant =
-              pathsToCheck.length === 0 ||
-              pathsToCheck.some(
-                (clonePath) =>
-                  clonePath &&
-                  projectSession.repository &&
-                  projectSession.repository.startsWith(clonePath),
-              );
-
-            if (isRelevant && projectSession.summaries) {
-              // Convert session summaries to our UI format
-              for (const summary of projectSession.summaries) {
-                console.info('[RepositoryManager] Loading session summary:', {
-                  sessionId: summary.sessionId.substring(0, 8),
-                  fileAccessCount: summary.fileAccessCount,
-                  fileWriteCount: summary.fileWriteCount,
-                  eventCount: summary.eventCount,
-                  active: summary.active,
-                });
-
-                const baseSession: UIAgentSessionData = {
-                  sessionId: summary.sessionId,
-                  directory: projectSession.repository || '',
-                  workingDirectory: projectSession.repository || '',
-                  lastActivity: summary.lastActivity || Date.now(),
-                  firstAccess: summary.startTime || Date.now(),
-                  isActive: summary.active, // Use the actual active status from the summary
-                  customName: summary.customName,
-                  lastEvent: {
-                    type: EventActivityType.READ,
-                    fileName: '',
-                    timestamp: summary.lastActivity || Date.now(),
-                  },
-                  fileAccessCount: summary.fileAccessCount || 0,
-                  fileWriteCount: summary.fileWriteCount || 0,
-                  toolCallCount: summary.toolUseCount || 0,
-                  eventCount: summary.eventCount || 0,
-                  metadata: undefined,
-                };
-
-                // Compute status and enhance the session
-                const statusInfo = computeSessionStatus(baseSession);
-                const enhancedSession: EnhancedUIAgentSessionData = {
-                  ...baseSession,
-                  ...statusInfo,
-                };
-
-                activeSessions.push(enhancedSession);
-              }
-            }
-          }
-        }
-
-        // Sort by last activity (newest first)
-        activeSessions.sort(
-          (a, b) => (b.lastActivity || 0) - (a.lastActivity || 0),
-        );
-        setAgentSessions(activeSessions);
-
-        // Initialize selection with live sessions on first load (only in collaboration mode)
-        if (
-          !hasInitializedSelection &&
-          activeSessions.length > 0 &&
-          viewMode === 'collaboration'
-        ) {
-          const liveSessionIds = activeSessions
-            .filter(
-              (session) =>
-                session.status === 'active' ||
-                session.status === 'idle' ||
-                session.status === 'waiting',
-            )
-            .map((session) => session.sessionId);
-
-          if (liveSessionIds.length > 0) {
-            console.info(
-              '[RepositoryManager] Initializing with',
-              liveSessionIds.length,
-              'live sessions',
-            );
-            setSelectedAgentSessionIds(new Set(liveSessionIds));
-            setSelectedAgentSessions(
-              activeSessions.filter((s) =>
-                liveSessionIds.includes(s.sessionId),
-              ),
-            );
-          }
-          setHasInitializedSelection(true);
-        }
-      } catch (error) {
-        console.error('Failed to load agent sessions:', error);
-        setAgentSessions([]);
-      }
-    }, [
-      repository.localClones,
-      computeSessionStatus,
-      hasInitializedSelection,
-      viewMode,
-    ]);
-
-    // Note: Agent session filtering removed - each window shows one clone
-
-    // Load sessions on mount and when repository changes
-    // Don't reload just because viewMode changed - that's expensive!
-    useEffect(() => {
-      loadAgentSessions();
-    }, [repository.localClones, loadAgentSessions]); // Only reload if clones actually change
-
-    // Handler for updating session data from real-time events
-    const handleSessionUpdate = useCallback(
-      (sessionId: string, updates: Partial<EnhancedUIAgentSessionData>) => {
-        console.info(
-          '[RepositoryManager] Updating session from event:',
-          sessionId,
-          updates,
-        );
-
-        setAgentSessions((prev) =>
-          prev.map((session) => {
-            if (session.sessionId === sessionId) {
-              // Merge updates into existing session
-              return { ...session, ...updates };
-            }
-            return session;
-          }),
-        );
-
-        // Also update selected sessions if needed
-        setSelectedAgentSessions((prev) =>
-          prev.map((session) => {
-            if (session.sessionId === sessionId) {
-              const updatedSession = agentSessions.find(
-                (s) => s.sessionId === sessionId,
-              );
-              if (updatedSession) {
-                return { ...updatedSession, ...updates };
-              }
-            }
-            return session;
-          }),
-        );
-      },
-      [agentSessions],
-    );
-
-    // Handler for refreshing a specific session (e.g., after stop event)
-    const handleSessionRefresh = useCallback(
-      async (sessionId: string) => {
-        console.info(
-          '[RepositoryManager] Refreshing session after stop event:',
-          sessionId,
-        );
-
-        try {
-          // Get fresh session data
-          const directorySessions =
-            await AgentSessionSDKService.getActiveSessionsByProject();
-          const pathsToCheck = repository.localClones?.map((c) => c.path) || [];
-
-          if (directorySessions && directorySessions.length > 0) {
-            for (const dirSession of directorySessions) {
-              // Find the matching session
-              const matchingSession = dirSession.summaries?.find(
-                (s: any) => s.sessionId === sessionId,
-              );
-              if (
-                matchingSession &&
-                pathsToCheck.includes(dirSession.repository || '')
-              ) {
-                // Compute fresh status
-                // Create a proper UIAgentSessionData from SessionSummary
-                const baseSession: UIAgentSessionData = {
-                  sessionId: matchingSession.sessionId,
-                  directory: dirSession.repository || '',
-                  workingDirectory: dirSession.repository || '',
-                  lastActivity: matchingSession.lastActivity || Date.now(),
-                  firstAccess: matchingSession.startTime || Date.now(),
-                  isActive: matchingSession.active,
-                  customName: matchingSession.customName,
-                  lastEvent: {
-                    type: EventActivityType.READ,
-                    fileName: '',
-                    timestamp: matchingSession.lastActivity || Date.now(),
-                  },
-                  fileAccessCount: matchingSession.fileAccessCount || 0,
-                  fileWriteCount: matchingSession.fileWriteCount || 0,
-                  toolCallCount: matchingSession.toolUseCount || 0,
-                  eventCount: matchingSession.eventCount || 0,
-                  metadata: undefined,
-                };
-
-                const statusInfo = computeSessionStatus(baseSession);
-                const enhancedSession: EnhancedUIAgentSessionData = {
-                  ...baseSession,
-                  ...statusInfo,
-                };
-
-                // Update in the sessions list
-                setAgentSessions((prev) =>
-                  prev.map((session) =>
-                    session.sessionId === sessionId ? enhancedSession : session,
-                  ),
-                );
-
-                // Update in selected sessions if selected
-                setSelectedAgentSessions((prev) =>
-                  prev.map((session) =>
-                    session.sessionId === sessionId ? enhancedSession : session,
-                  ),
-                );
-
-                return;
-              }
-            }
-          }
-
-          // If session not found (stopped and removed), remove it from lists
-          console.info(
-            '[RepositoryManager] Session no longer active, removing:',
-            sessionId,
-          );
-          setAgentSessions((prev) =>
-            prev.filter((s) => s.sessionId !== sessionId),
-          );
-          setSelectedAgentSessions((prev) =>
-            prev.filter((s) => s.sessionId !== sessionId),
-          );
-          setSelectedAgentSessionIds((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(sessionId);
-            return newSet;
-          });
-        } catch (error) {
-          console.error(
-            '[RepositoryManager] Failed to refresh session:',
-            sessionId,
-            error,
-          );
-        }
-      },
-      [repository.localClones, computeSessionStatus],
-    );
-
-    // Handler for selecting/toggling session from header
-    const handleAgentSessionSelect = useCallback(
-      (session: EnhancedUIAgentSessionData) => {
-        console.info(
-          '[RepositoryManager] Agent session toggled:',
-          session.sessionId,
-        );
-
-        setSelectedAgentSessionIds((prev) => {
-          const newSet = new Set(prev);
-          if (newSet.has(session.sessionId)) {
-            // Deselect
-            newSet.delete(session.sessionId);
-            setSelectedAgentSessions((current) =>
-              current.filter((s) => s.sessionId !== session.sessionId),
-            );
-          } else {
-            // Select
-            newSet.add(session.sessionId);
-            setSelectedAgentSessions((current) => [...current, session]);
-          }
-          return newSet;
-        });
-      },
-      [],
-    );
 
     // Don't render until view mode is determined
     if (!viewMode) {
@@ -1120,34 +757,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           {_loading && !fileTree ? (
             <RepositoryLoadingState repositoryName={repository.name} />
           ) : /* View Content */
-          viewMode === 'collaboration' && selectedSource?.type === 'local' ? (
-            <GitChangesProvider>
-              <FileChangeProvider>
-                <LocalDevelopmentView
-                  repository={repository}
-                  localClone={{
-                    path: selectedSource.location,
-                    currentBranch: selectedSource.metadata?.currentBranch,
-                  }}
-                  onRefresh={() => {}}
-                  selectedAgentSessionIds={selectedAgentSessionIds}
-                  selectedAgentSessions={selectedAgentSessions}
-                  allAgentSessions={agentSessions}
-                  onAgentSessionSelect={handleAgentSessionSelect}
-                  onSessionUpdate={handleSessionUpdate}
-                  onSessionRefresh={handleSessionRefresh}
-                  searchQuery={searchQuery}
-                  fileTree={fileTree}
-                  cityData={cityData}
-                  fileColorHighlightLayers={fileColorHighlightLayers}
-                  activeFileTreeSource={selectedSource}
-                  fileTreeSourceService={fileTreeSourceService}
-                  cacheService={cacheService}
-                  treeStats={treeStats}
-                />
-              </FileChangeProvider>
-            </GitChangesProvider>
-          ) : viewMode === 'planning' && selectedSource?.type === 'local' ? (
+          viewMode === 'planning' && selectedSource?.type === 'local' ? (
             <PlanningView
               repository={repository}
               localClone={{
@@ -1210,7 +820,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 fileColorHighlightLayers={fileColorHighlightLayers}
               />
             </GitChangesProvider>
-          ) : viewMode === 'planning' || viewMode === 'collaboration' ? (
+          ) : viewMode === 'planning' ? (
             <div
               style={{
                 display: 'flex',
@@ -1221,9 +831,8 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 fontSize: '14px',
               }}
             >
-              {viewMode === 'planning' ? 'Planning' : 'Collaboration'} mode
-              requires a local clone. Please select a local clone from the
-              source dropdown.
+              Planning mode requires a local clone. Please select a local
+              clone from the source dropdown.
             </div>
           ) : null}
         </div>

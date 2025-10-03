@@ -5,7 +5,7 @@ import { useTheme } from '@a24z/industry-theme';
 interface HelpModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode?: 'explore' | 'develop';
+  mode?: 'explore' | 'maintain';
 }
 
 export const HelpModal: React.FC<HelpModalProps> = ({
@@ -204,28 +204,28 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               rx="2"
             />
 
-            {/* Agent activity highlights */}
-            {mode === 'develop' && (
+            {/* Maintenance highlights */}
+            {mode === 'maintain' && (
               <>
-                {/* Read activity - outline */}
+                {/* Warning outline */}
                 <rect
                   x="75"
                   y="130"
                   width="25"
                   height="50"
                   fill="none"
-                  stroke="#10b981"
+                  stroke="#f97316"
                   strokeWidth="3"
                   rx="2"
                 />
-                {/* Write activity - filled */}
+                {/* Active issue highlight */}
                 <rect
                   x="265"
                   y="110"
                   width="35"
                   height="70"
-                  fill="#f59e0b"
-                  opacity="0.9"
+                  fill="#ef4444"
+                  opacity="0.8"
                   rx="2"
                 />
               </>
@@ -292,7 +292,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             with borders.
           </p>
 
-          {mode === 'develop' && (
+          {mode === 'maintain' && (
             <>
               <p
                 style={{
@@ -306,7 +306,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                   backgroundClip: 'text',
                 }}
               >
-                See what your agents are doing like never before
+                Keep your repository healthy and production-ready
               </p>
 
               <div
@@ -326,15 +326,15 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                     lineHeight: 1.5,
                   }}
                 >
-                  Watch{' '}
-                  <span style={{ color: '#10b981', fontWeight: 600 }}>
-                    agent activity
+                  Track{' '}
+                  <span style={{ color: '#f97316', fontWeight: 600 }}>
+                    outstanding issues
                   </span>{' '}
-                  in real-time and orchestrate{' '}
-                  <span style={{ color: '#f59e0b', fontWeight: 600 }}>
-                    multiple agents
+                  and{' '}
+                  <span style={{ color: '#ef4444', fontWeight: 600 }}>
+                    maintenance alerts
                   </span>{' '}
-                  working together
+                  to keep dependencies and automation in sync.
                 </p>
               </div>
             </>

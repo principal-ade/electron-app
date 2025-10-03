@@ -37,12 +37,8 @@ The application currently has a hybrid approach:
 
 ### 3. UI Components
 **Files to modify:**
-- `src/renderer/pages/RepoManager/shared/AgentSessionsTab.tsx`
-  - Remove: `locallyArchivedSessions` state
-  - Remove: `archiveSession()` function
-  - Remove: `onArchive` prop from `AgentSessionCard`
-  - Remove: Any UI elements for archiving sessions
-  - Clean up: Session filtering logic that checks archived status
+- `src/renderer/pages/RepoManager/shared/AgentSessionsTab.tsx` (removed)
+  - Legacy archive UI retired with Local Development panel
 
 - `src/renderer/pages/RepoManager/shared/AgentSessionCard.tsx`
   - Remove: `onArchive` prop from interface
@@ -117,7 +113,7 @@ The application currently has a hybrid approach:
 3. Ensure all session fetching goes through Turso SDK
 
 ### Phase 3: Clean UI Components
-1. Remove archive UI from `AgentSessionsTab.tsx`
+1. Remove archive UI from `AgentSessionsTab.tsx` **(completed - component removed)**
 2. Clean up session type definitions
 3. Remove any archive-related state management
 4. Update session cards to remove archive actions

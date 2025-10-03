@@ -655,7 +655,7 @@ export const RepositoryExplorationView: React.FC<
       fileTreeSourceService.initializeFromRepository(repository);
 
     // Filter to only remote sources for exploration view
-    // Local clones should be explored through LocalDevelopmentView
+    // Local clones should be managed through planning workflows
     const remoteSources = initialSources.filter(
       (source) => source.type === 'remote',
     );
@@ -1500,18 +1500,6 @@ export const RepositoryExplorationView: React.FC<
         headTree={gitState?.headTree}
         hasNoCommits={gitState?.hasNoCommits}
         viewMode="explore"
-        showWorkingTree={gitState?.enabled}
-        showHeadTree={gitState?.headTree !== undefined}
-        onToggleWorkingTree={(_show) => {
-          if (activeFileTreeSource?.type === 'local') {
-            // TODO: Update git state for working tree toggle
-          }
-        }}
-        onToggleHeadTree={(_show) => {
-          if (activeFileTreeSource?.type === 'local') {
-            // TODO: Update git state for head tree toggle
-          }
-        }}
         renderCustomBadges={() => (
           <>
             {fileTreeSources.length > 1 && (

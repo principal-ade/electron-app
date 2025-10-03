@@ -308,7 +308,7 @@ Without FSMonitor:
    **Files Using GitChangesContext/useGitChanges:**
    - `src/renderer/contexts/GitChangesContext.tsx` - **Core context file (DELETE)**
    - `src/renderer/pages/RepoManager/RepositoryManager.tsx` - Wraps views with `<GitChangesProvider>`
-   - `src/renderer/pages/RepoManager/LocalDevelopmentView.tsx` - Uses `useGitChanges()` hook
+  - `src/renderer/pages/RepoManager/LocalDevelopmentView.tsx` (removed) - Formerly used `useGitChanges()` hook
    - `src/renderer/pages/RepoManager/RepositoryExplorationView.tsx` - Uses `useGitChanges()` hook
    - `src/renderer/components/repository-maps/GitChangesButton.tsx` - Toggle button component
 
@@ -323,7 +323,7 @@ Without FSMonitor:
 2. **Migrate Remaining Components**
 
    **Priority 1 - Core Repository Views:**
-   - `LocalDevelopmentView.tsx` - Replace `useGitChanges()` with `useRepositoryGitStatus()`
+  - `LocalDevelopmentView.tsx` (removed) - View retired in favor of planning workflows
    - `RepositoryExplorationView.tsx` - Keep for highlight layers only, use new hook for data
    - `GitChangesButton.tsx` - Convert to use new git status hook
 

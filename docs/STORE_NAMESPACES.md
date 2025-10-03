@@ -21,9 +21,9 @@ This document lists the storage namespaces registered by the app, groups them by
   - Landing page / repo lists: [`src/renderer/pages/LandingPage/LandingPage.tsx:61`](src/renderer/pages/LandingPage/LandingPage.tsx:61)  
   - Repo manager & switcher: [`src/renderer/pages/RepoManager/RepositoryManager.tsx:339`](src/renderer/pages/RepoManager/RepositoryManager.tsx:339), [`src/renderer/pages/RepoManager/shared/RepositorySwitcherModal.tsx:33`](src/renderer/pages/RepoManager/shared/RepositorySwitcherModal.tsx:33)
 
-- agent-sessions — "Agent session data with flat event list" (provider: electron-store)  
-  - Registered: [`src/main/storage-providers/typed-namespaces.ts:389`](src/main/storage-providers/typed-namespaces.ts:389)  
-  - Session list / session details UIs: [`src/renderer/pages/RepoManager/shared/AgentSessionsTab.tsx:365`](src/renderer/pages/RepoManager/shared/AgentSessionsTab.tsx:365), [`src/renderer/components/agent-overview/SessionDetailsPanel.tsx:135`](src/renderer/components/agent-overview/SessionDetailsPanel.tsx:135)  
+- agent-sessions — "Agent session data with flat event list" (provider: electron-store)
+  - Registered: [`src/main/storage-providers/typed-namespaces.ts:389`](src/main/storage-providers/typed-namespaces.ts:389)
+  - Session details UI: [`src/renderer/components/agent-overview/SessionDetailsPanel.tsx:135`](src/renderer/components/agent-overview/SessionDetailsPanel.tsx:135) (AgentSessionsTab retired)
   - Archiving writes session summaries: [`src/main/agent-sessions/AgentSessionArchivingService.ts:212`](src/main/agent-sessions/AgentSessionArchivingService.ts:212)
 
 - secrets-metadata — "Metadata for encrypted secrets" (provider: electron-store)  
