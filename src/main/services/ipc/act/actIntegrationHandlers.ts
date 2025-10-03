@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 import {
   ActRunnerEvents,
 } from '../../../../shared/main-process-api-interfaces/ActRunnerAPI';
@@ -14,6 +14,11 @@ import type {
   ValidateRunRequirementsRequest,
   ValidateRunRequirementsResult,
 } from '../../../../shared/types/act.types';
+import {
+  ActRunnerWorkflowChannels,
+  type ActRunnerWorkflowEvent,
+} from '../../../../shared/types/act.types';
+import { ActRunnerService } from '../../act/ActRunnerService';
 
 const isActIntegrationEnabled =
   process.env.PLASMA_ENABLE_ACT_INTEGRATION === 'true';
@@ -39,7 +44,55 @@ const disabledValidation: ValidateRunRequirementsResult = {
   messages: ['ACT integration feature flag is disabled.'],
 };
 
+const actRunnerService = new ActRunnerService();
+let workflowListenersRegistered = false;
+
+const forwardWorkflowEvent = (
+  channel: (typeof ActRunnerWorkflowChannels)[keyof typeof ActRunnerWorkflowChannels],
+) =>
+  (event: ActRunnerWorkflowEvent) => {
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach((window) => {
+      if (!window.isDestroyed()) {
+        window.webContents.send(channel, event);
+      }
+    });
+  };
+
+function ensureWorkflowEventForwarding() {
+  if (workflowListenersRegistered) {
+    return;
+  }
+
+  actRunnerService.on(
+    ActRunnerWorkflowChannels.START,
+    forwardWorkflowEvent(ActRunnerWorkflowChannels.START),
+  );
+  actRunnerService.on(
+    ActRunnerWorkflowChannels.PROGRESS,
+    forwardWorkflowEvent(ActRunnerWorkflowChannels.PROGRESS),
+  );
+  actRunnerService.on(
+    ActRunnerWorkflowChannels.STEP,
+    forwardWorkflowEvent(ActRunnerWorkflowChannels.STEP),
+  );
+  actRunnerService.on(
+    ActRunnerWorkflowChannels.ERROR,
+    forwardWorkflowEvent(ActRunnerWorkflowChannels.ERROR),
+  );
+  actRunnerService.on(
+    ActRunnerWorkflowChannels.COMPLETE,
+    forwardWorkflowEvent(ActRunnerWorkflowChannels.COMPLETE),
+  );
+
+  workflowListenersRegistered = true;
+}
+
 export function registerActIntegrationHandlers() {
+  if (isActIntegrationEnabled) {
+    ensureWorkflowEventForwarding();
+  }
+
   ipcMain.handle(
     ActWorkflowEvents.LIST_REPOSITORY_ACTIONS,
     async (_event, repoId: string): Promise<ActWorkflowAction[]> => {
@@ -64,12 +117,21 @@ export function registerActIntegrationHandlers() {
       }
 
       log('Validating run requirements', request);
-      // Stubbed validation: secrets gate is handled renderer-side for now.
-      return {
-        secretsConfigured: true,
-        actInstalled: false,
-        messages: ['Act runner service stub: act binary validation pending.'],
-      };
+
+      try {
+        return await actRunnerService.validateRunRequirements(request);
+      } catch (error) {
+        console.error('[ActIntegration] Validation error:', error);
+        return {
+          secretsConfigured: false,
+          actInstalled: false,
+          messages: [
+            error instanceof Error
+              ? error.message
+              : 'Unexpected error validating run requirements.',
+          ],
+        };
+      }
     },
   );
 
@@ -83,11 +145,24 @@ export function registerActIntegrationHandlers() {
         return disabledResult;
       }
 
-      warn('Run requested (stub implementation)', request);
-      return {
-        success: false,
-        error: 'Act runner execution path not implemented yet.',
-      };
+      warn('Run requested', request);
+
+      try {
+        const result = await actRunnerService.runWorkflow(request);
+        if (!result.success) {
+          console.error('[ActIntegration] Workflow run failed to start:', result.error);
+        }
+        return result;
+      } catch (error) {
+        console.error('[ActIntegration] Failed to start workflow execution:', error);
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to start workflow execution.',
+        };
+      }
     },
   );
 }

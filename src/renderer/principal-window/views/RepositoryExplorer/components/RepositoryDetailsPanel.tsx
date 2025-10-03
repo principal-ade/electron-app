@@ -416,8 +416,16 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           return;
         }
 
+        const repoPath = selectedRepository?.path;
+
+        if (!repoPath) {
+          window.alert('Cannot determine repository path for this workflow run.');
+          return;
+        }
+
         const validation = await ActRunnerService.validateRunRequirements({
           repoId: repositoryId,
+          repoPath,
           workflowPath: action.workflowPath,
           actionId: action.id,
         });
@@ -440,6 +448,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
         const result = await ActRunnerService.runRepositoryAction({
           repoId: repositoryId,
+          repoPath,
           workflowPath: action.workflowPath,
           actionId: action.id,
         });
