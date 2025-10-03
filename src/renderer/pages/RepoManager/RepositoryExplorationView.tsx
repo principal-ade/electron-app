@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+  ReactNode,
+} from 'react';
 import {
   GitBranch,
   Layers,
@@ -14,6 +21,8 @@ import { useTheme } from '@a24z/industry-theme';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { PackageLayer } from '@principal-ai/codebase-composition';
+import { ThreePanelLayout } from '@a24z/panels';
+import '@a24z/panels/panels.css';
 import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { MarkdownDocumentViewer } from './shared/MarkdownDocumentViewer';
@@ -31,10 +40,7 @@ import { FileTreeSourceService } from '../../services/FileTreeSourceService';
 import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
 // import { SourceSelectionService } from '../../services/SourceSelectionService'; // TODO: Re-enable when needed
 import { FileTreeSource, FileTreeStats } from '../../types/file-tree-source';
-import {
-  RepositoryViewSkeleton,
-  TabConfig,
-} from './shared/RepositoryViewSkeleton';
+import { usePanelsTheme } from '../theme/panelsTheme';
 import type { ToolbarItem } from './shared/RepositoryToolbar';
 import { RepoSourceArchitecturePanelSimple } from './shared/RepoSourceArchitecturePanelSimple';
 import {
@@ -50,6 +56,18 @@ import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 import { RepositorySearchTab } from '../../components/repository-maps/RepositorySearchTab';
 import { FilePanel } from '../../components/FilePanel';
 import { ToolsTab } from './shared/ToolsTab';
+import {
+  RightPaneContainer,
+  RightPaneView,
+} from '../../components/repository-maps/RightPaneContainer';
+
+interface TabConfig {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  content: ReactNode;
+  visible?: boolean;
+}
 
 interface RepositoryExplorationViewProps {
   repository: Repository;
@@ -79,6 +97,10 @@ interface RepositoryExplorationViewProps {
 
   // Callbacks
   onFileTreeLoaded?: (fileTree: FileTree | null) => void;
+
+  // Panel layout state
+  leftPanelCollapsed?: boolean;
+  onLeftPanelCollapsedChange?: (collapsed: boolean) => void;
 }
 
 export const RepositoryExplorationView: React.FC<
@@ -97,10 +119,34 @@ export const RepositoryExplorationView: React.FC<
   onPackageLayersChange,
   fileColorHighlightLayers = [],
   onFileTreeLoaded,
+  leftPanelCollapsed: controlledLeftPanelCollapsed,
+  onLeftPanelCollapsedChange,
 }) => {
   const { theme } = useTheme();
+  const panelsTheme = usePanelsTheme();
   const [activeTab, setActiveTab] = useState<string>('search');
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
+  const [internalLeftPanelCollapsed, setInternalLeftPanelCollapsed] =
+    useState(false);
+
+  const isLeftPanelCollapsed =
+    controlledLeftPanelCollapsed ?? internalLeftPanelCollapsed;
+
+  useEffect(() => {
+    if (controlledLeftPanelCollapsed !== undefined) {
+      setInternalLeftPanelCollapsed(controlledLeftPanelCollapsed);
+    }
+  }, [controlledLeftPanelCollapsed]);
+
+  const setLeftPanelCollapsed = useCallback(
+    (collapsed: boolean) => {
+      if (onLeftPanelCollapsedChange) {
+        onLeftPanelCollapsedChange(collapsed);
+      } else {
+        setInternalLeftPanelCollapsed(collapsed);
+      }
+    },
+    [onLeftPanelCollapsedChange],
+  );
 
   // Services - use shared if provided, otherwise create local
   const fileTreeSourceService = useMemo(
@@ -1375,7 +1421,7 @@ export const RepositoryExplorationView: React.FC<
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {/* Collapse button */}
             <button
-              onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
+              onClick={() => setLeftPanelCollapsed(!isLeftPanelCollapsed)}
               style={{
                 background: 'none',
                 border: 'none',
@@ -1395,9 +1441,9 @@ export const RepositoryExplorationView: React.FC<
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
               }}
-              title={leftPanelCollapsed ? 'Show panel' : 'Hide panel'}
+              title={isLeftPanelCollapsed ? 'Show panel' : 'Hide panel'}
             >
-              {leftPanelCollapsed ? (
+              {isLeftPanelCollapsed ? (
                 <PanelLeft size={16} />
               ) : (
                 <PanelLeftClose size={16} />
@@ -1533,6 +1579,49 @@ export const RepositoryExplorationView: React.FC<
   const showDocumentView =
     activeTab === 'docs' && selectedDocPath && docContent;
   const showCodeFileViewer = selectedCodeFile; // Show viewer as soon as file is selected, not waiting for content
+  const shouldShowDocument = showDocumentView || showCodeFileViewer;
+  const documentPanelContent = showDocumentView
+    ? documentRightPanel
+    : showCodeFileViewer
+      ? fileViewerRightPanel
+      : null;
+  const visibleTabs = tabs.filter((tab) => tab.visible !== false);
+  const activeTabConfig = visibleTabs.find((tab) => tab.id === activeTab);
+  const handleTabChange = useCallback(
+    (tabId: string) => {
+      setActiveTab(tabId);
+      if (tabId !== 'docs') {
+        setSelectedDocPath(null);
+        setDocContent(null);
+      }
+    },
+    [setActiveTab, setSelectedDocPath, setDocContent],
+  );
+  const handleRightPaneViewChange = useCallback(
+    (mode: RightPaneView) => {
+      setRightPaneMode(mode);
+      if (mode === 'city') {
+        setSelectedDocPath(null);
+        setDocContent(null);
+        setSelectedCodeFile(null);
+        setCodeFileContent(null);
+      }
+    },
+    [
+      setRightPaneMode,
+      setSelectedDocPath,
+      setDocContent,
+      setSelectedCodeFile,
+      setCodeFileContent,
+    ],
+  );
+  const rightPaneViewMode = (
+    shouldShowDocument
+      ? 'document'
+      : rightPaneMode === 'terminal'
+        ? 'city'
+        : rightPaneMode
+  ) as RightPaneView;
 
   return (
     <div
@@ -1578,7 +1667,7 @@ export const RepositoryExplorationView: React.FC<
           // When docs tab is active and left panel is collapsed, render in full width mode
           if (
             activeTab === 'docs' &&
-            leftPanelCollapsed &&
+            isLeftPanelCollapsed &&
             selectedDocPath &&
             docContent
           ) {
@@ -1606,63 +1695,178 @@ export const RepositoryExplorationView: React.FC<
             );
           }
 
-          // Otherwise use the standard skeleton with resizable layout
+          // Otherwise render the shared three panel layout with the repository panels
+          const highlightLayers = shouldShowDocument
+            ? []
+            : [
+                ...(showFileColors ? fileColorHighlightLayers : []),
+                ...noteHighlightLayers,
+                ...folderFilterHighlightLayers,
+                ...(searchHighlightLayer ? [searchHighlightLayer] : []),
+                ...(hoveredSearchLayer ? [hoveredSearchLayer] : []),
+                ...(selectedFileLayer ? [selectedFileLayer] : []),
+                ...dependencyAnalysisHighlightLayer,
+                ...packageHighlightLayers,
+                ...toolsHighlightLayers,
+                ...gitHighlightLayers,
+              ];
+
+          const leftPanel = (
+            <div
+              style={{
+                backgroundColor: theme.colors.backgroundSecondary,
+                borderRadius: '8px 0 0 8px',
+                border: `1px solid ${theme.colors.border}`,
+                borderRight: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                height: '100%',
+              }}
+            >
+              {/* Tab Headers */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${visibleTabs.length}, 1fr)`,
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                  backgroundColor: theme.colors.backgroundLight,
+                  padding: '0 8px',
+                  flexShrink: 0,
+                }}
+              >
+                {visibleTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      padding: '12px 16px',
+                      backgroundColor: 'transparent',
+                      color:
+                        activeTab === tab.id
+                          ? theme.colors.primary
+                          : theme.colors.textSecondary,
+                      border: 'none',
+                      borderBottom:
+                        activeTab === tab.id
+                          ? `3px solid ${theme.colors.primary}`
+                          : '3px solid transparent',
+                      marginBottom: activeTab === tab.id ? '-2px' : '-2px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: activeTab === tab.id ? 600 : 400,
+                      transition: 'all 0.15s ease',
+                      whiteSpace: 'nowrap',
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      opacity: activeTab === tab.id ? 1 : 0.7,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeTab !== tab.id) {
+                        e.currentTarget.style.opacity = '0.9';
+                        e.currentTarget.style.color = theme.colors.text;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeTab !== tab.id) {
+                        e.currentTarget.style.opacity = '0.7';
+                        e.currentTarget.style.color = theme.colors.textSecondary;
+                      }
+                    }}
+                  >
+                    {tab.icon}
+                    <span
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {tab.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab Content */}
+              <div
+                style={{
+                  flex: 1,
+                  overflow: 'auto',
+                  padding: '16px',
+                }}
+              >
+                {activeTabConfig?.content}
+              </div>
+            </div>
+          );
+
+          const rightPanel = (
+            <div
+              style={{
+                borderRadius: '0 8px 8px 0',
+                border: `1px solid ${theme.colors.border}`,
+                borderLeft: 'none',
+                overflow: 'hidden',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <RightPaneContainer
+                activeView={rightPaneViewMode}
+                onViewChange={handleRightPaneViewChange}
+                cityData={shouldShowDocument ? null : managedCityData}
+                highlightLayers={highlightLayers}
+                loading={shouldShowDocument ? false : loading || isBuilding}
+                treeStats={shouldShowDocument ? null : treeStats}
+                onFileClick={handleFileClick}
+                activeSource={activeFileTreeSource}
+                sessions={[]}
+                sessionFileActivities={new Map()}
+                repository={repository}
+                onHelpClick={() => setShowHelpModal(true)}
+                headerExtra={undefined}
+                sourceBadges={shouldShowDocument ? null : sourceBadges}
+                loadingMessage="Loading repository structure"
+                emptyMessage="Select a branch to explore"
+                showViewSwitcher={true}
+                toolbarItems={shouldShowDocument ? [] : toolbarItems}
+                toolbarExpanded={toolbarExpanded}
+                onToolbarExpandedChange={setToolbarExpanded}
+                documentContent={documentPanelContent}
+              />
+            </div>
+          );
+
           return (
-            <RepositoryViewSkeleton
-              tabs={tabs}
-              activeTab={activeTab}
-              onTabChange={(tabId) => {
-                setActiveTab(tabId);
-                // Clear document when switching away from docs
-                if (tabId !== 'docs') {
-                  setSelectedDocPath(null);
-                  setDocContent(null);
-                }
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                padding: '16px',
+                boxSizing: 'border-box',
               }}
-              cityData={showDocumentView || showCodeFileViewer ? null : managedCityData}
-              onFileClick={handleFileClick}
-              highlightLayers={
-                showDocumentView || showCodeFileViewer
-                  ? []
-                  : [
-                      ...(showFileColors ? fileColorHighlightLayers : []), // Conditionally add file colors
-                      ...noteHighlightLayers,
-                      ...folderFilterHighlightLayers, // Add folder filter highlights
-                      ...(searchHighlightLayer ? [searchHighlightLayer] : []),
-                      ...(hoveredSearchLayer ? [hoveredSearchLayer] : []),
-                      ...(selectedFileLayer ? [selectedFileLayer] : []),
-                      ...dependencyAnalysisHighlightLayer,
-                      ...packageHighlightLayers,
-                      ...toolsHighlightLayers,
-                      ...gitHighlightLayers,
-                    ]
-              }
-              loading={(showDocumentView || showCodeFileViewer) ? false : loading || isBuilding}
-              treeStats={(showDocumentView || showCodeFileViewer) ? null : treeStats}
-              sourceBadges={(showDocumentView || showCodeFileViewer) ? null : sourceBadges}
-              activeSource={activeFileTreeSource}
-              onHelpClick={() => setShowHelpModal(true)}
-              cityHeaderExtra={undefined}
-              loadingMessage="Loading repository structure"
-              emptyMessage="Select a branch to explore"
-              rightPaneMode={showDocumentView || showCodeFileViewer ? 'document' : rightPaneMode}
-              onRightPaneModeChange={(mode) => {
-                setRightPaneMode(mode);
-                if (mode === 'city') {
-                  // Clear document and file viewer selection when switching back to map
-                  setSelectedDocPath(null);
-                  setDocContent(null);
-                  setSelectedCodeFile(null);
-                  setCodeFileContent(null);
-                }
-              }}
-              showViewSwitcher={true} // Show switcher to allow going back to map
-              // No terminalDirectory passed for remote view
-              toolbarItems={(showDocumentView || showCodeFileViewer) ? [] : toolbarItems}
-              toolbarExpanded={toolbarExpanded}
-              onToolbarExpandedChange={setToolbarExpanded}
-              documentContent={showDocumentView ? documentRightPanel : showCodeFileViewer ? fileViewerRightPanel : null}
-            />
+            >
+              <ThreePanelLayout
+                leftPanel={leftPanel}
+                middlePanel={rightPanel}
+                rightPanel={null}
+                collapsiblePanels={{ left: true, right: false }}
+                defaultSizes={{ left: 32, middle: 68, right: 0 }}
+                minSizes={{ left: 24, middle: 50, right: 0 }}
+                collapsed={{ left: isLeftPanelCollapsed }}
+                showCollapseButtons={false}
+                onLeftCollapseComplete={() => setLeftPanelCollapsed(true)}
+                onLeftExpandComplete={() => setLeftPanelCollapsed(false)}
+                style={{ height: '100%', width: '100%' }}
+                theme={panelsTheme}
+              />
+            </div>
           );
         }}
       </CityMapManager>
