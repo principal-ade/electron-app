@@ -1078,35 +1078,6 @@ export const RepositoryExplorationView: React.FC<
     [activeFileTreeSource, fileViewerContentProvider, preferredDocViewMode],
   );
 
-  // Handle package highlighting (toggle)
-  const handleHighlightPackage = (packagePath: string, packageName: string) => {
-    // Find the package by path and name to get its ID
-    const pkg = packageLayers?.find(
-      (p) =>
-        p.packageData.path === packagePath &&
-        p.packageData.name === packageName,
-    );
-
-    if (!pkg) {
-      console.warn(
-        '[RepositoryExplorationView] Could not find package:',
-        packageName,
-        packagePath,
-      );
-      return;
-    }
-
-    setHighlightedPackages((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(pkg.id)) {
-        newSet.delete(pkg.id);
-      } else {
-        newSet.add(pkg.id);
-      }
-      return newSet;
-    });
-  };
-
   // Get git state for source badges (moved here to be available for fileTrees)
   const gitState =
     activeFileTreeSource?.type === 'local'
@@ -1715,7 +1686,6 @@ export const RepositoryExplorationView: React.FC<
             <div
               style={{
                 backgroundColor: theme.colors.backgroundSecondary,
-                borderRadius: '8px 0 0 8px',
                 border: `1px solid ${theme.colors.border}`,
                 borderRight: 'none',
                 display: 'flex',
@@ -1808,7 +1778,6 @@ export const RepositoryExplorationView: React.FC<
           const rightPanel = (
             <div
               style={{
-                borderRadius: '0 8px 8px 0',
                 border: `1px solid ${theme.colors.border}`,
                 borderLeft: 'none',
                 overflow: 'hidden',
@@ -1848,7 +1817,6 @@ export const RepositoryExplorationView: React.FC<
               style={{
                 width: '100%',
                 height: '100%',
-                padding: '16px',
                 boxSizing: 'border-box',
               }}
             >

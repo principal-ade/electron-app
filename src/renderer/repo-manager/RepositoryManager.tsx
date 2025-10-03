@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
-import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import { createFileColorHighlightLayers } from '@principal-ai/code-city-react';
 import {
   PackageLayerModule,
@@ -68,7 +67,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
     );
     const [fileTree, setFileTree] = useState<FileTree | null>(null);
     const [treeStats, setTreeStats] = useState<FileTreeStats | null>(null);
-    const [cityData, setCityData] = useState<CityData | null>(null);
     const [packageLayers, setPackageLayers] = useState<PackageLayer[] | null>(
       null,
     );
@@ -369,7 +367,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
               new Map(), // No additional trees for basic loading
               { width: 1200, height: 900 },
             );
-            setCityData(city);
 
             // Discover packages for violation monitoring
             try {
@@ -451,7 +448,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           setFileTree(null);
           setTreeStats(null);
           setFilterLayers(null);
-          setCityData(null);
           setPackageLayers(null);
         } finally {
           setLoading(false);
