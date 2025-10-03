@@ -33,6 +33,18 @@ export class RemoteAgentWindowService {
   }
 
   /**
+   * Switch to a remote agent window
+   */
+  static async switchToAgent(agentId: string): Promise<void> {
+    try {
+      await window.mainProcess.remoteAgentWindow.switchToAgent(agentId);
+    } catch (error) {
+      console.error('[RemoteAgentWindowService] Failed to switch remote agent:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Close a remote agent window
    */
   static async closeRemoteAgent(agentId: string): Promise<void> {
@@ -64,6 +76,18 @@ export class RemoteAgentWindowService {
       return await window.mainProcess.remoteAgentWindow.listRemoteAgents();
     } catch (error) {
       console.error('[RemoteAgentWindowService] Failed to list remote agents:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the currently active remote agent id
+   */
+  static async getActiveAgentId(): Promise<string | null> {
+    try {
+      return await window.mainProcess.remoteAgentWindow.getActiveAgentId();
+    } catch (error) {
+      console.error('[RemoteAgentWindowService] Failed to get active remote agent id:', error);
       throw error;
     }
   }
@@ -108,5 +132,23 @@ export class RemoteAgentWindowService {
     callback: (agentId: string, message: any) => void
   ): () => void {
     return window.mainProcess.remoteAgentWindow.onRemoteAgentMessage(callback);
+  }
+
+  /**
+   * Subscribe to remote agent list changes
+   */
+  static onRemoteAgentListChanged(
+    callback: (agents: RemoteAgentConfig[], activeAgentId: string | null) => void
+  ): () => void {
+    return window.mainProcess.remoteAgentWindow.onRemoteAgentListChanged(callback);
+  }
+
+  /**
+   * Subscribe to active remote agent changes
+   */
+  static onRemoteAgentActiveChanged(
+    callback: (agentId: string | null) => void
+  ): () => void {
+    return window.mainProcess.remoteAgentWindow.onRemoteAgentActiveChanged(callback);
   }
 }

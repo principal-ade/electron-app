@@ -13,11 +13,20 @@ export class RemoteAgentService {
     (agentId: string, state: RemoteAgentWindowState) => void
   > = new Set();
   private messageListeners: Set<(agentId: string, message: any) => void> = new Set();
+  private agentListListeners: Set<
+    (agents: RemoteAgentConfig[], activeAgentId: string | null) => void
+  > = new Set();
+  private activeAgentListeners: Set<(agentId: string | null) => void> = new Set();
   private unsubscribeStateChange?: () => void;
   private unsubscribeMessage?: () => void;
+  private unsubscribeListChange?: () => void;
+  private unsubscribeActiveChange?: () => void;
+  private agentList: RemoteAgentConfig[] = [];
+  private activeAgentId: string | null = null;
 
   constructor() {
     this.setupEventListeners();
+    void this.initializeAgentState();
   }
 
   /**
@@ -65,9 +74,31 @@ export class RemoteAgentService {
    */
   async listRemoteAgents(): Promise<RemoteAgentConfig[]> {
     try {
-      return await RemoteAgentWindowService.listRemoteAgents();
+      const agents = await RemoteAgentWindowService.listRemoteAgents();
+      this.agentList = agents;
+      this.notifyAgentListListeners();
+      return agents;
     } catch (error) {
       console.error('Failed to list remote agents:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the currently active remote agent id (cached)
+   */
+  getActiveAgentId(): string | null {
+    return this.activeAgentId;
+  }
+
+  /**
+   * Switch to an existing remote agent window
+   */
+  async switchToAgent(agentId: string): Promise<void> {
+    try {
+      await RemoteAgentWindowService.switchToAgent(agentId);
+    } catch (error) {
+      console.error('Failed to switch remote agent:', error);
       throw error;
     }
   }
@@ -121,6 +152,39 @@ export class RemoteAgentService {
   }
 
   /**
+   * Subscribe to agent list changes
+   */
+  onAgentListChange(
+    callback: (agents: RemoteAgentConfig[], activeAgentId: string | null) => void
+  ): () => void {
+    this.agentListListeners.add(callback);
+    callback(this.agentList, this.activeAgentId);
+
+    return () => {
+      this.agentListListeners.delete(callback);
+    };
+  }
+
+  /**
+   * Subscribe to active agent changes
+   */
+  onActiveAgentChange(callback: (agentId: string | null) => void): () => void {
+    this.activeAgentListeners.add(callback);
+    callback(this.activeAgentId);
+
+    return () => {
+      this.activeAgentListeners.delete(callback);
+    };
+  }
+
+  /**
+   * Check whether a remote agent is currently open
+   */
+  isAgentOpen(agentId: string): boolean {
+    return this.agentList.some((agent) => agent.id === agentId);
+  }
+
+  /**
    * Setup event listeners from main process
    */
   private setupEventListeners(): void {
@@ -147,6 +211,20 @@ export class RemoteAgentService {
         }
       });
     });
+
+    this.unsubscribeListChange = RemoteAgentWindowService.onRemoteAgentListChanged(
+      (agents, activeAgentId) => {
+        this.agentList = agents;
+        this.activeAgentId = activeAgentId;
+        this.notifyAgentListListeners();
+        this.notifyActiveAgentListeners();
+      },
+    );
+
+    this.unsubscribeActiveChange = RemoteAgentWindowService.onRemoteAgentActiveChanged((agentId) => {
+      this.activeAgentId = agentId;
+      this.notifyActiveAgentListeners();
+    });
   }
 
   /**
@@ -155,8 +233,47 @@ export class RemoteAgentService {
   destroy(): void {
     this.unsubscribeStateChange?.();
     this.unsubscribeMessage?.();
+    this.unsubscribeListChange?.();
+    this.unsubscribeActiveChange?.();
     this.stateChangeListeners.clear();
     this.messageListeners.clear();
+    this.agentListListeners.clear();
+    this.activeAgentListeners.clear();
+  }
+
+  private async initializeAgentState(): Promise<void> {
+    try {
+      const [agents, activeAgentId] = await Promise.all([
+        RemoteAgentWindowService.listRemoteAgents(),
+        RemoteAgentWindowService.getActiveAgentId(),
+      ]);
+      this.agentList = agents;
+      this.activeAgentId = activeAgentId;
+      this.notifyAgentListListeners();
+      this.notifyActiveAgentListeners();
+    } catch (error) {
+      console.error('Failed to initialize remote agent state:', error);
+    }
+  }
+
+  private notifyAgentListListeners(): void {
+    this.agentListListeners.forEach((listener) => {
+      try {
+        listener(this.agentList, this.activeAgentId);
+      } catch (error) {
+        console.error('Error in agent list listener:', error);
+      }
+    });
+  }
+
+  private notifyActiveAgentListeners(): void {
+    this.activeAgentListeners.forEach((listener) => {
+      try {
+        listener(this.activeAgentId);
+      } catch (error) {
+        console.error('Error in active agent listener:', error);
+      }
+    });
   }
 }
 
