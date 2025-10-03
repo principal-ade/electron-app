@@ -28,7 +28,6 @@ import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { MarkdownDocumentViewer } from './shared/MarkdownDocumentViewer';
 import { ExcalidrawWrapper } from '../components/shared/ExcalidrawWrapper';
 import { FileSystemService } from '../main-process-api/FileSystemService';
-import { WindowService } from '../main-process-api/WindowService';
 
 import type { Repository } from '../../shared/types/repository.types';
 import { RightPaneMode } from '../../shared/types/userPreferences.types';
@@ -54,7 +53,7 @@ import { HelpModal } from './shared/HelpModal';
 import { useGitChanges } from '../contexts/GitChangesContext';
 import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
 import { RepositorySearchTab } from '../components/repository-maps/RepositorySearchTab';
-import { FilePanel } from '../components/FilePanel';
+import { RepoManagerCodePreview } from './shared/RepoManagerCodePreview';
 import { ToolsTab } from './shared/ToolsTab';
 import {
   RightPaneContainer,
@@ -232,11 +231,10 @@ export const RepositoryExplorationView: React.FC<
   // Help modal state
   const [showHelpModal, setShowHelpModal] = useState(false);
 
-  // Multi-file editor state
-  const [openedFiles, setOpenedFiles] = useState<Set<string>>(new Set());
-
   // File viewer in right panel state
   const [selectedCodeFile, setSelectedCodeFile] = useState<string | null>(null);
+  const [selectedCodeFileAbsolutePath, setSelectedCodeFileAbsolutePath] =
+    useState<string | null>(null);
   const [codeFileContent, setCodeFileContent] = useState<string | null>(null);
   const [loadingCodeFile, setLoadingCodeFile] = useState(false);
 
@@ -359,152 +357,69 @@ export const RepositoryExplorationView: React.FC<
     activeFileTreeSource?.metadata?.currentBranch,
   ]);
 
-  // Handle file click to open in multi-tab viewer
-  const handleFileClick = useCallback(
-    (filePath: string) => {
-      // Add file to opened files set
-      setOpenedFiles((prev) => new Set(prev).add(filePath));
-
-      // Open multi-file editor window
-      const openMultiFileEditor = async () => {
-        try {
-          // Check if this is a local or remote source
-          if (activeFileTreeSource?.type === 'local') {
-            // For local sources, convert relative path to absolute path
-            const absolutePath = filePath.startsWith('/')
-              ? filePath
-              : `${activeFileTreeSource.location}/${filePath}`;
-
-            // Prepare file info for the multi-file editor
-            const files = [
-              {
-                path: absolutePath,
-                relativePath: filePath,
-                lastModified: Date.now(),
-              },
-            ];
-
-            // Include any previously opened files
-            openedFiles.forEach((openedFile) => {
-              if (openedFile !== filePath) {
-                const absPath = openedFile.startsWith('/')
-                  ? openedFile
-                  : `${activeFileTreeSource.location}/${openedFile}`;
-                files.push({
-                  path: absPath,
-                  relativePath: openedFile,
-                  lastModified: Date.now(),
-                });
-              }
-            });
-
-            await WindowService.openLocalFiles({
-              windowId: `explore-local-${activeFileTreeSource.id}`,
-              windowTitle: `Explore ${activeFileTreeSource.name}`,
-              files,
-            });
-          } else {
-            // For remote sources, use the existing remote flow
-            const files = [
-              {
-                path: filePath,
-                relativePath: filePath,
-                lastModified: Date.now(),
-              },
-            ];
-
-            // Include any previously opened files
-            openedFiles.forEach((openedFile) => {
-              if (openedFile !== filePath) {
-                files.push({
-                  path: openedFile,
-                  relativePath: openedFile,
-                  lastModified: Date.now(),
-                });
-              }
-            });
-
-            // Pass remote repository information for the multi-file editor
-            const branch =
-              activeFileTreeSource?.metadata?.currentBranch ||
-              remoteData.defaultBranch;
-
-            await WindowService.openRemoteFiles({
-              windowId: `explore-${remoteData.owner}-${remoteData.repo}`,
-              windowTitle: `Explore ${remoteData.owner}/${remoteData.repo}`,
-              files,
-              owner: remoteData.owner,
-              repo: remoteData.repo,
-              branch,
-            });
-          }
-        } catch (error) {
-          console.error(
-            '[RepositoryExplorationView] Failed to open multi-file editor:',
-            error,
-          );
-        }
-      };
-
-      openMultiFileEditor();
-    },
-    [remoteData, openedFiles, activeFileTreeSource],
-  );
-
-  // Handle search file selection - now opens in right panel
   // Track the current loading file to prevent race conditions
   const loadingFileRef = useRef<string | null>(null);
 
-  const handleSearchFileSelect = useCallback(
-    async (filePath: string, lineNumbers?: number[], searchQuery?: string) => {
-      // Store the file we're loading to check later
+  const openFileInRightPane = useCallback(
+    async (filePath: string) => {
       loadingFileRef.current = filePath;
 
-      // Set selected file for highlighting
       setSelectedFile(filePath);
       setSelectedCodeFile(filePath);
+
+      const absolutePath =
+        activeFileTreeSource?.type === 'local'
+          ? filePath.startsWith('/')
+            ? filePath
+            : `${activeFileTreeSource.location}/${filePath}`
+          : null;
+
+      setSelectedCodeFileAbsolutePath(absolutePath);
       setLoadingCodeFile(true);
-      // Clear old content immediately to prevent showing wrong content
       setCodeFileContent(null);
 
-      // Switch right pane to document mode to show the file
       setRightPaneMode('document');
 
       try {
         let content: string | null = null;
 
-        if (activeFileTreeSource?.type === 'local') {
-          // For local sources, convert relative path to absolute path
-          const absolutePath = filePath.startsWith('/')
-            ? filePath
-            : `${activeFileTreeSource.location}/${filePath}`;
-
+        if (absolutePath) {
           const result = await FileSystemService.readFile(absolutePath);
-          content = result?.content || null;
+          content = result?.content ?? null;
         } else {
-          // For remote sources, use the content provider
           const relativePath = filePath.startsWith('/')
             ? filePath.substring(1)
             : filePath;
           content = await fileViewerContentProvider.readFileContent(relativePath);
         }
 
-        // Only set content if this is still the file we want to load
         if (loadingFileRef.current === filePath) {
           setCodeFileContent(content);
           setLoadingCodeFile(false);
         }
       } catch (error) {
-        // Only handle error if this is still the file we want to load
         if (loadingFileRef.current === filePath) {
           console.error('[RepositoryExplorationView] Failed to load file:', error);
           setCodeFileContent(null);
           setLoadingCodeFile(false);
         }
       }
-
     },
     [activeFileTreeSource, fileViewerContentProvider],
+  );
+
+  const handleFileClick = useCallback(
+    (filePath: string) => {
+      void openFileInRightPane(filePath);
+    },
+    [openFileInRightPane],
+  );
+
+  const handleSearchFileSelect = useCallback(
+    async (filePath: string, _lineNumbers?: number[], _searchQuery?: string) => {
+      await openFileInRightPane(filePath);
+    },
+    [openFileInRightPane],
   );
 
   // Handle search results change for highlighting
@@ -1332,36 +1247,20 @@ export const RepositoryExplorationView: React.FC<
 
   // Create custom right panel content for file viewing (from search results)
   const fileViewerRightPanel = selectedCodeFile ? (
-    loadingCodeFile ? (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          color: theme.colors.textSecondary,
-        }}
-      >
-        Loading file...
-      </div>
-    ) : (
-      <FilePanel
-        key={selectedCodeFile} // Add key to force remount when file changes
-        filePath={selectedCodeFile}
-        displayPath={selectedCodeFile}
-        repositoryPath={activeFileTreeSource?.type === 'local' ? activeFileTreeSource.location : undefined}
-        editable={false}
-        enableVimMode={true}
-        initialContent={codeFileContent || ''} // Provide empty string as fallback
-        onClose={() => {
-          setSelectedCodeFile(null);
-          setCodeFileContent(null);
-          setSelectedFile(null);
-          // Switch back to city view
-          setRightPaneMode('city');
-        }}
-      />
-    )
+    <RepoManagerCodePreview
+      key={selectedCodeFile} // Force remount when selecting a different file
+      filePath={selectedCodeFile}
+      absolutePath={selectedCodeFileAbsolutePath}
+      content={codeFileContent}
+      loading={loadingCodeFile}
+      onClose={() => {
+        setSelectedCodeFile(null);
+        setSelectedCodeFileAbsolutePath(null);
+        setCodeFileContent(null);
+        setSelectedFile(null);
+        setRightPaneMode('city');
+      }}
+    />
   ) : null;
 
   // Create custom right panel content for document viewing
@@ -1575,6 +1474,7 @@ export const RepositoryExplorationView: React.FC<
         setSelectedDocPath(null);
         setDocContent(null);
         setSelectedCodeFile(null);
+        setSelectedCodeFileAbsolutePath(null);
         setCodeFileContent(null);
       }
     },
@@ -1583,6 +1483,7 @@ export const RepositoryExplorationView: React.FC<
       setSelectedDocPath,
       setDocContent,
       setSelectedCodeFile,
+      setSelectedCodeFileAbsolutePath,
       setCodeFileContent,
     ],
   );
