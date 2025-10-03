@@ -18,6 +18,7 @@ import type { LLMModelsAPI } from './LLMModelsAPI';
 import type { AppVersionManagerAPI } from './AppVersionManagerAPI';
 import type { RepositoryAPI } from './RepositoryAPI';
 import type { RepositoryNotesAPI } from './RepositoryNotesAPI';
+import type { PalaceTasksAPI } from './PalaceTasksAPI';
 import type { RepositoryMonitoringAPI } from './RepositoryMonitoringAPI';
 import type { SecretsAPI } from './SecretsAPI';
 import type { ShellAPI } from './ShellAPI';
@@ -91,6 +92,7 @@ export interface MainProcessAPI {
   store: StoreAPI;
   repository: RepositoryAPI;
   repositoryNotes: RepositoryNotesAPI;
+  palaceTasks: PalaceTasksAPI;
   repositoryMonitoring: RepositoryMonitoringAPI;
   secrets: SecretsAPI;
   shell: ShellAPI;

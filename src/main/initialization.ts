@@ -37,6 +37,7 @@ import { registerAlexandriaHandlers } from './stores/AlexandriaApiEventHandler';
 import { registerAlexandriaDocsHandlers } from './stores/AlexandriaDocsApiEventHandler';
 import { registerPalaceRoomHandlers } from './stores/PalaceRoomApiEventHandler';
 import { registerRepositoryNotesHandlers } from './principal-mcp/repositoryNotesHandlers';
+import { registerPalaceTasksHandlers } from './palace-tasks/palaceTasksHandlers';
 import { registerRepositoryMonitoringHandlers, getManager as getRepositoryMonitoringManager } from './repository-monitoring/ipcHandlers';
 import { RepositoryRegistrationManager } from './repository-monitoring/RepositoryRegistrationManager';
 import { registerApiProxyHandlers } from './services/ApiProxyService';
@@ -140,6 +141,7 @@ const registerAllIpcHandlers = async () => {
   registerAlexandriaDocsHandlers();
   registerPalaceRoomHandlers();
   registerRepositoryNotesHandlers();
+  registerPalaceTasksHandlers();
   registerApiProxyHandlers();
   JWTService.registerHandlers();
 

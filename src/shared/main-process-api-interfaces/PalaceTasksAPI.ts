@@ -1,0 +1,48 @@
+/**
+ * API for interacting with Memory Palace tasks
+ */
+
+import type {
+  Task,
+  TaskStatus,
+  TaskPriority,
+  TaskQueryOptions as CoreTaskQueryOptions,
+} from '@a24z/core-library';
+
+export type { Task, TaskStatus, TaskPriority } from '@a24z/core-library';
+
+export interface TaskQueryOptions extends Partial<CoreTaskQueryOptions> {
+  // Extend with any additional UI-specific query options if needed
+}
+
+export interface GetTasksResponse {
+  tasks: Task[];
+  total: number;
+}
+
+export enum PalaceTasksAPIEvent {
+  GET_TASKS = 'palace-tasks:get-tasks',
+  GET_TASK = 'palace-tasks:get-task',
+  UPDATE_TASK_STATUS = 'palace-tasks:update-task-status',
+}
+
+export interface PalaceTasksAPI {
+  /**
+   * Get tasks for a repository
+   */
+  getTasks(repositoryPath: string, options?: TaskQueryOptions): Promise<GetTasksResponse>;
+
+  /**
+   * Get a specific task by ID
+   */
+  getTask(repositoryPath: string, taskId: string): Promise<Task | null>;
+
+  /**
+   * Update task status
+   */
+  updateTaskStatus(
+    repositoryPath: string,
+    taskId: string,
+    status: TaskStatus
+  ): Promise<boolean>;
+}

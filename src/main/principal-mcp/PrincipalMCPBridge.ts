@@ -3,6 +3,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { webContents } from 'electron';
 import { EventEmitter } from 'events';
+import { MemoryPalace, NodeFileSystemAdapter } from '@a24z/core-library';
+import type { CreateTaskInput, ValidatedRepositoryPath } from '@a24z/core-library';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
@@ -235,11 +237,54 @@ export class PrincipalMCPBridge extends EventEmitter {
           if (dependencyResolution.alexandriaEntry) {
             response.message = `Found registered repository: ${dependencyResolution.alexandriaEntry.name}`;
             response.alexandriaEntry = dependencyResolution.alexandriaEntry;
+
+            // Write task to dependency's Memory Palace
+            try {
+              const dependencyPath = dependencyResolution.alexandriaEntry.path;
+              const fsAdapter = new NodeFileSystemAdapter();
+              const validatedPath = MemoryPalace.validateRepositoryPath(
+                fsAdapter,
+                dependencyPath
+              ) as ValidatedRepositoryPath;
+              const palace = new MemoryPalace(validatedPath, fsAdapter);
+
+              // Compose task content
+              const content = request.taskDetails.trim().startsWith('#')
+                ? request.taskDetails
+                : `# ${request.taskSummary}\n\n${request.taskDetails}`;
+
+              // Create task input
+              const taskInput: CreateTaskInput = {
+                content,
+                directoryPath: '' as any, // Root of dependency repo
+                priority: request.priority,
+                tags: request.tags,
+                anchors: request.anchors?.map(anchor => anchor as any) || [],
+              };
+
+              // Determine sender ID from source repository
+              const senderName = request.repositoryRoot
+                ? fsAdapter.getRepositoryName(request.repositoryRoot as ValidatedRepositoryPath)
+                : 'external';
+
+              // Write task to dependency's Memory Palace
+              const task = palace.receiveTask(taskInput, senderName);
+
+              response.taskWritten = true;
+              response.taskPath = task.id;
+              response.dependencyRepository = dependencyPath;
+
+              console.log(`[Principal MCP Bridge] Task written to ${dependencyPath}/.palace-work/tasks/active/${task.id}.task.md`);
+            } catch (error) {
+              console.error('[Principal MCP Bridge] Failed to write task to dependency Memory Palace:', error);
+              response.taskWritten = false;
+              response.taskWriteError = error instanceof Error ? error.message : 'Unknown error';
+            }
           } else if (dependencyResolution.packageInfo) {
             response.message = `Dependency already exists in ${dependencyResolution.packageInfo.packagePath}`;
             response.existingPackage = dependencyResolution.packageInfo;
           }
-          
+
           if (dependencyResolution.suggestions) {
             response.installationSuggestions = dependencyResolution.suggestions;
           }

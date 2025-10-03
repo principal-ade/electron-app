@@ -8,7 +8,7 @@ import { RepositoryMonitoringService } from '../../../../main-process-api/Reposi
 import { WindowService } from '../../../../main-process-api/WindowService';
 import { RemoveRepositoryDialog } from './RemoveRepositoryDialog';
 import { TerminalService } from '../../../../main-process-api/TerminalService';
-import { RepositoryNotesPanel } from './RepositoryNotesPanel';
+import { RepositoryTasksAndNotesPanel } from './RepositoryTasksAndNotesPanel';
 import { GitService, GitBranchStatus } from '../../../../main-process-api/GitService';
 import { RepositoryHeader } from './RepositoryHeader';
 import { GitStatusPanel } from './GitStatusPanel';
@@ -553,8 +553,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   repository={selectedRepository}
                 />
 
-                {/* Repository Notes Panel */}
-                <RepositoryNotesPanel
+                {/* Repository Tasks and Notes Panel */}
+                <RepositoryTasksAndNotesPanel
                   repositoryPath={selectedRepository.path}
                   isLoading={false}
                 />
