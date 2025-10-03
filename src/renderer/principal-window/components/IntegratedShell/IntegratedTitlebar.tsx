@@ -78,13 +78,13 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         id: 'jules',
         name: 'Jules',
         url: 'https://jules.google.com',
-        buttonLabel: 'Open Jules',
+        buttonLabel: 'Jules',
       },
       chatgpt: {
         id: 'chatgpt',
         name: 'ChatGPT Codex',
         url: 'https://chatgpt.com/codex',
-        buttonLabel: 'ChatGPT',
+        buttonLabel: 'Codex',
       },
     }),
     [],
@@ -102,7 +102,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       try {
         await remoteAgentService.openRemoteAgent(config);
       } catch (error) {
-        console.error(`Error opening ${type === 'jules' ? 'Jules' : 'ChatGPT'}:`, error);
+        console.error(`Error opening ${type === 'jules' ? 'Jules' : 'Codex'}:`, error);
       }
     },
     [agentDefinitions]
@@ -165,13 +165,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           gap: '8px',
         }}
       >
-        {showRightSidebarControl && onToggleRightSidebar && (
-          <ViewSidebarControls
-            isCollapsed={rightSidebarCollapsed}
-            onToggle={onToggleRightSidebar}
-            side="right"
-          />
-        )}
         <div
           style={{
             display: 'flex',
@@ -238,14 +231,21 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             }}
             title={
               isAgentOpen(agentDefinitions.chatgpt.id)
-                ? 'Focus the existing ChatGPT Codex remote agent window'
-                : 'Open a ChatGPT Codex remote agent window'
+                ? 'Focus the existing Codex remote agent window'
+                : 'Open a Codex remote agent window'
             }
           >
             <Bot size={14} />
-            {isAgentOpen(agentDefinitions.chatgpt.id) ? 'Focus ChatGPT' : agentDefinitions.chatgpt.buttonLabel}
+            {isAgentOpen(agentDefinitions.chatgpt.id) ? 'Focus Codex' : agentDefinitions.chatgpt.buttonLabel}
           </button>
         </div>
+        {showRightSidebarControl && onToggleRightSidebar && (
+          <ViewSidebarControls
+            isCollapsed={rightSidebarCollapsed}
+            onToggle={onToggleRightSidebar}
+            side="right"
+          />
+        )}
         <ThemeDropdown />
       </div>
 
