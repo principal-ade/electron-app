@@ -7,6 +7,8 @@ import {
   AgentInstallationStatus,
 } from '../../../../main-process-api/AgentConfigurationService';
 import { AgentConfigurationView } from '../../../../pages/LandingPage/AgentConfigurationView';
+import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
+import type { UserPreferences } from '../../../../../shared/types/userPreferences.types';
 
 export const AIAssistantsSettings: React.FC = () => {
   const { theme } = useTheme();
@@ -15,6 +17,8 @@ export const AIAssistantsSettings: React.FC = () => {
     'claude' | 'cline' | 'opencode' | null
   >(null);
   const [agentViewLayout, setAgentViewLayout] = useState<'simple' | 'detailed'>('simple');
+  const [showJulesButton, setShowJulesButton] = useState(false);
+  const [showCodexButton, setShowCodexButton] = useState(false);
 
   const checkAgentStatus = useCallback(async () => {
     try {
@@ -29,9 +33,135 @@ export const AIAssistantsSettings: React.FC = () => {
     checkAgentStatus();
   }, [checkAgentStatus]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const applyPreferences = (preferences: UserPreferences) => {
+      if (!isMounted) {
+        return;
+      }
+
+      setShowJulesButton(preferences.remoteAgentButtons?.jules ?? false);
+      setShowCodexButton(preferences.remoteAgentButtons?.codex ?? false);
+    };
+
+    void UserPreferencesService.getPreferences().then(applyPreferences);
+
+    const handlePreferencesUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<UserPreferences>).detail;
+      if (detail) {
+        applyPreferences(detail);
+      }
+    };
+
+    window.addEventListener(
+      'user-preferences-updated',
+      handlePreferencesUpdated as EventListener,
+    );
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener(
+        'user-preferences-updated',
+        handlePreferencesUpdated as EventListener,
+      );
+    };
+  }, []);
+
+  const handleToggleJulesButton = async () => {
+    const nextValue = !showJulesButton;
+    setShowJulesButton(nextValue);
+    await UserPreferencesService.updatePreferences({
+      remoteAgentButtons: { jules: nextValue },
+    });
+  };
+
+  const handleToggleCodexButton = async () => {
+    const nextValue = !showCodexButton;
+    setShowCodexButton(nextValue);
+    await UserPreferencesService.updatePreferences({
+      remoteAgentButtons: { codex: nextValue },
+    });
+  };
+
   if (!activeAgentView) {
     return (
       <div style={{ maxWidth: '800px' }}>
+        <div style={{ marginBottom: '32px' }}>
+          <h4
+            style={{
+              fontSize: '16px',
+              fontWeight: 600,
+              marginBottom: '16px',
+              color: theme.colors.text,
+            }}
+          >
+            Remote Agent Buttons
+          </h4>
+          <div
+            style={{
+              backgroundColor: theme.colors.backgroundSecondary,
+              borderRadius: '12px',
+              padding: '20px',
+              border: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <p
+              style={{
+                fontSize: '14px',
+                color: theme.colors.textSecondary,
+                margin: '0 0 16px 0',
+              }}
+            >
+              Choose which remote agent quick access buttons appear in the titlebar.
+            </p>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '16px',
+                  fontSize: '14px',
+                  color: theme.colors.text,
+                }}
+              >
+                <span>Show Jules quick access button</span>
+                <input
+                  type="checkbox"
+                  checked={showJulesButton}
+                  onChange={handleToggleJulesButton}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+              </label>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '16px',
+                  fontSize: '14px',
+                  color: theme.colors.text,
+                }}
+              >
+                <span>Show Codex quick access button</span>
+                <input
+                  type="checkbox"
+                  checked={showCodexButton}
+                  onChange={handleToggleCodexButton}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+
         <div style={{ marginBottom: '32px' }}>
           <div
             style={{
