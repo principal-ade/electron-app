@@ -2,7 +2,7 @@
 
 Summary
 
-Excalidraw drawings created in the Planning view are saved to the application's Electron user data directory under a dedicated storage folder.
+Excalidraw drawings created in the repository manager are saved to the application's Electron user data directory under a dedicated storage folder.
 
 Storage location
 

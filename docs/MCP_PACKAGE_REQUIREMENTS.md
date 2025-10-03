@@ -222,7 +222,7 @@ Needed for:
 
 ### With electron-react
 - `src/main/mcp-app-control/mcp-integration.ts`
-- `src/main/planning-mcp/PlanningMCPBridge.ts`
+- `src/main/principal-mcp/PrincipalMCPBridge.ts`
 - `src/renderer/services/MCPService.ts`
 
 ### With agent-monitoring

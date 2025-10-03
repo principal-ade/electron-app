@@ -21,7 +21,6 @@ import type { Repository } from '../../../shared/types/repository.types';
 import { RepositoryViewType } from '../../../shared/types/userPreferences.types';
 import { RepositoryExplorationView } from './RepositoryExplorationView';
 import { RepositoryMaintenanceView } from './RepositoryMaintenanceView';
-import { PlanningView } from './PlanningView';
 import { SecretsModal } from './shared/SecretsModal';
 import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
 import { BadgeInfoModal } from './shared/BadgeInfoModal';
@@ -55,6 +54,9 @@ interface RepositoryManagerProps {
 }
 
 type ViewMode = RepositoryViewType;
+
+const isValidViewMode = (mode: unknown): mode is ViewMode =>
+  mode === 'exploration' || mode === 'deployment';
 
 export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
   ({ repository, onBack, hasUpdateAvailable }) => {
@@ -217,7 +219,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           let modeToUse: ViewMode = 'exploration'; // default
 
           // Priority 1: Window data (if provided)
-          if (initialMode) {
+          if (isValidViewMode(initialMode)) {
             modeToUse = initialMode;
             console.info(
               '[RepositoryManager] Using view mode from window data:',
@@ -225,7 +227,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
             );
           }
           // Priority 2: Saved state
-          else if (savedState?.activeView) {
+          else if (isValidViewMode(savedState?.activeView)) {
             modeToUse = savedState.activeView;
             console.info(
               '[RepositoryManager] Restoring view mode from saved state:',
@@ -757,30 +759,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           {_loading && !fileTree ? (
             <RepositoryLoadingState repositoryName={repository.name} />
           ) : /* View Content */
-          viewMode === 'planning' && selectedSource?.type === 'local' ? (
-            <PlanningView
-              repository={repository}
-              localClone={{
-                path: selectedSource.location,
-                currentBranch: selectedSource.metadata?.currentBranch,
-              }}
-              fileTree={fileTree}
-              activeFileTreeSource={selectedSource}
-              fileTreeSourceService={fileTreeSourceService}
-              cacheService={cacheService}
-              agentsWithMCP={agentsWithMCP}
-              loadingAgentMCPStatus={loadingAgentMCPStatus}
-              uiState={uiState.planningState as any}
-              onUIStateChange={(planningState: any) => {
-                const newState: RepositoryUIState = {
-                  ...uiState,
-                  planningState,
-                };
-                setUIState(newState);
-                saveUIState(newState);
-              }}
-            />
-          ) : viewMode === 'deployment' ? (
+          viewMode === 'deployment' ? (
             <React.Fragment key="maintain-view">
               <RepositoryMaintenanceView
                 repository={repository}
@@ -820,20 +799,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 fileColorHighlightLayers={fileColorHighlightLayers}
               />
             </GitChangesProvider>
-          ) : viewMode === 'planning' ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                color: theme.colors.textSecondary,
-                fontSize: '14px',
-              }}
-            >
-              Planning mode requires a local clone. Please select a local
-              clone from the source dropdown.
-            </div>
           ) : null}
         </div>
 

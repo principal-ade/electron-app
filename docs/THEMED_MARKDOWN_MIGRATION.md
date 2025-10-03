@@ -33,7 +33,7 @@ Our Wrappers
 #### High-Level Component Usage
 - **MarkdownDocumentViewer**: Central component using SlidePresentation/DocumentView
 - **MarkdownView**: Uses MarkdownDocumentViewer with fontSizeScale support
-- **PlanningView**: Uses parseMarkdownIntoPresentation + MarkdownDocumentViewer
+- **PlanningView**: (Removed) Previously used parseMarkdownIntoPresentation + MarkdownDocumentViewer
 - **FileViewer**: Uses high-level components
 - **DocumentSearchView**: Uses high-level components
 

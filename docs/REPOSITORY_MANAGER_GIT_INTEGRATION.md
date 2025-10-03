@@ -323,7 +323,7 @@ Without FSMonitor:
 2. **Migrate Remaining Components**
 
    **Priority 1 - Core Repository Views:**
-  - `LocalDevelopmentView.tsx` (removed) - View retired in favor of planning workflows
+  - `LocalDevelopmentView.tsx` (removed) - View retired alongside the former planning workflows
    - `RepositoryExplorationView.tsx` - Keep for highlight layers only, use new hook for data
    - `GitChangesButton.tsx` - Convert to use new git status hook
 
