@@ -603,7 +603,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 />
               </div>
 
-              {/* Right Column - Package Information and City Visualization */}
+              {/* Right Column - City Visualization and Package Information */}
               <div
                 style={{
                   display: 'flex',
@@ -612,12 +612,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   minWidth: 0,
                 }}
               >
-                {/* Package Information Panel */}
-                <QualityHexagonPanel
-                  directory={selectedRepository.path}
-                  compact={false}
-                />
-
                 {/* City Visualization */}
                 {selectedRepository && (
                   <div>
@@ -647,6 +641,11 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                     onRefreshActions={loadWorkflowActions}
                   />
                 ) : null}
+                {/* Package Information Panel */}
+                <QualityHexagonPanel
+                  directory={selectedRepository.path}
+                  compact={false}
+                />
               </div>
             </div>
           </div>
