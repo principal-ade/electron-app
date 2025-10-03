@@ -14,6 +14,10 @@ import { GitStatusPanel } from './GitStatusPanel';
 import { RepositoryFilesPanel } from './RepositoryFilesPanel';
 import { QualityHexagonPanel } from './quality';
 import { SimpleCityVisualization, RepositoryCityService } from './city';
+import { RepositoryActionsPanel } from './RepositoryActionsPanel';
+import { ActWorkflowService } from '../../../../main-process-api/ActWorkflowService';
+import { ActRunnerService } from '../../../../main-process-api/ActRunnerService';
+import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
 
 interface RepositoryDetailsPanelProps {
   selectedRepository: EnhancedAlexandriaEntry | null;
@@ -28,6 +32,10 @@ interface RepositoryDetailsPanelProps {
   isRefreshing?: boolean;
   onFileSelect?: (filePath: string | null) => void;
 }
+
+
+const ACT_INTEGRATION_ENABLED =
+  process.env.PLASMA_ENABLE_ACT_INTEGRATION === 'true';
 
 
 export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
@@ -62,8 +70,75 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const [isBuildingCity, setIsBuildingCity] = useState(false);
   const [cityError, setCityError] = useState<string | null>(null);
   const [treeStats, setTreeStats] = useState<{ fileCount: number; directoryCount: number } | null>(null);
+  const [workflowActions, setWorkflowActions] = useState<ActWorkflowAction[]>([]);
+  const [isLoadingActions, setIsLoadingActions] = useState(false);
+  const [actionsError, setActionsError] = useState<string | null>(null);
+  const [runningActionId, setRunningActionId] = useState<string | null>(null);
 
   const cityService = useMemo(() => RepositoryCityService.getInstance(), []);
+
+  const repositoryId = useMemo(() => {
+    if (!selectedRepository) {
+      return null;
+    }
+
+    const candidates: Array<unknown> = [
+      (selectedRepository as any).id,
+      (selectedRepository as any).repoId,
+      (selectedRepository as any).repositoryId,
+      (selectedRepository as any).alexandriaId,
+      (selectedRepository as any).github?.id,
+    ];
+
+    const owner = (selectedRepository as any).github?.owner;
+    const repoName = (selectedRepository as any).github?.name ?? selectedRepository.name;
+
+    if (owner && repoName) {
+      candidates.push(`${owner}/${repoName}`);
+    } else if (repoName) {
+      candidates.push(repoName);
+    }
+
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string' && candidate.trim().length > 0) {
+        return candidate;
+      }
+      if (typeof candidate === 'number') {
+        return candidate.toString();
+      }
+    }
+
+    return null;
+  }, [selectedRepository]);
+
+  const loadWorkflowActions = useCallback(async () => {
+    if (!ACT_INTEGRATION_ENABLED) {
+      return;
+    }
+
+    if (!repositoryId) {
+      setWorkflowActions([]);
+      setActionsError(null);
+      return;
+    }
+
+    setIsLoadingActions(true);
+    try {
+      const actions = await ActWorkflowService.listRepositoryActions(repositoryId);
+      setWorkflowActions(actions);
+      setActionsError(null);
+    } catch (error) {
+      console.error('[RepositoryDetailsPanel] Error loading workflow actions:', error);
+      setWorkflowActions([]);
+      setActionsError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to load workflow actions.',
+      );
+    } finally {
+      setIsLoadingActions(false);
+    }
+  }, [repositoryId]);
 
   const sortedMarkdownFiles = useMemo(() => {
     return [...markdownFiles].sort((a, b) => {
@@ -140,6 +215,21 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     setCityError(null);
     setIsBuildingCity(false);
   }, [selectedRepository?.path]);
+
+  useEffect(() => {
+    if (!ACT_INTEGRATION_ENABLED) {
+      setWorkflowActions([]);
+      setActionsError(null);
+      setIsLoadingActions(false);
+      return;
+    }
+
+    void loadWorkflowActions();
+  }, [loadWorkflowActions]);
+
+  useEffect(() => {
+    setRunningActionId(null);
+  }, [repositoryId]);
 
 
   const checkForUpdates = useCallback(async () => {
@@ -348,6 +438,75 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     [selectedRepository],
   );
 
+  const handleConfigureSecrets = useCallback(() => {
+    window.alert(
+      'Secrets configuration for workflow runs will be integrated soon. Manage repository secrets from the Repository Manager in the meantime.',
+    );
+  }, []);
+
+  const handleRunRepositoryAction = useCallback(
+    async (action: ActWorkflowAction) => {
+      if (!ACT_INTEGRATION_ENABLED || !selectedRepository || !repositoryId) {
+        return;
+      }
+
+      setRunningActionId(action.id);
+      try {
+        if (!action.workflowPath) {
+          window.alert('This workflow action is missing a workflow path and cannot run yet.');
+          return;
+        }
+
+        const validation = await ActRunnerService.validateRunRequirements({
+          repoId: repositoryId,
+          workflowPath: action.workflowPath,
+          actionId: action.id,
+        });
+
+        if (!validation.secretsConfigured) {
+          const message =
+            validation.messages?.join('\n') ??
+            'Repository secrets must be configured before running this workflow.';
+          window.alert(message);
+          return;
+        }
+
+        if (!validation.actInstalled) {
+          const message =
+            validation.messages?.join('\n') ??
+            'The local act binary is not installed. Install act to enable workflow execution.';
+          window.alert(message);
+          return;
+        }
+
+        const result = await ActRunnerService.runRepositoryAction({
+          repoId: repositoryId,
+          workflowPath: action.workflowPath,
+          actionId: action.id,
+        });
+
+        if (!result.success) {
+          window.alert(result.error ?? 'Failed to start the workflow run.');
+          return;
+        }
+
+        if (result.executionId) {
+          window.alert(`Workflow run started (execution ${result.executionId}).`);
+        } else {
+          window.alert('Workflow run started.');
+        }
+
+        await loadWorkflowActions();
+      } catch (error) {
+        console.error('[RepositoryDetailsPanel] Failed to trigger workflow action:', error);
+        window.alert('Failed to start the workflow action. Check the console for details.');
+      } finally {
+        setRunningActionId(null);
+      }
+    },
+    [repositoryId, selectedRepository, loadWorkflowActions],
+  );
+
   // Format relative time
   const getRelativeTime = (dateStr: string | undefined) => {
     if (!dateStr) return 'Never';
@@ -475,6 +634,19 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                     />
                   </div>
                 )}
+
+                {ACT_INTEGRATION_ENABLED ? (
+                  <RepositoryActionsPanel
+                    repoId={repositoryId}
+                    actions={workflowActions}
+                    onConfigure={handleConfigureSecrets}
+                    onRun={handleRunRepositoryAction}
+                    isLoadingActions={isLoadingActions}
+                    actionsError={actionsError}
+                    runningActionId={runningActionId}
+                    onRefreshActions={loadWorkflowActions}
+                  />
+                ) : null}
               </div>
             </div>
           </div>

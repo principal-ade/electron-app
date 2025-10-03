@@ -55,6 +55,7 @@ import {
 import { registerObservabilityHandlers } from './observability/observabilityHandlers';
 import { RemoteAgentWindowManager } from './window/remoteAgentWindowManager';
 import { registerRemoteAgentWindowHandlers } from './window/remoteAgentWindowHandlers';
+import { registerActIntegrationHandlers } from './services/ipc/act/actIntegrationHandlers';
 
 // let agentSessionEventsHttpBridge: AgentSessionEventsHttpBridge | null = null;
 let principalMCPBridgePort: number | null = null;
@@ -132,6 +133,7 @@ const registerAllIpcHandlers = async () => {
   //registerStorageHandlers();
   registerStoreHandlers();
   registerRepositoryMonitoringHandlers(); // Register repository monitoring handlers
+  registerActIntegrationHandlers();
   registerSecretHandlers();
   registerRepositoryHandlers();
   registerAlexandriaHandlers();
