@@ -76,6 +76,12 @@ export interface UserPreferences {
   defaultView?: 'projects' | 'customization';
   showRepoFilterBar?: boolean; // Show/hide the filter bar in repos view
 
+  // Remote agent quick access buttons
+  remoteAgentButtons?: {
+    jules?: boolean;
+    codex?: boolean;
+  };
+
   // Theme preferences
   selectedTheme?: string; // Name of the selected theme (built-in or custom)
   customThemes?: Record<string, Record<string, unknown>>; // User-defined custom themes

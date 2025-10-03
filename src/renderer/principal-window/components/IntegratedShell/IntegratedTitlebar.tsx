@@ -5,6 +5,8 @@ import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls'
 import { Bot } from 'lucide-react';
 import { remoteAgentService } from '../../../services/RemoteAgentService';
 import type { RemoteAgentConfig } from '../../../../shared/types/remoteAgent.types';
+import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
+import type { UserPreferences } from '../../../../shared/types/userPreferences.types';
 
 declare global {
   interface Window {
@@ -37,6 +39,10 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [openAgentIds, setOpenAgentIds] = useState<Set<string>>(new Set());
+  const [remoteAgentButtonVisibility, setRemoteAgentButtonVisibility] = useState({
+    jules: false,
+    codex: false,
+  });
   const { theme, mode } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
@@ -65,6 +71,43 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
 
     return () => {
       unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const applyPreferences = (preferences: UserPreferences) => {
+      if (!isMounted) {
+        return;
+      }
+
+      setRemoteAgentButtonVisibility({
+        jules: preferences.remoteAgentButtons?.jules ?? false,
+        codex: preferences.remoteAgentButtons?.codex ?? false,
+      });
+    };
+
+    void UserPreferencesService.getPreferences().then(applyPreferences);
+
+    const handlePreferencesUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<UserPreferences>).detail;
+      if (detail) {
+        applyPreferences(detail);
+      }
+    };
+
+    window.addEventListener(
+      'user-preferences-updated',
+      handlePreferencesUpdated as EventListener,
+    );
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener(
+        'user-preferences-updated',
+        handlePreferencesUpdated as EventListener,
+      );
     };
   }, []);
 
@@ -173,71 +216,81 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
           }}
         >
-          <button
-            onClick={() => openRemoteAgent('jules')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              backgroundColor: theme.colors.primary,
-              color: theme.colors.background,
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              opacity: isAgentOpen(agentDefinitions.jules.id) ? 0.85 : 1,
-              transition: 'opacity 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.9';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = isAgentOpen(agentDefinitions.jules.id) ? '0.85' : '1';
-            }}
-            title={
-              isAgentOpen(agentDefinitions.jules.id)
-                ? 'Focus the existing Jules remote agent window'
-                : 'Open a Jules remote agent window'
-            }
-          >
-            <Bot size={14} />
-            {isAgentOpen(agentDefinitions.jules.id) ? 'Focus Jules' : agentDefinitions.jules.buttonLabel}
-          </button>
+          {remoteAgentButtonVisibility.jules && (
+            <button
+              onClick={() => openRemoteAgent('jules')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                backgroundColor: theme.colors.primary,
+                color: theme.colors.background,
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                opacity: isAgentOpen(agentDefinitions.jules.id) ? 0.85 : 1,
+                transition: 'opacity 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = isAgentOpen(agentDefinitions.jules.id) ? '0.85' : '1';
+              }}
+              title={
+                isAgentOpen(agentDefinitions.jules.id)
+                  ? 'Focus the existing Jules remote agent window'
+                  : 'Open a Jules remote agent window'
+              }
+            >
+              <Bot size={14} />
+              {isAgentOpen(agentDefinitions.jules.id)
+                ? 'Focus Jules'
+                : agentDefinitions.jules.buttonLabel}
+            </button>
+          )}
 
-          <button
-            onClick={() => openRemoteAgent('chatgpt')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              backgroundColor: theme.colors.secondary,
-              color: theme.colors.background,
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              opacity: isAgentOpen(agentDefinitions.chatgpt.id) ? 0.85 : 1,
-              transition: 'opacity 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.9';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = isAgentOpen(agentDefinitions.chatgpt.id) ? '0.85' : '1';
-            }}
-            title={
-              isAgentOpen(agentDefinitions.chatgpt.id)
-                ? 'Focus the existing Codex remote agent window'
-                : 'Open a Codex remote agent window'
-            }
-          >
-            <Bot size={14} />
-            {isAgentOpen(agentDefinitions.chatgpt.id) ? 'Focus Codex' : agentDefinitions.chatgpt.buttonLabel}
-          </button>
+          {remoteAgentButtonVisibility.codex && (
+            <button
+              onClick={() => openRemoteAgent('chatgpt')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                backgroundColor: theme.colors.secondary,
+                color: theme.colors.background,
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                opacity: isAgentOpen(agentDefinitions.chatgpt.id) ? 0.85 : 1,
+                transition: 'opacity 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = isAgentOpen(agentDefinitions.chatgpt.id)
+                  ? '0.85'
+                  : '1';
+              }}
+              title={
+                isAgentOpen(agentDefinitions.chatgpt.id)
+                  ? 'Focus the existing Codex remote agent window'
+                  : 'Open a Codex remote agent window'
+              }
+            >
+              <Bot size={14} />
+              {isAgentOpen(agentDefinitions.chatgpt.id)
+                ? 'Focus Codex'
+                : agentDefinitions.chatgpt.buttonLabel}
+            </button>
+          )}
         </div>
         {showRightSidebarControl && onToggleRightSidebar && (
           <ViewSidebarControls

@@ -19,6 +19,10 @@ export class UserPreferencesHandler {
       const defaultPreferences: UserPreferences = {
         defaultEditor: 'vscode',
         defaultView: 'projects',
+        remoteAgentButtons: {
+          jules: false,
+          codex: false,
+        },
       };
 
       await this.typedStore.set(

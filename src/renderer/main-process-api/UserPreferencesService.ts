@@ -21,9 +21,13 @@ export class UserPreferencesService {
     updates: Partial<UserPreferences>,
   ): Promise<void> {
     try {
-      const current = await this.getPreferences();
-      const updated = { ...current, ...updates };
-      await window.mainProcess.userPreferences.updatePreferences(updated);
+      await window.mainProcess.userPreferences.updatePreferences(updates);
+      const updated = await this.getPreferences();
+      window.dispatchEvent(
+        new CustomEvent<UserPreferences>('user-preferences-updated', {
+          detail: updated,
+        }),
+      );
     } catch (error) {
       console.error('Error saving user preferences to electron store:', error);
     }
