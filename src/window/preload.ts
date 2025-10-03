@@ -8,6 +8,8 @@ import type { MainProcessAPI } from '../shared/main-process-api-interfaces/index
 
 console.info('[Preload] Type imports successful');
 
+import { actRunnerAPI } from './main-process-api-implementations/actRunnerApi';
+import { actWorkflowAPI } from './main-process-api-implementations/actWorkflowApi';
 import { terminalAPI } from './main-process-api-implementations/terminalApi';
 import { typeExtractionApi } from './main-process-api-implementations/typeExtractionApi';
 import { typeSchemaApi } from './main-process-api-implementations/typeSchemaApi';
@@ -87,6 +89,8 @@ console.info('[Preload] Starting API exposure...');
 
 // Expose the new mainProcess API
 const mainProcessExposure: MainProcessAPI = {
+  actRunner: actRunnerAPI,
+  actWorkflow: actWorkflowAPI,
   agentInstallation: agentInstallationAPI,
   agentConfig: agentConfigAPI,
   alexandria: alexandriaAPI,

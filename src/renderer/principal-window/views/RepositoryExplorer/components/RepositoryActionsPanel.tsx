@@ -3,24 +3,21 @@ import { useTheme } from '@a24z/industry-theme';
 import { AlertCircle, CheckCircle2, Loader2, Play, RefreshCcw, Settings } from 'lucide-react';
 
 import { useRepositorySecretsStatus } from '../hooks/useRepositorySecretsStatus';
-
-export interface RepositoryActionDefinition {
-  id: string;
-  label: string;
-  description?: string;
-  requiresSecrets?: boolean;
-  estimatedDurationSeconds?: number;
-}
+import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
 
 interface RepositoryActionsPanelProps {
   repoId: string | null | undefined;
-  actions?: RepositoryActionDefinition[];
+  actions?: ActWorkflowAction[];
   onConfigure?: () => void;
-  onRun?: (action: RepositoryActionDefinition) => void;
+  onRun?: (action: ActWorkflowAction) => void;
   /**
    * Allows parents to skip work when the panel is collapsed or hidden.
    */
   isVisible?: boolean;
+  isLoadingActions?: boolean;
+  actionsError?: string | null;
+  runningActionId?: string | null;
+  onRefreshActions?: () => void;
 }
 
 const formatDuration = (seconds?: number) => {
@@ -42,13 +39,18 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
   onConfigure,
   onRun,
   isVisible = true,
+  isLoadingActions = false,
+  actionsError,
+  runningActionId,
+  onRefreshActions,
 }) => {
   const { theme } = useTheme();
-  const { isConfigured, isLoading, error, hasChecked, refresh } = useRepositorySecretsStatus(repoId, {
+  const { isConfigured, isLoading, error, refresh } = useRepositorySecretsStatus(repoId, {
     skip: !isVisible,
   });
 
   const hasActions = actions.length > 0;
+  const isBusy = isLoading || isLoadingActions;
 
   const statusIndicator = useMemo(() => {
     if (!repoId) {
@@ -94,7 +96,7 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
     onConfigure?.();
   };
 
-  const handleRunClick = (action: RepositoryActionDefinition) => {
+  const handleRunClick = (action: ActWorkflowAction) => {
     if (!onRun) {
       return;
     }
@@ -136,8 +138,11 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
         {repoId ? (
           <button
             type="button"
-            onClick={() => void refresh()}
-            disabled={isLoading}
+            onClick={() => {
+              void refresh();
+              onRefreshActions?.();
+            }}
+            disabled={isBusy}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -147,12 +152,12 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
               border: `1px solid ${theme.colors.border}`,
               backgroundColor: theme.colors.background,
               color: theme.colors.textSecondary,
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.6 : 1,
+              cursor: isBusy ? 'not-allowed' : 'pointer',
+              opacity: isBusy ? 0.6 : 1,
             }}
           >
-            <RefreshCcw size={16} />
-            Re-check
+            {isBusy ? <Loader2 size={16} className="spin" /> : <RefreshCcw size={16} />}
+            {isBusy ? 'Checking…' : 'Re-check'}
           </button>
         ) : null}
       </div>
@@ -169,6 +174,19 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
         <span>{statusIndicator.text}</span>
       </div>
 
+      {actionsError ? (
+        <div
+          style={{
+            color: theme.colors.danger,
+            backgroundColor: `${theme.colors.danger}10`,
+            padding: '12px',
+            borderRadius: '10px',
+          }}
+        >
+          {actionsError}
+        </div>
+      ) : null}
+
       {!hasActions ? (
         <div
           style={{
@@ -183,9 +201,11 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
             padding: '24px',
           }}
         >
-          {repoId
-            ? 'No workflow actions detected yet. Actions will appear here after ACT integration discovers workflow jobs.'
-            : 'Select a repository to preview available workflow actions.'}
+          {isLoadingActions
+            ? 'Discovering workflow actions…'
+            : repoId
+              ? 'No workflow actions detected yet. Actions will appear here after ACT integration discovers workflow jobs.'
+              : 'Select a repository to preview available workflow actions.'}
         </div>
       ) : (
         <div
@@ -198,7 +218,8 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
         >
           {actions.map(action => {
             const requiresSecrets = action.requiresSecrets !== false;
-            const canRun = (!requiresSecrets || isConfigured) && Boolean(onRun);
+            const isActionRunning = runningActionId === action.id;
+            const canRun = (!requiresSecrets || isConfigured) && Boolean(onRun) && !isActionRunning;
             const showConfigure = requiresSecrets && !isConfigured;
             const durationLabel = formatDuration(action.estimatedDurationSeconds);
 
@@ -302,8 +323,12 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
                         }}
                         disabled={!canRun}
                       >
-                        <Play size={16} />
-                        Run
+                        {isActionRunning ? (
+                          <Loader2 size={16} className="spin" />
+                        ) : (
+                          <Play size={16} />
+                        )}
+                        {isActionRunning ? 'Running…' : 'Run'}
                       </button>
                     )}
                   </div>

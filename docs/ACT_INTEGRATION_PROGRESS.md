@@ -17,3 +17,5 @@ Next phase will wire the panel into `RepositoryDetailsPanel`, connect the run co
 - Captured the data contract for a minimal `ActWorkflowService` stub that can provide workflow metadata (id, name, description, workflowPath, requiresSecrets) so the panel can hydrate itself without hard-coded fixtures.
 - Identified validation hooks needed before executing an action (secrets present, act binary installed) and noted they will be surfaced in the confirmation flow as part of this phase.
 - Documented outstanding dependencies (runner service scaffolding, secure secret file management) so coordination with the main-process team can happen before the wiring lands.
+- Wired the `RepositoryActionsPanel` into `RepositoryDetailsPanel` behind the `PLASMA_ENABLE_ACT_INTEGRATION` feature flag, hydrated by the new renderer-side `ActWorkflowService`, and surfaced refined loading/error states while workflows are discovered.
+- Added shared ACT integration types alongside renderer/main-process service wrappers and IPC handlers so run confirmations now dispatch through `ActRunnerService` (currently stubbed) after validating prerequisites.

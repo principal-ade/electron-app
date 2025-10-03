@@ -1,4 +1,6 @@
 import type { A24zAPI } from './A24zAPI';
+import type { ActRunnerAPI } from './ActRunnerAPI';
+import type { ActWorkflowAPI } from './ActWorkflowAPI';
 import type { AgentConfigAPI } from './AgentConfigAPI';
 import type { AlexandriaAPI } from './AlexandriaAPI';
 import type { AlexandriaDocsAPI } from './AlexandriaDocsAPI';
@@ -65,6 +67,8 @@ export type {
 } from './AuthenticationAPI';
 
 export interface MainProcessAPI {
+  actRunner: ActRunnerAPI;
+  actWorkflow: ActWorkflowAPI;
   a24z: A24zAPI;
   agentConfig: AgentConfigAPI;
   alexandria: AlexandriaAPI;
