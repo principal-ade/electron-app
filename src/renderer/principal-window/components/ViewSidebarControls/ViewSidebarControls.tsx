@@ -7,6 +7,7 @@ interface ViewSidebarControlsProps {
   onToggle: () => void;
   style?: React.CSSProperties;
   side?: 'left' | 'right';
+  position?: 'left' | 'center' | 'right';
 }
 
 export const ViewSidebarControls: React.FC<ViewSidebarControlsProps> = ({
@@ -14,8 +15,11 @@ export const ViewSidebarControls: React.FC<ViewSidebarControlsProps> = ({
   onToggle,
   style,
   side = 'left',
+  // position prop is consumed by BaseTitlebar for layout placement.
+  position: _position,
 }) => {
   const { theme } = useTheme();
+  void _position;
 
   const getIcon = () => {
     if (side === 'right') {

@@ -7,6 +7,7 @@ import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
 import type { Repository } from '../../../shared/types/repository.types';
 import type { FileTreeSource } from '../../types/file-tree-source';
 import type { RepositoryMode } from '../../pages/RepoManager/shared/SimpleModeSelector';
+import { ViewSidebarControls } from '../../principal-window/components/ViewSidebarControls/ViewSidebarControls';
 
 export interface RepositoryTitlebarProps {
   repository?: Repository;
@@ -20,6 +21,9 @@ export interface RepositoryTitlebarProps {
   onForkBadgeClick?: () => void;
   mode?: RepositoryMode;
   onModeChange?: (mode: RepositoryMode) => void;
+  showSidebarControls?: boolean;
+  sidebarCollapsed?: boolean;
+  onToggleSidebar?: () => void;
 }
 
 export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
@@ -34,9 +38,19 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   onForkBadgeClick,
   mode,
   onModeChange,
+  showSidebarControls = false,
+  sidebarCollapsed = false,
+  onToggleSidebar,
 }) => {
   return (
     <BaseTitlebar>
+      {showSidebarControls && onToggleSidebar && (
+        <ViewSidebarControls
+          position="left"
+          isCollapsed={sidebarCollapsed}
+          onToggle={onToggleSidebar}
+        />
+      )}
       {repository && (
         <>
           <TitlebarForkBadge

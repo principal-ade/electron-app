@@ -29,6 +29,14 @@ export interface RepositoryUIState {
     viewMode?: 'tree' | 'graph';
   };
 
+  // Panel layout preferences scoped to this repository
+  panelLayouts?: {
+    exploration?: {
+      collapsed?: { left?: boolean; right?: boolean };
+      sizes?: { left: number; middle: number; right: number };
+    };
+  };
+
   // Last accessed timestamp
   lastAccessed?: number;
 }

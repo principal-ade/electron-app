@@ -29,6 +29,7 @@ import { SourceSelectionService } from '../../services/SourceSelectionService';
 import { CloneVisibilityService } from '../../services/CloneVisibilityService';
 import { AgentConfigurationService } from '../../main-process-api/AgentConfigurationService';
 import { SupportedAgent } from '@principal-ai/agent-monitoring';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 
 interface RepositoryManagerProps {
   repository: Repository;
@@ -111,6 +112,91 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
     );
     const ghOwner = repoInfo?.owner || repository.owner;
     const ghRepo = repoInfo?.repo || repository.name;
+
+    const repositoryKey = useMemo(() => {
+      const owner = ghOwner || repository.owner;
+      const name = ghRepo || repository.name;
+      if (owner && name) {
+        return `${owner}/${name}`;
+      }
+      return repository.remoteUrl;
+    }, [ghOwner, ghRepo, repository.owner, repository.name, repository.remoteUrl]);
+
+    const [panelCollapsedState, setPanelCollapsedState] = useState<{
+      left?: boolean;
+      right?: boolean;
+    }>({ left: false });
+    const [panelPreferencesLoaded, setPanelPreferencesLoaded] = useState(false);
+
+    // Load saved panel state for this repository
+    useEffect(() => {
+      let isMounted = true;
+      const loadPanelPreferences = async () => {
+        try {
+          const prefs = await UserPreferencesService.getPreferences();
+          const collapsed =
+            prefs.repositoryUIStates?.[repositoryKey]?.panelLayouts?.exploration?.collapsed?.left ??
+            false;
+          if (isMounted) {
+            setPanelCollapsedState((prev) => ({ ...prev, left: collapsed }));
+          }
+        } catch (error) {
+          console.error('[RepositoryManager] Failed to load panel state:', error);
+        } finally {
+          if (isMounted) {
+            setPanelPreferencesLoaded(true);
+          }
+        }
+      };
+
+      loadPanelPreferences();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [repositoryKey]);
+
+    const persistLeftPanelCollapsed = useCallback(
+      async (collapsed: boolean) => {
+        try {
+          const prefs = await UserPreferencesService.getPreferences();
+          const repoStates = { ...(prefs.repositoryUIStates ?? {}) };
+          const repoState = { ...(repoStates[repositoryKey] ?? {}) };
+          const panelLayouts = {
+            ...(repoState.panelLayouts ?? {}),
+            exploration: {
+              ...(repoState.panelLayouts?.exploration ?? {}),
+              collapsed: {
+                ...(repoState.panelLayouts?.exploration?.collapsed ?? {}),
+                left: collapsed,
+              },
+            },
+          };
+
+          repoStates[repositoryKey] = {
+            ...repoState,
+            panelLayouts,
+          };
+
+          await UserPreferencesService.updatePreferences({
+            repositoryUIStates: repoStates,
+          });
+        } catch (error) {
+          console.error('[RepositoryManager] Failed to persist panel state:', error);
+        }
+      },
+      [repositoryKey],
+    );
+
+    const handleLeftPanelCollapsedChange = useCallback(
+      (collapsed: boolean) => {
+        setPanelCollapsedState((prev) => ({ ...prev, left: collapsed }));
+        if (panelPreferencesLoaded) {
+          void persistLeftPanelCollapsed(collapsed);
+        }
+      },
+      [panelPreferencesLoaded, persistLeftPanelCollapsed],
+    );
 
     // Check which agents have MCP configured (once on mount)
     useEffect(() => {
@@ -529,6 +615,11 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           onSecretsClick={() => setShowSecretsModal(true)}
           onHelpClick={() => setShowSourceHelpModal(true)}
           onForkBadgeClick={() => setShowBadgeInfoModal(true)}
+          showSidebarControls
+          sidebarCollapsed={panelCollapsedState.left ?? false}
+          onToggleSidebar={() =>
+            handleLeftPanelCollapsedChange(!(panelCollapsedState.left ?? false))
+          }
         />
         <div
           style={{
@@ -560,6 +651,8 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 fileColorHighlightLayers={fileColorHighlightLayers}
                 packageLayers={packageLayers}
                 onPackageLayersChange={setPackageLayers}
+                leftPanelCollapsed={panelCollapsedState.left ?? false}
+                onLeftPanelCollapsedChange={handleLeftPanelCollapsedChange}
               />
             </GitChangesProvider>
           )}
