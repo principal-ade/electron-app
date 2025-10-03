@@ -21,7 +21,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
-import type { SessionCardData } from '../../pages/RepoManager/shared/AgentSessionCard';
+import type { SessionCardData } from '../../repo-manager/shared/AgentSessionCard';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
 import { SessionEventsView } from './SessionEventsView';
 

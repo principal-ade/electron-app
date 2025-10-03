@@ -23,7 +23,7 @@ Our Wrappers
 ### Usage Analysis
 
 #### Raw Component Usage (via ThemedMarkdownSlide wrapper)
-- **Location**: `src/renderer/pages/RepoManager/RepositoryExplorationView.tsx`
+- **Location**: `src/renderer/repo-manager/RepositoryExplorationView.tsx`
 - **Instances**: 3
   - README content (line 1499-1504)
   - CHANGELOG content (line 1763-1768)

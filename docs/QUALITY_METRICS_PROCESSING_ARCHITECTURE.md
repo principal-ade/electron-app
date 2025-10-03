@@ -461,7 +461,7 @@ class AnalysisScheduler {
 
 ### 1. Repository Manager
 ```typescript
-// src/renderer/pages/RepoManager/RepositoryManager.tsx
+// src/renderer/repo-manager/RepositoryManager.tsx
 const QualityMetricsPanel: React.FC<{ directory: string }> = ({ directory }) => {
   const [metrics, setMetrics] = useState<QualityMetrics | null>(null);
 

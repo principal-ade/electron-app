@@ -37,10 +37,10 @@ The application currently has a hybrid approach:
 
 ### 3. UI Components
 **Files to modify:**
-- `src/renderer/pages/RepoManager/shared/AgentSessionsTab.tsx` (removed)
+- `src/renderer/repo-manager/shared/AgentSessionsTab.tsx` (removed)
   - Legacy archive UI retired with Local Development panel
 
-- `src/renderer/pages/RepoManager/shared/AgentSessionCard.tsx`
+- `src/renderer/repo-manager/shared/AgentSessionCard.tsx`
   - Remove: `onArchive` prop from interface
   - Remove: Any archive button/UI in the card
 

@@ -11,7 +11,7 @@
     "src/renderer/pages/ArchivedSessionsViewer.tsx",
     "src/renderer/pages/StandaloneTerminal.tsx",
     "src/renderer/pages/StoreViewer.tsx",
-    "src/renderer/pages/RepositoryManager.tsx",
+    "src/renderer/repo-manager/RepositoryManager.tsx",
     "src/renderer/pages/MultiFileEditorWindow.tsx",
     "src/renderer/components/principal/PrincipalConfigurationView.tsx"
   ],

@@ -17,8 +17,8 @@ import { useTheme } from '@a24z/industry-theme';
 import type { PackageLayer, ConfigFile, PackageCommand } from '@principal-ai/codebase-composition';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
 import type { LensResult, Issue } from '@principal-ai/codebase-quality-lenses';
-import { RepositoryMonitoringService } from '../../../main-process-api/RepositoryMonitoringService';
-import type { ToolExecutionRequest, ToolExecutionResponse } from '../../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
+import type { ToolExecutionRequest, ToolExecutionResponse } from '../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 interface ToolsTabProps {
   packageLayers?: PackageLayer[] | null;

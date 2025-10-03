@@ -31,7 +31,7 @@ All files are using the `AnimatedResizableLayout` component and importing the de
    - Import: `AnimatedResizableLayout` and `@a24z/panels/style.css`
 
 ### Repo Manager (1 file)
-6. **src/renderer/pages/RepoManager/RepositoryExplorationView.tsx**
+6. **src/renderer/repo-manager/RepositoryExplorationView.tsx**
    - Lines: 24-25
    - Import: `ThreePanelLayout` and `@a24z/panels/panels.css`
 

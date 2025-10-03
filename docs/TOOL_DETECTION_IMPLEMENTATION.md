@@ -231,10 +231,10 @@ private async detectESLint(packageLayer: PackageLayer): Promise<DetectedTool | n
 ### UI Component Structure
 
 ```typescript
-// src/renderer/pages/RepoManager/RepositoryMaintenanceView.tsx
+// src/renderer/repo-manager/RepositoryMaintenanceView.tsx
 // Add new "Tools" tab alongside existing tabs
 
-// New component: src/renderer/pages/RepoManager/shared/ToolsTab.tsx
+// New component: src/renderer/repo-manager/shared/ToolsTab.tsx
 export function ToolsTab({ directory }: { directory: string }) {
   const [tools, setTools] = useState<ToolDetectionResult | null>(null);
   const [loading, setLoading] = useState(true);

@@ -2,8 +2,8 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { Search, FileText, Clock, Book, Loader } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
-import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
-import { AlexandriaDocsService } from '../../../main-process-api/AlexandriaDocsService';
+import { AlexandriaService } from '../../main-process-api/AlexandriaService';
+import { AlexandriaDocsService } from '../../main-process-api/AlexandriaDocsService';
 
 interface AlexandriaDocItem {
   path: string;

@@ -6,7 +6,7 @@ import { TitlebarForkBadge } from './TitlebarForkBadge';
 import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
 import type { Repository } from '../../../shared/types/repository.types';
 import type { FileTreeSource } from '../../types/file-tree-source';
-import type { RepositoryMode } from '../../pages/RepoManager/shared/SimpleModeSelector';
+import type { RepositoryMode } from '../../repo-manager/shared/SimpleModeSelector';
 import { ViewSidebarControls } from '../../principal-window/components/ViewSidebarControls/ViewSidebarControls';
 
 export interface RepositoryTitlebarProps {

@@ -20,9 +20,9 @@ import {
 import type {
   FileOperation,
   TodoItem,
-} from '../../../main-process-api/AgentSessionService';
-import type { EnhancedUIAgentSessionData } from '../../../types/session.types';
-import type { TouchedProject } from '../../../utils/sessionProjectMapping';
+} from '../../main-process-api/AgentSessionService';
+import type { EnhancedUIAgentSessionData } from '../../types/session.types';
+import type { TouchedProject } from '../../utils/sessionProjectMapping';
 
 export interface SessionCardData {
   session: EnhancedUIAgentSessionData;

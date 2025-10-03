@@ -15,7 +15,7 @@ When users open the Repository Manager dashboard:
 ## Current State
 
 ### What Exists
-- **Repository Manager** (`src/renderer/pages/RepoManager/RepositoryManager.tsx`)
+- **Repository Manager** (`src/renderer/repo-manager/RepositoryManager.tsx`)
   - Already registers repositories with cache service
   - Has explore view with search functionality
 - **Git Changes Context** (`src/renderer/contexts/GitChangesContext.tsx`)
@@ -307,9 +307,9 @@ Without FSMonitor:
 
    **Files Using GitChangesContext/useGitChanges:**
    - `src/renderer/contexts/GitChangesContext.tsx` - **Core context file (DELETE)**
-   - `src/renderer/pages/RepoManager/RepositoryManager.tsx` - Wraps views with `<GitChangesProvider>`
-  - `src/renderer/pages/RepoManager/LocalDevelopmentView.tsx` (removed) - Formerly used `useGitChanges()` hook
-   - `src/renderer/pages/RepoManager/RepositoryExplorationView.tsx` - Uses `useGitChanges()` hook
+   - `src/renderer/repo-manager/RepositoryManager.tsx` - Wraps views with `<GitChangesProvider>`
+  - `src/renderer/repo-manager/LocalDevelopmentView.tsx` (removed) - Formerly used `useGitChanges()` hook
+   - `src/renderer/repo-manager/RepositoryExplorationView.tsx` - Uses `useGitChanges()` hook
    - `src/renderer/components/repository-maps/GitChangesButton.tsx` - Toggle button component
 
    **Files Using GitWatcherService:**

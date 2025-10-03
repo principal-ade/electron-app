@@ -1,5 +1,5 @@
 import React from 'react';
-import { SimpleModeSelector, type RepositoryMode } from '../../pages/RepoManager/shared/SimpleModeSelector';
+import { SimpleModeSelector, type RepositoryMode } from '../../repo-manager/shared/SimpleModeSelector';
 
 interface TitlebarModeSelectorProps {
   mode: RepositoryMode;

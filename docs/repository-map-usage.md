@@ -4,7 +4,7 @@ This document outlines the current use of the `Map` for caching in `RepositoryMa
 
 ## Current Implementation in `RepositoryManager.tsx`
 
-In `src/renderer/pages/RepoManager/RepositoryManager.tsx`, a `Map` named `treeCache` is used for in-memory caching of file tree data. This cache is essential for performance, as it avoids re-fetching and processing the entire file tree every time a user switches between different views or sources within the same repository.
+In `src/renderer/repo-manager/RepositoryManager.tsx`, a `Map` named `treeCache` is used for in-memory caching of file tree data. This cache is essential for performance, as it avoids re-fetching and processing the entire file tree every time a user switches between different views or sources within the same repository.
 
 ### 1. Purpose of the Cache
 
@@ -20,7 +20,7 @@ By caching this data, the application provides a faster and smoother user experi
 The cache is initialized as a `Map` within the `RepositoryManager` component using the `useMemo` hook. This ensures that the same `Map` instance is preserved across re-renders, maintaining the cache's state throughout the component's lifecycle.
 
 ```typescript
-// From src/renderer/pages/RepoManager/RepositoryManager.tsx
+// From src/renderer/repo-manager/RepositoryManager.tsx
 
 const treeCache = useMemo(
   () =>

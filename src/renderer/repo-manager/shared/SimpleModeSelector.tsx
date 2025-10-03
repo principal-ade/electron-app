@@ -1,5 +1,5 @@
 import { useTheme } from '@a24z/industry-theme';
-import type { RepositoryViewType } from '../../../../shared/types/userPreferences.types';
+import type { RepositoryViewType } from '../../../shared/types/userPreferences.types';
 
 export type RepositoryMode = RepositoryViewType;
 

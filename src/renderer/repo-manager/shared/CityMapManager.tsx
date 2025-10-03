@@ -4,8 +4,8 @@ import { useTheme } from '@a24z/industry-theme';
 import type { CityData } from '@principal-ai/code-city-react';
 import { MultiVersionCityBuilder } from '@principal-ai/code-city-react';
 import { FileTree } from '@principal-ai/repository-abstraction';
-import { FileTreeSource } from '../../../types/file-tree-source';
-import { SourceSelectionService } from '../../../services/SourceSelectionService';
+import { FileTreeSource } from '../../types/file-tree-source';
+import { SourceSelectionService } from '../../services/SourceSelectionService';
 
 /**
  * View modes that affect how the city and badges are displayed

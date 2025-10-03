@@ -258,7 +258,7 @@ ipcMain.handle(
 ### 3.1 New State Management
 
 ```typescript
-// src/renderer/pages/RepoManager/shared/SecretsModal.tsx
+// src/renderer/repo-manager/shared/SecretsModal.tsx
 
 interface SecretValue {
   value: string;
