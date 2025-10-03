@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { parseGitHubUrl } from '../../../shared/utils/githubUrlParser';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
@@ -18,9 +12,7 @@ import { RepositoryTitlebar } from '../../components/Titlebar';
 import { RepositoryLoadingState } from './components/RepositoryLoadingState';
 
 import type { Repository } from '../../../shared/types/repository.types';
-import { RepositoryViewType } from '../../../shared/types/userPreferences.types';
 import { RepositoryExplorationView } from './RepositoryExplorationView';
-import { RepositoryMaintenanceView } from './RepositoryMaintenanceView';
 import { SecretsModal } from './shared/SecretsModal';
 import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
 import { BadgeInfoModal } from './shared/BadgeInfoModal';
@@ -37,15 +29,6 @@ import { SourceSelectionService } from '../../services/SourceSelectionService';
 import { CloneVisibilityService } from '../../services/CloneVisibilityService';
 import { AgentConfigurationService } from '../../main-process-api/AgentConfigurationService';
 import { SupportedAgent } from '@principal-ai/agent-monitoring';
-import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
-import { RepositoryUIState } from '../../../shared/types/userPreferences.types';
-
-// Window init data type for RepositoryManager
-interface RepositoryManagerWindowData {
-  windowInitData?: {
-    mode?: ViewMode;
-  };
-}
 
 interface RepositoryManagerProps {
   repository: Repository;
@@ -53,29 +36,9 @@ interface RepositoryManagerProps {
   hasUpdateAvailable?: boolean;
 }
 
-type ViewMode = RepositoryViewType;
-
-const isValidViewMode = (mode: unknown): mode is ViewMode =>
-  mode === 'exploration' || mode === 'deployment';
-
 export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
   ({ repository, onBack, hasUpdateAvailable }) => {
     const { theme } = useTheme();
-
-    // Repository identifier for state persistence
-    const repoKey = `${repository.owner}/${repository.name}`;
-
-    // UI State management
-    const [uiState, setUIState] = useState<RepositoryUIState>({});
-    const [uiStateLoaded, setUIStateLoaded] = useState(false);
-    const uiStateRef = useRef<RepositoryUIState>({});
-
-    // Get initial mode from window data if available
-    const initialMode = (window as Window & RepositoryManagerWindowData)
-      .windowInitData?.mode as ViewMode | undefined;
-
-    // View mode state - initialize as null to indicate not yet loaded
-    const [viewMode, setViewMode] = useState<ViewMode | null>(null);
 
     // Search state - TODO: Move to floating search component in bottom-left corner
     const [searchQuery] = useState<string>(''); // setSearchQuery will be used when search is implemented
@@ -183,110 +146,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
     }, []); // Only run once on mount
 
 
-    // Load saved UI state for this repository
-    useEffect(() => {
-      console.info(
-        '[RepositoryManager] Load effect starting. Initial mode from window:',
-        initialMode,
-      );
-
-      const loadUIState = async () => {
-        try {
-          console.info(
-            '[RepositoryManager] Loading UI state for repo:',
-            repoKey,
-          );
-          const preferences = await UserPreferencesService.getPreferences();
-          // Debug: All saved states - preferences.repositoryUIStates
-          const savedState = preferences.repositoryUIStates?.[repoKey];
-
-          console.info(
-            '[RepositoryManager] Found saved state for',
-            repoKey,
-            ':',
-            savedState,
-          );
-          console.info(
-            '[RepositoryManager] Initial mode from window:',
-            initialMode,
-          );
-
-          if (savedState) {
-            setUIState(savedState);
-          }
-
-          // Determine the view mode to use
-          let modeToUse: ViewMode = 'exploration'; // default
-
-          // Priority 1: Window data (if provided)
-          if (isValidViewMode(initialMode)) {
-            modeToUse = initialMode;
-            console.info(
-              '[RepositoryManager] Using view mode from window data:',
-              modeToUse,
-            );
-          }
-          // Priority 2: Saved state
-          else if (isValidViewMode(savedState?.activeView)) {
-            modeToUse = savedState.activeView;
-            console.info(
-              '[RepositoryManager] Restoring view mode from saved state:',
-              modeToUse,
-            );
-          }
-          // Priority 3: Default
-          else {
-            console.info(
-              '[RepositoryManager] Using default view mode:',
-              modeToUse,
-            );
-          }
-
-          setViewMode(modeToUse);
-
-          setUIStateLoaded(true);
-        } catch (error) {
-          console.error('[RepositoryManager] Failed to load UI state:', error);
-          setUIStateLoaded(true);
-        }
-      };
-
-      loadUIState();
-    }, [repoKey, initialMode]); // viewMode is logged for debugging only, not a dependency
-
-    // Save UI state when it changes
-    const saveUIState = useCallback(
-      async (newState: RepositoryUIState) => {
-        try {
-          console.info(
-            '[RepositoryManager] Saving UI state for repo:',
-            repoKey,
-            newState,
-          );
-          const preferences = await UserPreferencesService.getPreferences();
-          const repositoryUIStates = preferences.repositoryUIStates || {};
-
-          repositoryUIStates[repoKey] = {
-            ...newState,
-            lastAccessed: Date.now(),
-          };
-
-          await UserPreferencesService.updatePreferences({
-            repositoryUIStates,
-          });
-          console.info('[RepositoryManager] UI state saved successfully');
-        } catch (error) {
-          console.error('[RepositoryManager] Failed to save UI state:', error);
-        }
-      },
-      [repoKey],
-    );
-
-    // Keep ref in sync with state
-    useEffect(() => {
-      uiStateRef.current = uiState;
-    }, [uiState]);
-
     // Clear file tree cache on first load to prevent stale cached results
     useEffect(() => {
       console.log(
@@ -294,60 +153,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
       );
       cacheService.clearAll();
     }, []); // Empty deps = run only once on mount
-
-    // Track if this is the initial load to prevent saving on restore
-    const isInitialLoad = useRef(true);
-
-    // Handle view mode changes and UI state updates together
-    const handleViewModeChange = useCallback(
-      (newMode: ViewMode) => {
-        const newState = {
-          ...uiStateRef.current,
-          activeView: newMode,
-          lastAccessed: Date.now(),
-        };
-
-        // React 18 automatically batches these updates - no need for startTransition
-        // Update both states synchronously for immediate response
-        setViewMode(newMode);
-        setUIState(newState);
-        uiStateRef.current = newState;
-
-        // Defer the save operation
-        setTimeout(() => {
-          const currentRepoKey = `${repository.owner}/${repository.name}`;
-          UserPreferencesService.getPreferences()
-            .then((preferences) => {
-              const repositoryUIStates = preferences.repositoryUIStates || {};
-              repositoryUIStates[currentRepoKey] = newState;
-              return UserPreferencesService.updatePreferences({
-                repositoryUIStates,
-              });
-            })
-            .then(() => {})
-            .catch((error) => {
-              console.error(
-                '[RepositoryManager] Failed to save UI state:',
-                error,
-              );
-            });
-        }, 0);
-      },
-      [repository.owner, repository.name],
-    );
-
-    // Update UI state when view mode changes (only for tracking, not for mode changes from user)
-    useEffect(() => {
-      if (!uiStateLoaded || !viewMode) return;
-
-      // Skip on initial load
-      if (isInitialLoad.current) {
-        isInitialLoad.current = false;
-        return;
-      }
-
-      // Note: We now handle state updates in handleViewModeChange to avoid double updates
-    }, [viewMode, uiStateLoaded]); // Don't depend on uiState to avoid loops
 
     // Initialize selected source from repository and register with monitoring service
     useEffect(() => {
@@ -674,7 +479,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 setSelectedSource(newSource);
               }
             } else {
-              // Fall back to remote source and switch to explore mode
+              // Fall back to remote source if available
               const remoteSource = SourceSelectionService.getAvailableSources(
                 data.repository,
               ).find((s) => s.type === 'remote');
@@ -684,7 +489,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                   data.repository.remoteUrl,
                   remoteSource.id,
                 );
-                setViewMode('exploration');
               }
             }
           }
@@ -704,24 +508,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
       };
     }, [repository.remoteUrl, selectedSource]);
 
-
-    // Don't render until view mode is determined
-    if (!viewMode) {
-      return (
-        <div
-          style={{
-            width: '100vw',
-            height: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: theme.colors.background,
-          }}
-        >
-          <div>Loading...</div>
-        </div>
-      );
-    }
 
     return (
       <div
@@ -743,8 +529,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           onSecretsClick={() => setShowSecretsModal(true)}
           onHelpClick={() => setShowSourceHelpModal(true)}
           onForkBadgeClick={() => setShowBadgeInfoModal(true)}
-          mode={viewMode}
-          onModeChange={handleViewModeChange}
         />
         <div
           style={{
@@ -755,13 +539,11 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
             boxSizing: 'border-box',
           }}
         >
-          {/* Loading State */}
           {_loading && !fileTree ? (
             <RepositoryLoadingState repositoryName={repository.name} />
-          ) : /* View Content */
-          viewMode === 'deployment' ? (
-            <React.Fragment key="maintain-view">
-              <RepositoryMaintenanceView
+          ) : (
+            <GitChangesProvider>
+              <RepositoryExplorationView
                 repository={repository}
                 remoteData={{
                   owner: ghOwner || '',
@@ -779,27 +561,8 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 packageLayers={packageLayers}
                 onPackageLayersChange={setPackageLayers}
               />
-            </React.Fragment>
-          ) : viewMode === 'exploration' ? (
-            <GitChangesProvider>
-              <RepositoryExplorationView
-                repository={repository}
-                remoteData={{
-                  owner: ghOwner || '',
-                  repo: ghRepo || '',
-                  defaultBranch: repository.metadata?.defaultBranch || 'main',
-                }}
-                searchQuery={searchQuery}
-                fileTree={fileTree}
-                activeFileTreeSource={selectedSource}
-                fileTreeSourceService={fileTreeSourceService}
-                cacheService={cacheService}
-                cityDataCache={cityDataCache}
-                treeStats={treeStats}
-                fileColorHighlightLayers={fileColorHighlightLayers}
-              />
             </GitChangesProvider>
-          ) : null}
+          )}
         </div>
 
 

@@ -8,6 +8,7 @@ import {
   PanelLeft,
   PanelLeftClose,
   Palette,
+  Wrench,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
@@ -48,6 +49,7 @@ import { useGitChanges } from '../../contexts/GitChangesContext';
 import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 import { RepositorySearchTab } from '../../components/repository-maps/RepositorySearchTab';
 import { FilePanel } from '../../components/FilePanel';
+import { ToolsTab } from './shared/ToolsTab';
 
 interface RepositoryExplorationViewProps {
   repository: Repository;
@@ -65,6 +67,11 @@ interface RepositoryExplorationViewProps {
   cacheService?: MonitoredFileTreeService;
   cityDataCache?: unknown;
   treeStats?: FileTreeStats | null;
+
+
+  // Package layers shared from parent
+  packageLayers?: PackageLayer[] | null;
+  onPackageLayersChange?: (layers: PackageLayer[] | null) => void;
 
 
   // File color highlight layers from parent
@@ -86,6 +93,8 @@ export const RepositoryExplorationView: React.FC<
   cacheService: sharedCacheService,
   cityDataCache: _cityDataCache,
   treeStats: sharedTreeStats,
+  packageLayers: sharedPackageLayers,
+  onPackageLayersChange,
   fileColorHighlightLayers = [],
   onFileTreeLoaded,
 }) => {
@@ -186,8 +195,22 @@ export const RepositoryExplorationView: React.FC<
   const [loadingCodeFile, setLoadingCodeFile] = useState(false);
 
   // Package data state
-  const [packageLayers, setPackageLayers] = useState<PackageLayer[] | null>(
-    null,
+  const [packageLayers, setPackageLayersState] = useState<
+    PackageLayer[] | null
+  >(sharedPackageLayers ?? null);
+
+  useEffect(() => {
+    if (sharedPackageLayers !== undefined) {
+      setPackageLayersState(sharedPackageLayers);
+    }
+  }, [sharedPackageLayers]);
+
+  const handlePackageLayersChange = useCallback(
+    (layers: PackageLayer[] | null) => {
+      setPackageLayersState(layers);
+      onPackageLayersChange?.(layers);
+    },
+    [onPackageLayersChange],
   );
 
   // Toolbar state
@@ -201,6 +224,9 @@ export const RepositoryExplorationView: React.FC<
     new Set(),
   );
   const [packageHighlightLayers, setPackageHighlightLayers] = useState<
+    HighlightLayer[]
+  >([]);
+  const [toolsHighlightLayers, setToolsHighlightLayers] = useState<
     HighlightLayer[]
   >([]);
 
@@ -1059,6 +1085,17 @@ export const RepositoryExplorationView: React.FC<
     return trees;
   }, [fileTree, gitState?.headTree, activeFileTreeSource]);
 
+  const repositoryPathForTools =
+    activeFileTreeSource?.type === 'local'
+      ? activeFileTreeSource.location
+      : repository.localClones?.[0]?.path || '';
+
+  useEffect(() => {
+    if (!repositoryPathForTools) {
+      setToolsHighlightLayers([]);
+    }
+  }, [repositoryPathForTools]);
+
   // Create tabs configuration
   const tabs: TabConfig[] = [
     {
@@ -1094,7 +1131,7 @@ export const RepositoryExplorationView: React.FC<
           onError={(error) => {
             console.error('Architecture panel error:', error);
           }}
-          onPackageLayersChanged={setPackageLayers}
+          onPackageLayersChanged={handlePackageLayersChange}
           onPackageAnalysisStart={handlePackageAnalysisStart}
           onPackageAnalysisEnd={handlePackageAnalysisEnd}
           onPackageSelected={handlePackageSelected}
@@ -1110,6 +1147,19 @@ export const RepositoryExplorationView: React.FC<
         >
           No source selected
         </div>
+      ),
+    },
+    {
+      id: 'tools',
+      label: 'Tools',
+      icon: <Wrench size={14} />,
+      visible: true,
+      content: (
+        <ToolsTab
+          packageLayers={packageLayers}
+          repositoryPath={repositoryPathForTools}
+          onHighlightLayersChange={setToolsHighlightLayers}
+        />
       ),
     },
     {
@@ -1583,6 +1633,7 @@ export const RepositoryExplorationView: React.FC<
                       ...(selectedFileLayer ? [selectedFileLayer] : []),
                       ...dependencyAnalysisHighlightLayer,
                       ...packageHighlightLayers,
+                      ...toolsHighlightLayers,
                       ...gitHighlightLayers,
                     ]
               }
