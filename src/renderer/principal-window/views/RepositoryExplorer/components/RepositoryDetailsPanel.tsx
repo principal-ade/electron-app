@@ -11,6 +11,7 @@ import { RepositoryNotesPanel } from './RepositoryNotesPanel';
 import { GitService, GitBranchStatus } from '../../../../main-process-api/GitService';
 import { RepositoryHeader } from './RepositoryHeader';
 import { GitStatusPanel } from './GitStatusPanel';
+import { RepositoryFilesPanel } from './RepositoryFilesPanel';
 import { QualityHexagonPanel } from './quality';
 import { SimpleCityVisualization, RepositoryCityService } from './city';
 
@@ -410,7 +411,40 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 gap: '16px',
               }}
             >
-              {/* Left Column - City Visualization and Quality Panel */}
+              {/* Left Column - Combined Files Panel, Git Status and Notes */}
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  height: 'fit-content',
+                  minWidth: 0,
+                }}
+              >
+                {/* Combined Git Changes and Markdown Files */}
+                <RepositoryFilesPanel
+                  repository={selectedRepository}
+                  gitStatus={gitStatus}
+                  markdownFiles={sortedMarkdownFiles}
+                  isLoadingGitStatus={isLoadingGitStatus}
+                  isLoadingDocs={isLoadingDocs}
+                  onFileClick={handleFileClick}
+                  onMarkdownClick={handleOpenMarkdown}
+                />
+
+                {/* Git Status / Last Commit Info */}
+                <GitStatusPanel
+                  repository={selectedRepository}
+                />
+
+                {/* Repository Notes Panel */}
+                <RepositoryNotesPanel
+                  repositoryPath={selectedRepository.path}
+                  isLoading={false}
+                />
+              </div>
+
+              {/* Right Column - Package Information and City Visualization */}
               <div
                 style={{
                   display: 'flex',
@@ -419,7 +453,13 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   minWidth: 0,
                 }}
               >
-                {/* City Visualization - Always Visible */}
+                {/* Package Information Panel */}
+                <QualityHexagonPanel
+                  directory={selectedRepository.path}
+                  compact={false}
+                />
+
+                {/* City Visualization */}
                 {selectedRepository && (
                   <div>
                     <SimpleCityVisualization
@@ -435,178 +475,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                     />
                   </div>
                 )}
-
-                {/* Quality Hexagon Panel */}
-                <QualityHexagonPanel
-                  directory={selectedRepository.path}
-                  compact={false}
-                />
-              </div>
-
-              {/* Right Column - Git Changes, Markdown and Notes */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                  height: 'fit-content',
-                  minWidth: 0,
-                }}
-              >
-                {/* Git Changes List or Last Commit */}
-                <GitStatusPanel
-                  repository={selectedRepository}
-                  gitStatus={gitStatus}
-                  isLoadingGitStatus={isLoadingGitStatus}
-                  onFileClick={handleFileClick}
-                />
-
-                {/* Markdown Files List */}
-                <div
-                  style={{
-                    padding: '16px',
-                    backgroundColor: theme.colors.backgroundSecondary,
-                    borderRadius: '8px',
-                    border: `1px solid ${theme.colors.border}`,
-                  }}
-                >
-                <div
-                  style={{
-                    fontSize: theme.fontSizes[1],
-                    color: theme.colors.textSecondary,
-                    marginBottom: '12px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <span>Markdown Documents</span>
-                  <span style={{ fontSize: theme.fontSizes[1], fontWeight: 'normal', marginRight: '4px' }}>
-                    {isLoadingDocs ? 'Loading...' : sortedMarkdownFiles.length}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    maxHeight: '300px',
-                    overflow: 'auto',
-                  }}
-                >
-                  {isLoadingDocs ? (
-                    <div
-                      style={{
-                        padding: '20px',
-                        textAlign: 'center',
-                        color: theme.colors.textSecondary,
-                        fontSize: theme.fontSizes[1],
-                      }}
-                    >
-                      Loading documents...
-                    </div>
-                  ) : sortedMarkdownFiles.length === 0 ? (
-                    <div
-                      style={{
-                        padding: '20px',
-                        textAlign: 'center',
-                        color: theme.colors.textSecondary,
-                        fontSize: theme.fontSizes[1],
-                      }}
-                    >
-                      No markdown documents found
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '4px',
-                      }}
-                    >
-                      {sortedMarkdownFiles.map((file) => {
-                        const filename = file.path.split('/').pop() || file.path;
-                        const directory = file.path.includes('/') ? file.path.substring(0, file.path.lastIndexOf('/')) : 'root';
-
-                        return (
-                          <div
-                            key={file.path}
-                            style={{
-                              padding: '10px',
-                              backgroundColor: theme.colors.background,
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              transition: 'background-color 0.2s',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                theme.colors.backgroundTertiary;
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor =
-                                theme.colors.background;
-                            }}
-                            onClick={() => handleOpenMarkdown(file.path)}
-                            title={file.path}
-                          >
-                            <div
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-start',
-                                marginBottom: '2px',
-                              }}
-                            >
-                              <div
-                                style={{
-                                  fontSize: theme.fontSizes[1], // 14px
-                                  color: theme.colors.text,
-                                  fontWeight: 500,
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  flex: 1,
-                                }}
-                              >
-                                {filename}
-                              </div>
-                              {file.lastModified && (
-                                <div
-                                  style={{
-                                    fontSize: theme.fontSizes[1],
-                                    color: theme.colors.textSecondary,
-                                    whiteSpace: 'nowrap',
-                                    marginLeft: '8px',
-                                  }}
-                                >
-                                  {getRelativeTime(file.lastModified)}
-                                </div>
-                              )}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: theme.fontSizes[0],
-                                color: theme.colors.textSecondary,
-                                fontFamily: theme.fonts.monospace,
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {directory === 'root' ? 'root' : `${directory}/`}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-                </div>
-
-                {/* Repository Notes Panel */}
-                <RepositoryNotesPanel
-                  repositoryPath={selectedRepository.path}
-                  isLoading={false}
-                />
               </div>
             </div>
           </div>

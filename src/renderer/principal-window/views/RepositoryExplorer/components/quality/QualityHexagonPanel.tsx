@@ -4,12 +4,23 @@ import {
   QualityHexagonDetailed
 } from '@a24z/alexandria-ui';
 import { useTheme } from '@a24z/industry-theme';
-import { MockQualityMetricsService } from './MockQualityMetricsService';
-import type { ExtendedQualityMetrics } from './MockQualityMetricsService';
+import { Grid2x2, ChevronDown, ChevronRight } from 'lucide-react';
+import { RepositoryMonitoringService } from '../../../../../main-process-api/RepositoryMonitoringService';
+import type { PackageLayer } from '@principal-ai/codebase-composition';
+import type { PackageSummary } from '../../../../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 interface QualityHexagonPanelProps {
   directory: string;
   compact?: boolean;
+}
+
+interface PackageDisplayData {
+  name: string;
+  path: string;
+  version?: string;
+  dependencies?: number;
+  devDependencies?: number;
+  scripts?: string[];
 }
 
 export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
@@ -17,20 +28,30 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   compact = false,
 }) => {
   const { theme } = useTheme();
-  const [metrics, setMetrics] = useState<ExtendedQualityMetrics | null>(null);
+  const [packages, setPackages] = useState<PackageLayer[]>([]);
+  const [summary, setSummary] = useState<PackageSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
 
-  const analyzeQuality = useCallback(async () => {
+  const fetchPackages = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await MockQualityMetricsService.analyzeDirectory(directory);
-      setMetrics(result);
+      console.log('[QualityHexagon] Fetching packages for:', directory);
+      const result = await RepositoryMonitoringService.getPackages(directory);
+
+      if (result) {
+        console.log('[QualityHexagon] Packages fetched:', result);
+        setPackages(result.packages);
+        setSummary(result.summary);
+      } else {
+        setError('No package information available');
+      }
     } catch (err) {
-      console.error('[QualityHexagon] Analysis failed:', err);
-      setError(err instanceof Error ? err.message : 'Analysis failed');
+      console.error('[QualityHexagon] Failed to fetch packages:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load packages');
     } finally {
       setLoading(false);
     }
@@ -38,22 +59,155 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
 
   useEffect(() => {
     if (directory) {
-      setMetrics(null);
+      setPackages([]);
+      setSummary(null);
       setError(null);
-      analyzeQuality();
+      fetchPackages();
     }
-  }, [directory, analyzeQuality]);
+  }, [directory, fetchPackages]);
+
+  const togglePackage = (pkgPath: string) => {
+    setExpandedPackages(prev => {
+      const next = new Set(prev);
+      if (next.has(pkgPath)) {
+        next.delete(pkgPath);
+      } else {
+        next.add(pkgPath);
+      }
+      return next;
+    });
+  };
+
+  const renderPackageInfo = (pkg: PackageLayer) => {
+    const depCount = pkg.packageData.dependencies ? Object.keys(pkg.packageData.dependencies).length : 0;
+    const devDepCount = pkg.packageData.devDependencies ? Object.keys(pkg.packageData.devDependencies).length : 0;
+    const scripts = pkg.packageData.availableCommands?.map(cmd => cmd.name) || [];
+    const pkgPath = pkg.packageData.path || 'root';
+    const isExpanded = expandedPackages.has(pkgPath);
+
+    return (
+      <div
+        key={pkgPath}
+        style={{
+          padding: '12px',
+          background: theme.colors.background,
+          borderRadius: '6px',
+          marginBottom: '12px',
+          border: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        <div
+          onClick={() => togglePackage(pkgPath)}
+          style={{
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: isExpanded ? '8px' : '0',
+          }}
+        >
+          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          <div style={{ flex: 1 }}>
+            <div style={{
+              fontSize: theme.fontSizes[2],
+              fontWeight: 600,
+              color: theme.colors.text,
+              marginBottom: '4px',
+            }}>
+              {pkg.packageData.name || 'Unnamed Package'}
+            </div>
+            {pkg.packageData.version && (
+              <div style={{
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textSecondary,
+                fontFamily: theme.fonts.monospace,
+              }}>
+                v{pkg.packageData.version}
+              </div>
+            )}
+            {pkg.packageData.path && (
+              <div style={{
+                fontSize: theme.fontSizes[0],
+                color: theme.colors.textSecondary,
+                fontFamily: theme.fonts.monospace,
+                marginTop: '2px',
+              }}>
+                {pkg.packageData.path || 'root'}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {isExpanded && (
+          <>
+            <div style={{ display: 'flex', gap: '16px', marginTop: '8px', flexWrap: 'wrap' }}>
+              <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                <span style={{ fontWeight: 500 }}>Dependencies:</span> {depCount}
+              </div>
+              <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                <span style={{ fontWeight: 500 }}>Dev Dependencies:</span> {devDepCount}
+              </div>
+              {scripts.length > 0 && (
+                <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
+                  <span style={{ fontWeight: 500 }}>Scripts:</span> {scripts.length}
+                </div>
+              )}
+            </div>
+
+            {scripts.length > 0 && (
+              <div style={{ marginTop: '8px' }}>
+                <div style={{
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textSecondary,
+                  marginBottom: '4px',
+                  fontWeight: 600,
+                }}>
+                  Available Scripts:
+                </div>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {scripts.slice(0, 10).map(script => (
+                    <span
+                      key={script}
+                      style={{
+                        padding: '2px 8px',
+                        background: theme.colors.backgroundSecondary,
+                        borderRadius: '10px',
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textSecondary,
+                        fontFamily: theme.fonts.monospace,
+                      }}
+                    >
+                      {script}
+                    </span>
+                  ))}
+                  {scripts.length > 10 && (
+                    <span style={{
+                      fontSize: theme.fontSizes[0],
+                      color: theme.colors.textSecondary,
+                      padding: '2px 8px',
+                    }}>
+                      +{scripts.length - 10} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   const renderContent = () => {
     if (loading) {
       return (
         <div style={{
           width: '100%',
-          aspectRatio: '1 / 1',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
+          padding: '32px',
           color: theme.colors.textSecondary,
         }}>
           <div style={{
@@ -64,12 +218,7 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
           }} />
-          <p style={{ marginTop: '16px' }}>Analyzing code quality...</p>
-          <div style={{ marginTop: '16px', fontSize: '12px' }}>
-            <div style={{ opacity: 1 }}>🔍 Discovering tools...</div>
-            <div style={{ opacity: 0.5 }}>📊 Running analysis...</div>
-            <div style={{ opacity: 0.5 }}>📈 Calculating metrics...</div>
-          </div>
+          <p style={{ marginTop: '16px' }}>Loading package information...</p>
         </div>
       );
     }
@@ -78,17 +227,17 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
       return (
         <div style={{
           width: '100%',
-          aspectRatio: '1 / 1',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
+          padding: '32px',
           color: theme.colors.error,
         }}>
           <p>❌ {error}</p>
           <button
-            onClick={analyzeQuality}
+            onClick={fetchPackages}
             style={{
               marginTop: '16px',
               padding: '8px 16px',
@@ -105,21 +254,21 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
       );
     }
 
-    if (!metrics) {
+    if (!summary || packages.length === 0) {
       return (
         <div style={{
           width: '100%',
-          aspectRatio: '1 / 1',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
+          padding: '32px',
           color: theme.colors.textSecondary,
         }}>
-          <p>No quality metrics available</p>
+          <p>No package information available</p>
           <button
-            onClick={analyzeQuality}
+            onClick={fetchPackages}
             style={{
               marginTop: '16px',
               padding: '8px 24px',
@@ -131,108 +280,26 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
               fontWeight: 'bold',
             }}
           >
-            Analyze Quality
+            Load Packages
           </button>
         </div>
       );
     }
 
-    // For compact mode, just show the hexagon with proper SVG styling
-    if (compact) {
-      return (
-        <div style={{
-          width: '100%',
-          aspectRatio: '1 / 1',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: theme.colors.text, // Set text color for SVG
-        }}>
-          <QualityHexagonCompact
-            metrics={metrics.hexagon}
-            tier={metrics.tier}
-            className="w-full h-full"
-          />
-        </div>
-      );
-    }
+    // Show package information
+    // Sort packages by name
+    const sortedPackages = [...packages].sort((a, b) => {
+      const nameA = a.packageData.name || '';
+      const nameB = b.packageData.name || '';
+      return nameA.localeCompare(nameB);
+    });
 
-    // Non-compact mode - show detailed view with bars
     return (
       <div style={{ color: theme.colors.text }}>
-        <QualityHexagonDetailed
-          metrics={metrics.hexagon}
-          tier={metrics.tier}
-          className="w-full"
-        />
-
-        <div style={{
-          marginTop: '24px',
-          paddingTop: '16px',
-          borderTop: `1px solid ${theme.colors.border}`,
-        }}>
-          <h4 style={{ color: theme.colors.text, marginBottom: '8px' }}>Available Tools:</h4>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {metrics.availableTools.map(tool => (
-              <span
-                key={tool}
-                style={{
-                  padding: '4px 12px',
-                  background: theme.colors.backgroundSecondary,
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                {tool}
-              </span>
-            ))}
-          </div>
+        {/* Package List */}
+        <div style={{ maxHeight: '400px', overflow: 'auto' }}>
+          {sortedPackages.map(pkg => renderPackageInfo(pkg))}
         </div>
-
-        {metrics.suggestions.length > 0 && (
-          <div style={{ marginTop: '16px' }}>
-            <h4 style={{ color: theme.colors.text, marginBottom: '8px' }}>Suggestions:</h4>
-            <ul style={{ margin: 0, paddingLeft: '20px' }}>
-              {metrics.suggestions.map((suggestion) => (
-                <li
-                  key={`suggestion-${suggestion.priority}-${suggestion.message}`}
-                  style={{
-                    padding: '8px 0',
-                    color: theme.colors.textSecondary,
-                    borderLeft: `3px solid ${
-                      suggestion.priority === 'high' ? theme.colors.error :
-                      suggestion.priority === 'medium' ? theme.colors.warning :
-                      theme.colors.border
-                    }`,
-                    paddingLeft: '12px',
-                    marginLeft: '-20px',
-                    marginBottom: '4px',
-                  }}
-                >
-                  {suggestion.message}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        <button
-          onClick={analyzeQuality}
-          disabled={loading}
-          style={{
-            marginTop: '16px',
-            padding: '6px 16px',
-            background: 'transparent',
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: '4px',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.5 : 1,
-            color: theme.colors.text,
-          }}
-        >
-          🔄 Refresh Analysis
-        </button>
       </div>
     );
   };
@@ -257,12 +324,27 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: '8px',
         }}
       >
-        <span>Code Quality</span>
+        <span>Package Information</span>
+        {summary?.isMonorepo && (
+          <span style={{
+            fontWeight: 600,
+            color: theme.colors.primary,
+            textTransform: 'none',
+            fontSize: theme.fontSizes[1],
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}>
+            <Grid2x2 size={14} />
+            Monorepo
+          </span>
+        )}
       </div>
       {renderContent()}
-      <style jsx>{`
+      <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
