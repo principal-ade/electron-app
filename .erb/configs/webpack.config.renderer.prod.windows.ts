@@ -149,6 +149,14 @@ const configuration: webpack.Configuration = {
     alias: {
       react: path.resolve(webpackPaths.rootPath, 'node_modules/react'),
       'react-dom': path.resolve(webpackPaths.rootPath, 'node_modules/react-dom'),
+      'react/jsx-runtime': path.resolve(
+        webpackPaths.rootPath,
+        'node_modules/react/jsx-runtime'
+      ),
+      'react/jsx-dev-runtime': path.resolve(
+        webpackPaths.rootPath,
+        'node_modules/react/jsx-dev-runtime'
+      ),
       events: require.resolve('events/'),
     },
     plugins: [new TsconfigPathsPlugins()],
