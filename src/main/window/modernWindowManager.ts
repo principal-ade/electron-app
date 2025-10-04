@@ -314,16 +314,21 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
 
     // Terminal Manager
     if (this.features.terminalManager) {
+      console.log(`[ModernWindow] Attempting to initialize terminal manager for window ${this.window.id}`);
       import('../terminalWrapper')
         .then(({ getTerminalManager }) => {
+          console.log(`[ModernWindow] Terminal wrapper imported, getting manager...`);
           const terminalManager = getTerminalManager();
+          console.log(`[ModernWindow] Terminal manager retrieved:`, !!terminalManager);
           if (terminalManager) {
             terminalManager.setMainWindow(this.window);
-            console.log(`[ModernWindow] Terminal manager initialized`);
+            console.log(`[ModernWindow] Terminal manager initialized for window ${this.window.id}`);
+          } else {
+            console.warn(`[ModernWindow] Terminal manager is null/undefined`);
           }
         })
         .catch((e) => {
-          console.log(`[ModernWindow] Terminal manager not available`, e);
+          console.error(`[ModernWindow] Terminal manager not available:`, e);
         });
     }
 

@@ -81,7 +81,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   });
 
   // Use cached data for selected repository
-  const { data: selectedRepoData } = useRepositoryData(selectedRepositoryPath, {
+  const { data: selectedRepoData, loading: isLoadingSelectedRepo } = useRepositoryData(selectedRepositoryPath, {
     autoLoad: true,
     subscribe: true,
   });
@@ -489,6 +489,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         gitStatus={gitStatus}
         isLoadingDocs={false}
         isLoadingGitStatus={false}
+        isLoadingRepository={isLoadingSelectedRepo}
         onOpenDashboard={handleSelectRepository}
         onRepositoryRemoved={handleRepositoryRemoved}
         onRefresh={refreshRepos}

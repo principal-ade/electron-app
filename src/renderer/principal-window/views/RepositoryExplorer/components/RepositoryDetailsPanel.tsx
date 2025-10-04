@@ -30,6 +30,7 @@ interface RepositoryDetailsPanelProps {
   gitStatus: GitStatus;
   isLoadingDocs: boolean;
   isLoadingGitStatus: boolean;
+  isLoadingRepository?: boolean;
   onOpenDashboard: (repo: EnhancedAlexandriaEntry) => void;
   onRepositoryRemoved?: (removedRepoName: string) => void;
   onRefresh?: () => Promise<void> | void;
@@ -46,6 +47,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   gitStatus,
   isLoadingDocs,
   isLoadingGitStatus,
+  isLoadingRepository = false,
   onOpenDashboard,
   onRepositoryRemoved,
   onRefresh,
@@ -623,6 +625,162 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     return 'Just now';
   };
 
+  // Loading skeleton component
+  const renderLoadingSkeleton = () => (
+    <div
+      style={{
+        height: '100%',
+        backgroundColor: theme.colors.background,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Header skeleton */}
+      <div
+        style={{
+          padding: '20px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        <div
+          style={{
+            height: '24px',
+            width: '40%',
+            backgroundColor: theme.colors.backgroundTertiary,
+            borderRadius: '4px',
+            marginBottom: '12px',
+            animation: 'pulse 1.5s ease-in-out infinite',
+          }}
+        />
+        <div
+          style={{
+            height: '16px',
+            width: '60%',
+            backgroundColor: theme.colors.backgroundTertiary,
+            borderRadius: '4px',
+            animation: 'pulse 1.5s ease-in-out infinite',
+            animationDelay: '0.1s',
+          }}
+        />
+      </div>
+
+      {/* Content skeleton */}
+      <div
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: '20px',
+        }}
+      >
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+            gap: '16px',
+          }}
+        >
+          {/* Left column skeleton */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                style={{
+                  padding: '16px',
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                <div
+                  style={{
+                    height: '18px',
+                    width: '30%',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                    marginBottom: '12px',
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                    animationDelay: `${i * 0.1}s`,
+                  }}
+                />
+                <div
+                  style={{
+                    height: '14px',
+                    width: '100%',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                    marginBottom: '8px',
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                    animationDelay: `${i * 0.1 + 0.05}s`,
+                  }}
+                />
+                <div
+                  style={{
+                    height: '14px',
+                    width: '80%',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                    animationDelay: `${i * 0.1 + 0.1}s`,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Right column skeleton */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {[1, 2].map((i) => (
+              <div
+                key={i}
+                style={{
+                  padding: '16px',
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  borderRadius: '8px',
+                  border: `1px solid ${theme.colors.border}`,
+                  height: i === 1 ? '400px' : 'auto',
+                }}
+              >
+                <div
+                  style={{
+                    height: '18px',
+                    width: '40%',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                    marginBottom: '12px',
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                    animationDelay: `${i * 0.15}s`,
+                  }}
+                />
+                <div
+                  style={{
+                    height: '14px',
+                    width: '90%',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                    animationDelay: `${i * 0.15 + 0.05}s`,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+      `}</style>
+    </div>
+  );
+
   return (
     <div
       style={{
@@ -641,7 +799,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           requiredSecrets={requiredSecrets}
         />
       )}
-      {selectedRepository ? (
+      {isLoadingRepository ? (
+        renderLoadingSkeleton()
+      ) : selectedRepository ? (
         <>
           {/* Repository Header */}
           <RepositoryHeader

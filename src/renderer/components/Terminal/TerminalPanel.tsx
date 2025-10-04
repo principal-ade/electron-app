@@ -380,10 +380,16 @@ function TerminalPanel({
 
   // Handle terminal data
   useEffect(() => {
-    if (!terminal || !sessionId) return;
+    if (!terminal || !sessionId) {
+      console.log('[TerminalPanel] Data handler skipped - terminal:', !!terminal, 'sessionId:', sessionId);
+      return;
+    }
+
+    console.log('[TerminalPanel] Setting up data handlers for session:', sessionId);
 
     // Send data to backend
     const disposable = terminal.onData((data) => {
+      console.log('[TerminalPanel] Sending data to backend:', data.length, 'bytes');
       TerminalService.write(sessionId, data);
     });
 
@@ -391,6 +397,7 @@ function TerminalPanel({
     const unsubscribe = TerminalService.onData(
       async (data: { sessionId: string; data: string }) => {
         if (data.sessionId === sessionId) {
+          console.log('[TerminalPanel] Received data from backend:', data.data.length, 'bytes');
           terminal.write(data.data);
         }
       },
@@ -405,12 +412,15 @@ function TerminalPanel({
       },
     );
 
+    console.log('[TerminalPanel] Data handlers set up successfully');
+
     return () => {
+      console.log('[TerminalPanel] Cleaning up data handlers for session:', sessionId);
       disposable.dispose();
       void unsubscribe.then((fn) => fn()).catch(() => {});
       void unsubscribeExit.then((fn) => fn()).catch(() => {});
     };
-  }, [terminal, sessionId, isVisible]);
+  }, [terminal, sessionId]);
 
   // Handle terminal resize
   useEffect(() => {

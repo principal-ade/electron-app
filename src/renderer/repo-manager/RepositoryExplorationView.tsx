@@ -1725,13 +1725,21 @@ export const RepositoryExplorationView: React.FC<
             </div>
           );
 
-          // Terminal panel
+          const layout: PanelLayout = panelLayout || {
+            left: 'left',
+            middle: 'terminal',
+            right: 'middle',
+          };
+
+          // Terminal panel - defined after layout so we can check visibility
+          const isTerminalVisible = layout.middle === 'terminal' || layout.left === 'terminal' || layout.right === 'terminal';
           const terminalPanel = activeFileTreeSource?.type === 'local' ? (
             <TerminalPanel
               directory={activeFileTreeSource.location}
               context="dashboard"
-              isVisible={true}
+              isVisible={isTerminalVisible}
               hideHeader={false}
+              key={`terminal-${activeFileTreeSource.location}`}
             />
           ) : (
             <div
@@ -1773,12 +1781,6 @@ export const RepositoryExplorationView: React.FC<
               content: rightPanel,
             },
           ];
-
-          const layout: PanelLayout = panelLayout || {
-            left: 'left',
-            middle: 'terminal',
-            right: 'middle',
-          };
 
           return (
             <div

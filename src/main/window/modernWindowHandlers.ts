@@ -246,6 +246,7 @@ export function registerModernWindowHandlers(): void {
           fileSystemAdapter: true,
           windowManagerAdapter: true,
           githubAdapter: true,
+          terminalManager: true,
           contentSecurityPolicy: true,
           externalLinkHandler: true,
           menu: true,

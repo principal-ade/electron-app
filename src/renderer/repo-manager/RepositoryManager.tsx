@@ -55,8 +55,8 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
     // Panel layout state
     const [panelLayout, setPanelLayout] = useState<PanelLayout>({
       left: 'left',
-      middle: 'middle',
-      right: null,
+      middle: 'terminal',
+      right: 'middle',
     });
 
     // File tree services - shared across all views

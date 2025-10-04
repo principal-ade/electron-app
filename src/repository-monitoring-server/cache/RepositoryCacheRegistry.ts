@@ -281,7 +281,9 @@ export class RepositoryCacheRegistry extends EventEmitter {
     entry.hash = this.hash(data);
     entry.timestamp = this.now();
     delete entry.error;
-    this.emit('cacheUpdated', { repoPath, slice, entry: { ...entry } } satisfies CacheUpdatedEvent<K>);
+    // Exclude inflight promise when emitting to ensure structured clone compatibility
+    const { inflight, ...serializable } = entry;
+    this.emit('cacheUpdated', { repoPath, slice, entry: serializable } satisfies CacheUpdatedEvent<K>);
   }
 
   private applyError<K extends CacheSlice>(repoPath: string, slice: K, error: unknown): void {
@@ -291,7 +293,9 @@ export class RepositoryCacheRegistry extends EventEmitter {
     entry.error = serializeError(error);
     delete entry.data;
     delete entry.hash;
-    this.emit('cacheUpdated', { repoPath, slice, entry: { ...entry } } satisfies CacheUpdatedEvent<K>);
+    // Exclude inflight promise when emitting to ensure structured clone compatibility
+    const { inflight, ...serializable } = entry;
+    this.emit('cacheUpdated', { repoPath, slice, entry: serializable } satisfies CacheUpdatedEvent<K>);
   }
 
   private enqueueBuild(task: BuildTask): Promise<void> {
