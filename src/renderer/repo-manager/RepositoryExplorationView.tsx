@@ -21,7 +21,11 @@ import { useTheme } from '@a24z/industry-theme';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { PackageLayer } from '@principal-ai/codebase-composition';
-import { ThreePanelLayout } from '@a24z/panels';
+import {
+  ConfigurableThreePanelLayout,
+  type ThreePanelLayoutConfiguration,
+  type PanelIdentifier,
+} from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
@@ -1713,6 +1717,44 @@ export const RepositoryExplorationView: React.FC<
             </div>
           );
 
+          const layoutConfiguration: ThreePanelLayoutConfiguration = {
+            orientation: 'horizontal',
+            gapSize: 1,
+            panels: {
+              left: {
+                id: 'left',
+                content: leftPanel,
+                defaultSize: 32,
+                minSize: 24,
+                collapsible: true,
+                collapsed: isLeftPanelCollapsed,
+              },
+              middle: {
+                id: 'middle',
+                content: rightPanel,
+                defaultSize: 68,
+                minSize: 50,
+              },
+              right: {
+                id: 'right',
+                content: null,
+                defaultSize: 0,
+                minSize: 0,
+                collapsible: false,
+                collapsed: true,
+              },
+            },
+          };
+
+          const handlePanelCollapseChange = (
+            panelId: PanelIdentifier,
+            collapsed: boolean,
+          ) => {
+            if (panelId === 'left') {
+              setLeftPanelCollapsed(collapsed);
+            }
+          };
+
           return (
             <div
               style={{
@@ -1721,17 +1763,10 @@ export const RepositoryExplorationView: React.FC<
                 boxSizing: 'border-box',
               }}
             >
-              <ThreePanelLayout
-                leftPanel={leftPanel}
-                middlePanel={rightPanel}
-                rightPanel={null}
-                collapsiblePanels={{ left: true, right: false }}
-                defaultSizes={{ left: 32, middle: 68, right: 0 }}
-                minSizes={{ left: 24, middle: 50, right: 0 }}
-                collapsed={{ left: isLeftPanelCollapsed }}
+              <ConfigurableThreePanelLayout
+                configuration={layoutConfiguration}
                 showCollapseButtons={false}
-                onLeftCollapseComplete={() => setLeftPanelCollapsed(true)}
-                onLeftExpandComplete={() => setLeftPanelCollapsed(false)}
+                onPanelCollapseChange={handlePanelCollapseChange}
                 style={{ height: '100%', width: '100%' }}
                 theme={panelsTheme}
               />
