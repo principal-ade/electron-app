@@ -59,6 +59,7 @@ describe('RepositoryMonitoringServer', () => {
                 ahead: 2,
                 behind: 1,
                 watchingEnabled: false,
+                lastChangedAt: undefined,
             });
             expect(mockedGitCore.getDetailedStatus).toHaveBeenCalledWith(testRepoPath);
         });
@@ -74,6 +75,7 @@ describe('RepositoryMonitoringServer', () => {
                 ahead: 0,
                 behind: 0,
                 watchingEnabled: false,
+                lastChangedAt: undefined,
             });
         });
     });

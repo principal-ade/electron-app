@@ -20,6 +20,11 @@ The Repository Explorer UI currently depends on the renderer-side `RepositoryDat
 - Cache rebuild latency remains under 750ms for median repositories (measured from event receipt to cache-sync emission).
 - No increase in failed git/tree/package requests attributable to the new cache coordination.
 
+## Integration Alignment
+- The implementation work for this design is captured in [REPOSITORY_MONITORING_CACHE_SYNC_INTEGRATION.md](./REPOSITORY_MONITORING_CACHE_SYNC_INTEGRATION.md). Use that document to translate these architectural requirements into concrete worker, main process, and renderer tasks.
+- Main/renderer owners should cross-check the phased efforts in the integration plan against their existing Repository Monitoring milestones to avoid duplicate tracking.
+- Observability additions described below tie into the telemetry checklist contained in the integration plan’s “Telemetry & Observability” section.
+
 ## Proposed Architecture
 
 ### 1. Repository Cache Registry

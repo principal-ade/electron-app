@@ -3,6 +3,8 @@
 ## Overview
 The Repository Monitoring Server will be a separate utility process (like event-processing-server) that provides quality metrics and repository information to the renderer process via IPC. It will build upon existing FileTree creation patterns and extend them with quality analysis capabilities. Running as a separate process ensures the main process remains lightweight and responsive while performing CPU-intensive quality analysis tasks.
 
+> **Related Reading:** The cache synchronization track described in [REPOSITORY_MONITORING_CACHE_SYNC_INTEGRATION.md](./REPOSITORY_MONITORING_CACHE_SYNC_INTEGRATION.md) refines the server-facing milestones below with the concrete `RepositoryCacheRegistry` wiring needed for renderer parity.
+
 ## Milestone 1 Implementation Notes (COMPLETED)
 
 ### Key Learnings and Corrections

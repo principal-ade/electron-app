@@ -18,7 +18,12 @@ import type {
 } from '../../repository-monitoring-server/types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
-import type { MonitoringStatus, ResourceSnapshot, RepositoryInfo } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type {
+  MonitoringStatus,
+  ResourceSnapshot,
+  RepositoryInfo,
+  RepositoryCacheSnapshot,
+} from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 /**
  * Configuration for RepositoryMonitoringManager
@@ -408,6 +413,13 @@ export class RepositoryMonitoringManager extends EventEmitter {
    */
   async getPackages(path: string): Promise<{ packages: PackageLayer[]; summary: PackageSummary } | null> {
     return this.sendRequest({ type: 'getPackages', path });
+  }
+
+  /**
+   * Get the repository cache snapshot composed by the worker-side registry
+   */
+  async getRepositoryCacheSnapshot(path: string): Promise<RepositoryCacheSnapshot> {
+    return this.sendRequest({ type: 'getRepositoryCacheSnapshot', path });
   }
 
   /**

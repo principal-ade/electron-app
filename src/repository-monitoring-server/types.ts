@@ -6,7 +6,18 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { QualityMetrics, PackageLayer } from '@principal-ai/codebase-composition';
 import type { LensResult } from '@principal-ai/codebase-quality-lenses';
 import type { GitState } from '@principal-ai/repository-monitoring';
-import type { PackageSummary, ToolExecutionRequest, ToolExecutionResponse } from '../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type {
+  PackageSummary,
+  ToolExecutionRequest,
+  ToolExecutionResponse,
+  CacheEntry,
+  CacheError,
+  CacheSlice,
+  CacheSliceDataMap,
+  RepositoryCacheSnapshot,
+  RepositoryCacheSlices,
+  RepositoryCacheSyncEvent,
+} from '../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 // Re-export PackageSummary from shared types
 export type { PackageSummary } from '../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
@@ -159,53 +170,15 @@ export interface GitStatusWithFiles extends GitStatusMetadata {
 /**
  * Cache slices supported by the repository monitoring cache registry.
  */
-export type CacheSlice = 'gitStatus' | 'fileTree' | 'packages';
-
-/**
- * Error metadata recorded by cache entries when rebuilds fail.
- */
-export interface CacheError {
-  message: string;
-  name?: string;
-  stack?: string;
-  code?: string | number;
-}
-
-/**
- * Maps cache slices to their corresponding payload types.
- */
-export interface CacheSliceDataMap {
-  gitStatus: GitStatusWithFiles;
-  fileTree: FileTree;
-  packages: {
-    packages: PackageLayer[];
-    summary: PackageSummary;
-  };
-}
-
-/**
- * Cache entry metadata shared between the worker and renderer processes.
- */
-export interface CacheEntry<T> {
-  data?: T;
-  version: number;
-  hash?: string;
-  timestamp: number;
-  inflight?: Promise<T>;
-  error?: CacheError;
-}
-
-/**
- * Repository-wide snapshot of cached slices and their metadata.
- */
-export type RepositoryCacheSlices = {
-  [K in CacheSlice]?: CacheEntry<CacheSliceDataMap[K]>;
+export type {
+  CacheSlice,
+  CacheEntry,
+  CacheError,
+  CacheSliceDataMap,
+  RepositoryCacheSnapshot,
+  RepositoryCacheSlices,
+  RepositoryCacheSyncEvent,
 };
-
-export interface RepositoryCacheSnapshot {
-  repoPath: string;
-  slices: RepositoryCacheSlices;
-}
 
 /**
  * Git state event types from the library
@@ -254,6 +227,7 @@ export type MainToServerMessageType =
   | 'getFileTree'
   | 'getMetrics'
   | 'getPackages'
+  | 'getRepositoryCacheSnapshot'
   | 'refresh'
   | 'register'
   | 'unregister'

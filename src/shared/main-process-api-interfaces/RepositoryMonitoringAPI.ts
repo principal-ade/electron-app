@@ -38,6 +38,47 @@ export interface PackageSummary {
   availableScripts: string[];
 }
 
+export type CacheSlice = 'gitStatus' | 'fileTree' | 'packages';
+
+export interface CacheError {
+  message: string;
+  name?: string;
+  stack?: string;
+  code?: string | number;
+}
+
+export interface CacheEntry<T> {
+  data?: T;
+  version: number;
+  hash?: string;
+  timestamp: number;
+  error?: CacheError;
+}
+
+export interface CacheSliceDataMap {
+  gitStatus: GitStatusWithFiles;
+  fileTree: FileTree;
+  packages: {
+    packages: PackageLayer[];
+    summary: PackageSummary;
+  };
+}
+
+export type RepositoryCacheSlices = {
+  [K in CacheSlice]?: CacheEntry<CacheSliceDataMap[K]>;
+};
+
+export interface RepositoryCacheSnapshot {
+  repoPath: string;
+  slices: RepositoryCacheSlices;
+}
+
+export interface RepositoryCacheSyncEvent<K extends CacheSlice = CacheSlice> {
+  repoPath: string;
+  slice: K;
+  entry: CacheEntry<CacheSliceDataMap[K]>;
+}
+
 export enum RepositoryMonitoringAPIEvent {
   GET_FILE_TREE = 'repository-monitoring:get-file-tree',
   REGISTER = 'repository-monitoring:register',
@@ -56,7 +97,9 @@ export enum RepositoryMonitoringAPIEvent {
   GIT_STATUS_CHANGED = 'repository-monitoring:git-status-changed',
   GIT_STATE_EVENT = 'repository-monitoring:git-state-event',
   WORKSPACE_CHANGED = 'repository-monitoring:workspace-change',
+  CACHE_SYNC = 'repository-monitoring:cache-sync',
   EXECUTE_TOOL = 'repository-monitoring:execute-tool',
+  GET_CACHE_SNAPSHOT = 'repository-monitoring:get-cache-snapshot',
 }
 
 export interface RepositoryMonitoringResult {
@@ -91,6 +134,8 @@ export interface GitStatusWithFiles extends GitStatusMetadata {
   deletedFiles: string[];
 }
 
+export type GitStatus = GitStatusMetadata;
+
 export interface ResourceSnapshot {
   timestamp: number;
   memory: number;  // RSS in bytes
@@ -120,6 +165,7 @@ export interface MonitoringStatus {
 export interface RepositoryMonitoringAPI {
   getFileTree(repoPath: string): Promise<FileTree | null>;
   getPackages(repoPath: string): Promise<{ packages: PackageLayer[]; summary: PackageSummary } | null>;
+  getRepositoryCacheSnapshot(repoPath: string): Promise<RepositoryCacheSnapshot>;
   registerRepository(repoPath: string): Promise<RepositoryMonitoringResult>;
   unregisterRepository(repoPath: string): Promise<RepositoryMonitoringResult>;
   refreshRepository(repoPath: string): Promise<RepositoryMonitoringResult>;
@@ -132,5 +178,6 @@ export interface RepositoryMonitoringAPI {
   disableGitWatching(repoPath: string): Promise<RepositoryMonitoringResult>;
   onGitStatusChanged(callback: (status: GitStatusMetadata) => void): () => void;
   onWorkspaceChange(callback: (event: WorkspaceChangeEventPayload) => void): () => void;
+  onCacheSync(callback: (event: RepositoryCacheSyncEvent) => void): () => void;
   executeTool(request: ToolExecutionRequest): Promise<ToolExecutionResponse>;
 }

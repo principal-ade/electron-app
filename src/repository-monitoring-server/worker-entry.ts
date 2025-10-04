@@ -129,6 +129,11 @@ async function handleMessage(rawMessage: unknown): Promise<void> {
         result = await server.getPackages(message.path);
         break;
 
+      case 'getRepositoryCacheSnapshot':
+        if (!message.path) throw new Error('Path required for getRepositoryCacheSnapshot');
+        result = await server.getRepositoryCacheSnapshot(message.path);
+        break;
+
       case 'refresh':
         if (!message.path) throw new Error('Path required for refresh');
         await server.refreshRepository(message.path);

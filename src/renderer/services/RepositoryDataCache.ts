@@ -7,7 +7,15 @@ import { EventEmitter } from 'events';
 import type { EnhancedAlexandriaEntry } from '../../shared/types/repository.types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
-import type { GitStatusMetadata, GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type {
+  GitStatusMetadata,
+  GitStatusWithFiles,
+  RepositoryCacheSyncEvent,
+  CacheSlice,
+  CacheEntry as RegistryCacheEntry,
+  CacheSliceDataMap,
+  PackageSummary,
+} from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import type { AlexandriaChangeEvent, AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
@@ -16,7 +24,7 @@ import { GitService } from '../main-process-api/GitService';
 /**
  * Cache entry metadata
  */
-interface CacheEntry<T> {
+interface LocalCacheEntry<T> {
   data: T;
   timestamp: number;
   version: number;
@@ -74,6 +82,7 @@ export interface RepositoryCacheData {
   // Package and quality data
   packages: PackageLayer[];
   qualityMetrics: QualityMetrics | null;
+  packageSummary: PackageSummary | null;
 
   // Metadata
   lastFullRefresh: number;
@@ -83,12 +92,19 @@ export interface RepositoryCacheData {
     packages: number;
     quality: number;
   };
+  cacheSlices: RepositoryCacheSlicesState;
 }
 
 /**
  * Update types for partial cache updates
  */
 type PartialCacheUpdate = Partial<RepositoryCacheData>;
+
+type RepositoryCacheSlicesState = {
+  gitStatus?: RegistryCacheEntry<CacheSliceDataMap['gitStatus']>;
+  fileTree?: RegistryCacheEntry<CacheSliceDataMap['fileTree']>;
+  packages?: RegistryCacheEntry<CacheSliceDataMap['packages']>;
+};
 
 /**
  * Cache update event
@@ -112,7 +128,7 @@ interface QueuedUpdate {
  */
 export class RepositoryDataCache extends EventEmitter {
   private static instance: RepositoryDataCache | null = null;
-  private cache = new Map<string, CacheEntry<RepositoryCacheData>>();
+  private cache = new Map<string, LocalCacheEntry<RepositoryCacheData>>();
   private updateQueue = new Map<string, QueuedUpdate>();
   private flushTimer: NodeJS.Timeout | null = null;
   private flushInterval = 100; // Batch updates every 100ms
@@ -143,6 +159,11 @@ export class RepositoryDataCache extends EventEmitter {
       this.handleGitStatusChange(status);
     });
     this.eventSubscriptions.push(unsubscribeGit);
+
+    const unsubscribeCacheSync = RepositoryMonitoringService.onCacheSync((event) => {
+      this.handleCacheSyncEvent(event);
+    });
+    this.eventSubscriptions.push(unsubscribeCacheSync);
 
     // Subscribe to repository changes from Alexandria
     const unsubscribeRepo = AlexandriaService.onRepositoryChange((event) => {
@@ -226,21 +247,27 @@ export class RepositoryDataCache extends EventEmitter {
     }
 
     // Fetch all data in parallel
-    const [gitStatus, fileTree, packages, repository] = await Promise.all([
-      RepositoryMonitoringService.getGitStatusWithFiles(repoPath).catch(() => null),
-      RepositoryMonitoringService.getFileTree(repoPath).catch(() => null),
-      RepositoryMonitoringService.getPackages(repoPath).catch(() => null),
+    const [snapshot, repository] = await Promise.all([
+      RepositoryMonitoringService.getRepositoryCacheSnapshot(repoPath),
       this.getRepositoryByPath(repoPath),
     ]);
 
-    // Extract quality metrics from packages
-    const qualityMetrics = this.extractQualityMetrics(packages);
+    const gitEntry = snapshot.slices.gitStatus as RegistryCacheEntry<CacheSliceDataMap['gitStatus']> | undefined;
+    const fileTreeEntry = snapshot.slices.fileTree as RegistryCacheEntry<CacheSliceDataMap['fileTree']> | undefined;
+    const packagesEntry = snapshot.slices.packages as RegistryCacheEntry<CacheSliceDataMap['packages']> | undefined;
 
-    // Extract markdown files from file tree
+    const gitStatus = gitEntry?.data ?? null;
+    const fileTree = fileTreeEntry?.data ?? null;
+    const packagesData = packagesEntry?.data;
+
+    const qualityMetrics = this.extractQualityMetrics(packagesData);
     const markdownFiles = this.extractMarkdownFiles(fileTree);
-
-    // Get branch status
     const branchStatus = await this.getBranchStatus(repoPath, gitStatus);
+    const cacheSlices: RepositoryCacheSlicesState = {
+      gitStatus: gitEntry,
+      fileTree: fileTreeEntry,
+      packages: packagesEntry,
+    };
 
     // Create cache data
     const cacheData: RepositoryCacheData = {
@@ -250,15 +277,17 @@ export class RepositoryDataCache extends EventEmitter {
       branchStatus,
       fileTree,
       markdownFiles,
-      packages: packages?.packages || [],
+      packages: packagesData?.packages || [],
       qualityMetrics,
+      packageSummary: packagesData?.summary ?? null,
       lastFullRefresh: Date.now(),
       partialUpdates: {
-        git: Date.now(),
-        files: Date.now(),
-        packages: Date.now(),
-        quality: Date.now(),
+        git: gitEntry?.timestamp ?? Date.now(),
+        files: fileTreeEntry?.timestamp ?? Date.now(),
+        packages: packagesEntry?.timestamp ?? Date.now(),
+        quality: packagesEntry?.timestamp ?? Date.now(),
       },
+      cacheSlices,
     };
 
     // Store in cache
@@ -302,6 +331,9 @@ export class RepositoryDataCache extends EventEmitter {
     const updatedData = {
       ...entry.data,
       ...update,
+      cacheSlices: entry.data.cacheSlices,
+      packageSummary:
+        update.packageSummary !== undefined ? update.packageSummary : entry.data.packageSummary,
       partialUpdates: {
         ...entry.data.partialUpdates,
         git: update.gitStatus ? Date.now() : entry.data.partialUpdates.git,
@@ -395,6 +427,7 @@ export class RepositoryDataCache extends EventEmitter {
       const packagesData = await RepositoryMonitoringService.getPackages(repoPath).catch(() => null);
       updates.packages = packagesData?.packages || [];
       updates.qualityMetrics = this.extractQualityMetrics(packagesData);
+      updates.packageSummary = packagesData?.summary ?? null;
     }
 
     // Apply updates
@@ -433,9 +466,118 @@ export class RepositoryDataCache extends EventEmitter {
         repository: updatedRepository,
       });
     }
+  }
 
-    // Queue fetches for git status and file metadata (markdown timestamps)
-    this.queueUpdate(repoPath, ['gitStatus', 'fileTree']);
+  private handleCacheSyncEvent(event: RepositoryCacheSyncEvent): void {
+    void this.applyCacheSyncEvent(event);
+  }
+
+  private async applyCacheSyncEvent(event: RepositoryCacheSyncEvent): Promise<void> {
+    const entry = this.cache.get(event.repoPath);
+    if (!entry) {
+      return;
+    }
+
+    const slice = event.slice as CacheSlice;
+    const existingSlice = entry.data.cacheSlices[slice];
+    if (existingSlice && event.entry.version <= existingSlice.version) {
+      return;
+    }
+
+    const updatedSlices: RepositoryCacheSlicesState = {
+      ...entry.data.cacheSlices,
+      [slice]: event.entry as RegistryCacheEntry<CacheSliceDataMap[CacheSlice]>,
+    };
+
+    const updatedData: RepositoryCacheData = {
+      ...entry.data,
+      cacheSlices: updatedSlices,
+    };
+
+    const partial: PartialCacheUpdate = {};
+    const changedFields: string[] = [];
+    const partialUpdates = { ...entry.data.partialUpdates };
+    const timestamp = event.entry.timestamp ?? Date.now();
+
+    switch (slice) {
+      case 'gitStatus': {
+        updatedData.gitStatus = event.entry.data ?? null;
+        partial.gitStatus = updatedData.gitStatus;
+        changedFields.push('gitStatus');
+
+        if (event.entry.data) {
+          updatedData.gitBranch = event.entry.data.branch;
+          partial.gitBranch = updatedData.gitBranch;
+          changedFields.push('gitBranch');
+
+          updatedData.repository = this.enhanceRepository(updatedData.repository, event.entry.data);
+          partial.repository = updatedData.repository;
+          changedFields.push('repository');
+
+          updatedData.branchStatus = await this.getBranchStatus(event.repoPath, event.entry.data);
+          partial.branchStatus = updatedData.branchStatus;
+          changedFields.push('branchStatus');
+        } else {
+          updatedData.branchStatus = { ahead: 0, behind: 0 };
+          partial.branchStatus = updatedData.branchStatus;
+          changedFields.push('branchStatus');
+        }
+
+        partialUpdates.git = timestamp;
+        break;
+      }
+      case 'fileTree': {
+        updatedData.fileTree = event.entry.data ?? null;
+        partial.fileTree = updatedData.fileTree;
+        changedFields.push('fileTree');
+
+        updatedData.markdownFiles = this.extractMarkdownFiles(updatedData.fileTree);
+        partial.markdownFiles = updatedData.markdownFiles;
+        changedFields.push('markdownFiles');
+
+        partialUpdates.files = timestamp;
+        break;
+      }
+      case 'packages': {
+        const packagesData = event.entry.data;
+        updatedData.packages = packagesData?.packages ?? [];
+        partial.packages = updatedData.packages;
+        changedFields.push('packages');
+
+        updatedData.packageSummary = packagesData?.summary ?? null;
+        partial.packageSummary = updatedData.packageSummary;
+        changedFields.push('packageSummary');
+
+        updatedData.qualityMetrics = this.extractQualityMetrics(packagesData);
+        partial.qualityMetrics = updatedData.qualityMetrics;
+        changedFields.push('qualityMetrics');
+
+        partialUpdates.packages = timestamp;
+        partialUpdates.quality = timestamp;
+        break;
+      }
+      default:
+        return;
+    }
+
+    updatedData.partialUpdates = partialUpdates;
+
+    const newEntry: LocalCacheEntry<RepositoryCacheData> = {
+      ...entry,
+      data: updatedData,
+      timestamp: Date.now(),
+      version: entry.version + 1,
+    };
+
+    this.cache.set(event.repoPath, newEntry);
+
+    if (changedFields.length > 0) {
+      this.emit(`update:${event.repoPath}`, {
+        repoPath: event.repoPath,
+        fields: changedFields,
+        data: partial,
+      });
+    }
   }
 
   /**
@@ -484,7 +626,7 @@ export class RepositoryDataCache extends EventEmitter {
   /**
    * Check if cache entry is stale
    */
-  private isCacheStale(entry: CacheEntry<RepositoryCacheData>): boolean {
+  private isCacheStale(entry: LocalCacheEntry<RepositoryCacheData>): boolean {
     return Date.now() - entry.timestamp > this.maxCacheAge;
   }
 
@@ -558,7 +700,9 @@ export class RepositoryDataCache extends EventEmitter {
   /**
    * Extract quality metrics from packages data
    */
-  private extractQualityMetrics(packagesData: any): QualityMetrics | null {
+  private extractQualityMetrics(
+    packagesData: CacheSliceDataMap['packages'] | { packages: PackageLayer[] } | null | undefined,
+  ): QualityMetrics | null {
     if (!packagesData?.packages?.[0]?.qualityMetrics) {
       return null;
     }
