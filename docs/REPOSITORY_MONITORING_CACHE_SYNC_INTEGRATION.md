@@ -3,6 +3,11 @@
 ## Purpose
 This plan captures the concrete engineering work required to integrate the new `RepositoryCacheRegistry` infrastructure into the repository monitoring pipeline so that renderer caches stay in sync with the worker’s authoritative data. It breaks down the effort across worker, main process, and renderer responsibilities and outlines verification and rollout considerations.
 
+## Related Documents
+- [Repository Monitoring Cache Synchronization Design](./REPOSITORY_MONITORING_CACHE_SYNC_DESIGN.md) – architectural motivation, cache registry contract, and IPC schema that this integration plan operationalizes.
+- [Repository Monitoring Server Plan](./REPOSITORY_MONITORING_SERVER_PLAN.md) – broader process/worker roadmap whose milestones this cache sync work advances.
+- [Repository Monitoring Service Integration Guide](./REPOSITORY_MONITORING_INTEGRATION.md) – renderer adoption steps that will consume the registry-backed cache APIs described here.
+
 ## Prerequisites
 - Land the `RepositoryCacheRegistry` implementation and related type definitions in `src/repository-monitoring-server/cache`.
 - Verify unit tests for the registry pass locally (`RepositoryCacheRegistry.test.ts`).

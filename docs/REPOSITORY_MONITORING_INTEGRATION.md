@@ -4,6 +4,8 @@
 
 This document describes how to integrate the new Repository Monitoring Service with the existing RepositoryManager UI to provide optimized FileTree loading with git-aware caching.
 
+> **Need cache-sync specifics?** Pair this guide with [REPOSITORY_MONITORING_CACHE_SYNC_INTEGRATION.md](./REPOSITORY_MONITORING_CACHE_SYNC_INTEGRATION.md) for the worker/main/renderer coordination required to hydrate renderer caches from the new `RepositoryCacheRegistry`.
+
 ## Current Architecture
 
 ### How FileTree Loading Currently Works
