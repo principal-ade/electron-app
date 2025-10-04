@@ -5,6 +5,7 @@ import {
   GitStatusMetadata,
   type WorkspaceChangeEventPayload,
   type ToolExecutionRequest,
+  type RepositoryCacheSyncEvent,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
@@ -14,6 +15,10 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
 
   getPackages: async (repoPath: string) => {
     return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_PACKAGES, repoPath);
+  },
+
+  getRepositoryCacheSnapshot: async (repoPath: string) => {
+    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_CACHE_SNAPSHOT, repoPath);
   },
 
   registerRepository: async (repoPath: string) => {
@@ -69,6 +74,14 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
     ipcRenderer.on(RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED, handler);
     return () => {
       ipcRenderer.removeListener(RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED, handler);
+    };
+  },
+
+  onCacheSync: (callback: (event: RepositoryCacheSyncEvent) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, payload: RepositoryCacheSyncEvent) => callback(payload);
+    ipcRenderer.on(RepositoryMonitoringAPIEvent.CACHE_SYNC, handler);
+    return () => {
+      ipcRenderer.removeListener(RepositoryMonitoringAPIEvent.CACHE_SYNC, handler);
     };
   },
 

@@ -70,6 +70,18 @@ export function registerRepositoryMonitoringHandlers(): void {
     }
   });
 
+  // Get cache snapshot for a repository
+  ipcMain.handle(RepositoryMonitoringAPIEvent.GET_CACHE_SNAPSHOT, async (_event, repoPath: string) => {
+    console.log(`[RepositoryMonitoring] GET_CACHE_SNAPSHOT request for: ${repoPath}`);
+    try {
+      const snapshot = await manager.getRepositoryCacheSnapshot(repoPath);
+      return snapshot;
+    } catch (error) {
+      console.error('[RepositoryMonitoring] Error getting cache snapshot:', error);
+      return { repoPath, slices: {} };
+    }
+  });
+
   // Register a repository for monitoring
   ipcMain.handle(RepositoryMonitoringAPIEvent.REGISTER, async (_event, repoPath: string) => {
     console.log(`[RepositoryMonitoring] REGISTER request for: ${repoPath}`);

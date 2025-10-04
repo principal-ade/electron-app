@@ -13,7 +13,9 @@ import type {
   GitStatusWithFiles,
   ToolExecutionRequest,
   ToolExecutionResponse,
-  PackageSummary
+  PackageSummary,
+  RepositoryCacheSnapshot,
+  RepositoryCacheSyncEvent,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 export class RepositoryMonitoringService {
@@ -38,6 +40,18 @@ export class RepositoryMonitoringService {
     } catch (error) {
       console.error('[RepositoryMonitoring] Error getting packages:', error);
       return null;
+    }
+  }
+
+  /**
+   * Get the registry-backed cache snapshot for a repository
+   */
+  static async getRepositoryCacheSnapshot(repoPath: string): Promise<RepositoryCacheSnapshot> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.getRepositoryCacheSnapshot(repoPath);
+    } catch (error) {
+      console.error('[RepositoryMonitoring] Error getting cache snapshot:', error);
+      return { repoPath, slices: {} };
     }
   }
 
@@ -174,6 +188,13 @@ export class RepositoryMonitoringService {
    */
   static onGitStatusChanged(callback: (status: GitStatus) => void): () => void {
     return window.mainProcess.repositoryMonitoring.onGitStatusChanged(callback);
+  }
+
+  /**
+   * Subscribe to cache synchronization events emitted by the worker
+   */
+  static onCacheSync(callback: (event: RepositoryCacheSyncEvent) => void): () => void {
+    return window.mainProcess.repositoryMonitoring.onCacheSync(callback);
   }
 
   /**
