@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { ThemedMonacoWithProvider } from '@principal-ade/industry-themed-monaco-editor';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
@@ -21,6 +21,12 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [vimModeEnabled, setVimModeEnabled] = useState(false);
+  const latestFilePathRef = useRef<string | null>(null);
+
+  const getAbsolutePath = useCallback(
+    (path: string) => (path.startsWith('/') ? path : `${repositoryPath}/${path}`),
+    [repositoryPath],
+  );
 
   // Get language from file extension
   const getLanguage = (path: string): string => {
@@ -75,40 +81,80 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
       });
   }, []);
 
-  useEffect(() => {
-    const loadFile = async () => {
-      if (!filePath) {
-        setFileContent('');
+  const loadFile = useCallback(async () => {
+    if (!filePath) {
+      latestFilePathRef.current = null;
+      setFileContent('');
+      return;
+    }
+
+    const absolutePath = getAbsolutePath(filePath);
+    latestFilePathRef.current = absolutePath;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const result = await FileSystemService.readFile(absolutePath);
+
+      if (latestFilePathRef.current !== absolutePath) {
         return;
       }
 
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        // Construct absolute path
-        const absolutePath = filePath.startsWith('/')
-          ? filePath
-          : `${repositoryPath}/${filePath}`;
-
-        const result = await FileSystemService.readFile(absolutePath);
-
-        if (result && result.content !== undefined) {
-          setFileContent(result.content);
-        } else {
-          throw new Error('Failed to read file');
-        }
-      } catch (err) {
-        console.error('Error loading file:', err);
+      if (result && result.content !== undefined) {
+        setFileContent(result.content);
+      } else {
+        throw new Error('Failed to read file');
+      }
+    } catch (err) {
+      console.error('Error loading file:', err);
+      if (latestFilePathRef.current === absolutePath) {
         setError(err instanceof Error ? err.message : 'Failed to load file');
         setFileContent('');
-      } finally {
+      }
+    } finally {
+      if (latestFilePathRef.current === absolutePath) {
         setIsLoading(false);
+      }
+    }
+  }, [filePath, getAbsolutePath]);
+
+  useEffect(() => {
+    loadFile();
+  }, [loadFile]);
+
+  useEffect(() => {
+    if (!filePath) {
+      return;
+    }
+
+    const absolutePath = getAbsolutePath(filePath);
+    let unsubscribe: (() => void) | undefined;
+
+    const setupWatching = async () => {
+      try {
+        await FileSystemService.watchFile(absolutePath);
+        unsubscribe = FileSystemService.onFileChange((event) => {
+          if (event.path === absolutePath) {
+            loadFile();
+          }
+        });
+      } catch (watchError) {
+        console.error('Error setting up file watching:', watchError);
       }
     };
 
-    loadFile();
-  }, [filePath, repositoryPath]);
+    setupWatching();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      FileSystemService.stopWatchingFile(absolutePath).catch((stopError) => {
+        console.error('Error stopping file watching:', stopError);
+      });
+    };
+  }, [filePath, getAbsolutePath, loadFile]);
 
   if (!filePath) {
     return (
