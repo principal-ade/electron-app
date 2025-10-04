@@ -16,6 +16,7 @@ import {
   PanelLeftClose,
   Palette,
   Wrench,
+  FolderTree,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
@@ -62,6 +63,7 @@ import {
   RightPaneContainer,
   RightPaneView,
 } from '../components/repository-maps/RightPaneContainer';
+import { FileTreeTab } from './shared/FileTreeTab';
 
 interface TabConfig {
   id: string;
@@ -132,7 +134,7 @@ export const RepositoryExplorationView: React.FC<
 }) => {
   const { theme } = useTheme();
   const panelsTheme = usePanelsTheme();
-  const [activeTab, setActiveTab] = useState<string>('search');
+  const [activeTab, setActiveTab] = useState<string>('fileTree');
   const [internalLeftPanelCollapsed, setInternalLeftPanelCollapsed] =
     useState(false);
   const [internalRightPanelCollapsed, setInternalRightPanelCollapsed] =
@@ -1057,6 +1059,19 @@ export const RepositoryExplorationView: React.FC<
 
   // Create tabs configuration
   const tabs: TabConfig[] = [
+    {
+      id: 'fileTree',
+      label: 'Files',
+      icon: <FolderTree size={14} />,
+      visible: true,
+      content: (
+        <FileTreeTab
+          fileTree={fileTree}
+          onFileSelect={handleSearchFileSelect}
+          loading={loading}
+        />
+      ),
+    },
     {
       id: 'search',
       label: 'Search',

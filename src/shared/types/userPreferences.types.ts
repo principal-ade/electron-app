@@ -38,6 +38,16 @@ export interface RepositoryUIState {
     };
   };
 
+  // Panel visibility preferences for repository details view
+  panelVisibility?: {
+    files?: boolean;
+    gitStatus?: boolean;
+    tasksAndNotes?: boolean;
+    cityVisualization?: boolean;
+    actions?: boolean;
+    packageInfo?: boolean;
+  };
+
   // Last accessed timestamp
   lastAccessed?: number;
 }

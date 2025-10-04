@@ -4,6 +4,8 @@ import { ThemedMonacoWithProvider } from '@principal-ade/industry-themed-monaco-
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { FileText, X } from 'lucide-react';
+import { parseMarkdownIntoPresentation } from 'themed-markdown';
+import { ThemedSlidePresentationBook } from '../../../../components/markdown/ThemedSlidePresentationBook';
 
 interface FilePreviewPanelProps {
   filePath: string | null;
@@ -188,6 +190,18 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
 
   const fileName = filePath.split('/').pop() || filePath;
   const language = getLanguage(filePath);
+  const isMarkdown = language === 'markdown';
+
+  // Parse markdown into slides if it's a markdown file
+  const markdownSlides = isMarkdown && fileContent ? (() => {
+    try {
+      const presentation = parseMarkdownIntoPresentation(fileContent);
+      return (presentation?.slides || []).map((s) => s.location.content);
+    } catch (e) {
+      console.warn('[FilePreviewPanel] Failed to parse markdown:', e);
+      return [fileContent];
+    }
+  })() : [];
 
   return (
     <div
@@ -265,7 +279,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         )}
       </div>
 
-      {/* Editor */}
+      {/* Content */}
       <div style={{ flex: 1, minHeight: 0 }}>
         {isLoading ? (
           <div
@@ -293,6 +307,22 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           >
             Error: {error}
           </div>
+        ) : isMarkdown ? (
+          <ThemedSlidePresentationBook
+            slides={markdownSlides}
+            initialSlide={0}
+            theme={theme}
+            fontSizeScale={1.0}
+            onSlideChange={() => {}}
+            onCheckboxChange={() => {}}
+            showNavigation={true}
+            showSlideCounter={true}
+            showFullscreenButton={false}
+            viewMode="single"
+            slideIdPrefix="repository-preview"
+            enableHtmlPopout={false}
+            enableKeyboardScrolling={true}
+          />
         ) : (
           <ThemedMonacoWithProvider
             value={fileContent}

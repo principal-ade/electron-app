@@ -20,6 +20,8 @@ import { SecretsModal } from './SecretsModal';
 import { ActRunnerService } from '../../../../main-process-api/ActRunnerService';
 import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
 import { ActRunnerWorkflowChannels, type ActRunnerWorkflowEvent } from '../../../../../shared/types/act.types';
+import { PanelConfiguration, type PanelVisibility } from './PanelConfiguration';
+import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 
 interface RepositoryDetailsPanelProps {
   selectedRepository: EnhancedAlexandriaEntry | null;
@@ -56,6 +58,17 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
   // Track terminal windows by repository path
   const [terminalWindows, setTerminalWindows] = useState<Map<string, number>>(new Map());
+
+  // Panel configuration state
+  const [showConfiguration, setShowConfiguration] = useState(false);
+  const [panelVisibility, setPanelVisibility] = useState<PanelVisibility>({
+    files: true,
+    gitStatus: true,
+    tasksAndNotes: true,
+    cityVisualization: true,
+    actions: true,
+    packageInfo: true,
+  });
 
   // Branch sync status states
   const [branchStatus, setBranchStatus] = useState<GitBranchStatus | null>(null);
@@ -121,6 +134,67 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       return bTime - aTime;
     });
   }, [markdownFiles]);
+
+  // Load panel visibility preferences when repository changes
+  useEffect(() => {
+    const loadPanelPreferences = async () => {
+      if (!repositoryId) return;
+
+      try {
+        const preferences = await UserPreferencesService.getPreferences();
+        const repoState = preferences.repositoryUIStates?.[repositoryId];
+
+        if (repoState?.panelVisibility) {
+          setPanelVisibility({
+            files: repoState.panelVisibility.files ?? true,
+            gitStatus: repoState.panelVisibility.gitStatus ?? true,
+            tasksAndNotes: repoState.panelVisibility.tasksAndNotes ?? true,
+            cityVisualization: repoState.panelVisibility.cityVisualization ?? true,
+            actions: repoState.panelVisibility.actions ?? true,
+            packageInfo: repoState.panelVisibility.packageInfo ?? true,
+          });
+        } else {
+          // Reset to defaults if no preferences found
+          setPanelVisibility({
+            files: true,
+            gitStatus: true,
+            tasksAndNotes: true,
+            cityVisualization: true,
+            actions: true,
+            packageInfo: true,
+          });
+        }
+      } catch (error) {
+        console.error('Error loading panel preferences:', error);
+      }
+    };
+
+    loadPanelPreferences();
+  }, [repositoryId]);
+
+  // Save panel visibility preferences
+  const handlePanelVisibilityChange = useCallback(async (newVisibility: PanelVisibility) => {
+    setPanelVisibility(newVisibility);
+
+    if (!repositoryId) return;
+
+    try {
+      const preferences = await UserPreferencesService.getPreferences();
+      const currentRepoStates = preferences.repositoryUIStates || {};
+
+      await UserPreferencesService.updatePreferences({
+        repositoryUIStates: {
+          ...currentRepoStates,
+          [repositoryId]: {
+            ...currentRepoStates[repositoryId],
+            panelVisibility: newVisibility,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error saving panel preferences:', error);
+    }
+  }, [repositoryId]);
 
   const handleRemoveClick = () => {
     setShowRemoveDialog(true);
@@ -583,10 +657,19 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             onPerformPush={performPush}
             onOpenDashboard={() => onOpenDashboard(selectedRepository)}
             onRemove={handleRemoveClick}
+            onConfigure={() => setShowConfiguration(!showConfiguration)}
             onTerminalWindowsUpdate={setTerminalWindows}
             onOpenTerminal={onOpenTerminal}
           />
 
+          {/* Panel Configuration */}
+          {showConfiguration && (
+            <PanelConfiguration
+              panelVisibility={panelVisibility}
+              onPanelVisibilityChange={handlePanelVisibilityChange}
+              onHide={() => setShowConfiguration(false)}
+            />
+          )}
 
           {/* Repository Info */}
           <div
@@ -615,26 +698,32 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 }}
               >
                 {/* Combined Git Changes and Markdown Files */}
-                <RepositoryFilesPanel
-                  repository={selectedRepository}
-                  gitStatus={gitStatus}
-                  markdownFiles={sortedMarkdownFiles}
-                  isLoadingGitStatus={isLoadingGitStatus}
-                  isLoadingDocs={isLoadingDocs}
-                  onFileClick={handleFileClick}
-                  onMarkdownClick={handleOpenMarkdown}
-                />
+                {panelVisibility.files && (
+                  <RepositoryFilesPanel
+                    repository={selectedRepository}
+                    gitStatus={gitStatus}
+                    markdownFiles={sortedMarkdownFiles}
+                    isLoadingGitStatus={isLoadingGitStatus}
+                    isLoadingDocs={isLoadingDocs}
+                    onFileClick={handleFileClick}
+                    onMarkdownClick={handleFileClick}
+                  />
+                )}
 
                 {/* Git Status / Last Commit Info */}
-                <GitStatusPanel
-                  repository={selectedRepository}
-                />
+                {panelVisibility.gitStatus && (
+                  <GitStatusPanel
+                    repository={selectedRepository}
+                  />
+                )}
 
                 {/* Repository Tasks and Notes Panel */}
-                <RepositoryTasksAndNotesPanel
-                  repositoryPath={selectedRepository.path}
-                  isLoading={false}
-                />
+                {panelVisibility.tasksAndNotes && (
+                  <RepositoryTasksAndNotesPanel
+                    repositoryPath={selectedRepository.path}
+                    isLoading={false}
+                  />
+                )}
               </div>
 
               {/* Right Column - City Visualization and Package Information */}
@@ -647,7 +736,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 }}
               >
                 {/* City Visualization */}
-                {selectedRepository && (
+                {panelVisibility.cityVisualization && selectedRepository && (
                   <div>
                     <SimpleCityVisualization
                       repository={selectedRepository}
@@ -663,14 +752,16 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   </div>
                 )}
 
-                <RepositoryActionsPanel
-                  repoId={repositoryId}
-                  repositoryPath={selectedRepository.path}
-                  fileTree={fileTree}
-                  onConfigure={handleConfigureSecrets}
-                  onRun={handleRunRepositoryAction}
-                  runningActionId={runningActionId}
-                />
+                {panelVisibility.actions && (
+                  <RepositoryActionsPanel
+                    repoId={repositoryId}
+                    repositoryPath={selectedRepository.path}
+                    fileTree={fileTree}
+                    onConfigure={handleConfigureSecrets}
+                    onRun={handleRunRepositoryAction}
+                    runningActionId={runningActionId}
+                  />
+                )}
 
                 {/* Workflow Output Console */}
                 {workflowOutput.length > 0 && (
@@ -774,10 +865,12 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   </div>
                 )}
                 {/* Package Information Panel */}
-                <QualityHexagonPanel
-                  directory={selectedRepository.path}
-                  compact={false}
-                />
+                {panelVisibility.packageInfo && (
+                  <QualityHexagonPanel
+                    directory={selectedRepository.path}
+                    compact={false}
+                  />
+                )}
               </div>
             </div>
           </div>

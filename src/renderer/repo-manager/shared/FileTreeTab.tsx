@@ -1,0 +1,82 @@
+import React from 'react';
+import { useTheme } from '@a24z/industry-theme';
+import { DynamicFileTree } from '@a24z/dynamic-file-tree';
+import type { FileTree } from '@principal-ai/repository-abstraction';
+
+interface FileTreeTabProps {
+  fileTree: FileTree | null;
+  onFileSelect?: (filePath: string) => void;
+  loading?: boolean;
+}
+
+/**
+ * File Tree Tab Component
+ *
+ * Features:
+ * - Starts with all folders closed by default for better performance
+ * - Uses theme background color
+ * - Custom padding for visual spacing
+ *
+ * TODO: Request from @a24z/dynamic-file-tree team:
+ * - Add a `transparent` or `backgroundColor` prop to allow custom backgrounds
+ */
+export const FileTreeTab: React.FC<FileTreeTabProps> = ({
+  fileTree,
+  onFileSelect,
+  loading = false,
+}) => {
+  const { theme } = useTheme();
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.background,
+          color: theme.colors.textSecondary,
+        }}
+      >
+        Loading file tree...
+      </div>
+    );
+  }
+
+  if (!fileTree) {
+    return (
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.background,
+          color: theme.colors.textSecondary,
+        }}
+      >
+        No file tree available
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        height: '100%',
+        overflow: 'auto',
+        backgroundColor: theme.colors.background,
+      }}
+    >
+      <DynamicFileTree
+        fileTree={fileTree}
+        theme={theme}
+        onFileSelect={onFileSelect}
+        showIcons={true}
+        defaultOpen={false}
+        padding="4px"
+      />
+    </div>
+  );
+};

@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { GitBranch, Trash2, ExternalLink, Terminal, RefreshCw, GitPullRequest, Upload } from 'lucide-react';
+import React, { useCallback, useState, useRef, useEffect } from 'react';
+import { GitBranch, Trash2, ExternalLink, Terminal, RefreshCw, GitPullRequest, Upload, Settings } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import { GitBranchStatus } from '../../../../main-process-api/GitService';
@@ -18,6 +18,7 @@ interface RepositoryHeaderProps {
   onPerformPush: () => void;
   onOpenDashboard: () => void;
   onRemove: () => void;
+  onConfigure?: () => void;
   onTerminalWindowsUpdate: (windows: Map<string, number>) => void;
   onOpenTerminal?: () => void;
 }
@@ -46,10 +47,30 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
   onPerformPush,
   onOpenDashboard,
   onRemove,
+  onConfigure,
   onTerminalWindowsUpdate,
   onOpenTerminal,
 }) => {
   const { theme } = useTheme();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   const handleOpenTerminal = useCallback(async () => {
     if (!repository?.path) return;
@@ -386,36 +407,121 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
             }}
           >
             <ExternalLink size={14} />
-            Open Dashboard
+            ADE
           </button>
 
-          <button
-            onClick={onRemove}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 12px',
-              backgroundColor: 'transparent',
-              color: theme.colors.error || '#ef4444',
-              border: `1px solid ${theme.colors.error || '#ef4444'}`,
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = `${theme.colors.error || '#ef4444'}15`;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-            title="Remove repository from Alexandria"
-          >
-            <Trash2 size={14} />
-            Remove
-          </button>
+          {/* Settings Dropdown */}
+          <div ref={dropdownRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 12px',
+                backgroundColor: 'transparent',
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = theme.colors.border;
+              }}
+              title="Repository settings"
+            >
+              <Settings size={14} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {isDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  right: 0,
+                  minWidth: '160px',
+                  backgroundColor: theme.colors.backgroundLight,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '6px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  zIndex: 1000,
+                  overflow: 'hidden',
+                }}
+              >
+                {onConfigure && (
+                  <button
+                    onClick={() => {
+                      onConfigure();
+                      setIsDropdownOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 12px',
+                      backgroundColor: 'transparent',
+                      color: theme.colors.text,
+                      border: 'none',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s',
+                      textAlign: 'left',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <Settings size={14} />
+                    Configure
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    onRemove();
+                    setIsDropdownOpen(false);
+                  }}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '10px 12px',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.error || '#ef4444',
+                    border: 'none',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                    textAlign: 'left',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = `${theme.colors.error || '#ef4444'}15`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <Trash2 size={14} />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
