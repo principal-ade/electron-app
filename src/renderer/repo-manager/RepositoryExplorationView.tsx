@@ -22,9 +22,9 @@ import type { HighlightLayer } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { PackageLayer } from '@principal-ai/codebase-composition';
 import {
-  ConfigurableThreePanelLayout,
-  type ThreePanelLayoutConfiguration,
-  type PanelIdentifier,
+  ConfigurablePanelLayout,
+  type PanelDefinitionWithContent,
+  type PanelLayout,
 } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { CityMapManager } from './shared/CityMapManager';
@@ -37,8 +37,6 @@ import type { Repository } from '../../shared/types/repository.types';
 import { RightPaneMode } from '../../shared/types/userPreferences.types';
 import { RepositoryNote } from '../../shared/main-process-api-interfaces/RepositoryNotesAPI';
 import { RepositoryNotesService } from '../main-process-api/RepositoryNotesService';
-import { GitHubWebAdapters } from '../adapters/GitHubWebAdapters';
-import { ElectronPlatformAdapters } from '../adapters/ElectronPlatformAdapters';
 import { FileTreeSourceService } from '../services/FileTreeSourceService';
 import { MonitoredFileTreeService } from '../services/MonitoredFileTreeService';
 // import { SourceSelectionService } from '../services/SourceSelectionService'; // TODO: Re-enable when needed
@@ -104,6 +102,9 @@ interface RepositoryExplorationViewProps {
   // Panel layout state
   leftPanelCollapsed?: boolean;
   onLeftPanelCollapsedChange?: (collapsed: boolean) => void;
+  rightPanelCollapsed?: boolean;
+  onRightPanelCollapsedChange?: (collapsed: boolean) => void;
+  panelLayout?: PanelLayout;
 }
 
 export const RepositoryExplorationView: React.FC<
@@ -124,21 +125,34 @@ export const RepositoryExplorationView: React.FC<
   onFileTreeLoaded,
   leftPanelCollapsed: controlledLeftPanelCollapsed,
   onLeftPanelCollapsedChange,
+  rightPanelCollapsed: controlledRightPanelCollapsed,
+  onRightPanelCollapsedChange,
+  panelLayout,
 }) => {
   const { theme } = useTheme();
   const panelsTheme = usePanelsTheme();
   const [activeTab, setActiveTab] = useState<string>('search');
   const [internalLeftPanelCollapsed, setInternalLeftPanelCollapsed] =
     useState(false);
+  const [internalRightPanelCollapsed, setInternalRightPanelCollapsed] =
+    useState(false);
 
   const isLeftPanelCollapsed =
     controlledLeftPanelCollapsed ?? internalLeftPanelCollapsed;
+  const isRightPanelCollapsed =
+    controlledRightPanelCollapsed ?? internalRightPanelCollapsed;
 
   useEffect(() => {
     if (controlledLeftPanelCollapsed !== undefined) {
       setInternalLeftPanelCollapsed(controlledLeftPanelCollapsed);
     }
   }, [controlledLeftPanelCollapsed]);
+
+  useEffect(() => {
+    if (controlledRightPanelCollapsed !== undefined) {
+      setInternalRightPanelCollapsed(controlledRightPanelCollapsed);
+    }
+  }, [controlledRightPanelCollapsed]);
 
   const setLeftPanelCollapsed = useCallback(
     (collapsed: boolean) => {
@@ -149,6 +163,17 @@ export const RepositoryExplorationView: React.FC<
       }
     },
     [onLeftPanelCollapsedChange],
+  );
+
+  const setRightPanelCollapsed = useCallback(
+    (collapsed: boolean) => {
+      if (onRightPanelCollapsedChange) {
+        onRightPanelCollapsedChange(collapsed);
+      } else {
+        setInternalRightPanelCollapsed(collapsed);
+      }
+    },
+    [onRightPanelCollapsedChange],
   );
 
   // Services - use shared if provided, otherwise create local
@@ -474,6 +499,32 @@ export const RepositoryExplorationView: React.FC<
   // Right pane mode: for remote exploration we default to city and do not show terminal toggle
   const [rightPaneMode, setRightPaneMode] = useState<RightPaneMode>('city');
 
+  // Tab and view change handlers (defined after state to avoid "used before assignment" errors)
+  const handleTabChange = useCallback(
+    (tabId: string) => {
+      setActiveTab(tabId);
+      if (tabId !== 'docs') {
+        setSelectedDocPath(null);
+        setDocContent(null);
+      }
+    },
+    [],
+  );
+
+  const handleRightPaneViewChange = useCallback(
+    (mode: RightPaneView) => {
+      setRightPaneMode(mode);
+      if (mode === 'city') {
+        setSelectedDocPath(null);
+        setDocContent(null);
+        setSelectedCodeFile(null);
+        setSelectedCodeFileAbsolutePath(null);
+        setCodeFileContent(null);
+      }
+    },
+    [],
+  );
+
   // Create content provider for search
   const searchContentProvider = useMemo<ContentProvider>(() => {
     // For local repositories, use filesystem provider for content search
@@ -665,26 +716,6 @@ export const RepositoryExplorationView: React.FC<
     fileTreeSourceService,
     sharedFileTreeService,
     sharedActiveSource,
-  ]);
-
-  // Create adapters for active source - use appropriate provider based on source type
-  const adapters = useMemo(() => {
-    if (!activeFileTreeSource) return null;
-
-    // For local sources, use Electron adapters to read local files
-    if (activeFileTreeSource.type === 'local') {
-      return new ElectronPlatformAdapters();
-    }
-
-    // For remote sources, use GitHub adapters
-    const branch =
-      activeFileTreeSource.metadata?.currentBranch || remoteData.defaultBranch;
-    return new GitHubWebAdapters(remoteData.owner, remoteData.repo, branch);
-  }, [
-    activeFileTreeSource,
-    remoteData.owner,
-    remoteData.repo,
-    remoteData.defaultBranch,
   ]);
 
   // RepositoryExplorationView should never load its own tree - always use the one from RepositoryManager
@@ -937,15 +968,6 @@ export const RepositoryExplorationView: React.FC<
 
     setPackageHighlightLayers(layers);
   }, [highlightedPackages, packageLayers]);
-
-  // Handle source change
-  const handleSourceChange = (sourceId: string) => {
-    const source = fileTreeSourceService.getSource(sourceId);
-    if (source) {
-      fileTreeSourceService.setActiveSource(sourceId);
-      setActiveFileTreeSource(source);
-    }
-  };
 
   // Handle documentation selection
   const handleDocumentSelect = useCallback(
@@ -1461,36 +1483,6 @@ export const RepositoryExplorationView: React.FC<
       : null;
   const visibleTabs = tabs.filter((tab) => tab.visible !== false);
   const activeTabConfig = visibleTabs.find((tab) => tab.id === activeTab);
-  const handleTabChange = useCallback(
-    (tabId: string) => {
-      setActiveTab(tabId);
-      if (tabId !== 'docs') {
-        setSelectedDocPath(null);
-        setDocContent(null);
-      }
-    },
-    [setActiveTab, setSelectedDocPath, setDocContent],
-  );
-  const handleRightPaneViewChange = useCallback(
-    (mode: RightPaneView) => {
-      setRightPaneMode(mode);
-      if (mode === 'city') {
-        setSelectedDocPath(null);
-        setDocContent(null);
-        setSelectedCodeFile(null);
-        setSelectedCodeFileAbsolutePath(null);
-        setCodeFileContent(null);
-      }
-    },
-    [
-      setRightPaneMode,
-      setSelectedDocPath,
-      setDocContent,
-      setSelectedCodeFile,
-      setSelectedCodeFileAbsolutePath,
-      setCodeFileContent,
-    ],
-  );
   const rightPaneViewMode = (
     shouldShowDocument
       ? 'document'
@@ -1717,42 +1709,52 @@ export const RepositoryExplorationView: React.FC<
             </div>
           );
 
-          const layoutConfiguration: ThreePanelLayoutConfiguration = {
-            orientation: 'horizontal',
-            gapSize: 1,
-            panels: {
-              left: {
-                id: 'left',
-                content: leftPanel,
-                defaultSize: 32,
-                minSize: 24,
-                collapsible: true,
-                collapsed: isLeftPanelCollapsed,
-              },
-              middle: {
-                id: 'middle',
-                content: rightPanel,
-                defaultSize: 68,
-                minSize: 50,
-              },
-              right: {
-                id: 'right',
-                content: null,
-                defaultSize: 0,
-                minSize: 0,
-                collapsible: false,
-                collapsed: true,
-              },
-            },
-          };
+          // Terminal panel placeholder
+          const terminalPanel = (
+            <div
+              style={{
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                backgroundColor: theme.colors.backgroundSecondary,
+                color: theme.colors.textSecondary,
+                padding: '20px',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: theme.colors.text }}>
+                Terminal
+              </div>
+              <div style={{ fontSize: '14px' }}>
+                Terminal integration coming soon
+              </div>
+            </div>
+          );
 
-          const handlePanelCollapseChange = (
-            panelId: PanelIdentifier,
-            collapsed: boolean,
-          ) => {
-            if (panelId === 'left') {
-              setLeftPanelCollapsed(collapsed);
-            }
+          const panels: PanelDefinitionWithContent[] = [
+            {
+              id: 'left',
+              label: 'Search & Tools',
+              content: leftPanel,
+            },
+            {
+              id: 'middle',
+              label: 'City Visualization',
+              content: rightPanel,
+            },
+            {
+              id: 'terminal',
+              label: 'Terminal',
+              content: terminalPanel,
+            },
+          ];
+
+          const layout: PanelLayout = panelLayout || {
+            left: 'left',
+            middle: 'middle',
+            right: null,
           };
 
           return (
@@ -1763,10 +1765,18 @@ export const RepositoryExplorationView: React.FC<
                 boxSizing: 'border-box',
               }}
             >
-              <ConfigurableThreePanelLayout
-                configuration={layoutConfiguration}
+              <ConfigurablePanelLayout
+                panels={panels}
+                layout={layout}
+                collapsiblePanels={{ left: true, right: true }}
+                defaultSizes={{ left: 32, middle: 48, right: 20 }}
+                minSizes={{ left: 24, middle: 40, right: 15 }}
+                collapsed={{ left: isLeftPanelCollapsed, right: isRightPanelCollapsed }}
                 showCollapseButtons={false}
-                onPanelCollapseChange={handlePanelCollapseChange}
+                onLeftCollapseComplete={() => setLeftPanelCollapsed(true)}
+                onLeftExpandComplete={() => setLeftPanelCollapsed(false)}
+                onRightCollapseComplete={() => setRightPanelCollapsed(true)}
+                onRightExpandComplete={() => setRightPanelCollapsed(false)}
                 style={{ height: '100%', width: '100%' }}
                 theme={panelsTheme}
               />

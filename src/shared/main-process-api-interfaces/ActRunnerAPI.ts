@@ -3,6 +3,7 @@ import type {
   RunRepositoryActionResult,
   ValidateRunRequirementsRequest,
   ValidateRunRequirementsResult,
+  ActRunnerWorkflowEvent,
 } from '../types/act.types';
 
 export enum ActRunnerEvents {
@@ -17,4 +18,8 @@ export interface ActRunnerAPI {
   validateRunRequirements: (
     request: ValidateRunRequirementsRequest,
   ) => Promise<ValidateRunRequirementsResult>;
+  onWorkflowEvent: (
+    channel: string,
+    callback: (event: ActRunnerWorkflowEvent) => void,
+  ) => () => void;
 }

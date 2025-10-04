@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Theme } from '@a24z/industry-theme';
 import { useTheme } from '@a24z/industry-theme';
-import { X, RotateCcw } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import { ColorPickerInput } from './ColorPickerInput';
 import { ThemeService } from '../../../services/ThemeService';
 
@@ -132,90 +132,66 @@ export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = (
   }
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: `rgba(0, 0, 0, 0.5)`,
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 10000,
-      }}
-      onClick={onClose}
-    >
+    <>
+      {/* Backdrop */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: `rgba(0, 0, 0, 0.3)`,
+          zIndex: 9999,
+        }}
+        onClick={onClose}
+      />
+
+      {/* Side Panel */}
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: '450px',
+          maxWidth: '90vw',
           backgroundColor: theme.colors.background,
-          borderRadius: '16px',
-          border: `1px solid ${theme.colors.border}`,
-          width: '90%',
-          maxWidth: '800px',
-          maxHeight: '90vh',
+          borderLeft: `1px solid ${theme.colors.border}`,
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: `0 24px 48px rgba(0, 0, 0, 0.6)`,
+          boxShadow: `-4px 0 24px rgba(0, 0, 0, 0.4)`,
+          zIndex: 10000,
+          animation: 'slideInFromRight 0.2s ease-out',
         }}
       >
         {/* Header */}
         <div
           style={{
-            padding: '24px',
+            padding: '20px',
             borderBottom: `1px solid ${theme.colors.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
           }}
         >
-          <div>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: '20px',
-                fontWeight: 600,
-                color: theme.colors.text,
-              }}
-            >
-              Customize Theme
-            </h3>
-            <p
-              style={{
-                margin: '4px 0 0 0',
-                fontSize: '14px',
-                color: theme.colors.textSecondary,
-              }}
-            >
-              Editing: {themeName}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
+          <h3
             style={{
-              padding: '8px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: 'transparent',
-              color: theme.colors.textSecondary,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
+              margin: 0,
+              fontSize: '18px',
+              fontWeight: 600,
+              color: theme.colors.text,
             }}
           >
-            <X size={20} />
-          </button>
+            Customize Theme
+          </h3>
+          <p
+            style={{
+              margin: '4px 0 0 0',
+              fontSize: '13px',
+              color: theme.colors.textSecondary,
+            }}
+          >
+            Editing: {themeName}
+          </p>
         </div>
 
         {/* Content */}
@@ -223,7 +199,7 @@ export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = (
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '24px',
+            padding: '20px',
           }}
         >
           <div
@@ -268,7 +244,7 @@ export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = (
         {/* Footer */}
         <div
           style={{
-            padding: '16px 24px',
+            padding: '16px 20px',
             borderTop: `1px solid ${theme.colors.border}`,
             display: 'flex',
             gap: '12px',
@@ -326,6 +302,18 @@ export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = (
           </button>
         </div>
       </div>
-    </div>
+
+      {/* CSS animation */}
+      <style>{`
+        @keyframes slideInFromRight {
+          from {
+            transform: translateX(100%);
+          }
+          to {
+            transform: translateX(0);
+          }
+        }
+      `}</style>
+    </>
   );
 };

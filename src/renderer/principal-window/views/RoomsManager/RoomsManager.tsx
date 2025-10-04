@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { RefreshCw, Plus } from 'lucide-react';
-import { ThreePanelLayout } from '@a24z/panels';
+import {
+  ConfigurablePanelLayout,
+  type PanelDefinitionWithContent,
+  type PanelLayout,
+} from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../../../theme/panelsTheme';
 import type { PalaceRoom, AlexandriaEntry } from '@a24z/core-library';
@@ -356,10 +360,29 @@ export const RoomsManager: React.FC<RoomsManagerProps> = ({
         repositories={repositories}
         onCreate={handleCreateRoom}
       />
-      <ThreePanelLayout
-        leftPanel={renderLeftPanel()}
-        middlePanel={renderMiddlePanel()}
-        rightPanel={renderRightPanel()}
+      <ConfigurablePanelLayout
+        panels={[
+          {
+            id: 'room-list',
+            label: 'Rooms',
+            content: renderLeftPanel(),
+          },
+          {
+            id: 'room-details',
+            label: 'Room Details',
+            content: renderMiddlePanel(),
+          },
+          {
+            id: 'terminal',
+            label: 'Terminal',
+            content: renderRightPanel(),
+          },
+        ]}
+        layout={{
+          left: 'room-list',
+          middle: 'room-details',
+          right: 'terminal',
+        }}
         collapsiblePanels={{ left: true, right: true }}
         defaultSizes={panelState.type === 'three-panel' ? panelState.sizes : { left: 20, middle: 50, right: 30 }}
         minSizes={{ left: 15, middle: 30, right: 20 }}

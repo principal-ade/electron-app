@@ -260,8 +260,7 @@ if (process.parentPort) {
   process.parentPort.on('message', (e) => {
     // In utilityProcess, the message comes wrapped in an event with a data property
     const data = e.data || e; // Handle both formats
-    console.log('[Worker] Received command:', data.type, data.command);
-    
+
     switch (data.type) {
       case 'execute':
         executor.execute(data);

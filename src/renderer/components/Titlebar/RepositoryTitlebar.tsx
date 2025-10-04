@@ -1,9 +1,11 @@
 import React from 'react';
+import { Layout } from 'lucide-react';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarSourceSelector } from './TitlebarSourceSelector';
 import { TitlebarModeSelector } from './TitlebarModeSelector';
 import { TitlebarForkBadge } from './TitlebarForkBadge';
 import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
+import { TitlebarButton } from './TitlebarButton';
 import type { Repository } from '../../../shared/types/repository.types';
 import type { FileTreeSource } from '../../types/file-tree-source';
 import type { RepositoryMode } from '../../repo-manager/shared/SimpleModeSelector';
@@ -24,6 +26,9 @@ export interface RepositoryTitlebarProps {
   showSidebarControls?: boolean;
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
+  rightSidebarCollapsed?: boolean;
+  onToggleRightSidebar?: () => void;
+  onConfigurePanels?: () => void;
 }
 
 export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
@@ -41,9 +46,13 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   showSidebarControls = false,
   sidebarCollapsed = false,
   onToggleSidebar,
+  rightSidebarCollapsed = false,
+  onToggleRightSidebar,
+  onConfigurePanels,
 }) => {
   return (
     <BaseTitlebar>
+      {/* Left: Left panel controls */}
       {showSidebarControls && onToggleSidebar && (
         <ViewSidebarControls
           position="left"
@@ -51,32 +60,98 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           onToggle={onToggleSidebar}
         />
       )}
-      {repository && (
-        <>
-          <TitlebarForkBadge
-            repository={repository}
-            position="left"
-            onClick={onForkBadgeClick}
+
+      {/* Center: Repository info and mode selector */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          // @ts-ignore - WebkitAppRegion is not in CSSProperties
+          WebkitAppRegion: 'no-drag',
+        }}
+      >
+        {repository && (
+          <>
+            <TitlebarForkBadge
+              repository={repository}
+              position="left"
+              onClick={onForkBadgeClick}
+            />
+            <TitlebarSourceSelector
+              position="left"
+              repository={repository}
+              selectedSource={selectedSource}
+              onSourceSelect={onSourceSelect}
+              onSecretsClick={onSecretsClick}
+              onHelpClick={onHelpClick}
+            />
+          </>
+        )}
+        {mode && (
+          <TitlebarModeSelector
+            position="center"
+            mode={mode}
+            onModeChange={onModeChange}
+            hasLocalClones={!!repository?.localClones?.length}
           />
-          <TitlebarSourceSelector
-            position="left"
-            repository={repository}
-            selectedSource={selectedSource}
-            onSourceSelect={onSourceSelect}
-            onSecretsClick={onSecretsClick}
-            onHelpClick={onHelpClick}
+        )}
+        <TitlebarOpenInIDE repository={repository} />
+      </div>
+
+      {/* Right: Right panel controls and actions */}
+      <div
+        style={{
+          position: 'absolute',
+          right: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
+        {onToggleRightSidebar && (
+          <ViewSidebarControls
+            position="right"
+            side="right"
+            isCollapsed={rightSidebarCollapsed}
+            onToggle={onToggleRightSidebar}
           />
-        </>
-      )}
-      {mode && (
-        <TitlebarModeSelector
-          position="center"
-          mode={mode}
-          onModeChange={onModeChange}
-          hasLocalClones={!!repository?.localClones?.length}
-        />
-      )}
-      <TitlebarOpenInIDE repository={repository} />
+        )}
+        {onConfigurePanels && (
+          <button
+            onClick={onConfigurePanels}
+            title="Configure panel layout"
+            style={{
+              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: 'transparent',
+              border: 'none',
+              color: '#9ca3af',
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              width: '32px',
+              height: '32px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#374151';
+              e.currentTarget.style.color = '#fff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#9ca3af';
+            }}
+          >
+            <Layout size={14} />
+          </button>
+        )}
+      </div>
     </BaseTitlebar>
   );
 };

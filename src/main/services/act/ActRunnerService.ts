@@ -401,7 +401,7 @@ export class ActRunnerService extends EventEmitter {
     request: RunRepositoryActionRequest,
     secretsFile: string | null,
   ): string[] {
-    const args: string[] = ['-j', request.actionId, '--no-tty'];
+    const args: string[] = ['-j', request.actionId];
 
     if (request.workflowPath) {
       args.push('--workflows', request.workflowPath);
@@ -410,6 +410,10 @@ export class ActRunnerService extends EventEmitter {
     if (secretsFile) {
       args.push('--secret-file', secretsFile);
     }
+
+    // Use medium image by default (compatible with most actions)
+    args.push('--pull=false'); // Don't auto-pull, use cached images
+    args.push('-P', 'ubuntu-latest=catthehacker/ubuntu:act-latest');
 
     return args;
   }

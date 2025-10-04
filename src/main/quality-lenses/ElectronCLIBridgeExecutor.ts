@@ -47,24 +47,11 @@ export class ElectronCLIBridgeExecutor implements Executor {
     await this.ensureInitialized();
 
     try {
-      console.log(`[ElectronCLIBridgeExecutor] Executing command:`, {
-        command,
-        args,
-        cwd: options.cwd
-      });
-
       // Use the general execute method from electron-cli-bridge for all commands
       const result = await electronCLI.execute(command, args, {
         cwd: options.cwd,
         env: options.env,
         timeout: options.timeout,
-      });
-
-      console.log(`[ElectronCLIBridgeExecutor] Result:`, {
-        exitCode: result.exitCode,
-        stdoutLength: result.stdout?.length,
-        stderrLength: result.stderr?.length,
-        stdoutPreview: result.stdout?.substring(0, 100)
       });
 
       return {

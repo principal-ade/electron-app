@@ -150,9 +150,7 @@ export class CLIBridge extends EventEmitter {
           const output = data.toString();
           this.log('debug', `[${name} stdout] ${output}`);
           // Check for console.log messages from worker
-          if (output.includes('[Worker]')) {
-            this.log('info', `Worker output: ${output.trim()}`);
-          }
+          // Removed: worker output logging
         });
       }
 

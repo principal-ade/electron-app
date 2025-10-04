@@ -40,3 +40,189 @@ Next phase will wire the panel into `RepositoryDetailsPanel`, connect the run co
 - ✅ **Automatic updates** - Workflow list updates whenever FileTree refreshes (e.g., on git operations).
 - ✅ **Simpler architecture** - Client-side filtering is more straightforward than maintaining a separate main-process service.
 - ✅ **Better performance** - One less IPC call and leverages existing monitoring infrastructure.
+
+## Phase 4 (Core Runner Implementation) ✅ COMPLETE
+
+### ActRunnerService Implementation
+Fully implemented the core workflow execution service with all security measures:
+
+**Core Functionality** (`src/main/services/act/ActRunnerService.ts`):
+- ✅ `runWorkflow()` - Spawns `act` binary with proper arguments and environment
+- ✅ `stopWorkflow()` - Gracefully terminates running workflows (SIGTERM then SIGKILL)
+- ✅ `validateRunRequirements()` - Checks for secrets, act installation, and repository access
+- ✅ `validateInstallation()` - Probes for `act` binary availability
+
+**Secure Secret Management**:
+- ✅ Creates temporary secret files with mode `0600` (owner read/write only)
+- ✅ Generates unique temp directories under OS temp folder (`/tmp/act-secrets-*`)
+- ✅ Automatic cleanup on workflow completion/error
+- ✅ Memory zeroing of secret buffers after write
+- ✅ Secrets retrieved from `UnifiedSecureStorage` and written in `.env` format
+
+**Event Streaming & Monitoring**:
+- ✅ Real-time stdout/stderr streaming via readline interfaces
+- ✅ ANSI escape code stripping for clean output
+- ✅ Step detection with status parsing (success ✓, failure ✖, running ▶)
+- ✅ Error detection from stderr and error keywords
+- ✅ Event emission through EventEmitter pattern
+- ✅ Events forwarded to all renderer windows via IPC
+
+**Event Types Implemented** (`src/shared/types/act.types.ts`):
+- ✅ `ActRunnerWorkflowStartEvent` - Workflow execution started
+- ✅ `ActRunnerWorkflowProgressEvent` - Output line received (stdout/stderr)
+- ✅ `ActRunnerWorkflowStepEvent` - Step status change (success/failure/running)
+- ✅ `ActRunnerWorkflowErrorEvent` - Error occurred
+- ✅ `ActRunnerWorkflowCompleteEvent` - Workflow finished (with exit code and duration)
+
+**IPC Integration** (`src/main/services/ipc/act/actIntegrationHandlers.ts`):
+- ✅ `actRunner:run-repository-action` - Execute workflow
+- ✅ `actRunner:validate-run-requirements` - Pre-flight validation
+- ✅ Event forwarding to all browser windows for live updates
+- ✅ Always enabled (feature flag removed)
+
+**Renderer Integration** (`src/renderer/main-process-api/ActRunnerService.ts`):
+- ✅ Type-safe wrapper for IPC calls
+- ✅ `runRepositoryAction()` method
+- ✅ `validateRunRequirements()` method
+
+### Architecture Details
+
+**Process Lifecycle**:
+1. Validate act binary exists
+2. Retrieve secrets from UnifiedSecureStorage
+3. Create temporary secrets file (mode 0600)
+4. Spawn act process with `--secret-file` flag
+5. Stream stdout/stderr with line-by-line parsing
+6. Detect steps and emit progress events
+7. On completion/error: cleanup temp files and remove from tracking
+
+**Arguments Passed to `act`**:
+- `-j <actionId>` - Run specific job
+- `--workflows <workflowPath>` - Workflow file path
+- `--secret-file <path>` - Path to secrets .env file
+- `--no-tty` - Disable interactive terminal
+
+**Error Handling**:
+- Binary not found → Clear error message to install act
+- Repository path inaccessible → Validation failure
+- Secrets unavailable → Proceeds without secrets file
+- Process spawn error → Cleanup and error event
+- Graceful termination on stop request
+
+### Security Measures Implemented
+✅ All security requirements from design doc met:
+- Temporary files created with 0600 permissions
+- Unique filenames with timestamp + random hex
+- Automatic cleanup in finally blocks and process exit handlers
+- No secrets logged (uses `--secret-file` not env vars)
+- Process isolation through child_process spawn
+- Memory protection with buffer zeroing
+
+## Phase 5 (Required Secrets Detection) ✅ COMPLETE
+
+### YAML Workflow Parsing
+- ✅ Created `workflowParser.ts` utility using `js-yaml`
+- ✅ Parses workflow files to extract `${{ secrets.SECRET_NAME }}` references
+- ✅ Detects secrets in job/step env, with parameters, and run commands
+- ✅ Returns unique list of required secret names
+
+### Enhanced UI with Required Secrets
+- ✅ Updated `ActWorkflowAction` type to include `requiredSecrets` array
+- ✅ `extractWorkflowActionsFromTree` now async - reads and parses each workflow file
+- ✅ Action descriptions show required secrets (e.g., "Requires: GITHUB_TOKEN, NPM_TOKEN")
+- ✅ `SecretsModal` accepts `requiredSecrets` prop
+- ✅ Modal shows banner with visual indicators:
+  - ✓ Green badge for configured secrets
+  - ○ Gray badge for missing secrets
+- ✅ Configure button passes workflow's required secrets to modal
+
+### Feature Flag Removal
+- ✅ Removed `PLASMA_ENABLE_ACT_INTEGRATION` environment variable check
+- ✅ ACT integration now always enabled
+- ✅ Event forwarding always initialized
+- ✅ All IPC handlers always registered
+
+## Phase 6 (Workflow Output Display) ✅ COMPLETE
+
+### Real-time Workflow Output UI
+Fully implemented live workflow execution monitoring in the Repository Explorer:
+
+**Event Listeners** (`RepositoryDetailsPanel.tsx:196-243`):
+- ✅ Subscribed to all workflow event channels (START, PROGRESS, STEP, ERROR, COMPLETE)
+- ✅ Proper cleanup on component unmount
+- ✅ Event handlers update workflow output state and status
+
+**Workflow Output Console** (`RepositoryDetailsPanel.tsx:675-774`):
+- ✅ Real-time output display with monospace font
+- ✅ Status indicators with color coding:
+  - Running... (blue)
+  - ✓ Success (green)
+  - ✖ Failed (red)
+- ✅ Step progress with visual icons (✓ success, ✖ failure, ▶ running)
+- ✅ Execution duration display (seconds with 1 decimal)
+- ✅ Scrollable output panel (max 300px height)
+- ✅ Clear button to reset output
+
+**Event Processing**:
+- `start` → Set status to 'running', show workflow path
+- `progress` → Append stdout/stderr messages
+- `step` → Show step status with icon
+- `error` → Display error messages with ERROR: prefix
+- `complete` → Show final status, duration, reset running state
+
+**IPC Integration** (`ActRunnerAPI.ts` & `actRunnerApi.ts`):
+- ✅ Added `onWorkflowEvent()` method to API interface
+- ✅ Proper IpcRenderer listener setup with cleanup
+- ✅ Type-safe event handling for `ActRunnerWorkflowEvent`
+
+### Benefits:
+- ✅ **Live feedback** - Users see workflow execution in real-time
+- ✅ **Visual clarity** - Color-coded status and step indicators
+- ✅ **No external tools** - Output displayed directly in Repository Explorer
+- ✅ **Clean UX** - Collapsible with clear button, doesn't clutter UI when idle
+- ✅ **Complete transparency** - Shows stdout, stderr, steps, and errors
+
+## Next Steps (Phase 7 - Advanced Features)
+
+### Outstanding Work:
+
+1. **Workflow Name Extraction** 📋 Planned
+   - Parse YAML workflow files to extract:
+     - Workflow name from `name:` field
+     - Job names and descriptions
+     - Step names for better UI labels
+     - Estimated duration (if available in workflow or from history)
+   - Replace filename-based labels with real workflow names
+
+2. **Execution History & Tracking** 📊 Planned
+   - Store workflow run history
+   - Display recent runs with status
+   - Allow viewing logs from previous runs
+   - Track execution metrics (duration, success rate)
+
+3. **Advanced Features** 🚀 Future
+   - Job selection (run specific jobs within workflow)
+   - Matrix strategy support
+   - Artifact collection and viewing
+   - Debug mode with verbose output
+   - Workflow caching options
+   - Stop/cancel running workflows
+
+### Current Status Summary:
+- ✅ **Phase 1-3**: UI foundations and FileTree integration
+- ✅ **Phase 4**: Core runner implementation with secure secret handling
+- ✅ **Phase 5**: Required secrets detection and feature flag removal
+- ✅ **Phase 6**: Real-time workflow output display with job-level execution
+- 📋 **Phase 7**: Deployment & UX improvements (see ACT_DEPLOYMENT_OPTIONS.md)
+- 🚀 **Phase 8**: Execution history and optimization
+
+---
+
+## Deployment & User Experience
+
+See [ACT_DEPLOYMENT_OPTIONS.md](./ACT_DEPLOYMENT_OPTIONS.md) for comprehensive analysis of:
+- Bundling act binary with the application
+- Guided installation workflows
+- Docker management strategies
+- Image pull automation
+- Recommended hybrid approach for optimal UX

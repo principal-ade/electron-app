@@ -172,19 +172,19 @@ sequenceDiagram
 
 ```mermaid
 graph LR
-    subgraph "Encrypted Storage"
+    subgraph Encrypted["Encrypted Storage"]
         ES[UnifiedSecureStorage]
     end
 
-    subgraph "Memory"
+    subgraph Memory["Memory"]
         DEC[Decrypted Secrets]
     end
 
-    subgraph "Temp File"
-        TF[/tmp/act-secrets-*.env]
+    subgraph TempFile["Temp File"]
+        TF["act-secrets-*.env"]
     end
 
-    subgraph "act Process"
+    subgraph ActProc["act Process"]
         ENV[Environment Variables]
     end
 

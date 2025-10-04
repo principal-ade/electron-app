@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import './Titlebar.css';
 import { ThemeDropdown } from './ThemeDropdown';
+import { ThemeCustomizationButton } from './ThemeCustomizationButton';
 
 declare global {
   interface Window {
@@ -19,6 +20,7 @@ export interface BaseTitlebarProps {
   title?: string | React.ReactNode;
   showWindowControls?: boolean;
   showThemeDropdown?: boolean;
+  showCustomizeButton?: boolean;
   children?: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
@@ -29,6 +31,7 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
   title,
   showWindowControls = true,
   showThemeDropdown = false,
+  showCustomizeButton = false,
   children,
   className = '',
   style,
@@ -90,6 +93,13 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
       {showThemeDropdown && (
         <div style={{ marginLeft: '8px' }}>
           <ThemeDropdown />
+        </div>
+      )}
+
+      {/* Customize button after theme dropdown */}
+      {showCustomizeButton && (
+        <div style={{ marginLeft: '8px' }}>
+          <ThemeCustomizationButton />
         </div>
       )}
 

@@ -23,6 +23,10 @@ export class UserPreferencesHandler {
           jules: false,
           codex: false,
         },
+        titlebarButtons: {
+          theme: true,
+          customize: true,
+        },
       };
 
       await this.typedStore.set(

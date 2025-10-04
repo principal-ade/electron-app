@@ -1,6 +1,10 @@
 import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { GitBranch } from 'lucide-react';
-import { ThreePanelLayout } from '@a24z/panels';
+import {
+  ConfigurablePanelLayout,
+  type PanelDefinitionWithContent,
+  type PanelLayout,
+} from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { usePanelsTheme } from '../../../theme/panelsTheme';
 import { useTheme } from '@a24z/industry-theme';
@@ -525,10 +529,29 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         onRepositoryAdded={handleRepositoryAdded}
       />
 
-      <ThreePanelLayout
-        leftPanel={renderLeftPanel()}
-        middlePanel={renderMiddlePanel()}
-        rightPanel={renderRightPanel()}
+      <ConfigurablePanelLayout
+        panels={[
+          {
+            id: 'repository-list',
+            label: 'Repository List',
+            content: renderLeftPanel(),
+          },
+          {
+            id: 'repository-details',
+            label: 'Repository Details',
+            content: renderMiddlePanel(),
+          },
+          {
+            id: 'file-preview',
+            label: 'File Preview',
+            content: renderRightPanel(),
+          },
+        ]}
+        layout={{
+          left: 'repository-list',
+          middle: 'repository-details',
+          right: 'file-preview',
+        }}
         collapsiblePanels={{ left: true, right: true }}
         defaultSizes={panelState.type === 'three-panel' ? panelState.sizes : { left: 20, middle: 50, right: 30 }}
         minSizes={{ left: 15, middle: 30, right: 20 }}

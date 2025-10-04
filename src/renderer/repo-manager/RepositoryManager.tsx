@@ -15,6 +15,8 @@ import { RepositoryExplorationView } from './RepositoryExplorationView';
 import { SecretsModal } from './shared/SecretsModal';
 import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
 import { BadgeInfoModal } from './shared/BadgeInfoModal';
+import { PanelConfiguratorModal } from './shared/PanelConfiguratorModal';
+import type { PanelLayout } from '@a24z/panels';
 import { GitChangesProvider } from '../contexts/GitChangesContext';
 import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
@@ -47,7 +49,15 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
     const [showSecretsModal, setShowSecretsModal] = useState(false);
     const [showSourceHelpModal, setShowSourceHelpModal] = useState(false);
     const [showBadgeInfoModal, setShowBadgeInfoModal] = useState(false);
+    const [showPanelConfigModal, setShowPanelConfigModal] = useState(false);
     const [cloneBranchStatuses, setCloneBranchStatuses] = useState<Record<string, any>>({});
+
+    // Panel layout state
+    const [panelLayout, setPanelLayout] = useState<PanelLayout>({
+      left: 'left',
+      middle: 'middle',
+      right: null,
+    });
 
     // File tree services - shared across all views
     const fileTreeSourceService = useMemo(
@@ -123,7 +133,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
     const [panelCollapsedState, setPanelCollapsedState] = useState<{
       left?: boolean;
       right?: boolean;
-    }>({ left: false });
+    }>({ left: false, right: false });
     const [panelPreferencesLoaded, setPanelPreferencesLoaded] = useState(false);
 
     // Load saved panel state for this repository
@@ -132,11 +142,19 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
       const loadPanelPreferences = async () => {
         try {
           const prefs = await UserPreferencesService.getPreferences();
-          const collapsed =
+          const savedLayout =
+            prefs.repositoryUIStates?.[repositoryKey]?.panelLayouts?.exploration?.layout;
+          const leftCollapsed =
             prefs.repositoryUIStates?.[repositoryKey]?.panelLayouts?.exploration?.collapsed?.left ??
             false;
+          const rightCollapsed =
+            prefs.repositoryUIStates?.[repositoryKey]?.panelLayouts?.exploration?.collapsed?.right ??
+            false;
           if (isMounted) {
-            setPanelCollapsedState((prev) => ({ ...prev, left: collapsed }));
+            if (savedLayout) {
+              setPanelLayout(savedLayout);
+            }
+            setPanelCollapsedState({ left: leftCollapsed, right: rightCollapsed });
           }
         } catch (error) {
           console.error('[RepositoryManager] Failed to load panel state:', error);
@@ -194,6 +212,87 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
         }
       },
       [panelPreferencesLoaded, persistLeftPanelCollapsed],
+    );
+
+    const persistRightPanelCollapsed = useCallback(
+      async (collapsed: boolean) => {
+        try {
+          const prefs = await UserPreferencesService.getPreferences();
+          const repoStates = { ...(prefs.repositoryUIStates ?? {}) };
+          const repoState = { ...(repoStates[repositoryKey] ?? {}) };
+          const panelLayouts = {
+            ...(repoState.panelLayouts ?? {}),
+            exploration: {
+              ...(repoState.panelLayouts?.exploration ?? {}),
+              collapsed: {
+                ...(repoState.panelLayouts?.exploration?.collapsed ?? {}),
+                right: collapsed,
+              },
+            },
+          };
+
+          repoStates[repositoryKey] = {
+            ...repoState,
+            panelLayouts,
+          };
+
+          await UserPreferencesService.updatePreferences({
+            repositoryUIStates: repoStates,
+          });
+        } catch (error) {
+          console.error('[RepositoryManager] Failed to persist right panel state:', error);
+        }
+      },
+      [repositoryKey],
+    );
+
+    const handleRightPanelCollapsedChange = useCallback(
+      (collapsed: boolean) => {
+        setPanelCollapsedState((prev) => ({ ...prev, right: collapsed }));
+        if (panelPreferencesLoaded) {
+          void persistRightPanelCollapsed(collapsed);
+        }
+      },
+      [panelPreferencesLoaded, persistRightPanelCollapsed],
+    );
+
+    const persistPanelLayout = useCallback(
+      async (layout: PanelLayout) => {
+        try {
+          const prefs = await UserPreferencesService.getPreferences();
+          const repoStates = { ...(prefs.repositoryUIStates ?? {}) };
+          const repoState = { ...(repoStates[repositoryKey] ?? {}) };
+          const panelLayouts = {
+            ...(repoState.panelLayouts ?? {}),
+            exploration: {
+              ...(repoState.panelLayouts?.exploration ?? {}),
+              layout,
+            },
+          };
+
+          repoStates[repositoryKey] = {
+            ...repoState,
+            panelLayouts,
+          };
+
+          await UserPreferencesService.updatePreferences({
+            repositoryUIStates: repoStates,
+          });
+        } catch (error) {
+          console.error('[RepositoryManager] Failed to persist panel layout:', error);
+        }
+      },
+      [repositoryKey],
+    );
+
+    const handlePanelLayoutChange = useCallback(
+      (layout: PanelLayout) => {
+        setPanelLayout(layout);
+        if (panelPreferencesLoaded) {
+          void persistPanelLayout(layout);
+        }
+      },
+      [panelPreferencesLoaded, persistPanelLayout],
     );
 
     // Check which agents have MCP configured (once on mount)
@@ -611,10 +710,15 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           onSecretsClick={() => setShowSecretsModal(true)}
           onHelpClick={() => setShowSourceHelpModal(true)}
           onForkBadgeClick={() => setShowBadgeInfoModal(true)}
+          onConfigurePanels={() => setShowPanelConfigModal(true)}
           showSidebarControls
           sidebarCollapsed={panelCollapsedState.left ?? false}
           onToggleSidebar={() =>
             handleLeftPanelCollapsedChange(!(panelCollapsedState.left ?? false))
+          }
+          rightSidebarCollapsed={panelCollapsedState.right ?? false}
+          onToggleRightSidebar={() =>
+            handleRightPanelCollapsedChange(!(panelCollapsedState.right ?? false))
           }
         />
         <div
@@ -649,6 +753,9 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 onPackageLayersChange={setPackageLayers}
                 leftPanelCollapsed={panelCollapsedState.left ?? false}
                 onLeftPanelCollapsedChange={handleLeftPanelCollapsedChange}
+                rightPanelCollapsed={panelCollapsedState.right ?? false}
+                onRightPanelCollapsedChange={handleRightPanelCollapsedChange}
+                panelLayout={panelLayout}
               />
             </GitChangesProvider>
           )}
@@ -674,6 +781,30 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           repository={repository}
           cloneBranchStatuses={cloneBranchStatuses}
           setCloneBranchStatuses={setCloneBranchStatuses}
+        />
+
+        <PanelConfiguratorModal
+          isOpen={showPanelConfigModal}
+          onClose={() => setShowPanelConfigModal(false)}
+          availablePanels={[
+            {
+              id: 'left',
+              label: 'Search & Tools',
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Search & Tools</div>
+            },
+            {
+              id: 'middle',
+              label: 'City Visualization',
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>City Visualization</div>
+            },
+            {
+              id: 'terminal',
+              label: 'Terminal',
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Terminal</div>
+            },
+          ]}
+          currentLayout={panelLayout}
+          onChange={handlePanelLayoutChange}
         />
       </div>
     );

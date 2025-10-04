@@ -16,8 +16,10 @@ import { RepositoryFilesPanel } from './RepositoryFilesPanel';
 import { QualityHexagonPanel } from './quality';
 import { SimpleCityVisualization, RepositoryCityService } from './city';
 import { RepositoryActionsPanel } from './RepositoryActionsPanel';
+import { SecretsModal } from './SecretsModal';
 import { ActRunnerService } from '../../../../main-process-api/ActRunnerService';
 import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
+import { ActRunnerWorkflowChannels, type ActRunnerWorkflowEvent } from '../../../../../shared/types/act.types';
 
 interface RepositoryDetailsPanelProps {
   selectedRepository: EnhancedAlexandriaEntry | null;
@@ -68,6 +70,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const [cityError, setCityError] = useState<string | null>(null);
   const [treeStats, setTreeStats] = useState<{ fileCount: number; directoryCount: number } | null>(null);
   const [runningActionId, setRunningActionId] = useState<string | null>(null);
+  const [showSecretsModal, setShowSecretsModal] = useState(false);
+  const [requiredSecrets, setRequiredSecrets] = useState<string[]>([]);
+  const [workflowOutput, setWorkflowOutput] = useState<string[]>([]);
+  const [workflowStatus, setWorkflowStatus] = useState<'idle' | 'running' | 'success' | 'failed'>('idle');
 
   const cityService = useMemo(() => RepositoryCityService.getInstance(), []);
 
@@ -185,6 +191,54 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     setCityError(null);
     setIsBuildingCity(false);
   }, [selectedRepository?.path]);
+
+  // Listen for workflow events
+  useEffect(() => {
+    const handleWorkflowEvent = (data: ActRunnerWorkflowEvent) => {
+      switch (data.type) {
+        case 'start':
+          setWorkflowStatus('running');
+          setWorkflowOutput([`Starting workflow: ${data.workflowPath}`]);
+          break;
+
+        case 'progress':
+          setWorkflowOutput(prev => [...prev, data.message]);
+          break;
+
+        case 'step':
+          const stepIcon = data.status === 'success' ? '✓' : data.status === 'failure' ? '✖' : '▶';
+          setWorkflowOutput(prev => [...prev, `${stepIcon} ${data.label}`]);
+          break;
+
+        case 'error':
+          setWorkflowOutput(prev => [...prev, `ERROR: ${data.message}`]);
+          break;
+
+        case 'complete':
+          setWorkflowStatus(data.success ? 'success' : 'failed');
+          setWorkflowOutput(prev => [
+            ...prev,
+            '',
+            `Workflow ${data.success ? 'completed successfully' : 'failed'} (${(data.durationMs / 1000).toFixed(1)}s)`,
+          ]);
+          setRunningActionId(null);
+          break;
+      }
+    };
+
+    // Subscribe to all workflow event channels
+    const unsubscribers = [
+      window.mainProcess.actRunner.onWorkflowEvent(ActRunnerWorkflowChannels.START, handleWorkflowEvent),
+      window.mainProcess.actRunner.onWorkflowEvent(ActRunnerWorkflowChannels.PROGRESS, handleWorkflowEvent),
+      window.mainProcess.actRunner.onWorkflowEvent(ActRunnerWorkflowChannels.STEP, handleWorkflowEvent),
+      window.mainProcess.actRunner.onWorkflowEvent(ActRunnerWorkflowChannels.ERROR, handleWorkflowEvent),
+      window.mainProcess.actRunner.onWorkflowEvent(ActRunnerWorkflowChannels.COMPLETE, handleWorkflowEvent),
+    ];
+
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
+  }, []);
 
   useEffect(() => {
     setRunningActionId(null);
@@ -397,10 +451,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     [selectedRepository],
   );
 
-  const handleConfigureSecrets = useCallback(() => {
-    window.alert(
-      'Secrets configuration for workflow runs will be integrated soon. Manage repository secrets from the Repository Manager in the meantime.',
-    );
+  const handleConfigureSecrets = useCallback((secrets?: string[]) => {
+    setRequiredSecrets(secrets || []);
+    setShowSecretsModal(true);
   }, []);
 
   const handleRunRepositoryAction = useCallback(
@@ -430,18 +483,22 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           actionId: action.id,
         });
 
-        if (!validation.secretsConfigured) {
-          const message =
-            validation.messages?.join('\n') ??
-            'Repository secrets must be configured before running this workflow.';
-          window.alert(message);
-          return;
-        }
-
+        // Check act installation first (hard requirement)
         if (!validation.actInstalled) {
           const message =
             validation.messages?.join('\n') ??
             'The local act binary is not installed. Install act to enable workflow execution.';
+          window.alert(message);
+          return;
+        }
+
+        // Check secrets only if the workflow requires them
+        if (action.requiresSecrets && !validation.secretsConfigured) {
+          const secretsList = action.requiredSecrets?.length
+            ? `\n\nRequired secrets:\n${action.requiredSecrets.map(s => `  • ${s}`).join('\n')}`
+            : '';
+          const message =
+            `This workflow requires secrets to run.${secretsList}\n\nConfigure secrets before running this workflow.`;
           window.alert(message);
           return;
         }
@@ -500,6 +557,14 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         overflow: 'hidden',
       }}
     >
+      {selectedRepository && showSecretsModal && (
+        <SecretsModal
+          isOpen={showSecretsModal}
+          onClose={() => setShowSecretsModal(false)}
+          repository={selectedRepository}
+          requiredSecrets={requiredSecrets}
+        />
+      )}
       {selectedRepository ? (
         <>
           {/* Repository Header */}
@@ -597,11 +662,114 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
                 <RepositoryActionsPanel
                   repoId={repositoryId}
+                  repositoryPath={selectedRepository.path}
                   fileTree={fileTree}
                   onConfigure={handleConfigureSecrets}
                   onRun={handleRunRepositoryAction}
                   runningActionId={runningActionId}
                 />
+
+                {/* Workflow Output Console */}
+                {workflowOutput.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: '16px',
+                      padding: '16px',
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      borderRadius: '8px',
+                      border: `1px solid ${theme.colors.border}`,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        marginBottom: '12px',
+                      }}
+                    >
+                      <h3
+                        style={{
+                          margin: 0,
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: theme.colors.text,
+                        }}
+                      >
+                        Workflow Output
+                        {workflowStatus === 'running' && (
+                          <span
+                            style={{
+                              marginLeft: '8px',
+                              fontSize: '12px',
+                              color: theme.colors.info || '#3b82f6',
+                            }}
+                          >
+                            (Running...)
+                          </span>
+                        )}
+                        {workflowStatus === 'success' && (
+                          <span
+                            style={{
+                              marginLeft: '8px',
+                              fontSize: '12px',
+                              color: theme.colors.success || '#10b981',
+                            }}
+                          >
+                            ✓ Success
+                          </span>
+                        )}
+                        {workflowStatus === 'failed' && (
+                          <span
+                            style={{
+                              marginLeft: '8px',
+                              fontSize: '12px',
+                              color: theme.colors.error || '#ef4444',
+                            }}
+                          >
+                            ✖ Failed
+                          </span>
+                        )}
+                      </h3>
+                      <button
+                        onClick={() => {
+                          setWorkflowOutput([]);
+                          setWorkflowStatus('idle');
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '12px',
+                          backgroundColor: 'transparent',
+                          border: `1px solid ${theme.colors.border}`,
+                          borderRadius: '4px',
+                          color: theme.colors.textSecondary,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '12px',
+                        backgroundColor: theme.colors.background,
+                        padding: '12px',
+                        borderRadius: '4px',
+                        maxHeight: '300px',
+                        overflowY: 'auto',
+                        whiteSpace: 'pre-wrap',
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {workflowOutput.map((line, i) => (
+                        <div key={i} style={{ marginBottom: '2px' }}>
+                          {line}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {/* Package Information Panel */}
                 <QualityHexagonPanel
                   directory={selectedRepository.path}

@@ -4,6 +4,7 @@ export interface ActWorkflowAction {
   description?: string;
   workflowPath: string;
   requiresSecrets?: boolean;
+  requiredSecrets?: string[]; // List of specific secret names required
   estimatedDurationSeconds?: number;
 }
 

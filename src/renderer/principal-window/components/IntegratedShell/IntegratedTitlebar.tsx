@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { ThemeDropdown } from './ThemeDropdown';
+import { ThemeCustomizationButton } from '../../../components/Titlebar/ThemeCustomizationButton';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';
 import { Bot } from 'lucide-react';
 import { remoteAgentService } from '../../../services/RemoteAgentService';
@@ -43,6 +44,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
     jules: false,
     codex: false,
   });
+  const [showThemeButton, setShowThemeButton] = useState(true);
+  const [showCustomizeButton, setShowCustomizeButton] = useState(true);
   const { theme, mode } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
@@ -86,6 +89,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         jules: preferences.remoteAgentButtons?.jules ?? false,
         codex: preferences.remoteAgentButtons?.codex ?? false,
       });
+      setShowThemeButton(preferences.titlebarButtons?.theme ?? true);
+      setShowCustomizeButton(preferences.titlebarButtons?.customize ?? true);
     };
 
     void UserPreferencesService.getPreferences().then(applyPreferences);
@@ -299,7 +304,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             side="right"
           />
         )}
-        <ThemeDropdown />
+        {showThemeButton && <ThemeDropdown />}
+        {showCustomizeButton && <ThemeCustomizationButton />}
       </div>
 
       {/* Window controls for Windows */}

@@ -1,15 +1,18 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { AlertCircle, CheckCircle2, Loader2, Play, RefreshCcw, Settings } from 'lucide-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 
 import { useRepositorySecretsStatus } from '../hooks/useRepositorySecretsStatus';
 import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
+import { FileSystemService } from '../../../../main-process-api/FileSystemService';
+import { getRequiredSecrets } from '../../../../utils/workflowParser';
 
 interface RepositoryActionsPanelProps {
   repoId: string | null | undefined;
+  repositoryPath?: string | null;
   fileTree: FileTree | null;
-  onConfigure?: () => void;
+  onConfigure?: (requiredSecrets?: string[]) => void;
   onRun?: (action: ActWorkflowAction) => void;
   /**
    * Allows parents to skip work when the panel is collapsed or hidden.
@@ -33,9 +36,13 @@ const formatDuration = (seconds?: number) => {
 
 /**
  * Extract workflow actions from FileTree by filtering for .github/workflows/*.{yml,yaml} files
+ * Async version that reads and parses workflow files to extract jobs and required secrets
  */
-const extractWorkflowActionsFromTree = (fileTree: FileTree | null): ActWorkflowAction[] => {
-  if (!fileTree?.allFiles) {
+const extractWorkflowActionsFromTree = async (
+  fileTree: FileTree | null,
+  repositoryPath: string | null
+): Promise<ActWorkflowAction[]> => {
+  if (!fileTree?.allFiles || !repositoryPath) {
     return [];
   }
 
@@ -44,28 +51,63 @@ const extractWorkflowActionsFromTree = (fileTree: FileTree | null): ActWorkflowA
     return path.includes('.github/workflows/') && (path.endsWith('.yml') || path.endsWith('.yaml'));
   });
 
-  return workflowFiles.map(file => {
+  const actions: ActWorkflowAction[] = [];
+
+  for (const file of workflowFiles) {
     const fileName = file.path.split('/').pop() || file.path;
-    const baseName = fileName.replace(/\.(yml|yaml)$/i, '');
 
-    // Generate a readable label from the filename
-    const label = baseName
-      .split(/[-_]/)
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+    try {
+      // Read workflow file content
+      const fullPath = `${repositoryPath}/${file.path}`;
+      const result = await FileSystemService.readFile(fullPath);
 
-    return {
-      id: file.path,
-      label,
-      description: `Workflow defined in ${fileName}`,
-      workflowPath: file.path,
-      requiresSecrets: true, // Conservative default - assume secrets needed
-    };
-  });
+      const content = typeof result === 'string' ? result : (result as any)?.content;
+
+      if (!content) {
+        console.warn('[RepositoryActionsPanel] No content for:', file.path);
+        continue;
+      }
+
+      const requiredSecrets = getRequiredSecrets(content);
+
+      // Parse workflow to extract jobs
+      const { parseWorkflowFile } = await import('../../../../utils/workflowParser');
+      const parsed = parseWorkflowFile(content);
+
+      if (!parsed || !parsed.jobs) {
+        console.warn(`[RepositoryActionsPanel] No jobs found in workflow ${file.path}`);
+        continue;
+      }
+
+      const workflowName = parsed.name || fileName.replace(/\.(yml|yaml)$/i, '');
+
+      // Create one action per job
+      for (const [jobId, job] of Object.entries(parsed.jobs)) {
+        const jobName = (job as any).name || jobId;
+        const label = `${workflowName} › ${jobName}`;
+
+        actions.push({
+          id: jobId, // Use actual job ID for act
+          label,
+          description: requiredSecrets.length > 0
+            ? `Requires: ${requiredSecrets.join(', ')}`
+            : `Job in ${fileName}`,
+          workflowPath: file.path,
+          requiresSecrets: requiredSecrets.length > 0,
+          requiredSecrets,
+        });
+      }
+    } catch (error) {
+      console.error(`[RepositoryActionsPanel] Failed to parse workflow ${file.path}:`, error);
+    }
+  }
+
+  return actions;
 };
 
 export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
   repoId,
+  repositoryPath,
   fileTree,
   onConfigure,
   onRun,
@@ -77,11 +119,41 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
     skip: !isVisible,
   });
 
-  // Extract actions from the FileTree
-  const actions = useMemo(() => extractWorkflowActionsFromTree(fileTree), [fileTree]);
+  // Extract actions from the FileTree with async parsing
+  const [actions, setActions] = useState<ActWorkflowAction[]>([]);
+  const [isLoadingActions, setIsLoadingActions] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadActions() {
+      setIsLoadingActions(true);
+      try {
+        const extractedActions = await extractWorkflowActionsFromTree(fileTree, repositoryPath || null);
+        if (!cancelled) {
+          setActions(extractedActions);
+        }
+      } catch (error) {
+        console.error('[RepositoryActionsPanel] Failed to extract actions:', error);
+        if (!cancelled) {
+          setActions([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingActions(false);
+        }
+      }
+    }
+
+    loadActions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fileTree, repositoryPath]);
 
   const hasActions = actions.length > 0;
-  const isBusy = isLoading;
+  const isBusy = isLoading || isLoadingActions;
 
   const statusIndicator = useMemo(() => {
     if (!repoId) {
@@ -302,7 +374,7 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
                     {showConfigure ? (
                       <button
                         type="button"
-                        onClick={handleConfigureClick}
+                        onClick={() => onConfigure?.(action.requiredSecrets)}
                         style={{
                           display: 'flex',
                           alignItems: 'center',

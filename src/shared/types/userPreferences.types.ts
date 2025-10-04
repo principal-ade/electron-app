@@ -34,6 +34,7 @@ export interface RepositoryUIState {
     exploration?: {
       collapsed?: { left?: boolean; right?: boolean };
       sizes?: { left: number; middle: number; right: number };
+      layout?: { left: string | null; middle: string | null; right: string | null };
     };
   };
 
@@ -80,6 +81,12 @@ export interface UserPreferences {
   remoteAgentButtons?: {
     jules?: boolean;
     codex?: boolean;
+  };
+
+  // Titlebar button visibility
+  titlebarButtons?: {
+    theme?: boolean;
+    customize?: boolean;
   };
 
   // Theme preferences

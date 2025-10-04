@@ -20,9 +20,6 @@ import {
 } from '../../../../shared/types/act.types';
 import { ActRunnerService } from '../../act/ActRunnerService';
 
-const isActIntegrationEnabled =
-  process.env.PLASMA_ENABLE_ACT_INTEGRATION === 'true';
-
 const logPrefix = '[ActIntegration]';
 
 const log = (...args: unknown[]) => {
@@ -31,17 +28,6 @@ const log = (...args: unknown[]) => {
 
 const warn = (...args: unknown[]) => {
   console.warn(logPrefix, ...args);
-};
-
-const disabledResult: RunRepositoryActionResult = {
-  success: false,
-  error: 'ACT integration is disabled.',
-};
-
-const disabledValidation: ValidateRunRequirementsResult = {
-  secretsConfigured: false,
-  actInstalled: false,
-  messages: ['ACT integration feature flag is disabled.'],
 };
 
 const actRunnerService = new ActRunnerService();
@@ -89,17 +75,12 @@ function ensureWorkflowEventForwarding() {
 }
 
 export function registerActIntegrationHandlers() {
-  if (isActIntegrationEnabled) {
-    ensureWorkflowEventForwarding();
-  }
+  // Always enable event forwarding
+  ensureWorkflowEventForwarding();
 
   ipcMain.handle(
     ActWorkflowEvents.LIST_REPOSITORY_ACTIONS,
     async (_event, repoId: string): Promise<ActWorkflowAction[]> => {
-      if (!isActIntegrationEnabled) {
-        return [];
-      }
-
       log('Workflow actions requested for repository', repoId);
       // Stub implementation: real workflow discovery arrives in a later phase.
       return [];
@@ -112,10 +93,6 @@ export function registerActIntegrationHandlers() {
       _event,
       request: ValidateRunRequirementsRequest,
     ): Promise<ValidateRunRequirementsResult> => {
-      if (!isActIntegrationEnabled) {
-        return disabledValidation;
-      }
-
       log('Validating run requirements', request);
 
       try {
@@ -141,10 +118,6 @@ export function registerActIntegrationHandlers() {
       _event,
       request: RunRepositoryActionRequest,
     ): Promise<RunRepositoryActionResult> => {
-      if (!isActIntegrationEnabled) {
-        return disabledResult;
-      }
-
       warn('Run requested', request);
 
       try {

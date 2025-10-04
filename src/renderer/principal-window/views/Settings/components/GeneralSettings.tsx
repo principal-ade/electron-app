@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Palette, FolderOpen, RefreshCw, Settings } from 'lucide-react';
+import { Palette, FolderOpen, RefreshCw } from 'lucide-react';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { ThemeService } from '../../../../services/ThemeService';
 import type { EditorId } from '../../../../../shared/types/editor.types';
 import { EDITOR_LABELS } from '../../../../../shared/types/editor.types';
+import type { UserPreferences } from '../../../../../shared/types/userPreferences.types';
 import { predefinedThemes, getThemeNames } from '../../../../themes/predefinedThemes';
-import { ThemeCustomizationPanel } from '../../../components/themes/ThemeCustomizationPanel';
 import AppIcon from '../../../../../../assets/icons/icon-48x48.png';
 
 export const GeneralSettings: React.FC = () => {
@@ -21,7 +21,8 @@ export const GeneralSettings: React.FC = () => {
   const [selectedTheme, setSelectedTheme] = useState<string>('default');
   const [pendingTheme, setPendingTheme] = useState<string | null>(null);
   const [isApplyingTheme, setIsApplyingTheme] = useState(false);
-  const [showCustomizationPanel, setShowCustomizationPanel] = useState(false);
+  const [showThemeButton, setShowThemeButton] = useState(true);
+  const [showCustomizeButton, setShowCustomizeButton] = useState(true);
 
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
@@ -32,21 +33,49 @@ export const GeneralSettings: React.FC = () => {
     AppVersionManagerService.getVersion().then(setCurrentVersion);
     AppVersionManagerService.isDevMode().then(setIsDevMode);
 
+    let isMounted = true;
+
+    const applyPreferences = (prefs: UserPreferences) => {
+      if (!isMounted) return;
+
+      const editor = (prefs.defaultEditor ?? 'vscode') as EditorId;
+      setDefaultEditor(editor);
+      setDefaultCloneDirectory(prefs.defaultCloneDirectory || '');
+      setEnableVimMode(prefs.enableVimMode ?? false);
+      setShowThemeButton(prefs.titlebarButtons?.theme ?? true);
+      setShowCustomizeButton(prefs.titlebarButtons?.customize ?? true);
+    };
+
     UserPreferencesService.getPreferences()
-      .then((prefs) => {
-        const editor = (prefs.defaultEditor ?? 'vscode') as EditorId;
-        setDefaultEditor(editor);
-        setDefaultCloneDirectory(prefs.defaultCloneDirectory || '');
-        setEnableVimMode(prefs.enableVimMode ?? false);
-      })
+      .then(applyPreferences)
       .catch(() => {
         setDefaultEditor('vscode');
         setEnableVimMode(false);
       });
 
+    const handlePreferencesUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<UserPreferences>).detail;
+      if (detail) {
+        applyPreferences(detail);
+      }
+    };
+
+    window.addEventListener(
+      'user-preferences-updated',
+      handlePreferencesUpdated as EventListener,
+    );
+
     const currentTheme = ThemeService.getCurrentThemeName();
     setSelectedTheme(currentTheme);
     setPendingTheme(null);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener(
+        'user-preferences-updated',
+        handlePreferencesUpdated as EventListener,
+      );
+    };
   }, []);
 
   return (
@@ -277,6 +306,100 @@ export const GeneralSettings: React.FC = () => {
               Enable Vim mode for file preview and code editors
             </span>
           </label>
+        </div>
+      </div>
+
+      {/* Titlebar Button Visibility */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Titlebar Buttons
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <p
+            style={{
+              fontSize: '14px',
+              color: theme.colors.textSecondary,
+              margin: '0 0 16px 0',
+            }}
+          >
+            Choose which buttons appear in the titlebar
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+          >
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                fontSize: '14px',
+                color: theme.colors.text,
+              }}
+            >
+              <span>Show theme selector button</span>
+              <input
+                type="checkbox"
+                checked={showThemeButton}
+                onChange={async (e) => {
+                  const enabled = e.target.checked;
+                  setShowThemeButton(enabled);
+                  await UserPreferencesService.updatePreferences({
+                    titlebarButtons: {
+                      theme: enabled,
+                      customize: showCustomizeButton
+                    },
+                  });
+                }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+            </label>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                fontSize: '14px',
+                color: theme.colors.text,
+              }}
+            >
+              <span>Show theme customization button</span>
+              <input
+                type="checkbox"
+                checked={showCustomizeButton}
+                onChange={async (e) => {
+                  const enabled = e.target.checked;
+                  setShowCustomizeButton(enabled);
+                  await UserPreferencesService.updatePreferences({
+                    titlebarButtons: {
+                      theme: showThemeButton,
+                      customize: enabled
+                    },
+                  });
+                }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+            </label>
+          </div>
         </div>
       </div>
 
@@ -525,33 +648,6 @@ export const GeneralSettings: React.FC = () => {
                 )}
               </button>
             )}
-
-            <button
-              onClick={() => setShowCustomizationPanel(true)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: '8px',
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.background,
-                color: theme.colors.text,
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 500,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.background;
-              }}
-            >
-              <Settings size={14} />
-              Customize
-            </button>
           </div>
           <div
             style={{
@@ -576,14 +672,6 @@ export const GeneralSettings: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Theme Customization Panel */}
-      {showCustomizationPanel && (
-        <ThemeCustomizationPanel
-          themeName={selectedTheme}
-          onClose={() => setShowCustomizationPanel(false)}
-        />
-      )}
     </div>
   );
 };
