@@ -44,6 +44,7 @@ import type { FeedbackAPI } from './FeedbackAPI';
 import type { DocumentSearchAPI } from '../ipc/DocumentSearchIPC';
 import type { ObservabilityAPI } from './ObservabilityAPI';
 import type { RemoteAgentWindowAPI } from './RemoteAgentWindowAPI';
+import type { DevSidecarAPI } from './DevSidecarAPI';
 
 // Re-export for convenience
 export type {
@@ -66,6 +67,15 @@ export type {
   TokenWithMetadata,
   TokenMigrationEntry,
 } from './AuthenticationAPI';
+export type {
+  DevSidecarAPI,
+  DevSidecarWindowInfo,
+  DevSidecarServerStatusResponse,
+  CreateDevSidecarWindowPayload,
+  StartDevSidecarServerPayload,
+  RestartDevSidecarServerPayload,
+} from './DevSidecarAPI';
+export { DevSidecarEvent } from './DevSidecarAPI';
 
 export interface MainProcessAPI {
   actRunner: ActRunnerAPI;
@@ -115,6 +125,7 @@ export interface MainProcessAPI {
   documentSearch: DocumentSearchAPI;
   observability: ObservabilityAPI;
   remoteAgentWindow: RemoteAgentWindowAPI;
+  devSidecar: DevSidecarAPI;
 }
 
 /**

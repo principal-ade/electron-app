@@ -45,6 +45,16 @@ const titlebarEntryPath = path.join(
   'titlebar',
   'index.tsx',
 );
+const devSidecarEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'dev-sidecar',
+  'index.tsx',
+);
+const devSidecarLogsEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'dev-sidecar-logs',
+  'index.tsx',
+);
 
 // Use principal entry if it exists, otherwise fall back to legacy
 if (fs.existsSync(principalEntryPath)) {
@@ -110,6 +120,42 @@ if (fs.existsSync(titlebarEntryPath)) {
       filename: 'titlebar.html',
       template: path.join(webpackPaths.srcPath, 'titlebar', 'index.ejs'),
       chunks: ['titlebar'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    }),
+  );
+}
+
+if (fs.existsSync(devSidecarEntryPath)) {
+  entryPoints['dev-sidecar'] = devSidecarEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'dev-sidecar.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['dev-sidecar'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    }),
+  );
+}
+
+if (fs.existsSync(devSidecarLogsEntryPath)) {
+  entryPoints['dev-sidecar-logs'] = devSidecarLogsEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'dev-sidecar-logs.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['dev-sidecar-logs'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
