@@ -19,6 +19,7 @@ export enum MonitoringInternalEvent {
   GIT_STATUS_CHANGED = 'git-status-changed',
   GIT_STATE_EVENT = 'git-state-event',
   WORKSPACE_CHANGED = 'workspace-change',
+  CACHE_SYNC = 'cache-sync',
 }
 
 /**
@@ -153,6 +154,57 @@ export interface GitStatusWithFiles extends GitStatusMetadata {
   stagedFiles: string[];
   createdFiles: string[];
   deletedFiles: string[];
+}
+
+/**
+ * Cache slices supported by the repository monitoring cache registry.
+ */
+export type CacheSlice = 'gitStatus' | 'fileTree' | 'packages';
+
+/**
+ * Error metadata recorded by cache entries when rebuilds fail.
+ */
+export interface CacheError {
+  message: string;
+  name?: string;
+  stack?: string;
+  code?: string | number;
+}
+
+/**
+ * Maps cache slices to their corresponding payload types.
+ */
+export interface CacheSliceDataMap {
+  gitStatus: GitStatusWithFiles;
+  fileTree: FileTree;
+  packages: {
+    packages: PackageLayer[];
+    summary: PackageSummary;
+  };
+}
+
+/**
+ * Cache entry metadata shared between the worker and renderer processes.
+ */
+export interface CacheEntry<T> {
+  data?: T;
+  version: number;
+  hash?: string;
+  timestamp: number;
+  inflight?: Promise<T>;
+  error?: CacheError;
+}
+
+/**
+ * Repository-wide snapshot of cached slices and their metadata.
+ */
+export type RepositoryCacheSlices = {
+  [K in CacheSlice]?: CacheEntry<CacheSliceDataMap[K]>;
+};
+
+export interface RepositoryCacheSnapshot {
+  repoPath: string;
+  slices: RepositoryCacheSlices;
 }
 
 /**
