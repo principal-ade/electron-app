@@ -19,6 +19,7 @@ interface RepositoryHeaderProps {
   onOpenDashboard: () => void;
   onRemove: () => void;
   onTerminalWindowsUpdate: (windows: Map<string, number>) => void;
+  onOpenTerminal?: () => void;
 }
 
 const spinAnimation = `
@@ -46,12 +47,20 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
   onOpenDashboard,
   onRemove,
   onTerminalWindowsUpdate,
+  onOpenTerminal,
 }) => {
   const { theme } = useTheme();
 
   const handleOpenTerminal = useCallback(async () => {
     if (!repository?.path) return;
 
+    // If we have the onOpenTerminal handler, use it to open the right panel with terminal
+    if (onOpenTerminal) {
+      onOpenTerminal();
+      return;
+    }
+
+    // Fallback to pop-out behavior if no handler is provided
     try {
       const existingWindowId = terminalWindows.get(repository.path);
 
@@ -79,7 +88,7 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
     } catch (error) {
       console.error('Error opening terminal:', error);
     }
-  }, [repository, terminalWindows, onTerminalWindowsUpdate]);
+  }, [repository, terminalWindows, onTerminalWindowsUpdate, onOpenTerminal]);
 
 
   return (
@@ -335,15 +344,19 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               e.currentTarget.style.borderColor = theme.colors.border;
             }}
             title={
-              repository?.path && terminalWindows.has(repository.path)
-                ? "Focus existing terminal window"
-                : "Open terminal in repository directory"
+              onOpenTerminal
+                ? "Open terminal panel"
+                : (repository?.path && terminalWindows.has(repository.path)
+                    ? "Focus existing terminal window"
+                    : "Open terminal in repository directory")
             }
           >
             <Terminal size={14} />
-            {repository?.path && terminalWindows.has(repository.path)
-              ? "Focus Terminal"
-              : "Terminal"
+            {onOpenTerminal
+              ? "Terminal"
+              : (repository?.path && terminalWindows.has(repository.path)
+                  ? "Focus Terminal"
+                  : "Terminal")
             }
           </button>
 

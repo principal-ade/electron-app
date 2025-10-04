@@ -24,6 +24,8 @@ import { TerminalService } from '../../main-process-api/TerminalService';
 interface TerminalPanelProps {
   /** Absolute working directory for the terminal session */
   directory: string;
+  /** Optional context to differentiate terminals (e.g., 'principal', 'dashboard') */
+  context?: string;
   /** Optional handler when user requests to hide the terminal (does not kill the session) */
   onClose?: () => void;
   /** Optional handler when user requests to destroy the terminal session */
@@ -48,6 +50,7 @@ interface TerminalPanelProps {
 
 function TerminalPanel({
   directory,
+  context,
   onClose,
   onDestroy,
   className = '',
@@ -113,17 +116,18 @@ function TerminalPanel({
           const id = await TerminalService.createWithCommand(
             dir,
             initialCommand,
+            context,
           );
           return id || null;
         }
         // For agent sessions without command, always create new
         else if (agentSessionId) {
           // Agent sessions should have their own terminal
-          const id = await TerminalService.create(dir);
+          const id = await TerminalService.create(dir, context);
           return id || null;
         } else {
-          // Regular terminals can reuse existing sessions for the same directory
-          const id = await TerminalService.getOrCreate(dir);
+          // Regular terminals can reuse existing sessions for the same directory+context
+          const id = await TerminalService.getOrCreate(dir, context);
           return id || null;
         }
       } catch (error) {
@@ -131,7 +135,7 @@ function TerminalPanel({
         return null;
       }
     },
-    [initialCommand, agentSessionId],
+    [initialCommand, agentSessionId, context],
   );
 
   const destroyTerminalSession = async (id: string) => {

@@ -32,6 +32,7 @@ import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { MarkdownDocumentViewer } from './shared/MarkdownDocumentViewer';
 import { ExcalidrawWrapper } from '../components/shared/ExcalidrawWrapper';
 import { FileSystemService } from '../main-process-api/FileSystemService';
+import TerminalPanel from '../components/Terminal/TerminalPanel';
 
 import type { Repository } from '../../shared/types/repository.types';
 import { RightPaneMode } from '../../shared/types/userPreferences.types';
@@ -1709,8 +1710,15 @@ export const RepositoryExplorationView: React.FC<
             </div>
           );
 
-          // Terminal panel placeholder
-          const terminalPanel = (
+          // Terminal panel
+          const terminalPanel = activeFileTreeSource?.type === 'local' ? (
+            <TerminalPanel
+              directory={activeFileTreeSource.location}
+              context="dashboard"
+              isVisible={true}
+              hideHeader={false}
+            />
+          ) : (
             <div
               style={{
                 height: '100%',
@@ -1725,10 +1733,10 @@ export const RepositoryExplorationView: React.FC<
               }}
             >
               <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: theme.colors.text }}>
-                Terminal
+                Terminal Unavailable
               </div>
               <div style={{ fontSize: '14px' }}>
-                Terminal integration coming soon
+                Terminal is only available for local repository clones
               </div>
             </div>
           );
@@ -1740,21 +1748,21 @@ export const RepositoryExplorationView: React.FC<
               content: leftPanel,
             },
             {
-              id: 'middle',
-              label: 'City Visualization',
-              content: rightPanel,
-            },
-            {
               id: 'terminal',
               label: 'Terminal',
               content: terminalPanel,
+            },
+            {
+              id: 'middle',
+              label: 'City Visualization',
+              content: rightPanel,
             },
           ];
 
           const layout: PanelLayout = panelLayout || {
             left: 'left',
-            middle: 'middle',
-            right: null,
+            middle: 'terminal',
+            right: 'middle',
           };
 
           return (
@@ -1769,8 +1777,8 @@ export const RepositoryExplorationView: React.FC<
                 panels={panels}
                 layout={layout}
                 collapsiblePanels={{ left: true, right: true }}
-                defaultSizes={{ left: 32, middle: 48, right: 20 }}
-                minSizes={{ left: 24, middle: 40, right: 15 }}
+                defaultSizes={{ left: 20, middle: 45, right: 35 }}
+                minSizes={{ left: 15, middle: 30, right: 25 }}
                 collapsed={{ left: isLeftPanelCollapsed, right: isRightPanelCollapsed }}
                 showCollapseButtons={false}
                 onLeftCollapseComplete={() => setLeftPanelCollapsed(true)}

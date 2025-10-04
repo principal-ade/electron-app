@@ -9,19 +9,20 @@ export class TerminalService {
     return window.mainProcess.terminal.list();
   }
 
-  static async create(dir: string): Promise<string> {
-    return window.mainProcess.terminal.create(dir);
+  static async create(dir: string, context?: string): Promise<string> {
+    return window.mainProcess.terminal.create(dir, context);
   }
 
-  static async getOrCreate(dir: string): Promise<string> {
-    return window.mainProcess.terminal.getOrCreate(dir);
+  static async getOrCreate(dir: string, context?: string): Promise<string> {
+    return window.mainProcess.terminal.getOrCreate(dir, context);
   }
 
   static async createWithCommand(
     dir: string,
     command: string,
+    context?: string,
   ): Promise<string> {
-    return window.mainProcess.terminal.createWithCommand(dir, command);
+    return window.mainProcess.terminal.createWithCommand(dir, command, context);
   }
 
   static async destroy(id: string): Promise<void> {

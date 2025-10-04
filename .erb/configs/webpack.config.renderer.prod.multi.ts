@@ -341,7 +341,7 @@ const configuration: webpack.Configuration = {
       ),
       'react/jsx-dev-runtime': path.resolve(
         webpackPaths.rootPath,
-        'node_modules/react/jsx-dev-runtime'
+        'node_modules/react/jsx-runtime'
       ),
       '@shared': path.resolve(webpackPaths.srcRendererPath, 'shared'),
     },

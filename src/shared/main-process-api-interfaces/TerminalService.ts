@@ -21,6 +21,7 @@ export enum TerminalAPIEvents {
 export interface TerminalInfo {
   id: string;
   directory: string;
+  context?: string; // 'principal' | 'dashboard' | 'agent' | etc
   agentSessionId?: string;
   createdAt: number;
   lastActivity: number;
@@ -37,9 +38,9 @@ export interface TerminalExit {
 }
 
 export interface TerminalAPI {
-  create: (directory: string) => Promise<string>;
-  getOrCreate: (directory: string) => Promise<string>;
-  createWithCommand: (directory: string, command: string) => Promise<string>;
+  create: (directory: string, context?: string) => Promise<string>;
+  getOrCreate: (directory: string, context?: string) => Promise<string>;
+  createWithCommand: (directory: string, command: string, context?: string) => Promise<string>;
   write: (sessionId: string, data: string) => Promise<void>;
   resize: (sessionId: string, cols: number, rows: number) => Promise<void>;
   destroy: (sessionId: string) => Promise<void>;

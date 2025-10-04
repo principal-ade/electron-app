@@ -33,6 +33,7 @@ interface RepositoryDetailsPanelProps {
   onRefresh?: () => Promise<void> | void;
   isRefreshing?: boolean;
   onFileSelect?: (filePath: string | null) => void;
+  onOpenTerminal?: () => void;
 }
 
 
@@ -48,6 +49,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   onRefresh,
   isRefreshing: _isRefreshing,
   onFileSelect,
+  onOpenTerminal,
 }) => {
   const { theme } = useTheme();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
@@ -582,6 +584,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             onOpenDashboard={() => onOpenDashboard(selectedRepository)}
             onRemove={handleRemoveClick}
             onTerminalWindowsUpdate={setTerminalWindows}
+            onOpenTerminal={onOpenTerminal}
           />
 
 

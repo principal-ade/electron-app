@@ -31,6 +31,7 @@ interface TerminalSession {
   id: string;
   pty: any; // Changed from pty.IPty to any for optional support
   directory: string;
+  context?: string; // 'principal' | 'dashboard' | 'agent' | etc
   agentSessionId?: string; // Associated AI session
   createdAt: number;
   lastActivity: number;
@@ -39,8 +40,8 @@ interface TerminalSession {
 class TerminalManager {
   private sessions: Map<string, TerminalSession> = new Map();
 
-  // Track sessions by repository path for persistence
-  private sessionsByRepo: Map<string, string> = new Map(); // repoPath -> sessionId
+  // Track sessions by repository path + context for persistence
+  private sessionsByRepo: Map<string, string> = new Map(); // "repoPath:context" -> sessionId
 
   private maxSessions = 10; // Limit number of concurrent sessions
 
@@ -54,6 +55,11 @@ class TerminalManager {
 
   setMainWindow(window: BrowserWindow) {
     this.mainWindow = window;
+  }
+
+  // Helper to generate session key from directory and context
+  private getSessionKey(directory: string, context?: string): string {
+    return `${directory}:${context || 'default'}`;
   }
 
   // Helper to clean up a session and its repo tracking
@@ -81,6 +87,7 @@ class TerminalManager {
   private async handleTerminalCreate(
     event: any,
     directory: string,
+    context?: string,
   ): Promise<string> {
     // This will contain the actual terminal creation logic
     // We'll move the existing create handler logic here
@@ -141,6 +148,7 @@ class TerminalManager {
       id: sessionId,
       pty: ptyProcess,
       directory,
+      context,
       agentSessionId: activeAgentSessionId || undefined,
       createdAt: now,
       lastActivity: now,
@@ -236,7 +244,7 @@ class TerminalManager {
 
   private setupIPCHandlers() {
     // Get or create a terminal session for a repository
-    ipcMain.handle('terminal:getOrCreate', async (event, directory: string) => {
+    ipcMain.handle('terminal:getOrCreate', async (event, directory: string, context?: string) => {
       try {
         // Check if node-pty is available
         if (!pty) {
@@ -245,11 +253,12 @@ class TerminalManager {
           );
         }
 
-        // Check if we already have a session for this directory
-        const existingSessionId = this.sessionsByRepo.get(directory);
+        // Check if we already have a session for this directory+context
+        const sessionKey = this.getSessionKey(directory, context);
+        const existingSessionId = this.sessionsByRepo.get(sessionKey);
         if (existingSessionId && this.sessions.has(existingSessionId)) {
           console.log(
-            `[Terminal] Reusing existing session ${existingSessionId} for ${directory}`,
+            `[Terminal] Reusing existing session ${existingSessionId} for ${sessionKey}`,
           );
           return existingSessionId;
         }
@@ -261,11 +270,11 @@ class TerminalManager {
           );
         }
 
-        // Create new session (use existing create logic)
-        const sessionId = await this.createTerminalForDirectory(directory);
+        // Create new session with context
+        const sessionId = await this.handleTerminalCreate(event, directory, context);
 
-        // Track by repository
-        this.sessionsByRepo.set(directory, sessionId);
+        // Track by repository+context
+        this.sessionsByRepo.set(sessionKey, sessionId);
 
         return sessionId;
       } catch (error) {
@@ -275,7 +284,7 @@ class TerminalManager {
     });
 
     // Create a new terminal session (keep for backward compatibility)
-    ipcMain.handle('terminal:create', async (event, directory: string) => {
+    ipcMain.handle('terminal:create', async (event, directory: string, context?: string) => {
       try {
         // Check if node-pty is available
         if (!pty) {
@@ -291,8 +300,8 @@ class TerminalManager {
           );
         }
 
-        // Use the shared terminal creation logic
-        return await this.handleTerminalCreate(event, directory);
+        // Use the shared terminal creation logic with context
+        return await this.handleTerminalCreate(event, directory, context);
       } catch (error) {
         console.error('Failed to create terminal session:', error);
 
@@ -317,10 +326,10 @@ class TerminalManager {
       'terminal:create-with-command',
       async (
         event,
-        { directory, command }: { directory: string; command: string },
+        { directory, command, context }: { directory: string; command: string; context?: string },
       ) => {
         console.log(
-          `[Terminal] create-with-command called with command: "${command}" in directory: "${directory}"`,
+          `[Terminal] create-with-command called with command: "${command}" in directory: "${directory}" context: "${context || 'default'}"`,
         );
         try {
           // Check if we've reached the session limit
@@ -400,6 +409,7 @@ class TerminalManager {
             id: sessionId,
             pty: ptyProcess,
             directory,
+            context,
             agentSessionId: activeAgentSessionId || undefined,
             createdAt: now,
             lastActivity: now,
@@ -550,6 +560,7 @@ class TerminalManager {
         ([id, session]) => ({
           id,
           directory: session.directory,
+          context: session.context,
           agentSessionId: session.agentSessionId,
           createdAt: session.createdAt,
           lastActivity: session.lastActivity,

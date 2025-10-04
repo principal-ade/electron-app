@@ -22,7 +22,7 @@ import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 import { RepositoryDetailsPanel } from './components/RepositoryDetailsPanel';
 import { GitCloneModal } from './components/GitCloneModal';
 import { RepositoryListHeader } from './components/RepositoryListHeader';
-import { FilePreviewPanel } from './components/FilePreviewPanel';
+import { RightPanel } from './components/RightPanel';
 
 interface RepositoryExplorerProps {
   sidebarCollapsed?: boolean;
@@ -49,6 +49,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [panelSizes, setPanelSizes] = useState({ left: 20, middle: 50, right: 30 });
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+  const [rightPanelTab, setRightPanelTab] = useState<'preview' | 'terminal'>('terminal');
 
   const handleFileSelect = useCallback(
     (filePath: string | null) => {
@@ -59,6 +60,11 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
     },
     [onEnsureRightPanelOpen],
   );
+
+  const handleOpenTerminal = useCallback(() => {
+    setRightPanelTab('terminal');
+    onEnsureRightPanelOpen?.();
+  }, [onEnsureRightPanelOpen]);
 
   // Use panel persistence hook
   const panelState = usePanelPersistence({
@@ -488,16 +494,19 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         onRefresh={refreshRepos}
         isRefreshing={isLoadingRepos}
         onFileSelect={handleFileSelect}
+        onOpenTerminal={handleOpenTerminal}
       />
     );
   };
 
-  // Render right panel - File Preview
+  // Render right panel - File Preview and Terminal
   const renderRightPanel = () => {
     return (
-      <FilePreviewPanel
+      <RightPanel
         filePath={selectedFilePath}
         repositoryPath={selectedRepositoryPath || ''}
+        activeTab={rightPanelTab}
+        onTabChange={setRightPanelTab}
         onClose={() => setSelectedFilePath(null)}
       />
     );
@@ -543,7 +552,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
           },
           {
             id: 'file-preview',
-            label: 'File Preview',
+            label: 'Preview & Terminal',
             content: renderRightPanel(),
           },
         ]}
