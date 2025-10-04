@@ -49,7 +49,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [panelSizes, setPanelSizes] = useState({ left: 20, middle: 50, right: 30 });
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
-  const [rightPanelTab, setRightPanelTab] = useState<'preview' | 'terminal'>('terminal');
+  const [rightPanelTab, setRightPanelTab] = useState<'preview' | 'terminal'>('preview');
 
   const handleFileSelect = useCallback(
     (filePath: string | null) => {

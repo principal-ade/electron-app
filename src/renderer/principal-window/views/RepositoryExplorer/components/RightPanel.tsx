@@ -20,7 +20,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   onClose,
 }) => {
   const { theme } = useTheme();
-  const [internalActiveTab, setInternalActiveTab] = useState<'preview' | 'terminal'>('terminal');
+  const [internalActiveTab, setInternalActiveTab] = useState<'preview' | 'terminal'>('preview');
 
   // Use external tab if provided, otherwise use internal state
   const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;

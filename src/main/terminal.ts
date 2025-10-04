@@ -47,14 +47,47 @@ class TerminalManager {
 
   private terminalWindows: Map<string, BrowserWindow> = new Map(); // Track terminal windows
 
-  private mainWindow: BrowserWindow | null = null;
+  private rendererWindows: Set<BrowserWindow> = new Set();
 
   constructor() {
     this.setupIPCHandlers();
   }
 
   setMainWindow(window: BrowserWindow) {
-    this.mainWindow = window;
+    if (!window) {
+      return;
+    }
+
+    if (this.rendererWindows.has(window)) {
+      return;
+    }
+
+    this.rendererWindows.add(window);
+
+    const cleanup = () => {
+      this.rendererWindows.delete(window);
+      window.removeListener('closed', cleanup);
+    };
+
+    window.on('closed', cleanup);
+  }
+
+  private broadcastToRendererWindows(channel: string, payload: unknown) {
+    for (const rendererWindow of Array.from(this.rendererWindows)) {
+      if (rendererWindow.isDestroyed()) {
+        this.rendererWindows.delete(rendererWindow);
+        continue;
+      }
+
+      try {
+        rendererWindow.webContents.send(channel, payload);
+      } catch (error) {
+        console.warn(
+          `[Terminal] Failed to send ${channel} to window ${rendererWindow.id}:`,
+          error,
+        );
+      }
+    }
   }
 
   // Helper to generate session key from directory and context
@@ -184,22 +217,18 @@ class TerminalManager {
 
     // Handle PTY data
     ptyProcess.onData((data: string) => {
-      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-        this.mainWindow.webContents.send('terminal:data', {
-          sessionId,
-          data,
-        });
-      }
+      this.broadcastToRendererWindows('terminal:data', {
+        sessionId,
+        data,
+      });
     });
 
     // Handle PTY exit
     ptyProcess.onExit(async (exitCode: { exitCode: number }) => {
-      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-        this.mainWindow.webContents.send('terminal:exit', {
-          sessionId,
-          code: exitCode.exitCode,
-        });
-      }
+      this.broadcastToRendererWindows('terminal:exit', {
+        sessionId,
+        code: exitCode.exitCode,
+      });
 
       // Update AI session to mark terminal as closed
       if (session.agentSessionId) {
@@ -441,22 +470,18 @@ class TerminalManager {
 
           // Handle PTY data
           ptyProcess.onData((data: string) => {
-            if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-              this.mainWindow.webContents.send('terminal:data', {
-                sessionId,
-                data,
-              });
-            }
+            this.broadcastToRendererWindows('terminal:data', {
+              sessionId,
+              data,
+            });
           });
 
           // Handle PTY exit
           ptyProcess.onExit(async (exitCode: { exitCode: number }) => {
-            if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-              this.mainWindow.webContents.send('terminal:exit', {
-                sessionId,
-                code: exitCode.exitCode,
-              });
-            }
+            this.broadcastToRendererWindows('terminal:exit', {
+              sessionId,
+              code: exitCode.exitCode,
+            });
 
             // Update AI session to mark terminal as closed
             if (session.agentSessionId) {
@@ -789,22 +814,18 @@ class TerminalManager {
 
       // Handle PTY data
       ptyProcess.onData((data: string) => {
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-          this.mainWindow.webContents.send('terminal:data', {
-            sessionId,
-            data,
-          });
-        }
+        this.broadcastToRendererWindows('terminal:data', {
+          sessionId,
+          data,
+        });
       });
 
       // Handle PTY exit
       ptyProcess.onExit(async (exitCode: { exitCode: number }) => {
-        if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-          this.mainWindow.webContents.send('terminal:exit', {
-            sessionId,
-            code: exitCode.exitCode,
-          });
-        }
+        this.broadcastToRendererWindows('terminal:exit', {
+          sessionId,
+          code: exitCode.exitCode,
+        });
 
         // Update AI session to mark terminal as closed
         if (session.agentSessionId) {
@@ -886,16 +907,19 @@ class TerminalManager {
 
     // Terminal-specific: Notify all windows when the terminal window is shown
     terminalWindow.once('show', () => {
-      const windows = BrowserWindow.getAllWindows();
-      windows.forEach((window) => {
-        if (!window.isDestroyed()) {
-          window.webContents.send(TerminalAPIEvents.ON_WINDOW_READY, {
-            terminalId: sessionId,
-            agentSessionId: session.agentSessionId,
-            windowId: terminalWindow.id,
-          });
-        }
+      this.broadcastToRendererWindows(TerminalAPIEvents.ON_WINDOW_READY, {
+        terminalId: sessionId,
+        agentSessionId: session.agentSessionId,
+        windowId: terminalWindow.id,
       });
+
+      if (!terminalWindow.isDestroyed()) {
+        terminalWindow.webContents.send(TerminalAPIEvents.ON_WINDOW_READY, {
+          terminalId: sessionId,
+          agentSessionId: session.agentSessionId,
+          windowId: terminalWindow.id,
+        });
+      }
       console.log(
         `[Terminal] Window ready event sent for terminal ${sessionId}, agent session ${session.agentSessionId}`,
       );
@@ -911,17 +935,12 @@ class TerminalManager {
     terminalWindow.on('closed', () => {
       console.log(`[Terminal] Pop-out window closed for session ${sessionId}`);
       this.terminalWindows.delete(sessionId);
-      
-      // Notify all windows about the terminal window close
-      const windows = BrowserWindow.getAllWindows();
-      windows.forEach((window) => {
-        if (!window.isDestroyed()) {
-          window.webContents.send(TerminalAPIEvents.ON_WINDOW_CLOSE, {
-            terminalId: sessionId,
-            agentSessionId: session.agentSessionId,
-            windowId: terminalWindow.id,
-          });
-        }
+
+      // Notify registered windows about the terminal window close
+      this.broadcastToRendererWindows(TerminalAPIEvents.ON_WINDOW_CLOSE, {
+        terminalId: sessionId,
+        agentSessionId: session.agentSessionId,
+        windowId: terminalWindow.id,
       });
     });
 
