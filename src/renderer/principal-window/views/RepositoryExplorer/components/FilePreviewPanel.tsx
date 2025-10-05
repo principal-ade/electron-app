@@ -20,10 +20,28 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const [fileContent, setFileContent] = useState<string>('');
+  const [editorContent, setEditorContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [vimModeEnabled, setVimModeEnabled] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const latestFilePathRef = useRef<string | null>(null);
+  const isSavingRef = useRef(false);
+  const isDirtyRef = useRef(false);
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  useEffect(() => {
+    isDirtyRef.current = false;
+    setIsDirty(false);
+    setIsSaving(false);
+    isSavingRef.current = false;
+    setSaveError(null);
+  }, [filePath]);
 
   const getAbsolutePath = useCallback(
     (path: string) => (path.startsWith('/') ? path : `${repositoryPath}/${path}`),
@@ -87,6 +105,10 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     if (!filePath) {
       latestFilePathRef.current = null;
       setFileContent('');
+      setEditorContent('');
+      setIsDirty(false);
+      setIsSaving(false);
+      setSaveError(null);
       return;
     }
 
@@ -105,6 +127,11 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
 
       if (result && result.content !== undefined) {
         setFileContent(result.content);
+        setSaveError(null);
+        if (!isDirtyRef.current) {
+          setEditorContent(result.content);
+          setIsDirty(false);
+        }
       } else {
         throw new Error('Failed to read file');
       }
@@ -138,6 +165,9 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         await FileSystemService.watchFile(absolutePath);
         unsubscribe = FileSystemService.onFileChange((event) => {
           if (event.path === absolutePath) {
+            if (isSavingRef.current) {
+              return;
+            }
             loadFile();
           }
         });
@@ -191,6 +221,57 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   const fileName = filePath.split('/').pop() || filePath;
   const language = getLanguage(filePath);
   const isMarkdown = language === 'markdown';
+
+  const handleEditorChange = useCallback(
+    (value?: string) => {
+      const nextValue = value ?? '';
+      setEditorContent(nextValue);
+      setIsDirty(nextValue !== fileContent);
+      if (saveError) {
+        setSaveError(null);
+      }
+    },
+    [fileContent, saveError],
+  );
+
+  const handleEditorSave = useCallback(
+    async (value?: string) => {
+      if (!filePath) {
+        return;
+      }
+
+      const absolutePath = getAbsolutePath(filePath);
+      const contentToSave = value ?? editorContent;
+
+      if (!isDirty && contentToSave === fileContent) {
+        return;
+      }
+
+      isSavingRef.current = true;
+      setIsSaving(true);
+      setSaveError(null);
+
+      try {
+        await FileSystemService.writeFile(absolutePath, contentToSave);
+
+        if (latestFilePathRef.current === absolutePath) {
+          setFileContent(contentToSave);
+          setEditorContent(contentToSave);
+          setIsDirty(false);
+        }
+      } catch (err) {
+        if (latestFilePathRef.current === absolutePath) {
+          setSaveError(err instanceof Error ? err.message : 'Failed to save file');
+        }
+      } finally {
+        if (latestFilePathRef.current === absolutePath) {
+          setIsSaving(false);
+        }
+        isSavingRef.current = false;
+      }
+    },
+    [editorContent, fileContent, filePath, getAbsolutePath, isDirty],
+  );
 
   // Parse markdown into slides if it's a markdown file
   const markdownSlides = isMarkdown && fileContent ? (() => {
@@ -252,31 +333,77 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             </div>
           </div>
         </div>
-        {onClose && filePath && (
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              padding: '4px',
-              cursor: 'pointer',
-              color: theme.colors.textSecondary,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: '4px',
-              transition: 'background-color 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            <X size={16} />
-          </button>
-        )}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+          }}
+        >
+          {!isMarkdown && (
+            <>
+              {saveError ? (
+                <span style={{ color: theme.colors.error, fontSize: theme.fontSizes[0] }}>
+                  Save failed: {saveError}
+                </span>
+              ) : isSaving ? (
+                <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[0] }}>
+                  Saving...
+                </span>
+              ) : isDirty ? (
+                <span style={{ color: theme.colors.primary, fontSize: theme.fontSizes[0] }}>
+                  Unsaved changes
+                </span>
+              ) : (
+                <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[0] }}>
+                  Saved
+                </span>
+              )}
+              <button
+                onClick={() => void handleEditorSave()}
+                disabled={!isDirty || isSaving}
+                style={{
+                  backgroundColor: theme.colors.primary,
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '6px 10px',
+                  fontSize: theme.fontSizes[0],
+                  cursor: !isDirty || isSaving ? 'not-allowed' : 'pointer',
+                  opacity: !isDirty || isSaving ? 0.6 : 1,
+                  transition: 'opacity 0.2s ease',
+                }}
+              >
+                Save
+              </button>
+            </>
+          )}
+          {onClose && filePath && (
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '4px',
+                cursor: 'pointer',
+                color: theme.colors.textSecondary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '4px',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -325,11 +452,10 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           />
         ) : (
           <ThemedMonacoWithProvider
-            value={fileContent}
+            value={editorContent}
             language={language}
             vimMode={vimModeEnabled}
             options={{
-              readOnly: true,
               minimap: { enabled: false },
               lineNumbers: 'on',
               scrollBeyondLastLine: false,
@@ -347,6 +473,8 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
               },
             }}
             height="100%"
+            onChange={handleEditorChange}
+            onSave={handleEditorSave}
           />
         )}
       </div>
