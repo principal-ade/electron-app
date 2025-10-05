@@ -1,11 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-  ReactNode,
-} from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   GitBranch,
   Layers,
@@ -26,6 +19,7 @@ import {
   ConfigurablePanelLayout,
   type PanelDefinitionWithContent,
   type PanelLayout,
+  type PanelTabDefinition,
 } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { CityMapManager } from './shared/CityMapManager';
@@ -65,13 +59,14 @@ import {
 } from '../components/repository-maps/RightPaneContainer';
 import { FileTreeTab } from './shared/FileTreeTab';
 
-interface TabConfig {
-  id: string;
-  label: string;
-  icon: ReactNode;
-  content: ReactNode;
-  visible?: boolean;
-}
+type PanelTabConfig = PanelTabDefinition & { visible?: boolean };
+type TabbedPanelDefinition = PanelDefinitionWithContent & {
+  tabs?: PanelTabDefinition[];
+  activeTab?: string;
+  activeTabId?: string;
+  onTabChange?: (tabId: string) => void;
+  onActiveTabChange?: (tabId: string) => void;
+};
 
 interface RepositoryExplorationViewProps {
   repository: Repository;
@@ -1058,7 +1053,7 @@ export const RepositoryExplorationView: React.FC<
   }, [repositoryPathForTools]);
 
   // Create tabs configuration
-  const tabs: TabConfig[] = [
+  const tabs: PanelTabConfig[] = [
     {
       id: 'fileTree',
       label: 'Files',
@@ -1498,7 +1493,44 @@ export const RepositoryExplorationView: React.FC<
       ? fileViewerRightPanel
       : null;
   const visibleTabs = tabs.filter((tab) => tab.visible !== false);
-  const activeTabConfig = visibleTabs.find((tab) => tab.id === activeTab);
+
+  useEffect(() => {
+    if (!visibleTabs.some((tab) => tab.id === activeTab)) {
+      const nextTab = visibleTabs[0];
+      if (nextTab) {
+        handleTabChange(nextTab.id);
+      }
+    }
+  }, [visibleTabs, activeTab, handleTabChange]);
+
+  const leftPanelTabs: PanelTabDefinition[] = visibleTabs.map(
+    ({ visible: _visible, content, ...tab }) => ({
+      ...tab,
+      content: (
+        <div
+          style={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            backgroundColor: theme.colors.backgroundSecondary,
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              overflow: 'auto',
+              padding: '16px',
+              boxSizing: 'border-box',
+            }}
+          >
+            {content}
+          </div>
+        </div>
+      ),
+    }),
+  );
+
   const rightPaneViewMode = (
     shouldShowDocument
       ? 'document'
@@ -1595,99 +1627,6 @@ export const RepositoryExplorationView: React.FC<
                 ...gitHighlightLayers,
               ];
 
-          const leftPanel = (
-            <div
-              style={{
-                backgroundColor: theme.colors.backgroundSecondary,
-                border: `1px solid ${theme.colors.border}`,
-                borderRight: 'none',
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-                height: '100%',
-              }}
-            >
-              {/* Tab Headers */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${visibleTabs.length}, 1fr)`,
-                  borderBottom: `1px solid ${theme.colors.border}`,
-                  backgroundColor: theme.colors.backgroundLight,
-                  padding: '0 8px',
-                  flexShrink: 0,
-                }}
-              >
-                {visibleTabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabChange(tab.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      padding: '12px 16px',
-                      backgroundColor: 'transparent',
-                      color:
-                        activeTab === tab.id
-                          ? theme.colors.primary
-                          : theme.colors.textSecondary,
-                      border: 'none',
-                      borderBottom:
-                        activeTab === tab.id
-                          ? `3px solid ${theme.colors.primary}`
-                          : '3px solid transparent',
-                      marginBottom: activeTab === tab.id ? '-2px' : '-2px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: activeTab === tab.id ? 600 : 400,
-                      transition: 'all 0.15s ease',
-                      whiteSpace: 'nowrap',
-                      minWidth: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      opacity: activeTab === tab.id ? 1 : 0.7,
-                    }}
-                    onMouseEnter={(e) => {
-                      if (activeTab !== tab.id) {
-                        e.currentTarget.style.opacity = '0.9';
-                        e.currentTarget.style.color = theme.colors.text;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (activeTab !== tab.id) {
-                        e.currentTarget.style.opacity = '0.7';
-                        e.currentTarget.style.color = theme.colors.textSecondary;
-                      }
-                    }}
-                  >
-                    {tab.icon}
-                    <span
-                      style={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {tab.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab Content */}
-              <div
-                style={{
-                  flex: 1,
-                  overflow: 'auto',
-                  padding: '16px',
-                }}
-              >
-                {activeTabConfig?.content}
-              </div>
-            </div>
-          );
-
           const rightPanel = (
             <div
               style={{
@@ -1764,11 +1703,16 @@ export const RepositoryExplorationView: React.FC<
             </div>
           );
 
-          const panels: PanelDefinitionWithContent[] = [
+          const panels: TabbedPanelDefinition[] = [
             {
               id: 'left',
               label: 'Search & Tools',
-              content: leftPanel,
+              content: null,
+              tabs: leftPanelTabs,
+              activeTab: activeTab,
+              activeTabId: activeTab,
+              onTabChange: handleTabChange,
+              onActiveTabChange: handleTabChange,
             },
             {
               id: 'terminal',
