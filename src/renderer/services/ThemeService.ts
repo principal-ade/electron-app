@@ -94,13 +94,10 @@ class ThemeServiceClass extends EventEmitter {
     return baseTheme;
   }
 
-  /**
-   * Update a single color in the theme
-   */
-  async updateThemeColor(
+  private async updateThemeOverride(
     themeName: string,
-    colorPath: string,
-    newValue: string,
+    propertyPath: string,
+    newValue: unknown,
   ): Promise<void> {
     try {
       const preferences = await UserPreferencesService.getPreferences();
@@ -111,8 +108,8 @@ class ThemeServiceClass extends EventEmitter {
         lastModified: Date.now(),
       };
 
-      // Parse color path (e.g., "colors.primary")
-      const parts = colorPath.split('.');
+      // Parse property path (e.g., "colors.primary" or "fonts.body")
+      const parts = propertyPath.split('.');
       let current: any = themeOverrides.overrides;
 
       // Navigate/create nested structure
@@ -140,11 +137,35 @@ class ThemeServiceClass extends EventEmitter {
         await this.applyTheme(themeName, false);
       }
 
-      console.log(`[ThemeService] Updated ${colorPath} in ${themeName} theme`);
+      console.log(
+        `[ThemeService] Updated ${propertyPath} in ${themeName} theme`,
+      );
     } catch (error) {
-      console.error('[ThemeService] Failed to update theme color:', error);
+      console.error('[ThemeService] Failed to update theme override:', error);
       throw error;
     }
+  }
+
+  /**
+   * Update a single color in the theme
+   */
+  async updateThemeColor(
+    themeName: string,
+    colorPath: string,
+    newValue: string,
+  ): Promise<void> {
+    await this.updateThemeOverride(themeName, colorPath, newValue);
+  }
+
+  /**
+   * Update any string based theme setting (fonts, etc.)
+   */
+  async updateThemeSetting(
+    themeName: string,
+    propertyPath: string,
+    newValue: string,
+  ): Promise<void> {
+    await this.updateThemeOverride(themeName, propertyPath, newValue);
   }
 
   /**
