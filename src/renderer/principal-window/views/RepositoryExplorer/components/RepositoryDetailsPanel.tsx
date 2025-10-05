@@ -12,7 +12,8 @@ import { RepositoryTasksAndNotesPanel } from './RepositoryTasksAndNotesPanel';
 import { GitService, GitBranchStatus } from '../../../../main-process-api/GitService';
 import { RepositoryHeader } from './RepositoryHeader';
 import { GitStatusPanel } from './GitStatusPanel';
-import { RepositoryFilesPanel } from './RepositoryFilesPanel';
+import { GitChangesPanel } from './GitChangesPanel';
+import { MarkdownDocumentsPanel } from './MarkdownDocumentsPanel';
 import { QualityHexagonPanel } from './quality';
 import { SimpleCityVisualization, RepositoryCityService } from './city';
 import { RepositoryActionsPanel } from './RepositoryActionsPanel';
@@ -65,6 +66,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const [showConfiguration, setShowConfiguration] = useState(false);
   const [panelVisibility, setPanelVisibility] = useState<PanelVisibility>({
     files: true,
+    gitChanges: true,
     gitStatus: true,
     tasksAndNotes: true,
     cityVisualization: true,
@@ -149,6 +151,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         if (repoState?.panelVisibility) {
           setPanelVisibility({
             files: repoState.panelVisibility.files ?? true,
+            gitChanges: repoState.panelVisibility.gitChanges ?? true,
             gitStatus: repoState.panelVisibility.gitStatus ?? true,
             tasksAndNotes: repoState.panelVisibility.tasksAndNotes ?? true,
             cityVisualization: repoState.panelVisibility.cityVisualization ?? true,
@@ -159,6 +162,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           // Reset to defaults if no preferences found
           setPanelVisibility({
             files: true,
+            gitChanges: true,
             gitStatus: true,
             tasksAndNotes: true,
             cityVisualization: true,
@@ -847,7 +851,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 gap: '16px',
               }}
             >
-              {/* Left Column - Combined Files Panel, Git Status and Notes */}
+              {/* Left Column - Git Changes, Documents, Status and Notes */}
               <div
                 style={{
                   display: 'flex',
@@ -857,15 +861,21 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   minWidth: 0,
                 }}
               >
-                {/* Combined Git Changes and Markdown Files */}
-                {panelVisibility.files && (
-                  <RepositoryFilesPanel
+                {/* Git Changes */}
+                {panelVisibility.gitChanges && (
+                  <GitChangesPanel
                     repository={selectedRepository}
                     gitStatus={gitStatus}
-                    markdownFiles={sortedMarkdownFiles}
-                    isLoadingGitStatus={isLoadingGitStatus}
-                    isLoadingDocs={isLoadingDocs}
+                    isLoading={isLoadingGitStatus}
                     onFileClick={handleFileClick}
+                  />
+                )}
+
+                {/* Markdown Documents */}
+                {panelVisibility.files && (
+                  <MarkdownDocumentsPanel
+                    markdownFiles={sortedMarkdownFiles}
+                    isLoading={isLoadingDocs}
                     onMarkdownClick={handleFileClick}
                   />
                 )}
