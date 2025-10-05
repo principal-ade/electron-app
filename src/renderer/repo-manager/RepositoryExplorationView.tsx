@@ -19,7 +19,8 @@ import {
   ConfigurablePanelLayout,
   type PanelDefinitionWithContent,
   type PanelLayout,
-  type PanelTabDefinition,
+  type PanelGroup as PanelGroupConfig,
+  type TabsConfig,
 } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { CityMapManager } from './shared/CityMapManager';
@@ -61,14 +62,7 @@ import { FileTreeTab } from './shared/FileTreeTab';
 import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 
-type PanelTabConfig = PanelTabDefinition & { visible?: boolean };
-type TabbedPanelDefinition = PanelDefinitionWithContent & {
-  tabs?: PanelTabDefinition[];
-  activeTab?: string;
-  activeTabId?: string;
-  onTabChange?: (tabId: string) => void;
-  onActiveTabChange?: (tabId: string) => void;
-};
+type PanelTabConfig = { id: string; label: string; icon?: React.ReactNode; content: React.ReactNode; visible?: boolean };
 
 interface RepositoryExplorationViewProps {
   repository: Repository;
@@ -1523,7 +1517,7 @@ export const RepositoryExplorationView: React.FC<
     }
   }, [visibleTabs, activeTab, handleTabChange]);
 
-  const leftPanelTabs: PanelTabDefinition[] = visibleTabs.map(
+  const leftPanelTabs: PanelDefinitionWithContent[] = visibleTabs.map(
     ({ visible: _visible, content, ...tab }) => ({
       ...tab,
       content: (
@@ -1684,14 +1678,14 @@ export const RepositoryExplorationView: React.FC<
             </div>
           );
 
-          const layout: PanelLayout = panelLayout || {
+          const propsPanelLayout = panelLayout || {
             left: 'left',
             middle: 'terminal',
             right: 'middle',
           };
 
           // Terminal panel - defined after layout so we can check visibility
-          const isTerminalVisible = layout.middle === 'terminal' || layout.left === 'terminal' || layout.right === 'terminal';
+          const isTerminalVisible = propsPanelLayout.middle === 'terminal' || propsPanelLayout.left === 'terminal' || propsPanelLayout.right === 'terminal';
           const terminalPanel = activeFileTreeSource?.type === 'local' ? (
             <TerminalPanel
               directory={activeFileTreeSource.location}
@@ -1723,28 +1717,35 @@ export const RepositoryExplorationView: React.FC<
             </div>
           );
 
-          const panels: TabbedPanelDefinition[] = [
-            {
-              id: 'left',
-              label: 'Search & Tools',
-              content: null,
-              tabs: leftPanelTabs,
-              activeTab: activeTab,
-              activeTabId: activeTab,
-              onTabChange: handleTabChange,
-              onActiveTabChange: handleTabChange,
-            },
+          // Create all panel definitions (tabs + other panels)
+          const allPanels: PanelDefinitionWithContent[] = [
+            ...leftPanelTabs,
             {
               id: 'terminal',
               label: 'Terminal',
               content: terminalPanel,
             },
             {
-              id: 'middle',
+              id: 'cityView',
               label: 'City Visualization',
               content: rightPanel,
             },
           ];
+
+          // Create the layout structure with tab group for left panel
+          const leftPanelGroup: PanelGroupConfig = {
+            type: 'tabs',
+            panels: leftPanelTabs.map(tab => tab.id),
+            config: {
+              defaultActiveTab: leftPanelTabs.findIndex(tab => tab.id === activeTab),
+            } as TabsConfig,
+          };
+
+          const actualPanelLayout: PanelLayout = {
+            left: leftPanelGroup,
+            middle: propsPanelLayout?.middle === 'terminal' ? 'terminal' : 'cityView',
+            right: propsPanelLayout?.right === 'terminal' ? 'terminal' : (propsPanelLayout?.right === 'middle' ? 'cityView' : propsPanelLayout?.right || 'cityView'),
+          };
 
           return (
             <div
@@ -1755,8 +1756,8 @@ export const RepositoryExplorationView: React.FC<
               }}
             >
               <ConfigurablePanelLayout
-                panels={panels}
-                layout={layout}
+                panels={allPanels}
+                layout={actualPanelLayout}
                 collapsiblePanels={{ left: true, right: true }}
                 defaultSizes={{ left: 20, middle: 45, right: 35 }}
                 minSizes={{ left: 15, middle: 30, right: 25 }}

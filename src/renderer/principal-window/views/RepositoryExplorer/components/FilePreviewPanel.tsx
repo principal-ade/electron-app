@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { ThemedMonacoWithProvider } from '@principal-ade/industry-themed-monaco-editor';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
@@ -152,76 +152,6 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     loadFile();
   }, [loadFile]);
 
-  useEffect(() => {
-    if (!filePath) {
-      return;
-    }
-
-    const absolutePath = getAbsolutePath(filePath);
-    let unsubscribe: (() => void) | undefined;
-
-    const setupWatching = async () => {
-      try {
-        await FileSystemService.watchFile(absolutePath);
-        unsubscribe = FileSystemService.onFileChange((event) => {
-          if (event.path === absolutePath) {
-            if (isSavingRef.current) {
-              return;
-            }
-            loadFile();
-          }
-        });
-      } catch (watchError) {
-        console.error('Error setting up file watching:', watchError);
-      }
-    };
-
-    setupWatching();
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-      FileSystemService.stopWatchingFile(absolutePath).catch((stopError) => {
-        console.error('Error stopping file watching:', stopError);
-      });
-    };
-  }, [filePath, getAbsolutePath, loadFile]);
-
-  if (!filePath) {
-    return (
-      <div
-        style={{
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'column',
-          color: theme.colors.textSecondary,
-          padding: '20px',
-          textAlign: 'center',
-        }}
-      >
-        <FileText size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
-        <div style={{
-          fontSize: theme.fontSizes[3],
-          fontWeight: 600,
-          marginBottom: '12px',
-          color: theme.colors.text,
-        }}>
-          File Preview
-        </div>
-        <div style={{ fontSize: theme.fontSizes[1] }}>
-          Select a file from the git changes or repository map to preview
-        </div>
-      </div>
-    );
-  }
-
-  const fileName = filePath.split('/').pop() || filePath;
-  const language = getLanguage(filePath);
-  const isMarkdown = language === 'markdown';
-
   const handleEditorChange = useCallback(
     (value?: string) => {
       const nextValue = value ?? '';
@@ -273,8 +203,51 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     [editorContent, fileContent, filePath, getAbsolutePath, isDirty],
   );
 
+  useEffect(() => {
+    if (!filePath) {
+      return;
+    }
+
+    const absolutePath = getAbsolutePath(filePath);
+    let unsubscribe: (() => void) | undefined;
+
+    const setupWatching = async () => {
+      try {
+        await FileSystemService.watchFile(absolutePath);
+        unsubscribe = FileSystemService.onFileChange((event) => {
+          if (event.path === absolutePath) {
+            if (isSavingRef.current) {
+              return;
+            }
+            loadFile();
+          }
+        });
+      } catch (watchError) {
+        console.error('Error setting up file watching:', watchError);
+      }
+    };
+
+    setupWatching();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+      FileSystemService.stopWatchingFile(absolutePath).catch((stopError) => {
+        console.error('Error stopping file watching:', stopError);
+      });
+    };
+  }, [filePath, getAbsolutePath, loadFile]);
+
   // Parse markdown into slides if it's a markdown file
-  const markdownSlides = isMarkdown && fileContent ? (() => {
+  const fileName = filePath?.split('/').pop() || filePath || '';
+  const language = filePath ? getLanguage(filePath) : 'plaintext';
+  const isMarkdown = language === 'markdown';
+
+  const markdownSlides = useMemo(() => {
+    if (!isMarkdown || !fileContent) {
+      return [];
+    }
     try {
       const presentation = parseMarkdownIntoPresentation(fileContent);
       return (presentation?.slides || []).map((s) => s.location.content);
@@ -282,7 +255,37 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
       console.warn('[FilePreviewPanel] Failed to parse markdown:', e);
       return [fileContent];
     }
-  })() : [];
+  }, [isMarkdown, fileContent]);
+
+  if (!filePath) {
+    return (
+      <div
+        style={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
+          color: theme.colors.textSecondary,
+          padding: '20px',
+          textAlign: 'center',
+        }}
+      >
+        <FileText size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
+        <div style={{
+          fontSize: theme.fontSizes[3],
+          fontWeight: 600,
+          marginBottom: '12px',
+          color: theme.colors.text,
+        }}>
+          File Preview
+        </div>
+        <div style={{ fontSize: theme.fontSizes[1] }}>
+          Select a file from the git changes or repository map to preview
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
