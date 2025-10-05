@@ -17,6 +17,9 @@ import type { AlexandriaEntry } from '@a24z/core-library';
  * Register all modern window IPC handlers
  */
 export function registerModernWindowHandlers(): void {
+  const multiFileEditorDisabledMessage =
+    'The multi-file editor is temporarily unavailable while we migrate to the new Monaco experience.';
+
   // Store Viewer Window
   ipcMain.handle(
     WindowEvent.OPEN_STORE_VIEWER,
@@ -75,45 +78,17 @@ export function registerModernWindowHandlers(): void {
         }>;
       },
     ) => {
-      const windowName = `file-editor-${request.windowId}`;
+      await dialog.showMessageBox({
+        type: 'info',
+        message: multiFileEditorDisabledMessage,
+      });
 
-      // Get screen dimensions for left-half positioning
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width: screenWidth, height: screenHeight } =
-        primaryDisplay.workAreaSize;
-
-      const window = createSpecialWindow(
-        windowName,
-        {
-          width: Math.floor(screenWidth / 2),
-          height: screenHeight,
-          x: 0,
-          y: 0,
-          minWidth: 1000,
-          minHeight: 600,
-          title: request.windowTitle || `File Editor`,
-        },
-        {
-          fileSystemAdapter: true,
-          contentSecurityPolicy: true,
-          externalLinkHandler: true,
-          menu: true,
-        },
-      );
-
-      if (!window) return;
-
-      // Pass the request data with a type indicator
-      const payload = {
-        ...request,
-        editorType: 'local',
-      };
-
-      // Encode the payload as JSON in the URL
-      const encoded = encodeURIComponent(JSON.stringify(payload));
-      const url = `${resolveHtmlPath('index.html')}#multi-file-editor/${encoded}`;
-
-      window.window.loadURL(url);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(
+          '[modernWindowHandlers] OPEN_LOCAL_FILES intercepted; multi-file editor disabled.',
+          request,
+        );
+      }
     },
   );
 
@@ -133,46 +108,17 @@ export function registerModernWindowHandlers(): void {
         branch?: string;
       },
     ) => {
-      const windowName = `file-editor-${request.windowId}`;
+      await dialog.showMessageBox({
+        type: 'info',
+        message: multiFileEditorDisabledMessage,
+      });
 
-      // Get screen dimensions for left-half positioning
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width: screenWidth, height: screenHeight } =
-        primaryDisplay.workAreaSize;
-
-      const window = createSpecialWindow(
-        windowName,
-        {
-          width: Math.floor(screenWidth / 2),
-          height: screenHeight,
-          x: 0,
-          y: 0,
-          minWidth: 1000,
-          minHeight: 600,
-          title: request.windowTitle || `File Editor - ${request.owner}/${request.repo}`,
-        },
-        {
-          fileSystemAdapter: true,
-          githubAdapter: true,
-          contentSecurityPolicy: true,
-          externalLinkHandler: true,
-          menu: true,
-        },
-      );
-
-      if (!window) return;
-
-      // Pass the request data with a type indicator
-      const payload = {
-        ...request,
-        editorType: 'remote',
-      };
-
-      // Encode the payload as JSON in the URL
-      const encoded = encodeURIComponent(JSON.stringify(payload));
-      const url = `${resolveHtmlPath('index.html')}#multi-file-editor/${encoded}`;
-
-      window.window.loadURL(url);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(
+          '[modernWindowHandlers] OPEN_REMOTE_FILES intercepted; multi-file editor disabled.',
+          request,
+        );
+      }
     },
   );
 

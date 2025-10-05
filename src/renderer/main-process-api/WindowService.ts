@@ -38,11 +38,15 @@ export class WindowService {
   static async openLocalFiles(
     request: OpenLocalFilesRequest,
   ): Promise<void> {
-    try {
-      await window.mainProcess.window.openLocalFiles(request);
-    } catch (error) {
-      console.error('[WindowService] Failed to open local files:', error);
-      throw new Error('Failed to open local files editor window');
+    window.alert(
+      'The multi-file editor is temporarily unavailable while we migrate to the new Monaco experience.',
+    );
+
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        '[WindowService] openLocalFiles call intercepted because the multi-file editor has been disabled.',
+        request,
+      );
     }
   }
 
@@ -53,11 +57,15 @@ export class WindowService {
   static async openRemoteFiles(
     request: OpenRemoteFilesRequest,
   ): Promise<void> {
-    try {
-      await window.mainProcess.window.openRemoteFiles(request);
-    } catch (error) {
-      console.error('[WindowService] Failed to open remote files:', error);
-      throw new Error('Failed to open remote files editor window');
+    window.alert(
+      'The multi-file editor is temporarily unavailable while we migrate to the new Monaco experience.',
+    );
+
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        '[WindowService] openRemoteFiles call intercepted because the multi-file editor has been disabled.',
+        request,
+      );
     }
   }
 
