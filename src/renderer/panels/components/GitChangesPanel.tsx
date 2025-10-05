@@ -1,23 +1,61 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { GitStatusFileTree, type GitFileStatus } from '@a24z/dynamic-file-tree';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
-import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../../shared/types/repository.types';
+import { useRepositoryPanelContext } from '../RepositoryPanelProvider';
 
 interface GitChangesPanelProps {
-  repository: EnhancedAlexandriaEntry;
-  gitStatus: GitStatus;
-  isLoading: boolean;
-  onFileClick: (filePath: string) => void;
+  onFileClick?: (filePath: string) => void;
+  emptyMessage?: string;
+  loadingMessage?: string;
 }
 
 export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
-  repository,
-  gitStatus,
-  isLoading,
   onFileClick,
+  emptyMessage = 'No git changes to display',
+  loadingMessage = 'Loading git changes...',
 }) => {
   const { theme } = useTheme();
+  const {
+    repository,
+    repositoryPath,
+    gitStatus,
+    gitStatusLoading,
+    actions,
+  } = useRepositoryPanelContext();
+
+  const handleFileSelect = useCallback(
+    (filePath: string) => {
+      if (onFileClick) {
+        onFileClick(filePath);
+        return;
+      }
+
+      actions.openFile?.(filePath);
+    },
+    [actions.openFile, onFileClick],
+  );
+
+  if (!repositoryPath) {
+    return (
+      <div
+        style={{
+          padding: '16px',
+          backgroundColor: theme.colors.backgroundSecondary,
+          borderRadius: '8px',
+          border: `1px solid ${theme.colors.border}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '160px',
+          color: theme.colors.textSecondary,
+          textAlign: 'center',
+        }}
+      >
+        Git changes are only available for local repositories.
+      </div>
+    );
+  }
 
   const hasChanges =
     gitStatus.staged.length > 0 ||
@@ -26,7 +64,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     gitStatus.deleted.length > 0;
 
   const gitChangesData = useMemo(() => {
-    if (!hasChanges || isLoading) return null;
+    if (!hasChanges || gitStatusLoading) return null;
 
     const allChangedFiles = [
       ...gitStatus.staged.map((f) => f.path),
@@ -38,7 +76,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     const builder = new PathsFileTreeBuilder();
     const tree = builder.build({
       files: allChangedFiles,
-      rootPath: repository.path,
+      rootPath: repository?.path ?? repositoryPath,
     });
 
     const statusData: GitFileStatus[] = [
@@ -69,7 +107,13 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     ];
 
     return { tree, statusData };
-  }, [gitStatus, repository.path, hasChanges, isLoading]);
+  }, [
+    gitStatus,
+    repository?.path,
+    repositoryPath,
+    hasChanges,
+    gitStatusLoading,
+  ]);
 
   return (
     <div
@@ -101,7 +145,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
         >
           Git Changes
         </h3>
-        {hasChanges && !isLoading && (
+        {hasChanges && !gitStatusLoading && (
           <span
             style={{
               fontSize: theme.fontSizes[1],
@@ -115,7 +159,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
       </div>
 
       <div style={{ flex: 1, overflow: 'auto' }}>
-        {isLoading ? (
+        {gitStatusLoading ? (
           <div
             style={{
               padding: '20px',
@@ -123,7 +167,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               color: theme.colors.textSecondary,
             }}
           >
-            Loading git changes...
+            {loadingMessage}
           </div>
         ) : !hasChanges ? (
           <div
@@ -133,7 +177,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               color: theme.colors.textSecondary,
             }}
           >
-            No git changes to display
+            {emptyMessage}
           </div>
         ) : (
           gitChangesData && (
@@ -141,7 +185,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               fileTree={gitChangesData.tree}
               theme={theme}
               gitStatusData={gitChangesData.statusData}
-              onFileSelect={onFileClick}
+              onFileSelect={handleFileSelect}
               showIcons
             />
           )

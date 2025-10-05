@@ -58,6 +58,8 @@ import {
   RightPaneView,
 } from '../components/repository-maps/RightPaneContainer';
 import { FileTreeTab } from './shared/FileTreeTab';
+import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
+import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 
 type PanelTabConfig = PanelTabDefinition & { visible?: boolean };
 type TabbedPanelDefinition = PanelDefinitionWithContent & {
@@ -1086,6 +1088,24 @@ export const RepositoryExplorationView: React.FC<
           onSearchResultHover={handleSearchResultHover}
           onFolderFiltersChange={handleFolderFiltersChange}
         />
+      ),
+    },
+    {
+      id: 'gitChanges',
+      label: 'Git Changes',
+      icon: <GitBranch size={14} />,
+      visible: activeFileTreeSource?.type === 'local',
+      content: (
+        <RepositoryPanelProvider
+          repositoryPath={
+            activeFileTreeSource?.type === 'local'
+              ? activeFileTreeSource.location
+              : null
+          }
+          actions={{ openFile: handleFileClick }}
+        >
+          <GitChangesPanel />
+        </RepositoryPanelProvider>
       ),
     },
     {

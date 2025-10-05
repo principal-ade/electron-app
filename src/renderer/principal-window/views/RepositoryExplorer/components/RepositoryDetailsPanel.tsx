@@ -3,6 +3,7 @@ import { useTheme } from '@a24z/industry-theme';
 import type { CityData } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../../shared/types/repository.types';
+import type { RepositoryPanelVisibility, RepositoryPanelId } from '../../../../../shared/types/repositoryPanel.types';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
 import { RepositoryMonitoringService } from '../../../../main-process-api/RepositoryMonitoringService';
 import { WindowService } from '../../../../main-process-api/WindowService';
@@ -12,7 +13,6 @@ import { RepositoryTasksAndNotesPanel } from './RepositoryTasksAndNotesPanel';
 import { GitService, GitBranchStatus } from '../../../../main-process-api/GitService';
 import { RepositoryHeader } from './RepositoryHeader';
 import { GitStatusPanel } from './GitStatusPanel';
-import { GitChangesPanel } from './GitChangesPanel';
 import { MarkdownDocumentsPanel } from './MarkdownDocumentsPanel';
 import { QualityHexagonPanel } from './quality';
 import { SimpleCityVisualization, RepositoryCityService } from './city';
@@ -21,8 +21,11 @@ import { SecretsModal } from './SecretsModal';
 import { ActRunnerService } from '../../../../main-process-api/ActRunnerService';
 import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
 import { ActRunnerWorkflowChannels, type ActRunnerWorkflowEvent } from '../../../../../shared/types/act.types';
-import { PanelConfiguration, type PanelVisibility } from './PanelConfiguration';
+import { PanelConfiguration } from './PanelConfiguration';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
+import { RepositoryPanelProvider } from '../../../../panels/RepositoryPanelProvider';
+import { GitChangesPanel } from '../../../../panels/components/GitChangesPanel';
+import { createDefaultPanelVisibility } from '../../../../panels/registry';
 
 interface RepositoryDetailsPanelProps {
   selectedRepository: EnhancedAlexandriaEntry | null;
@@ -30,7 +33,6 @@ interface RepositoryDetailsPanelProps {
   markdownFiles: Array<{ path: string; lastModified?: string }>;
   gitStatus: GitStatus;
   isLoadingDocs: boolean;
-  isLoadingGitStatus: boolean;
   isLoadingRepository?: boolean;
   onOpenDashboard: (repo: EnhancedAlexandriaEntry) => void;
   onRepositoryRemoved?: (removedRepoName: string) => void;
@@ -47,7 +49,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   markdownFiles,
   gitStatus,
   isLoadingDocs,
-  isLoadingGitStatus,
   isLoadingRepository = false,
   onOpenDashboard,
   onRepositoryRemoved,
@@ -64,15 +65,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
   // Panel configuration state
   const [showConfiguration, setShowConfiguration] = useState(false);
-  const [panelVisibility, setPanelVisibility] = useState<PanelVisibility>({
-    files: true,
-    gitChanges: true,
-    gitStatus: true,
-    tasksAndNotes: true,
-    cityVisualization: true,
-    actions: true,
-    packageInfo: true,
-  });
+  const [panelVisibility, setPanelVisibility] = useState<RepositoryPanelVisibility>(
+    createDefaultPanelVisibility(),
+  );
 
   // Branch sync status states
   const [branchStatus, setBranchStatus] = useState<GitBranchStatus | null>(null);
@@ -149,26 +144,20 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         const repoState = preferences.repositoryUIStates?.[repositoryId];
 
         if (repoState?.panelVisibility) {
-          setPanelVisibility({
-            files: repoState.panelVisibility.files ?? true,
-            gitChanges: repoState.panelVisibility.gitChanges ?? true,
-            gitStatus: repoState.panelVisibility.gitStatus ?? true,
-            tasksAndNotes: repoState.panelVisibility.tasksAndNotes ?? true,
-            cityVisualization: repoState.panelVisibility.cityVisualization ?? true,
-            actions: repoState.panelVisibility.actions ?? true,
-            packageInfo: repoState.panelVisibility.packageInfo ?? true,
-          });
+          const defaultVisibility = createDefaultPanelVisibility();
+          const nextVisibility: RepositoryPanelVisibility = {
+            ...defaultVisibility,
+          };
+
+          for (const [key, value] of Object.entries(repoState.panelVisibility)) {
+            if (typeof value === 'boolean' && key in nextVisibility) {
+              nextVisibility[key as RepositoryPanelId] = value;
+            }
+          }
+
+          setPanelVisibility(nextVisibility);
         } else {
-          // Reset to defaults if no preferences found
-          setPanelVisibility({
-            files: true,
-            gitChanges: true,
-            gitStatus: true,
-            tasksAndNotes: true,
-            cityVisualization: true,
-            actions: true,
-            packageInfo: true,
-          });
+          setPanelVisibility(createDefaultPanelVisibility());
         }
       } catch (error) {
         console.error('Error loading panel preferences:', error);
@@ -179,7 +168,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   }, [repositoryId]);
 
   // Save panel visibility preferences
-  const handlePanelVisibilityChange = useCallback(async (newVisibility: PanelVisibility) => {
+  const handlePanelVisibilityChange = useCallback(async (newVisibility: RepositoryPanelVisibility) => {
     setPanelVisibility(newVisibility);
 
     if (!repositoryId) return;
@@ -863,12 +852,12 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
               >
                 {/* Git Changes */}
                 {panelVisibility.gitChanges && (
-                  <GitChangesPanel
-                    repository={selectedRepository}
-                    gitStatus={gitStatus}
-                    isLoading={isLoadingGitStatus}
-                    onFileClick={handleFileClick}
-                  />
+                  <RepositoryPanelProvider
+                    repositoryPath={selectedRepository?.path ?? null}
+                    actions={{ openFile: handleFileClick }}
+                  >
+                    <GitChangesPanel />
+                  </RepositoryPanelProvider>
                 )}
 
                 {/* Markdown Documents */}

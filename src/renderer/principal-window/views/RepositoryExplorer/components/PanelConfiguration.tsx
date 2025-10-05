@@ -1,19 +1,11 @@
 import React from 'react';
 import { useTheme } from '@a24z/industry-theme';
-
-export interface PanelVisibility {
-  files: boolean;
-  gitChanges: boolean;
-  gitStatus: boolean;
-  tasksAndNotes: boolean;
-  cityVisualization: boolean;
-  actions: boolean;
-  packageInfo: boolean;
-}
+import type { RepositoryPanelVisibility } from '../../../../../shared/types/repositoryPanel.types';
+import { repositoryPanelDefinitions } from '../../../../panels/registry';
 
 interface PanelConfigurationProps {
-  panelVisibility: PanelVisibility;
-  onPanelVisibilityChange: (visibility: PanelVisibility) => void;
+  panelVisibility: RepositoryPanelVisibility;
+  onPanelVisibilityChange: (visibility: RepositoryPanelVisibility) => void;
   onHide: () => void;
 }
 
@@ -24,17 +16,7 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
 }) => {
   const { theme } = useTheme();
 
-  const panels = [
-    { key: 'files' as const, label: 'Markdown Documents' },
-    { key: 'gitChanges' as const, label: 'Git Changes' },
-    { key: 'gitStatus' as const, label: 'Git Status' },
-    { key: 'tasksAndNotes' as const, label: 'Tasks & Notes' },
-    { key: 'cityVisualization' as const, label: 'City Visualization' },
-    { key: 'actions' as const, label: 'Repository Actions' },
-    { key: 'packageInfo' as const, label: 'Package Information' },
-  ];
-
-  const handleToggle = (key: keyof PanelVisibility) => {
+  const handleToggle = (key: keyof RepositoryPanelVisibility) => {
     onPanelVisibilityChange({
       ...panelVisibility,
       [key]: !panelVisibility[key],
@@ -97,9 +79,9 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
           gap: '12px',
         }}
       >
-        {panels.map(({ key, label }) => (
+        {repositoryPanelDefinitions.map(({ id, label }) => (
           <label
-            key={key}
+            key={id}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -120,8 +102,8 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
           >
             <input
               type="checkbox"
-              checked={panelVisibility[key]}
-              onChange={() => handleToggle(key)}
+              checked={panelVisibility[id] ?? true}
+              onChange={() => handleToggle(id)}
               style={{
                 width: '16px',
                 height: '16px',
