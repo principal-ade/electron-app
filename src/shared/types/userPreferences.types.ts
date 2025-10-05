@@ -1,5 +1,6 @@
 import { EditorId } from './editor.types';
 import { TerminalId } from './terminal.types';
+import type { RepositoryPanelVisibility } from './repositoryPanel.types';
 
 // Repository view types - unified naming
 export type RepositoryViewType = 'exploration';
@@ -39,14 +40,7 @@ export interface RepositoryUIState {
   };
 
   // Panel visibility preferences for repository details view
-  panelVisibility?: {
-    files?: boolean;
-    gitStatus?: boolean;
-    tasksAndNotes?: boolean;
-    cityVisualization?: boolean;
-    actions?: boolean;
-    packageInfo?: boolean;
-  };
+  panelVisibility?: Partial<RepositoryPanelVisibility>;
 
   // Last accessed timestamp
   lastAccessed?: number;
