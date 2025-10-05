@@ -205,6 +205,7 @@ export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = (
   themeName,
   onClose,
 }) => {
+  console.log('ThemeCustomizationPanel component initialized!', { themeName });
   const { theme } = useTheme();
   const [currentTheme, setCurrentTheme] = useState<Theme | null>(null);
   const [baseTheme, setBaseTheme] = useState<Theme | null>(null);
@@ -215,16 +216,23 @@ export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = (
   // Load theme on mount and capture snapshot
   useEffect(() => {
     const loadTheme = async () => {
+      console.log('Loading theme:', themeName);
       const active = await ThemeService.getActiveTheme(themeName);
       const base = ThemeService.getBaseTheme(themeName);
+
+      console.log('Theme loaded:', { active, base });
 
       if (active) {
         setCurrentTheme(active);
         snapshotRef.current = JSON.parse(JSON.stringify(active)); // Deep clone
+      } else {
+        console.error('Failed to load active theme:', themeName);
       }
 
       if (base) {
         setBaseTheme(base);
+      } else {
+        console.error('Failed to load base theme:', themeName);
       }
     };
 
@@ -330,8 +338,11 @@ export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = (
   };
 
   if (!currentTheme || !baseTheme) {
+    console.log('ThemeCustomizationPanel: waiting for themes to load...', { currentTheme, baseTheme });
     return null;
   }
+
+  console.log('ThemeCustomizationPanel: rendering panel!');
 
   return (
     <>

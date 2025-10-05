@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTheme } from '@a24z/industry-theme';
 import { Settings } from 'lucide-react';
 import { ThemeService } from '../../services/ThemeService';
@@ -10,16 +11,36 @@ export const ThemeCustomizationButton: React.FC = () => {
   const { theme, colorMode } = useTheme();
 
   useEffect(() => {
-    // Get current theme
-    const themeName = ThemeService.getCurrentThemeName();
-    setCurrentTheme(themeName);
+    console.log('showCustomizationPanel changed to:', showCustomizationPanel);
+  }, [showCustomizationPanel]);
+
+  useEffect(() => {
+    // Wait a bit for ThemeService to initialize, then get current theme
+    const getThemeName = () => {
+      const themeName = ThemeService.getCurrentThemeName();
+      console.log('ThemeService.getCurrentThemeName() returned:', themeName);
+      // Only update if it's not 'default' (which means not initialized yet)
+      if (themeName && themeName !== 'default') {
+        setCurrentTheme(themeName);
+      }
+    };
+
+    // Try immediately
+    getThemeName();
+
+    // Also try after a delay in case ThemeService hasn't loaded yet
+    const timeout = setTimeout(getThemeName, 100);
 
     // Listen for theme changes
     const unsubscribe = ThemeService.onThemeChange(({ themeName }) => {
+      console.log('Theme changed to:', themeName);
       setCurrentTheme(themeName);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timeout);
+      unsubscribe();
+    };
   }, []);
 
   const accentColor =
@@ -39,7 +60,9 @@ export const ThemeCustomizationButton: React.FC = () => {
         <button
           onClick={(e) => {
             e.stopPropagation();
+            console.log('ThemeCustomizationButton clicked!');
             setShowCustomizationPanel(true);
+            console.log('showCustomizationPanel set to true');
           }}
           style={{
             display: 'flex',

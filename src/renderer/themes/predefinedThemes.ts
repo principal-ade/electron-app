@@ -74,6 +74,11 @@ export const getThemeNames = (): string[] => {
 
 // Get theme by name
 export const getThemeByName = (name: string): Theme | undefined => {
+  // If theme doesn't exist, fall back to 'terminal' as default
+  if (!predefinedThemes[name]) {
+    console.warn(`Theme '${name}' not found, falling back to 'terminal'`);
+    return predefinedThemes['terminal']?.theme;
+  }
   return predefinedThemes[name]?.theme;
 };
 

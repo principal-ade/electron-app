@@ -270,6 +270,7 @@ export const IntegratedShell: React.FC = () => {
               : theme.colors.backgroundSecondary,
             borderTopLeftRadius: '8px', // Rounded corner creates the cutout effect
             overflow: 'hidden',
+            pointerEvents: 'none', // Allow clicks through to titlebar
           }}
         >
           <div className="view-container" style={{
@@ -285,6 +286,7 @@ export const IntegratedShell: React.FC = () => {
             backgroundColor: mode === 'dark' && theme.modes?.dark?.background
               ? theme.modes.dark.background
               : theme.colors.background,
+            pointerEvents: 'auto', // Re-enable pointer events for content
           }}>
             {/* Views will be rendered here based on activeView */}
             {activeView === 'repository' && (
