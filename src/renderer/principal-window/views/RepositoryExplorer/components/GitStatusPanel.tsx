@@ -9,7 +9,7 @@ interface GitStatusPanelProps {
 
 /**
  * GitStatusPanel - Displays commit information only
- * Git changes are now shown in RepositoryFilesPanel
+ * Git changes are now shown in GitChangesPanel
  */
 export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
   repository,

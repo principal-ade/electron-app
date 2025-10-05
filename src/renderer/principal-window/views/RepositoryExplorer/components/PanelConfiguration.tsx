@@ -3,6 +3,7 @@ import { useTheme } from '@a24z/industry-theme';
 
 export interface PanelVisibility {
   files: boolean;
+  gitChanges: boolean;
   gitStatus: boolean;
   tasksAndNotes: boolean;
   cityVisualization: boolean;
@@ -24,7 +25,8 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
   const { theme } = useTheme();
 
   const panels = [
-    { key: 'files' as const, label: 'Files & Git Changes' },
+    { key: 'files' as const, label: 'Markdown Documents' },
+    { key: 'gitChanges' as const, label: 'Git Changes' },
     { key: 'gitStatus' as const, label: 'Git Status' },
     { key: 'tasksAndNotes' as const, label: 'Tasks & Notes' },
     { key: 'cityVisualization' as const, label: 'City Visualization' },
