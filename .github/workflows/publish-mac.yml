@@ -45,6 +45,11 @@ jobs:
           cd release/app
           npm install --legacy-peer-deps --ignore-scripts
 
+      - name: Setup Python and install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip3 install Pillow
+
       - name: Import Code Signing Certificate
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
