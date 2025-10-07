@@ -165,7 +165,7 @@ try {
   const publishArg = shouldPublish
     ? '--publish always'
     : '--publish never';
-  execSync(`electron-builder build ${publishArg}`, {
+  execSync(`npx electron-builder build ${publishArg}`, {
     cwd: projectRoot,
     stdio: 'inherit',
   });

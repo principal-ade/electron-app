@@ -24,7 +24,7 @@ import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import TerminalPanel from '../panels/TerminalPanel';
-import { TabbedTerminalPanel } from '../panels/TabbedTerminalPanel';
+import { TabbedTerminalPanel } from '../panels/components/TabbedTerminalPanel';
 
 import type { Repository } from '../../shared/types/repository.types';
 import { RightPaneMode } from '../../shared/types/userPreferences.types';
@@ -369,60 +369,33 @@ export const RepositoryExplorationView: React.FC<
 
   // Track the current loading file to prevent race conditions
 
-  // Handle documentation selection - defined early so openFileInRightPane can use it
+  // Handle documentation selection - now just sets the path, panel loads content itself
   const handleDocumentSelect = useCallback(
     async (filePath: string, type: 'markdown' | 'excalidraw') => {
       setSelectedDocPath(filePath);
       setSelectedDocType(type);
-      setLoadingDoc(true);
-
-      try {
-        // For local sources, read from filesystem
-        if (activeFileTreeSource?.type === 'local') {
-          // Build full path for local files
-          const fullPath = filePath.startsWith('/')
-            ? filePath
-            : `${activeFileTreeSource.location}/${filePath}`.replace(
-                /\/+/g,
-                '/',
-              );
-
-          const result = await FileSystemService.readFile(fullPath);
-          if (result?.content) {
-            setDocContent(result.content);
-          } else {
-            setDocContent(null);
-          }
-        } else if (activeFileTreeSource?.type === 'remote') {
-          // For remote sources, use GitHub API
-          const relativePath = filePath.startsWith('/')
-            ? filePath.substring(1)
-            : filePath;
-          const content =
-            await fileViewerContentProvider.readFileContent(relativePath);
-          if (content) {
-            setDocContent(content);
-          } else {
-            setDocContent(null);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load document:', error);
-        setDocContent(null);
-      } finally {
-        setLoadingDoc(false);
-      }
+      setRightPaneMode('document');
     },
-    [activeFileTreeSource, fileViewerContentProvider],
+    [],
   );
 
   const openFileInRightPane = useCallback(
     async (filePath: string) => {
       setSelectedFile(filePath);
 
-      // Show all files in code viewer
-      setSelectedCodeFile(filePath);
-      setRightPaneMode('document');
+      // Check if it's a markdown file
+      const isMarkdown = filePath.toLowerCase().endsWith('.md') || filePath.toLowerCase().endsWith('.mdx');
+
+      if (isMarkdown) {
+        // Open in markdown viewer
+        setSelectedDocPath(filePath);
+        setSelectedDocType('markdown');
+        setRightPaneMode('document');
+      } else {
+        // Show all other files in code viewer
+        setSelectedCodeFile(filePath);
+        setRightPaneMode('document');
+      }
     },
     [],
   );
@@ -1253,26 +1226,19 @@ export const RepositoryExplorationView: React.FC<
   const markdownViewerPanel = useMemo(
     () => {
       const shouldShow = selectedDocType !== 'excalidraw';
-      console.info('[RepositoryExplorationView] Markdown viewer panel updated:', {
-        selectedDocPath,
-        selectedDocType,
-        shouldShow,
-        hasContent: !!docContent,
-        loading: loadingDoc,
-      });
       return (
         <MarkdownRenderingPanel
-          docPath={shouldShow ? selectedDocPath : null}
-          docContent={shouldShow ? docContent : null}
-          loading={loadingDoc}
+          filePath={shouldShow ? selectedDocPath : null}
+          source={activeFileTreeSource}
+          contentProvider={fileViewerContentProvider}
           onClose={() => {
             setSelectedDocPath(null);
-            setDocContent(null);
+            setSelectedDocType('markdown');
           }}
         />
       );
     },
-    [selectedDocPath, selectedDocType, docContent, loadingDoc],
+    [selectedDocPath, selectedDocType, activeFileTreeSource, fileViewerContentProvider],
   );
 
   const excalidrawDiagramPanel = useMemo(
@@ -1283,7 +1249,7 @@ export const RepositoryExplorationView: React.FC<
         loading={loadingDoc}
         onClose={() => {
           setSelectedDocPath(null);
-          setDocContent(null);
+          setSelectedDocType('markdown');
         }}
       />
     ),
@@ -1391,8 +1357,7 @@ export const RepositoryExplorationView: React.FC<
           if (
             activeTab === 'docs' &&
             isLeftPanelCollapsed &&
-            selectedDocPath &&
-            docContent
+            selectedDocPath
           ) {
             return (
               <div

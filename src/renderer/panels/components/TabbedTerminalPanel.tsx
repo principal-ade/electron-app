@@ -11,9 +11,9 @@ import {
   Bug,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
-import TerminalPanel from './TerminalPanel';
-import { TerminalService } from '../main-process-api/TerminalService';
-import { TerminalDebugModal } from '../components/Terminal/TerminalDebugModal';
+import TerminalPanel from '../TerminalPanel';
+import { TerminalService } from '../../main-process-api/TerminalService';
+import { TerminalDebugModal } from './TerminalDebugModal';
 
 export interface TerminalTab {
   id: string;
@@ -242,6 +242,30 @@ export const TabbedTerminalPanel = forwardRef<
         console.log('[TabbedTerminal] Active tab details:', activeTab);
       }
     }, [activeTabId, tabs, sessionIds, activeTab]);
+
+    // Keyboard shortcuts for tab navigation
+    useEffect(() => {
+      const handleKeyDown = (e: KeyboardEvent) => {
+        // Command/Ctrl + number (1-9) to switch tabs
+        if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '9') {
+          e.preventDefault();
+          const keyNum = parseInt(e.key, 10);
+
+          // Command + 9 always goes to last tab
+          const tabIndex = keyNum === 9 ? tabs.length - 1 : keyNum - 1;
+
+          if (tabIndex >= 0 && tabIndex < tabs.length) {
+            const targetTab = tabs[tabIndex];
+            if (targetTab) {
+              switchTab(targetTab.id);
+            }
+          }
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [tabs, switchTab]);
 
     return (
       <div
