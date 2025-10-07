@@ -1,8 +1,9 @@
 // Standalone panel components for the Repository Manager
 export { CityVisualizationPanel } from './CityVisualizationPanel';
-export { MarkdownViewerPanel } from './MarkdownViewerPanel';
 export { ExcalidrawPanel } from './ExcalidrawPanel';
 
-// Legacy exports (deprecated - use MarkdownViewerPanel instead)
+// Re-export from panels/components
+export { MarkdownRenderingPanel } from '../../panels/components/MarkdownRenderingPanel';
+
+// Legacy exports (deprecated - use MarkdownRenderingPanel instead)
 export { MarkdownDocumentPanel } from './MarkdownDocumentPanel';
-export { MarkdownSlidesPanel } from './MarkdownSlidesPanel';

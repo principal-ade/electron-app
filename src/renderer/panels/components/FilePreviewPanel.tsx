@@ -4,8 +4,6 @@ import { ThemedMonacoWithProvider } from '@principal-ade/industry-themed-monaco-
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { FileText, X } from 'lucide-react';
-import { parseMarkdownIntoPresentation } from 'themed-markdown';
-import { ThemedSlidePresentationBook } from '../../components/markdown/ThemedSlidePresentationBook';
 import type { FileTreeSource } from '../../types/file-tree-source';
 
 interface FilePreviewPanelProps {
@@ -269,23 +267,8 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     };
   }, [filePath, isLocalFile, getAbsolutePath, loadFile]);
 
-  // Parse markdown into slides if it's a markdown file
   const fileName = filePath?.split('/').pop() || filePath || '';
   const language = filePath ? getLanguage(filePath) : 'plaintext';
-  const isMarkdown = language === 'markdown';
-
-  const markdownSlides = useMemo(() => {
-    if (!isMarkdown || !fileContent) {
-      return [];
-    }
-    try {
-      const presentation = parseMarkdownIntoPresentation(fileContent);
-      return (presentation?.slides || []).map((s) => s.location.content);
-    } catch (e) {
-      console.warn('[FilePreviewPanel] Failed to parse markdown:', e);
-      return [fileContent];
-    }
-  }, [isMarkdown, fileContent]);
 
   if (!filePath) {
     return (
@@ -373,7 +356,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             gap: '12px',
           }}
         >
-          {!isMarkdown && isEditable && (
+          {isEditable && (
             <>
               {saveError ? (
                 <span style={{ color: theme.colors.error, fontSize: theme.fontSizes[0] }}>
@@ -467,22 +450,6 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           >
             Error: {error}
           </div>
-        ) : isMarkdown ? (
-          <ThemedSlidePresentationBook
-            slides={markdownSlides}
-            initialSlide={0}
-            theme={theme}
-            fontSizeScale={1.0}
-            onSlideChange={() => {}}
-            onCheckboxChange={() => {}}
-            showNavigation={true}
-            showSlideCounter={true}
-            showFullscreenButton={false}
-            viewMode="single"
-            slideIdPrefix="repository-preview"
-            enableHtmlPopout={false}
-            enableKeyboardScrolling={true}
-          />
         ) : (
           <ThemedMonacoWithProvider
             value={editorContent}

@@ -6,6 +6,7 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 interface FileTreeTabProps {
   fileTree: FileTree | null;
   onFileSelect?: (filePath: string) => void;
+  onContextMenu?: (event: React.MouseEvent, nodePath: string, isFolder: boolean) => void;
   loading?: boolean;
 }
 
@@ -20,6 +21,7 @@ interface FileTreeTabProps {
 export const FileTreeTab: React.FC<FileTreeTabProps> = ({
   fileTree,
   onFileSelect,
+  onContextMenu,
   loading = false,
 }) => {
   const { theme } = useTheme();
@@ -69,6 +71,7 @@ export const FileTreeTab: React.FC<FileTreeTabProps> = ({
         fileTree={fileTree}
         theme={theme}
         onFileSelect={onFileSelect}
+        onContextMenu={onContextMenu}
         showIcons={true}
         defaultOpen={false}
         padding="16px"

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { FileText, Presentation } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
-import { MarkdownDocumentViewer } from '../shared/MarkdownDocumentViewer';
-import { PanelEmptyState } from './PanelEmptyState';
+import { MarkdownDocumentViewer } from '../../repo-manager/shared/MarkdownDocumentViewer';
+import { PanelEmptyState } from '../../repo-manager/panels/PanelEmptyState';
 
-interface MarkdownViewerPanelProps {
+interface MarkdownRenderingPanelProps {
   // Document data
   docPath: string | null;
   docContent: string | null;
@@ -16,7 +16,7 @@ interface MarkdownViewerPanelProps {
   onClose?: () => void;
 }
 
-export const MarkdownViewerPanel: React.FC<MarkdownViewerPanelProps> = ({
+export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
   docPath,
   docContent,
   loading = false,

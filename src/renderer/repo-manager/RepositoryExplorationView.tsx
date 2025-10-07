@@ -49,12 +49,12 @@ import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
 import { RepositorySearchTab } from '../components/repository-maps/RepositorySearchTab';
 import { ToolsTab } from './shared/ToolsTab';
 import { RightPaneView } from '../components/repository-maps/RightPaneContainer';
-import { FileTreeTab } from './shared/FileTreeTab';
+import { FileTreeTab } from '../panels/components/FileTreeTab';
 import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 import {
   CityVisualizationPanel,
-  MarkdownViewerPanel,
+  MarkdownRenderingPanel,
   ExcalidrawPanel,
 } from './panels';
 import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
@@ -1261,7 +1261,7 @@ export const RepositoryExplorationView: React.FC<
         loading: loadingDoc,
       });
       return (
-        <MarkdownViewerPanel
+        <MarkdownRenderingPanel
           docPath={shouldShow ? selectedDocPath : null}
           docContent={shouldShow ? docContent : null}
           loading={loadingDoc}
