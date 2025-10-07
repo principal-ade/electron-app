@@ -53,4 +53,19 @@ export const windowAPI: WindowAPI = {
   openCallimachusWindow: () =>
     ipcRenderer.invoke(WindowEvent.OPEN_CALLIMACHUS_WINDOW),
 
+  /**
+   * Toggle main window minimize/restore
+   */
+  toggleMainWindowMinimize: (shouldMinimize: boolean) =>
+    ipcRenderer.invoke(WindowEvent.TOGGLE_MAIN_WINDOW_MINIMIZE, shouldMinimize),
+
+  /**
+   * Listen for main window minimize state changes
+   */
+  onMainWindowMinimizeStateChange: (callback: (isMinimized: boolean) => void) => {
+    ipcRenderer.on(WindowEvent.MAIN_WINDOW_MINIMIZE_STATE_CHANGED, (_event, isMinimized: boolean) => {
+      callback(isMinimized);
+    });
+  },
+
 };

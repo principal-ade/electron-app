@@ -41,6 +41,7 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > release/app/.npmrc
           cd release/app
           npm install --legacy-peer-deps --ignore-scripts
 

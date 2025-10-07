@@ -27,6 +27,7 @@ import {
   applicationWindows,
   specialWindows,
   WINDOW_FEATURES,
+  setMainWindowId,
 } from './types';
 
 // Re-export for backward compatibility
@@ -530,6 +531,12 @@ export async function createWindow(
 
   try {
     const appWindow = new ModernApplicationWindow(options, windowType);
+
+    // Track main window ID
+    if (isMainWindow) {
+      setMainWindowId(appWindow.window.id);
+      console.log(`[ModernWindow] Set main window ID: ${appWindow.window.id}`);
+    }
 
     // Load content - use principal.html for main window
     const htmlFileName = isMainWindow ? 'principal.html' : 'index.html';

@@ -41,6 +41,19 @@ export const applicationWindows = new Map<number, IModernApplicationWindow>();
 export const specialWindows = new Map<string, number>();
 
 /**
+ * Reference to the main window (first window created)
+ */
+export let mainWindowId: number | null = null;
+
+export function setMainWindowId(id: number) {
+  mainWindowId = id;
+}
+
+export function getMainWindowId(): number | null {
+  return mainWindowId;
+}
+
+/**
  * Default features for different window types
  */
 export const WINDOW_FEATURES: Record<string, WindowFeatures> = {

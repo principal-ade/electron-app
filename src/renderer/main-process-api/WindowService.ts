@@ -124,4 +124,35 @@ export class WindowService {
     }
   }
 
+  /**
+   * Toggle main window minimize/restore
+   * @param shouldMinimize - true to minimize, false to restore
+   */
+  static async toggleMainWindowMinimize(shouldMinimize: boolean): Promise<void> {
+    try {
+      await window.mainProcess.window.toggleMainWindowMinimize(shouldMinimize);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to toggle main window minimize:',
+        error,
+      );
+      throw new Error('Failed to toggle main window minimize state');
+    }
+  }
+
+  /**
+   * Listen for main window minimize state changes
+   * @param callback - Called when the main window minimize state changes
+   */
+  static onMainWindowMinimizeStateChange(callback: (isMinimized: boolean) => void): void {
+    try {
+      window.mainProcess.window.onMainWindowMinimizeStateChange(callback);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to register minimize state listener:',
+        error,
+      );
+    }
+  }
+
 }

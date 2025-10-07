@@ -97,4 +97,16 @@ export interface WindowAPI {
    */
   openCallimachusWindow(): Promise<void>;
 
+  /**
+   * Toggle main window minimize/restore
+   * @param shouldMinimize - true to minimize, false to restore
+   */
+  toggleMainWindowMinimize(shouldMinimize: boolean): Promise<void>;
+
+  /**
+   * Listen for main window minimize state changes
+   * @param callback - Called when the main window minimize state changes
+   */
+  onMainWindowMinimizeStateChange(callback: (isMinimized: boolean) => void): void;
+
 }

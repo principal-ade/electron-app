@@ -12,6 +12,7 @@ import {
 import { resolveHtmlPath } from '../util';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@a24z/core-library';
+import type { IModernApplicationWindow } from './types';
 
 /**
  * Register all modern window IPC handlers
@@ -19,6 +20,37 @@ import type { AlexandriaEntry } from '@a24z/core-library';
 export function registerModernWindowHandlers(): void {
   const multiFileEditorDisabledMessage =
     'The multi-file editor is temporarily unavailable while we migrate to the new Monaco experience.';
+
+  // Toggle main window minimize/restore
+  ipcMain.handle(WindowEvent.TOGGLE_MAIN_WINDOW_MINIMIZE, async (_event, shouldMinimize: boolean) => {
+    const { getMainWindowId } = require('./types');
+    const { applicationWindows } = require('./types');
+
+    const mainWindowId = getMainWindowId();
+    if (!mainWindowId) {
+      console.warn('[modernWindowHandlers] Main window ID not set');
+      return;
+    }
+
+    const mainAppWindow = applicationWindows.get(mainWindowId);
+    if (!mainAppWindow?.window || mainAppWindow.window.isDestroyed()) {
+      console.warn('[modernWindowHandlers] Main window not found or destroyed');
+      return;
+    }
+
+    if (shouldMinimize) {
+      mainAppWindow.window.minimize();
+    } else {
+      mainAppWindow.window.restore();
+    }
+
+    // Broadcast the state change to all windows
+    applicationWindows.forEach((appWindow: IModernApplicationWindow) => {
+      if (appWindow.window && !appWindow.window.isDestroyed()) {
+        appWindow.window.webContents.send(WindowEvent.MAIN_WINDOW_MINIMIZE_STATE_CHANGED, shouldMinimize);
+      }
+    });
+  });
 
   // Store Viewer Window
   ipcMain.handle(
@@ -187,9 +219,6 @@ export function registerModernWindowHandlers(): void {
           minWidth: 1200,
           minHeight: 800,
           title: `${repoName} - Code City Map`,
-          // Set tabbingIdentifier to group repo manager windows separately
-          // This allows Command+` to cycle only through repo windows, excluding main window
-          tabbingIdentifier: 'repository-manager-group',
         },
         {
           fileSystemAdapter: true,
