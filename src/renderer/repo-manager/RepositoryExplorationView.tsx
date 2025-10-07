@@ -254,8 +254,6 @@ export const RepositoryExplorationView: React.FC<
 
   // File viewer in right panel state
   const [selectedCodeFile, setSelectedCodeFile] = useState<string | null>(null);
-  const [selectedCodeFileAbsolutePath, setSelectedCodeFileAbsolutePath] =
-    useState<string | null>(null);
 
   // Package data state
   const [packageLayers, setPackageLayersState] = useState<
@@ -370,7 +368,6 @@ export const RepositoryExplorationView: React.FC<
   ]);
 
   // Track the current loading file to prevent race conditions
-  const loadingFileRef = useRef<string | null>(null);
 
   // Handle documentation selection - defined early so openFileInRightPane can use it
   const handleDocumentSelect = useCallback(
@@ -421,15 +418,13 @@ export const RepositoryExplorationView: React.FC<
 
   const openFileInRightPane = useCallback(
     async (filePath: string) => {
-      loadingFileRef.current = filePath;
-
       setSelectedFile(filePath);
 
       // Show all files in code viewer
       setSelectedCodeFile(filePath);
       setRightPaneMode('document');
     },
-    [activeFileTreeSource, fileViewerContentProvider, handleDocumentSelect],
+    [],
   );
 
   const handleFileClick = useCallback(
@@ -513,7 +508,6 @@ export const RepositoryExplorationView: React.FC<
         setSelectedDocPath(null);
         setDocContent(null);
         setSelectedCodeFile(null);
-        setSelectedCodeFileAbsolutePath(null);
       }
     },
     [],
@@ -1248,7 +1242,6 @@ export const RepositoryExplorationView: React.FC<
           contentProvider={fileViewerContentProvider}
           onClose={() => {
             setSelectedCodeFile(null);
-            setSelectedCodeFileAbsolutePath(null);
             setSelectedFile(null);
           }}
         />
