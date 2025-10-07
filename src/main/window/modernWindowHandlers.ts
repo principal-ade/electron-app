@@ -187,6 +187,9 @@ export function registerModernWindowHandlers(): void {
           minWidth: 1200,
           minHeight: 800,
           title: `${repoName} - Code City Map`,
+          // Set tabbingIdentifier to group repo manager windows separately
+          // This allows Command+` to cycle only through repo windows, excluding main window
+          tabbingIdentifier: 'repository-manager-group',
         },
         {
           fileSystemAdapter: true,
