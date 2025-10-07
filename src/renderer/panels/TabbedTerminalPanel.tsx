@@ -3,34 +3,29 @@ import React, {
   useCallback,
   useEffect,
   forwardRef,
-  useImperativeHandle,
 } from 'react';
 import {
   Terminal as TerminalIcon,
   X,
   Plus,
-  Play,
   Bug,
-  ExternalLink,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import TerminalPanel from './TerminalPanel';
-import { TerminalService } from '../../main-process-api/TerminalService';
-import { AgentSessionService } from '../../main-process-api/AgentSessionService';
-import { TerminalDebugModal } from './TerminalDebugModal';
-import { getAgentInfo, SupportedAgent } from '@principal-ai/agent-monitoring';
+import { TerminalService } from '../main-process-api/TerminalService';
+import { TerminalDebugModal } from '../components/Terminal/TerminalDebugModal';
 
 export interface TerminalTab {
   id: string;
   label: string;
   directory: string;
-  agentSessionId?: string;
   command?: string;
   isActive: boolean;
 }
 
 interface TabbedTerminalPanelProps {
   directory: string;
+  repositoryKey: string;
   hideHeader?: boolean;
   isVisible?: boolean;
   onTabsChange?: (tabs: TerminalTab[]) => void;
@@ -38,7 +33,7 @@ interface TabbedTerminalPanelProps {
 }
 
 export interface TabbedTerminalPanelRef {
-  addClaudeSession: (sessionId: string, sessionName?: string) => Promise<void>;
+  // Future methods can be added here
 }
 
 export const TabbedTerminalPanel = forwardRef<
@@ -48,6 +43,7 @@ export const TabbedTerminalPanel = forwardRef<
   (
     {
       directory,
+      repositoryKey,
       hideHeader = false,
       isVisible = true,
       onTabsChange,
@@ -62,6 +58,10 @@ export const TabbedTerminalPanel = forwardRef<
       new Map(),
     );
     const [showDebugModal, setShowDebugModal] = useState(false);
+    const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
+
+    // Create unique context for this tabbed terminal instance
+    const terminalContext = `tabbed-terminal:${repositoryKey}`;
 
     // Switch to a tab
     const switchTab = useCallback(
@@ -91,12 +91,12 @@ export const TabbedTerminalPanel = forwardRef<
 
     // Create a new terminal tab
     const addNewTab = useCallback(
-      (label?: string, command?: string, agentSessionId?: string) => {
+      (label?: string, command?: string) => {
+        const directoryName = directory.split('/').pop() || directory;
         const newTab: TerminalTab = {
           id: `tab-${Date.now()}`,
-          label: label || `Terminal ${tabs.length + 1}`,
+          label: label || directoryName,
           directory,
-          agentSessionId,
           command,
           isActive: true,
         };
@@ -110,142 +110,18 @@ export const TabbedTerminalPanel = forwardRef<
 
         setActiveTabId(newTab.id);
       },
-      [tabs, directory, onTabsChange],
+      [directory, onTabsChange],
     );
 
-    // Open terminal for Claude session
-    const openClaudeSessionTerminal = useCallback(
-      async (sessionId: string, sessionName?: string) => {
-        // First check if we already have a tab for this agent session
-        const existingTab = tabs.find((t) => t.agentSessionId === sessionId);
-        if (existingTab) {
-          console.log(
-            '[TabbedTerminal] Found existing tab for agent session:',
-            sessionId,
-            'tab:',
-            existingTab.id,
-          );
-          switchTab(existingTab.id);
-          return;
-        }
-
-        // Check if the agent session has an active terminal session in the backend
-        try {
-          // Get the agent session to check for terminal sessions
-          const agentSession = await AgentSessionService.getSession(
-            sessionId,
-            directory,
-          );
-          if (agentSession && agentSession.terminalSessions) {
-            // Look for an active terminal session
-            const activeTerminal = agentSession.terminalSessions.find(
-              (t) => t.status === 'active',
-            );
-
-            if (activeTerminal) {
-              console.log(
-                '[TabbedTerminal] Found existing terminal session:',
-                activeTerminal.terminalId,
-                'for agent:',
-                sessionId,
-              );
-
-              // Verify the terminal session still exists in backend
-              const terminals = await TerminalService.list();
-              const terminalExists = terminals.some(
-                (t) => t.id === activeTerminal.terminalId,
-              );
-
-              if (terminalExists) {
-                // Create a tab that reattaches to the existing terminal
-                const label =
-                  sessionName || `Claude: ${sessionId.substring(0, 8)}`;
-                const newTab: TerminalTab = {
-                  id: `tab-${Date.now()}`,
-                  label,
-                  directory,
-                  agentSessionId: sessionId,
-                  command: undefined, // Don't run command since terminal already exists
-                  isActive: true,
-                };
-
-                setTabs((prevTabs) => {
-                  const updatedTabs = prevTabs.map((t) => ({
-                    ...t,
-                    isActive: false,
-                  }));
-                  const newTabs = [...updatedTabs, newTab];
-                  onTabsChange?.(newTabs);
-                  return newTabs;
-                });
-
-                setActiveTabId(newTab.id);
-
-                // Map the existing terminal session to this tab
-                setSessionIds((prev) =>
-                  new Map(prev).set(newTab.id, activeTerminal.terminalId),
-                );
-
-                console.log(
-                  '[TabbedTerminal] Reattached to existing terminal:',
-                  activeTerminal.terminalId,
-                );
-                return;
-              }
-            }
-          }
-        } catch (err) {
-          console.error(
-            '[TabbedTerminal] Error checking for existing terminal:',
-            err,
-          );
-        }
-
-        // Determine which agent was used for this session
-        let agentBinary = 'claude'; // Default to claude for backwards compatibility
-        let agentDisplayName = 'Claude';
-
-        try {
-          // Try to get session events to determine the agent type
-          const events = await AgentSessionService.getSessionEvents(sessionId);
-          if (events && events.length > 0) {
-            // Get the provider from the first event (all events in a session should have the same provider)
-            const provider = events[0].provider as SupportedAgent;
-            if (provider) {
-              const agentInfo = getAgentInfo(provider);
-              agentBinary = agentInfo.installation?.binaryName || provider;
-              agentDisplayName = agentInfo.displayName;
-              console.log(
-                `[TabbedTerminal] Detected agent: ${provider} with binary: ${agentBinary} for session ${sessionId}`,
-              );
-            }
-          }
-        } catch (err) {
-          console.warn(
-            '[TabbedTerminal] Could not determine agent type, using default:',
-            err,
-          );
-        }
-
-        // No existing tab or terminal session, create new
-        const label =
-          sessionName || `${agentDisplayName}: ${sessionId.substring(0, 8)}`;
-        const command = `${agentBinary} -r ${sessionId}`;
-        addNewTab(label, command, sessionId);
-      },
-      [addNewTab, tabs, switchTab, directory, onTabsChange],
-    );
-
-    // Initialize with a default tab if none exist and cleanup on unmount
+    // Initialize - cleanup orphaned sessions on mount
     useEffect(() => {
       console.log(
         '[TabbedTerminal] Mounting with',
         initialTabs.length,
-        'initial tabs, isVisible:',
-        isVisible,
+        'initial tabs',
       );
 
-      // Clean up orphaned sessions on mount
+      // Clean up orphaned sessions on mount - only for our context
       const cleanupOrphans = async () => {
         try {
           const allSessions = await TerminalService.list();
@@ -257,20 +133,13 @@ export const TabbedTerminalPanel = forwardRef<
 
           // Check each session to see if it's orphaned
           for (const session of allSessions) {
-            // Check if this session belongs to our directory
-            if (session.directory === directory) {
-              // Check against initial tabs (from props) since component just mounted
-              const hasTab = initialTabs.some(
-                (tab) => tab.agentSessionId === session.id,
+            // Only clean up sessions with our specific context
+            if (session.context === terminalContext && session.directory === directory) {
+              console.log(
+                '[TabbedTerminal] Found orphaned session with our context on mount, destroying:',
+                session.id,
               );
-
-              if (!hasTab) {
-                console.log(
-                  '[TabbedTerminal] Found orphaned session on mount, destroying:',
-                  session.id,
-                );
-                await TerminalService.destroy(session.id);
-              }
+              await TerminalService.destroy(session.id);
             }
           }
         } catch (err) {
@@ -282,14 +151,6 @@ export const TabbedTerminalPanel = forwardRef<
       };
 
       cleanupOrphans();
-
-      // Only create default tab if component is visible and no tabs exist
-      if (tabs.length === 0 && isVisible) {
-        console.log(
-          '[TabbedTerminal] Creating default tab (component is visible)',
-        );
-        addNewTab();
-      }
 
       return () => {
         console.log(
@@ -314,27 +175,6 @@ export const TabbedTerminalPanel = forwardRef<
         });
       };
     }, []);
-
-    // Create default tab when component becomes visible for the first time
-    useEffect(() => {
-      if (isVisible && tabs.length === 0) {
-        console.log(
-          '[TabbedTerminal] Component became visible with no tabs, creating default tab',
-        );
-        addNewTab();
-      }
-    }, [isVisible, tabs.length, addNewTab]);
-
-    // Expose methods via ref
-    useImperativeHandle(
-      ref,
-      () => ({
-        addClaudeSession: async (sessionId: string, sessionName?: string) => {
-          await openClaudeSessionTerminal(sessionId, sessionName);
-        },
-      }),
-      [openClaudeSessionTerminal],
-    );
 
     // Close a tab
     const closeTab = useCallback(
@@ -417,17 +257,21 @@ export const TabbedTerminalPanel = forwardRef<
           <div
             style={{
               display: 'flex',
-              alignItems: 'center',
-              backgroundColor: theme.colors.backgroundSecondary,
-              borderBottom: `1px solid ${theme.colors.border}`,
-              minHeight: '36px',
-              paddingLeft: '8px',
-              gap: '4px',
-              overflowX: 'auto',
+              alignItems: 'stretch',
+              height: '36px',
               flexShrink: 0,
             }}
           >
-            {tabs.map((tab) => (
+            {/* Tabs container - takes up remaining space */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                flex: 1,
+                overflow: 'hidden',
+              }}
+            >
+              {tabs.map((tab) => (
               <div
                 key={tab.id}
                 onClick={(e) => {
@@ -439,57 +283,37 @@ export const TabbedTerminalPanel = forwardRef<
                   e.stopPropagation();
                   switchTab(tab.id);
                 }}
+                onMouseEnter={() => setHoveredTabId(tab.id)}
+                onMouseLeave={() => setHoveredTabId(null)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'center',
                   gap: '6px',
                   padding: '6px 8px',
                   backgroundColor: tab.isActive
                     ? theme.colors.background
-                    : 'transparent',
-                  borderTop: tab.isActive
-                    ? `2px solid ${theme.colors.primary}`
-                    : '2px solid transparent',
+                    : theme.colors.backgroundSecondary,
+                  borderBottom: `1px solid ${theme.colors.border}`,
                   cursor: 'pointer',
-                  fontSize: '12px',
+                  fontSize: '14px',
+                  fontWeight: tab.isActive ? 600 : 400,
                   color: tab.isActive
                     ? theme.colors.text
                     : theme.colors.textSecondary,
                   whiteSpace: 'nowrap',
                   transition: 'all 0.2s',
+                  flex: 1,
+                  minWidth: 0,
+                  height: '100%',
+                  position: 'relative',
                 }}
               >
-                <TerminalIcon size={12} />
-                <span>{tab.label}</span>
-                {tab.agentSessionId && (
-                  <Play
-                    size={10}
-                    style={{ color: theme.colors.success }}
-                    title="Claude session"
-                  />
-                )}
-                {/* Pop-out button for active tab */}
-                {tab.isActive && sessionIds.get(tab.id) && (
+                {hoveredTabId === tab.id && (
                   <button
-                    onClick={async (e) => {
+                    onClick={(e) => {
                       e.stopPropagation();
-                      const sessionId = sessionIds.get(tab.id);
-                      if (sessionId) {
-                        try {
-                          await TerminalService.popOut(sessionId);
-                          console.log(
-                            '[TabbedTerminal] Popped out terminal:',
-                            sessionId,
-                          );
-                          // Optionally close the tab after popping out
-                          // closeTab(tab.id);
-                        } catch (err) {
-                          console.error(
-                            '[TabbedTerminal] Failed to pop out terminal:',
-                            err,
-                          );
-                        }
-                      }
+                      closeTab(tab.id);
                     }}
                     style={{
                       display: 'flex',
@@ -503,62 +327,43 @@ export const TabbedTerminalPanel = forwardRef<
                       cursor: 'pointer',
                       color: theme.colors.textSecondary,
                       padding: 0,
+                      position: 'absolute',
+                      left: '8px',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor =
                         theme.colors.backgroundTertiary;
-                      e.currentTarget.style.color = theme.colors.primary;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = theme.colors.textSecondary;
                     }}
-                    title="Pop out to new window"
                   >
-                    <ExternalLink size={11} />
+                    <X size={12} />
                   </button>
                 )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeTab(tab.id);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '3px',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    cursor: 'pointer',
-                    color: theme.colors.textSecondary,
-                    padding: 0,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }}
-                >
-                  <X size={12} />
-                </button>
+                <span>{tab.label}</span>
               </div>
-            ))}
+              ))}
+            </div>
 
-            {/* Add new tab button */}
-            <button
+            {/* Action buttons - fixed on the right */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderLeft: `1px solid ${theme.colors.border}`,
+                borderBottom: tabs.length > 0 ? `1px solid ${theme.colors.border}` : 'none',
+              }}
+            >
+              {/* Add new tab button */}
+              <button
               onClick={() => addNewTab()}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                borderRadius: '4px',
+                width: '32px',
+                height: '100%',
                 border: 'none',
                 backgroundColor: 'transparent',
                 cursor: 'pointer',
@@ -583,13 +388,14 @@ export const TabbedTerminalPanel = forwardRef<
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                borderRadius: '4px',
+                width: '36px',
+                height: '100%',
                 border: 'none',
                 backgroundColor: 'transparent',
                 cursor: 'pointer',
                 color: theme.colors.warning,
+                paddingLeft: '4px',
+                paddingRight: '4px',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor =
@@ -600,8 +406,9 @@ export const TabbedTerminalPanel = forwardRef<
               }}
               title="Debug terminal sessions"
             >
-              <Bug size={14} />
+              <Bug size={16} />
             </button>
+            </div>
           </div>
         )}
 
@@ -627,6 +434,7 @@ export const TabbedTerminalPanel = forwardRef<
               >
                 <TerminalPanel
                   directory={tab.directory}
+                  context={terminalContext}
                   hideHeader={true}
                   isVisible={isVisible && isActiveTab}
                   autoFocus={isActiveTab}
@@ -635,7 +443,6 @@ export const TabbedTerminalPanel = forwardRef<
                   onSessionCreated={(sessionId) => {
                     handleSessionCreated(tab.id, sessionId);
                   }}
-                  agentSessionId={tab.agentSessionId}
                 />
               </div>
             );
@@ -651,6 +458,7 @@ export const TabbedTerminalPanel = forwardRef<
                 justifyContent: 'center',
                 height: '100%',
                 color: theme.colors.textSecondary,
+                borderTop: `1px solid ${theme.colors.border}`,
               }}
             >
               <TerminalIcon
@@ -695,19 +503,3 @@ export const TabbedTerminalPanel = forwardRef<
 );
 
 TabbedTerminalPanel.displayName = 'TabbedTerminalPanel';
-
-// Export a function that can be called from other components to open Claude sessions
-export const openClaudeTerminal = (
-  sessionId: string,
-  directory: string,
-  sessionName?: string,
-): TerminalTab => {
-  return {
-    id: `claude-${sessionId}-${Date.now()}`,
-    label: sessionName || `Claude: ${sessionId.substring(0, 8)}`,
-    directory,
-    agentSessionId: sessionId,
-    command: `claude -r ${sessionId}`,
-    isActive: true,
-  };
-};

@@ -1,6 +1,7 @@
 import { EditorId } from './editor.types';
 import { TerminalId } from './terminal.types';
 import type { RepositoryPanelVisibility } from './repositoryPanel.types';
+import type { PanelLayout } from '@a24z/panels';
 
 // Repository view types - unified naming
 export type RepositoryViewType = 'exploration';
@@ -35,7 +36,7 @@ export interface RepositoryUIState {
     exploration?: {
       collapsed?: { left?: boolean; right?: boolean };
       sizes?: { left: number; middle: number; right: number };
-      layout?: { left: string | null; middle: string | null; right: string | null };
+      layout?: PanelLayout;
     };
   };
 

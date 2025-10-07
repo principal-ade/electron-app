@@ -1,6 +1,5 @@
 // Standalone panel components for the Repository Manager
 export { CityVisualizationPanel } from './CityVisualizationPanel';
-export { CodeFileViewerPanel } from './CodeFileViewerPanel';
 export { MarkdownViewerPanel } from './MarkdownViewerPanel';
 export { ExcalidrawPanel } from './ExcalidrawPanel';
 

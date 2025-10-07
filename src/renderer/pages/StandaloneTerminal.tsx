@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useTheme } from '@a24z/industry-theme';
 import * as path from 'path';
 
-import TerminalPanel from '../components/Terminal/TerminalPanel';
+import TerminalPanel from '../panels/TerminalPanel';
 import { TerminalTitlebar } from '../components/Titlebar';
 import { TerminalService } from '../main-process-api/TerminalService';
 import { AgentSessionService } from '../main-process-api/AgentSessionService';

@@ -23,7 +23,8 @@ import '@a24z/panels/panels.css';
 import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { FileSystemService } from '../main-process-api/FileSystemService';
-import TerminalPanel from '../components/Terminal/TerminalPanel';
+import TerminalPanel from '../panels/TerminalPanel';
+import { TabbedTerminalPanel } from '../panels/TabbedTerminalPanel';
 
 import type { Repository } from '../../shared/types/repository.types';
 import { RightPaneMode } from '../../shared/types/userPreferences.types';
@@ -53,15 +54,16 @@ import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 import {
   CityVisualizationPanel,
-  CodeFileViewerPanel,
   MarkdownViewerPanel,
   ExcalidrawPanel,
 } from './panels';
+import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
 
 type PanelTabConfig = { id: string; label: string; icon?: React.ReactNode; content: React.ReactNode; visible?: boolean };
 
 interface RepositoryExplorationViewProps {
   repository: Repository;
+  repositoryKey: string;
   remoteData: {
     owner: string;
     repo: string;
@@ -101,6 +103,7 @@ export const RepositoryExplorationView: React.FC<
   RepositoryExplorationViewProps
 > = ({
   repository,
+  repositoryKey,
   remoteData,
   searchQuery,
   fileTree: sharedFileTree,
@@ -253,8 +256,6 @@ export const RepositoryExplorationView: React.FC<
   const [selectedCodeFile, setSelectedCodeFile] = useState<string | null>(null);
   const [selectedCodeFileAbsolutePath, setSelectedCodeFileAbsolutePath] =
     useState<string | null>(null);
-  const [codeFileContent, setCodeFileContent] = useState<string | null>(null);
-  const [loadingCodeFile, setLoadingCodeFile] = useState(false);
 
   // Package data state
   const [packageLayers, setPackageLayersState] = useState<
@@ -424,56 +425,9 @@ export const RepositoryExplorationView: React.FC<
 
       setSelectedFile(filePath);
 
-      // Check if this is a markdown or excalidraw file
-      const isMarkdown = filePath.endsWith('.md');
-      const isExcalidraw = filePath.endsWith('.excalidraw');
-
-      if (isMarkdown || isExcalidraw) {
-        // Route to document viewer
-        await handleDocumentSelect(filePath, isExcalidraw ? 'excalidraw' : 'markdown');
-        return;
-      }
-
-      // Otherwise, show in code viewer
+      // Show all files in code viewer
       setSelectedCodeFile(filePath);
-
-      const absolutePath =
-        activeFileTreeSource?.type === 'local'
-          ? filePath.startsWith('/')
-            ? filePath
-            : `${activeFileTreeSource.location}/${filePath}`
-          : null;
-
-      setSelectedCodeFileAbsolutePath(absolutePath);
-      setLoadingCodeFile(true);
-      setCodeFileContent(null);
-
       setRightPaneMode('document');
-
-      try {
-        let content: string | null = null;
-
-        if (absolutePath) {
-          const result = await FileSystemService.readFile(absolutePath);
-          content = result?.content ?? null;
-        } else {
-          const relativePath = filePath.startsWith('/')
-            ? filePath.substring(1)
-            : filePath;
-          content = await fileViewerContentProvider.readFileContent(relativePath);
-        }
-
-        if (loadingFileRef.current === filePath) {
-          setCodeFileContent(content);
-          setLoadingCodeFile(false);
-        }
-      } catch (error) {
-        if (loadingFileRef.current === filePath) {
-          console.error('[RepositoryExplorationView] Failed to load file:', error);
-          setCodeFileContent(null);
-          setLoadingCodeFile(false);
-        }
-      }
     },
     [activeFileTreeSource, fileViewerContentProvider, handleDocumentSelect],
   );
@@ -560,7 +514,6 @@ export const RepositoryExplorationView: React.FC<
         setDocContent(null);
         setSelectedCodeFile(null);
         setSelectedCodeFileAbsolutePath(null);
-        setCodeFileContent(null);
       }
     },
     [],
@@ -1288,27 +1241,20 @@ export const RepositoryExplorationView: React.FC<
   // Memoize viewer panels to ensure they re-render when state changes
   const codeViewerPanel = useMemo(
     () => {
-      console.info('[RepositoryExplorationView] Code viewer panel updated:', {
-        selectedCodeFile,
-        hasContent: !!codeFileContent,
-        loading: loadingCodeFile,
-      });
       return (
-        <CodeFileViewerPanel
+        <FilePreviewPanel
           filePath={selectedCodeFile}
-          absolutePath={selectedCodeFileAbsolutePath}
-          content={codeFileContent}
-          loading={loadingCodeFile}
+          source={activeFileTreeSource}
+          contentProvider={fileViewerContentProvider}
           onClose={() => {
             setSelectedCodeFile(null);
             setSelectedCodeFileAbsolutePath(null);
-            setCodeFileContent(null);
             setSelectedFile(null);
           }}
         />
       );
     },
-    [selectedCodeFile, selectedCodeFileAbsolutePath, codeFileContent, loadingCodeFile],
+    [selectedCodeFile, activeFileTreeSource, fileViewerContentProvider],
   );
 
   const markdownViewerPanel = useMemo(
@@ -1550,6 +1496,39 @@ export const RepositoryExplorationView: React.FC<
             </div>
           );
 
+          // Tabbed Terminal panel - defined after layout so we can check visibility
+          const isTabbedTerminalVisible = propsPanelLayout.middle === 'tabbedTerminal' || propsPanelLayout.left === 'tabbedTerminal' || propsPanelLayout.right === 'tabbedTerminal';
+          const tabbedTerminalPanel = activeFileTreeSource?.type === 'local' ? (
+            <TabbedTerminalPanel
+              directory={activeFileTreeSource.location}
+              repositoryKey={repositoryKey}
+              isVisible={isTabbedTerminalVisible}
+              hideHeader={false}
+              key={`tabbed-terminal-${activeFileTreeSource.location}`}
+            />
+          ) : (
+            <div
+              style={{
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                backgroundColor: theme.colors.backgroundSecondary,
+                color: theme.colors.textSecondary,
+                padding: '20px',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: theme.colors.text }}>
+                Terminal Unavailable
+              </div>
+              <div style={{ fontSize: '14px' }}>
+                Terminal is only available for local repository clones
+              </div>
+            </div>
+          );
+
           // Create all panel definitions - expose individual panels for configuration
           const allPanels: PanelDefinitionWithContent[] = [
             // Individual panel tabs (can now be configured independently)
@@ -1559,6 +1538,11 @@ export const RepositoryExplorationView: React.FC<
               id: 'terminal',
               label: 'Terminal',
               content: terminalPanel,
+            },
+            {
+              id: 'tabbedTerminal',
+              label: 'Tabbed Terminal',
+              content: tabbedTerminalPanel,
             },
             {
               id: 'cityVisualization',

@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { FileText, Terminal as TerminalIcon } from 'lucide-react';
-import { FilePreviewPanel } from './FilePreviewPanel';
-import TerminalPanel from '../../../../components/Terminal/TerminalPanel';
+import { FilePreviewPanel } from '../../../../panels/components/FilePreviewPanel';
+import TerminalPanel from '../../../../panels/TerminalPanel';
+import { createFileTreeSource } from '../../../../types/file-tree-source';
 
 interface RightPanelProps {
   filePath: string | null;
@@ -24,6 +25,18 @@ export const RightPanel: React.FC<RightPanelProps> = ({
 
   // Use external tab if provided, otherwise use internal state
   const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
+
+  // Create a FileTreeSource for the local repository
+  const source = useMemo(() => {
+    if (!repositoryPath) return null;
+    const repoName = repositoryPath.split('/').pop() || 'repository';
+    return createFileTreeSource.localWorkingCopy(
+      repositoryPath,
+      '', // owner unknown in this context
+      repoName,
+      '', // remoteUrl unknown in this context
+    );
+  }, [repositoryPath]);
 
   const handleTabChange = (tab: 'preview' | 'terminal') => {
     if (onTabChange) {
@@ -128,7 +141,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
         {activeTab === 'preview' ? (
           <FilePreviewPanel
             filePath={filePath}
-            repositoryPath={repositoryPath}
+            source={source}
             onClose={onClose}
           />
         ) : (

@@ -12,8 +12,8 @@ import '@xterm/xterm/css/xterm.css';
 
 import { useTheme } from '@a24z/industry-theme';
 
-import { AgentSessionService } from '../../main-process-api/AgentSessionService';
-import { TerminalService } from '../../main-process-api/TerminalService';
+import { AgentSessionService } from '../main-process-api/AgentSessionService';
+import { TerminalService } from '../main-process-api/TerminalService';
 
 /* eslint-disable no-console */
 
@@ -479,7 +479,6 @@ function TerminalPanel({
         flexDirection: 'column',
         height: '100%',
         backgroundColor: theme.colors.background,
-        borderTop: `1px solid ${theme.colors.border}`,
       }}
     >
       {/* Terminal Header (optional) */}

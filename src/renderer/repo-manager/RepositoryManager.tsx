@@ -283,18 +283,12 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           const repoStates = { ...(prefs.repositoryUIStates ?? {}) };
           const repoState = { ...(repoStates[repositoryKey] ?? {}) };
 
-          // Convert PanelLayout to the expected type (string IDs only)
-          const layoutConfig = {
-            left: typeof layout.left === 'string' ? layout.left : null,
-            middle: typeof layout.middle === 'string' ? layout.middle : null,
-            right: typeof layout.right === 'string' ? layout.right : null,
-          };
-
+          // Save the full PanelLayout object including tabs configurations
           const panelLayouts = {
             ...(repoState.panelLayouts ?? {}),
             exploration: {
               ...(repoState.panelLayouts?.exploration ?? {}),
-              layout: layoutConfig,
+              layout: layout,
             },
           };
 
@@ -764,6 +758,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
             <GitChangesProvider>
               <RepositoryExplorationView
                 repository={repository}
+                repositoryKey={repositoryKey}
                 remoteData={{
                   owner: ghOwner || '',
                   repo: ghRepo || '',
@@ -865,6 +860,12 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
               label: 'Terminal',
               icon: <TerminalIcon size={16} />,
               preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Integrated terminal</div>
+            },
+            {
+              id: 'tabbedTerminal',
+              label: 'Tabbed Terminal',
+              icon: <TerminalIcon size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Multi-tab terminal with agent support</div>
             },
             // Viewer panels (context-dependent, shown when files are selected)
             {

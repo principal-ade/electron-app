@@ -1,22 +1,29 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { ThemedMonacoWithProvider } from '@principal-ade/industry-themed-monaco-editor';
-import { FileSystemService } from '../../../../main-process-api/FileSystemService';
-import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
+import { FileSystemService } from '../../main-process-api/FileSystemService';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { FileText, X } from 'lucide-react';
 import { parseMarkdownIntoPresentation } from 'themed-markdown';
-import { ThemedSlidePresentationBook } from '../../../../components/markdown/ThemedSlidePresentationBook';
+import { ThemedSlidePresentationBook } from '../../components/markdown/ThemedSlidePresentationBook';
+import type { FileTreeSource } from '../../types/file-tree-source';
 
 interface FilePreviewPanelProps {
   filePath: string | null;
-  repositoryPath: string;
+  source?: FileTreeSource | null; // The file tree source (local or remote)
+  contentProvider?: {
+    readFileContent: (path: string) => Promise<string | null>;
+  };
   onClose?: () => void;
+  readOnly?: boolean; // Force read-only mode
 }
 
 export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   filePath,
-  repositoryPath,
+  source,
+  contentProvider,
   onClose,
+  readOnly: forceReadOnly = false,
 }) => {
   const { theme } = useTheme();
   const [fileContent, setFileContent] = useState<string>('');
@@ -44,9 +51,20 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   }, [filePath]);
 
   const getAbsolutePath = useCallback(
-    (path: string) => (path.startsWith('/') ? path : `${repositoryPath}/${path}`),
-    [repositoryPath],
+    (path: string) => {
+      // For local sources, construct absolute path
+      if (source?.type === 'local') {
+        return path.startsWith('/') ? path : `${source.location}/${path}`;
+      }
+      // For remote sources or no source, return as-is
+      return path;
+    },
+    [source],
   );
+
+  // Determine if this is a local file that supports editing
+  const isLocalFile = source?.type === 'local';
+  const isEditable = isLocalFile && !forceReadOnly;
 
   // Get language from file extension
   const getLanguage = (path: string): string => {
@@ -119,17 +137,28 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     setError(null);
 
     try {
-      const result = await FileSystemService.readFile(absolutePath);
+      let content: string | null = null;
+
+      // For local sources, read from filesystem
+      if (isLocalFile) {
+        const result = await FileSystemService.readFile(absolutePath);
+        content = result?.content ?? null;
+      }
+      // For remote sources, use content provider if available
+      else if (contentProvider) {
+        const relativePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+        content = await contentProvider.readFileContent(relativePath);
+      }
 
       if (latestFilePathRef.current !== absolutePath) {
         return;
       }
 
-      if (result && result.content !== undefined) {
-        setFileContent(result.content);
+      if (content !== null) {
+        setFileContent(content);
         setSaveError(null);
         if (!isDirtyRef.current) {
-          setEditorContent(result.content);
+          setEditorContent(content);
           setIsDirty(false);
         }
       } else {
@@ -146,7 +175,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         setIsLoading(false);
       }
     }
-  }, [filePath, getAbsolutePath]);
+  }, [filePath, getAbsolutePath, isLocalFile, contentProvider]);
 
   useEffect(() => {
     loadFile();
@@ -203,8 +232,9 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     [editorContent, fileContent, filePath, getAbsolutePath, isDirty],
   );
 
+  // File watching - only for local files
   useEffect(() => {
-    if (!filePath) {
+    if (!filePath || !isLocalFile) {
       return;
     }
 
@@ -237,7 +267,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         console.error('Error stopping file watching:', stopError);
       });
     };
-  }, [filePath, getAbsolutePath, loadFile]);
+  }, [filePath, isLocalFile, getAbsolutePath, loadFile]);
 
   // Parse markdown into slides if it's a markdown file
   const fileName = filePath?.split('/').pop() || filePath || '';
@@ -343,7 +373,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             gap: '12px',
           }}
         >
-          {!isMarkdown && (
+          {!isMarkdown && isEditable && (
             <>
               {saveError ? (
                 <span style={{ color: theme.colors.error, fontSize: theme.fontSizes[0] }}>
@@ -457,8 +487,9 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           <ThemedMonacoWithProvider
             value={editorContent}
             language={language}
-            vimMode={vimModeEnabled}
+            vimMode={isEditable ? vimModeEnabled : false}
             options={{
+              readOnly: !isEditable,
               minimap: { enabled: false },
               lineNumbers: 'on',
               scrollBeyondLastLine: false,
@@ -476,8 +507,8 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
               },
             }}
             height="100%"
-            onChange={handleEditorChange}
-            onSave={handleEditorSave}
+            onChange={isEditable ? handleEditorChange : undefined}
+            onSave={isEditable ? handleEditorSave : undefined}
           />
         )}
       </div>

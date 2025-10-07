@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.56",
+  "version": "0.0.57",
   "description": "Principal ADE - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -161,7 +161,7 @@
     "@a24z/alexandria-ui": "^0.0.3",
     "@a24z/callimachus": "^0.1.4",
     "@a24z/core-library": "^0.1.25",
-    "@a24z/dynamic-file-tree": "^0.1.13",
+    "@a24z/dynamic-file-tree": "^0.1.14",
     "@a24z/industry-theme": "^0.1.1",
     "@a24z/markdown-search": "^2.0.6",
     "@a24z/observability-sdk": "^0.4.6",

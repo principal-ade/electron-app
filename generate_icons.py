@@ -10,7 +10,7 @@ import shutil
 from PIL import Image, ImageDraw
 
 def create_rounded_rectangle_mask(size, radius):
-    """Create a mask for rounded corners"""
+    """Create a mask for rounded corners"""   
     mask = Image.new('L', (size, size), 0)
     draw = ImageDraw.Draw(mask)
 

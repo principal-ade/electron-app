@@ -358,6 +358,16 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
     setHasChanges(true);
   };
 
+  const handleClose = () => {
+    if (hasChanges) {
+      if (window.confirm('You have unsaved changes. Are you sure you want to close without saving?')) {
+        onClose();
+      }
+    } else {
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   // Add CSS animation for spinner
@@ -384,7 +394,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
         justifyContent: 'center',
         zIndex: 10000,
       }}
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div
         style={{
@@ -434,7 +444,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
             </span>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{
               backgroundColor: 'transparent',
               border: 'none',
@@ -516,6 +526,15 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                 return (
                   <span
                     key={secret}
+                    onClick={() => {
+                      if (!isConfigured) {
+                        setNewKey(secret);
+                        // Focus the value input field after a short delay
+                        setTimeout(() => {
+                          document.getElementById('secret-value-input')?.focus();
+                        }, 100);
+                      }
+                    }}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -535,6 +554,20 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                       color: isConfigured
                         ? theme.colors.success || '#10b981'
                         : theme.colors.textSecondary,
+                      cursor: isConfigured ? 'default' : 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isConfigured) {
+                        e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                        e.currentTarget.style.borderColor = theme.colors.primary;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isConfigured) {
+                        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                        e.currentTarget.style.borderColor = theme.colors.border;
+                      }
                     }}
                   >
                     {isConfigured ? '✓' : '○'} {secret}
@@ -937,7 +970,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               style={{
                 padding: '8px 16px',
                 backgroundColor: theme.colors.backgroundSecondary,
