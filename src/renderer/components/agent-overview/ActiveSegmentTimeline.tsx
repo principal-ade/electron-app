@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
-import { usePanelsTheme } from '../../theme/panelsTheme';
 import { FileText, Wrench, Globe, X, Clipboard, Check } from 'lucide-react';
 import { AnimatedTimelineEvent } from '../landing-page/AnimatedTimelineEvent';
 import { FileViewer } from '../FileViewer';
@@ -21,7 +20,6 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
   newEventIds,
 }) => {
   const { theme } = useTheme();
-  const panelsTheme = usePanelsTheme();
   const [viewingFile, setViewingFile] = useState<string | null>(null);
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
   const [expandedEdits, setExpandedEdits] = useState<Set<string>>(new Set());
@@ -1127,7 +1125,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
       {viewingFile ? (
         <AnimatedResizableLayout
           minSize={30}
-          theme={panelsTheme}
+          theme={theme}
           leftPanel={
             <div style={{ height: '100%', overflowY: 'auto', padding: '16px' }}>
               <div

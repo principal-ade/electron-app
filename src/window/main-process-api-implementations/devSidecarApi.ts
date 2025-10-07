@@ -5,10 +5,10 @@ import type {
   StartDevSidecarServerPayload,
   StopDevSidecarServerPayload,
   DevSidecarAPI,
-  DevSidecarEvent,
   DevSidecarWindowInfo,
   DevSidecarServerStatusResponse,
 } from '../../shared/main-process-api-interfaces/DevSidecarAPI';
+import { DevSidecarEvent } from '../../shared/main-process-api-interfaces/DevSidecarAPI';
 import type { DevServerLogEntry } from '../../shared/types/devServer.types';
 
 function registerListener<T>(

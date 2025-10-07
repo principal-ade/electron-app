@@ -14,11 +14,8 @@ interface FileTreeTabProps {
  *
  * Features:
  * - Starts with all folders closed by default for better performance
- * - Uses theme background color
+ * - Uses transparent background for better theming
  * - Custom padding for visual spacing
- *
- * TODO: Request from @a24z/dynamic-file-tree team:
- * - Add a `transparent` or `backgroundColor` prop to allow custom backgrounds
  */
 export const FileTreeTab: React.FC<FileTreeTabProps> = ({
   fileTree,
@@ -66,7 +63,6 @@ export const FileTreeTab: React.FC<FileTreeTabProps> = ({
       style={{
         height: '100%',
         overflow: 'auto',
-        backgroundColor: theme.colors.background,
       }}
     >
       <DynamicFileTree
@@ -75,7 +71,8 @@ export const FileTreeTab: React.FC<FileTreeTabProps> = ({
         onFileSelect={onFileSelect}
         showIcons={true}
         defaultOpen={false}
-        padding="4px"
+        padding="16px"
+        transparentBackground={true}
       />
     </div>
   );

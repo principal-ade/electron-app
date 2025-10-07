@@ -74,14 +74,139 @@ When converting an existing panel to the shared system:
 - [ ] Update configuration menus or layout initializers to reference the registry rather than maintaining local arrays of panel IDs.
 - [ ] Verify that shared `actions` (e.g., open file, focus diff view) are exposed through the provider so panels stay reusable.
 
+## Tab vs Panel Variants
+
+Many panels need to render differently depending on their context. A panel shown in a standalone card needs borders, headers, and padding. The same panel shown as tab content should skip those decorations and let the tab system control the chrome.
+
+### Implementing Variant Support
+
+Use a `variant` prop to support both contexts:
+
+```typescript
+interface PanelProps {
+  variant?: 'panel' | 'tab';  // defaults to 'panel'
+  // ... other props
+}
+```
+
+**Panel variant** includes:
+- Container with background color, border, and border radius
+- Header with title and metadata (e.g., file count)
+- Internal padding around content
+- Self-contained card styling
+
+**Tab variant** includes:
+- No container wrapper or border
+- No header (tab provides the label)
+- Content only, with minimal or no padding
+- Transparent background (parent controls styling)
+
+### Example: GitChangesPanel
+
+```typescript
+// Panel variant - full card styling
+<GitChangesPanel variant="panel" />
+
+// Tab variant - content only
+<GitChangesPanel variant="tab" />
+```
+
+The tab variant returns just the tree component without wrapper elements, allowing the tab container to control the overall appearance and background.
+
+### Styling Considerations
+
+For tab variants:
+- Let the parent/tab system control background colors
+- Remove internal padding or keep it minimal
+- Omit headers and borders
+- Consider using transparent backgrounds on nested components (pending dependency support for `transparentBackground` prop)
+
+For panel variants:
+- Include full card styling with borders and backgrounds
+- Add headers with titles and metadata
+- Use standard padding (typically 16px)
+- Display as standalone, self-contained components
+
+## Repository Manager Implementation
+
+The Repository Manager now uses the `@a24z/panels` library's `ConfigurablePanelLayout` and `PanelConfigurator` components for a fully user-configurable layout system.
+
+### Available Panels
+
+The registry includes Repository Manager-specific panels:
+
+- **`fileTree`** - File browser for navigating the repository structure
+- **`search`** - Search files by name and content with advanced filtering
+- **`gitChanges`** - Git changes panel (shared with Repository Explorer, uses `RepositoryPanelProvider`)
+- **`dependencies`** - Package architecture and dependency relationships
+- **`tools`** - Development tools and utilities
+- **`docs`** - Documentation viewer for markdown and diagram files
+- **`cityVisualization`** - Interactive code-city visualization (shared with Repository Explorer)
+- **`terminal`** - Integrated terminal for repository commands
+
+### Default Layout
+
+```typescript
+{
+  left: {
+    type: 'tabs',
+    panels: ['fileTree', 'docs'],
+    config: { defaultActiveTab: 0 }
+  },
+  middle: 'cityVisualization',
+  right: {
+    type: 'tabs',
+    panels: ['search', 'gitChanges', 'dependencies', 'tools'],
+    config: { defaultActiveTab: 0 }
+  }
+}
+```
+
+### User Configuration
+
+Users can reconfigure the layout via the "Configure Panels" button in the titlebar, which opens a `PanelConfiguratorModal`. The configurator allows:
+
+- **Assigning panels to slots** - Any panel can go in left, middle, or right slot
+- **Creating tab groups** - Multiple panels can be grouped as tabs in a single slot
+- **Creating tile layouts** - Panels can be split side-by-side (not yet implemented but supported by `@a24z/panels`)
+- **Swapping slot contents** - Click two slots to swap their entire configuration
+
+Layout preferences persist per repository.
+
+### Panel Content Mapping
+
+The `RepositoryExplorationView` maintains a `panelContentMap` that maps panel IDs from the registry to their actual React components. This approach:
+
+1. Keeps panel content definitions centralized
+2. Allows the `ConfigurablePanelLayout` to render any combination of panels
+3. Supports dependency injection for panel props
+4. Maintains type safety through the registry
+
+Example:
+```typescript
+const panelContentMap: Record<string, React.ReactNode> = {
+  fileTree: <FileTreeTab fileTree={fileTree} onFileSelect={handleFileSelect} />,
+  search: <RepositorySearchTab fileTrees={fileTrees} onFileSelect={handleFileSelect} />,
+  gitChanges: (
+    <RepositoryPanelProvider repositoryPath={repoPath} actions={{ openFile }}>
+      <GitChangesPanel variant="tab" />
+    </RepositoryPanelProvider>
+  ),
+  // ... other panels
+};
+```
+
 ## Frequently Asked Questions
 
 **How do I show a panel in multiple windows?**
-Select the same `RepositoryPanelDefinition` in each window’s layout configuration. Because both are wrapped in `RepositoryPanelProvider`, the panel component receives equivalent data.
+Select the same `RepositoryPanelDefinition` in each window's layout configuration. Because both are wrapped in `RepositoryPanelProvider`, the panel component receives equivalent data.
 
 **Can a panel lazy-load heavy data?**
 Yes. Use `context.hasSlice('packages')` or `context.isSliceLoading('packages')` to decide when to fetch or display placeholders. If a panel needs additional data beyond the built-in slices, fetch it inside the panel component while keeping repository basics centralized.
 
 **What about panels without a shared renderer?**
-Define them in the registry without a `render` function. Host views can map the definition to their own UI component but still benefit from synchronized metadata, persistence, and slice declarations.
+Define them in the registry without a `render` function. Host views can map the definition to their own UI component but still benefit from synchronized metadata, persistence, and slice declarations. This is the current approach for Repository Manager panels, where the registry defines metadata but `RepositoryExplorationView` provides the actual component implementations.
+
+**How does the PanelConfigurator work with tabs?**
+The `@a24z/panels@1.0.14` library supports creating `PanelGroup` objects with `type: 'tabs'`. Users can assign multiple panels to a single slot as a tab group. The configurator UI allows dragging panels between slots and automatically creates/updates tab groups. Layout state persists using the `PanelLayout` type from `@a24z/panels`.
 

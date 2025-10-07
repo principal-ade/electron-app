@@ -52,15 +52,6 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
 }) => {
   return (
     <BaseTitlebar>
-      {/* Left: Left panel controls */}
-      {showSidebarControls && onToggleSidebar && (
-        <ViewSidebarControls
-          position="left"
-          isCollapsed={sidebarCollapsed}
-          onToggle={onToggleSidebar}
-        />
-      )}
-
       {/* Center: Repository info and mode selector */}
       <div
         style={{
@@ -102,7 +93,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
         <TitlebarOpenInIDE repository={repository} />
       </div>
 
-      {/* Right: Right panel controls and actions */}
+      {/* Right: Panel controls and actions */}
       <div
         style={{
           position: 'absolute',
@@ -112,6 +103,13 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           gap: '8px',
         }}
       >
+        {showSidebarControls && onToggleSidebar && (
+          <ViewSidebarControls
+            position="left"
+            isCollapsed={sidebarCollapsed}
+            onToggle={onToggleSidebar}
+          />
+        )}
         {onToggleRightSidebar && (
           <ViewSidebarControls
             position="right"

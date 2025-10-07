@@ -1,5 +1,19 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '@a24z/industry-theme';
+import {
+  FolderTree,
+  Search,
+  GitBranch,
+  Layers,
+  Wrench,
+  Book,
+  Building2,
+  Terminal as TerminalIcon,
+  FileCode,
+  FileText,
+  Presentation,
+  Pencil,
+} from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { createFileColorHighlightLayers } from '@principal-ai/code-city-react';
 import {
@@ -52,11 +66,17 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
     const [showPanelConfigModal, setShowPanelConfigModal] = useState(false);
     const [cloneBranchStatuses, setCloneBranchStatuses] = useState<Record<string, any>>({});
 
-    // Panel layout state
+    // Panel layout state - default matches RepositoryExplorationView
     const [panelLayout, setPanelLayout] = useState<PanelLayout>({
-      left: 'left',
+      left: {
+        type: 'tabs',
+        panels: ['fileTree', 'docs'],
+        config: {
+          defaultActiveTab: 0,
+        },
+      },
       middle: 'terminal',
-      right: 'middle',
+      right: 'cityVisualization',
     });
 
     // File tree services - shared across all views
@@ -262,11 +282,19 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           const prefs = await UserPreferencesService.getPreferences();
           const repoStates = { ...(prefs.repositoryUIStates ?? {}) };
           const repoState = { ...(repoStates[repositoryKey] ?? {}) };
+
+          // Convert PanelLayout to the expected type (string IDs only)
+          const layoutConfig = {
+            left: typeof layout.left === 'string' ? layout.left : null,
+            middle: typeof layout.middle === 'string' ? layout.middle : null,
+            right: typeof layout.right === 'string' ? layout.right : null,
+          };
+
           const panelLayouts = {
             ...(repoState.panelLayouts ?? {}),
             exploration: {
               ...(repoState.panelLayouts?.exploration ?? {}),
-              layout,
+              layout: layoutConfig,
             },
           };
 
@@ -787,20 +815,75 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           isOpen={showPanelConfigModal}
           onClose={() => setShowPanelConfigModal(false)}
           availablePanels={[
+            // Navigation & Search panels
             {
-              id: 'left',
-              label: 'Search & Tools',
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Search & Tools</div>
+              id: 'fileTree',
+              label: 'Files',
+              icon: <FolderTree size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>File browser</div>
             },
             {
-              id: 'middle',
+              id: 'search',
+              label: 'Search',
+              icon: <Search size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Search files and content</div>
+            },
+            {
+              id: 'gitChanges',
+              label: 'Git Changes',
+              icon: <GitBranch size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View git changes</div>
+            },
+            {
+              id: 'dependencies',
+              label: 'Dependencies',
+              icon: <Layers size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Package architecture</div>
+            },
+            {
+              id: 'tools',
+              label: 'Tools',
+              icon: <Wrench size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Development tools</div>
+            },
+            {
+              id: 'docs',
+              label: 'Docs',
+              icon: <Book size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Documentation viewer</div>
+            },
+            // Visualization panels
+            {
+              id: 'cityVisualization',
               label: 'City Visualization',
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>City Visualization</div>
+              icon: <Building2 size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Code city view</div>
             },
+            // Utility panels
             {
               id: 'terminal',
               label: 'Terminal',
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Terminal</div>
+              icon: <TerminalIcon size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Integrated terminal</div>
+            },
+            // Viewer panels (context-dependent, shown when files are selected)
+            {
+              id: 'codeViewer',
+              label: 'Code Viewer',
+              icon: <FileCode size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View source code files</div>
+            },
+            {
+              id: 'markdownViewer',
+              label: 'Markdown Viewer',
+              icon: <FileText size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View markdown as document or slides</div>
+            },
+            {
+              id: 'excalidrawDiagram',
+              label: 'Excalidraw Diagram',
+              icon: <Pencil size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View excalidraw diagrams</div>
             },
           ]}
           currentLayout={panelLayout}

@@ -31,7 +31,9 @@ export interface CacheUpdatedEvent<K extends CacheSlice = CacheSlice> {
   entry: CacheEntry<CacheSliceDataMap[K]>;
 }
 
-type InternalCacheEntry<K extends CacheSlice = CacheSlice> = CacheEntry<CacheSliceDataMap[K]>;
+interface InternalCacheEntry<K extends CacheSlice = CacheSlice> extends CacheEntry<CacheSliceDataMap[K]> {
+  inflight?: Promise<CacheSliceDataMap[K]>;
+}
 
 type RepositoryCacheMap = Map<CacheSlice, InternalCacheEntry>;
 
@@ -109,18 +111,36 @@ export class RepositoryCacheRegistry extends EventEmitter {
     };
   }
 
-  on<K extends CacheSlice>(event: 'cacheUpdated', listener: (payload: CacheUpdatedEvent<K>) => void): this;
-  on(event: string, listener: (...args: unknown[]) => void): this {
+  override on(
+    event: 'cacheUpdated',
+    listener: (payload: CacheUpdatedEvent) => void,
+  ): this;
+  override on(
+    event: string | symbol,
+    listener: ((payload: CacheUpdatedEvent) => void) | ((...args: unknown[]) => void),
+  ): this {
     return super.on(event, listener);
   }
 
-  once<K extends CacheSlice>(event: 'cacheUpdated', listener: (payload: CacheUpdatedEvent<K>) => void): this;
-  once(event: string, listener: (...args: unknown[]) => void): this {
+  override once(
+    event: 'cacheUpdated',
+    listener: (payload: CacheUpdatedEvent) => void,
+  ): this;
+  override once(
+    event: string | symbol,
+    listener: ((payload: CacheUpdatedEvent) => void) | ((...args: unknown[]) => void),
+  ): this {
     return super.once(event, listener);
   }
 
-  off<K extends CacheSlice>(event: 'cacheUpdated', listener: (payload: CacheUpdatedEvent<K>) => void): this;
-  off(event: string, listener: (...args: unknown[]) => void): this {
+  override off(
+    event: 'cacheUpdated',
+    listener: (payload: CacheUpdatedEvent) => void,
+  ): this;
+  override off(
+    event: string | symbol,
+    listener: ((payload: CacheUpdatedEvent) => void) | ((...args: unknown[]) => void),
+  ): this {
     return super.off(event, listener);
   }
 

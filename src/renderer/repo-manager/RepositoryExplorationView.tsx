@@ -5,8 +5,6 @@ import {
   Search,
   FileText,
   Book,
-  PanelLeft,
-  PanelLeftClose,
   Palette,
   Wrench,
   FolderTree,
@@ -19,14 +17,11 @@ import {
   ConfigurablePanelLayout,
   type PanelDefinitionWithContent,
   type PanelLayout,
-  type PanelGroup as PanelGroupConfig,
   type TabsConfig,
 } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
-import { MarkdownDocumentViewer } from './shared/MarkdownDocumentViewer';
-import { ExcalidrawWrapper } from '../components/shared/ExcalidrawWrapper';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import TerminalPanel from '../components/Terminal/TerminalPanel';
 
@@ -38,7 +33,6 @@ import { FileTreeSourceService } from '../services/FileTreeSourceService';
 import { MonitoredFileTreeService } from '../services/MonitoredFileTreeService';
 // import { SourceSelectionService } from '../services/SourceSelectionService'; // TODO: Re-enable when needed
 import { FileTreeSource, FileTreeStats } from '../types/file-tree-source';
-import { usePanelsTheme } from '../theme/panelsTheme';
 import type { ToolbarItem } from './shared/RepositoryToolbar';
 import { RepoSourceArchitecturePanelSimple } from './shared/RepoSourceArchitecturePanelSimple';
 import {
@@ -52,15 +46,17 @@ import { HelpModal } from './shared/HelpModal';
 import { useGitChanges } from '../contexts/GitChangesContext';
 import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
 import { RepositorySearchTab } from '../components/repository-maps/RepositorySearchTab';
-import { RepoManagerCodePreview } from './shared/RepoManagerCodePreview';
 import { ToolsTab } from './shared/ToolsTab';
-import {
-  RightPaneContainer,
-  RightPaneView,
-} from '../components/repository-maps/RightPaneContainer';
+import { RightPaneView } from '../components/repository-maps/RightPaneContainer';
 import { FileTreeTab } from './shared/FileTreeTab';
 import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
+import {
+  CityVisualizationPanel,
+  CodeFileViewerPanel,
+  MarkdownViewerPanel,
+  ExcalidrawPanel,
+} from './panels';
 
 type PanelTabConfig = { id: string; label: string; icon?: React.ReactNode; content: React.ReactNode; visible?: boolean };
 
@@ -124,7 +120,6 @@ export const RepositoryExplorationView: React.FC<
   panelLayout,
 }) => {
   const { theme } = useTheme();
-  const panelsTheme = usePanelsTheme();
   const [activeTab, setActiveTab] = useState<string>('fileTree');
   const [internalLeftPanelCollapsed, setInternalLeftPanelCollapsed] =
     useState(false);
@@ -313,13 +308,6 @@ export const RepositoryExplorationView: React.FC<
   >('markdown');
   const [docContent, setDocContent] = useState<string | null>(null);
   const [loadingDoc, setLoadingDoc] = useState(false);
-  const [docViewMode, setDocViewMode] = useState<'slides' | 'document'>(
-    'document',
-  );
-  const [preferredDocViewMode, setPreferredDocViewMode] = useState<
-    'slides' | 'document'
-  >('document');
-  const [currentSlide, setCurrentSlide] = useState(0);
 
   // Git changes from context (for highlight layers)
   const {
@@ -383,11 +371,70 @@ export const RepositoryExplorationView: React.FC<
   // Track the current loading file to prevent race conditions
   const loadingFileRef = useRef<string | null>(null);
 
+  // Handle documentation selection - defined early so openFileInRightPane can use it
+  const handleDocumentSelect = useCallback(
+    async (filePath: string, type: 'markdown' | 'excalidraw') => {
+      setSelectedDocPath(filePath);
+      setSelectedDocType(type);
+      setLoadingDoc(true);
+
+      try {
+        // For local sources, read from filesystem
+        if (activeFileTreeSource?.type === 'local') {
+          // Build full path for local files
+          const fullPath = filePath.startsWith('/')
+            ? filePath
+            : `${activeFileTreeSource.location}/${filePath}`.replace(
+                /\/+/g,
+                '/',
+              );
+
+          const result = await FileSystemService.readFile(fullPath);
+          if (result?.content) {
+            setDocContent(result.content);
+          } else {
+            setDocContent(null);
+          }
+        } else if (activeFileTreeSource?.type === 'remote') {
+          // For remote sources, use GitHub API
+          const relativePath = filePath.startsWith('/')
+            ? filePath.substring(1)
+            : filePath;
+          const content =
+            await fileViewerContentProvider.readFileContent(relativePath);
+          if (content) {
+            setDocContent(content);
+          } else {
+            setDocContent(null);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load document:', error);
+        setDocContent(null);
+      } finally {
+        setLoadingDoc(false);
+      }
+    },
+    [activeFileTreeSource, fileViewerContentProvider],
+  );
+
   const openFileInRightPane = useCallback(
     async (filePath: string) => {
       loadingFileRef.current = filePath;
 
       setSelectedFile(filePath);
+
+      // Check if this is a markdown or excalidraw file
+      const isMarkdown = filePath.endsWith('.md');
+      const isExcalidraw = filePath.endsWith('.excalidraw');
+
+      if (isMarkdown || isExcalidraw) {
+        // Route to document viewer
+        await handleDocumentSelect(filePath, isExcalidraw ? 'excalidraw' : 'markdown');
+        return;
+      }
+
+      // Otherwise, show in code viewer
       setSelectedCodeFile(filePath);
 
       const absolutePath =
@@ -428,7 +475,7 @@ export const RepositoryExplorationView: React.FC<
         }
       }
     },
-    [activeFileTreeSource, fileViewerContentProvider],
+    [activeFileTreeSource, fileViewerContentProvider, handleDocumentSelect],
   );
 
   const handleFileClick = useCallback(
@@ -505,7 +552,7 @@ export const RepositoryExplorationView: React.FC<
     [],
   );
 
-  const handleRightPaneViewChange = useCallback(
+  const _handleRightPaneViewChange = useCallback(
     (mode: RightPaneView) => {
       setRightPaneMode(mode);
       if (mode === 'city') {
@@ -963,56 +1010,6 @@ export const RepositoryExplorationView: React.FC<
     setPackageHighlightLayers(layers);
   }, [highlightedPackages, packageLayers]);
 
-  // Handle documentation selection
-  const handleDocumentSelect = useCallback(
-    async (filePath: string, type: 'markdown' | 'excalidraw') => {
-      setSelectedDocPath(filePath);
-      setSelectedDocType(type);
-      setLoadingDoc(true);
-      // Use the preferred view mode when opening a new document
-      setDocViewMode(preferredDocViewMode);
-      setCurrentSlide(0); // Reset to first slide
-
-      try {
-        // For local sources, read from filesystem
-        if (activeFileTreeSource?.type === 'local') {
-          // Build full path for local files
-          const fullPath = filePath.startsWith('/')
-            ? filePath
-            : `${activeFileTreeSource.location}/${filePath}`.replace(
-                /\/+/g,
-                '/',
-              );
-
-          const result = await FileSystemService.readFile(fullPath);
-          if (result?.content) {
-            setDocContent(result.content);
-          } else {
-            setDocContent(null);
-          }
-        } else if (activeFileTreeSource?.type === 'remote') {
-          // For remote sources, use GitHub API
-          const relativePath = filePath.startsWith('/')
-            ? filePath.substring(1)
-            : filePath;
-          const content =
-            await fileViewerContentProvider.readFileContent(relativePath);
-          if (content) {
-            setDocContent(content);
-          } else {
-            setDocContent(null);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load document:', error);
-        setDocContent(null);
-      } finally {
-        setLoadingDoc(false);
-      }
-    },
-    [activeFileTreeSource, fileViewerContentProvider, preferredDocViewMode],
-  );
-
   // Get git state for source badges (moved here to be available for fileTrees)
   const gitState =
     activeFileTreeSource?.type === 'local'
@@ -1048,32 +1045,22 @@ export const RepositoryExplorationView: React.FC<
     }
   }, [repositoryPathForTools]);
 
-  // Create tabs configuration
-  const tabs: PanelTabConfig[] = [
-    {
-      id: 'fileTree',
-      label: 'Files',
-      icon: <FolderTree size={14} />,
-      visible: true,
-      content: (
+  // Create panel content map - matches registry IDs
+  const panelContentMap = React.useMemo(() => {
+    const map: Record<string, React.ReactNode> = {
+      fileTree: (
         <FileTreeTab
           fileTree={fileTree}
           onFileSelect={handleSearchFileSelect}
           loading={loading}
         />
       ),
-    },
-    {
-      id: 'search',
-      label: 'Search',
-      icon: <Search size={14} />,
-      visible: true,
-      content: (
+      search: (
         <RepositorySearchTab
           fileTrees={fileTrees}
           activeFileTreeSource={activeFileTreeSource}
           contentProvider={searchContentProvider}
-          showEditorSelector={false} // Hide editor selector in explore view
+          showEditorSelector={false}
           gitModifiedFiles={allModifiedFiles}
           gitStatusWithFiles={gitStatusWithFiles}
           onFileSelect={handleSearchFileSelect}
@@ -1083,13 +1070,7 @@ export const RepositoryExplorationView: React.FC<
           onFolderFiltersChange={handleFolderFiltersChange}
         />
       ),
-    },
-    {
-      id: 'gitChanges',
-      label: 'Git Changes',
-      icon: <GitBranch size={14} />,
-      visible: activeFileTreeSource?.type === 'local',
-      content: (
+      gitChanges: (
         <RepositoryPanelProvider
           repositoryPath={
             activeFileTreeSource?.type === 'local'
@@ -1098,16 +1079,10 @@ export const RepositoryExplorationView: React.FC<
           }
           actions={{ openFile: handleFileClick }}
         >
-          <GitChangesPanel />
+          <GitChangesPanel variant="tab" />
         </RepositoryPanelProvider>
       ),
-    },
-    {
-      id: 'layers',
-      label: 'Dependencies',
-      icon: <Layers size={14} />,
-      visible: true,
-      content: activeFileTreeSource ? (
+      dependencies: activeFileTreeSource ? (
         <RepoSourceArchitecturePanelSimple
           source={activeFileTreeSource}
           cacheService={cacheService}
@@ -1131,26 +1106,14 @@ export const RepositoryExplorationView: React.FC<
           No source selected
         </div>
       ),
-    },
-    {
-      id: 'tools',
-      label: 'Tools',
-      icon: <Wrench size={14} />,
-      visible: true,
-      content: (
+      tools: (
         <ToolsTab
           packageLayers={packageLayers}
           repositoryPath={repositoryPathForTools}
           onHighlightLayersChange={setToolsHighlightLayers}
         />
       ),
-    },
-    {
-      id: 'docs',
-      label: 'Docs',
-      icon: <Book size={14} />,
-      visible: true, // Always show, will display message if not registered
-      content: (
+      docs: (
         <AlexandriaDocsPanel
           repositoryPath={
             activeFileTreeSource?.location ||
@@ -1161,7 +1124,45 @@ export const RepositoryExplorationView: React.FC<
           selectedDocument={selectedDocPath ?? undefined}
         />
       ),
-    },
+    };
+    return map;
+  }, [
+    fileTree,
+    loading,
+    handleSearchFileSelect,
+    fileTrees,
+    activeFileTreeSource,
+    searchContentProvider,
+    allModifiedFiles,
+    gitStatusWithFiles,
+    selectedFile,
+    handleSearchResultsChange,
+    handleSearchResultHover,
+    handleFolderFiltersChange,
+    handleFileClick,
+    cacheService,
+    handlePackageLayersChange,
+    handlePackageAnalysisStart,
+    handlePackageAnalysisEnd,
+    handlePackageSelected,
+    handlePackageDeselected,
+    theme.colors.textSecondary,
+    packageLayers,
+    repositoryPathForTools,
+    setToolsHighlightLayers,
+    repository.localClones,
+    handleDocumentSelect,
+    selectedDocPath,
+  ]);
+
+  // Build tabs from registry using panel content
+  const tabs: PanelTabConfig[] = [
+    { id: 'fileTree', label: 'Files', icon: <FolderTree size={14} />, visible: true, content: panelContentMap.fileTree },
+    { id: 'search', label: 'Search', icon: <Search size={14} />, visible: true, content: panelContentMap.search },
+    { id: 'gitChanges', label: 'Git Changes', icon: <GitBranch size={14} />, visible: activeFileTreeSource?.type === 'local', content: panelContentMap.gitChanges },
+    { id: 'dependencies', label: 'Dependencies', icon: <Layers size={14} />, visible: true, content: panelContentMap.dependencies },
+    { id: 'tools', label: 'Tools', icon: <Wrench size={14} />, visible: true, content: panelContentMap.tools },
+    { id: 'docs', label: 'Docs', icon: <Book size={14} />, visible: true, content: panelContentMap.docs },
   ];
 
   // Create toolbar items
@@ -1273,6 +1274,83 @@ export const RepositoryExplorationView: React.FC<
     setGitChangesVisible,
   ]);
 
+  const visibleTabs = tabs.filter((tab) => tab.visible !== false);
+
+  useEffect(() => {
+    if (!visibleTabs.some((tab) => tab.id === activeTab)) {
+      const nextTab = visibleTabs[0];
+      if (nextTab) {
+        handleTabChange(nextTab.id);
+      }
+    }
+  }, [visibleTabs, activeTab, handleTabChange]);
+
+  // Memoize viewer panels to ensure they re-render when state changes
+  const codeViewerPanel = useMemo(
+    () => {
+      console.info('[RepositoryExplorationView] Code viewer panel updated:', {
+        selectedCodeFile,
+        hasContent: !!codeFileContent,
+        loading: loadingCodeFile,
+      });
+      return (
+        <CodeFileViewerPanel
+          filePath={selectedCodeFile}
+          absolutePath={selectedCodeFileAbsolutePath}
+          content={codeFileContent}
+          loading={loadingCodeFile}
+          onClose={() => {
+            setSelectedCodeFile(null);
+            setSelectedCodeFileAbsolutePath(null);
+            setCodeFileContent(null);
+            setSelectedFile(null);
+          }}
+        />
+      );
+    },
+    [selectedCodeFile, selectedCodeFileAbsolutePath, codeFileContent, loadingCodeFile],
+  );
+
+  const markdownViewerPanel = useMemo(
+    () => {
+      const shouldShow = selectedDocType !== 'excalidraw';
+      console.info('[RepositoryExplorationView] Markdown viewer panel updated:', {
+        selectedDocPath,
+        selectedDocType,
+        shouldShow,
+        hasContent: !!docContent,
+        loading: loadingDoc,
+      });
+      return (
+        <MarkdownViewerPanel
+          docPath={shouldShow ? selectedDocPath : null}
+          docContent={shouldShow ? docContent : null}
+          loading={loadingDoc}
+          onClose={() => {
+            setSelectedDocPath(null);
+            setDocContent(null);
+          }}
+        />
+      );
+    },
+    [selectedDocPath, selectedDocType, docContent, loadingDoc],
+  );
+
+  const excalidrawDiagramPanel = useMemo(
+    () => (
+      <ExcalidrawPanel
+        docPath={selectedDocType === 'excalidraw' ? selectedDocPath : null}
+        docContent={selectedDocType === 'excalidraw' ? docContent : null}
+        loading={loadingDoc}
+        onClose={() => {
+          setSelectedDocPath(null);
+          setDocContent(null);
+        }}
+      />
+    ),
+    [selectedDocPath, selectedDocType, docContent, loadingDoc],
+  );
+
   // Error handling
   if (error) {
     return (
@@ -1296,227 +1374,6 @@ export const RepositoryExplorationView: React.FC<
     );
   }
 
-  // Create custom right panel content for file viewing (from search results)
-  const fileViewerRightPanel = selectedCodeFile ? (
-    <RepoManagerCodePreview
-      key={selectedCodeFile} // Force remount when selecting a different file
-      filePath={selectedCodeFile}
-      absolutePath={selectedCodeFileAbsolutePath}
-      content={codeFileContent}
-      loading={loadingCodeFile}
-      onClose={() => {
-        setSelectedCodeFile(null);
-        setSelectedCodeFileAbsolutePath(null);
-        setCodeFileContent(null);
-        setSelectedFile(null);
-        setRightPaneMode('city');
-      }}
-    />
-  ) : null;
-
-  // Create custom right panel content for document viewing
-  const documentRightPanel =
-    selectedDocPath && docContent && activeTab === 'docs' ? (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          backgroundColor: theme.colors.background,
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {/* Document header with collapse button */}
-        <div
-          style={{
-            padding: '12px 16px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '8px',
-            backgroundColor: theme.colors.backgroundLight,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Collapse button */}
-            <button
-              onClick={() => setLeftPanelCollapsed(!isLeftPanelCollapsed)}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '4px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '4px',
-                color: theme.colors.textSecondary,
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundTertiary;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-              title={isLeftPanelCollapsed ? 'Show panel' : 'Hide panel'}
-            >
-              {isLeftPanelCollapsed ? (
-                <PanelLeft size={16} />
-              ) : (
-                <PanelLeftClose size={16} />
-              )}
-            </button>
-
-            <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
-            >
-              <span
-                style={{
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
-                }}
-              >
-                {selectedDocPath.split('/').pop()}
-              </span>
-              <span
-                style={{
-                  fontSize: '11px',
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                {selectedDocPath}
-              </span>
-            </div>
-          </div>
-
-          {/* View mode switcher for markdown files */}
-          {selectedDocType === 'markdown' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <button
-                onClick={() => {
-                  setDocViewMode('document');
-                  setPreferredDocViewMode('document');
-                }}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  border: 'none',
-                  background:
-                    docViewMode === 'document'
-                      ? theme.colors.primary
-                      : 'transparent',
-                  color:
-                    docViewMode === 'document'
-                      ? '#fff'
-                      : theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  fontSize: 11,
-                  fontWeight: 500,
-                  transition: 'all 0.15s ease',
-                }}
-                title="View as document"
-              >
-                Document
-              </button>
-              <button
-                onClick={() => {
-                  setDocViewMode('slides');
-                  setPreferredDocViewMode('slides');
-                }}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  border: 'none',
-                  background:
-                    docViewMode === 'slides'
-                      ? theme.colors.primary
-                      : 'transparent',
-                  color:
-                    docViewMode === 'slides'
-                      ? '#fff'
-                      : theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  fontSize: 11,
-                  fontWeight: 500,
-                  transition: 'all 0.15s ease',
-                }}
-                title="View as slides"
-              >
-                Slides
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Document content */}
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          {loadingDoc ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                color: theme.colors.textSecondary,
-              }}
-            >
-              Loading document...
-            </div>
-          ) : selectedDocType === 'excalidraw' ? (
-            <ExcalidrawWrapper
-              initialData={(() => {
-                try {
-                  return JSON.parse(docContent);
-                } catch {
-                  return { elements: [], appState: {}, files: {} };
-                }
-              })()}
-              onChange={() => {}}
-            />
-          ) : (
-            <MarkdownDocumentViewer
-              viewMode={docViewMode}
-              showEditor={false}
-              content={docContent}
-              slides={docContent.split('\n\n---\n\n')}
-              currentSlide={currentSlide}
-              theme={theme}
-              showSegmented={true}
-              onContentChange={() => {}}
-              onSlideNavigate={setCurrentSlide}
-              onCheckboxChange={() => {}}
-            />
-          )}
-        </div>
-      </div>
-    ) : null;
-
-  // Check if we should show document view or file viewer instead of city
-  const showDocumentView =
-    activeTab === 'docs' && selectedDocPath && docContent;
-  const showCodeFileViewer = selectedCodeFile; // Show viewer as soon as file is selected, not waiting for content
-  const shouldShowDocument = showDocumentView || showCodeFileViewer;
-  const documentPanelContent = showDocumentView
-    ? documentRightPanel
-    : showCodeFileViewer
-      ? fileViewerRightPanel
-      : null;
-  const visibleTabs = tabs.filter((tab) => tab.visible !== false);
-
-  useEffect(() => {
-    if (!visibleTabs.some((tab) => tab.id === activeTab)) {
-      const nextTab = visibleTabs[0];
-      if (nextTab) {
-        handleTabChange(nextTab.id);
-      }
-    }
-  }, [visibleTabs, activeTab, handleTabChange]);
-
   const leftPanelTabs: PanelDefinitionWithContent[] = visibleTabs.map(
     ({ visible: _visible, content, ...tab }) => ({
       ...tab,
@@ -1534,7 +1391,6 @@ export const RepositoryExplorationView: React.FC<
             style={{
               flex: 1,
               overflow: 'auto',
-              padding: '16px',
               boxSizing: 'border-box',
             }}
           >
@@ -1545,12 +1401,10 @@ export const RepositoryExplorationView: React.FC<
     }),
   );
 
-  const rightPaneViewMode = (
-    shouldShowDocument
-      ? 'document'
-      : rightPaneMode === 'terminal'
-        ? 'city'
-        : rightPaneMode
+  const _rightPaneViewMode = (
+    rightPaneMode === 'terminal'
+      ? 'city'
+      : rightPaneMode
   ) as RightPaneView;
 
   return (
@@ -1626,9 +1480,7 @@ export const RepositoryExplorationView: React.FC<
           }
 
           // Otherwise render the shared three panel layout with the repository panels
-          const highlightLayers = shouldShowDocument
-            ? []
-            : [
+          const highlightLayers = [
                 ...(showFileColors ? fileColorHighlightLayers : []),
                 ...noteHighlightLayers,
                 ...folderFilterHighlightLayers,
@@ -1641,41 +1493,22 @@ export const RepositoryExplorationView: React.FC<
                 ...gitHighlightLayers,
               ];
 
-          const rightPanel = (
-            <div
-              style={{
-                border: `1px solid ${theme.colors.border}`,
-                borderLeft: 'none',
-                overflow: 'hidden',
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <RightPaneContainer
-                activeView={rightPaneViewMode}
-                onViewChange={handleRightPaneViewChange}
-                cityData={shouldShowDocument ? null : managedCityData}
-                highlightLayers={highlightLayers}
-                loading={shouldShowDocument ? false : loading || isBuilding}
-                treeStats={shouldShowDocument ? null : treeStats}
-                onFileClick={handleFileClick}
-                activeSource={activeFileTreeSource}
-                sessions={[]}
-                sessionFileActivities={new Map()}
-                repository={repository}
-                onHelpClick={() => setShowHelpModal(true)}
-                headerExtra={undefined}
-                sourceBadges={shouldShowDocument ? null : sourceBadges}
-                loadingMessage="Loading repository structure"
-                emptyMessage="Select a branch to explore"
-                showViewSwitcher={true}
-                toolbarItems={shouldShowDocument ? [] : toolbarItems}
-                toolbarExpanded={toolbarExpanded}
-                onToolbarExpandedChange={setToolbarExpanded}
-                documentContent={documentPanelContent}
-              />
-            </div>
+          // City visualization panel (standalone, decoupled from document viewing)
+          const cityPanel = (
+            <CityVisualizationPanel
+              cityData={managedCityData}
+              highlightLayers={highlightLayers}
+              treeStats={treeStats}
+              onFileClick={handleFileClick}
+              onHelpClick={() => setShowHelpModal(true)}
+              loading={loading || isBuilding}
+              loadingMessage="Loading repository structure"
+              emptyMessage="Select a branch to explore"
+              sourceBadges={sourceBadges}
+              toolbarItems={toolbarItems}
+              toolbarExpanded={toolbarExpanded}
+              onToolbarExpandedChange={setToolbarExpanded}
+            />
           );
 
           const propsPanelLayout = panelLayout || {
@@ -1717,35 +1550,61 @@ export const RepositoryExplorationView: React.FC<
             </div>
           );
 
-          // Create all panel definitions (tabs + other panels)
+          // Create all panel definitions - expose individual panels for configuration
           const allPanels: PanelDefinitionWithContent[] = [
+            // Individual panel tabs (can now be configured independently)
             ...leftPanelTabs,
+            // Other panels
             {
               id: 'terminal',
               label: 'Terminal',
               content: terminalPanel,
             },
             {
-              id: 'cityView',
+              id: 'cityVisualization',
               label: 'City Visualization',
-              content: rightPanel,
+              content: cityPanel,
+            },
+            // Viewer panels - memoized to re-render when state changes
+            {
+              id: 'codeViewer',
+              label: 'Code Viewer',
+              content: codeViewerPanel,
+            },
+            {
+              id: 'markdownViewer',
+              label: 'Markdown Viewer',
+              content: markdownViewerPanel,
+            },
+            {
+              id: 'excalidrawDiagram',
+              label: 'Excalidraw Diagram',
+              content: excalidrawDiagramPanel,
             },
           ];
 
-          // Create the layout structure with tab group for left panel
-          const leftPanelGroup: PanelGroupConfig = {
-            type: 'tabs',
-            panels: leftPanelTabs.map(tab => tab.id),
-            config: {
-              defaultActiveTab: leftPanelTabs.findIndex(tab => tab.id === activeTab),
-            } as TabsConfig,
+          // Default layout: fileTree + docs tabs in left, city in middle, search + tools tabs in right
+          // User can reconfigure via PanelConfigurator
+          const defaultLayout: PanelLayout = {
+            left: {
+              type: 'tabs',
+              panels: ['fileTree', 'docs'],
+              config: {
+                defaultActiveTab: 0,
+              } as TabsConfig,
+            },
+            middle: 'cityVisualization',
+            right: {
+              type: 'tabs',
+              panels: ['search', 'gitChanges', 'dependencies', 'tools'],
+              config: {
+                defaultActiveTab: 0,
+              } as TabsConfig,
+            },
           };
 
-          const actualPanelLayout: PanelLayout = {
-            left: leftPanelGroup,
-            middle: propsPanelLayout?.middle === 'terminal' ? 'terminal' : 'cityView',
-            right: propsPanelLayout?.right === 'terminal' ? 'terminal' : (propsPanelLayout?.right === 'middle' ? 'cityView' : propsPanelLayout?.right || 'cityView'),
-          };
+          // Use provided layout or default
+          const actualPanelLayout: PanelLayout = panelLayout || defaultLayout;
 
           return (
             <div
@@ -1768,7 +1627,7 @@ export const RepositoryExplorationView: React.FC<
                 onRightCollapseComplete={() => setRightPanelCollapsed(true)}
                 onRightExpandComplete={() => setRightPanelCollapsed(false)}
                 style={{ height: '100%', width: '100%' }}
-                theme={panelsTheme}
+                theme={theme}
               />
             </div>
           );

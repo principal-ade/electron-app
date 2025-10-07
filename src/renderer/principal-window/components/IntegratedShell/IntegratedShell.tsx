@@ -228,6 +228,41 @@ export const IntegratedShell: React.FC = () => {
     }
   };
 
+  const collapseRightSidebar = () => {
+    if (rightSidebarCollapsed) {
+      return;
+    }
+
+    const currentLeftCollapsed =
+      viewCollapsedStates[activeView]?.left ?? getViewDefaults(activeView).left;
+
+    setViewCollapsedStates(prev => ({
+      ...prev,
+      [activeView]: {
+        ...prev[activeView],
+        right: true,
+      },
+    }));
+
+    if (preferencesLoaded) {
+      const viewKey = getViewKey(activeView);
+      if (viewKey) {
+        void UserPreferencesService.updatePreferences({
+          panelLayouts: {
+            [viewKey]: {
+              collapsed: {
+                left: currentLeftCollapsed,
+                right: true,
+              },
+            },
+          },
+        }).catch(error => {
+          console.error('Failed to save right sidebar collapsed state:', error);
+        });
+      }
+    }
+  };
+
   const backgroundColor = mode === 'dark' && theme.modes?.dark?.background
     ? theme.modes.dark.background
     : theme.colors.background;
@@ -294,6 +329,7 @@ export const IntegratedShell: React.FC = () => {
                 sidebarCollapsed={sidebarCollapsed}
                 rightSidebarCollapsed={rightSidebarCollapsed}
                 onEnsureRightPanelOpen={ensureRightSidebarOpen}
+                onCollapseRightPanel={collapseRightSidebar}
               />
             )}
             {activeView === 'terminal' && <TerminalManager sidebarCollapsed={sidebarCollapsed} />}

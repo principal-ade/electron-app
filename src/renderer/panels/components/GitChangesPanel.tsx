@@ -8,12 +8,14 @@ interface GitChangesPanelProps {
   onFileClick?: (filePath: string) => void;
   emptyMessage?: string;
   loadingMessage?: string;
+  variant?: 'panel' | 'tab'; // panel shows wrapper with border/header, tab shows just the tree
 }
 
 export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
   onFileClick,
   emptyMessage = 'No git changes to display',
   loadingMessage = 'Loading git changes...',
+  variant = 'panel',
 }) => {
   const { theme } = useTheme();
   const {
@@ -22,6 +24,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     gitStatus,
     gitStatusLoading,
     actions,
+    fileTree,
   } = useRepositoryPanelContext();
 
   const handleFileSelect = useCallback(
@@ -37,13 +40,10 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
   );
 
   if (!repositoryPath) {
-    return (
+    const content = (
       <div
         style={{
-          padding: '16px',
-          backgroundColor: theme.colors.backgroundSecondary,
-          borderRadius: '8px',
-          border: `1px solid ${theme.colors.border}`,
+          padding: variant === 'panel' ? '16px' : '20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -53,6 +53,22 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
         }}
       >
         Git changes are only available for local repositories.
+      </div>
+    );
+
+    if (variant === 'tab') {
+      return content;
+    }
+
+    return (
+      <div
+        style={{
+          backgroundColor: theme.colors.backgroundSecondary,
+          borderRadius: '8px',
+          border: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        {content}
       </div>
     );
   }
@@ -66,10 +82,37 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
   const gitChangesData = useMemo(() => {
     if (!hasChanges || gitStatusLoading) return null;
 
+    // Helper function to expand directories using the fileTree
+    const expandDirectories = (paths: string[]): string[] => {
+      if (!fileTree?.allFiles) return paths;
+
+      const expandedPaths: string[] = [];
+
+      for (const path of paths) {
+        // Check if this path is a directory by seeing if any files in the tree start with it
+        const matchingFiles = fileTree.allFiles.filter(file =>
+          file.path.startsWith(path + '/') || file.path === path
+        );
+
+        if (matchingFiles.length > 0) {
+          // This is a directory - add all matching files
+          expandedPaths.push(...matchingFiles.map(f => f.path));
+        } else {
+          // This is a file - add it directly
+          expandedPaths.push(path);
+        }
+      }
+
+      return expandedPaths;
+    };
+
+    // Expand untracked directories to show all files
+    const expandedUntracked = expandDirectories(gitStatus.untracked.map((f) => f.path));
+
     const allChangedFiles = [
       ...gitStatus.staged.map((f) => f.path),
       ...gitStatus.unstaged.map((f) => f.path),
-      ...gitStatus.untracked.map((f) => f.path),
+      ...expandedUntracked,
       ...gitStatus.deleted.map((f) => f.path),
     ].sort((a, b) => a.localeCompare(b));
 
@@ -98,8 +141,8 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
         workingTreeStatus: 'D',
         status: 'D' as const,
       })),
-      ...gitStatus.untracked.map((f) => ({
-        filePath: f.path,
+      ...expandedUntracked.map((filePath) => ({
+        filePath,
         indexStatus: '?',
         workingTreeStatus: '?',
         status: '??' as const,
@@ -113,8 +156,51 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     repositoryPath,
     hasChanges,
     gitStatusLoading,
+    fileTree,
   ]);
 
+  // Tab variant - just the tree with no wrapper
+  if (variant === 'tab') {
+    return (
+      <div style={{ height: '100%', overflow: 'auto' }}>
+        {gitStatusLoading ? (
+          <div
+            style={{
+              padding: '20px',
+              textAlign: 'center',
+              color: theme.colors.textSecondary,
+            }}
+          >
+            {loadingMessage}
+          </div>
+        ) : !hasChanges ? (
+          <div
+            style={{
+              padding: '20px',
+              textAlign: 'center',
+              color: theme.colors.textSecondary,
+            }}
+          >
+            {emptyMessage}
+          </div>
+        ) : (
+          gitChangesData && (
+            <GitStatusFileTree
+              fileTree={gitChangesData.tree}
+              theme={theme}
+              gitStatusData={gitChangesData.statusData}
+              onFileSelect={handleFileSelect}
+              showIcons
+              transparentBackground={true}
+              padding="16px"
+            />
+          )
+        )}
+      </div>
+    );
+  }
+
+  // Panel variant - with wrapper, header, border
   return (
     <div
       style={{
@@ -187,6 +273,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               gitStatusData={gitChangesData.statusData}
               onFileSelect={handleFileSelect}
               showIcons
+              transparentBackground={true}
             />
           )
         )}

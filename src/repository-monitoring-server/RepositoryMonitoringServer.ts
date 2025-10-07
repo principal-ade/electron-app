@@ -112,13 +112,14 @@ export class RepositoryMonitoringServer {
     switch (slice) {
       case 'fileTree':
         if (entry.data) {
+          const fileTreeData = entry.data as FileTree;
           this.fileTreeCache.set(repoPath, {
-            tree: entry.data,
+            tree: fileTreeData,
             timestamp: entry.timestamp,
-            sha: entry.data.sha,
+            sha: fileTreeData.sha,
           });
           if (state) {
-            state.fileTree = entry.data;
+            state.fileTree = fileTreeData;
             state.lastUpdated = new Date(entry.timestamp);
           }
         } else {
@@ -131,9 +132,10 @@ export class RepositoryMonitoringServer {
 
       case 'packages':
         if (entry.data) {
+          const packagesData = entry.data as { packages: PackageLayer[]; summary: PackageSummary };
           this.packageCache.set(repoPath, {
-            packages: entry.data.packages,
-            summary: entry.data.summary,
+            packages: packagesData.packages,
+            summary: packagesData.summary,
             timestamp: entry.timestamp,
           });
         } else {
@@ -143,9 +145,10 @@ export class RepositoryMonitoringServer {
 
       case 'gitStatus':
         if (state && entry.data) {
-          state.lastGitStatus = this.toGitStatusMetadata(entry.data);
-          if (entry.data.lastChangedAt) {
-            state.lastLocalChange = entry.data.lastChangedAt;
+          const gitStatusData = entry.data as GitStatusWithFiles;
+          state.lastGitStatus = this.toGitStatusMetadata(gitStatusData);
+          if (gitStatusData.lastChangedAt) {
+            state.lastLocalChange = gitStatusData.lastChangedAt;
           }
         }
         break;

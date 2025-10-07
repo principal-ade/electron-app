@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import type { CityData } from '@principal-ai/code-city-react';
+import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
+import { createFileColorHighlightLayers } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../../shared/types/repository.types';
 import type { RepositoryPanelVisibility, RepositoryPanelId } from '../../../../../shared/types/repositoryPanel.types';
@@ -89,6 +90,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const [workflowOutput, setWorkflowOutput] = useState<string[]>([]);
   const [workflowStatus, setWorkflowStatus] = useState<'idle' | 'running' | 'success' | 'failed'>('idle');
 
+  // File color state - default to showing file colors
+  const [showFileColors, setShowFileColors] = useState(true);
+
   const cityService = useMemo(() => RepositoryCityService.getInstance(), []);
 
   const repositoryId = useMemo(() => {
@@ -124,6 +128,114 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
     return null;
   }, [selectedRepository]);
+
+  // Create file color highlight layers from fileTree
+  const fileColorHighlightLayers = useMemo(() => {
+    if (!fileTree || !fileTree.allFiles) return [];
+    return createFileColorHighlightLayers(fileTree.allFiles);
+  }, [fileTree]);
+
+  // Create git highlight layers from git status
+  const gitHighlightLayers = useMemo(() => {
+    const layers: HighlightLayer[] = [];
+
+    // Untracked files - Green (new files)
+    if (gitStatus.untracked && gitStatus.untracked.length > 0) {
+      layers.push({
+        id: 'git-untracked',
+        name: `Untracked (${gitStatus.untracked.length})`,
+        enabled: true,
+        color: '#10b981',
+        priority: 25,
+        opacity: 0.7,
+        items: gitStatus.untracked.map((item) => ({
+          path: item.path,
+          type: 'file' as const,
+          renderStrategy: 'fill' as const,
+        })),
+      });
+    }
+
+    // Staged files - Blue
+    if (gitStatus.staged && gitStatus.staged.length > 0) {
+      layers.push({
+        id: 'git-staged',
+        name: `Staged (${gitStatus.staged.length})`,
+        enabled: true,
+        color: '#3b82f6',
+        priority: 26,
+        opacity: 0.7,
+        items: gitStatus.staged.map((item) => ({
+          path: item.path,
+          type: 'file' as const,
+          renderStrategy: 'fill' as const,
+        })),
+      });
+    }
+
+    // Unstaged/Modified files - Orange
+    if (gitStatus.unstaged && gitStatus.unstaged.length > 0) {
+      layers.push({
+        id: 'git-unstaged',
+        name: `Modified (${gitStatus.unstaged.length})`,
+        enabled: true,
+        color: '#f59e0b',
+        priority: 24,
+        opacity: 0.7,
+        items: gitStatus.unstaged.map((item) => ({
+          path: item.path,
+          type: 'file' as const,
+          renderStrategy: 'fill' as const,
+        })),
+      });
+    }
+
+    // Deleted files - Red
+    if (gitStatus.deleted && gitStatus.deleted.length > 0) {
+      layers.push({
+        id: 'git-deleted',
+        name: `Deleted (${gitStatus.deleted.length})`,
+        enabled: true,
+        color: '#ef4444',
+        priority: 23,
+        opacity: 0.7,
+        items: gitStatus.deleted.map((item) => ({
+          path: item.path,
+          type: 'file' as const,
+          renderStrategy: 'fill' as const,
+        })),
+      });
+    }
+
+    return layers;
+  }, [gitStatus]);
+
+  // Determine if there are any git changes
+  const hasGitChanges = useMemo(() => {
+    return (
+      (gitStatus.staged && gitStatus.staged.length > 0) ||
+      (gitStatus.unstaged && gitStatus.unstaged.length > 0) ||
+      (gitStatus.untracked && gitStatus.untracked.length > 0) ||
+      (gitStatus.deleted && gitStatus.deleted.length > 0)
+    );
+  }, [gitStatus]);
+
+  // Select which layers to show: git changes if available, otherwise file colors
+  const activeHighlightLayers = useMemo(() => {
+    if (hasGitChanges) {
+      return gitHighlightLayers;
+    }
+    return showFileColors ? fileColorHighlightLayers : [];
+  }, [hasGitChanges, gitHighlightLayers, showFileColors, fileColorHighlightLayers]);
+
+  // Check if there are workflow files in the repository
+  const hasWorkflowActions = useMemo(() => {
+    if (!fileTree?.allFiles) return false;
+    return fileTree.allFiles.some(file => {
+      const path = file.path.toLowerCase();
+      return path.includes('.github/workflows/') && (path.endsWith('.yml') || path.endsWith('.yaml'));
+    });
+  }, [fileTree]);
 
 
   const sortedMarkdownFiles = useMemo(() => {
@@ -851,7 +963,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 }}
               >
                 {/* Git Changes */}
-                {panelVisibility.gitChanges && (
+                {panelVisibility.gitChanges && hasGitChanges && (
                   <RepositoryPanelProvider
                     repositoryPath={selectedRepository?.path ?? null}
                     actions={{ openFile: handleFileClick }}
@@ -900,6 +1012,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                     <SimpleCityVisualization
                       repository={selectedRepository}
                       cityData={cityData}
+                      highlightLayers={activeHighlightLayers}
                       isBuilding={isBuildingCity}
                       treeStats={treeStats}
                       height="400px"
@@ -911,7 +1024,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   </div>
                 )}
 
-                {panelVisibility.actions && (
+                {panelVisibility.actions && hasWorkflowActions && (
                   <RepositoryActionsPanel
                     repoId={repositoryId}
                     repositoryPath={selectedRepository.path}

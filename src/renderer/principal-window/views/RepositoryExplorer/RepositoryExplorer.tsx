@@ -6,7 +6,6 @@ import {
   type PanelLayout,
 } from '@a24z/panels';
 import '@a24z/panels/panels.css';
-import { usePanelsTheme } from '../../../theme/panelsTheme';
 import { useTheme } from '@a24z/industry-theme';
 
 import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../shared/types/repository.types';
@@ -28,15 +27,16 @@ interface RepositoryExplorerProps {
   sidebarCollapsed?: boolean;
   rightSidebarCollapsed?: boolean;
   onEnsureRightPanelOpen?: () => void;
+  onCollapseRightPanel?: () => void;
 }
 
 export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   sidebarCollapsed = false,
   rightSidebarCollapsed = false,
   onEnsureRightPanelOpen,
+  onCollapseRightPanel,
 }) => {
   const { theme } = useTheme();
-  const panelsTheme = usePanelsTheme();
   const trackingProps = useComponentTracking(
     'RepositoryExplorer',
     'src/renderer/principal-window/views/RepositoryExplorer/RepositoryExplorer.tsx',
@@ -507,7 +507,10 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         repositoryPath={selectedRepositoryPath || ''}
         activeTab={rightPanelTab}
         onTabChange={setRightPanelTab}
-        onClose={() => setSelectedFilePath(null)}
+        onClose={() => {
+          setSelectedFilePath(null);
+          onCollapseRightPanel?.();
+        }}
       />
     );
   };
@@ -566,7 +569,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         minSizes={{ left: 15, middle: 30, right: 20 }}
         collapsed={panelState.collapsed}
         style={{ height: '100%', width: '100%' }}
-        theme={panelsTheme}
+        theme={theme}
         showCollapseButtons={false}
         onPanelResize={panelState.type === 'three-panel' ? panelState.handlePanelResize : undefined}
         onLeftCollapseComplete={panelState.handleLeftCollapseComplete}

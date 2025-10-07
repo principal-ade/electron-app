@@ -7,7 +7,6 @@ import {
   type PanelLayout,
 } from '@a24z/panels';
 import '@a24z/panels/panels.css';
-import { usePanelsTheme } from '../../../theme/panelsTheme';
 import type { PalaceRoom, AlexandriaEntry } from '@a24z/core-library';
 import { PalaceRoomService } from '../../../main-process-api/PalaceRoomService';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
@@ -32,7 +31,6 @@ export const RoomsManager: React.FC<RoomsManagerProps> = ({
   rightSidebarCollapsed = false,
 }) => {
   const { theme } = useTheme();
-  const panelsTheme = usePanelsTheme();
   const [rooms, setRooms] = useState<RoomInfo[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<RoomInfo | null>(null);
   const [loading, setLoading] = useState(false);
@@ -388,7 +386,7 @@ export const RoomsManager: React.FC<RoomsManagerProps> = ({
         minSizes={{ left: 15, middle: 30, right: 20 }}
         collapsed={panelState.collapsed}
         style={{ height: '100%', width: '100%' }}
-        theme={panelsTheme}
+        theme={theme}
         showCollapseButtons={false}
         onPanelResize={panelState.type === 'three-panel' ? panelState.handlePanelResize : undefined}
         onLeftCollapseComplete={panelState.handleLeftCollapseComplete}

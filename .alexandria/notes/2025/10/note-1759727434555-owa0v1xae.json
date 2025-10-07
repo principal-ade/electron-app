@@ -1,0 +1,18 @@
+{
+  "id": "note-1759727434555-owa0v1xae",
+  "note": "map doesnt update on commit events",
+  "anchors": [
+    "."
+  ],
+  "tags": [
+    "general"
+  ],
+  "metadata": {
+    "directoryPath": "/Users/griever/Developer/electron-app",
+    "relativePath": ".",
+    "confidence": "medium",
+    "type": "explanation"
+  },
+  "timestamp": 1759727434555,
+  "codebaseViewId": "default"
+}

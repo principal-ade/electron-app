@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
-import { usePanelsTheme } from '../../../theme/panelsTheme';
 import { useAuthState } from '../../../hooks/useAuthState';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import type { EnhancedAlexandriaEntry } from '../../../../shared/types/repository.types';
@@ -26,7 +25,6 @@ import './AuthView.css';
 
 export const AuthView: React.FC = () => {
   const { theme } = useTheme();
-  const panelsTheme = usePanelsTheme();
   const {
     isAuthenticated,
     user: authUser,
@@ -399,7 +397,7 @@ export const AuthView: React.FC = () => {
         collapsibleSide="left"
         collapsed={panelState.collapsed.left}
         style={{ height: '100%', width: '100%' }}
-        theme={panelsTheme}
+        theme={theme}
         onCollapseComplete={panelState.handleLeftCollapseComplete}
         onExpandComplete={panelState.handleLeftExpandComplete}
       />

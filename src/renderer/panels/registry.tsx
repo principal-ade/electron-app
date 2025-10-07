@@ -22,6 +22,7 @@ export interface RepositoryPanelDefinition {
 }
 
 export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
+  // Repository Explorer panels
   {
     id: 'gitChanges',
     label: 'Git Changes',
@@ -71,6 +72,71 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
     description: 'Package insights and dependency layers detected in the codebase.',
     defaultLocation: 'right',
     slices: ['packages'],
+  },
+  // Repository Manager panels
+  {
+    id: 'fileTree',
+    label: 'Files',
+    description: 'Browse the complete file tree structure of the repository.',
+    defaultLocation: 'left',
+    slices: ['fileTree'],
+  },
+  {
+    id: 'search',
+    label: 'Search',
+    description: 'Search files by name and content with advanced filtering.',
+    defaultLocation: 'left',
+    slices: ['fileTree'],
+  },
+  {
+    id: 'dependencies',
+    label: 'Dependencies',
+    description: 'Explore package architecture and dependency relationships.',
+    defaultLocation: 'left',
+    slices: ['packages', 'fileTree'],
+  },
+  {
+    id: 'tools',
+    label: 'Tools',
+    description: 'Development tools and utilities for the repository.',
+    defaultLocation: 'left',
+    slices: ['packages'],
+  },
+  {
+    id: 'docs',
+    label: 'Docs',
+    description: 'Documentation viewer for markdown and diagram files.',
+    defaultLocation: 'left',
+    slices: ['markdown'],
+  },
+  {
+    id: 'terminal',
+    label: 'Terminal',
+    description: 'Integrated terminal for repository commands.',
+    defaultLocation: 'right',
+    slices: [],
+  },
+  // Viewer panels (decoupled, context-dependent content)
+  {
+    id: 'codeViewer',
+    label: 'Code Viewer',
+    description: 'View source code files with syntax highlighting.',
+    defaultLocation: 'right',
+    slices: ['fileTree'],
+  },
+  {
+    id: 'markdownViewer',
+    label: 'Markdown Viewer',
+    description: 'View markdown files as documents or slides with toggle.',
+    defaultLocation: 'right',
+    slices: ['markdown'],
+  },
+  {
+    id: 'excalidrawDiagram',
+    label: 'Excalidraw Diagram',
+    description: 'View and interact with excalidraw diagrams.',
+    defaultLocation: 'right',
+    slices: [],
   },
 ];
 

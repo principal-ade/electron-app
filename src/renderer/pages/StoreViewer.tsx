@@ -18,7 +18,6 @@ import {
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { useTheme } from '@a24z/industry-theme';
-import { usePanelsTheme } from '../theme/panelsTheme';
 
 import { FileViewer } from '../components/FileViewer';
 import { StoreViewerTitlebar } from '../components/Titlebar';
@@ -34,7 +33,6 @@ interface StoreViewerProps {}
 
 export const StoreViewer: React.FC<StoreViewerProps> = () => {
   const { theme } = useTheme();
-  const panelsTheme = usePanelsTheme();
   const [storeStats, setStoreStats] = useState<StorageStats | null>(null);
   const [storePath, setStorePath] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -194,8 +192,8 @@ export const StoreViewer: React.FC<StoreViewerProps> = () => {
         // Namespace-specific store
         try {
           const [path, statsResult] = await Promise.all([
-            StoreService.getNamespaceFilePath(selectedNamespace),
-            StoreService.getNamespaceStats(selectedNamespace),
+            StoreService.getNamespaceFilePath(selectedNamespace as any),
+            StoreService.getNamespaceStats(selectedNamespace as any),
           ]);
 
           console.log('Setting store path to:', path);
@@ -929,6 +927,7 @@ export const StoreViewer: React.FC<StoreViewerProps> = () => {
                             const result =
                               await StoreService.cleanupSessionStorage({
                                 olderThanDays: 7,
+                                includeArchives: false,
                                 includeProcessed: true,
                               });
                             alert(
@@ -956,6 +955,20 @@ export const StoreViewer: React.FC<StoreViewerProps> = () => {
     );
   };
 
+  // Parse selectedNamespace to extract agent and namespace for titlebar
+  const parsedNamespace = React.useMemo(() => {
+    if (!selectedNamespace) return { agent: undefined, namespace: undefined };
+
+    // Check if it's an agent-namespaced format (e.g., "agent:namespace")
+    const parts = selectedNamespace.split(':');
+    if (parts.length === 2) {
+      return { agent: parts[0], namespace: parts[1] };
+    }
+
+    // Otherwise just use it as namespace
+    return { agent: undefined, namespace: selectedNamespace };
+  }, [selectedNamespace]);
+
   return (
     <div
       className="fixed inset-0 flex flex-col"
@@ -963,8 +976,8 @@ export const StoreViewer: React.FC<StoreViewerProps> = () => {
     >
       {/* Titlebar */}
       <StoreViewerTitlebar
-        agent={selectedNamespace?.agent}
-        namespace={selectedNamespace?.namespace}
+        agent={parsedNamespace.agent}
+        namespace={parsedNamespace.namespace}
         onRefresh={loadStoreInfo}
       />
 
@@ -975,7 +988,7 @@ export const StoreViewer: React.FC<StoreViewerProps> = () => {
           rightPanel={renderRightPanel()}
           minSize={30}
           defaultSize={50}
-          theme={panelsTheme}
+          theme={theme}
         />
         {renderStorageOverview()}
       </div>

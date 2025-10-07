@@ -66,7 +66,7 @@ export class TerminalService {
   }
 
   static onWindowReady(
-    callback: (data: { terminalId?: string; agentSessionId?: string }) => void,
+    callback: (data: { terminalId: string; agentSessionId?: string; windowId: number }) => void,
   ): () => void {
     return window.mainProcess.terminal.onWindowReady?.(callback) || (() => {});
   }

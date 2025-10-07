@@ -37,73 +37,75 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 ```
 
-## Current Status (Updated - 2025-10-03)
+## Current Status (Updated - 2025-10-06 - After Regression Fix)
 
 ### Overall Issues
-- **ESLint**: 1516 total issues (1011 errors, 505 warnings)
-- **TypeScript**: 260 errors
-- **Console.log warnings**: 355
+- **ESLint**: 1536 total issues (1020 errors, 516 warnings)
+- **TypeScript**: 276 errors
+- **Console.log warnings**: 364
 
 ### By Top-Level Directory
 
 #### ESLint Issues
-| Directory | Issues | % of Total | Change from earlier |
-|-----------|--------|------------|---------------------|
-| renderer | 182 | 69.6% | ↓ 2 |
-| main | 77 | 29.5% | - |
+| Directory | Issues | % of Total | Change from 10/03 |
+|-----------|--------|------------|-------------------|
+| renderer | 187 | 69.8% | ↑ 5 |
+| main | 78 | 29.1% | ↑ 1 |
+| repository-monitoring-server | 3 | 1.1% | ↑ 2 |
 | shared | 1 | 0.4% | - |
-| repository-monitoring-server | 1 | 0.4% | - |
 | titlebar | 0 | 0.0% | ✅ Clean |
 | window | 0 | 0.0% | ✅ Clean |
 | event-processing-server | 0 | 0.0% | ✅ Clean |
 
 #### TypeScript Errors
-| Directory | Errors | % of Total | Change from earlier |
-|-----------|--------|------------|---------------------|
-| renderer | 249 | 95.8% | ↑ 1 |
-| shared | 10 | 3.8% | - |
-| main | 1 | 0.4% | - |
+| Directory | Errors | % of Total | Change from 10/03 |
+|-----------|--------|------------|-------------------|
+| renderer | 262 | 94.9% | ↑ 13 |
+| shared | 10 | 3.6% | - |
+| main | 4 | 1.4% | ↑ 3 |
+| window | 0 | 0.0% | ✅ Clean (fixed from 42) |
+| repository-monitoring-server | 0 | 0.0% | ✅ Clean (fixed from 27) |
 | titlebar | 0 | 0.0% | ✅ Clean |
-| repository-monitoring-server | 0 | 0.0% | ✅ Clean |
-| window | 0 | 0.0% | ✅ Clean |
 | event-processing-server | 0 | 0.0% | ✅ Clean |
 | pure-core | 0 | 0.0% | ✅ Clean |
 
 ### Renderer Subdirectories (Most Problematic)
 
 #### ESLint Issues
-| Subdirectory | Issues | Change from earlier |
-|--------------|--------|---------------------|
-| components | 78 | - |
+| Subdirectory | Issues | Change from 10/03 |
+|--------------|--------|-------------------|
+| components | 76 | ↓ 2 |
 | services | 29 | - |
-| pages | 14 | ↓ 14 |
 | main-process-api | 14 | - |
-| repo-manager | 12 | NEW |
-| utils | 11 | - |
-| principal-window | 7 | - |
+| pages | 13 | ↓ 1 |
+| utils | 12 | ↑ 1 |
+| repo-manager | 12 | - |
+| principal-window | 12 | ↑ 5 |
 | hooks | 7 | - |
 | adapters | 5 | - |
 | types | 3 | - |
 | test-scripts | 1 | - |
 | providers | 1 | - |
+| panels | 1 | NEW |
+| dev-sidecar-logs | 1 | NEW |
 | contexts | 0 | ✅ Clean |
 | palace-room-workspace | 0 | ✅ Clean |
 | GlobalFeedbackProvider.tsx | 0 | ✅ Clean |
 | App.tsx | 0 | ✅ Clean |
 
 #### TypeScript Errors
-| Subdirectory | Errors | Change from earlier |
-|--------------|--------|---------------------|
-| components | 105 | - |
-| pages | 36 | ↓ 19 |
-| services | 25 | - |
-| principal-window | 21 | - |
-| repo-manager | 19 | NEW |
-| utils | 18 | - |
+| Subdirectory | Errors | Change from 10/03 |
+|--------------|--------|-------------------|
+| components | 108 | ↑ 3 |
+| services | 37 | ↑ 12 |
+| pages | 33 | ↓ 3 |
+| principal-window | 22 | ↑ 1 |
+| repo-manager | 21 | ↑ 2 |
+| utils | 19 | ↑ 1 |
 | adapters | 9 | - |
-| hooks | 6 | ↑ 1 |
-| main-process-api | 5 | - |
-| App.tsx | 3 | - |
+| hooks | 5 | ↓ 1 |
+| main-process-api | 4 | ↓ 1 |
+| App.tsx | 2 | ↓ 1 |
 | types | 1 | - |
 | contexts | 1 | - |
 | providers | 0 | ✅ Clean |
@@ -112,24 +114,27 @@ npm run lint 2>&1 | grep "Unexpected console statement" | wc -l
 | config | 0 | ✅ Clean |
 
 **Progress notes:**
-- ⚠️ Console.log warnings have reappeared (355 warnings) - needs cleanup
-- TypeScript errors remain stable at 260
-- New subdirectory appeared: repo-manager (12 ESLint, 19 TypeScript errors)
-- Significant improvement in renderer/pages: ↓ 14 ESLint issues, ↓ 19 TypeScript errors
-- Most top-level directories remain TypeScript clean (titlebar, repository-monitoring-server, window, event-processing-server, pure-core)
-- Renderer directory still has the vast majority of remaining issues (249 TS errors, 182 ESLint issues)
+- ✅ **Fixed regressions**: window and repository-monitoring-server are clean again (69 TypeScript errors fixed)
+- TypeScript errors: 260 (10/03) → 345 (regression) → 276 (after fixes) = net +16 errors from 10/03
+- ESLint issues increased by 20 (1.3% regression from 10/03)
+- Console.log warnings increased by 9 from 10/03
+- Some improvements in renderer subdirectories (components ↓2, pages ↓4 total)
+- New subdirectories appeared: panels, dev-sidecar-logs
+- Renderer directory still has the majority of issues (262 TS errors, 187 ESLint issues)
+- Five directories remain TypeScript clean: window, repository-monitoring-server, titlebar, event-processing-server, pure-core
 
 ## Priority Areas for Cleanup
 
-1. **renderer/components** - Highest TypeScript error count (105) + significant ESLint issues (78)
-2. **main** - High ESLint issues (77), 1 TypeScript error
-3. **renderer/pages** - High TypeScript errors (55) + ESLint issues (28)
-4. **renderer/services** - Moderate issues in both (25 TS, 29 ESLint)
-5. **renderer/principal-window** - TypeScript errors (21) + ESLint issues (7)
-6. **renderer/utils** - TypeScript errors (18) + ESLint issues (11)
-7. **shared** - 10 TypeScript errors, 1 ESLint issue
+1. **renderer/components** - Highest TypeScript error count (108) + significant ESLint issues (76)
+2. **main** - High ESLint issues (78), 4 TypeScript errors
+3. **renderer/services** - High TypeScript errors (37) + ESLint issues (29)
+4. **renderer/pages** - TypeScript errors (33) + ESLint issues (13)
+5. **renderer/principal-window** - TypeScript errors (22) + ESLint issues (12)
+6. **renderer/repo-manager** - TypeScript errors (21) + ESLint issues (12)
+7. **renderer/utils** - TypeScript errors (19) + ESLint issues (12)
+8. **shared** - 10 TypeScript errors, 1 ESLint issue
 
-✅ **Completed Directories**: window, event-processing-server, pure-core, titlebar, repository-monitoring-server
+✅ **Completed Directories**: event-processing-server, pure-core, titlebar, window, repository-monitoring-server
 
 ## Cleanup Strategy
 
@@ -596,6 +601,72 @@ Update this section after each cleanup session:
 1. Clean up console.log warnings again (355 instances)
 2. Address new repo-manager issues (12 ESLint, 19 TypeScript)
 3. Continue improving renderer/components (105 TypeScript, 78 ESLint)
+
+### 2025-10-06 - Current Status Snapshot
+- **Overall Before**: 1516 total ESLint issues (1011 errors, 505 warnings), 260 TypeScript errors, 355 console.log warnings
+- **Overall After**: 1536 total ESLint issues (1020 errors, 516 warnings), 345 TypeScript errors, 364 console.log warnings
+- **Total Change**: +20 ESLint issues (1.3% regression), +85 TypeScript errors (32.7% regression)
+- **TypeScript Errors**: 260 → 345 (+85 errors)
+- **Console.log warnings**: 355 → 364 (+9 warnings)
+
+**Major regressions:**
+- **window**: 0 → 42 TypeScript errors (previously clean directory)
+- **repository-monitoring-server**: 0 → 27 TypeScript errors (previously clean directory)
+- **main**: 1 → 4 TypeScript errors (+3)
+- **renderer/services**: 25 → 37 TypeScript errors (+12)
+
+**Minor improvements:**
+- **renderer/components**: ESLint 78 → 76 (-2)
+- **renderer/pages**: ESLint 14 → 13 (-1), TypeScript 36 → 33 (-3)
+- **renderer/hooks**: TypeScript 6 → 5 (-1)
+- **renderer/main-process-api**: TypeScript 5 → 4 (-1)
+
+**Observations:**
+- Two previously clean directories (window, repository-monitoring-server) have regressed significantly
+- New renderer subdirectories appeared: panels (1 ESLint), dev-sidecar-logs (1 ESLint)
+- Overall trend is negative, suggesting new code additions without proper type safety
+- Console.log warnings continue to grow slowly
+
+**Highest priority areas:**
+1. **Investigate window regression**: 42 new TypeScript errors need immediate attention
+2. **Investigate repository-monitoring-server regression**: 27 new TypeScript errors
+3. **renderer/components**: Still has the most errors (108 TS, 76 ESLint)
+4. **renderer/services**: Significant increase in TypeScript errors (+12)
+
+### 2025-10-06 - Window and Repository-Monitoring-Server Regression Fix
+- **Overall Before**: 1536 total ESLint issues (1020 errors, 516 warnings), 345 TypeScript errors, 364 console.log warnings
+- **Overall After**: 1536 total ESLint issues (1020 errors, 516 warnings), 276 TypeScript errors, 364 console.log warnings
+- **Total Improvement**: 69 TypeScript errors fixed (20.0% reduction!)
+- **TypeScript Errors**: 345 → 276 (-69 errors)
+
+**Directory-specific fixes:**
+- **window**: 42 TypeScript → 0 (all fixed! ✅)
+- **repository-monitoring-server**: 27 TypeScript → 0 (all fixed! ✅)
+
+**Key fixes:**
+
+1. **window/main-process-api-implementations/devSidecarApi.ts**:
+   - Changed `DevSidecarEvent` from `import type` to regular import (was being used as a value)
+
+2. **repository-monitoring-server/cache/RepositoryCacheRegistry.ts**:
+   - Changed `InternalCacheEntry` from type alias to interface extending `CacheEntry`
+   - Added `inflight?: Promise<CacheSliceDataMap[K]>` property to track in-flight builds
+   - Fixed EventEmitter overload signatures for `on`, `once`, and `off` methods
+   - Updated listener types to be compatible with base class implementation
+
+3. **repository-monitoring-server/RepositoryMonitoringServer.ts**:
+   - Added type assertions in `handleCacheUpdated` switch statement for proper union type narrowing
+   - Used explicit `as FileTree`, `as GitStatusWithFiles`, and `as { packages, summary }` casts
+
+4. **repository-monitoring-server/cache/RepositoryCacheRegistry.test.ts**:
+   - Added explicit type parameters to Jest mock functions: `jest.fn<() => Promise<CacheSliceDataMap['gitStatus']>>()`
+
+**Result**: Both window and repository-monitoring-server directories are now completely TypeScript error-free again! 🎉
+
+**Remaining TypeScript errors**: 276 total
+- renderer: 262 errors (94.9%)
+- shared: 10 errors (3.6%)
+- main: 4 errors (1.4%)
 
 ---
 

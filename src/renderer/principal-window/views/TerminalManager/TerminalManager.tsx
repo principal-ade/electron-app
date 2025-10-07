@@ -3,7 +3,6 @@ import { useTheme } from '@a24z/industry-theme';
 import { RefreshCw, Plus } from 'lucide-react';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
-import { usePanelsTheme } from '../../../theme/panelsTheme';
 import { TerminalService } from '../../../main-process-api/TerminalService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -18,7 +17,6 @@ interface TerminalManagerProps {
 
 export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollapsed = false }) => {
   const { theme } = useTheme();
-  const panelsTheme = usePanelsTheme();
   const [terminals, setTerminals] = useState<TerminalInfo[]>([]);
   const [selectedTerminal, setSelectedTerminal] = useState<TerminalInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,14 +91,12 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
 
     // Subscribe to terminal window events
     const unsubscribeReady = TerminalService.onWindowReady((data) => {
-      if (data.terminalId && data.windowId !== undefined) {
-        const { terminalId, windowId } = data;
-        setTerminalWindows(prev => {
-          const newMap = new Map(prev);
-          newMap.set(terminalId, windowId);
-          return newMap;
-        });
-      }
+      const { terminalId, windowId } = data;
+      setTerminalWindows(prev => {
+        const newMap = new Map(prev);
+        newMap.set(terminalId, windowId);
+        return newMap;
+      });
     });
 
     const unsubscribeClose = TerminalService.onWindowClose((data) => {
@@ -369,7 +365,7 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
         collapsibleSide="left"
         collapsed={panelState.collapsed.left}
         style={{ height: '100%', width: '100%' }}
-        theme={panelsTheme}
+        theme={theme}
         onCollapseComplete={panelState.handleLeftCollapseComplete}
         onExpandComplete={panelState.handleLeftExpandComplete}
       />

@@ -176,16 +176,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         zIndex: 100,
       }}
     >
-      {/* Left controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: '10px' }}>
-        {showSidebarControl && onToggleSidebar && (
-          <ViewSidebarControls
-            isCollapsed={sidebarCollapsed}
-            onToggle={onToggleSidebar}
-          />
-        )}
-      </div>
-
       {/* Left spacer */}
       <div style={{ flex: 1 }} />
 
@@ -203,7 +193,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         Principal View
       </div>
 
-      {/* Right spacer with theme dropdown and right sidebar control */}
+      {/* Right spacer with controls */}
       <div
         style={{
           flex: 1,
@@ -297,6 +287,14 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             </button>
           )}
         </div>
+        {showThemeButton && <ThemeDropdown />}
+        {showCustomizeButton && <ThemeCustomizationButton />}
+        {showSidebarControl && onToggleSidebar && (
+          <ViewSidebarControls
+            isCollapsed={sidebarCollapsed}
+            onToggle={onToggleSidebar}
+          />
+        )}
         {showRightSidebarControl && onToggleRightSidebar && (
           <ViewSidebarControls
             isCollapsed={rightSidebarCollapsed}
@@ -304,8 +302,6 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             side="right"
           />
         )}
-        {showThemeButton && <ThemeDropdown />}
-        {showCustomizeButton && <ThemeCustomizationButton />}
       </div>
 
       {/* Window controls for Windows */}
