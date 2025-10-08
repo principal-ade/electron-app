@@ -63,7 +63,7 @@ import { CityVisualizationPanel } from '../panels/components/CityVisualizationPa
 
 type PanelTabConfig = { id: string; label: string; icon?: React.ReactNode; content: React.ReactNode; visible?: boolean };
 
-interface RepositoryExplorationViewProps {
+interface DevelopmentWorkspaceProps {
   repository: Repository;
   repositoryKey: string;
   remoteData: {
@@ -96,8 +96,8 @@ interface RepositoryExplorationViewProps {
   eventHighlightService?: EventHighlightService;
 }
 
-export const RepositoryExplorationView: React.FC<
-  RepositoryExplorationViewProps
+export const DevelopmentWorkspace: React.FC<
+  DevelopmentWorkspaceProps
 > = ({
   repository,
   repositoryKey,
@@ -153,7 +153,7 @@ export const RepositoryExplorationView: React.FC<
       return;
     }
 
-    console.log('[RepositoryExplorationView] Registering event highlight layers:', eventHighlightLayers.length);
+    console.log('[DevelopmentWorkspace] Registering event highlight layers:', eventHighlightLayers.length);
 
     // Register all event highlight layers
     eventHighlightLayers.forEach((layer, idx) => {
@@ -380,7 +380,7 @@ export const RepositoryExplorationView: React.FC<
       return;
     }
 
-    console.log('[RepositoryExplorationView] Registering git highlight layers:', gitHighlightLayers.length);
+    console.log('[DevelopmentWorkspace] Registering git highlight layers:', gitHighlightLayers.length);
 
     // Register each git layer
     gitHighlightLayers.forEach((layer, idx) => {

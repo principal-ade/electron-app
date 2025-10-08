@@ -24,7 +24,7 @@ import { SourceFileSystemAdapter } from '../adapters/SourceFileSystemAdapter';
 import { RepositoryTitlebar } from '../components/Titlebar';
 
 import type { Repository } from '../../shared/types/repository.types';
-import { RepositoryExplorationView } from './RepositoryExplorationView';
+import { DevelopmentWorkspace } from './DevelopmentWorkspace';
 import { SecretsModal } from './shared/SecretsModal';
 import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
 import { BadgeInfoModal } from './shared/BadgeInfoModal';
@@ -67,7 +67,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
     const [showPanelConfigModal, setShowPanelConfigModal] = useState(false);
     const [cloneBranchStatuses, setCloneBranchStatuses] = useState<Record<string, any>>({});
 
-    // Panel layout state - default matches RepositoryExplorationView
+    // Panel layout state - default matches DevelopmentWorkspace
     const [panelLayout, setPanelLayout] = useState<PanelLayout>({
       left: {
         type: 'tabs',
@@ -704,7 +704,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
         >
           <HighlightLayersProvider>
               <GitChangesProvider>
-                <RepositoryExplorationView
+                <DevelopmentWorkspace
                 key={panelResetKey}
                 repository={repository}
                 repositoryKey={repositoryKey}

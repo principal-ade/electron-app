@@ -594,7 +594,6 @@ function TerminalPanel({
         ref={terminalRef}
         style={{
           flex: 1,
-          padding: '8px',
           overflow: 'hidden',
         }}
       />
