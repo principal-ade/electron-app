@@ -73,7 +73,7 @@ fileTree: (
 )
 ```
 
-### 4. ✅ Made RepositoryExplorationView Self-Sufficient
+### 4. ✅ Made DevelopmentWorkspace Self-Sufficient
 
 **Added**:
 ```typescript
@@ -100,7 +100,7 @@ useEffect(() => {
 ```
 RepositoryManager
   └─> manages fileTree state
-      └─> passes to RepositoryExplorationView
+      └─> passes to DevelopmentWorkspace
           └─> passes to 4 child components
               └─> passes to search/city/etc
 ```
@@ -139,7 +139,7 @@ RepositoryPanelProvider (context boundary)
 
 ### 1. Migrate Remaining Highlight Layers to Context
 
-Still in RepositoryExplorationView state:
+Still in DevelopmentWorkspace state:
 - `searchHighlightLayer`
 - `selectedFileLayer`
 - `hoveredSearchLayer`
@@ -187,11 +187,11 @@ RepositoryManager shouldn't manage fileTree anymore:
 
 ```diff
 - const [fileTree, setFileTree] = useState<FileTree | null>(null);
-- <RepositoryExplorationView fileTree={fileTree} />
-+ <RepositoryExplorationView />
+- <DevelopmentWorkspace fileTree={fileTree} />
++ <DevelopmentWorkspace />
 ```
 
-RepositoryExplorationView already subscribes to cache!
+DevelopmentWorkspace already subscribes to cache!
 
 ---
 
@@ -205,7 +205,7 @@ RepositoryExplorationView already subscribes to cache!
 5. ✅ Main process forwards to renderer
 6. ✅ RepositoryDataCache receives event
 7. ✅ useRepositoryData hook gets update
-8. ✅ RepositoryExplorationView fileTree state updates
+8. ✅ DevelopmentWorkspace fileTree state updates
 9. ✅ FileTreePanelContent gets update from RepositoryPanelProvider
 10. ✅ UI re-renders automatically!
 

@@ -349,7 +349,7 @@ export class WorkspaceLayoutService {
           left: {
             type: 'tabs',
             panels: ['fileTree', 'docs'],
-            config: { defaultActiveTab: 0 },
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
           middle: 'terminal',
           right: 'cityVisualization',

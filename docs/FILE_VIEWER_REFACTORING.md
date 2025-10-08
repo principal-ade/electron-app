@@ -79,7 +79,7 @@ FilePanel (orchestrator)
 - Added `allowEditToggle` and `onEditableChange` props
 - Props are passed through to FileViewer via spread operator
 
-#### `src/renderer/repo-manager/RepositoryExplorationView.tsx`
+#### `src/renderer/repo-manager/DevelopmentWorkspace.tsx`
 **Changes:**
 - Replaced `import { FileViewer }` with `import { FilePanel }`
 - Updated file viewer rendering to use FilePanel

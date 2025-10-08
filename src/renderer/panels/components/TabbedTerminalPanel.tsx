@@ -66,25 +66,14 @@ export const TabbedTerminalPanel = forwardRef<
     // Switch to a tab
     const switchTab = useCallback(
       (tabId: string) => {
-        console.log(
-          '[TabbedTerminal] Switching to tab:',
-          tabId,
-          'from:',
-          activeTabId,
-        );
         setTabs((prevTabs) => {
           const newTabs = prevTabs.map((t) => ({
             ...t,
             isActive: t.id === tabId,
           }));
-          console.log('[TabbedTerminal] Updated tabs:', newTabs);
           return newTabs;
         });
         setActiveTabId(tabId);
-
-        // Log session info for the tab
-        const sessionId = sessionIds.get(tabId);
-        console.log('[TabbedTerminal] Tab', tabId, 'has session:', sessionId);
       },
       [activeTabId, sessionIds],
     );
@@ -113,66 +102,63 @@ export const TabbedTerminalPanel = forwardRef<
       [directory, onTabsChange],
     );
 
-    // Initialize - cleanup orphaned sessions on mount
+    // Initialize - restore existing sessions or cleanup orphaned ones
     useEffect(() => {
-      console.log(
-        '[TabbedTerminal] Mounting with',
-        initialTabs.length,
-        'initial tabs',
-      );
-
-      // Clean up orphaned sessions on mount - only for our context
-      const cleanupOrphans = async () => {
+      // Restore existing sessions or use initialTabs
+      const restoreOrCleanup = async () => {
         try {
           const allSessions = await TerminalService.list();
-          console.log(
-            '[TabbedTerminal] Found',
-            allSessions.length,
-            'total sessions on mount',
+
+          // Find sessions that belong to this tabbed terminal instance
+          const ourSessions = allSessions.filter(
+            (session) =>
+              session.context?.startsWith(terminalContext) &&
+              session.directory === directory,
           );
 
-          // Check each session to see if it's orphaned
-          for (const session of allSessions) {
-            // Only clean up sessions with our specific context
-            if (session.context === terminalContext && session.directory === directory) {
-              console.log(
-                '[TabbedTerminal] Found orphaned session with our context on mount, destroying:',
-                session.id,
-              );
-              await TerminalService.destroy(session.id);
-            }
+          // Only restore sessions if we don't have initialTabs
+          if (ourSessions.length > 0 && initialTabs.length === 0) {
+            // Restore tabs from existing sessions
+            const restoredTabs: TerminalTab[] = [];
+            const restoredSessionIds = new Map<string, string>();
+
+            ourSessions.forEach((session, index) => {
+              // Extract tab ID from context (format: "tabbed-terminal:repoKey:tab-12345")
+              const contextParts = session.context?.split(':') || [];
+              const tabId = contextParts[contextParts.length - 1] || `tab-${Date.now()}-${index}`;
+
+              const tab: TerminalTab = {
+                id: tabId,
+                label: directory.split('/').pop() || directory,
+                directory: session.directory,
+                isActive: index === 0, // Make first tab active
+              };
+
+              restoredTabs.push(tab);
+              restoredSessionIds.set(tabId, session.id);
+            });
+
+            setTabs(restoredTabs);
+            setSessionIds(restoredSessionIds);
+            setActiveTabId(restoredTabs[0]?.id || null);
+            onTabsChange?.(restoredTabs);
+          } else if (initialTabs.length > 0) {
+            // If initialTabs were provided, use those (parent is managing state)
+            setActiveTabId(initialTabs.find(t => t.isActive)?.id || initialTabs[0]?.id || null);
           }
         } catch (err) {
           console.error(
-            '[TabbedTerminal] Failed to cleanup orphans on mount:',
+            '[TabbedTerminal] Failed to restore sessions on mount:',
             err,
           );
         }
       };
 
-      cleanupOrphans();
+      restoreOrCleanup();
 
       return () => {
-        console.log(
-          '[TabbedTerminal] Unmounting with',
-          tabs.length,
-          'tabs and',
-          sessionIds.size,
-          'sessions',
-        );
-        // Clean up all sessions when the component unmounts
-        sessionIds.forEach((sessionId, tabId) => {
-          console.log(
-            '[TabbedTerminal] Cleaning up session on unmount:',
-            sessionId,
-          );
-          TerminalService.destroy(sessionId).catch((err) => {
-            console.error(
-              '[TabbedTerminal] Failed to cleanup session on unmount:',
-              err,
-            );
-          });
-        });
+        // DON'T destroy sessions on unmount - they should persist when panel is swapped
+        // Sessions are only destroyed when user explicitly closes a tab
       };
     }, []);
 
@@ -215,33 +201,12 @@ export const TabbedTerminalPanel = forwardRef<
     // Handle terminal session creation
     const handleSessionCreated = useCallback(
       (tabId: string, sessionId: string) => {
-        console.log(
-          '[TabbedTerminal] Session created:',
-          sessionId,
-          'for tab:',
-          tabId,
-        );
         setSessionIds((prev) => new Map(prev).set(tabId, sessionId));
       },
       [],
     );
 
     const activeTab = tabs.find((t) => t.id === activeTabId);
-
-    // Log render state
-    useEffect(() => {
-      console.log(
-        '[TabbedTerminal] Render - Active tab:',
-        activeTabId,
-        'Total tabs:',
-        tabs.length,
-        'Sessions:',
-        sessionIds.size,
-      );
-      if (activeTab) {
-        console.log('[TabbedTerminal] Active tab details:', activeTab);
-      }
-    }, [activeTabId, tabs, sessionIds, activeTab]);
 
     // Keyboard shortcuts for tab navigation
     useEffect(() => {
@@ -309,11 +274,6 @@ export const TabbedTerminalPanel = forwardRef<
               <div
                 key={tab.id}
                 onClick={(e) => {
-                  console.log(
-                    '[TabbedTerminal] Tab clicked:',
-                    tab.id,
-                    tab.label,
-                  );
                   e.stopPropagation();
                   switchTab(tab.id);
                 }}
@@ -450,12 +410,6 @@ export const TabbedTerminalPanel = forwardRef<
         <div style={{ flex: 1, position: 'relative' }}>
           {tabs.map((tab) => {
             const isActiveTab = tab.id === activeTabId;
-            console.log(
-              '[TabbedTerminal] Rendering terminal for tab:',
-              tab.id,
-              'Active:',
-              isActiveTab,
-            );
             return (
               <div
                 key={tab.id}
@@ -467,8 +421,9 @@ export const TabbedTerminalPanel = forwardRef<
                 }}
               >
                 <TerminalPanel
+                  key={tab.id}
                   directory={tab.directory}
-                  context={terminalContext}
+                  context={`${terminalContext}:${tab.id}`}
                   hideHeader={true}
                   isVisible={isVisible && isActiveTab}
                   autoFocus={isActiveTab}

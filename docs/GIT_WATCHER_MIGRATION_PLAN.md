@@ -8,7 +8,7 @@ This document outlines the components that need to be migrated from the old git 
 ### Components Already Using New System ✅
 1. **MonitoredFileTreeService** - Already uses RepositoryMonitoringService
 2. **RepositoryManager** - Enables git watching via RepositoryMonitoringService
-3. **RepositoryExplorationView** - Uses useRepositoryGitStatus hook
+3. **DevelopmentWorkspace** - Uses useRepositoryGitStatus hook
 4. **SystemMonitor** - Displays monitoring status from new system
 
 ### Components That Need Migration ❌

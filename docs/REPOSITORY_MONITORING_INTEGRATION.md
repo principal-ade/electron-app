@@ -116,7 +116,7 @@ const fileTreeService = useMemo(() => new MonitoredFileTreeService(), []);
 
 Components to update:
 - `RepositoryManager.tsx`
-- `RepositoryExplorationView.tsx` (if it creates its own cache service)
+- `DevelopmentWorkspace.tsx` (if it creates its own cache service)
 - `PlanningView.tsx` (removed; planning workflow retired)
 - Any other views that load FileTrees
 

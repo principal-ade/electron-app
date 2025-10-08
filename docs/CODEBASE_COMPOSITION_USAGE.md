@@ -79,7 +79,7 @@ const result = await fileSystemModule.loadFileSystemTree();
 ##### Repository Management UI
 - `src/renderer/repo-manager/RepositoryManager.tsx:13-15` - Central orchestration of package discovery
 - `src/renderer/repo-manager/RepositoryMaintenanceView.tsx:22` - Maintenance operations on packages
-- `src/renderer/repo-manager/RepositoryExplorationView.tsx:14` - Package exploration interface
+- `src/renderer/repo-manager/DevelopmentWorkspace.tsx:14` - Package exploration interface
 - `src/renderer/repo-manager/RepositoryManagerHeader.tsx:46` - Header with package info display
 
 ##### Component Libraries

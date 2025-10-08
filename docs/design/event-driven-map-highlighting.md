@@ -44,7 +44,7 @@ graph TB
 
     subgraph "Renderer Process - RepoManager"
         D[RepositoryManager]
-        E[RepositoryExplorationView]
+        E[DevelopmentWorkspace]
         F[CityVisualizationPanel]
         G[EventHighlightService]
         H[EventHistoryStore]
@@ -137,7 +137,7 @@ src/
 ├── renderer/
 │   ├── repo-manager/
 │   │   ├── RepositoryManager.tsx                 # Add EventHighlightService integration
-│   │   ├── RepositoryExplorationView.tsx         # Pass event layers to visualization
+│   │   ├── DevelopmentWorkspace.tsx              # Pass event layers to visualization
 │   │   └── shared/
 │   │       └── CityMapManager.tsx                # Optional: event layer management
 └── main/
@@ -754,23 +754,23 @@ useEffect(() => {
   };
 }, [repositoryKey, eventHighlightService]);
 
-// Pass to RepositoryExplorationView
-<RepositoryExplorationView
+// Pass to DevelopmentWorkspace
+<DevelopmentWorkspace
   // ... existing props
   eventHighlightLayers={eventHighlightLayers}
   eventHighlightService={eventHighlightService}
 />
 ```
 
-### 2. RepositoryExplorationView Integration
+### 2. DevelopmentWorkspace Integration
 
 ```typescript
-// src/renderer/repo-manager/RepositoryExplorationView.tsx (additions)
+// src/renderer/repo-manager/DevelopmentWorkspace.tsx (additions)
 
 import { EventNavigationControls } from '../components/EventNavigationControls';
 import type { EventHighlightService } from '../services/EventHighlightService';
 
-interface RepositoryExplorationViewProps {
+interface DevelopmentWorkspaceProps {
   // ... existing props
   eventHighlightLayers?: HighlightLayer[];
   eventHighlightService?: EventHighlightService;

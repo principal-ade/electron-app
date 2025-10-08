@@ -16,7 +16,7 @@ We have **TWO separate caching systems** for repository data:
 
 **Used by**:
 - `RepositoryManager.tsx` - Creates instance and passes to views
-- `RepositoryExplorationView.tsx` - Uses for file tree display
+- `DevelopmentWorkspace.tsx` - Uses for file tree display
 - `FileTreeSourceService.ts` - Wraps it for file tree loading
 - `RepositoryCityVisualization.tsx` - Uses for visualization
 - `RepoSourceArchitecturePanelSimple.tsx` - Uses for architecture view
@@ -118,7 +118,7 @@ constructor() {
 
 **Changes needed**:
 1. `RepositoryManager.tsx` - Remove MonitoredFileTreeService creation
-2. `RepositoryExplorationView.tsx` - Get fileTree from `useRepositoryData`
+2. `DevelopmentWorkspace.tsx` - Get fileTree from `useRepositoryData`
 3. `FileTreeSourceService.ts` - Use RepositoryDataCache instead
 4. Other consumers - Migrate to hook pattern
 
@@ -143,7 +143,7 @@ constructor() {
 The old `MonitoredFileTreeService` was created before the comprehensive `RepositoryDataCache` existed. Now that we have a better event-driven system, we should migrate everything to use it.
 
 **Migration Steps**:
-1. Update `RepositoryExplorationView` to use `useRepositoryData` hook
+1. Update `DevelopmentWorkspace` to use `useRepositoryData` hook
 2. Remove `MonitoredFileTreeService` prop passing
 3. Update other consumers one by one
 4. Delete `MonitoredFileTreeService.ts` once nothing uses it

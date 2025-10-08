@@ -5,7 +5,7 @@
 ```
 RepositoryManager (manages state)
   ↓ (passes fileTree, cacheService as props)
-RepositoryExplorationView (distributes to children)
+DevelopmentWorkspace (distributes to children)
   ↓
   ├─> FileTreeTab (via panelContentMap)
   ├─> RepositorySearchTab (via fileTrees map)
@@ -16,14 +16,14 @@ RepositoryExplorationView (distributes to children)
 ## Components Using fileTree
 
 ### 1. FileTreeTab
-**Current**: Gets `fileTree` via prop from RepositoryExplorationView
+**Current**: Gets `fileTree` via prop from DevelopmentWorkspace
 **Usage**: Displays file tree
 **Should be self-managed?**: **YES** - Already wrapped in `RepositoryPanelProvider`
 
 ### 2. RepositorySearchTab
-**Current**: Gets `fileTrees` Map (includes fileTree) from RepositoryExplorationView
+**Current**: Gets `fileTrees` Map (includes fileTree) from DevelopmentWorkspace
 **Usage**: Searches across files in the tree
-**Should be self-managed?**: **NO** - Needs coordination with RepositoryExplorationView for search state
+**Should be self-managed?**: **NO** - Needs coordination with DevelopmentWorkspace for search state
 **Why**: Search results, selected file, highlight layers all coordinated at parent level
 
 ### 3. RepoSourceArchitecturePanelSimple
@@ -56,9 +56,9 @@ Looking at RepositoryManager.tsx lines 421-577:
 
 ## Recommendation
 
-### Phase 1: Make RepositoryExplorationView Self-Sufficient (What we're doing now)
+### Phase 1: Make DevelopmentWorkspace Self-Sufficient (What we're doing now)
 
-**RepositoryExplorationView**:
+**DevelopmentWorkspace**:
 - Subscribe to `useRepositoryData` for fileTree
 - Keep local fileTree state for search coordination
 - Pass fileTree to children that need coordination (Search, CityMap)
@@ -66,7 +66,7 @@ Looking at RepositoryManager.tsx lines 421-577:
 **RepositoryManager**:
 - Stop managing fileTree state
 - Stop passing fileTree/cacheService props
-- Let RepositoryExplorationView be self-sufficient
+- Let DevelopmentWorkspace be self-sufficient
 
 **FileTreeTab**:
 - Already migrated to `RepositoryPanelProvider` ✅
@@ -102,7 +102,7 @@ Looking at RepositoryManager.tsx lines 421-577:
 ### 1. Remove fileTree prop passing from RepositoryManager
 
 ```diff
-  <RepositoryExplorationView
+  <DevelopmentWorkspace
     repository={repository}
 -   fileTree={fileTree}
 -   cacheService={cacheService}
@@ -110,7 +110,7 @@ Looking at RepositoryManager.tsx lines 421-577:
   />
 ```
 
-### 2. RepositoryExplorationView becomes self-sufficient
+### 2. DevelopmentWorkspace becomes self-sufficient
 
 ```typescript
 // Already added in our changes:
@@ -142,7 +142,7 @@ useEffect(() => {
 
 ## Answer to Your Question
 
-**"How many things are getting fileTree from RepositoryExplorationView and should they be self-managed?"**
+**"How many things are getting fileTree from DevelopmentWorkspace and should they be self-managed?"**
 
 **Answer**:
 - **FileTreeTab**: Already self-managed ✅

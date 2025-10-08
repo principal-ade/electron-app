@@ -1524,7 +1524,7 @@ export const DevelopmentWorkspace: React.FC<
               panels: ['fileTree', 'docs'],
               config: {
                 defaultActiveTab: 0,
-                centered: true,
+                tabPosition: 'top',
               } as TabsConfig,
             },
             middle: 'cityVisualization',
@@ -1533,7 +1533,7 @@ export const DevelopmentWorkspace: React.FC<
               panels: ['search', 'gitChanges', 'dependencies', 'tools'],
               config: {
                 defaultActiveTab: 0,
-                centered: true,
+                tabPosition: 'top',
               } as TabsConfig,
             },
           };

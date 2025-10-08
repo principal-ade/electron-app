@@ -23,7 +23,7 @@ Our Wrappers
 ### Usage Analysis
 
 #### Raw Component Usage (via ThemedMarkdownSlide wrapper)
-- **Location**: `src/renderer/repo-manager/RepositoryExplorationView.tsx`
+- **Location**: `src/renderer/repo-manager/DevelopmentWorkspace.tsx`
 - **Instances**: 3
   - README content (line 1499-1504)
   - CHANGELOG content (line 1763-1768)
@@ -57,7 +57,7 @@ Create new wrapper components that maintain the custom theming capability:
 
 ### Phase 2: Migrate Existing Usage
 
-#### RepositoryExplorationView Migration
+#### DevelopmentWorkspace Migration
 Replace ThemedMarkdownSlide usage with ThemedDocumentView:
 
 ```tsx
@@ -100,7 +100,7 @@ Once all migrations are complete:
   - [ ] Add fontSizeScale support
   - [ ] Test with user preferences
 
-- [ ] Migrate RepositoryExplorationView
+- [ ] Migrate DevelopmentWorkspace
   - [ ] Replace README viewer
   - [ ] Replace CHANGELOG viewer
   - [ ] Replace LICENSE viewer

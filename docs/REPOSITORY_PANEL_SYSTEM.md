@@ -175,7 +175,7 @@ Layout preferences persist per repository.
 
 ### Panel Content Mapping
 
-The `RepositoryExplorationView` maintains a `panelContentMap` that maps panel IDs from the registry to their actual React components. This approach:
+The `DevelopmentWorkspace` maintains a `panelContentMap` that maps panel IDs from the registry to their actual React components. This approach:
 
 1. Keeps panel content definitions centralized
 2. Allows the `ConfigurablePanelLayout` to render any combination of panels
@@ -205,7 +205,7 @@ Select the same `RepositoryPanelDefinition` in each window's layout configuratio
 Yes. Use `context.hasSlice('packages')` or `context.isSliceLoading('packages')` to decide when to fetch or display placeholders. If a panel needs additional data beyond the built-in slices, fetch it inside the panel component while keeping repository basics centralized.
 
 **What about panels without a shared renderer?**
-Define them in the registry without a `render` function. Host views can map the definition to their own UI component but still benefit from synchronized metadata, persistence, and slice declarations. This is the current approach for Repository Manager panels, where the registry defines metadata but `RepositoryExplorationView` provides the actual component implementations.
+Define them in the registry without a `render` function. Host views can map the definition to their own UI component but still benefit from synchronized metadata, persistence, and slice declarations. This is the current approach for Repository Manager panels, where the registry defines metadata but `DevelopmentWorkspace` provides the actual component implementations.
 
 **How does the PanelConfigurator work with tabs?**
 The `@a24z/panels@1.0.14` library supports creating `PanelGroup` objects with `type: 'tabs'`. Users can assign multiple panels to a single slot as a tab group. The configurator UI allows dragging panels between slots and automatically creates/updates tab groups. Layout state persists using the `PanelLayout` type from `@a24z/panels`.

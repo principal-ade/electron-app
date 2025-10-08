@@ -119,7 +119,7 @@ interface RepositorySearchTabProps {
 
 #### 2.2 Default to Modified Files View
 ```typescript
-// In RepositoryExplorationView.tsx
+// In DevelopmentWorkspace.tsx
 const { gitStatus, modifiedFiles } = useRepositoryGitStatus(repo?.localPath);
 
 // Pass to search tab
@@ -309,7 +309,7 @@ Without FSMonitor:
    - `src/renderer/contexts/GitChangesContext.tsx` - **Core context file (DELETE)**
    - `src/renderer/repo-manager/RepositoryManager.tsx` - Wraps views with `<GitChangesProvider>`
   - `src/renderer/repo-manager/LocalDevelopmentView.tsx` (removed) - Formerly used `useGitChanges()` hook
-   - `src/renderer/repo-manager/RepositoryExplorationView.tsx` - Uses `useGitChanges()` hook
+   - `src/renderer/repo-manager/DevelopmentWorkspace.tsx` - Uses `useGitChanges()` hook
    - `src/renderer/components/repository-maps/GitChangesButton.tsx` - Toggle button component
 
    **Files Using GitWatcherService:**
@@ -324,7 +324,7 @@ Without FSMonitor:
 
    **Priority 1 - Core Repository Views:**
   - `LocalDevelopmentView.tsx` (removed) - View retired alongside the former planning workflows
-   - `RepositoryExplorationView.tsx` - Keep for highlight layers only, use new hook for data
+   - `DevelopmentWorkspace.tsx` - Keep for highlight layers only, use new hook for data
    - `GitChangesButton.tsx` - Convert to use new git status hook
 
    **Priority 2 - Context Providers:**

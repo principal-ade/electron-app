@@ -93,10 +93,6 @@ function TerminalPanel({
 
           for (const orphan of orphanedSessions) {
             try {
-              console.log(
-                '[TerminalPanel] Destroying orphaned session:',
-                orphan.id,
-              );
               await TerminalService.destroy(orphan.id);
             } catch (err) {
               console.error(
@@ -109,10 +105,6 @@ function TerminalPanel({
 
         // If there's an initial command, create a new terminal with that command
         if (initialCommand) {
-          console.log(
-            '[TerminalPanel] Creating terminal with command:',
-            initialCommand,
-          );
           const id = await TerminalService.createWithCommand(
             dir,
             initialCommand,
@@ -125,7 +117,13 @@ function TerminalPanel({
           // Agent sessions should have their own terminal
           const id = await TerminalService.create(dir, context);
           return id || null;
-        } else {
+        }
+        // For tabbed terminals (context includes tab ID), always create new sessions
+        else if (context && context.includes(':tab-')) {
+          const id = await TerminalService.create(dir, context);
+          return id || null;
+        }
+        else {
           // Regular terminals can reuse existing sessions for the same directory+context
           const id = await TerminalService.getOrCreate(dir, context);
           return id || null;

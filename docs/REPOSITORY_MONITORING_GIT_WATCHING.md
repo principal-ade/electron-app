@@ -146,7 +146,7 @@ Key features:
 The monitoring status is displayed in:
 - **SystemMonitor**: Shows repositories with watching mode (FSMonitor/Fallback)
 - **RepositoryManager**: Enables watching when repository is opened
-- **RepositoryExplorationView**: Uses git status to highlight modified files
+- **DevelopmentWorkspace**: Uses git status to highlight modified files
 
 ## Migration from Old File Watcher
 

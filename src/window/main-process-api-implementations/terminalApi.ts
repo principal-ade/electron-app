@@ -8,21 +8,23 @@ import type {
 } from '../../shared/main-process-api-interfaces/TerminalService';
 
 export const terminalAPI: TerminalAPI = {
-  create: async (directory: string): Promise<string> => {
-    return ipcRenderer.invoke(TerminalAPIEvents.CREATE, directory);
+  create: async (directory: string, context?: string): Promise<string> => {
+    return ipcRenderer.invoke(TerminalAPIEvents.CREATE, directory, context);
   },
 
-  getOrCreate: async (directory: string): Promise<string> => {
-    return ipcRenderer.invoke(TerminalAPIEvents.GET_OR_CREATE, directory);
+  getOrCreate: async (directory: string, context?: string): Promise<string> => {
+    return ipcRenderer.invoke(TerminalAPIEvents.GET_OR_CREATE, directory, context);
   },
 
   createWithCommand: async (
     directory: string,
     command: string,
+    context?: string,
   ): Promise<string> => {
     return ipcRenderer.invoke(TerminalAPIEvents.CREATE_WITH_COMMAND, {
       directory,
       command,
+      context,
     });
   },
 

@@ -237,7 +237,7 @@ The agent-monitoring library extracts paths from:
   - [ ] Previous/Next buttons
   - [ ] Live mode toggle
   - [ ] Clear history
-- [ ] Integration with RepositoryExplorationView
+- [ ] Integration with DevelopmentWorkspace
   - [ ] Pass highlight layers to visualization
   - [ ] Update on event reception
 
