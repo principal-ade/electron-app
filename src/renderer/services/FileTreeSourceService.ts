@@ -16,7 +16,6 @@ import {
   isTemporarySource,
 } from '../types/file-tree-source';
 
-import { MonitoredFileTreeService } from './MonitoredFileTreeService';
 import { CloneVisibilityService } from './CloneVisibilityService';
 import { ElectronPlatformAdapters } from '../adapters';
 import { GitHubWebAdapters } from '../adapters/GitHubWebAdapters';
@@ -24,15 +23,16 @@ import { GitHubWebAdapters } from '../adapters/GitHubWebAdapters';
 /**
  * Service for managing file tree sources
  * Handles converting repository info to sources and managing source state
+ *
+ * NOTE: This service is deprecated and only kept for RepositoryCityVisualization.
+ * New code should use RepositoryDataCache with useRepositoryData hook instead.
  */
 export class FileTreeSourceService {
   private sources: Map<string, FileTreeSource> = new Map();
   private activeSourceId: string | null = null;
-  private cacheService: MonitoredFileTreeService;
   private packageModule: PackageLayerModule;
 
-  constructor(cacheService?: MonitoredFileTreeService) {
-    this.cacheService = cacheService || new MonitoredFileTreeService();
+  constructor() {
     this.packageModule = new PackageLayerModule();
   }
 
@@ -104,8 +104,7 @@ export class FileTreeSourceService {
       this.activeSourceId = defaultSource.id;
     }
 
-    // Only prefetch the visible clone's tree
-    this.cacheService.prefetchTrees(sources.filter((s) => !s.isTemporary));
+    // Note: Prefetching removed - use RepositoryDataCache instead
 
     return sources;
   }
@@ -116,10 +115,7 @@ export class FileTreeSourceService {
   addSource(source: FileTreeSource): void {
     this.sources.set(source.id, source);
 
-    // Prefetch if not temporary
-    if (!source.isTemporary) {
-      this.cacheService.prefetchTrees([source]);
-    }
+    // Note: Prefetching removed - use RepositoryDataCache instead
   }
 
   /**
@@ -130,8 +126,7 @@ export class FileTreeSourceService {
     if (source) {
       this.sources.delete(sourceId);
 
-      // Invalidate cache for this source
-      this.cacheService.invalidateSource(sourceId);
+      // Note: Cache invalidation removed - use RepositoryDataCache instead
 
       // Switch to another source if active was removed
       if (this.activeSourceId === sourceId) {
@@ -194,65 +189,37 @@ export class FileTreeSourceService {
 
   /**
    * Load a source's tree (uses cache)
+   * @deprecated Use RepositoryDataCache with useRepositoryData hook instead
    */
   async loadSourceTree(sourceId: string): Promise<LoadedFileTreeSource | null> {
-    const source = this.sources.get(sourceId);
-    if (!source) return null;
+    throw new Error('FileTreeSourceService.loadSourceTree is deprecated - use RepositoryDataCache instead');
+  }
 
-    return this.cacheService.loadFileTree(source);
+  /**
+   * Load file tree (alias for loadSourceTree)
+   * @deprecated Use RepositoryDataCache with useRepositoryData hook instead
+   */
+  async loadFileTree(sourceId: string): Promise<LoadedFileTreeSource | null> {
+    throw new Error('FileTreeSourceService.loadFileTree is deprecated - use RepositoryDataCache instead');
   }
 
   /**
    * Load the active source's tree
+   * @deprecated Use RepositoryDataCache with useRepositoryData hook instead
    */
   async loadActiveSourceTree(): Promise<LoadedFileTreeSource | null> {
-    const activeSource = this.getActiveSource();
-    if (!activeSource) return null;
-
-    return this.cacheService.loadFileTree(activeSource);
+    throw new Error('FileTreeSourceService.loadActiveSourceTree is deprecated - use RepositoryDataCache instead');
   }
 
   /**
    * Detect packages in a source's file tree
    * Uses the standard PackageLayerModule for consistent package detection
+   * @deprecated Use RepositoryMonitoringService.getPackages instead
    */
   async detectPackagesForSource(
     sourceId: string,
   ): Promise<PackageLayer[] | null> {
-    // Check if we have cached analysis first
-    const cachedAnalysis = this.cacheService.getAnalysis(sourceId);
-    if (cachedAnalysis?.packageLayers) {
-      return cachedAnalysis.packageLayers;
-    }
-
-    // Load the file tree
-    const source = this.sources.get(sourceId);
-    if (!source) return null;
-
-    const treeResult = await this.cacheService.loadFileTree(source);
-    if (!treeResult || !treeResult.tree) return null;
-
-    // Detect packages using the standard module
-    try {
-      const packages = await this.detectPackages(treeResult.tree, source);
-
-      // Cache the results in the analysis cache
-      const existingAnalysis = this.cacheService.getAnalysis(sourceId) || {
-        frameworkLayers: null,
-        dependencyLayers: null,
-        fileTypeLayers: null,
-      };
-
-      this.cacheService.setAnalysis(sourceId, {
-        ...existingAnalysis,
-        packageLayers: packages,
-      });
-
-      return packages;
-    } catch (error) {
-      console.error('Failed to detect packages:', error);
-      return null;
-    }
+    throw new Error('FileTreeSourceService.detectPackagesForSource is deprecated - use RepositoryMonitoringService.getPackages instead');
   }
 
   /**
@@ -294,21 +261,18 @@ export class FileTreeSourceService {
 
   /**
    * Get cached packages for a source without loading
+   * @deprecated Use RepositoryDataCache instead
    */
   getCachedPackages(sourceId: string): PackageLayer[] | null {
-    const analysis = this.cacheService.getAnalysis(sourceId);
-    return analysis?.packageLayers || null;
+    return null;
   }
 
   /**
    * Load multiple source trees in parallel
+   * @deprecated Use RepositoryDataCache instead
    */
   async loadSourceTrees(sourceIds: string[]): Promise<LoadedFileTreeSource[]> {
-    const sources = sourceIds
-      .map((id) => this.sources.get(id))
-      .filter((s): s is FileTreeSource => s !== undefined);
-
-    return this.cacheService.loadTrees(sources);
+    throw new Error('FileTreeSourceService.loadSourceTrees is deprecated - use RepositoryDataCache instead');
   }
 
   /**
@@ -489,31 +453,21 @@ export class FileTreeSourceService {
 
   /**
    * Refresh a source (invalidate cache and optionally reload)
+   * @deprecated Use RepositoryDataCache instead
    */
   async refreshSource(
     sourceId: string,
     reload: boolean = false,
   ): Promise<LoadedFileTreeSource | null> {
-    const source = this.sources.get(sourceId);
-    if (!source) return null;
-
-    // Invalidate cache
-    this.cacheService.invalidateSource(sourceId);
-
-    // Reload if requested
-    if (reload) {
-      return this.cacheService.loadFileTree(source);
-    }
-
     return null;
   }
 
   /**
    * Refresh all sources of a specific type
+   * @deprecated Use RepositoryDataCache instead
    */
   async refreshSourcesByType(type: 'local' | 'remote'): Promise<void> {
-    const sources = this.getSourcesByType(type);
-    await Promise.all(sources.map((source) => this.refreshSource(source.id)));
+    // No-op
   }
 
   /**
@@ -536,11 +490,7 @@ export class FileTreeSourceService {
    * Clear all sources
    */
   clear(): void {
-    // Invalidate all caches
-    this.sources.forEach((_, id) => {
-      this.cacheService.invalidateSource(id);
-    });
-
+    // Note: Cache invalidation removed - use RepositoryDataCache instead
     this.sources.clear();
     this.activeSourceId = null;
   }
@@ -564,7 +514,7 @@ export class FileTreeSourceService {
       remoteSources: sources.filter((s) => s.type === 'remote').length,
       temporarySources: sources.filter(isTemporarySource).length,
       activeSourceId: this.activeSourceId,
-      cacheStats: this.cacheService.getCacheStats(),
+      cacheStats: {}, // No cache stats available
     };
   }
 
@@ -598,8 +548,6 @@ export class FileTreeSourceService {
       this.activeSourceId = data.activeSourceId;
     }
 
-    // Prefetch non-temporary sources
-    const sourcesToPrefetch = data.sources.filter((s) => !s.isTemporary);
-    this.cacheService.prefetchTrees(sourcesToPrefetch);
+    // Note: Prefetching removed - use RepositoryDataCache instead
   }
 }

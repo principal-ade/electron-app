@@ -6,6 +6,8 @@ import type {
   RepositoryPanelSlice,
 } from './RepositoryPanelProvider';
 import { GitChangesPanel } from './components/GitChangesPanel';
+import { ExcalidrawPanel } from './components/ExcalidrawPanel';
+import { DrawingsListPanel } from './components/DrawingsListPanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -137,6 +139,22 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
     description: 'View and interact with excalidraw diagrams.',
     defaultLocation: 'right',
     slices: [],
+  },
+  {
+    id: 'excalidrawEditor',
+    label: 'Excalidraw Editor',
+    description: 'Create and edit excalidraw drawings saved to Memory Palace.',
+    defaultLocation: 'right',
+    slices: [],
+    render: () => <ExcalidrawPanel />,
+  },
+  {
+    id: 'drawingsList',
+    label: 'Drawings',
+    description: 'Browse and manage excalidraw drawings in the repository.',
+    defaultLocation: 'left',
+    slices: [],
+    render: () => <DrawingsListPanel />,
   },
 ];
 

@@ -146,7 +146,7 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
    * Check git status for a source (with caching)
    */
   const checkGitStatus = useCallback(
-    async (source: FileTreeSource): Promise<GitDetailedChanges | null> => {
+    async (source: FileTreeSource, bypassCache = false): Promise<GitDetailedChanges | null> => {
       // Only works for local sources
       if (source.type !== 'local') {
         return null;
@@ -154,8 +154,8 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
 
       const existingState = gitStatesRef.current.get(source.id);
 
-      // Check cache
-      if (existingState?.gitStatus && existingState.lastStatusCheck) {
+      // Check cache (unless bypassed)
+      if (!bypassCache && existingState?.gitStatus && existingState.lastStatusCheck) {
         const age = Date.now() - existingState.lastStatusCheck;
         if (age < STATUS_CACHE_DURATION) {
           console.info(
@@ -553,7 +553,8 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
         label: '',
       };
 
-      await checkGitStatus(source);
+      // Bypass cache when explicitly refreshing (e.g., from GIT_STATUS_CHANGED event)
+      await checkGitStatus(source, true);
     },
     [checkGitStatus],
   );

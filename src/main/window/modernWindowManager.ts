@@ -487,6 +487,29 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         if (win) win.close();
       });
 
+      // Window close with confirmation
+      ipcMain.handle('window-close-with-confirmation', async (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (!win) return false;
+
+        const { dialog } = require('electron');
+        const choice = await dialog.showMessageBox(win, {
+          type: 'question',
+          buttons: ['Cancel', 'Close'],
+          defaultId: 0,
+          cancelId: 0,
+          title: 'Close Repository',
+          message: 'Are you sure you want to close this repository?',
+          detail: 'Any unsaved work may be lost.',
+        });
+
+        if (choice.response === 1) {
+          win.close();
+          return true;
+        }
+        return false;
+      });
+
       // Check if maximized
       ipcMain.handle('window-is-maximized', (event) => {
         const win = BrowserWindow.fromWebContents(event.sender);

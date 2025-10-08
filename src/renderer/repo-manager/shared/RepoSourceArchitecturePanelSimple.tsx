@@ -1,23 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FolderOpen, AlertCircle } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
-import type { FileSystemTree } from '@principal-ai/codebase-composition';
+import { FileTree } from '@principal-ai/repository-abstraction';
 import {
   PackageLayerModule,
   PackageLayer,
 } from '@principal-ai/codebase-composition';
 
-import { MonitoredFileTreeService } from '../../services/MonitoredFileTreeService';
 import { GitHubWebAdapters } from '../../adapters/GitHubWebAdapters';
 import { ElectronPlatformAdapters } from '../../adapters';
 import { loadManifestContents } from '../../utils/loadManifestContents';
 import { FileTreeSource } from '../../types/file-tree-source';
 import { DependenciesPanel } from '../../components/repository-maps/DependenciesPanel';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
+import { useRepositoryData } from '../../hooks/useRepositoryData';
 
 interface RepoSourceArchitecturePanelSimpleProps {
   source: FileTreeSource;
-  cacheService: MonitoredFileTreeService;
   packageLayers?: PackageLayer[] | null;
   onError?: (error: string) => void;
   onPackageLayersChanged?: (packageLayers: PackageLayer[] | null) => void;
@@ -36,7 +35,6 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
   RepoSourceArchitecturePanelSimpleProps
 > = ({
   source,
-  cacheService,
   packageLayers: packageLayersProp,
   onError,
   onPackageLayersChanged,
@@ -48,13 +46,18 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
   const { theme } = useTheme();
 
   // State
-  const [loading, setLoading] = useState(true);
   const [analyzingLayers, setAnalyzingLayers] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileSystemTree, setFileSystemTree] = useState<FileSystemTree | null>(
+  const [fileSystemTree, setFileSystemTree] = useState<FileTree | null>(
     null,
   );
-  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
+
+  // Get file tree from cache for local sources
+  const repositoryPath = source.type === 'local' ? source.location : null;
+  const { data: cacheData, loading } = useRepositoryData(repositoryPath, {
+    autoLoad: true,
+    subscribe: true,
+  });
 
   // Analysis results - use prop if provided, otherwise maintain local state
   const [localPackageLayers, setLocalPackageLayers] = useState<
@@ -76,32 +79,16 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
     return null;
   }, [source]);
 
-  // Load filesystem tree for the source
+  // Update file system tree when cache data changes
   useEffect(() => {
-    const loadTree = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Load tree from cache or fetch with strong typing
-        const result = await cacheService.loadFileTree(source);
-
-        setFileSystemTree(result.tree);
-        setLastRefresh(Date.now());
-      } catch (err) {
-        const errorMsg =
-          err instanceof Error
-            ? err.message
-            : 'Failed to load architecture data';
-        setError(errorMsg);
-        if (onError) onError(errorMsg);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadTree();
-  }, [source, cacheService]);
+    if (cacheData?.fileTree) {
+      setFileSystemTree(cacheData.fileTree);
+      setError(null);
+    } else if (!loading && source.type === 'local') {
+      setError('Failed to load architecture data');
+      if (onError) onError('Failed to load architecture data');
+    }
+  }, [cacheData?.fileTree, loading, source.type, onError]);
 
   // Only analyze layers if not provided as prop
   useEffect(() => {
@@ -110,16 +97,6 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
     const analyzeLayers = async () => {
       try {
         setAnalyzingLayers(true);
-        // Check cache first
-        const cached = cacheService.getAnalysis(source.id);
-        if (cached) {
-          setLocalPackageLayers(cached.packageLayers);
-          setAnalyzingLayers(false);
-          if (!packageLayersProp) {
-            onPackageLayersChanged?.(cached.packageLayers);
-          }
-          return;
-        }
 
         // Use RepositoryMonitoringService for local sources (it's much faster and more accurate)
         if (source.type === 'local' && source.location) {
@@ -140,11 +117,6 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
             onPackageLayersChanged?.(packageResult);
           }
 
-          // Save to cache
-          cacheService.setAnalysis(source.id, {
-            packageLayers: packageResult,
-          });
-
           return;
         }
 
@@ -158,15 +130,13 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
     };
 
     analyzeLayers();
-  }, [fileSystemTree, adapters, packageLayersProp]);
+  }, [fileSystemTree, adapters, packageLayersProp, source.type, source.location, onPackageLayersChanged]);
 
   // Handle refresh
   const handleRefresh = async () => {
-    // Clear caches for this source
-    cacheService.removeTree(source.id);
-    cacheService.removeAnalysis(source.id);
-    // Trigger reload
-    setLastRefresh(Date.now());
+    // For local sources, clear the package layers and re-trigger analysis
+    setLocalPackageLayers(null);
+    // The useEffect will automatically re-run when fileSystemTree changes
   };
 
   // Loading skeleton

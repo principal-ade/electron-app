@@ -10,6 +10,7 @@ import {
   GitStatusMetadata,
   type ToolExecutionRequest,
   type WorkspaceChangeEventPayload,
+  type RepositoryCacheSyncEvent,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { MonitoringInternalEvent } from '../../repository-monitoring-server/types';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
@@ -218,6 +219,30 @@ export function registerRepositoryMonitoringHandlers(): void {
     }
   });
 
+  // Get git remote info for a repository
+  ipcMain.handle(RepositoryMonitoringAPIEvent.GET_GIT_REMOTE_INFO, async (_event, repoPath: string) => {
+    console.log(`[RepositoryMonitoring] GET_GIT_REMOTE_INFO request for: ${repoPath}`);
+    try {
+      const remoteInfo = await manager.getGitRemoteInfo(repoPath);
+      return remoteInfo;
+    } catch (error) {
+      console.error('[RepositoryMonitoring] Error getting git remote info:', error);
+      return null;
+    }
+  });
+
+  // Invalidate git remote cache for a repository
+  ipcMain.handle(RepositoryMonitoringAPIEvent.INVALIDATE_GIT_REMOTE_CACHE, async (_event, repoPath: string) => {
+    console.log(`[RepositoryMonitoring] INVALIDATE_GIT_REMOTE_CACHE request for: ${repoPath}`);
+    try {
+      await manager.invalidateGitRemoteCache(repoPath);
+      return { success: true };
+    } catch (error) {
+      console.error('[RepositoryMonitoring] Error invalidating git remote cache:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  });
+
   // Execute tool using quality lenses
   ipcMain.handle(RepositoryMonitoringAPIEvent.EXECUTE_TOOL, async (_event, request: ToolExecutionRequest) => {
     console.log(`[RepositoryMonitoring] EXECUTE_TOOL request for: ${request.toolName} in ${request.repoPath}`);
@@ -270,6 +295,15 @@ export function registerRepositoryMonitoringHandlers(): void {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach(window => {
       window.webContents.send(RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED, payload);
+    });
+  });
+
+  // Forward cache sync events to renderer windows
+  manager.on(MonitoringInternalEvent.CACHE_SYNC, (event: RepositoryCacheSyncEvent) => {
+    console.log(`[RepositoryMonitoring] Forwarding cache sync to renderer: ${event.repoPath} - ${event.slice}`);
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach(window => {
+      window.webContents.send(RepositoryMonitoringAPIEvent.CACHE_SYNC, event);
     });
   });
 

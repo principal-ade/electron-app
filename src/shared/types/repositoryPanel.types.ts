@@ -18,6 +18,9 @@ export type RepositoryPanelId =
   | 'codeViewer'
   | 'markdownViewer'
   | 'excalidrawDiagram'
+  // Excalidraw panels
+  | 'excalidrawEditor'
+  | 'drawingsList'
   // Legacy panel IDs (deprecated)
   | 'markdownDocument'
   | 'markdownSlides';

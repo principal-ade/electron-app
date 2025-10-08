@@ -16,7 +16,8 @@ import { RepositoryHeader } from './RepositoryHeader';
 import { GitStatusPanel } from './GitStatusPanel';
 import { MarkdownDocumentsPanel } from './MarkdownDocumentsPanel';
 import { QualityHexagonPanel } from './quality';
-import { SimpleCityVisualization, RepositoryCityService } from './city';
+import { RepositoryCityService } from './city';
+import { CityVisualizationPanel } from '../../../../panels/components/CityVisualizationPanel';
 import { RepositoryActionsPanel } from './RepositoryActionsPanel';
 import { SecretsModal } from './SecretsModal';
 import { ActRunnerService } from '../../../../main-process-api/ActRunnerService';
@@ -27,6 +28,7 @@ import { UserPreferencesService } from '../../../../main-process-api/UserPrefere
 import { RepositoryPanelProvider } from '../../../../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../../../../panels/components/GitChangesPanel';
 import { createDefaultPanelVisibility } from '../../../../panels/registry';
+import { useHighlightLayers } from '../../../../contexts/HighlightLayersContext';
 
 interface RepositoryDetailsPanelProps {
   selectedRepository: EnhancedAlexandriaEntry | null;
@@ -59,6 +61,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   onOpenTerminal,
 }) => {
   const { theme } = useTheme();
+  const { registerLayer, unregisterLayer } = useHighlightLayers();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
 
   // Track terminal windows by repository path
@@ -227,6 +230,30 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     }
     return showFileColors ? fileColorHighlightLayers : [];
   }, [hasGitChanges, gitHighlightLayers, showFileColors, fileColorHighlightLayers]);
+
+  // Register active highlight layers with context
+  useEffect(() => {
+    if (!activeHighlightLayers || activeHighlightLayers.length === 0) {
+      return;
+    }
+
+    // Register each layer
+    activeHighlightLayers.forEach((layer, idx) => {
+      registerLayer(`repo-highlight-${idx}`, {
+        name: layer.name,
+        enabled: layer.enabled,
+        color: layer.color,
+        priority: layer.priority,
+        items: layer.items,
+      });
+    });
+
+    return () => {
+      activeHighlightLayers.forEach((_, idx) => {
+        unregisterLayer(`repo-highlight-${idx}`);
+      });
+    };
+  }, [activeHighlightLayers, registerLayer, unregisterLayer]);
 
   // Check if there are workflow files in the repository
   const hasWorkflowActions = useMemo(() => {
@@ -1009,18 +1036,17 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 {/* City Visualization */}
                 {panelVisibility.cityVisualization && selectedRepository && (
                   <div>
-                    <SimpleCityVisualization
-                      repository={selectedRepository}
-                      cityData={cityData}
-                      highlightLayers={activeHighlightLayers}
-                      isBuilding={isBuildingCity}
-                      treeStats={treeStats}
-                      height="400px"
-                      onFileClick={handleFileClick}
-                      onRequestCityData={buildCityData}
-                      loadingMessage="Building repository structure visualization..."
-                      emptyMessage={cityError || 'Repository structure not available'}
-                    />
+                    <div style={{ height: '400px' }}>
+                      <CityVisualizationPanel
+                        cityData={cityData}
+                        loading={isBuildingCity}
+                        treeStats={treeStats}
+                        onFileClick={handleFileClick}
+                        onRequestCityData={buildCityData}
+                        loadingMessage="Building repository structure visualization..."
+                        emptyMessage={cityError || 'Repository structure not available'}
+                      />
+                    </div>
                   </div>
                 )}
 

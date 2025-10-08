@@ -45,11 +45,6 @@ export class AlexandriaRegistryService {
           // Get last commit info from git
           const commitInfo = await gitClientFactory.getLastCommitInfo(entry.path);
 
-          // Debug: log commit message to check if it's full or truncated
-          if (commitInfo?.message && entry.name === 'electron-app') {
-            console.log(`[Alexandria] Commit message for ${entry.name}:`, commitInfo.message);
-          }
-
           if (commitInfo && commitInfo.date) {
             // Update the github field with last commit date only (per type constraints)
             // Store other commit details at the top level

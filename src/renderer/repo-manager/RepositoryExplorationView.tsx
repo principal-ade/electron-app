@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   GitBranch,
   Layers,
@@ -8,6 +8,7 @@ import {
   Palette,
   Wrench,
   FolderTree,
+  Activity,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
@@ -22,7 +23,6 @@ import {
 import '@a24z/panels/panels.css';
 import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
-import { FileSystemService } from '../main-process-api/FileSystemService';
 import TerminalPanel from '../panels/TerminalPanel';
 import { TabbedTerminalPanel } from '../panels/components/TabbedTerminalPanel';
 
@@ -30,8 +30,6 @@ import type { Repository } from '../../shared/types/repository.types';
 import { RightPaneMode } from '../../shared/types/userPreferences.types';
 import { RepositoryNote } from '../../shared/main-process-api-interfaces/RepositoryNotesAPI';
 import { RepositoryNotesService } from '../main-process-api/RepositoryNotesService';
-import { FileTreeSourceService } from '../services/FileTreeSourceService';
-import { MonitoredFileTreeService } from '../services/MonitoredFileTreeService';
 // import { SourceSelectionService } from '../services/SourceSelectionService'; // TODO: Re-enable when needed
 import { FileTreeSource, FileTreeStats } from '../types/file-tree-source';
 import type { ToolbarItem } from './shared/RepositoryToolbar';
@@ -45,19 +43,23 @@ import {
 import { RemoteFileViewerModal } from './shared/RemoteFileViewerModal';
 import { HelpModal } from './shared/HelpModal';
 import { useGitChanges } from '../contexts/GitChangesContext';
-import { useRepositoryGitStatus } from '../hooks/useRepositoryGitStatus';
+import { useRepositoryData } from '../hooks/useRepositoryData';
 import { RepositorySearchTab } from '../components/repository-maps/RepositorySearchTab';
 import { ToolsTab } from './shared/ToolsTab';
 import { RightPaneView } from '../components/repository-maps/RightPaneContainer';
 import { FileTreeTab } from '../panels/components/FileTreeTab';
+import { FileTreePanelContent } from '../panels/components/FileTreePanelContent';
 import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 import {
-  CityVisualizationPanel,
   MarkdownRenderingPanel,
   ExcalidrawPanel,
 } from './panels';
 import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
+import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
+import type { EventHighlightService } from './services/EventHighlightService';
+import { useHighlightLayers } from '../contexts/HighlightLayersContext';
+import { CityVisualizationPanel } from '../panels/components/CityVisualizationPanel';
 
 type PanelTabConfig = { id: string; label: string; icon?: React.ReactNode; content: React.ReactNode; visible?: boolean };
 
@@ -72,24 +74,12 @@ interface RepositoryExplorationViewProps {
   searchQuery?: string;
 
   // Shared tree data from parent
-  fileTree?: FileTree | null;
   activeFileTreeSource?: FileTreeSource | null;
-  fileTreeSourceService?: FileTreeSourceService;
-  cacheService?: MonitoredFileTreeService;
   cityDataCache?: unknown;
-  treeStats?: FileTreeStats | null;
-
 
   // Package layers shared from parent
   packageLayers?: PackageLayer[] | null;
   onPackageLayersChange?: (layers: PackageLayer[] | null) => void;
-
-
-  // File color highlight layers from parent
-  fileColorHighlightLayers?: HighlightLayer[];
-
-  // Callbacks
-  onFileTreeLoaded?: (fileTree: FileTree | null) => void;
 
   // Panel layout state
   leftPanelCollapsed?: boolean;
@@ -97,6 +87,13 @@ interface RepositoryExplorationViewProps {
   rightPanelCollapsed?: boolean;
   onRightPanelCollapsedChange?: (collapsed: boolean) => void;
   panelLayout?: PanelLayout;
+  panelSizes?: { left: number; middle: number; right: number };
+  onPanelSizesChange?: (sizes: { left: number; middle: number; right: number }) => void;
+  panelPreferencesLoaded?: boolean;
+
+  // Event highlighting
+  eventHighlightLayers?: HighlightLayer[];
+  eventHighlightService?: EventHighlightService;
 }
 
 export const RepositoryExplorationView: React.FC<
@@ -106,23 +103,23 @@ export const RepositoryExplorationView: React.FC<
   repositoryKey,
   remoteData,
   searchQuery,
-  fileTree: sharedFileTree,
   activeFileTreeSource: sharedActiveSource,
-  fileTreeSourceService: sharedFileTreeService,
-  cacheService: sharedCacheService,
   cityDataCache: _cityDataCache,
-  treeStats: sharedTreeStats,
   packageLayers: sharedPackageLayers,
   onPackageLayersChange,
-  fileColorHighlightLayers = [],
-  onFileTreeLoaded,
   leftPanelCollapsed: controlledLeftPanelCollapsed,
   onLeftPanelCollapsedChange,
   rightPanelCollapsed: controlledRightPanelCollapsed,
   onRightPanelCollapsedChange,
   panelLayout,
+  panelSizes,
+  onPanelSizesChange,
+  panelPreferencesLoaded = true,
+  eventHighlightLayers,
+  eventHighlightService,
 }) => {
   const { theme } = useTheme();
+  const { registerLayer, unregisterLayer } = useHighlightLayers();
   const [activeTab, setActiveTab] = useState<string>('fileTree');
   const [internalLeftPanelCollapsed, setInternalLeftPanelCollapsed] =
     useState(false);
@@ -146,6 +143,37 @@ export const RepositoryExplorationView: React.FC<
     }
   }, [controlledRightPanelCollapsed]);
 
+  // Register event highlight layers with context
+  useEffect(() => {
+    if (!eventHighlightLayers || eventHighlightLayers.length === 0) {
+      // Unregister all event highlight layers
+      eventHighlightLayers?.forEach((_, idx) => {
+        unregisterLayer(`event-highlight-${idx}`);
+      });
+      return;
+    }
+
+    console.log('[RepositoryExplorationView] Registering event highlight layers:', eventHighlightLayers.length);
+
+    // Register all event highlight layers
+    eventHighlightLayers.forEach((layer, idx) => {
+      registerLayer(`event-highlight-${idx}`, {
+        name: layer.name,
+        enabled: layer.enabled,
+        color: layer.color,
+        priority: layer.priority,
+        items: layer.items,
+      });
+    });
+
+    // Cleanup: unregister on unmount
+    return () => {
+      eventHighlightLayers.forEach((_, idx) => {
+        unregisterLayer(`event-highlight-${idx}`);
+      });
+    };
+  }, [eventHighlightLayers, registerLayer, unregisterLayer]);
+
   const setLeftPanelCollapsed = useCallback(
     (collapsed: boolean) => {
       if (onLeftPanelCollapsedChange) {
@@ -168,18 +196,8 @@ export const RepositoryExplorationView: React.FC<
     [onRightPanelCollapsedChange],
   );
 
-  // Services - use shared if provided, otherwise create local
-  const fileTreeSourceService = useMemo(
-    () => sharedFileTreeService || new FileTreeSourceService(),
-    [sharedFileTreeService],
-  );
-  const cacheService = useMemo(
-    () => sharedCacheService || new MonitoredFileTreeService(),
-    [sharedCacheService],
-  );
-
   // Data loading state
-  const [loading, setLoading] = useState(!sharedFileTree);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Sources state
@@ -187,33 +205,43 @@ export const RepositoryExplorationView: React.FC<
   const [activeFileTreeSource, setActiveFileTreeSource] =
     useState<FileTreeSource | null>(sharedActiveSource || null);
 
-  // Repository data - use shared if provided
-  const [treeStats, setTreeStats] = useState<FileTreeStats | null>(
-    sharedTreeStats || null,
-  );
-  const [fileTree, setFileTree] = useState<FileTree | null>(
-    sharedFileTree || null,
-  );
+  // Repository data
+  const [treeStats, setTreeStats] = useState<FileTreeStats | null>(null);
+  const [fileTree, setFileTree] = useState<FileTree | null>(null);
 
-  // Update local state when shared data changes
+  // Subscribe to file tree updates from RepositoryDataCache
+  const repositoryPath = activeFileTreeSource?.type === 'local' ? activeFileTreeSource.location : null;
+  const { data: cacheData } = useRepositoryData(repositoryPath, {
+    autoLoad: true,
+    subscribe: true,
+  });
+
+  // Update local fileTree state when cache data changes
   useEffect(() => {
-    if (sharedFileTree !== undefined) {
-      setFileTree(sharedFileTree);
+    if (cacheData?.fileTree) {
+      setFileTree(cacheData.fileTree);
       setLoading(false);
     }
-  }, [sharedFileTree]);
+  }, [cacheData?.fileTree]);
+
+  // Compute tree stats from fileTree
+  useEffect(() => {
+    if (fileTree && fileTree.stats) {
+      setTreeStats({
+        fileCount: fileTree.stats.totalFiles,
+        directoryCount: fileTree.stats.totalDirectories,
+        loadedAt: Date.now(),
+      });
+    } else {
+      setTreeStats(null);
+    }
+  }, [fileTree]);
 
   useEffect(() => {
     if (sharedActiveSource !== undefined) {
       setActiveFileTreeSource(sharedActiveSource);
     }
   }, [sharedActiveSource]);
-
-  useEffect(() => {
-    if (sharedTreeStats !== undefined) {
-      setTreeStats(sharedTreeStats);
-    }
-  }, [sharedTreeStats]);
 
 
   // Notes state
@@ -305,8 +333,6 @@ export const RepositoryExplorationView: React.FC<
   const [selectedDocType, setSelectedDocType] = useState<
     'markdown' | 'excalidraw'
   >('markdown');
-  const [docContent, setDocContent] = useState<string | null>(null);
-  const [loadingDoc, setLoadingDoc] = useState(false);
 
   // Git changes from context (for highlight layers)
   const {
@@ -320,13 +346,8 @@ export const RepositoryExplorationView: React.FC<
     HighlightLayer[]
   >([]);
 
-  // New git status with file lists from monitoring service
-  const {
-    gitStatusWithFiles,
-    allModifiedFiles,
-  } = useRepositoryGitStatus(
-    activeFileTreeSource?.type === 'local' ? activeFileTreeSource.location : null
-  );
+  // Git status is now handled by RepositoryPanelProvider for GitChangesPanel
+  // No longer needed in parent component
 
   // Auto-initialize git state for local sources (loads HEAD tree)
   useEffect(() => {
@@ -352,6 +373,32 @@ export const RepositoryExplorationView: React.FC<
       setGitHighlightLayers([]);
     }
   }, [activeFileTreeSource, fileTree, checkGitStatus, getGitHighlightLayers]);
+
+  // Register git highlight layers
+  useEffect(() => {
+    if (!gitHighlightLayers || gitHighlightLayers.length === 0) {
+      return;
+    }
+
+    console.log('[RepositoryExplorationView] Registering git highlight layers:', gitHighlightLayers.length);
+
+    // Register each git layer
+    gitHighlightLayers.forEach((layer, idx) => {
+      registerLayer(`git-highlight-${idx}`, {
+        name: layer.name,
+        enabled: layer.enabled,
+        color: layer.color,
+        priority: layer.priority,
+        items: layer.items,
+      });
+    });
+
+    return () => {
+      gitHighlightLayers.forEach((_, idx) => {
+        unregisterLayer(`git-highlight-${idx}`);
+      });
+    };
+  }, [gitHighlightLayers, registerLayer, unregisterLayer]);
 
   // Separate provider for viewing individual files (not for search)
   const fileViewerContentProvider = useMemo(() => {
@@ -387,12 +434,13 @@ export const RepositoryExplorationView: React.FC<
       const isMarkdown = filePath.toLowerCase().endsWith('.md') || filePath.toLowerCase().endsWith('.mdx');
 
       if (isMarkdown) {
-        // Open in markdown viewer
+        // Open in BOTH markdown viewer and code viewer (editor)
         setSelectedDocPath(filePath);
         setSelectedDocType('markdown');
+        setSelectedCodeFile(filePath); // Also open in editor
         setRightPaneMode('document');
       } else {
-        // Show all other files in code viewer
+        // Show all other files in code viewer only
         setSelectedCodeFile(filePath);
         setRightPaneMode('document');
       }
@@ -646,57 +694,6 @@ export const RepositoryExplorationView: React.FC<
     }
 
   }, [searchQuery, performSimpleSearch]);
-
-  // Initialize sources only if not using shared service
-  useEffect(() => {
-    if (sharedFileTreeService || sharedActiveSource) {
-      // Skip initialization if using shared data
-      return;
-    }
-
-    const initialSources =
-      fileTreeSourceService.initializeFromRepository(repository);
-
-    // Filter to only remote sources for exploration view
-    // Local clones are handled through external workflows
-    const remoteSources = initialSources.filter(
-      (source) => source.type === 'remote',
-    );
-
-    setFileTreeSources(remoteSources);
-
-    // Set the first remote source as active (should be the default branch)
-    const defaultRemoteSource =
-      remoteSources.find((s) => s.isDefault) || remoteSources[0];
-    if (defaultRemoteSource) {
-      fileTreeSourceService.setActiveSource(defaultRemoteSource.id);
-      setActiveFileTreeSource(defaultRemoteSource);
-    }
-  }, [
-    repository,
-    fileTreeSourceService,
-    sharedFileTreeService,
-    sharedActiveSource,
-  ]);
-
-  // RepositoryExplorationView should never load its own tree - always use the one from RepositoryManager
-  useEffect(() => {
-    if (!sharedFileTree) {
-      setLoading(false);
-      setError('File tree not provided by RepositoryManager');
-      console.error(
-        '[RepositoryExploration] No file tree provided by RepositoryManager',
-      );
-    } else {
-      setLoading(false);
-      setError(null);
-      // Call onFileTreeLoaded if provided
-      if (onFileTreeLoaded) {
-        onFileTreeLoaded(sharedFileTree);
-      }
-    }
-  }, [sharedFileTree, onFileTreeLoaded]);
-
 
   // Fetch repository notes
   useEffect(() => {
@@ -969,11 +966,16 @@ export const RepositoryExplorationView: React.FC<
   const panelContentMap = React.useMemo(() => {
     const map: Record<string, React.ReactNode> = {
       fileTree: (
-        <FileTreeTab
-          fileTree={fileTree}
-          onFileSelect={handleSearchFileSelect}
-          loading={loading}
-        />
+        <RepositoryPanelProvider
+          repositoryPath={
+            activeFileTreeSource?.type === 'local'
+              ? activeFileTreeSource.location
+              : null
+          }
+          actions={{ openFile: handleSearchFileSelect }}
+        >
+          <FileTreePanelContent onFileSelect={handleSearchFileSelect} />
+        </RepositoryPanelProvider>
       ),
       search: (
         <RepositorySearchTab
@@ -981,8 +983,6 @@ export const RepositoryExplorationView: React.FC<
           activeFileTreeSource={activeFileTreeSource}
           contentProvider={searchContentProvider}
           showEditorSelector={false}
-          gitModifiedFiles={allModifiedFiles}
-          gitStatusWithFiles={gitStatusWithFiles}
           onFileSelect={handleSearchFileSelect}
           selectedFile={selectedFile}
           onSearchResultsChange={handleSearchResultsChange}
@@ -1005,7 +1005,6 @@ export const RepositoryExplorationView: React.FC<
       dependencies: activeFileTreeSource ? (
         <RepoSourceArchitecturePanelSimple
           source={activeFileTreeSource}
-          cacheService={cacheService}
           onError={(error) => {
             console.error('Architecture panel error:', error);
           }}
@@ -1044,6 +1043,16 @@ export const RepositoryExplorationView: React.FC<
           selectedDocument={selectedDocPath ?? undefined}
         />
       ),
+      agentEvents: (
+        <AgentEventsPanel
+          repositoryPath={
+            activeFileTreeSource?.type === 'local'
+              ? activeFileTreeSource.location
+              : null
+          }
+          maxEvents={100}
+        />
+      ),
     };
     return map;
   }, [
@@ -1053,14 +1062,11 @@ export const RepositoryExplorationView: React.FC<
     fileTrees,
     activeFileTreeSource,
     searchContentProvider,
-    allModifiedFiles,
-    gitStatusWithFiles,
     selectedFile,
     handleSearchResultsChange,
     handleSearchResultHover,
     handleFolderFiltersChange,
     handleFileClick,
-    cacheService,
     handlePackageLayersChange,
     handlePackageAnalysisStart,
     handlePackageAnalysisEnd,
@@ -1083,6 +1089,7 @@ export const RepositoryExplorationView: React.FC<
     { id: 'dependencies', label: 'Dependencies', icon: <Layers size={14} />, visible: true, content: panelContentMap.dependencies },
     { id: 'tools', label: 'Tools', icon: <Wrench size={14} />, visible: true, content: panelContentMap.tools },
     { id: 'docs', label: 'Docs', icon: <Book size={14} />, visible: true, content: panelContentMap.docs },
+    { id: 'agentEvents', label: 'Agent Events', icon: <Activity size={14} />, visible: true, content: panelContentMap.agentEvents },
   ];
 
   // Create toolbar items
@@ -1245,15 +1252,15 @@ export const RepositoryExplorationView: React.FC<
     () => (
       <ExcalidrawPanel
         docPath={selectedDocType === 'excalidraw' ? selectedDocPath : null}
-        docContent={selectedDocType === 'excalidraw' ? docContent : null}
-        loading={loadingDoc}
+        source={activeFileTreeSource}
+        contentProvider={fileViewerContentProvider}
         onClose={() => {
           setSelectedDocPath(null);
           setSelectedDocType('markdown');
         }}
       />
     ),
-    [selectedDocPath, selectedDocType, docContent, loadingDoc],
+    [selectedDocPath, selectedDocType, activeFileTreeSource, fileViewerContentProvider],
   );
 
   // Error handling
@@ -1383,25 +1390,10 @@ export const RepositoryExplorationView: React.FC<
             );
           }
 
-          // Otherwise render the shared three panel layout with the repository panels
-          const highlightLayers = [
-                ...(showFileColors ? fileColorHighlightLayers : []),
-                ...noteHighlightLayers,
-                ...folderFilterHighlightLayers,
-                ...(searchHighlightLayer ? [searchHighlightLayer] : []),
-                ...(hoveredSearchLayer ? [hoveredSearchLayer] : []),
-                ...(selectedFileLayer ? [selectedFileLayer] : []),
-                ...dependencyAnalysisHighlightLayer,
-                ...packageHighlightLayers,
-                ...toolsHighlightLayers,
-                ...gitHighlightLayers,
-              ];
-
           // City visualization panel (standalone, decoupled from document viewing)
           const cityPanel = (
             <CityVisualizationPanel
               cityData={managedCityData}
-              highlightLayers={highlightLayers}
               treeStats={treeStats}
               onFileClick={handleFileClick}
               onHelpClick={() => setShowHelpModal(true)}
@@ -1411,7 +1403,6 @@ export const RepositoryExplorationView: React.FC<
               sourceBadges={sourceBadges}
               toolbarItems={toolbarItems}
               toolbarExpanded={toolbarExpanded}
-              onToolbarExpandedChange={setToolbarExpanded}
             />
           );
 
@@ -1533,6 +1524,7 @@ export const RepositoryExplorationView: React.FC<
               panels: ['fileTree', 'docs'],
               config: {
                 defaultActiveTab: 0,
+                centered: true,
               } as TabsConfig,
             },
             middle: 'cityVisualization',
@@ -1541,9 +1533,28 @@ export const RepositoryExplorationView: React.FC<
               panels: ['search', 'gitChanges', 'dependencies', 'tools'],
               config: {
                 defaultActiveTab: 0,
+                centered: true,
               } as TabsConfig,
             },
           };
+
+          // Wait for panel preferences to be loaded from parent before rendering
+          if (!panelPreferencesLoaded) {
+            return (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: theme.colors.background,
+                }}
+              >
+                <div style={{ color: theme.colors.textSecondary }}>Loading...</div>
+              </div>
+            );
+          }
 
           // Use provided layout or default
           const actualPanelLayout: PanelLayout = panelLayout || defaultLayout;
@@ -1560,10 +1571,11 @@ export const RepositoryExplorationView: React.FC<
                 panels={allPanels}
                 layout={actualPanelLayout}
                 collapsiblePanels={{ left: true, right: true }}
-                defaultSizes={{ left: 20, middle: 45, right: 35 }}
+                defaultSizes={panelSizes ?? { left: 20, middle: 45, right: 35 }}
                 minSizes={{ left: 15, middle: 30, right: 25 }}
                 collapsed={{ left: isLeftPanelCollapsed, right: isRightPanelCollapsed }}
                 showCollapseButtons={false}
+                onPanelResize={onPanelSizesChange}
                 onLeftCollapseComplete={() => setLeftPanelCollapsed(true)}
                 onLeftExpandComplete={() => setLeftPanelCollapsed(false)}
                 onRightCollapseComplete={() => setRightPanelCollapsed(true)}

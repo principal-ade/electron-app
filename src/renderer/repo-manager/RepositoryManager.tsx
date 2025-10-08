@@ -13,16 +13,15 @@ import {
   FileText,
   Presentation,
   Pencil,
+  Activity,
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
-import { createFileColorHighlightLayers } from '@principal-ai/code-city-react';
 import {
   PackageLayerModule,
   PackageLayer,
 } from '@principal-ai/codebase-composition';
 import { SourceFileSystemAdapter } from '../adapters/SourceFileSystemAdapter';
 import { RepositoryTitlebar } from '../components/Titlebar';
-import { RepositoryLoadingState } from './components/RepositoryLoadingState';
 
 import type { Repository } from '../../shared/types/repository.types';
 import { RepositoryExplorationView } from './RepositoryExplorationView';
@@ -32,19 +31,21 @@ import { BadgeInfoModal } from './shared/BadgeInfoModal';
 import { PanelConfiguratorModal } from './shared/PanelConfiguratorModal';
 import type { PanelLayout } from '@a24z/panels';
 import { GitChangesProvider } from '../contexts/GitChangesContext';
+import { HighlightLayersProvider } from '../contexts/HighlightLayersContext';
 import { GitService } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import { FileTree } from '@principal-ai/repository-abstraction';
-import { FileTreeSourceService } from '../services/FileTreeSourceService';
-import { MonitoredFileTreeService } from '../services/MonitoredFileTreeService';
-import { FileTreeInvalidator } from '../services/FileTreeInvalidator';
 import { CityDataCacheService } from '../services/CityDataCacheService';
-import { FileTreeSource, FileTreeStats } from '../types/file-tree-source';
+import { FileTreeSource } from '../types/file-tree-source';
 import { SourceSelectionService } from '../services/SourceSelectionService';
 import { CloneVisibilityService } from '../services/CloneVisibilityService';
 import { AgentConfigurationService } from '../main-process-api/AgentConfigurationService';
 import { SupportedAgent } from '@principal-ai/agent-monitoring';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
+import { EventHighlightService } from './services/EventHighlightService';
+import { AgentSessionSDKService } from '../main-process-api/AgentSessionSDKService';
+import type { HighlightLayer } from '@principal-ai/code-city-react';
+import { WorkspaceLayoutService } from '../services/WorkspaceLayoutService';
+import type { WorkspaceLayout } from '../../shared/types/userPreferences.types';
 
 interface RepositoryManagerProps {
   repository: Repository;
@@ -79,57 +80,31 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
       right: 'cityVisualization',
     });
 
+    // Workspace layout state
+    const [availableWorkspaces, setAvailableWorkspaces] = useState<Record<string, WorkspaceLayout>>({});
+    const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null);
+    const [workspacesLoaded, setWorkspacesLoaded] = useState(false);
+    const [hasStateDeviation, setHasStateDeviation] = useState(false);
+    const [panelResetKey, setPanelResetKey] = useState(0);
+
     // File tree services - shared across all views
-    const fileTreeSourceService = useMemo(
-      () => new FileTreeSourceService(),
-      [],
-    );
-    const cacheService = useMemo(() => new MonitoredFileTreeService(), []);
     const cityDataCache = useMemo(() => new CityDataCacheService(), []);
-    const fileTreeInvalidator = useMemo(
-      () => new FileTreeInvalidator(cacheService, cityDataCache),
-      [cacheService, cityDataCache],
-    );
 
     // File tree state - unified around selected source
     const [selectedSource, setSelectedSource] = useState<FileTreeSource | null>(
       null,
     );
-    const [fileTree, setFileTree] = useState<FileTree | null>(null);
-    const [treeStats, setTreeStats] = useState<FileTreeStats | null>(null);
     const [packageLayers, setPackageLayers] = useState<PackageLayer[] | null>(
       null,
     );
-    const [filterLayers, setFilterLayers] = useState<any[] | null>(null);
-    const [_loading, setLoading] = useState(true);
-    const [_treeLoadError, setTreeLoadError] = useState<string | null>(null);
-    // Note: _loading and _treeLoadError will be used in UI rendering once implemented
-
-    // Cache for loaded trees to avoid re-fetching
-    const treeCache = useMemo(
-      () =>
-        new Map<
-          string,
-          { tree: FileTree; stats: FileTreeStats; filterLayers?: any[] }
-        >(),
-      [],
-    );
-
-    // Create file color highlight layers from fileTree
-    const fileColorHighlightLayers = useMemo(() => {
-      if (!fileTree || !fileTree.allFiles) return [];
-      const layers = createFileColorHighlightLayers(fileTree.allFiles);
-      console.log('[RepositoryManager] Created file color highlight layers:', {
-        layerCount: layers.length,
-        totalFiles: fileTree.allFiles?.length || 0,
-      });
-      return layers;
-    }, [fileTree]);
 
     // MCP Agent configuration state
     const [agentsWithMCP, setAgentsWithMCP] = useState<SupportedAgent[]>([]);
     const [loadingAgentMCPStatus, setLoadingAgentMCPStatus] = useState(true);
 
+    // Event highlight service - convert agent events to map highlights
+    const [eventHighlightService] = useState(() => new EventHighlightService());
+    const [eventHighlightLayers, setEventHighlightLayers] = useState<HighlightLayer[]>([]);
 
     // Note: File tree sources and toggle logic removed - badges now launch windows
 
@@ -154,30 +129,41 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
       left?: boolean;
       right?: boolean;
     }>({ left: false, right: false });
+    const [panelSizes, setPanelSizes] = useState<{ left: number; middle: number; right: number }>({
+      left: 20,
+      middle: 45,
+      right: 35,
+    });
     const [panelPreferencesLoaded, setPanelPreferencesLoaded] = useState(false);
 
-    // Load saved panel state for this repository
+    // Load saved repository state (workspace + sizes + collapsed)
     useEffect(() => {
       let isMounted = true;
-      const loadPanelPreferences = async () => {
+      const loadRepositoryState = async () => {
         try {
-          const prefs = await UserPreferencesService.getPreferences();
-          const savedLayout =
-            prefs.repositoryUIStates?.[repositoryKey]?.panelLayouts?.exploration?.layout;
-          const leftCollapsed =
-            prefs.repositoryUIStates?.[repositoryKey]?.panelLayouts?.exploration?.collapsed?.left ??
-            false;
-          const rightCollapsed =
-            prefs.repositoryUIStates?.[repositoryKey]?.panelLayouts?.exploration?.collapsed?.right ??
-            false;
-          if (isMounted) {
-            if (savedLayout) {
-              setPanelLayout(savedLayout);
+          const repoState = await WorkspaceLayoutService.getRepositoryState(repositoryKey);
+
+          if (isMounted && repoState) {
+            // Set workspace ID
+            setCurrentWorkspaceId(repoState.workspaceId);
+
+            // Apply layout from workspace or custom
+            if (repoState.workspaceId) {
+              const workspace = await WorkspaceLayoutService.getWorkspaceLayout(repoState.workspaceId);
+              if (workspace) {
+                setPanelLayout(workspace.layout);
+              }
+            } else if (repoState.layout) {
+              // Custom layout (no workspace)
+              setPanelLayout(repoState.layout);
             }
-            setPanelCollapsedState({ left: leftCollapsed, right: rightCollapsed });
+
+            // Apply saved sizes and collapsed state
+            setPanelSizes(repoState.sizes);
+            setPanelCollapsedState(repoState.collapsed);
           }
         } catch (error) {
-          console.error('[RepositoryManager] Failed to load panel state:', error);
+          console.error('[RepositoryManager] Failed to load repository state:', error);
         } finally {
           if (isMounted) {
             setPanelPreferencesLoaded(true);
@@ -185,40 +171,76 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
         }
       };
 
-      loadPanelPreferences();
+      loadRepositoryState();
 
       return () => {
         isMounted = false;
       };
     }, [repositoryKey]);
 
-    const persistLeftPanelCollapsed = useCallback(
-      async (collapsed: boolean) => {
+    // Initialize and load workspace layouts (once per repository)
+    useEffect(() => {
+      let isMounted = true;
+
+      const loadWorkspaces = async () => {
         try {
-          const prefs = await UserPreferencesService.getPreferences();
-          const repoStates = { ...(prefs.repositoryUIStates ?? {}) };
-          const repoState = { ...(repoStates[repositoryKey] ?? {}) };
-          const panelLayouts = {
-            ...(repoState.panelLayouts ?? {}),
-            exploration: {
-              ...(repoState.panelLayouts?.exploration ?? {}),
-              collapsed: {
-                ...(repoState.panelLayouts?.exploration?.collapsed ?? {}),
-                left: collapsed,
-              },
-            },
-          };
+          // Initialize workspace layouts if needed
+          await WorkspaceLayoutService.initializeWorkspaceLayouts();
 
-          repoStates[repositoryKey] = {
-            ...repoState,
-            panelLayouts,
-          };
-
-          await UserPreferencesService.updatePreferences({
-            repositoryUIStates: repoStates,
-          });
+          // Load all available workspaces
+          const workspaces = await WorkspaceLayoutService.getWorkspaceLayouts();
+          if (isMounted) {
+            setAvailableWorkspaces(workspaces);
+            setWorkspacesLoaded(true);
+          }
         } catch (error) {
-          console.error('[RepositoryManager] Failed to persist panel state:', error);
+          console.error('[RepositoryManager] Failed to load workspace layouts:', error);
+          if (isMounted) {
+            setWorkspacesLoaded(true);
+          }
+        }
+      };
+
+      loadWorkspaces();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [repositoryKey]);
+
+    // Detect when layout changes and check for drift from workspace defaults
+    useEffect(() => {
+      if (!workspacesLoaded || !panelPreferencesLoaded) return;
+
+      const checkLayoutAndDrift = async () => {
+        // If no workspace is selected, try to match current layout to a workspace
+        if (!currentWorkspaceId) {
+          const matchingWorkspaceId = await WorkspaceLayoutService.findMatchingWorkspace(panelLayout);
+          setCurrentWorkspaceId(matchingWorkspaceId);
+          setHasStateDeviation(false);
+          return;
+        }
+
+        // If workspace is selected, check for drift
+        const workspace = availableWorkspaces[currentWorkspaceId];
+        if (workspace) {
+          const deviation = WorkspaceLayoutService.hasStateDeviation(
+            { workspaceId: currentWorkspaceId, sizes: panelSizes, collapsed: panelCollapsedState },
+            workspace
+          );
+          setHasStateDeviation(deviation.hasSizeDeviation || deviation.hasCollapsedDeviation);
+        }
+      };
+
+      checkLayoutAndDrift();
+    }, [panelLayout, panelSizes, panelCollapsedState, workspacesLoaded, panelPreferencesLoaded, currentWorkspaceId, availableWorkspaces]);
+
+    const persistCollapsedState = useCallback(
+      async (collapsed: { left?: boolean; right?: boolean }) => {
+        try {
+          await WorkspaceLayoutService.updateRepositoryCollapsed(repositoryKey, collapsed);
+        } catch (error) {
+          console.error('[RepositoryManager] Failed to persist collapsed state:', error);
         }
       },
       [repositoryKey],
@@ -226,85 +248,41 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
 
     const handleLeftPanelCollapsedChange = useCallback(
       (collapsed: boolean) => {
-        setPanelCollapsedState((prev) => ({ ...prev, left: collapsed }));
+        const newCollapsed = { ...panelCollapsedState, left: collapsed };
+        setPanelCollapsedState(newCollapsed);
         if (panelPreferencesLoaded) {
-          void persistLeftPanelCollapsed(collapsed);
+          void persistCollapsedState(newCollapsed);
         }
       },
-      [panelPreferencesLoaded, persistLeftPanelCollapsed],
-    );
-
-    const persistRightPanelCollapsed = useCallback(
-      async (collapsed: boolean) => {
-        try {
-          const prefs = await UserPreferencesService.getPreferences();
-          const repoStates = { ...(prefs.repositoryUIStates ?? {}) };
-          const repoState = { ...(repoStates[repositoryKey] ?? {}) };
-          const panelLayouts = {
-            ...(repoState.panelLayouts ?? {}),
-            exploration: {
-              ...(repoState.panelLayouts?.exploration ?? {}),
-              collapsed: {
-                ...(repoState.panelLayouts?.exploration?.collapsed ?? {}),
-                right: collapsed,
-              },
-            },
-          };
-
-          repoStates[repositoryKey] = {
-            ...repoState,
-            panelLayouts,
-          };
-
-          await UserPreferencesService.updatePreferences({
-            repositoryUIStates: repoStates,
-          });
-        } catch (error) {
-          console.error('[RepositoryManager] Failed to persist right panel state:', error);
-        }
-      },
-      [repositoryKey],
+      [panelPreferencesLoaded, persistCollapsedState, panelCollapsedState],
     );
 
     const handleRightPanelCollapsedChange = useCallback(
       (collapsed: boolean) => {
-        setPanelCollapsedState((prev) => ({ ...prev, right: collapsed }));
+        const newCollapsed = { ...panelCollapsedState, right: collapsed };
+        setPanelCollapsedState(newCollapsed);
         if (panelPreferencesLoaded) {
-          void persistRightPanelCollapsed(collapsed);
+          void persistCollapsedState(newCollapsed);
         }
       },
-      [panelPreferencesLoaded, persistRightPanelCollapsed],
+      [panelPreferencesLoaded, persistCollapsedState, panelCollapsedState],
     );
 
     const persistPanelLayout = useCallback(
       async (layout: PanelLayout) => {
         try {
-          const prefs = await UserPreferencesService.getPreferences();
-          const repoStates = { ...(prefs.repositoryUIStates ?? {}) };
-          const repoState = { ...(repoStates[repositoryKey] ?? {}) };
-
-          // Save the full PanelLayout object including tabs configurations
-          const panelLayouts = {
-            ...(repoState.panelLayouts ?? {}),
-            exploration: {
-              ...(repoState.panelLayouts?.exploration ?? {}),
-              layout: layout,
-            },
-          };
-
-          repoStates[repositoryKey] = {
-            ...repoState,
-            panelLayouts,
-          };
-
-          await UserPreferencesService.updatePreferences({
-            repositoryUIStates: repoStates,
+          // When layout changes, save as custom layout (workspaceId = null)
+          await WorkspaceLayoutService.setRepositoryState(repositoryKey, {
+            workspaceId: null,
+            layout,
+            sizes: panelSizes,
+            collapsed: panelCollapsedState,
           });
         } catch (error) {
           console.error('[RepositoryManager] Failed to persist panel layout:', error);
         }
       },
-      [repositoryKey],
+      [repositoryKey, panelSizes, panelCollapsedState],
     );
 
     const handlePanelLayoutChange = useCallback(
@@ -315,6 +293,165 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
         }
       },
       [panelPreferencesLoaded, persistPanelLayout],
+    );
+
+    const persistPanelSizes = useCallback(
+      async (sizes: { left: number; middle: number; right: number }) => {
+        try {
+          await WorkspaceLayoutService.updateRepositorySizes(repositoryKey, sizes);
+        } catch (error) {
+          console.error('[RepositoryManager] Failed to persist panel sizes:', error);
+        }
+      },
+      [repositoryKey],
+    );
+
+    // Debounce panel size changes to avoid too frequent saves
+    const [pendingPanelSizes, setPendingPanelSizes] = useState<{ left: number; middle: number; right: number } | null>(null);
+
+    useEffect(() => {
+      if (!pendingPanelSizes || !panelPreferencesLoaded) return;
+
+      const timeoutId = setTimeout(() => {
+        void persistPanelSizes(pendingPanelSizes);
+        setPendingPanelSizes(null);
+      }, 500); // Debounce by 500ms
+
+      return () => clearTimeout(timeoutId);
+    }, [pendingPanelSizes, panelPreferencesLoaded, persistPanelSizes]);
+
+    const handlePanelSizesChange = useCallback(
+      (sizes: { left: number; middle: number; right: number }) => {
+        setPanelSizes(sizes);
+        if (panelPreferencesLoaded) {
+          setPendingPanelSizes(sizes);
+        }
+      },
+      [panelPreferencesLoaded],
+    );
+
+    // Workspace layout handlers
+    const handleWorkspaceSelect = useCallback(
+      async (workspaceId: string) => {
+        const workspace = availableWorkspaces[workspaceId];
+        if (!workspace) {
+          console.error(`[RepositoryManager] Workspace ${workspaceId} not found`);
+          return;
+        }
+
+        const newSizes = workspace.defaultSizes || { left: 20, middle: 45, right: 35 };
+        const newCollapsed = workspace.defaultCollapsed || { left: false, right: false };
+
+        // Apply workspace layout
+        setPanelLayout(workspace.layout);
+        setPanelSizes(newSizes);
+        setPanelCollapsedState(newCollapsed);
+        setCurrentWorkspaceId(workspaceId);
+        setPanelResetKey(prev => prev + 1); // Force panel remount
+
+        // Save repository state (workspace + current sizes/collapsed)
+        await WorkspaceLayoutService.setRepositoryState(repositoryKey, {
+          workspaceId,
+          sizes: newSizes,
+          collapsed: newCollapsed,
+        });
+      },
+      [availableWorkspaces, repositoryKey],
+    );
+
+    const handleSaveWorkspace = useCallback(
+      async (
+        name: string,
+        options?: {
+          description?: string;
+          includeSizes?: boolean;
+          includeCollapsed?: boolean;
+        }
+      ) => {
+        try {
+          const workspace = await WorkspaceLayoutService.createWorkspaceLayout(
+            name,
+            panelLayout,
+            {
+              description: options?.description,
+              defaultSizes: options?.includeSizes ? panelSizes : undefined,
+              defaultCollapsed: options?.includeCollapsed ? panelCollapsedState : undefined,
+            }
+          );
+
+          // Update available workspaces
+          setAvailableWorkspaces(prev => ({
+            ...prev,
+            [workspace.id]: workspace,
+          }));
+
+          // Set as current workspace
+          setCurrentWorkspaceId(workspace.id);
+
+          // Save repository state with this workspace
+          await WorkspaceLayoutService.setRepositoryState(repositoryKey, {
+            workspaceId: workspace.id,
+            sizes: panelSizes,
+            collapsed: panelCollapsedState,
+          });
+
+          return workspace;
+        } catch (error) {
+          console.error('[RepositoryManager] Failed to save workspace:', error);
+          throw error;
+        }
+      },
+      [panelLayout, panelSizes, panelCollapsedState, repositoryKey],
+    );
+
+    const handleUpdateWorkspaceDefaults = useCallback(
+      async () => {
+        if (!currentWorkspaceId) return;
+
+        try {
+          await WorkspaceLayoutService.updateWorkspaceFromRepositoryState(
+            currentWorkspaceId,
+            repositoryKey
+          );
+
+          // Reload workspaces to reflect updated defaults
+          const workspaces = await WorkspaceLayoutService.getWorkspaceLayouts();
+          setAvailableWorkspaces(workspaces);
+          setHasStateDeviation(false);
+        } catch (error) {
+          console.error('[RepositoryManager] Failed to update workspace defaults:', error);
+        }
+      },
+      [currentWorkspaceId, repositoryKey],
+    );
+
+    const handleResetToWorkspaceDefaults = useCallback(
+      async () => {
+        if (!currentWorkspaceId) return;
+
+        const workspace = availableWorkspaces[currentWorkspaceId];
+        if (!workspace) return;
+
+        try {
+          const defaultSizes = workspace.defaultSizes || { left: 20, middle: 45, right: 35 };
+          const defaultCollapsed = workspace.defaultCollapsed || { left: false, right: false };
+
+          // Update UI state immediately
+          setPanelSizes(defaultSizes);
+          setPanelCollapsedState(defaultCollapsed);
+          setHasStateDeviation(false);
+          setPanelResetKey(prev => prev + 1); // Force panel remount
+
+          // Persist to repository state
+          await WorkspaceLayoutService.resetRepositoryToWorkspaceDefaults(
+            repositoryKey,
+            currentWorkspaceId
+          );
+        } catch (error) {
+          console.error('[RepositoryManager] Failed to reset to workspace defaults:', error);
+        }
+      },
+      [currentWorkspaceId, repositoryKey, availableWorkspaces],
     );
 
     // Check which agents have MCP configured (once on mount)
@@ -350,15 +487,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
       checkAgentMCPStatus();
     }, []); // Only run once on mount
 
-
-    // Clear file tree cache on first load to prevent stale cached results
-    useEffect(() => {
-      console.log(
-        '🗑️ [RepositoryManager] Clearing file tree cache on first load to prevent stale data',
-      );
-      cacheService.clearAll();
-    }, []); // Empty deps = run only once on mount
-
     // Initialize selected source from repository and register with monitoring service
     useEffect(() => {
       const initializeAndRegister = async () => {
@@ -366,9 +494,6 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           SourceSelectionService.getSelectedSource(repository);
         if (defaultSource) {
           setSelectedSource(defaultSource);
-          // Initialize the file tree source service with this source
-          fileTreeSourceService.initializeFromRepository(repository);
-          fileTreeSourceService.setActiveSource(defaultSource.id);
 
           // Register repository with monitoring service for local clones
           if (repository.localClones && repository.localClones.length > 0) {
@@ -381,7 +506,7 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 console.log('[RepositoryManager] Monitoring service started');
 
                 console.log('[RepositoryManager] Registering repository with monitoring service:', visibleClonePath);
-                await cacheService.registerRepository(visibleClonePath);
+                await RepositoryMonitoringService.registerRepository(visibleClonePath);
                 console.log('[RepositoryManager] Repository registered successfully');
 
                 // Enable git watching for the repository
@@ -418,223 +543,41 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
             });
         }
       };
-    }, [repository, fileTreeSourceService, cacheService]);
+    }, [repository]);
 
-    // Load file tree for selected source
-    const loadTree = useCallback(
-      async (forceReload = false) => {
-        if (!selectedSource) {
-          setLoading(false);
-          return;
-        }
-
-        // Check memory cache first (unless forcing reload)
-        if (!forceReload) {
-          const cached = treeCache.get(selectedSource.id);
-          if (cached) {
-            setFileTree(cached.tree);
-            setTreeStats(cached.stats);
-            setFilterLayers(cached.filterLayers || null);
-            setLoading(false);
-            return;
-          }
-        }
-
-        try {
-          setLoading(true);
-          setTreeLoadError(null);
-
-          console.log(
-            '[RepositoryManager] Loading tree for source:',
-            selectedSource,
-          );
-
-          // Load tree using cache service
-          const result = await cacheService.loadFileTree(selectedSource);
-
-          console.log('[RepositoryManager] Tree loaded result:', {
-            sourceId: selectedSource.id,
-            hasTree: !!result.tree,
-            hasTreeStats: !!result.treeStats,
-            treeFiles: result.tree?.allFiles?.length || 0,
-            treeDirs: result.tree?.allDirectories?.length || 0,
-            treeStats: result.treeStats,
-            filterLayers: result.filterLayers?.length || 0,
-            filters: result.filterLayers,
-          });
-
-          // Update memory cache
-          treeCache.set(selectedSource.id, {
-            tree: result.tree,
-            stats: result.treeStats,
-            filterLayers: result.filterLayers,
-          });
-
-          console.log('[RepositoryManager] Setting state:', {
-            tree: !!result.tree,
-            treeStats: result.treeStats,
-            filterLayers: result.filterLayers?.length || 0,
-          });
-
-          setFileTree(result.tree);
-          setTreeStats(result.treeStats);
-          setFilterLayers(result.filterLayers || null);
-
-          // Build city data using cache service
-          if (result.tree) {
-            const city = await cityDataCache.buildCityData(
-              selectedSource,
-              result.tree,
-              new Map(), // No additional trees for basic loading
-              { width: 1200, height: 900 },
-            );
-
-            // Discover packages for violation monitoring
-            try {
-              console.info('[RepositoryManager] Discovering packages...');
-
-              // Check if packages are already cached
-              const cached = cacheService.getAnalysis(selectedSource.id);
-              if (cached?.packageLayers) {
-                console.info(
-                  '[RepositoryManager] Using cached packages:',
-                  cached.packageLayers.length,
-                );
-                setPackageLayers(cached.packageLayers);
-              } else {
-                // Create source-aware filesystem adapter
-                const sourceAdapter = new SourceFileSystemAdapter(
-                  selectedSource,
-                );
-
-                // Create package module
-                const packageModule = new PackageLayerModule();
-
-                // Convert FileTree to FileSystemTree
-                const fileSystemTree = result.tree as any;
-
-                // Create file reader function from the source adapter
-                const fileReader = sourceAdapter.createFileReader();
-
-                // Discover packages
-                const packageResult = await packageModule.discoverPackages(
-                  fileSystemTree,
-                  fileReader,
-                );
-                console.info(
-                  '[RepositoryManager] Discovered packages:',
-                  packageResult?.length || 0,
-                );
-                // Log detailed structure of first package for debugging
-                if (packageResult && packageResult.length > 0) {
-                  console.info('[RepositoryManager] First package structure:', {
-                    hasPackageData: !!packageResult[0].packageData,
-                    packageDataPath: packageResult[0].packageData?.path,
-                    packageDataName: packageResult[0].packageData?.name,
-                    configFiles: packageResult[0].configFiles,
-                    type: packageResult[0].type,
-                    keys: Object.keys(packageResult[0]),
-                  });
-                }
-
-                setPackageLayers(packageResult);
-
-                // Cache the result
-                if (packageResult) {
-                  cacheService.setAnalysis(selectedSource.id, {
-                    packageLayers: packageResult,
-                  });
-                }
-              }
-            } catch (error) {
-              console.error(
-                '[RepositoryManager] Error discovering packages:',
-                error,
-              );
-              // Don't fail the whole load if package discovery fails
-              setPackageLayers(null);
-            }
-          }
-        } catch (err) {
-          console.error('[RepositoryManager] Error loading tree:', err);
-          console.error('[RepositoryManager] Error details:', {
-            message: err instanceof Error ? err.message : 'Unknown error',
-            stack: err instanceof Error ? err.stack : undefined,
-            source: selectedSource,
-            err,
-          });
-          setTreeLoadError(
-            err instanceof Error ? err.message : 'Failed to load file tree',
-          );
-          setFileTree(null);
-          setTreeStats(null);
-          setFilterLayers(null);
-          setPackageLayers(null);
-        } finally {
-          setLoading(false);
-        }
-      },
-      [selectedSource, cacheService, treeCache, cityDataCache],
-    );
-
-    // Load tree when source changes
+    // Set up event highlight service - listen for agent events
     useEffect(() => {
-      console.log(
-        '[RepositoryManager] useEffect triggered for loadTree, selectedSource:',
-        selectedSource,
-      );
-      if (selectedSource) {
-        loadTree();
-      } else {
-        console.log('[RepositoryManager] No selectedSource, skipping loadTree');
+      const visibleClonePath = CloneVisibilityService.getVisibleClonePath(repository);
+      if (!visibleClonePath) {
+        console.log('[RepositoryManager] No visible clone path for event highlighting');
+        return;
       }
-    }, [selectedSource, loadTree]);
 
-    // Listen for cache invalidation events
-    useEffect(() => {
-      const handleCacheInvalidated = (event: CustomEvent) => {
-        const { repoPath } = event.detail;
+      console.log('[RepositoryManager] Setting up event highlight service for:', visibleClonePath);
 
-        // Check if this invalidation affects our current source
-        if (
-          selectedSource?.type === 'local' &&
-          selectedSource.location === repoPath
-        ) {
-          console.info(
-            '[RepositoryManager] Cache invalidated for current source, reloading...',
-          );
-          // Clear memory cache for this source
-          treeCache.delete(selectedSource.id);
-          // Reload the tree
-          loadTree(true);
-        }
+      // Set repository context
+      eventHighlightService.setRepository(visibleClonePath);
+
+      // Subscribe to processed events
+      const unsubscribe = AgentSessionSDKService.onProcessedEvent((event) => {
+        console.log('[RepositoryManager] Received agent event:', event.eventType, event.toolName);
+        eventHighlightService.processEvent(event);
+      });
+
+      // Listen for highlight updates
+      const handleHighlightUpdate = (layers: HighlightLayer[]) => {
+        console.log('[RepositoryManager] Highlight layers updated:', layers.length);
+        setEventHighlightLayers(layers);
       };
 
-      window.addEventListener(
-        'filetree:cache-invalidated',
-        handleCacheInvalidated as EventListener,
-      );
+      eventHighlightService.on('highlight-update', handleHighlightUpdate);
 
       return () => {
-        window.removeEventListener(
-          'filetree:cache-invalidated',
-          handleCacheInvalidated as EventListener,
-        );
+        console.log('[RepositoryManager] Cleaning up event highlight service');
+        unsubscribe();
+        eventHighlightService.off('highlight-update', handleHighlightUpdate);
       };
-    }, [selectedSource, loadTree, treeCache]);
-
-    // Determine available modes
-    // const hasLocalClones = repository.localClones && repository.localClones.length > 0; // TODO: Use for mode availability checks
-    // const hasRemoteAccess = Boolean(ghOwner && ghRepo); // TODO: Use for mode availability checks
-
-    // Note: File tree source initialization and toggle handling removed
-
-    // Clean up file tree invalidator on unmount
-    useEffect(() => {
-      return () => {
-        fileTreeInvalidator.destroy();
-      };
-    }, [fileTreeInvalidator]);
+    }, [repository, eventHighlightService]);
 
     // Listen for repository updates (e.g., new clones added)
     useEffect(() => {
@@ -742,6 +685,13 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
           onToggleRightSidebar={() =>
             handleRightPanelCollapsedChange(!(panelCollapsedState.right ?? false))
           }
+          availableWorkspaces={availableWorkspaces}
+          currentWorkspaceId={currentWorkspaceId}
+          onWorkspaceSelect={handleWorkspaceSelect}
+          onSaveWorkspace={handleSaveWorkspace}
+          hasStateDeviation={hasStateDeviation}
+          onUpdateWorkspaceDefaults={handleUpdateWorkspaceDefaults}
+          onResetToWorkspaceDefaults={handleResetToWorkspaceDefaults}
         />
         <div
           style={{
@@ -752,11 +702,10 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
             boxSizing: 'border-box',
           }}
         >
-          {_loading && !fileTree ? (
-            <RepositoryLoadingState repositoryName={repository.name} />
-          ) : (
-            <GitChangesProvider>
-              <RepositoryExplorationView
+          <HighlightLayersProvider>
+              <GitChangesProvider>
+                <RepositoryExplorationView
+                key={panelResetKey}
                 repository={repository}
                 repositoryKey={repositoryKey}
                 remoteData={{
@@ -765,13 +714,8 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                   defaultBranch: repository.metadata?.defaultBranch || 'main',
                 }}
                 searchQuery={searchQuery}
-                fileTree={fileTree}
                 activeFileTreeSource={selectedSource}
-                fileTreeSourceService={fileTreeSourceService}
-                cacheService={cacheService}
                 cityDataCache={cityDataCache}
-                treeStats={treeStats}
-                fileColorHighlightLayers={fileColorHighlightLayers}
                 packageLayers={packageLayers}
                 onPackageLayersChange={setPackageLayers}
                 leftPanelCollapsed={panelCollapsedState.left ?? false}
@@ -779,9 +723,14 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
                 rightPanelCollapsed={panelCollapsedState.right ?? false}
                 onRightPanelCollapsedChange={handleRightPanelCollapsedChange}
                 panelLayout={panelLayout}
+                panelSizes={panelSizes}
+                onPanelSizesChange={handlePanelSizesChange}
+                panelPreferencesLoaded={panelPreferencesLoaded}
+                eventHighlightLayers={eventHighlightLayers}
+                eventHighlightService={eventHighlightService}
               />
             </GitChangesProvider>
-          )}
+          </HighlightLayersProvider>
         </div>
 
 
@@ -846,6 +795,12 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
               label: 'Docs',
               icon: <Book size={16} />,
               preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Documentation viewer</div>
+            },
+            {
+              id: 'agentEvents',
+              label: 'Agent Events',
+              icon: <Activity size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Monitor agent activity in real-time</div>
             },
             // Visualization panels
             {

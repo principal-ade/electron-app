@@ -5,6 +5,8 @@
  * Enhanced with @principal-ai/repository-monitoring library for git state events
  */
 
+/// <reference path="./global.d.ts" />
+
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import { FileTreeBuilder } from './FileTreeBuilder';
@@ -16,6 +18,7 @@ import type {
   CachedFileTree,
   GitStatusMetadata,
   GitStatusWithFiles,
+  GitRemoteInfo,
   PackageSummary,
   GitStateEventPayload,
   WorkspaceChangeEventPayload,
@@ -28,6 +31,7 @@ import type {
 } from './types';
 import { MonitoringInternalEvent } from './types';
 import { GitWatcherAdapter } from './GitWatcherAdapter';
+import { GitRemoteService } from './GitRemoteService';
 
 export class RepositoryMonitoringServer {
   private repositories: Map<string, RepositoryState> = new Map();
@@ -220,6 +224,8 @@ export class RepositoryMonitoringServer {
         return (await this.buildFileTreeSlice(repoPath)) as CacheSliceDataMap[K];
       case 'packages':
         return (await this.buildPackagesSlice(repoPath)) as CacheSliceDataMap[K];
+      case 'gitRemote':
+        return (await this.buildGitRemoteSlice(repoPath)) as CacheSliceDataMap[K];
       default: {
         const exhaustive: never = slice;
         throw new Error(`Unsupported cache slice: ${exhaustive}`);
@@ -287,6 +293,34 @@ export class RepositoryMonitoringServer {
     }
 
     return status;
+  }
+
+  private async buildGitRemoteSlice(repoPath: string): Promise<GitRemoteInfo> {
+    console.info(`[RepositoryMonitoring] Building gitRemote cache for ${repoPath}`);
+
+    try {
+      const remoteInfo = await GitRemoteService.buildRemoteInfo(repoPath);
+
+      console.info(`[RepositoryMonitoring] gitRemote cache built for ${repoPath}`, {
+        accessible: remoteInfo.accessible,
+        defaultBranch: remoteInfo.defaultBranch,
+        branchCount: remoteInfo.remoteBranches.length,
+      });
+
+      return remoteInfo;
+    } catch (error) {
+      console.error(`[RepositoryMonitoring] Failed to build gitRemote cache for ${repoPath}:`, error);
+
+      // Return fallback with just remote URL
+      const remoteUrl = await GitCore.getRemoteUrl(repoPath).catch(() => null);
+      return {
+        remoteUrl: remoteUrl || '',
+        remoteBranches: [],
+        accessible: false,
+        lastFetched: Date.now(),
+        fetchError: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
   }
 
   private createFallbackGitStatus(repoPath: string): GitStatusMetadata {
@@ -480,6 +514,45 @@ export class RepositoryMonitoringServer {
   }
 
   /**
+   * Get git remote information for a repository
+   */
+  async getGitRemoteInfo(repoPath: string): Promise<GitRemoteInfo | null> {
+    console.info(`[RepositoryMonitoring] getGitRemoteInfo called for ${repoPath}`);
+    try {
+      const entry = await this.cacheRegistry.getOrBuild(repoPath, 'gitRemote', () =>
+        this.buildGitRemoteSlice(repoPath),
+      );
+
+      if (entry.data) {
+        return entry.data;
+      }
+
+      return null;
+    } catch (error) {
+      console.error(`[RepositoryMonitoring] Failed to get git remote info for ${repoPath}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Invalidate git remote cache for a repository
+   * This will force a fresh fetch on next access
+   */
+  async invalidateGitRemoteCache(repoPath: string): Promise<void> {
+    console.info(`[RepositoryMonitoring] Invalidating gitRemote cache for ${repoPath}`);
+    this.cacheRegistry.invalidate(repoPath, 'gitRemote');
+
+    // Trigger background rebuild
+    await this.cacheRegistry.scheduleRebuild(
+      repoPath,
+      'gitRemote',
+      () => this.buildGitRemoteSlice(repoPath)
+    ).catch(error => {
+      console.error(`[RepositoryMonitoring] Failed to rebuild gitRemote cache for ${repoPath}:`, error);
+    });
+  }
+
+  /**
    * Enable git watching for a repository
    */
   async enableGitWatching(repoPath: string): Promise<void> {
@@ -583,13 +656,19 @@ export class RepositoryMonitoringServer {
     const timer = setTimeout(async () => {
       this.gitStatusRefreshTimers.delete(repoPath);
       try {
-        const status = await this.getGitStatus(repoPath);
+        // Rebuild git status in cache - this will emit CACHE_SYNC event
+        // Use buildGitStatusSlice directly to force a fresh build instead of using cached data
+        await this.cacheRegistry.scheduleRebuild(repoPath, 'gitStatus', async () => {
+          return await this.buildGitStatusSlice(repoPath);
+        });
+
         if (process.parentPort) {
+          const status = this.cacheRegistry.get(repoPath, 'gitStatus');
           process.parentPort.postMessage({
             type: 'event',
             event: {
               name: MonitoringInternalEvent.GIT_STATUS_CHANGED,
-              data: status,
+              data: status?.data,
             },
           });
         }

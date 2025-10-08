@@ -6,7 +6,6 @@ import { ArchitectureMapHighlightLayers, MultiVersionCityBuilder } from '@princi
 import { FileTree } from '@principal-ai/repository-abstraction';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import { FileTreeSourceService } from '../../../../services/FileTreeSourceService';
-import { MonitoredFileTreeService } from '../../../../services/MonitoredFileTreeService';
 import { CityDataCacheService } from '../../../../services/CityDataCacheService';
 import { WindowService } from '../../../../main-process-api/WindowService';
 
@@ -70,7 +69,7 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
   
   // Services - initialize once
   const [services] = useState(() => ({
-    fileTreeService: new FileTreeSourceService(new MonitoredFileTreeService()),
+    fileTreeService: new FileTreeSourceService(),
     cacheService: new CityDataCacheService(),
   }));
 

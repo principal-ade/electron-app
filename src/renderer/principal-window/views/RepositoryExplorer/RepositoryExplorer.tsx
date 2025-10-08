@@ -22,6 +22,7 @@ import { RepositoryDetailsPanel } from './components/RepositoryDetailsPanel';
 import { GitCloneModal } from './components/GitCloneModal';
 import { RepositoryListHeader } from './components/RepositoryListHeader';
 import { RightPanel } from './components/RightPanel';
+import { HighlightLayersProvider } from '../../../contexts/HighlightLayersContext';
 
 interface RepositoryExplorerProps {
   sidebarCollapsed?: boolean;
@@ -76,7 +77,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
 
   // Use the cache to get all repositories
   const { repositories: cachedRepos, loading: isLoadingRepos, refresh: refreshRepos } = useAllRepositories({
-    autoLoad: false,
+    autoLoad: true,
     subscribe: true,
   });
 
@@ -516,32 +517,33 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }} {...trackingProps}>
-      <style>{`
-        @keyframes flashHighlight {
-          0%, 100% {
-            background-color: transparent;
-            border-color: transparent;
+    <HighlightLayersProvider>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }} {...trackingProps}>
+        <style>{`
+          @keyframes flashHighlight {
+            0%, 100% {
+              background-color: transparent;
+              border-color: transparent;
+            }
+            25%, 75% {
+              background-color: ${theme.colors.primary}30;
+              border-color: ${theme.colors.primary};
+              transform: scale(1.02);
+            }
           }
-          25%, 75% {
-            background-color: ${theme.colors.primary}30;
-            border-color: ${theme.colors.primary};
-            transform: scale(1.02);
+
+          .flash-highlight {
+            animation: flashHighlight 1s ease-in-out;
           }
-        }
+        `}</style>
 
-        .flash-highlight {
-          animation: flashHighlight 1s ease-in-out;
-        }
-      `}</style>
+        <GitCloneModal
+          isOpen={showGitCloneModal}
+          onClose={() => setShowGitCloneModal(false)}
+          onRepositoryAdded={handleRepositoryAdded}
+        />
 
-      <GitCloneModal
-        isOpen={showGitCloneModal}
-        onClose={() => setShowGitCloneModal(false)}
-        onRepositoryAdded={handleRepositoryAdded}
-      />
-
-      <ConfigurablePanelLayout
+        <ConfigurablePanelLayout
         panels={[
           {
             id: 'repository-list',
@@ -577,6 +579,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         onRightCollapseComplete={panelState.type === 'three-panel' ? panelState.handleRightCollapseComplete : undefined}
         onRightExpandComplete={panelState.type === 'three-panel' ? panelState.handleRightExpandComplete : undefined}
       />
-    </div>
+      </div>
+    </HighlightLayersProvider>
   );
 };

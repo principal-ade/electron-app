@@ -380,6 +380,10 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
     let localBranchInfo: any = null;
     if (params.localPath) {
       try {
+        // TODO: BLOCKING - getBranchInfo makes network calls to fetch remote branch info
+        // This should be replaced with local-only branch info and remote info should be
+        // fetched via the gitRemote cache slice in the background
+        // See: docs/design/GIT_REMOTE_INFORMATION_ARCHITECTURE.md
         localBranchInfo = await this.branchService.getBranchInfo(
           params.localPath,
         );
@@ -538,6 +542,10 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
     // Get branch info for the local clone
     let branchInfo: any = null;
     try {
+      // TODO: BLOCKING - getBranchInfo makes network calls to fetch remote branch info
+      // This should be replaced with local-only branch info and remote info should be
+      // fetched via the gitRemote cache slice in the background
+      // See: docs/design/GIT_REMOTE_INFORMATION_ARCHITECTURE.md
       branchInfo = await this.branchService.getBranchInfo(localPath);
     } catch (error) {
       console.log('[addLocalClone] Could not get branch info:', error);

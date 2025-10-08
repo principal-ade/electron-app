@@ -1,6 +1,5 @@
 import React from 'react';
 import { SlidePresentation, SlidePresentationProps } from 'themed-markdown';
-import { ThemeProvider } from '@a24z/industry-theme';
 import { useTheme } from '@a24z/industry-theme';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 
@@ -65,9 +64,5 @@ export const ThemedSlidePresentation: React.FC<ThemedSlidePresentationProps> = (
   // Determine which theme to use: explicit > custom > app
   const themeToUse = explicitTheme || (shouldUseCustom && markdownTheme ? markdownTheme : appTheme);
 
-  return (
-    <ThemeProvider theme={themeToUse}>
-      <SlidePresentation {...props} />
-    </ThemeProvider>
-  );
+  return <SlidePresentation {...props} theme={themeToUse} />;
 };

@@ -166,36 +166,20 @@ function TerminalPanel({
 
   // Create terminal session if needed or use provided one
   useEffect(() => {
-    console.log(
-      '[TerminalPanel] Session effect - terminalId:',
-      terminalId,
-      'sessionId:',
-      sessionId,
-      'directory:',
-      directory,
-    );
-
     if (terminalId) {
       // Use provided terminal ID
-      console.log('[TerminalPanel] Using provided terminal ID:', terminalId);
       setSessionId(terminalId);
       return;
     }
 
     if (sessionId) {
-      console.log('[TerminalPanel] Already have session:', sessionId);
       return; // Already have a session
     }
 
     let isMounted = true;
-    console.log(
-      '[TerminalPanel] Creating new terminal session for directory:',
-      directory,
-    );
 
     createTerminalSession(directory).then((id) => {
       if (id && isMounted) {
-        console.log('[TerminalPanel] Created session:', id);
         setSessionId(id);
         // Notify parent component of the new session
         if (onSessionCreated) {
@@ -218,17 +202,13 @@ function TerminalPanel({
   // Initialize terminal UI - only once per component mount
   useEffect(() => {
     if (!terminalRef.current) {
-      console.log('[TerminalPanel] Skipping terminal init - no ref');
       return;
     }
 
     // Check if we already have a terminal instance
     if (terminal) {
-      console.log('[TerminalPanel] Terminal already initialized');
       return;
     }
-
-    console.log('[TerminalPanel] Creating xterm.js Terminal instance');
 
     // Create terminal instance (only once per component lifecycle)
     const term = new Terminal({
@@ -284,7 +264,7 @@ function TerminalPanel({
       }, 100); // Small delay to ensure terminal is fully rendered
     }
 
-    // Handle resize
+    // Handle resize - both window resize and container resize
     const handleResize = () => {
       if (fitAddonRef.current) {
         fitAddonRef.current.fit();
@@ -293,8 +273,18 @@ function TerminalPanel({
 
     window.addEventListener('resize', handleResize);
 
+    // Add ResizeObserver to handle container resize (e.g., when panel is resized)
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+
+    if (terminalRef.current) {
+      resizeObserver.observe(terminalRef.current);
+    }
+
     return () => {
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       term.dispose();
       // Don't destroy the session here - it should persist
     };
@@ -304,15 +294,12 @@ function TerminalPanel({
   useEffect(() => {
     if (terminal && sessionId && terminalId && fitAddonRef.current) {
       // We're reconnecting to an existing session
-      console.log('[TerminalPanel] Connected to existing session:', sessionId);
-
       // Trigger a resize to force the PTY to repaint its buffer
       // This is needed when connecting to an existing session to see the current content
       setTimeout(() => {
         if (fitAddonRef.current && sessionId) {
           const dimensions = fitAddonRef.current.proposeDimensions();
           if (dimensions) {
-            console.log('[TerminalPanel] Triggering resize to refresh existing session');
             // First resize to slightly different dimensions to force a redraw
             TerminalService.resize(sessionId, dimensions.cols, dimensions.rows - 1)
               .then(() => {
@@ -332,7 +319,6 @@ function TerminalPanel({
   useEffect(() => {
     if (terminal && autoFocus && isVisible) {
       // Focus the terminal when it becomes visible and autoFocus is true
-      console.log('[TerminalPanel] Focusing terminal for session:', sessionId);
       setTimeout(() => {
         terminal.focus();
         // Removed refresh - it was clearing the screen with Ctrl+L
@@ -342,22 +328,10 @@ function TerminalPanel({
 
   // Handle visibility changes - resize terminal when it becomes visible
   useEffect(() => {
-    console.log(
-      '[TerminalPanel] Visibility changed:',
-      isVisible,
-      'Session:',
-      sessionId,
-      'Has terminal:',
-      !!terminal,
-    );
     if (terminal && fitAddonRef.current && isVisible) {
       // Trigger a resize when terminal becomes visible
       // This ensures proper dimensions after being hidden
       setTimeout(() => {
-        console.log(
-          '[TerminalPanel] Resizing terminal for session:',
-          sessionId,
-        );
         if (fitAddonRef.current) {
           fitAddonRef.current.fit();
         }
@@ -365,12 +339,6 @@ function TerminalPanel({
         if (terminal && sessionId) {
           const dimensions = fitAddonRef.current?.proposeDimensions();
           if (dimensions) {
-            console.log(
-              '[TerminalPanel] Resizing to:',
-              dimensions.cols,
-              'x',
-              dimensions.rows,
-            );
             TerminalService.resize(sessionId, dimensions.cols, dimensions.rows);
           }
         }
@@ -381,15 +349,11 @@ function TerminalPanel({
   // Handle terminal data
   useEffect(() => {
     if (!terminal || !sessionId) {
-      console.log('[TerminalPanel] Data handler skipped - terminal:', !!terminal, 'sessionId:', sessionId);
       return;
     }
 
-    console.log('[TerminalPanel] Setting up data handlers for session:', sessionId);
-
     // Send data to backend
     const disposable = terminal.onData((data) => {
-      console.log('[TerminalPanel] Sending data to backend:', data.length, 'bytes');
       TerminalService.write(sessionId, data);
     });
 
@@ -397,7 +361,6 @@ function TerminalPanel({
     const unsubscribe = TerminalService.onData(
       async (data: { sessionId: string; data: string }) => {
         if (data.sessionId === sessionId) {
-          console.log('[TerminalPanel] Received data from backend:', data.data.length, 'bytes');
           terminal.write(data.data);
         }
       },
@@ -412,10 +375,7 @@ function TerminalPanel({
       },
     );
 
-    console.log('[TerminalPanel] Data handlers set up successfully');
-
     return () => {
-      console.log('[TerminalPanel] Cleaning up data handlers for session:', sessionId);
       disposable.dispose();
       void unsubscribe.then((fn) => fn()).catch(() => {});
       void unsubscribeExit.then((fn) => fn()).catch(() => {});

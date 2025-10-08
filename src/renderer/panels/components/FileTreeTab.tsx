@@ -68,6 +68,7 @@ export const FileTreeTab: React.FC<FileTreeTabProps> = ({
       }}
     >
       <DynamicFileTree
+        key={fileTree.allFiles?.length || 0}
         fileTree={fileTree}
         theme={theme}
         onFileSelect={onFileSelect}

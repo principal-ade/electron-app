@@ -89,9 +89,12 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
       const expandedPaths: string[] = [];
 
       for (const path of paths) {
+        // Normalize path by removing trailing slash (git returns directories with trailing slash)
+        const normalizedPath = path.endsWith('/') ? path.slice(0, -1) : path;
+
         // Check if this path is a directory by seeing if any files in the tree start with it
         const matchingFiles = fileTree.allFiles.filter(file =>
-          file.path.startsWith(path + '/') || file.path === path
+          file.path.startsWith(normalizedPath + '/') || file.path === normalizedPath
         );
 
         if (matchingFiles.length > 0) {
@@ -99,7 +102,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
           expandedPaths.push(...matchingFiles.map(f => f.path));
         } else {
           // This is a file - add it directly
-          expandedPaths.push(path);
+          expandedPaths.push(normalizedPath);
         }
       }
 
@@ -186,6 +189,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
         ) : (
           gitChangesData && (
             <GitStatusFileTree
+              key={gitChangesData.statusData.length}
               fileTree={gitChangesData.tree}
               theme={theme}
               gitStatusData={gitChangesData.statusData}
@@ -268,6 +272,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
         ) : (
           gitChangesData && (
             <GitStatusFileTree
+              key={gitChangesData.statusData.length}
               fileTree={gitChangesData.tree}
               theme={theme}
               gitStatusData={gitChangesData.statusData}

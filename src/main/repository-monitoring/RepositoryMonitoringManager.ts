@@ -186,7 +186,7 @@ export class RepositoryMonitoringManager extends EventEmitter {
       this.worker.stdout.on('data', (data: Buffer) => {
         const message = data.toString().trim();
         if (message) {
-          this.log('debug', `[Worker stdout] ${message}`);
+          this.log('info', `[Worker stdout] ${message}`);
         }
       });
     }
@@ -479,6 +479,26 @@ export class RepositoryMonitoringManager extends EventEmitter {
   async disableGitWatching(repoPath: string): Promise<void> {
     await this.sendRequest({
       type: 'disableGitWatching',
+      path: repoPath,
+    });
+  }
+
+  /**
+   * Get git remote info for a repository
+   */
+  async getGitRemoteInfo(repoPath: string): Promise<any> {
+    return this.sendRequest({
+      type: 'getGitRemoteInfo',
+      path: repoPath,
+    });
+  }
+
+  /**
+   * Invalidate git remote cache for a repository
+   */
+  async invalidateGitRemoteCache(repoPath: string): Promise<void> {
+    await this.sendRequest({
+      type: 'invalidateGitRemoteCache',
       path: repoPath,
     });
   }

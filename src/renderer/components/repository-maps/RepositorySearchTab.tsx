@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { FileTree } from '@principal-ai/repository-abstraction';
 import { useTheme } from '@a24z/industry-theme';
-import { Code, Check, AlertCircle, GitBranch, Search } from 'lucide-react';
+import { Code, Check, AlertCircle } from 'lucide-react';
 import { LocalSearchPanel } from '../shared/LocalSearchPanel';
 import { FileTreeSource } from '../../types/file-tree-source';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
@@ -18,7 +18,6 @@ import {
 } from '../../../shared/types/editor.types';
 import { ContentProvider } from '../../services/ContentProviders';
 import { localSearchService } from '../../services/LocalSearchService';
-import type { GitStatusWithFiles } from '../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 interface RepositorySearchTabProps {
   // Multiple file trees support
@@ -27,10 +26,6 @@ interface RepositorySearchTabProps {
 
   // Content provider for search
   contentProvider?: ContentProvider;
-
-  // Git modified files
-  gitModifiedFiles?: string[];
-  gitStatusWithFiles?: GitStatusWithFiles | null;
 
   // UI options
   showEditorSelector?: boolean; // Hide in explore view
@@ -51,8 +46,6 @@ export const RepositorySearchTab: React.FC<RepositorySearchTabProps> = ({
   fileTrees,
   activeFileTreeSource,
   contentProvider,
-  gitModifiedFiles,
-  gitStatusWithFiles,
   showEditorSelector = true,
   onFileSelect,
   selectedFile,
@@ -67,30 +60,6 @@ export const RepositorySearchTab: React.FC<RepositorySearchTabProps> = ({
   const [isEditorMenuOpen, setIsEditorMenuOpen] = useState(false);
   const editorMenuRef = useRef<HTMLDivElement | null>(null);
   const editorButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  // View mode: 'search' or 'modified'
-  // Default to 'modified' if we have git changes, otherwise 'search'
-  const [viewMode, setViewMode] = useState<'search' | 'modified'>(
-    gitModifiedFiles && gitModifiedFiles.length > 0 ? 'modified' : 'search'
-  );
-
-  // Update view mode when git status changes
-  useEffect(() => {
-    // Only auto-switch to search if modified files are cleared while in modified view
-    if ((!gitModifiedFiles || gitModifiedFiles.length === 0) && viewMode === 'modified') {
-      setViewMode('search');
-    }
-  }, [gitModifiedFiles, viewMode]);
-
-  // Update search results when showing modified files
-  useEffect(() => {
-    if (viewMode === 'modified' && gitModifiedFiles) {
-      onSearchResultsChange?.(gitModifiedFiles);
-    } else if (viewMode === 'search') {
-      // Clear modified files highlight when switching to search mode
-      // The LocalSearchPanel will handle its own search results
-    }
-  }, [viewMode, gitModifiedFiles, onSearchResultsChange]);
 
   // Set content provider when it changes
   useEffect(() => {
@@ -252,203 +221,9 @@ export const RepositorySearchTab: React.FC<RepositorySearchTabProps> = ({
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* View Mode Toggle */}
-      {gitModifiedFiles && gitModifiedFiles.length > 0 && (
-        <div
-          style={{
-            padding: '8px 12px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-            display: 'flex',
-            gap: '8px',
-            alignItems: 'center',
-            backgroundColor: theme.colors.backgroundSecondary,
-          }}
-        >
-          <button
-            onClick={() => setViewMode('modified')}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              backgroundColor:
-                viewMode === 'modified'
-                  ? `${theme.colors.primary}22`
-                  : theme.colors.backgroundTertiary,
-              border:
-                viewMode === 'modified'
-                  ? `1px solid ${theme.colors.primary}`
-                  : `1px solid ${theme.colors.border}`,
-              color:
-                viewMode === 'modified'
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary,
-              fontSize: '12px',
-              fontWeight: viewMode === 'modified' ? 600 : 500,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <GitBranch size={12} />
-            Modified Files ({gitModifiedFiles.length})
-          </button>
-          <button
-            onClick={() => setViewMode('search')}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              backgroundColor:
-                viewMode === 'search'
-                  ? `${theme.colors.primary}22`
-                  : theme.colors.backgroundTertiary,
-              border:
-                viewMode === 'search'
-                  ? `1px solid ${theme.colors.primary}`
-                  : `1px solid ${theme.colors.border}`,
-              color:
-                viewMode === 'search'
-                  ? theme.colors.primary
-                  : theme.colors.textSecondary,
-              fontSize: '12px',
-              fontWeight: viewMode === 'search' ? 600 : 500,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Search size={12} />
-            Search
-          </button>
-        </div>
-      )}
-
-      {/* Content based on view mode */}
+      {/* Search panel */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        {viewMode === 'modified' && gitModifiedFiles ? (
-          // Modified files list
-          <div
-            style={{
-              height: '100%',
-              overflow: 'auto',
-              padding: '12px',
-            }}
-          >
-            {gitModifiedFiles.length === 0 ? (
-              <div
-                style={{
-                  padding: '20px',
-                  textAlign: 'center',
-                  color: theme.colors.textSecondary,
-                  fontSize: '14px',
-                }}
-              >
-                No modified files
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                }}
-              >
-                {gitModifiedFiles.map((filePath) => {
-                  const fileName = filePath.split('/').pop() || filePath;
-                  const isSelected = selectedFile === filePath;
-
-                  // Determine file status
-                  let statusColor = theme.colors.text;
-                  let statusLabel = 'M';
-                  if (gitStatusWithFiles?.createdFiles.includes(filePath)) {
-                    statusColor = '#10b981';
-                    statusLabel = 'A';
-                  } else if (gitStatusWithFiles?.deletedFiles.includes(filePath)) {
-                    statusColor = '#ef4444';
-                    statusLabel = 'D';
-                  } else if (gitStatusWithFiles?.modifiedFiles.includes(filePath)) {
-                    statusColor = '#f59e0b';
-                    statusLabel = 'M';
-                  }
-
-                  return (
-                    <div
-                      key={filePath}
-                      onClick={() => handleFileSelect(filePath)}
-                      style={{
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        backgroundColor: isSelected
-                          ? `${theme.colors.primary}15`
-                          : 'transparent',
-                        border: isSelected
-                          ? `1px solid ${theme.colors.primary}30`
-                          : '1px solid transparent',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        ':hover': {
-                          backgroundColor: theme.colors.backgroundTertiary,
-                        },
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor =
-                          theme.colors.backgroundTertiary;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = isSelected
-                          ? `${theme.colors.primary}15`
-                          : 'transparent';
-                      }}
-                    >
-                      <span
-                        style={{
-                          color: statusColor,
-                          fontWeight: 600,
-                          fontSize: '11px',
-                          fontFamily: 'monospace',
-                          width: '14px',
-                          textAlign: 'center',
-                        }}
-                      >
-                        {statusLabel}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div
-                          style={{
-                            fontSize: '13px',
-                            color: theme.colors.text,
-                            fontWeight: isSelected ? 500 : 400,
-                            marginBottom: '2px',
-                          }}
-                        >
-                          {fileName}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '11px',
-                            color: theme.colors.textSecondary,
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {filePath}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ) : (
-          // Search panel
-          <LocalSearchPanel
+        <LocalSearchPanel
             fileSystemTree={fileSystemTree}
             baseDirectory={activeFileTreeSource.location}
             onFileSelect={handleFileSelect}
@@ -627,10 +402,9 @@ export const RepositorySearchTab: React.FC<RepositorySearchTabProps> = ({
               )}
             </div>
           }
-            onSearchResultsChange={handleSearchResultsChange}
-            onSearchResultHover={onSearchResultHover}
-          />
-        )}
+          onSearchResultsChange={handleSearchResultsChange}
+          onSearchResultHover={onSearchResultHover}
+        />
       </div>
     </div>
   );

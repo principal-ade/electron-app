@@ -173,7 +173,6 @@ export function useRepositoryData(
         repoPath,
         componentId.current,
         (updatedData) => {
-          console.log(`[useRepositoryData] Received cache update for ${repoPath}`);
           setData(updatedData);
           setLastUpdated(Date.now());
           setIsStale(false);

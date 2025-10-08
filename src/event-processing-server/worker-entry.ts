@@ -3,8 +3,6 @@
  * This file runs in an Electron utility process and communicates with the main process
  */
 
-import { parentPort } from 'worker_threads';
-
 import { HttpEventServer } from './HttpEventServer';
 import type { MainToServerMessage, ServerToMainMessage } from './types';
 
@@ -56,12 +54,13 @@ function handleMessage(rawMessage: unknown): void {
 function sendToMain(message: OutgoingMessage): void {
   console.info('[EventProcessingWorker] Attempting to send message to main:', message.type);
   try {
-    if (parentPort) {
-      console.info('[EventProcessingWorker] Using parentPort.postMessage');
-      parentPort.postMessage(message);
-      console.info('[EventProcessingWorker] Message sent via parentPort');
+    // Electron utility processes use process.parentPort
+    if (process.parentPort) {
+      console.info('[EventProcessingWorker] Using process.parentPort.postMessage');
+      process.parentPort.postMessage(message);
+      console.info('[EventProcessingWorker] Message sent via process.parentPort');
     } else if (process.send) {
-      // Fallback to process.send if available
+      // Fallback to process.send for child processes
       console.info('[EventProcessingWorker] Using process.send');
       process.send(message);
       console.info('[EventProcessingWorker] Message sent via process.send');
@@ -115,13 +114,13 @@ async function initialize(): Promise<void> {
 // Start initialization
 initialize();
 
-// Set up message handling for utility process
-if (parentPort) {
-  parentPort.on('message', (message) => {
+// Set up message handling for Electron utility process
+if (process.parentPort) {
+  process.parentPort.on('message', (message) => {
     handleMessage(message);
   });
 } else {
-  // Fallback to process.on for other contexts
+  // Fallback to process.on for child processes
   process.on('message', handleMessage);
 }
 

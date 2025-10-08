@@ -246,6 +246,16 @@ export const TabbedTerminalPanel = forwardRef<
     // Keyboard shortcuts for tab navigation
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
+        // Command/Ctrl + W to close active tab
+        if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
+          if (activeTabId && tabs.length > 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeTab(activeTabId);
+          }
+          return;
+        }
+
         // Command/Ctrl + number (1-9) to switch tabs
         if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '9') {
           e.preventDefault();
@@ -265,7 +275,7 @@ export const TabbedTerminalPanel = forwardRef<
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [tabs, switchTab]);
+    }, [tabs, switchTab, activeTabId, closeTab]);
 
     return (
       <div

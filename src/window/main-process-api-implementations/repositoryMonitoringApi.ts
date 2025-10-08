@@ -61,6 +61,14 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
     return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.DISABLE_GIT_WATCHING, repoPath);
   },
 
+  getGitRemoteInfo: async (repoPath: string) => {
+    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_GIT_REMOTE_INFO, repoPath);
+  },
+
+  invalidateGitRemoteCache: async (repoPath: string) => {
+    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.INVALIDATE_GIT_REMOTE_CACHE, repoPath);
+  },
+
   onGitStatusChanged: (callback: (status: GitStatusMetadata) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, status: GitStatusMetadata) => callback(status);
     ipcRenderer.on(RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED, handler);

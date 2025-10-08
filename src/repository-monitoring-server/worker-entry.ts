@@ -205,6 +205,17 @@ async function handleMessage(rawMessage: unknown): Promise<void> {
         result = { success: true };
         break;
 
+      case 'getGitRemoteInfo':
+        if (!message.path) throw new Error('Path required for getGitRemoteInfo');
+        result = await server.getGitRemoteInfo(message.path);
+        break;
+
+      case 'invalidateGitRemoteCache':
+        if (!message.path) throw new Error('Path required for invalidateGitRemoteCache');
+        await server.invalidateGitRemoteCache(message.path);
+        result = { success: true };
+        break;
+
       case 'resolveDependency':
         if (!message.dependencyRequest) throw new Error('Dependency request required for resolveDependency');
         result = await server.resolveDependency(message.dependencyRequest);

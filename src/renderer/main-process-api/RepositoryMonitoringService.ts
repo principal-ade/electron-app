@@ -11,6 +11,7 @@ import type {
   MonitoringStatus,
   GitStatus,
   GitStatusWithFiles,
+  GitRemoteInfo,
   ToolExecutionRequest,
   ToolExecutionResponse,
   PackageSummary,
@@ -177,6 +178,30 @@ export class RepositoryMonitoringService {
       return await window.mainProcess.repositoryMonitoring.disableGitWatching(repoPath);
     } catch (error) {
       console.error('[RepositoryMonitoring] Error disabling git watching:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
+   * Get git remote info for a repository
+   */
+  static async getGitRemoteInfo(repoPath: string): Promise<GitRemoteInfo | null> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.getGitRemoteInfo(repoPath);
+    } catch (error) {
+      console.error('[RepositoryMonitoring] Error getting git remote info:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Invalidate git remote cache for a repository
+   */
+  static async invalidateGitRemoteCache(repoPath: string): Promise<RepositoryMonitoringResult> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.invalidateGitRemoteCache(repoPath);
+    } catch (error) {
+      console.error('[RepositoryMonitoring] Error invalidating git remote cache:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }

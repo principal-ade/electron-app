@@ -22,6 +22,9 @@ import type {
 // Re-export PackageSummary from shared types
 export type { PackageSummary } from '../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
+// Re-export GitRemoteInfo from shared types
+export type { GitRemoteInfo } from '../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+
 /**
  * Internal event names for communication between server and main process
  */
@@ -238,6 +241,8 @@ export type MainToServerMessageType =
   | 'getGitStatusWithFiles'
   | 'enableGitWatching'
   | 'disableGitWatching'
+  | 'getGitRemoteInfo'
+  | 'invalidateGitRemoteCache'
   | 'resolveDependency';
 
 /**

@@ -3,6 +3,22 @@ import { TerminalId } from './terminal.types';
 import type { RepositoryPanelVisibility } from './repositoryPanel.types';
 import type { PanelLayout } from '@a24z/panels';
 
+/**
+ * WorkspaceLayout - A saved panel configuration preset
+ */
+export interface WorkspaceLayout {
+  id: string;
+  name: string;
+  description?: string;
+  layout: PanelLayout;
+  // Optional: default sizes and collapse states
+  defaultSizes?: { left: number; middle: number; right: number };
+  defaultCollapsed?: { left?: boolean; right?: boolean };
+  createdAt: number;
+  updatedAt: number;
+  isBuiltIn?: boolean;
+}
+
 // Repository view types - unified naming
 export type RepositoryViewType = 'exploration';
 
@@ -156,6 +172,21 @@ export interface UserPreferences {
       sizes?: { left: number; right: number };
       collapsed?: { left?: boolean };
     };
+  };
+
+  // Workspace layout presets
+  workspaceLayouts?: {
+    // Global workspace layouts (directory-agnostic)
+    presets: Record<string, WorkspaceLayout>;
+    // Per-repository state: which workspace + current sizes/collapsed
+    repositoryState?: Record<string, {
+      workspaceId: string | null; // null = custom layout
+      layout?: PanelLayout; // Only saved for custom layouts (no workspace)
+      sizes: { left: number; middle: number; right: number };
+      collapsed: { left?: boolean; right?: boolean };
+    }>;
+    // Built-in workspace layout IDs that can't be deleted
+    builtInWorkspaceIds?: string[];
   };
 
   // TODO: Add these fields that are currently using direct storage.get/set calls:

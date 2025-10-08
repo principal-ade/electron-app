@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { ThemedMonacoWithProvider } from '@principal-ade/industry-themed-monaco-editor';
 import { FileSystemService } from '../../main-process-api/FileSystemService';

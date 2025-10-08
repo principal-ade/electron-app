@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Layers } from 'lucide-react';
+import { Layout, Layers, Key } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
-import { TitlebarSourceSelector } from './TitlebarSourceSelector';
-import { TitlebarModeSelector } from './TitlebarModeSelector';
-import { TitlebarForkBadge } from './TitlebarForkBadge';
 import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
-import { TitlebarButton } from './TitlebarButton';
+import { WorkspaceSelector } from './WorkspaceSelector';
 import type { Repository } from '../../../shared/types/repository.types';
 import type { FileTreeSource } from '../../types/file-tree-source';
 import type { RepositoryMode } from '../../repo-manager/shared/SimpleModeSelector';
+import type { WorkspaceLayout } from '../../../shared/types/userPreferences.types';
 import { ViewSidebarControls } from '../../principal-window/components/ViewSidebarControls/ViewSidebarControls';
 import { WindowService } from '../../main-process-api/WindowService';
+import { SaveWorkspaceModal } from '../../repo-manager/shared/SaveWorkspaceModal';
 
 export interface RepositoryTitlebarProps {
   repository?: Repository;
@@ -31,6 +30,21 @@ export interface RepositoryTitlebarProps {
   rightSidebarCollapsed?: boolean;
   onToggleRightSidebar?: () => void;
   onConfigurePanels?: () => void;
+  // Workspace layout props
+  availableWorkspaces?: Record<string, WorkspaceLayout>;
+  currentWorkspaceId?: string | null;
+  onWorkspaceSelect?: (workspaceId: string) => void;
+  onSaveWorkspace?: (
+    name: string,
+    options: {
+      description?: string;
+      includeSizes?: boolean;
+      includeCollapsed?: boolean;
+    }
+  ) => Promise<void>;
+  hasStateDeviation?: boolean;
+  onUpdateWorkspaceDefaults?: () => void;
+  onResetToWorkspaceDefaults?: () => void;
 }
 
 export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
@@ -51,9 +65,17 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   rightSidebarCollapsed = false,
   onToggleRightSidebar,
   onConfigurePanels,
+  availableWorkspaces,
+  currentWorkspaceId,
+  onWorkspaceSelect,
+  onSaveWorkspace,
+  hasStateDeviation,
+  onUpdateWorkspaceDefaults,
+  onResetToWorkspaceDefaults,
 }) => {
   const { theme } = useTheme();
   const [mainWindowMinimized, setMainWindowMinimized] = useState(false);
+  const [showSaveWorkspaceModal, setShowSaveWorkspaceModal] = useState(false);
 
   // Listen for main window minimize state changes from other repo windows
   useEffect(() => {
@@ -64,14 +86,16 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   const handleToggleMainWindow = async () => {
     await WindowService.toggleMainWindowMinimize(!mainWindowMinimized);
   };
+  const displayName = repositoryName || repository?.name || 'Repository';
+  const hasLocalClone = selectedSource?.type === 'local';
+
   return (
-    <BaseTitlebar>
-      {/* Center: Repository info and mode selector */}
+    <BaseTitlebar confirmBeforeClose={true}>
+      {/* Left: Repository name and actions */}
       <div
         style={{
           position: 'absolute',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          left: '80px', // Position after traffic lights
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
@@ -79,32 +103,64 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {repository && (
-          <>
-            <TitlebarForkBadge
-              repository={repository}
-              position="left"
-              onClick={onForkBadgeClick}
-            />
-            <TitlebarSourceSelector
-              position="left"
-              repository={repository}
-              selectedSource={selectedSource}
-              onSourceSelect={onSourceSelect}
-              onSecretsClick={onSecretsClick}
-              onHelpClick={onHelpClick}
-            />
-          </>
+        <span
+          style={{
+            fontSize: '13px',
+            fontWeight: 500,
+            color: theme.colors.text,
+          }}
+        >
+          {displayName}
+        </span>
+
+        {/* Secrets button - only show for local clones */}
+        {hasLocalClone && onSecretsClick && (
+          <button
+            onClick={onSecretsClick}
+            style={{
+              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              width: '32px',
+              height: '32px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+            title="Manage environment secrets"
+          >
+            <Key size={14} />
+          </button>
         )}
-        {mode && (
-          <TitlebarModeSelector
-            position="center"
-            mode={mode}
-            onModeChange={onModeChange}
-            hasLocalClones={!!repository?.localClones?.length}
+
+        {/* Open in IDE button */}
+        <TitlebarOpenInIDE repository={repository} />
+
+        {/* Workspace selector */}
+        {availableWorkspaces && onWorkspaceSelect && (
+          <WorkspaceSelector
+            availableWorkspaces={availableWorkspaces}
+            currentWorkspaceId={currentWorkspaceId ?? null}
+            onWorkspaceSelect={onWorkspaceSelect}
+            onSaveWorkspace={() => setShowSaveWorkspaceModal(true)}
+            hasStateDeviation={hasStateDeviation ?? false}
+            onUpdateWorkspaceDefaults={onUpdateWorkspaceDefaults}
+            onResetToWorkspaceDefaults={onResetToWorkspaceDefaults}
           />
         )}
-        <TitlebarOpenInIDE repository={repository} />
       </div>
 
       {/* Right: Panel controls and actions */}
@@ -175,7 +231,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
               WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
               background: 'transparent',
               border: 'none',
-              color: '#9ca3af',
+              color: theme.colors.textSecondary,
               cursor: 'pointer',
               padding: '6px',
               borderRadius: '4px',
@@ -187,18 +243,27 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
               height: '32px',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#374151';
-              e.currentTarget.style.color = '#fff';
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#9ca3af';
+              e.currentTarget.style.color = theme.colors.textSecondary;
             }}
           >
             <Layout size={14} />
           </button>
         )}
       </div>
+
+      {/* Save Workspace Modal */}
+      {onSaveWorkspace && (
+        <SaveWorkspaceModal
+          isOpen={showSaveWorkspaceModal}
+          onClose={() => setShowSaveWorkspaceModal(false)}
+          onSave={onSaveWorkspace}
+        />
+      )}
     </BaseTitlebar>
   );
 };

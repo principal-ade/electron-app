@@ -41,108 +41,115 @@ function normalizeGitUrl(url: string): string {
 async function testGitAccess(
   url: string,
 ): Promise<{ accessible: boolean; message: string }> {
-  try {
-    // Don't normalize - use the URL as provided (already SSH or HTTPS)
-    // Use ls-remote to test if we can access the repository
-    // This doesn't clone, just checks if we can connect
-    const git = await gitClientFactory.getClient(os.homedir());
+  // TODO: BLOCKING - ls-remote is a blocking network operation with 10s timeout
+  // This should be moved to gitRemote cache slice
+  // See: docs/design/GIT_REMOTE_INFORMATION_ARCHITECTURE.md
 
-    // Check if this is an SSH URL
-    const isSSH = url.startsWith('git@') || url.includes('ssh://');
+  console.warn('[gitHandlers] testGitAccess is currently disabled to prevent blocking operations');
+  return { accessible: false, message: 'Git access check disabled - will be implemented via gitRemote cache' };
 
-    // For SSH, we need certain env vars for authentication
-    // For HTTPS, we need to prevent interactive prompts
-    // Only pass serializable environment variables
-    const baseEnv = {
-      PATH: process.env.PATH,
-      HOME: process.env.HOME,
-      USER: process.env.USER,
-      SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK,
-      SSH_AGENT_PID: process.env.SSH_AGENT_PID,
-    };
+  // try {
+  //   // Don't normalize - use the URL as provided (already SSH or HTTPS)
+  //   // Use ls-remote to test if we can access the repository
+  //   // This doesn't clone, just checks if we can connect
+  //   const git = await gitClientFactory.getClient(os.homedir());
 
-    const envVars = isSSH ?
-      baseEnv :
-      {
-        ...baseEnv,
-        GIT_TERMINAL_PROMPT: '0',
-        GIT_ASKPASS: '/bin/echo',
-        GCM_INTERACTIVE: 'never'
-      };
+  //   // Check if this is an SSH URL
+  //   const isSSH = url.startsWith('git@') || url.includes('ssh://');
 
-    // Use a shorter timeout for the auth check
-    // Note: We remove --exit-code because it returns 2 for empty repos
-    // Instead, we'll check for authentication errors in stderr
-    const result = await Promise.race([
-      git.raw(
-        ['ls-remote', url],
-        {
-          env: envVars,
-          timeout: 10000  // Give SSH a bit more time (10 seconds)
-        }
-      ),
-      new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error('Authentication timeout')), 10000)
-      )
-    ]);
+  //   // For SSH, we need certain env vars for authentication
+  //   // For HTTPS, we need to prevent interactive prompts
+  //   // Only pass serializable environment variables
+  //   const baseEnv = {
+  //     PATH: process.env.PATH,
+  //     HOME: process.env.HOME,
+  //     USER: process.env.USER,
+  //     SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK,
+  //     SSH_AGENT_PID: process.env.SSH_AGENT_PID,
+  //   };
 
-    // If we get here without error, the URL is accessible
-    // Empty result is OK (means empty repository)
-    // Check for actual error messages in the result
-    if (result !== undefined && !result.includes('fatal:') && !result.includes('Authentication failed')) {
-      // Even empty string is OK - it means we connected but repo is empty
-      return { accessible: true, message: 'Authentication successful' };
-    }
+  //   const envVars = isSSH ?
+  //     baseEnv :
+  //     {
+  //       ...baseEnv,
+  //       GIT_TERMINAL_PROMPT: '0',
+  //       GIT_ASKPASS: '/bin/echo',
+  //       GCM_INTERACTIVE: 'never'
+  //     };
 
-    // Check for specific error messages
-    if (
-      result.includes('Authentication failed') ||
-      result.includes('Invalid username or password')
-    ) {
-      return { accessible: false, message: 'Authentication required' };
-    }
+  //   // Use a shorter timeout for the auth check
+  //   // Note: We remove --exit-code because it returns 2 for empty repos
+  //   // Instead, we'll check for authentication errors in stderr
+  //   const result = await Promise.race([
+  //     git.raw(
+  //       ['ls-remote', url],
+  //       {
+  //         env: envVars,
+  //         timeout: 10000  // Give SSH a bit more time (10 seconds)
+  //       }
+  //     ),
+  //     new Promise<string>((_, reject) =>
+  //       setTimeout(() => reject(new Error('Authentication timeout')), 10000)
+  //     )
+  //   ]);
 
-    if (result.includes('Permission denied')) {
-      return {
-        accessible: false,
-        message: 'Permission denied - check your SSH keys or credentials',
-      };
-    }
+  //   // If we get here without error, the URL is accessible
+  //   // Empty result is OK (means empty repository)
+  //   // Check for actual error messages in the result
+  //   if (result !== undefined && !result.includes('fatal:') && !result.includes('Authentication failed')) {
+  //     // Even empty string is OK - it means we connected but repo is empty
+  //     return { accessible: true, message: 'Authentication successful' };
+  //   }
 
-    if (result.includes('Could not read from remote')) {
-      return {
-        accessible: false,
-        message: 'Could not connect to remote repository',
-      };
-    }
+  //   // Check for specific error messages
+  //   if (
+  //     result.includes('Authentication failed') ||
+  //     result.includes('Invalid username or password')
+  //   ) {
+  //     return { accessible: false, message: 'Authentication required' };
+  //   }
 
-    return { accessible: false, message: 'Unable to access repository' };
-  } catch (error: unknown) {
-    // Parse the error message for common issues
-    const errorMsg = error instanceof Error ? error.message : String(error);
+  //   if (result.includes('Permission denied')) {
+  //     return {
+  //       accessible: false,
+  //       message: 'Permission denied - check your SSH keys or credentials',
+  //     };
+  //   }
 
-    if (errorMsg.includes('Authentication timeout')) {
-      return { accessible: false, message: 'Authentication required - repository is private' };
-    }
+  //   if (result.includes('Could not read from remote')) {
+  //     return {
+  //       accessible: false,
+  //       message: 'Could not connect to remote repository',
+  //     };
+  //   }
 
-    if (errorMsg.includes('Repository not found') || errorMsg.includes('404')) {
-      return { accessible: false, message: 'Repository not found or private' };
-    }
+  //   return { accessible: false, message: 'Unable to access repository' };
+  // } catch (error: unknown) {
+  //   // Parse the error message for common issues
+  //   const errorMsg = error instanceof Error ? error.message : String(error);
 
-    if (errorMsg.includes('Authentication')) {
-      return { accessible: false, message: 'Authentication required' };
-    }
+  //   if (errorMsg.includes('Authentication timeout')) {
+  //     return { accessible: false, message: 'Authentication required - repository is private' };
+  //   }
 
-    if (errorMsg.includes('Permission denied')) {
-      return { accessible: false, message: 'Permission denied - check SSH keys' };
-    }
+  //   if (errorMsg.includes('Repository not found') || errorMsg.includes('404')) {
+  //     return { accessible: false, message: 'Repository not found or private' };
+  //   }
 
-    if (errorMsg.includes('Host key verification failed')) {
-      return { accessible: false, message: 'SSH host key verification failed - run: ssh-keyscan github.com >> ~/.ssh/known_hosts' };
-    }
+  //   if (errorMsg.includes('Authentication')) {
+  //     return { accessible: false, message: 'Authentication required' };
+  //   }
 
-    return { accessible: false, message: `Connection failed: ${errorMsg.substring(0, 100)}` };
-  }
+  //   if (errorMsg.includes('Permission denied')) {
+  //     return { accessible: false, message: 'Permission denied - check SSH keys' };
+  //   }
+
+  //   if (errorMsg.includes('Host key verification failed')) {
+  //     return { accessible: false, message: 'SSH host key verification failed - run: ssh-keyscan github.com >> ~/.ssh/known_hosts' };
+  //   }
+
+  //   return { accessible: false, message: `Connection failed: ${errorMsg.substring(0, 100)}` };
+  // }
 }
 
 export function registerGitHandlers(): void {
@@ -253,7 +260,7 @@ export function registerGitHandlers(): void {
         const result = await git.raw(args);
         return { stdout: result, stderr: '' };
       } catch (error) {
-        console.error('[Git] Failed to execute git command:', error);
+        console.error(`[Git] Failed to execute git command: git ${args.join(' ')} (in ${directory}):`, error);
         throw error;
       }
     },

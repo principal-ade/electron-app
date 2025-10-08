@@ -85,70 +85,74 @@ export class GitBranchService {
    * This is crucial for repositories, especially private ones
    */
   private async getDefaultBranch(gitRoot: string): Promise<string | undefined> {
-    // Method 1: Try to get from remote HEAD (requires fetch)
-    try {
-      const { stdout } = await execAsync(
-        'git symbolic-ref refs/remotes/origin/HEAD',
-        { cwd: gitRoot },
-      );
-      const branch = stdout.trim().replace('refs/remotes/origin/', '');
-      if (branch) return branch;
-    } catch {
-      // Remote HEAD not set, try to set it
-      try {
-        await execAsync('git remote set-head origin --auto', { cwd: gitRoot });
-        const { stdout } = await execAsync(
-          'git symbolic-ref refs/remotes/origin/HEAD',
-          { cwd: gitRoot },
-        );
-        const branch = stdout.trim().replace('refs/remotes/origin/', '');
-        if (branch) return branch;
-      } catch {
-        // Could not set remote HEAD
-      }
-    }
+    // TODO: BLOCKING - All remote operations commented out
+    // These should be moved to gitRemote cache slice
+    // See: docs/design/GIT_REMOTE_INFORMATION_ARCHITECTURE.md
 
-    // Method 2: Try to get from git ls-remote (works without fetch)
-    try {
-      const { stdout } = await execAsync('git ls-remote --symref origin HEAD', {
-        cwd: gitRoot,
-      });
-      const match = stdout.match(/ref: refs\/heads\/(\S+)\s+HEAD/);
-      if (match) return match[1];
-    } catch {
-      // ls-remote failed (maybe no network or auth issues)
-    }
+    // // Method 1: Try to get from remote HEAD (requires fetch)
+    // try {
+    //   const { stdout } = await execAsync(
+    //     'git symbolic-ref refs/remotes/origin/HEAD',
+    //     { cwd: gitRoot },
+    //   );
+    //   const branch = stdout.trim().replace('refs/remotes/origin/', '');
+    //   if (branch) return branch;
+    // } catch {
+    //   // Remote HEAD not set, try to set it
+    //   try {
+    //     await execAsync('git remote set-head origin --auto', { cwd: gitRoot });
+    //     const { stdout } = await execAsync(
+    //       'git symbolic-ref refs/remotes/origin/HEAD',
+    //       { cwd: gitRoot },
+    //     );
+    //     const branch = stdout.trim().replace('refs/remotes/origin/', '');
+    //     if (branch) return branch;
+    //   } catch {
+    //     // Could not set remote HEAD
+    //   }
+    // }
 
-    // Method 3: Check common default branch names
-    try {
-      const { stdout } = await execAsync('git branch -r', { cwd: gitRoot });
-      const remoteBranches = stdout
-        .split('\n')
-        .map((b) => b.trim())
-        .filter((b) => b && !b.includes('HEAD'))
-        .map((b) => b.replace('origin/', ''));
+    // // Method 2: Try to get from git ls-remote (works without fetch)
+    // try {
+    //   const { stdout } = await execAsync('git ls-remote --symref origin HEAD', {
+    //     cwd: gitRoot,
+    //   });
+    //   const match = stdout.match(/ref: refs\/heads\/(\S+)\s+HEAD/);
+    //   if (match) return match[1];
+    // } catch {
+    //   // ls-remote failed (maybe no network or auth issues)
+    // }
 
-      // Check for common default branch names in order of preference
-      const commonDefaults = [
-        'main',
-        'master',
-        'develop',
-        'development',
-        'trunk',
-      ];
-      for (const defaultName of commonDefaults) {
-        if (remoteBranches.includes(defaultName)) {
-          return defaultName;
-        }
-      }
+    // // Method 3: Check common default branch names
+    // try {
+    //   const { stdout } = await execAsync('git branch -r', { cwd: gitRoot });
+    //   const remoteBranches = stdout
+    //     .split('\n')
+    //     .map((b) => b.trim())
+    //     .filter((b) => b && !b.includes('HEAD'))
+    //     .map((b) => b.replace('origin/', ''));
 
-      // If no common default found, use the first remote branch
-      if (remoteBranches.length > 0) {
-        return remoteBranches[0];
-      }
-    } catch {
-      // Could not list remote branches
-    }
+    //   // Check for common default branch names in order of preference
+    //   const commonDefaults = [
+    //     'main',
+    //     'master',
+    //     'develop',
+    //     'development',
+    //     'trunk',
+    //   ];
+    //   for (const defaultName of commonDefaults) {
+    //     if (remoteBranches.includes(defaultName)) {
+    //       return defaultName;
+    //     }
+    //   }
+
+    //   // If no common default found, use the first remote branch
+    //   if (remoteBranches.length > 0) {
+    //     return remoteBranches[0];
+    //   }
+    // } catch {
+    //   // Could not list remote branches
+    // }
 
     // Method 4: Check local branches if no remote info available
     try {
@@ -180,28 +184,28 @@ export class GitBranchService {
       // Could not list local branches
     }
 
-    // Method 5: Try GitHub CLI if available (as last resort)
-    try {
-      const remoteUrl = await this.getRemoteUrl(gitRoot);
-      if (remoteUrl && remoteUrl.includes('github.com')) {
-        const match = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
-        if (match) {
-          const [, owner, repo] = match;
-          try {
-            const { stdout } = await execAsync(
-              `gh api repos/${owner}/${repo} --jq .default_branch`,
-              { cwd: gitRoot },
-            );
-            const branch = stdout.trim();
-            if (branch) return branch;
-          } catch {
-            // GitHub CLI not available or not authenticated
-          }
-        }
-      }
-    } catch {
-      // Could not get remote URL or use GitHub CLI
-    }
+    // // Method 5: Try GitHub CLI if available (as last resort)
+    // try {
+    //   const remoteUrl = await this.getRemoteUrl(gitRoot);
+    //   if (remoteUrl && remoteUrl.includes('github.com')) {
+    //     const match = remoteUrl.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
+    //     if (match) {
+    //       const [, owner, repo] = match;
+    //       try {
+    //         const { stdout } = await execAsync(
+    //           `gh api repos/${owner}/${repo} --jq .default_branch`,
+    //           { cwd: gitRoot },
+    //         );
+    //         const branch = stdout.trim();
+    //         if (branch) return branch;
+    //       } catch {
+    //         // GitHub CLI not available or not authenticated
+    //       }
+    //     }
+    //   }
+    // } catch {
+    //   // Could not get remote URL or use GitHub CLI
+    // }
 
     return undefined;
   }
@@ -220,19 +224,23 @@ export class GitBranchService {
       // Could not get local branches
     }
 
-    // Get remote branches using simple-git
-    try {
-      const remoteBranches = await gitClientFactory.getRemoteBranches(gitRoot);
-      remoteBranches.forEach((branch) => {
-        if (!branch.includes('HEAD')) {
-          // Remove 'remotes/origin/' prefix
-          const branchName = branch.replace(/^remotes\/origin\//, '');
-          branches.add(branchName);
-        }
-      });
-    } catch {
-      // Could not get remote branches
-    }
+    // TODO: BLOCKING - Remote branch fetching commented out
+    // This should be moved to gitRemote cache slice
+    // See: docs/design/GIT_REMOTE_INFORMATION_ARCHITECTURE.md
+
+    // // Get remote branches using simple-git
+    // try {
+    //   const remoteBranches = await gitClientFactory.getRemoteBranches(gitRoot);
+    //   remoteBranches.forEach((branch) => {
+    //     if (!branch.includes('HEAD')) {
+    //       // Remove 'remotes/origin/' prefix
+    //       const branchName = branch.replace(/^remotes\/origin\//, '');
+    //       branches.add(branchName);
+    //     }
+    //   });
+    // } catch {
+    //   // Could not get remote branches
+    // }
 
     return Array.from(branches).sort();
   }
@@ -326,16 +334,23 @@ export class GitBranchService {
    * This is useful to ensure we have the latest branch information
    */
   async fetchRemoteInfo(directory: string): Promise<boolean> {
-    try {
-      const gitRoot = await this.getGitRoot(directory);
-      if (!gitRoot) return false;
+    // TODO: BLOCKING - git fetch is a blocking network operation
+    // This should be moved to gitRemote cache slice
+    // See: docs/design/GIT_REMOTE_INFORMATION_ARCHITECTURE.md
 
-      // Try to fetch with a short timeout
-      await execAsync('git fetch --timeout=5', { cwd: gitRoot });
-      return true;
-    } catch {
-      // Fetch failed (network issue, auth issue, etc.)
-      return false;
-    }
+    console.warn('[GitBranchService] fetchRemoteInfo is currently disabled to prevent blocking operations');
+    return false;
+
+    // try {
+    //   const gitRoot = await this.getGitRoot(directory);
+    //   if (!gitRoot) return false;
+
+    //   // Try to fetch with a short timeout
+    //   await execAsync('git fetch --timeout=5', { cwd: gitRoot });
+    //   return true;
+    // } catch {
+    //   // Fetch failed (network issue, auth issue, etc.)
+    //   return false;
+    // }
   }
 }

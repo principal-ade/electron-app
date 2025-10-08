@@ -38,7 +38,7 @@ export interface PackageSummary {
   availableScripts: string[];
 }
 
-export type CacheSlice = 'gitStatus' | 'fileTree' | 'packages';
+export type CacheSlice = 'gitStatus' | 'fileTree' | 'packages' | 'gitRemote';
 
 export interface CacheError {
   message: string;
@@ -55,13 +55,34 @@ export interface CacheEntry<T> {
   error?: CacheError;
 }
 
+export interface PackagesData {
+  packages: PackageLayer[];
+  summary: PackageSummary;
+}
+
+export interface GitRemoteInfo {
+  remoteUrl: string;
+  defaultBranch?: string;
+  remoteBranches: string[];
+  accessible: boolean;
+  authMethods?: {
+    ssh: boolean;
+    https: boolean;
+  };
+  upstreamStatus?: {
+    ahead: number;
+    behind: number;
+    upToDate: boolean;
+  };
+  lastFetched?: number;
+  fetchError?: string;
+}
+
 export interface CacheSliceDataMap {
   gitStatus: GitStatusWithFiles;
   fileTree: FileTree;
-  packages: {
-    packages: PackageLayer[];
-    summary: PackageSummary;
-  };
+  packages: PackagesData;
+  gitRemote: GitRemoteInfo;
 }
 
 export type RepositoryCacheSlices = {
@@ -100,6 +121,8 @@ export enum RepositoryMonitoringAPIEvent {
   CACHE_SYNC = 'repository-monitoring:cache-sync',
   EXECUTE_TOOL = 'repository-monitoring:execute-tool',
   GET_CACHE_SNAPSHOT = 'repository-monitoring:get-cache-snapshot',
+  GET_GIT_REMOTE_INFO = 'repository-monitoring:get-git-remote-info',
+  INVALIDATE_GIT_REMOTE_CACHE = 'repository-monitoring:invalidate-git-remote-cache',
 }
 
 export interface RepositoryMonitoringResult {
@@ -180,4 +203,6 @@ export interface RepositoryMonitoringAPI {
   onWorkspaceChange(callback: (event: WorkspaceChangeEventPayload) => void): () => void;
   onCacheSync(callback: (event: RepositoryCacheSyncEvent) => void): () => void;
   executeTool(request: ToolExecutionRequest): Promise<ToolExecutionResponse>;
+  getGitRemoteInfo(repoPath: string): Promise<GitRemoteInfo | null>;
+  invalidateGitRemoteCache(repoPath: string): Promise<RepositoryMonitoringResult>;
 }

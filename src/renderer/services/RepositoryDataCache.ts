@@ -6,15 +6,20 @@
 import { EventEmitter } from 'events';
 import type { EnhancedAlexandriaEntry } from '../../shared/types/repository.types';
 import type { FileTree } from '@principal-ai/repository-abstraction';
-import type { PackageLayer } from '@principal-ai/codebase-composition';
+import type {
+  PackageLayer,
+  QualityMetrics as LibraryQualityMetrics
+} from '@principal-ai/codebase-composition';
 import type {
   GitStatusMetadata,
   GitStatusWithFiles,
+  GitRemoteInfo,
   RepositoryCacheSyncEvent,
   CacheSlice,
   CacheEntry as RegistryCacheEntry,
   CacheSliceDataMap,
   PackageSummary,
+  PackagesData,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import type { AlexandriaChangeEvent, AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
@@ -74,6 +79,7 @@ export interface RepositoryCacheData {
     canFastForward?: boolean;
     needsUpstream?: boolean;
   };
+  gitRemote: GitRemoteInfo | null;
 
   // File system data
   fileTree: FileTree | null;
@@ -104,6 +110,7 @@ type RepositoryCacheSlicesState = {
   gitStatus?: RegistryCacheEntry<CacheSliceDataMap['gitStatus']>;
   fileTree?: RegistryCacheEntry<CacheSliceDataMap['fileTree']>;
   packages?: RegistryCacheEntry<CacheSliceDataMap['packages']>;
+  gitRemote?: RegistryCacheEntry<CacheSliceDataMap['gitRemote']>;
 };
 
 /**
@@ -255,18 +262,21 @@ export class RepositoryDataCache extends EventEmitter {
     const gitEntry = snapshot.slices.gitStatus as RegistryCacheEntry<CacheSliceDataMap['gitStatus']> | undefined;
     const fileTreeEntry = snapshot.slices.fileTree as RegistryCacheEntry<CacheSliceDataMap['fileTree']> | undefined;
     const packagesEntry = snapshot.slices.packages as RegistryCacheEntry<CacheSliceDataMap['packages']> | undefined;
+    const gitRemoteEntry = snapshot.slices.gitRemote as RegistryCacheEntry<CacheSliceDataMap['gitRemote']> | undefined;
 
     const gitStatus = gitEntry?.data ?? null;
     const fileTree = fileTreeEntry?.data ?? null;
     const packagesData = packagesEntry?.data;
+    const gitRemote = gitRemoteEntry?.data ?? null;
 
     const qualityMetrics = this.extractQualityMetrics(packagesData);
     const markdownFiles = this.extractMarkdownFiles(fileTree);
-    const branchStatus = await this.getBranchStatus(repoPath, gitStatus);
+    const branchStatus = this.extractBranchStatus(gitStatus);
     const cacheSlices: RepositoryCacheSlicesState = {
       gitStatus: gitEntry,
       fileTree: fileTreeEntry,
       packages: packagesEntry,
+      gitRemote: gitRemoteEntry,
     };
 
     // Create cache data
@@ -275,6 +285,7 @@ export class RepositoryDataCache extends EventEmitter {
       gitStatus,
       gitBranch: gitStatus?.branch || 'main',
       branchStatus,
+      gitRemote,
       fileTree,
       markdownFiles,
       packages: packagesData?.packages || [],
@@ -413,7 +424,7 @@ export class RepositoryDataCache extends EventEmitter {
       updates.gitStatus = await RepositoryMonitoringService.getGitStatusWithFiles(repoPath).catch(() => null);
       if (updates.gitStatus) {
         updates.gitBranch = updates.gitStatus.branch;
-        updates.branchStatus = await this.getBranchStatus(repoPath, updates.gitStatus);
+        updates.branchStatus = this.extractBranchStatus(updates.gitStatus);
       }
     }
 
@@ -439,7 +450,7 @@ export class RepositoryDataCache extends EventEmitter {
    * Receives a basic GitStatusMetadata event and triggers a fetch for full details
    */
   private handleGitStatusChange(status: GitStatusMetadata): void {
-    const repoPath = status.repoPath || status.path;
+    const repoPath = status.repoPath;
     if (!repoPath) return;
 
     // Update basic status immediately
@@ -475,6 +486,15 @@ export class RepositoryDataCache extends EventEmitter {
   private async applyCacheSyncEvent(event: RepositoryCacheSyncEvent): Promise<void> {
     const entry = this.cache.get(event.repoPath);
     if (!entry) {
+      console.log(`[RepositoryDataCache] Cache sync for ${event.repoPath} ignored - repository not loaded in cache yet`);
+      console.log(`[RepositoryDataCache] Loading repository into cache...`);
+      // Load the repository into cache so future events work
+      try {
+        await this.load(event.repoPath);
+        console.log(`[RepositoryDataCache] Repository loaded, future cache sync events will work`);
+      } catch (error) {
+        console.error(`[RepositoryDataCache] Failed to load repository:`, error);
+      }
       return;
     }
 
@@ -501,20 +521,21 @@ export class RepositoryDataCache extends EventEmitter {
 
     switch (slice) {
       case 'gitStatus': {
-        updatedData.gitStatus = event.entry.data ?? null;
+        const gitStatusData = event.entry.data as GitStatusWithFiles | null | undefined;
+        updatedData.gitStatus = gitStatusData ?? null;
         partial.gitStatus = updatedData.gitStatus;
         changedFields.push('gitStatus');
 
-        if (event.entry.data) {
-          updatedData.gitBranch = event.entry.data.branch;
+        if (gitStatusData) {
+          updatedData.gitBranch = gitStatusData.branch;
           partial.gitBranch = updatedData.gitBranch;
           changedFields.push('gitBranch');
 
-          updatedData.repository = this.enhanceRepository(updatedData.repository, event.entry.data);
+          updatedData.repository = this.enhanceRepository(updatedData.repository, gitStatusData);
           partial.repository = updatedData.repository;
           changedFields.push('repository');
 
-          updatedData.branchStatus = await this.getBranchStatus(event.repoPath, event.entry.data);
+          updatedData.branchStatus = this.extractBranchStatus(gitStatusData);
           partial.branchStatus = updatedData.branchStatus;
           changedFields.push('branchStatus');
         } else {
@@ -527,7 +548,8 @@ export class RepositoryDataCache extends EventEmitter {
         break;
       }
       case 'fileTree': {
-        updatedData.fileTree = event.entry.data ?? null;
+        const fileTreeData = event.entry.data as FileTree | null | undefined;
+        updatedData.fileTree = fileTreeData ?? null;
         partial.fileTree = updatedData.fileTree;
         changedFields.push('fileTree');
 
@@ -539,7 +561,7 @@ export class RepositoryDataCache extends EventEmitter {
         break;
       }
       case 'packages': {
-        const packagesData = event.entry.data;
+        const packagesData = event.entry.data as PackagesData | null | undefined;
         updatedData.packages = packagesData?.packages ?? [];
         partial.packages = updatedData.packages;
         changedFields.push('packages');
@@ -554,6 +576,27 @@ export class RepositoryDataCache extends EventEmitter {
 
         partialUpdates.packages = timestamp;
         partialUpdates.quality = timestamp;
+        break;
+      }
+      case 'gitRemote': {
+        const gitRemoteData = event.entry.data as GitRemoteInfo | null | undefined;
+        updatedData.gitRemote = gitRemoteData ?? null;
+        partial.gitRemote = updatedData.gitRemote;
+        changedFields.push('gitRemote');
+
+        // Update repository metadata if default branch is available
+        if (gitRemoteData?.defaultBranch && updatedData.repository.metadata) {
+          updatedData.repository = {
+            ...updatedData.repository,
+            metadata: {
+              ...updatedData.repository.metadata,
+              defaultBranch: gitRemoteData.defaultBranch,
+            }
+          };
+          partial.repository = updatedData.repository;
+          changedFields.push('repository');
+        }
+
         break;
       }
       default:
@@ -634,8 +677,8 @@ export class RepositoryDataCache extends EventEmitter {
    * Get repository by path from Alexandria
    */
   private async getRepositoryByPath(repoPath: string): Promise<EnhancedAlexandriaEntry> {
-    const repos = await AlexandriaService.getRepositories();
-    const repo = repos.find(r => r.path === repoPath);
+    // Use direct path lookup instead of fetching all repositories
+    const repo = await AlexandriaService.getRepositoryByPath(repoPath);
 
     if (!repo) {
       throw new Error(`Repository not found: ${repoPath}`);
@@ -668,9 +711,10 @@ export class RepositoryDataCache extends EventEmitter {
   }
 
   /**
-   * Get branch status for a repository
+   * Extract branch status from GitStatusWithFiles
+   * Uses data already available from the monitoring service to avoid redundant git calls
    */
-  private async getBranchStatus(repoPath: string, gitStatus: GitStatusWithFiles | null): Promise<any> {
+  private extractBranchStatus(gitStatus: GitStatusWithFiles | null): any {
     if (!gitStatus) {
       return {
         ahead: 0,
@@ -678,48 +722,51 @@ export class RepositoryDataCache extends EventEmitter {
       };
     }
 
-    try {
-      const branchStatus = await GitService.getBranchStatus(repoPath);
-      const pushSafety = await GitService.isPushSafe(repoPath);
+    const ahead = gitStatus.ahead || 0;
+    const behind = gitStatus.behind || 0;
 
-      return {
-        ahead: gitStatus.ahead || branchStatus.ahead || 0,
-        behind: gitStatus.behind || branchStatus.behind || 0,
-        upstream: branchStatus.upstream,
-        canFastForward: branchStatus.canFastForward,
-        needsUpstream: pushSafety.needsUpstream,
-      };
-    } catch (error) {
-      return {
-        ahead: gitStatus.ahead || 0,
-        behind: gitStatus.behind || 0,
-      };
-    }
+    // Determine if we can fast-forward (behind > 0, ahead == 0, no uncommitted changes)
+    const hasUncommittedChanges = gitStatus.isDirty;
+    const canFastForward = behind > 0 && ahead === 0 && !hasUncommittedChanges;
+
+    // If behind is 0 and ahead is 0, we likely don't have an upstream configured
+    // This is a heuristic - the monitoring service should ideally provide this info
+    const needsUpstream = ahead === 0 && behind === 0 && gitStatus.branch !== 'main' && gitStatus.branch !== 'master';
+
+    return {
+      ahead,
+      behind,
+      upstream: undefined, // Not available in GitStatusWithFiles
+      canFastForward,
+      needsUpstream,
+    };
   }
 
   /**
    * Extract quality metrics from packages data
+   * Converts from library's flat QualityMetrics to our wrapped format
    */
   private extractQualityMetrics(
-    packagesData: CacheSliceDataMap['packages'] | { packages: PackageLayer[] } | null | undefined,
+    packagesData: PackagesData | null | undefined,
   ): QualityMetrics | null {
     if (!packagesData?.packages?.[0]?.qualityMetrics) {
       return null;
     }
 
-    const metrics = packagesData.packages[0].qualityMetrics;
+    const metrics = packagesData.packages[0].qualityMetrics as LibraryQualityMetrics;
+    // Library metrics are flat, we wrap them in hexagon property
     return {
-      hexagon: metrics.hexagon || {
-        tests: 0,
-        deadCode: 0,
-        formatting: 0,
-        linting: 0,
-        types: 0,
-        documentation: 0,
+      hexagon: {
+        tests: metrics.tests ?? 0,
+        deadCode: metrics.deadCode ?? 0,
+        formatting: metrics.formatting ?? 0,
+        linting: metrics.linting ?? 0,
+        types: metrics.types ?? 0,
+        documentation: metrics.documentation ?? 0,
       },
-      tier: metrics.tier || 'bronze',
-      availableTools: metrics.availableTools || [],
-      confidence: metrics.confidence || 'low',
+      tier: 'bronze', // TODO: Calculate tier from metrics
+      availableTools: [], // TODO: Extract from package
+      confidence: 'low', // TODO: Calculate confidence
     };
   }
 

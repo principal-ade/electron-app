@@ -60,4 +60,20 @@ export class AgentSessionSDKService {
       directory,
     );
   }
+
+  /**
+   * Subscribe to processed events
+   * Returns an unsubscribe function
+   */
+  static onProcessedEvent(
+    callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
+  ): () => void {
+    console.log('[AgentSessionSDKService] Setting up onProcessedEvent subscription');
+    const unsubscribe = window.mainProcess.agentSessionSDK.onProcessedEvent((event) => {
+      console.log('[AgentSessionSDKService] Event received from IPC:', event.eventType);
+      callback(event);
+    });
+    console.log('[AgentSessionSDKService] Subscription set up, unsubscribe function created');
+    return unsubscribe;
+  }
 }

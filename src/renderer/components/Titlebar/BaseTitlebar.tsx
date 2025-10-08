@@ -10,6 +10,7 @@ declare global {
       minimize: () => void;
       maximize: () => void;
       close: () => void;
+      closeWithConfirmation: () => Promise<boolean>;
       isMaximized: () => Promise<boolean>;
       onMaximizeChange: (callback: (isMaximized: boolean) => void) => void;
     };
@@ -21,6 +22,7 @@ export interface BaseTitlebarProps {
   showWindowControls?: boolean;
   showThemeDropdown?: boolean;
   showCustomizeButton?: boolean;
+  confirmBeforeClose?: boolean;
   children?: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
@@ -32,6 +34,7 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
   showWindowControls = true,
   showThemeDropdown = false,
   showCustomizeButton = false,
+  confirmBeforeClose = false,
   children,
   className = '',
   style,
@@ -182,7 +185,13 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
           </button>
           <button
             className="titlebar-button close"
-            onClick={() => window.electronTitlebar?.close()}
+            onClick={() => {
+              if (confirmBeforeClose) {
+                window.electronTitlebar?.closeWithConfirmation();
+              } else {
+                window.electronTitlebar?.close();
+              }
+            }}
             aria-label="Close"
           >
             <svg width="12" height="12" viewBox="0 0 12 12">
