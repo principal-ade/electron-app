@@ -46,6 +46,12 @@ export const GlobalFeedbackProvider: React.FC<GlobalFeedbackProviderProps> = ({
 
     // Global context menu handler
     const handleContextMenu = (e: MouseEvent) => {
+      // Don't interfere if the event has already been prevented
+      // This allows custom context menus (like file tree) to work
+      if (e.defaultPrevented) {
+        return;
+      }
+
       const target = e.target as HTMLElement;
 
       // Use enhanced component detection

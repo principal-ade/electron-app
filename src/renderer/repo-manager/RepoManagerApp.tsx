@@ -5,7 +5,7 @@ import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
 import { UserPromptProvider } from '../components/mcp/UserPromptProvider';
 import { AppVersionManagerService } from '../main-process-api/AppVersionManagerService';
 import type { Repository } from '../../shared/types/repository.types';
-import { RepositoryManager } from './RepositoryManager';
+import { RepositoryWorkspace } from './RepositoryWorkspace';
 
 interface RepoManagerWindowData {
   repository?: Repository;
@@ -119,7 +119,7 @@ export const RepoManagerApp: React.FC = () => {
     }
 
     return (
-      <RepositoryManager
+      <RepositoryWorkspace
         repository={repository}
         onBack={() => window.close()}
         hasUpdateAvailable={hasUpdateAvailable}

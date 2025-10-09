@@ -344,14 +344,14 @@ export class WorkspaceLayoutService {
       'development': {
         id: 'development',
         name: 'Development',
-        description: 'File tree, terminal, and city visualization',
+        description: 'File tree, tabbed terminal, and city visualization',
         layout: {
           left: {
             type: 'tabs',
             panels: ['fileTree', 'docs'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
-          middle: 'terminal',
+          middle: 'tabbedTerminal',
           right: 'cityVisualization',
         },
         defaultSizes: { left: 20, middle: 45, right: 35 },

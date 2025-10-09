@@ -2,11 +2,18 @@ import React from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import type { LucideIcon } from 'lucide-react';
 
+interface PanelEmptyStateAction {
+  label: string;
+  icon?: LucideIcon;
+  onClick: () => void;
+}
+
 interface PanelEmptyStateProps {
   icon: LucideIcon;
   title: string;
   description?: string;
   iconSize?: number;
+  actions?: PanelEmptyStateAction[];
 }
 
 export const PanelEmptyState: React.FC<PanelEmptyStateProps> = ({
@@ -14,6 +21,7 @@ export const PanelEmptyState: React.FC<PanelEmptyStateProps> = ({
   title,
   description,
   iconSize = 48,
+  actions,
 }) => {
   const { theme } = useTheme();
 
@@ -28,7 +36,7 @@ export const PanelEmptyState: React.FC<PanelEmptyStateProps> = ({
         justifyContent: 'center',
         color: theme.colors.textSecondary,
         fontSize: '14px',
-        gap: '8px',
+        gap: '16px',
         backgroundColor: theme.colors.background,
         padding: '20px',
         textAlign: 'center',
@@ -39,6 +47,39 @@ export const PanelEmptyState: React.FC<PanelEmptyStateProps> = ({
       {description && (
         <div style={{ fontSize: '12px', opacity: 0.7, maxWidth: '400px' }}>
           {description}
+        </div>
+      )}
+      {actions && actions.length > 0 && (
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          {actions.map((action, index) => (
+            <button
+              key={index}
+              onClick={action.onClick}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                border: 'none',
+                borderRadius: '6px',
+                backgroundColor: theme.colors.primary,
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+            >
+              {action.icon && <action.icon size={16} />}
+              {action.label}
+            </button>
+          ))}
         </div>
       )}
     </div>

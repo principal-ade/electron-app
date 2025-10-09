@@ -45,6 +45,10 @@ export const shellAPI = {
   moveToTrash: async (filePath: string) =>
     ipcRenderer.invoke(ShellAPIEvent.MOVE_TO_TRASH, filePath),
 
+  // Show a file or directory in the system file manager (Finder/Explorer)
+  showItemInFolder: async (filePath: string) =>
+    ipcRenderer.invoke(ShellAPIEvent.SHOW_ITEM_IN_FOLDER, filePath),
+
   // Open a file or directory in the system's default application
   openPath: async (path: string) =>
     ipcRenderer.invoke(ShellAPIEvent.OPEN_PATH, path),

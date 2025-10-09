@@ -211,6 +211,14 @@ export const TabbedTerminalPanel = forwardRef<
     // Keyboard shortcuts for tab navigation
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
+        // Command/Ctrl + T to open new tab
+        if ((e.metaKey || e.ctrlKey) && e.key === 't') {
+          e.preventDefault();
+          e.stopPropagation();
+          addNewTab();
+          return;
+        }
+
         // Command/Ctrl + W to close active tab
         if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
           if (activeTabId && tabs.length > 0) {
@@ -240,7 +248,7 @@ export const TabbedTerminalPanel = forwardRef<
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [tabs, switchTab, activeTabId, closeTab]);
+    }, [tabs, switchTab, activeTabId, closeTab, addNewTab]);
 
     return (
       <div
@@ -257,7 +265,7 @@ export const TabbedTerminalPanel = forwardRef<
             style={{
               display: 'flex',
               alignItems: 'stretch',
-              height: '36px',
+              height: '40px',
               flexShrink: 0,
             }}
           >
@@ -356,7 +364,7 @@ export const TabbedTerminalPanel = forwardRef<
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '32px',
+                width: '36px',
                 height: '100%',
                 border: 'none',
                 backgroundColor: 'transparent',

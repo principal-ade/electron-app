@@ -66,6 +66,12 @@ export const FileTreeTab: React.FC<FileTreeTabProps> = ({
         height: '100%',
         overflow: 'auto',
       }}
+      onContextMenu={(e) => {
+        // Always prevent default browser context menu when we have a custom handler
+        if (onContextMenu) {
+          e.preventDefault();
+        }
+      }}
     >
       <DynamicFileTree
         key={fileTree.allFiles?.length || 0}
@@ -73,10 +79,8 @@ export const FileTreeTab: React.FC<FileTreeTabProps> = ({
         theme={theme}
         onFileSelect={onFileSelect}
         onContextMenu={onContextMenu}
-        showIcons={true}
         defaultOpen={false}
         padding="16px"
-        transparentBackground={true}
       />
     </div>
   );

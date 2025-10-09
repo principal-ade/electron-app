@@ -154,4 +154,25 @@ export class ShellService {
     }
     return result;
   }
+
+  /**
+   * Show a file or directory in the system file manager (Finder/Explorer).
+   * Opens the parent folder and selects the item.
+   */
+  static async showItemInFolder(
+    filePath: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    console.log(`[ShellService] Showing item in folder: ${filePath}`);
+    return window.mainProcess.shell.showItemInFolder(filePath);
+  }
+
+  /**
+   * Move a file or directory to the system trash/recycle bin.
+   */
+  static async moveToTrash(
+    filePath: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    console.log(`[ShellService] Moving to trash: ${filePath}`);
+    return window.mainProcess.shell.moveToTrash(filePath);
+  }
 }

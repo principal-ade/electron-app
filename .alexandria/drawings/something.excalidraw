@@ -1,12 +1,12 @@
 {
   "elements": [
     {
-      "id": "VXBcnO2KttgYaZPBg1WW7",
-      "type": "diamond",
-      "x": 78.66015625,
-      "y": 238.265625,
-      "width": 170.67578125,
-      "height": 119.15625,
+      "id": "-u3M_XziQOVpcPRqLhKzt",
+      "type": "ellipse",
+      "x": 77.05859375,
+      "y": 160.9765625,
+      "width": 130.578125,
+      "height": 101.10546875,
       "angle": 0,
       "strokeColor": "#1e1e1e",
       "backgroundColor": "transparent",
@@ -21,12 +21,12 @@
       "roundness": {
         "type": 2
       },
-      "seed": 321742868,
-      "version": 21,
-      "versionNonce": 584977452,
+      "seed": 310897940,
+      "version": 19,
+      "versionNonce": 603393196,
       "isDeleted": false,
       "boundElements": null,
-      "updated": 1760023841079,
+      "updated": 1760023827779,
       "link": null,
       "locked": false
     }
@@ -60,7 +60,17 @@
       "type": "selection",
       "customType": null,
       "locked": false,
-      "lastActiveTool": null
+      "lastActiveTool": {
+        "type": "hand",
+        "customType": null,
+        "locked": false,
+        "lastActiveTool": {
+          "type": "selection",
+          "customType": null,
+          "locked": false,
+          "lastActiveTool": null
+        }
+      }
     },
     "penMode": false,
     "penDetected": false,
@@ -80,7 +90,7 @@
     "isRotating": false,
     "lastPointerDownWith": "mouse",
     "multiElement": null,
-    "name": null,
+    "name": "something",
     "contextMenu": null,
     "openMenu": null,
     "openPopup": null,
@@ -90,11 +100,13 @@
       "shown": false,
       "data": null
     },
-    "previousSelectedElementIds": {},
+    "previousSelectedElementIds": {
+      "i-gIM9kPEy8MnY4yTy2Ub": true
+    },
     "resizingElement": null,
     "scrolledOutside": false,
     "selectedElementIds": {
-      "VXBcnO2KttgYaZPBg1WW7": true
+      "-u3M_XziQOVpcPRqLhKzt": true
     },
     "hoveredElementIds": {},
     "selectedGroupIds": {},

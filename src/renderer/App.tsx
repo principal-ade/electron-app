@@ -51,9 +51,9 @@ const StandaloneTerminal = React.lazy(() =>
 const StoreViewer = React.lazy(() =>
   import('./pages/StoreViewer').then((m) => ({ default: m.StoreViewer })),
 );
-const RepositoryManager = React.lazy(() =>
-  import('./repo-manager/RepositoryManager').then((m) => ({
-    default: m.RepositoryManager,
+const RepositoryWorkspace = React.lazy(() =>
+  import('./repo-manager/RepositoryWorkspace').then((m) => ({
+    default: m.RepositoryWorkspace,
   })),
 );
 const MultiFileEditorWindow = React.lazy(() =>
@@ -286,7 +286,7 @@ function AppContent({
     const repoData = windowInitData as RepositoryMapsData | null;
     return (
       <Suspense fallback={<LoadingFallback />}>
-        <RepositoryManager
+        <RepositoryWorkspace
           repository={repoData?.repository}
           onBack={() => window.close()}
           hasUpdateAvailable={hasUpdateAvailable}

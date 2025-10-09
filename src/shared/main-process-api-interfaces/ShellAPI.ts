@@ -6,6 +6,7 @@ export enum ShellAPIEvent {
   OPEN_IN_EDITOR = 'shell:open-in-editor',
   OPEN_IN_TERMINAL = 'shell:open-in-terminal',
   MOVE_TO_TRASH = 'shell:move-to-trash',
+  SHOW_ITEM_IN_FOLDER = 'shell:show-item-in-folder',
   OPEN_PATH = 'shell:openPath',
   OPEN_TERMINAL = 'shell:openTerminal',
   CHECK_COMMAND = 'terminal:checkCommand',
@@ -47,6 +48,14 @@ export interface ShellAPI {
    * Move a file or directory to the system trash/recycle bin.
    */
   moveToTrash: (
+    filePath: string,
+  ) => Promise<{ success: boolean; error?: string }>;
+
+  /**
+   * Show a file or directory in the system file manager (Finder/Explorer).
+   * Opens the parent folder and selects the item.
+   */
+  showItemInFolder: (
     filePath: string,
   ) => Promise<{ success: boolean; error?: string }>;
 
