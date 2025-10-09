@@ -117,9 +117,11 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
   return (
     <div
       style={{
-        padding: '20px',
+        padding: '12px 16px',
         borderBottom: `1px solid ${theme.colors.border}`,
         backgroundColor: theme.colors.backgroundLight,
+        height: '101px',
+        boxSizing: 'border-box',
       }}
     >
       <style>{spinAnimation}</style>

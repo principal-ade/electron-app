@@ -8,6 +8,7 @@ import type {
 import { GitChangesPanel } from './components/GitChangesPanel';
 import { ExcalidrawPanel } from './components/ExcalidrawPanel';
 import { DrawingsListPanel } from './components/DrawingsListPanel';
+import { ToolsPanel } from './components/ToolsPanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -103,6 +104,12 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
     description: 'Development tools and utilities for the repository.',
     defaultLocation: 'left',
     slices: ['packages'],
+    render: ({ context }) => (
+      <ToolsPanel
+        packageLayers={context.packages}
+        repositoryPath={context.repositoryPath || ''}
+      />
+    ),
   },
   {
     id: 'docs',

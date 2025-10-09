@@ -20,7 +20,7 @@ import type { LensResult, Issue } from '@principal-ai/codebase-quality-lenses';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import type { ToolExecutionRequest, ToolExecutionResponse } from '../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
-interface ToolsTabProps {
+interface ToolsPanelProps {
   packageLayers?: PackageLayer[] | null;
   repositoryPath: string;
   onHighlightLayersChange?: (layers: HighlightLayer[]) => void;
@@ -85,7 +85,7 @@ const CATEGORY_COLORS: Record<ToolInfo['category'], string> = {
   other: '#9ca3af',      // gray-400
 };
 
-export const ToolsTab: React.FC<ToolsTabProps> = ({ packageLayers, repositoryPath, onHighlightLayersChange }) => {
+export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositoryPath, onHighlightLayersChange }) => {
   const { theme } = useTheme();
   const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
   const [runningTools, setRunningTools] = useState<Map<string, boolean>>(new Map());
@@ -835,7 +835,8 @@ export function createHighlightLayersFromLensResults(
             opacity: 0.8,
             items: Array.from(filesWithErrors).map(path => ({
               path,
-              type: 'file' as const
+              type: 'file' as const,
+              renderStrategy: 'fill' as const
             })),
             enabled: true,
             priority: 10,
@@ -851,7 +852,8 @@ export function createHighlightLayersFromLensResults(
             opacity: 0.6,
             items: Array.from(filesWithWarnings).map(path => ({
               path,
-              type: 'file' as const
+              type: 'file' as const,
+              renderStrategy: 'fill' as const
             })),
             enabled: true,
             priority: 5,
@@ -879,7 +881,8 @@ export function createHighlightLayersFromLensResults(
 
           items = analyzedFiles.map((file: any) => ({
             path: typeof file === 'string' ? file : file.path || file.relative,
-            type: 'file' as const
+            type: 'file' as const,
+            renderStrategy: 'fill' as const
           }));
 
           console.log(`[createHighlightLayers] Created ${items.length} file items, first few:`, items.slice(0, 3));
@@ -890,7 +893,8 @@ export function createHighlightLayersFromLensResults(
 
           items = [{
             path: highlightPath,
-            type: 'directory' as const
+            type: 'directory' as const,
+            renderStrategy: 'fill' as const
           }];
         }
 

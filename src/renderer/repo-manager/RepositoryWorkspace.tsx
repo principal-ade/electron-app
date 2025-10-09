@@ -65,7 +65,7 @@ import { HelpModal } from './shared/HelpModal';
 import { useGitChanges } from '../contexts/GitChangesContext';
 import { useRepositoryData } from '../hooks/useRepositoryData';
 import { RepositorySearchTab } from '../components/repository-maps/RepositorySearchTab';
-import { ToolsTab } from './shared/ToolsTab';
+import { ToolsPanel } from '../panels/components/ToolsPanel';
 import { RightPaneView } from '../components/repository-maps/RightPaneContainer';
 import { FileTreePanelContent } from '../panels/components/FileTreePanelContent';
 import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
@@ -854,6 +854,33 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
       };
     }, [gitHighlightLayers, registerLayer, unregisterLayer]);
 
+    // Register tools highlight layers
+    useEffect(() => {
+      if (!toolsHighlightLayers || toolsHighlightLayers.length === 0) {
+        return;
+      }
+
+      console.log('[RepositoryWorkspace] Registering tools highlight layers:', toolsHighlightLayers.length);
+
+      // Register each tools layer
+      toolsHighlightLayers.forEach((layer, idx) => {
+        registerLayer(`tools-highlight-${idx}`, {
+          name: layer.name,
+          enabled: layer.enabled,
+          color: layer.color,
+          opacity: layer.opacity,
+          priority: layer.priority,
+          items: layer.items,
+        });
+      });
+
+      return () => {
+        toolsHighlightLayers.forEach((_, idx) => {
+          unregisterLayer(`tools-highlight-${idx}`);
+        });
+      };
+    }, [toolsHighlightLayers, registerLayer, unregisterLayer]);
+
     // Separate provider for viewing individual files
     const fileViewerContentProvider = useMemo(() => {
       return new GitHubContentProvider(
@@ -1443,8 +1470,8 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
           </div>
         ),
         tools: (
-          <ToolsTab
-            packageLayers={packageLayers}
+          <ToolsPanel
+            packageLayers={cacheData?.packages ?? null}
             repositoryPath={repositoryPathForTools}
             onHighlightLayersChange={setToolsHighlightLayers}
           />

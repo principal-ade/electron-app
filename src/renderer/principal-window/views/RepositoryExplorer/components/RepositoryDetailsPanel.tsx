@@ -118,7 +118,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const cityService = useMemo(() => RepositoryCityService.getInstance(), []);
 
   // State for nested panel collapse
-  const [nestedRightPanelCollapsed, setNestedRightPanelCollapsed] = useState(false);
+  const [nestedRightPanelCollapsed, setNestedRightPanelCollapsed] = useState(true);
 
   // Panel state for nested panel layout (details content in middle, preview/terminal in right)
   const nestedPanelState = usePanelPersistence({
@@ -876,8 +876,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       {/* Header skeleton */}
       <div
         style={{
-          padding: '20px',
+          padding: '12px 16px',
           borderBottom: `1px solid ${theme.colors.border}`,
+          height: '101px',
+          boxSizing: 'border-box',
         }}
       >
         <div
