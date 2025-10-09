@@ -1103,6 +1103,7 @@ export const DevelopmentWorkspace: React.FC<
     repository.localClones,
     handleDocumentSelect,
     selectedDocPath,
+    handleTaskClick,
   ]);
 
   // Build tabs from registry using panel content
