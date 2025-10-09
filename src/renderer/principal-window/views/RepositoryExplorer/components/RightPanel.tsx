@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { FileText, Terminal as TerminalIcon } from 'lucide-react';
+import { FileText, Terminal as TerminalIcon, BookOpen } from 'lucide-react';
 import { FilePreviewPanel } from '../../../../panels/components/FilePreviewPanel';
+import { MarkdownRenderingPanel } from '../../../../panels/components/MarkdownRenderingPanel';
 import TerminalPanel from '../../../../panels/TerminalPanel';
 import { createFileTreeSource } from '../../../../types/file-tree-source';
 
 interface RightPanelProps {
   filePath: string | null;
   repositoryPath: string;
-  activeTab?: 'preview' | 'terminal';
-  onTabChange?: (tab: 'preview' | 'terminal') => void;
+  activeTab?: 'preview' | 'terminal' | 'markdown';
+  onTabChange?: (tab: 'preview' | 'terminal' | 'markdown') => void;
   onClose?: () => void;
 }
 
@@ -21,7 +22,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   onClose,
 }) => {
   const { theme } = useTheme();
-  const [internalActiveTab, setInternalActiveTab] = useState<'preview' | 'terminal'>('preview');
+  const [internalActiveTab, setInternalActiveTab] = useState<'preview' | 'terminal' | 'markdown'>('preview');
 
   // Use external tab if provided, otherwise use internal state
   const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
@@ -38,7 +39,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
     );
   }, [repositoryPath]);
 
-  const handleTabChange = (tab: 'preview' | 'terminal') => {
+  const handleTabChange = (tab: 'preview' | 'terminal' | 'markdown') => {
     if (onTabChange) {
       onTabChange(tab);
     } else {
@@ -46,10 +47,16 @@ export const RightPanel: React.FC<RightPanelProps> = ({
     }
   };
 
-  // Switch to preview tab when a file is selected
+  // Switch to appropriate tab when a file is selected
   useEffect(() => {
-    if (filePath && activeTab === 'terminal') {
-      handleTabChange('preview');
+    if (filePath) {
+      // Check if it's a markdown file
+      const isMarkdown = filePath.toLowerCase().endsWith('.md');
+      if (isMarkdown && activeTab === 'terminal') {
+        handleTabChange('markdown');
+      } else if (!isMarkdown && activeTab === 'terminal') {
+        handleTabChange('preview');
+      }
     }
   }, [filePath]);
 
@@ -103,6 +110,38 @@ export const RightPanel: React.FC<RightPanelProps> = ({
           File Preview
         </button>
         <button
+          onClick={() => handleTabChange('markdown')}
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '12px 16px',
+            backgroundColor: activeTab === 'markdown' ? theme.colors.background : 'transparent',
+            color: activeTab === 'markdown' ? theme.colors.text : theme.colors.textSecondary,
+            border: 'none',
+            borderBottom: activeTab === 'markdown' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: activeTab === 'markdown' ? 600 : 500,
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            if (activeTab !== 'markdown') {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (activeTab !== 'markdown') {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }
+          }}
+        >
+          <BookOpen size={16} />
+          Markdown
+        </button>
+        <button
           onClick={() => handleTabChange('terminal')}
           style={{
             flex: 1,
@@ -140,6 +179,12 @@ export const RightPanel: React.FC<RightPanelProps> = ({
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {activeTab === 'preview' ? (
           <FilePreviewPanel
+            filePath={filePath}
+            source={source}
+            onClose={onClose}
+          />
+        ) : activeTab === 'markdown' ? (
+          <MarkdownRenderingPanel
             filePath={filePath}
             source={source}
             onClose={onClose}

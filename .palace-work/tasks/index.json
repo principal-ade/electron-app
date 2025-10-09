@@ -1,55 +1,16 @@
 {
   "version": "1.0.0",
-  "lastUpdated": 1759467189529,
-  "tasks": {
-    "task-1759465397897-aly1hgdfn": {
-      "id": "task-1759465397897-aly1hgdfn",
-      "status": "pending",
-      "priority": "normal",
-      "directoryPath": "",
-      "senderId": "electron-app",
-      "tags": [
-        "test",
-        "handoff",
-        "mcp",
-        "themed-markdown"
-      ],
-      "receivedAt": 1759465397897,
-      "updatedAt": 1759465397897,
-      "filePath": "active/task-1759465397897-aly1hgdfn.task.md"
-    },
-    "task-1759467189528-tue83ru3g": {
-      "id": "task-1759467189528-tue83ru3g",
-      "status": "pending",
-      "priority": "normal",
-      "directoryPath": "",
-      "senderId": "electron-app",
-      "tags": [
-        "test",
-        "handoff",
-        "mcp",
-        "themed-markdown"
-      ],
-      "receivedAt": 1759467189528,
-      "updatedAt": 1759467189528,
-      "filePath": "active/task-1759467189528-tue83ru3g.task.md"
-    }
-  },
+  "lastUpdated": 1759986525392,
+  "tasks": {},
   "byStatus": {
-    "pending": [
-      "task-1759465397897-aly1hgdfn",
-      "task-1759467189528-tue83ru3g"
-    ],
+    "pending": [],
     "acknowledged": [],
     "in_progress": [],
     "completed": [],
     "failed": []
   },
   "bySender": {
-    "electron-app": [
-      "task-1759465397897-aly1hgdfn",
-      "task-1759467189528-tue83ru3g"
-    ]
+    "electron-app": []
   },
   "byADE": {}
 }

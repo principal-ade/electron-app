@@ -50,13 +50,14 @@ export function HighlightLayersProvider({ children }: HighlightLayersProviderPro
     return Array.from(layers.values()).sort((a, b) => b.priority - a.priority);
   }, [layers]);
 
+  // These callbacks don't need layers in dependencies since they use setLayers with updater function
   const registerLayer = useCallback((id: string, layerData: Omit<HighlightLayer, 'id'>) => {
     setLayers(prev => {
       const next = new Map(prev);
       next.set(id, { ...layerData, id });
       return next;
     });
-  }, []);
+  }, []); // No dependencies - stable reference
 
   const unregisterLayer = useCallback((id: string) => {
     setLayers(prev => {
@@ -64,7 +65,7 @@ export function HighlightLayersProvider({ children }: HighlightLayersProviderPro
       next.delete(id);
       return next;
     });
-  }, []);
+  }, []); // No dependencies - stable reference
 
   const setLayerEnabled = useCallback((id: string, enabled: boolean) => {
     setLayers(prev => {
@@ -75,7 +76,7 @@ export function HighlightLayersProvider({ children }: HighlightLayersProviderPro
       next.set(id, { ...layer, enabled });
       return next;
     });
-  }, []);
+  }, []); // No dependencies - stable reference
 
   const getLayer = useCallback((id: string) => {
     return layers.get(id);

@@ -50,7 +50,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [panelSizes, setPanelSizes] = useState({ left: 20, middle: 50, right: 30 });
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
-  const [rightPanelTab, setRightPanelTab] = useState<'preview' | 'terminal'>('preview');
+  const [rightPanelTab, setRightPanelTab] = useState<'preview' | 'terminal' | 'markdown'>('preview');
 
   const handleFileSelect = useCallback(
     (filePath: string | null) => {
@@ -67,11 +67,11 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
     onEnsureRightPanelOpen?.();
   }, [onEnsureRightPanelOpen]);
 
-  // Use panel persistence hook
+  // Use panel persistence hook for three-panel layout (left collapsed, middle main, right always hidden)
   const panelState = usePanelPersistence({
     viewKey: 'repositoryExplorer',
-    defaultSizes: panelSizes,
-    collapsed: { left: sidebarCollapsed, right: rightSidebarCollapsed },
+    defaultSizes: { left: 20, middle: 80, right: 0 },
+    collapsed: { left: sidebarCollapsed, right: true },
     panelType: 'three-panel',
   });
 
@@ -480,7 +480,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
     );
   };
 
-  // Render middle panel - Repository details
+  // Render middle panel - Repository details with nested panels
   const renderMiddlePanel = () => {
     return (
       <RepositoryDetailsPanel
@@ -496,24 +496,21 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         isRefreshing={isLoadingRepos}
         onFileSelect={handleFileSelect}
         onOpenTerminal={handleOpenTerminal}
-      />
-    );
-  };
-
-  // Render right panel - File Preview and Terminal
-  const renderRightPanel = () => {
-    return (
-      <RightPanel
-        filePath={selectedFilePath}
-        repositoryPath={selectedRepositoryPath || ''}
-        activeTab={rightPanelTab}
-        onTabChange={setRightPanelTab}
-        onClose={() => {
+        // Props for the nested right panel (File Preview + Terminal)
+        selectedFilePath={selectedFilePath}
+        rightPanelTab={rightPanelTab}
+        onRightPanelTabChange={setRightPanelTab}
+        onRightPanelClose={() => {
           setSelectedFilePath(null);
           onCollapseRightPanel?.();
         }}
       />
     );
+  };
+
+  // Render right panel - Empty placeholder (kept collapsed)
+  const renderRightPanel = () => {
+    return null;
   };
 
   return (
@@ -556,20 +553,20 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
             content: renderMiddlePanel(),
           },
           {
-            id: 'file-preview',
-            label: 'Preview & Terminal',
+            id: 'empty-panel',
+            label: 'Empty',
             content: renderRightPanel(),
           },
         ]}
         layout={{
           left: 'repository-list',
           middle: 'repository-details',
-          right: 'file-preview',
+          right: null,
         }}
-        collapsiblePanels={{ left: true, right: true }}
-        defaultSizes={panelState.type === 'three-panel' ? panelState.sizes : { left: 20, middle: 50, right: 30 }}
-        minSizes={{ left: 15, middle: 30, right: 20 }}
-        collapsed={panelState.collapsed}
+        collapsiblePanels={{ left: true, right: false }}
+        defaultSizes={panelState.type === 'three-panel' ? panelState.sizes : { left: 20, middle: 80, right: 0 }}
+        minSizes={{ left: 15, middle: 40, right: 0 }}
+        collapsed={{ left: panelState.collapsed?.left || false, right: true }}
         style={{ height: '100%', width: '100%' }}
         theme={theme}
         showCollapseButtons={false}

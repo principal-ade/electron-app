@@ -9,6 +9,7 @@ import {
   Wrench,
   FolderTree,
   Activity,
+  ListTodo,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
@@ -60,6 +61,7 @@ import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
 import type { EventHighlightService } from './services/EventHighlightService';
 import { useHighlightLayers } from '../contexts/HighlightLayersContext';
 import { CityVisualizationPanel } from '../panels/components/CityVisualizationPanel';
+import { TasksPanel } from '../panels/components/TasksPanel';
 
 type PanelTabConfig = { id: string; label: string; icon?: React.ReactNode; content: React.ReactNode; visible?: boolean };
 
@@ -424,6 +426,18 @@ export const DevelopmentWorkspace: React.FC<
       setRightPaneMode('document');
     },
     [],
+  );
+
+  // Handle task click - open task markdown in viewer
+  const handleTaskClick = useCallback(
+    async (task: any) => {
+      // Tasks are stored in .palace-work/tasks/active/ directory
+      const taskDocPath = task.documentPath || `${repositoryPath}/.palace-work/tasks/active/${task.id}.task.md`;
+      setSelectedDocPath(taskDocPath);
+      setSelectedDocType('markdown');
+      setRightPaneMode('document');
+    },
+    [repositoryPath],
   );
 
   const openFileInRightPane = useCallback(
@@ -1053,6 +1067,16 @@ export const DevelopmentWorkspace: React.FC<
           maxEvents={100}
         />
       ),
+      tasks: (
+        <TasksPanel
+          repositoryPath={
+            activeFileTreeSource?.type === 'local'
+              ? activeFileTreeSource.location
+              : repository.localClones?.[0]?.path || ''
+          }
+          onTaskClick={handleTaskClick}
+        />
+      ),
     };
     return map;
   }, [
@@ -1090,6 +1114,7 @@ export const DevelopmentWorkspace: React.FC<
     { id: 'tools', label: 'Tools', icon: <Wrench size={14} />, visible: true, content: panelContentMap.tools },
     { id: 'docs', label: 'Docs', icon: <Book size={14} />, visible: true, content: panelContentMap.docs },
     { id: 'agentEvents', label: 'Agent Events', icon: <Activity size={14} />, visible: true, content: panelContentMap.agentEvents },
+    { id: 'tasks', label: 'Tasks', icon: <ListTodo size={14} />, visible: true, content: panelContentMap.tasks },
   ];
 
   // Create toolbar items

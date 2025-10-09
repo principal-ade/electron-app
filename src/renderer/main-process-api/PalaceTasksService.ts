@@ -28,4 +28,8 @@ export class PalaceTasksService {
       status
     );
   }
+
+  static async deleteTask(repositoryPath: string, taskId: string): Promise<boolean> {
+    return window.mainProcess.palaceTasks.deleteTask(repositoryPath, taskId);
+  }
 }

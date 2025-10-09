@@ -21,6 +21,7 @@ interface RepositoryHeaderProps {
   onConfigure?: () => void;
   onTerminalWindowsUpdate: (windows: Map<string, number>) => void;
   onOpenTerminal?: () => void;
+  isNestedRightPanelCollapsed?: boolean;
 }
 
 const spinAnimation = `
@@ -50,6 +51,7 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
   onConfigure,
   onTerminalWindowsUpdate,
   onOpenTerminal,
+  isNestedRightPanelCollapsed,
 }) => {
   const { theme } = useTheme();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -366,7 +368,7 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
             }}
             title={
               onOpenTerminal
-                ? "Open terminal panel"
+                ? (isNestedRightPanelCollapsed ? "Show preview/terminal panel" : "Hide preview/terminal panel")
                 : (repository?.path && terminalWindows.has(repository.path)
                     ? "Focus existing terminal window"
                     : "Open terminal in repository directory")
@@ -374,7 +376,7 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
           >
             <Terminal size={14} />
             {onOpenTerminal
-              ? "Terminal"
+              ? (isNestedRightPanelCollapsed ? "Show Panel" : "Hide Panel")
               : (repository?.path && terminalWindows.has(repository.path)
                   ? "Focus Terminal"
                   : "Terminal")

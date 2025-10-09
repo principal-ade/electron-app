@@ -72,7 +72,7 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
     if ('right' in incomingSizes && incomingSizes.right > 0) {
       lastNonZeroSizesRef.current.right = incomingSizes.right;
     }
-  }, []);
+  }, []); // No dependencies - uses ref
 
   const getFallbackSize = useCallback((panel: 'left' | 'right') => {
     const storedSize = lastNonZeroSizesRef.current[panel];
@@ -92,9 +92,21 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
   }, [defaultSizes]);
 
   // Update sizes when defaultSizes changes (parent has loaded preferences)
+  // Use a ref to track if we've seen this defaultSizes object before
+  const prevDefaultSizesRef = useRef(defaultSizes);
   useEffect(() => {
-    setSizes(defaultSizes);
-    updateLastNonZeroSizes(defaultSizes);
+    // Only update if the actual values changed, not just the reference
+    const hasChanged =
+      ('left' in defaultSizes && defaultSizes.left !== prevDefaultSizesRef.current.left) ||
+      ('middle' in defaultSizes && 'middle' in prevDefaultSizesRef.current &&
+        defaultSizes.middle !== (prevDefaultSizesRef.current as PanelSizes).middle) ||
+      ('right' in defaultSizes && defaultSizes.right !== prevDefaultSizesRef.current.right);
+
+    if (hasChanged) {
+      setSizes(defaultSizes);
+      updateLastNonZeroSizes(defaultSizes);
+      prevDefaultSizesRef.current = defaultSizes;
+    }
   }, [defaultSizes, updateLastNonZeroSizes]);
 
   // Sync with parent's collapsed state (e.g., from titlebar buttons)

@@ -1,5 +1,11 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
+import {
+  ConfigurablePanelLayout,
+  type PanelDefinitionWithContent,
+  type PanelLayout,
+} from '@a24z/panels';
+import '@a24z/panels/panels.css';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import { createFileColorHighlightLayers } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
@@ -29,6 +35,10 @@ import { RepositoryPanelProvider } from '../../../../panels/RepositoryPanelProvi
 import { GitChangesPanel } from '../../../../panels/components/GitChangesPanel';
 import { createDefaultPanelVisibility } from '../../../../panels/registry';
 import { useHighlightLayers } from '../../../../contexts/HighlightLayersContext';
+import { RightPanel } from './RightPanel';
+import { usePanelPersistence } from '../../../../hooks/usePanelPersistence';
+import type { Task } from '../../../../../shared/main-process-api-interfaces/PalaceTasksAPI';
+import { PalaceTasksService } from '../../../../main-process-api/PalaceTasksService';
 
 interface RepositoryDetailsPanelProps {
   selectedRepository: EnhancedAlexandriaEntry | null;
@@ -43,6 +53,11 @@ interface RepositoryDetailsPanelProps {
   isRefreshing?: boolean;
   onFileSelect?: (filePath: string | null) => void;
   onOpenTerminal?: () => void;
+  // Props for nested right panel (File Preview + Terminal + Markdown)
+  selectedFilePath?: string | null;
+  rightPanelTab?: 'preview' | 'terminal' | 'markdown';
+  onRightPanelTabChange?: (tab: 'preview' | 'terminal' | 'markdown') => void;
+  onRightPanelClose?: () => void;
 }
 
 
@@ -59,6 +74,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   isRefreshing: _isRefreshing,
   onFileSelect,
   onOpenTerminal,
+  selectedFilePath,
+  rightPanelTab = 'preview',
+  onRightPanelTabChange,
+  onRightPanelClose,
 }) => {
   const { theme } = useTheme();
   const { registerLayer, unregisterLayer } = useHighlightLayers();
@@ -97,6 +116,22 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const [showFileColors, setShowFileColors] = useState(true);
 
   const cityService = useMemo(() => RepositoryCityService.getInstance(), []);
+
+  // State for nested panel collapse
+  const [nestedRightPanelCollapsed, setNestedRightPanelCollapsed] = useState(false);
+
+  // Panel state for nested panel layout (details content in middle, preview/terminal in right)
+  const nestedPanelState = usePanelPersistence({
+    viewKey: 'repositoryDetailsNested',
+    defaultSizes: { left: 0, middle: 50, right: 50 },
+    collapsed: { left: true, right: nestedRightPanelCollapsed },
+    panelType: 'three-panel',
+  });
+
+  // Toggle nested right panel function
+  const handleToggleNestedRightPanel = useCallback(() => {
+    setNestedRightPanelCollapsed(prev => !prev);
+  }, []);
 
   const repositoryId = useMemo(() => {
     if (!selectedRepository) {
@@ -139,20 +174,39 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   }, [fileTree]);
 
   // Create git highlight layers from git status
+  // Use stable keys based on actual file paths to avoid unnecessary re-renders
+  const untrackedKey = useMemo(() =>
+    (gitStatus.untracked?.map(item => item.path) ?? []).join('|'),
+    [gitStatus.untracked]
+  );
+  const stagedKey = useMemo(() =>
+    (gitStatus.staged?.map(item => item.path) ?? []).join('|'),
+    [gitStatus.staged]
+  );
+  const unstagedKey = useMemo(() =>
+    (gitStatus.unstaged?.map(item => item.path) ?? []).join('|'),
+    [gitStatus.unstaged]
+  );
+  const deletedKey = useMemo(() =>
+    (gitStatus.deleted?.map(item => item.path) ?? []).join('|'),
+    [gitStatus.deleted]
+  );
+
   const gitHighlightLayers = useMemo(() => {
     const layers: HighlightLayer[] = [];
 
     // Untracked files - Green (new files)
-    if (gitStatus.untracked && gitStatus.untracked.length > 0) {
+    const untrackedPaths = untrackedKey ? untrackedKey.split('|') : [];
+    if (untrackedPaths.length > 0 && untrackedPaths[0] !== '') {
       layers.push({
         id: 'git-untracked',
-        name: `Untracked (${gitStatus.untracked.length})`,
+        name: `Untracked (${untrackedPaths.length})`,
         enabled: true,
         color: '#10b981',
         priority: 25,
         opacity: 0.7,
-        items: gitStatus.untracked.map((item) => ({
-          path: item.path,
+        items: untrackedPaths.map((path) => ({
+          path,
           type: 'file' as const,
           renderStrategy: 'fill' as const,
         })),
@@ -160,16 +214,17 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     }
 
     // Staged files - Blue
-    if (gitStatus.staged && gitStatus.staged.length > 0) {
+    const stagedPaths = stagedKey ? stagedKey.split('|') : [];
+    if (stagedPaths.length > 0 && stagedPaths[0] !== '') {
       layers.push({
         id: 'git-staged',
-        name: `Staged (${gitStatus.staged.length})`,
+        name: `Staged (${stagedPaths.length})`,
         enabled: true,
         color: '#3b82f6',
         priority: 26,
         opacity: 0.7,
-        items: gitStatus.staged.map((item) => ({
-          path: item.path,
+        items: stagedPaths.map((path) => ({
+          path,
           type: 'file' as const,
           renderStrategy: 'fill' as const,
         })),
@@ -177,16 +232,17 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     }
 
     // Unstaged/Modified files - Orange
-    if (gitStatus.unstaged && gitStatus.unstaged.length > 0) {
+    const unstagedPaths = unstagedKey ? unstagedKey.split('|') : [];
+    if (unstagedPaths.length > 0 && unstagedPaths[0] !== '') {
       layers.push({
         id: 'git-unstaged',
-        name: `Modified (${gitStatus.unstaged.length})`,
+        name: `Modified (${unstagedPaths.length})`,
         enabled: true,
         color: '#f59e0b',
         priority: 24,
         opacity: 0.7,
-        items: gitStatus.unstaged.map((item) => ({
-          path: item.path,
+        items: unstagedPaths.map((path) => ({
+          path,
           type: 'file' as const,
           renderStrategy: 'fill' as const,
         })),
@@ -194,16 +250,17 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     }
 
     // Deleted files - Red
-    if (gitStatus.deleted && gitStatus.deleted.length > 0) {
+    const deletedPaths = deletedKey ? deletedKey.split('|') : [];
+    if (deletedPaths.length > 0 && deletedPaths[0] !== '') {
       layers.push({
         id: 'git-deleted',
-        name: `Deleted (${gitStatus.deleted.length})`,
+        name: `Deleted (${deletedPaths.length})`,
         enabled: true,
         color: '#ef4444',
         priority: 23,
         opacity: 0.7,
-        items: gitStatus.deleted.map((item) => ({
-          path: item.path,
+        items: deletedPaths.map((path) => ({
+          path,
           type: 'file' as const,
           renderStrategy: 'fill' as const,
         })),
@@ -211,7 +268,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     }
 
     return layers;
-  }, [gitStatus]);
+  }, [untrackedKey, stagedKey, unstagedKey, deletedKey]);
 
   // Determine if there are any git changes
   const hasGitChanges = useMemo(() => {
@@ -232,12 +289,21 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   }, [hasGitChanges, gitHighlightLayers, showFileColors, fileColorHighlightLayers]);
 
   // Register active highlight layers with context
+  // Use ref to track registered layer count to avoid cleanup issues
+  const registeredLayersCountRef = useRef(0);
+
   useEffect(() => {
+    // Unregister previous layers first
+    for (let i = 0; i < registeredLayersCountRef.current; i++) {
+      unregisterLayer(`repo-highlight-${i}`);
+    }
+
     if (!activeHighlightLayers || activeHighlightLayers.length === 0) {
+      registeredLayersCountRef.current = 0;
       return;
     }
 
-    // Register each layer
+    // Register new layers
     activeHighlightLayers.forEach((layer, idx) => {
       registerLayer(`repo-highlight-${idx}`, {
         name: layer.name,
@@ -248,11 +314,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       });
     });
 
-    return () => {
-      activeHighlightLayers.forEach((_, idx) => {
-        unregisterLayer(`repo-highlight-${idx}`);
-      });
-    };
+    registeredLayersCountRef.current = activeHighlightLayers.length;
   }, [activeHighlightLayers, registerLayer, unregisterLayer]);
 
   // Check if there are workflow files in the repository
@@ -661,6 +723,49 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     [selectedRepository],
   );
 
+  // Handle clicking a task to view it in the markdown viewer
+  const handleTaskClick = useCallback(
+    async (task: Task) => {
+      if (!selectedRepository) return;
+
+      try {
+        // The task content is already markdown, stored in the task's document path
+        // Get the full task to ensure we have all details
+        const fullTask = await PalaceTasksService.getTask(selectedRepository.path, task.id);
+
+        if (!fullTask) {
+          console.error('[RepositoryDetailsPanel] Could not retrieve task');
+          return;
+        }
+
+        // The task document path should be in the task object
+        // If not, construct it based on the repository path and task ID
+        // Tasks are stored in .palace-work/tasks/active/ directory
+        const taskDocPath = fullTask.documentPath ||
+                            `${selectedRepository.path}/.palace-work/tasks/active/${task.id}.task.md`;
+
+        // If we have an onFileSelect handler and onRightPanelTabChange, use the inline viewer
+        if (onFileSelect && onRightPanelTabChange) {
+          // Convert absolute path to relative path for the MarkdownRenderingPanel
+          const relativePath = taskDocPath.startsWith(selectedRepository.path)
+            ? taskDocPath.substring(selectedRepository.path.length + 1) // +1 to remove leading slash
+            : taskDocPath;
+
+          // Set the file path to the relative task document path
+          onFileSelect(relativePath);
+          // Switch to markdown tab
+          onRightPanelTabChange('markdown');
+        } else {
+          // Fallback: open in a dedicated markdown view window
+          await WindowService.openMarkdownView(taskDocPath, selectedRepository.name);
+        }
+      } catch (error) {
+        console.error('[RepositoryDetailsPanel] Error opening task:', error);
+      }
+    },
+    [selectedRepository, onFileSelect, onRightPanelTabChange],
+  );
+
   const handleConfigureSecrets = useCallback((secrets?: string[]) => {
     setRequiredSecrets(secrets || []);
     setShowSecretsModal(true);
@@ -951,7 +1056,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             onRemove={handleRemoveClick}
             onConfigure={() => setShowConfiguration(!showConfiguration)}
             onTerminalWindowsUpdate={setTerminalWindows}
-            onOpenTerminal={onOpenTerminal}
+            onOpenTerminal={handleToggleNestedRightPanel}
+            isNestedRightPanelCollapsed={nestedRightPanelCollapsed}
           />
 
           {/* Panel Configuration */}
@@ -963,22 +1069,40 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             />
           )}
 
-          {/* Repository Info */}
+          {/* Repository Info - Two Nested Panels */}
           <div
             style={{
               flex: 1,
-              overflow: 'auto',
-              padding: '20px',
+              overflow: 'hidden',
             }}
           >
-            {/* Main Content Grid */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-                gap: '16px',
-              }}
-            >
+            <ConfigurablePanelLayout
+              panels={[
+                {
+                  id: 'empty-left',
+                  label: 'Empty',
+                  content: null,
+                },
+                {
+                  id: 'repository-content',
+                  label: 'Repository Content',
+                  content: (
+                    <div
+                      style={{
+                        height: '100%',
+                        overflow: 'auto',
+                        padding: '20px',
+                        backgroundColor: theme.colors.background,
+                      }}
+                    >
+                      {/* Main Content Grid */}
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                          gap: '16px',
+                        }}
+                      >
               {/* Left Column - Git Changes, Documents, Status and Notes */}
               <div
                 style={{
@@ -1020,6 +1144,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                   <RepositoryTasksAndNotesPanel
                     repositoryPath={selectedRepository.path}
                     isLoading={false}
+                    onTaskClick={handleTaskClick}
                   />
                 )}
               </div>
@@ -1171,6 +1296,41 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 )}
               </div>
             </div>
+                    </div>
+                  ),
+                },
+                {
+                  id: 'file-preview-terminal',
+                  label: 'Preview & Terminal',
+                  content: (
+                    <RightPanel
+                      filePath={selectedFilePath || null}
+                      repositoryPath={selectedRepository.path}
+                      activeTab={rightPanelTab}
+                      onTabChange={onRightPanelTabChange}
+                      onClose={onRightPanelClose}
+                    />
+                  ),
+                },
+              ]}
+              layout={{
+                left: null,
+                middle: 'repository-content',
+                right: 'file-preview-terminal',
+              }}
+              collapsiblePanels={{ left: false, right: true }}
+              defaultSizes={nestedPanelState.type === 'three-panel' ? nestedPanelState.sizes : { left: 0, middle: 50, right: 50 }}
+              minSizes={{ left: 0, middle: 30, right: 0 }}
+              collapsed={nestedPanelState.collapsed}
+              style={{ height: '100%', width: '100%' }}
+              theme={theme}
+              showCollapseButtons={false}
+              onPanelResize={nestedPanelState.type === 'three-panel' ? nestedPanelState.handlePanelResize : undefined}
+              onLeftCollapseComplete={nestedPanelState.handleLeftCollapseComplete}
+              onLeftExpandComplete={nestedPanelState.handleLeftExpandComplete}
+              onRightCollapseComplete={nestedPanelState.type === 'three-panel' ? nestedPanelState.handleRightCollapseComplete : undefined}
+              onRightExpandComplete={nestedPanelState.type === 'three-panel' ? nestedPanelState.handleRightExpandComplete : undefined}
+            />
           </div>
         </>
       ) : (

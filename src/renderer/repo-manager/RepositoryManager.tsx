@@ -14,6 +14,7 @@ import {
   Presentation,
   Pencil,
   Activity,
+  ListTodo,
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import {
@@ -801,6 +802,12 @@ export const RepositoryManager: React.FC<RepositoryManagerProps> = React.memo(
               label: 'Agent Events',
               icon: <Activity size={16} />,
               preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Monitor agent activity in real-time</div>
+            },
+            {
+              id: 'tasks',
+              label: 'Tasks',
+              icon: <ListTodo size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View and manage repository tasks</div>
             },
             // Visualization panels
             {

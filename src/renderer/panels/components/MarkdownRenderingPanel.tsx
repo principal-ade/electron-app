@@ -34,74 +34,67 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const latestFilePathRef = useRef<string | null>(null);
 
-  const getAbsolutePath = useCallback(
-    (path: string) => {
-      // For local sources, construct absolute path
-      if (source?.type === 'local') {
-        return path.startsWith('/') ? path : `${source.location}/${path}`;
-      }
-      // For remote sources or no source, return as-is
-      return path;
-    },
-    [source],
-  );
-
   const isLocalFile = source?.type === 'local';
+  const sourceLocation = source?.type === 'local' ? source.location : null;
 
-  const loadFile = useCallback(async () => {
-    if (!filePath) {
-      latestFilePathRef.current = null;
-      setDocContent(null);
-      setError(null);
-      return;
-    }
-
-    const absolutePath = getAbsolutePath(filePath);
-    latestFilePathRef.current = absolutePath;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      let content: string | null = null;
-
-      // For local sources, read from filesystem
-      if (isLocalFile) {
-        const result = await FileSystemService.readFile(absolutePath);
-        content = result?.content ?? null;
-      }
-      // For remote sources, use content provider if available
-      else if (contentProvider) {
-        const relativePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
-        content = await contentProvider.readFileContent(relativePath);
-      }
-
-      if (latestFilePathRef.current !== absolutePath) {
+  useEffect(() => {
+    const loadFile = async () => {
+      if (!filePath) {
+        latestFilePathRef.current = null;
+        setDocContent(null);
+        setError(null);
         return;
       }
 
-      if (content !== null) {
-        setDocContent(content);
-        setError(null);
-      } else {
-        throw new Error('Failed to read file');
-      }
-    } catch (err) {
-      console.error('Error loading markdown file:', err);
-      if (latestFilePathRef.current === absolutePath) {
-        setError(err instanceof Error ? err.message : 'Failed to load file');
-        setDocContent(null);
-      }
-    } finally {
-      if (latestFilePathRef.current === absolutePath) {
-        setIsLoading(false);
-      }
-    }
-  }, [filePath, getAbsolutePath, isLocalFile, contentProvider]);
+      // Construct absolute path inline
+      const absolutePath = isLocalFile && sourceLocation
+        ? (filePath.startsWith('/') ? filePath : `${sourceLocation}/${filePath}`)
+        : filePath;
 
-  useEffect(() => {
+      latestFilePathRef.current = absolutePath;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        let content: string | null = null;
+
+        // For local sources, read from filesystem
+        if (isLocalFile) {
+          const result = await FileSystemService.readFile(absolutePath);
+          content = result?.content ?? null;
+        }
+        // For remote sources, use content provider if available
+        else if (contentProvider) {
+          const relativePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+          content = await contentProvider.readFileContent(relativePath);
+        }
+
+        if (latestFilePathRef.current !== absolutePath) {
+          return;
+        }
+
+        if (content !== null) {
+          setDocContent(content);
+          setError(null);
+        } else {
+          throw new Error('Failed to read file');
+        }
+      } catch (err) {
+        console.error('Error loading markdown file:', err);
+        if (latestFilePathRef.current === absolutePath) {
+          setError(err instanceof Error ? err.message : 'Failed to load file');
+          setDocContent(null);
+        }
+      } finally {
+        if (latestFilePathRef.current === absolutePath) {
+          setIsLoading(false);
+        }
+      }
+    };
+
     loadFile();
-  }, [loadFile]);
+  }, [filePath, isLocalFile, sourceLocation, contentProvider]);
 
   if (!filePath) {
     return (

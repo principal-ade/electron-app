@@ -24,4 +24,7 @@ export const palaceTasksApi: PalaceTasksAPI = {
       taskId,
       status
     ),
+
+  deleteTask: (repositoryPath: string, taskId: string) =>
+    ipcRenderer.invoke(PalaceTasksAPIEvent.DELETE_TASK, repositoryPath, taskId),
 };

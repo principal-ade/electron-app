@@ -91,6 +91,26 @@ export function registerPalaceTasksHandlers() {
     }
   );
 
+  // Delete a task permanently
+  ipcMain.handle(
+    PalaceTasksAPIEvent.DELETE_TASK,
+    async (_event, repositoryPath: string, taskId: string): Promise<boolean> => {
+      try {
+        const fsAdapter = new NodeFileSystemAdapter();
+        const validatedPath = MemoryPalace.validateRepositoryPath(
+          fsAdapter,
+          repositoryPath
+        ) as ValidatedRepositoryPath;
+        const palace = new MemoryPalace(validatedPath, fsAdapter);
+
+        return palace.deleteTask(taskId);
+      } catch (error) {
+        console.error('[PalaceTasksHandlers] Error deleting task:', error);
+        return false;
+      }
+    }
+  );
+
   console.log('[PalaceTasksHandlers] Palace tasks IPC handlers registered');
 }
 
@@ -101,6 +121,7 @@ export function unregisterPalaceTasksHandlers() {
   ipcMain.removeHandler(PalaceTasksAPIEvent.GET_TASKS);
   ipcMain.removeHandler(PalaceTasksAPIEvent.GET_TASK);
   ipcMain.removeHandler(PalaceTasksAPIEvent.UPDATE_TASK_STATUS);
+  ipcMain.removeHandler(PalaceTasksAPIEvent.DELETE_TASK);
 
   console.log('[PalaceTasksHandlers] Palace tasks IPC handlers unregistered');
 }

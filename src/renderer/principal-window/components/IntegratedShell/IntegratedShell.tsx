@@ -35,7 +35,7 @@ const getViewKey = (view: NavigationView): 'repositoryExplorer' | 'roomsManager'
 const getViewDefaults = (view: NavigationView): { left: boolean; right: boolean } => {
   switch (view) {
     case 'repository':
-      return { left: false, right: true };
+      return { left: false, right: false }; // No right panel for repository (uses nested panels instead)
     case 'rooms':
       return { left: false, right: true };
     case 'terminal':
@@ -54,7 +54,7 @@ export const IntegratedShell: React.FC = () => {
 
   // Store collapsed states per view to avoid animation glitches when switching
   const [viewCollapsedStates, setViewCollapsedStates] = useState<Record<string, { left: boolean; right: boolean }>>({
-    repository: { left: false, right: true },
+    repository: { left: false, right: false }, // No right panel for repository
     rooms: { left: false, right: true },
     terminal: { left: false, right: false },
     auth: { left: false, right: false },
@@ -286,7 +286,7 @@ export const IntegratedShell: React.FC = () => {
           showSidebarControl={activeView === 'repository' || activeView === 'terminal' || activeView === 'rooms'}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={handleToggleSidebar}
-          showRightSidebarControl={activeView === 'rooms' || activeView === 'repository'}
+          showRightSidebarControl={activeView === 'rooms'}
           rightSidebarCollapsed={rightSidebarCollapsed}
           onToggleRightSidebar={handleToggleRightSidebar}
         />
