@@ -46,6 +46,12 @@ export const agentSessionSDKApi: AgentSessionSDKAPI = {
     ipcRenderer.invoke(AgentSessionSDKAPIEvents.GET_SESSION_EVENTS, sessionId),
 
   /**
+   * Check event server health
+   */
+  checkEventServerHealth: () =>
+    ipcRenderer.invoke(AgentSessionSDKAPIEvents.CHECK_EVENT_SERVER_HEALTH),
+
+  /**
    * Subscribe to processed events
    */
   onProcessedEvent: (

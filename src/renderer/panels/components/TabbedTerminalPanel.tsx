@@ -3,15 +3,11 @@ import React, {
   useCallback,
   useEffect,
   forwardRef,
+  useRef,
 } from 'react';
-import {
-  Terminal as TerminalIcon,
-  X,
-  Plus,
-  Bug,
-} from 'lucide-react';
+import { Terminal as TerminalIcon, X, Plus, Bug, Monitor } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
-import TerminalPanel from '../TerminalPanel';
+import TerminalPanel, { TerminalPanelRef } from '../TerminalPanel';
 import { TerminalService } from '../../main-process-api/TerminalService';
 import { TerminalDebugModal } from './TerminalDebugModal';
 
@@ -30,6 +26,8 @@ interface TabbedTerminalPanelProps {
   isVisible?: boolean;
   onTabsChange?: (tabs: TerminalTab[]) => void;
   initialTabs?: TerminalTab[];
+  showAllTerminals?: boolean;
+  onShowAllTerminalsChange?: (showAll: boolean) => void;
 }
 
 export interface TabbedTerminalPanelRef {
@@ -48,6 +46,8 @@ export const TabbedTerminalPanel = forwardRef<
       isVisible = true,
       onTabsChange,
       initialTabs = [],
+      showAllTerminals = false,
+      onShowAllTerminalsChange,
     },
     ref,
   ) => {
@@ -59,6 +59,9 @@ export const TabbedTerminalPanel = forwardRef<
     );
     const [showDebugModal, setShowDebugModal] = useState(false);
     const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
+
+    // Store refs to terminal panels for each tab
+    const terminalRefs = useRef<Map<string, TerminalPanelRef>>(new Map());
 
     // Create unique context for this tabbed terminal instance
     const terminalContext = `tabbed-terminal:${repositoryKey}`;
@@ -80,12 +83,13 @@ export const TabbedTerminalPanel = forwardRef<
 
     // Create a new terminal tab
     const addNewTab = useCallback(
-      (label?: string, command?: string) => {
-        const directoryName = directory.split('/').pop() || directory;
+      (label?: string, command?: string, targetDirectory?: string) => {
+        const targetDir = targetDirectory || directory;
+        const directoryName = targetDir.split('/').pop() || targetDir;
         const newTab: TerminalTab = {
           id: `tab-${Date.now()}`,
-          label: label || directoryName,
-          directory,
+          label: label || (showAllTerminals ? directoryName : directoryName),
+          directory: targetDir,
           command,
           isActive: true,
         };
@@ -99,7 +103,7 @@ export const TabbedTerminalPanel = forwardRef<
 
         setActiveTabId(newTab.id);
       },
-      [directory, onTabsChange],
+      [directory, showAllTerminals, onTabsChange],
     );
 
     // Initialize - restore existing sessions or cleanup orphaned ones
@@ -112,8 +116,8 @@ export const TabbedTerminalPanel = forwardRef<
           // Find sessions that belong to this tabbed terminal instance
           const ourSessions = allSessions.filter(
             (session) =>
-              session.context?.startsWith(terminalContext) &&
-              session.directory === directory,
+              session.context?.startsWith('tabbed-terminal:') &&
+              (showAllTerminals || session.directory === directory),
           );
 
           // Only restore sessions if we don't have initialTabs
@@ -125,11 +129,15 @@ export const TabbedTerminalPanel = forwardRef<
             ourSessions.forEach((session, index) => {
               // Extract tab ID from context (format: "tabbed-terminal:repoKey:tab-12345")
               const contextParts = session.context?.split(':') || [];
-              const tabId = contextParts[contextParts.length - 1] || `tab-${Date.now()}-${index}`;
+              const tabId =
+                contextParts[contextParts.length - 1] ||
+                `tab-${Date.now()}-${index}`;
 
               const tab: TerminalTab = {
                 id: tabId,
-                label: directory.split('/').pop() || directory,
+                label: showAllTerminals
+                  ? `${session.directory.split('/').pop() || session.directory}`
+                  : directory.split('/').pop() || directory,
                 directory: session.directory,
                 isActive: index === 0, // Make first tab active
               };
@@ -144,7 +152,11 @@ export const TabbedTerminalPanel = forwardRef<
             onTabsChange?.(restoredTabs);
           } else if (initialTabs.length > 0) {
             // If initialTabs were provided, use those (parent is managing state)
-            setActiveTabId(initialTabs.find(t => t.isActive)?.id || initialTabs[0]?.id || null);
+            setActiveTabId(
+              initialTabs.find((t) => t.isActive)?.id ||
+                initialTabs[0]?.id ||
+                null,
+            );
           }
         } catch (err) {
           console.error(
@@ -160,7 +172,13 @@ export const TabbedTerminalPanel = forwardRef<
         // DON'T destroy sessions on unmount - they should persist when panel is swapped
         // Sessions are only destroyed when user explicitly closes a tab
       };
-    }, []);
+    }, [
+      showAllTerminals,
+      directory,
+      terminalContext,
+      initialTabs.length,
+      onTabsChange,
+    ]);
 
     // Close a tab
     const closeTab = useCallback(
@@ -210,7 +228,7 @@ export const TabbedTerminalPanel = forwardRef<
 
     // Keyboard shortcuts for tab navigation
     useEffect(() => {
-      const handleKeyDown = (e: KeyboardEvent) => {
+      const handleKeyDown = async (e: KeyboardEvent) => {
         // Command/Ctrl + T to open new tab
         if ((e.metaKey || e.ctrlKey) && e.key === 't') {
           e.preventDefault();
@@ -225,6 +243,44 @@ export const TabbedTerminalPanel = forwardRef<
             e.preventDefault();
             e.stopPropagation();
             closeTab(activeTabId);
+          }
+          return;
+        }
+
+        // Command/Ctrl + B to scroll to bottom
+        if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+          if (activeTabId) {
+            e.preventDefault();
+            e.stopPropagation();
+            const terminalRef = terminalRefs.current.get(activeTabId);
+            if (terminalRef) {
+              terminalRef.scrollToBottom();
+            }
+          }
+          return;
+        }
+
+        // Command/Ctrl + O to open repository for the active tab
+        if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
+          if (activeTab && activeTab.directory !== directory) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Import services dynamically to avoid circular dependencies
+            const { RepositoryService } = await import('../../main-process-api/RepositoryService');
+            const { WindowService } = await import('../../main-process-api/WindowService');
+
+            try {
+              // Find the repository that contains this directory
+              const repo = await RepositoryService.getRepositoryByLocalPath(activeTab.directory);
+
+              if (repo) {
+                // Open the repository dashboard
+                await WindowService.openRepositoryDashboard(repo as any);
+              }
+            } catch (error) {
+              console.error('[TabbedTerminalPanel] Failed to open repository:', error);
+            }
           }
           return;
         }
@@ -248,7 +304,7 @@ export const TabbedTerminalPanel = forwardRef<
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [tabs, switchTab, activeTabId, closeTab, addNewTab]);
+    }, [tabs, switchTab, activeTabId, closeTab, addNewTab, activeTab, directory]);
 
     return (
       <div
@@ -265,7 +321,7 @@ export const TabbedTerminalPanel = forwardRef<
             style={{
               display: 'flex',
               alignItems: 'stretch',
-              height: '40px',
+              height: '41px',
               flexShrink: 0,
             }}
           >
@@ -279,72 +335,74 @@ export const TabbedTerminalPanel = forwardRef<
               }}
             >
               {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  switchTab(tab.id);
-                }}
-                onMouseEnter={() => setHoveredTabId(tab.id)}
-                onMouseLeave={() => setHoveredTabId(null)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  padding: '6px 8px',
-                  backgroundColor: tab.isActive
-                    ? theme.colors.background
-                    : theme.colors.backgroundSecondary,
-                  borderBottom: `1px solid ${theme.colors.border}`,
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: tab.isActive ? 600 : 400,
-                  color: tab.isActive
-                    ? theme.colors.text
-                    : theme.colors.textSecondary,
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.2s',
-                  flex: 1,
-                  minWidth: 0,
-                  height: '100%',
-                  position: 'relative',
-                }}
-              >
-                {hoveredTabId === tab.id && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeTab(tab.id);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '16px',
-                      height: '16px',
-                      borderRadius: '3px',
-                      border: 'none',
-                      backgroundColor: 'transparent',
-                      cursor: 'pointer',
-                      color: theme.colors.textSecondary,
-                      padding: 0,
-                      position: 'absolute',
-                      left: '8px',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.backgroundTertiary;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <X size={12} />
-                  </button>
-                )}
-                <span>{tab.label}</span>
-              </div>
+                <div
+                  key={tab.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    switchTab(tab.id);
+                  }}
+                  onMouseEnter={() => setHoveredTabId(tab.id)}
+                  onMouseLeave={() => setHoveredTabId(null)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '6px 8px',
+                    backgroundColor: tab.isActive
+                      ? theme.colors.background
+                      : theme.colors.backgroundSecondary,
+                    borderBottom: `1px solid ${theme.colors.border}`,
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: tab.isActive ? 600 : 400,
+                    color: tab.isActive
+                      ? theme.colors.text
+                      : theme.colors.textSecondary,
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.2s',
+                    flex: 1,
+                    minWidth: 0,
+                    height: '100%',
+                    position: 'relative',
+                  }}
+                >
+                  {hoveredTabId === tab.id && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(tab.id);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '16px',
+                        height: '16px',
+                        borderRadius: '3px',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        cursor: 'pointer',
+                        color: theme.colors.textSecondary,
+                        padding: 0,
+                        position: 'absolute',
+                        left: '8px',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.backgroundTertiary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}
+                    >
+                      <X size={12} />
+                    </button>
+                  )}
+                  <span title={showAllTerminals ? tab.directory : undefined}>
+                    {tab.label}
+                  </span>
+                </div>
               ))}
             </div>
 
@@ -354,62 +412,99 @@ export const TabbedTerminalPanel = forwardRef<
                 display: 'flex',
                 alignItems: 'center',
                 borderLeft: `1px solid ${theme.colors.border}`,
-                borderBottom: tabs.length > 0 ? `1px solid ${theme.colors.border}` : 'none',
+                borderBottom:
+                  tabs.length > 0 ? `1px solid ${theme.colors.border}` : 'none',
               }}
             >
+              {/* Show all terminals toggle */}
+              <button
+                onClick={() => onShowAllTerminalsChange?.(!showAllTerminals)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '100%',
+                  border: 'none',
+                  backgroundColor: showAllTerminals
+                    ? theme.colors.primary
+                    : 'transparent',
+                  cursor: 'pointer',
+                  color: showAllTerminals ? '#fff' : theme.colors.textSecondary,
+                }}
+                onMouseEnter={(e) => {
+                  if (!showAllTerminals) {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!showAllTerminals) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+                title={
+                  showAllTerminals
+                    ? 'Show current repo terminals only'
+                    : 'Show all terminals'
+                }
+              >
+                <Monitor size={14} />
+              </button>
+
               {/* Add new tab button */}
               <button
-              onClick={() => addNewTab()}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '36px',
-                height: '100%',
-                border: 'none',
-                backgroundColor: 'transparent',
-                cursor: 'pointer',
-                color: theme.colors.textSecondary,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundTertiary;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-              title="New terminal"
-            >
-              <Plus size={14} />
-            </button>
+                onClick={() => addNewTab()}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '100%',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  color: theme.colors.textSecondary,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                title="New terminal"
+              >
+                <Plus size={14} />
+              </button>
 
-            {/* Debug button */}
-            <button
-              onClick={() => setShowDebugModal(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '36px',
-                height: '100%',
-                border: 'none',
-                backgroundColor: 'transparent',
-                cursor: 'pointer',
-                color: theme.colors.warning,
-                paddingLeft: '4px',
-                paddingRight: '4px',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundTertiary;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-              title="Debug terminal sessions"
-            >
-              <Bug size={16} />
-            </button>
+              {/* Debug button */}
+              <button
+                onClick={() => setShowDebugModal(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '100%',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  color: theme.colors.warning,
+                  paddingLeft: '4px',
+                  paddingRight: '4px',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                title="Debug terminal sessions"
+              >
+                <Bug size={16} />
+              </button>
             </div>
           </div>
         )}
@@ -429,6 +524,13 @@ export const TabbedTerminalPanel = forwardRef<
                 }}
               >
                 <TerminalPanel
+                  ref={(el) => {
+                    if (el) {
+                      terminalRefs.current.set(tab.id, el);
+                    } else {
+                      terminalRefs.current.delete(tab.id);
+                    }
+                  }}
                   key={tab.id}
                   directory={tab.directory}
                   context={`${terminalContext}:${tab.id}`}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import {
   Terminal as TerminalIcon,
   ExternalLink,
@@ -50,7 +50,11 @@ interface TerminalPanelProps {
   initialCommand?: string;
 }
 
-function TerminalPanel({
+export interface TerminalPanelRef {
+  scrollToBottom: () => void;
+}
+
+const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(({
   directory,
   context,
   onClose,
@@ -63,7 +67,7 @@ function TerminalPanel({
   isVisible = true,
   onSessionCreated,
   initialCommand,
-}: TerminalPanelProps) {
+}, ref) => {
   const { theme } = useTheme();
   const terminalRef = useRef<HTMLDivElement>(null);
   const [terminal, setTerminal] = useState<Terminal | null>(null);
@@ -75,6 +79,15 @@ function TerminalPanel({
   } | null>(null);
   const devSidecarSessionIdRef = useRef<string | null>(null);
   const [devSidecarSessionId, setDevSidecarSessionId] = useState<string | null>(null);
+
+  // Expose scrollToBottom method via ref
+  useImperativeHandle(ref, () => ({
+    scrollToBottom: () => {
+      if (terminal) {
+        terminal.scrollToBottom();
+      }
+    },
+  }), [terminal]);
 
   const createTerminalSession = useCallback(
     async (dir: string): Promise<string | null> => {
@@ -651,12 +664,8 @@ function TerminalPanel({
       />
     </div>
   );
-}
+});
 
-TerminalPanel.defaultProps = {
-  onClose: undefined,
-  onDestroy: undefined,
-  className: '',
-};
+TerminalPanel.displayName = 'TerminalPanel';
 
 export default TerminalPanel;

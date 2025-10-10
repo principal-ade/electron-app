@@ -341,18 +341,22 @@ export class WorkspaceLayoutService {
     const now = Date.now();
 
     return {
-      'development': {
-        id: 'development',
-        name: 'Development',
-        description: 'File tree, tabbed terminal, and city visualization',
+      'project-management': {
+        id: 'project-management',
+        name: 'Project Management',
+        description: 'Tasks, dependencies, file tree, docs, drawings, tools, tabbed terminal, city visualization, code viewer, markdown slides, and excalidraw',
         layout: {
           left: {
             type: 'tabs',
-            panels: ['fileTree', 'docs'],
+            panels: ['tasks', 'dependencies', 'fileTree', 'docs', 'drawings', 'tools'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
           middle: 'tabbedTerminal',
-          right: 'cityVisualization',
+          right: {
+            type: 'tabs',
+            panels: ['cityVisualization', 'codeViewer', 'markdownViewer', 'excalidrawDiagram'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
         },
         defaultSizes: { left: 20, middle: 45, right: 35 },
         defaultCollapsed: { left: false, right: false },
@@ -393,11 +397,19 @@ export class WorkspaceLayoutService {
       'agent-work': {
         id: 'agent-work',
         name: 'Agent Work',
-        description: 'File tree, tabbed terminal, and agent events',
+        description: 'File tree, agent context, git changes, tabbed terminal, city map, agent events, code viewer, and markdown slides',
         layout: {
-          left: 'fileTree',
+          left: {
+            type: 'tabs',
+            panels: ['fileTree', 'agentContext', 'gitChanges'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
           middle: 'tabbedTerminal',
-          right: 'agentEvents',
+          right: {
+            type: 'tabs',
+            panels: ['cityVisualization', 'agentEvents', 'codeViewer', 'markdownViewer'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
         },
         defaultSizes: { left: 20, middle: 45, right: 35 },
         defaultCollapsed: { left: false, right: false },
@@ -420,7 +432,7 @@ export class WorkspaceLayoutService {
         workspaceLayouts: {
           presets: {},
           lastUsedWorkspace: {},
-          builtInWorkspaceIds: ['development', 'code-review', 'documentation', 'agent-work'],
+          builtInWorkspaceIds: ['project-management', 'code-review', 'documentation', 'agent-work'],
         },
       });
     }

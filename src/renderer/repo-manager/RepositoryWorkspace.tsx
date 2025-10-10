@@ -70,10 +70,7 @@ import { RightPaneView } from '../components/repository-maps/RightPaneContainer'
 import { FileTreePanelContent } from '../panels/components/FileTreePanelContent';
 import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
-import {
-  MarkdownRenderingPanel,
-  ExcalidrawPanel,
-} from './panels';
+import { MarkdownRenderingPanel, ExcalidrawPanel } from './panels';
 import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
 import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
 import { AgentContextTreePanel } from '../panels/components/AgentContextTreePanel';
@@ -85,7 +82,13 @@ import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { TabbedTerminalPanel } from '../panels/components/TabbedTerminalPanel';
 
-type PanelTabConfig = { id: string; label: string; icon?: React.ReactNode; content: React.ReactNode; visible?: boolean };
+type PanelTabConfig = {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  content: React.ReactNode;
+  visible?: boolean;
+};
 
 interface RepositoryWorkspaceProps {
   repository: Repository;
@@ -94,8 +97,8 @@ interface RepositoryWorkspaceProps {
 }
 
 // Internal component that uses the highlight layers context
-const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.memo(
-  ({ repository, onBack, hasUpdateAvailable }) => {
+const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
+  React.memo(({ repository, onBack, hasUpdateAvailable }) => {
     const { theme } = useTheme();
     const { registerLayer, unregisterLayer } = useHighlightLayers();
 
@@ -107,7 +110,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
     const [showSourceHelpModal, setShowSourceHelpModal] = useState(false);
     const [showBadgeInfoModal, setShowBadgeInfoModal] = useState(false);
     const [showPanelConfigModal, setShowPanelConfigModal] = useState(false);
-    const [cloneBranchStatuses, setCloneBranchStatuses] = useState<Record<string, any>>({});
+    const [cloneBranchStatuses, setCloneBranchStatuses] = useState<
+      Record<string, any>
+    >({});
 
     // Panel layout state - default layout
     const [panelLayout, setPanelLayout] = useState<PanelLayout>({
@@ -122,9 +127,16 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
       right: 'cityVisualization',
     });
 
+    // Terminal panel state
+    const [showAllTerminals, setShowAllTerminals] = useState(false);
+
     // Workspace layout state
-    const [availableWorkspaces, setAvailableWorkspaces] = useState<Record<string, WorkspaceLayout>>({});
-    const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(null);
+    const [availableWorkspaces, setAvailableWorkspaces] = useState<
+      Record<string, WorkspaceLayout>
+    >({});
+    const [currentWorkspaceId, setCurrentWorkspaceId] = useState<string | null>(
+      null,
+    );
     const [workspacesLoaded, setWorkspacesLoaded] = useState(false);
     const [hasStateDeviation, setHasStateDeviation] = useState(false);
     const [panelResetKey, setPanelResetKey] = useState(0);
@@ -133,8 +145,12 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
     const cityDataCache = useMemo(() => new CityDataCacheService(), []);
 
     // File tree state - unified around selected source
-    const [selectedSource, setSelectedSource] = useState<FileTreeSource | null>(null);
-    const [packageLayers, setPackageLayers] = useState<PackageLayer[] | null>(null);
+    const [selectedSource, setSelectedSource] = useState<FileTreeSource | null>(
+      null,
+    );
+    const [packageLayers, setPackageLayers] = useState<PackageLayer[] | null>(
+      null,
+    );
 
     // MCP Agent configuration state
     const [agentsWithMCP, setAgentsWithMCP] = useState<SupportedAgent[]>([]);
@@ -142,7 +158,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
 
     // Event highlight service - convert agent events to map highlights
     const [eventHighlightService] = useState(() => new EventHighlightService());
-    const [eventHighlightLayers, setEventHighlightLayers] = useState<HighlightLayer[]>([]);
+    const [eventHighlightLayers, setEventHighlightLayers] = useState<
+      HighlightLayer[]
+    >([]);
 
     // Parse repository info
     const repoInfo = useMemo(
@@ -159,13 +177,23 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         return `${owner}/${name}`;
       }
       return repository.remoteUrl;
-    }, [ghOwner, ghRepo, repository.owner, repository.name, repository.remoteUrl]);
+    }, [
+      ghOwner,
+      ghRepo,
+      repository.owner,
+      repository.name,
+      repository.remoteUrl,
+    ]);
 
     const [panelCollapsedState, setPanelCollapsedState] = useState<{
       left?: boolean;
       right?: boolean;
     }>({ left: false, right: false });
-    const [panelSizes, setPanelSizes] = useState<{ left: number; middle: number; right: number }>({
+    const [panelSizes, setPanelSizes] = useState<{
+      left: number;
+      middle: number;
+      right: number;
+    }>({
       left: 20,
       middle: 45,
       right: 35,
@@ -176,36 +204,54 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
     const [activeTab, setActiveTab] = useState<string>('fileTree');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [fileTreeSources, setFileTreeSources] = useState<FileTreeSource[]>([]);
+    const [fileTreeSources, setFileTreeSources] = useState<FileTreeSource[]>(
+      [],
+    );
     const [treeStats, setTreeStats] = useState<FileTreeStats | null>(null);
     const [fileTree, setFileTree] = useState<FileTree | null>(null);
 
     // Notes state
-    const [tribalKnowledgeNotes, setTribalKnowledgeNotes] = useState<RepositoryNote[]>([]);
-    const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(new Set());
-    const [noteHighlightLayers, setNoteHighlightLayers] = useState<HighlightLayer[]>([]);
+    const [tribalKnowledgeNotes, setTribalKnowledgeNotes] = useState<
+      RepositoryNote[]
+    >([]);
+    const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(
+      new Set(),
+    );
+    const [noteHighlightLayers, setNoteHighlightLayers] = useState<
+      HighlightLayer[]
+    >([]);
 
     // Search state
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [searchResults, setSearchResults] = useState<string[]>([]);
-    const [searchHighlightLayer, setSearchHighlightLayer] = useState<HighlightLayer | null>(null);
-    const [selectedFileLayer, setSelectedFileLayer] = useState<HighlightLayer | null>(null);
-    const [hoveredSearchResult, setHoveredSearchResult] = useState<string | null>(null);
-    const [hoveredSearchLayer, setHoveredSearchLayer] = useState<HighlightLayer | null>(null);
+    const [searchHighlightLayer, setSearchHighlightLayer] =
+      useState<HighlightLayer | null>(null);
+    const [selectedFileLayer, setSelectedFileLayer] =
+      useState<HighlightLayer | null>(null);
+    const [hoveredSearchResult, setHoveredSearchResult] = useState<
+      string | null
+    >(null);
+    const [hoveredSearchLayer, setHoveredSearchLayer] =
+      useState<HighlightLayer | null>(null);
 
     // Folder filter state
-    const [folderFilterHighlightLayers, setFolderFilterHighlightLayers] = useState<HighlightLayer[]>([]);
+    const [folderFilterHighlightLayers, setFolderFilterHighlightLayers] =
+      useState<HighlightLayer[]>([]);
 
     // File viewer modal state
     const [showFileViewer, setShowFileViewer] = useState(false);
     const [viewerFilePath, setViewerFilePath] = useState<string | null>(null);
-    const [viewerRelativePath, setViewerRelativePath] = useState<string | null>(null);
+    const [viewerRelativePath, setViewerRelativePath] = useState<string | null>(
+      null,
+    );
 
     // Help modal state
     const [showHelpModal, setShowHelpModal] = useState(false);
 
     // File viewer in right panel state
-    const [selectedCodeFile, setSelectedCodeFile] = useState<string | null>(null);
+    const [selectedCodeFile, setSelectedCodeFile] = useState<string | null>(
+      null,
+    );
 
     // Toolbar state
     const [toolbarExpanded, setToolbarExpanded] = useState(false);
@@ -214,17 +260,30 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
     const [showFileColors, setShowFileColors] = useState(true);
 
     // Package highlight state
-    const [highlightedPackages, setHighlightedPackages] = useState<Set<string>>(new Set());
-    const [packageHighlightLayers, setPackageHighlightLayers] = useState<HighlightLayer[]>([]);
-    const [toolsHighlightLayers, setToolsHighlightLayers] = useState<HighlightLayer[]>([]);
+    const [highlightedPackages, setHighlightedPackages] = useState<Set<string>>(
+      new Set(),
+    );
+    const [packageHighlightLayers, setPackageHighlightLayers] = useState<
+      HighlightLayer[]
+    >([]);
+    const [toolsHighlightLayers, setToolsHighlightLayers] = useState<
+      HighlightLayer[]
+    >([]);
 
     // Dependency analysis highlight state
-    const [analyzingPackagePath, setAnalyzingPackagePath] = useState<string | null>(null);
-    const [dependencyAnalysisHighlightLayer, setDependencyAnalysisHighlightLayer] = useState<HighlightLayer[]>([]);
+    const [analyzingPackagePath, setAnalyzingPackagePath] = useState<
+      string | null
+    >(null);
+    const [
+      dependencyAnalysisHighlightLayer,
+      setDependencyAnalysisHighlightLayer,
+    ] = useState<HighlightLayer[]>([]);
 
     // Documentation state
     const [selectedDocPath, setSelectedDocPath] = useState<string | null>(null);
-    const [selectedDocType, setSelectedDocType] = useState<'markdown' | 'excalidraw'>('markdown');
+    const [selectedDocType, setSelectedDocType] = useState<
+      'markdown' | 'excalidraw'
+    >('markdown');
 
     // Right pane mode
     const [rightPaneMode, setRightPaneMode] = useState<RightPaneMode>('city');
@@ -237,10 +296,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
       initializeLocalSource,
       setGitChangesVisible,
     } = useGitChanges();
-    const [gitHighlightLayers, setGitHighlightLayers] = useState<HighlightLayer[]>([]);
+    const [gitHighlightLayers, setGitHighlightLayers] = useState<
+      HighlightLayer[]
+    >([]);
 
     // Subscribe to file tree updates from RepositoryDataCache
-    const repositoryPath = selectedSource?.type === 'local' ? selectedSource.location : null;
+    const repositoryPath =
+      selectedSource?.type === 'local' ? selectedSource.location : null;
     const { data: cacheData } = useRepositoryData(repositoryPath, {
       autoLoad: true,
       subscribe: true,
@@ -272,7 +334,8 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
       let isMounted = true;
       const loadRepositoryState = async () => {
         try {
-          const repoState = await WorkspaceLayoutService.getRepositoryState(repositoryKey);
+          const repoState =
+            await WorkspaceLayoutService.getRepositoryState(repositoryKey);
 
           if (isMounted && repoState) {
             // Set workspace ID
@@ -280,7 +343,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
 
             // Apply layout from workspace or custom
             if (repoState.workspaceId) {
-              const workspace = await WorkspaceLayoutService.getWorkspaceLayout(repoState.workspaceId);
+              const workspace = await WorkspaceLayoutService.getWorkspaceLayout(
+                repoState.workspaceId,
+              );
               if (workspace) {
                 setPanelLayout(workspace.layout);
               }
@@ -294,7 +359,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
             setPanelCollapsedState(repoState.collapsed);
           }
         } catch (error) {
-          console.error('[RepositoryWorkspace] Failed to load repository state:', error);
+          console.error(
+            '[RepositoryWorkspace] Failed to load repository state:',
+            error,
+          );
         } finally {
           if (isMounted) {
             setPanelPreferencesLoaded(true);
@@ -325,7 +393,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
             setWorkspacesLoaded(true);
           }
         } catch (error) {
-          console.error('[RepositoryWorkspace] Failed to load workspace layouts:', error);
+          console.error(
+            '[RepositoryWorkspace] Failed to load workspace layouts:',
+            error,
+          );
           if (isMounted) {
             setWorkspacesLoaded(true);
           }
@@ -346,7 +417,8 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
       const checkLayoutAndDrift = async () => {
         // If no workspace is selected, try to match current layout to a workspace
         if (!currentWorkspaceId) {
-          const matchingWorkspaceId = await WorkspaceLayoutService.findMatchingWorkspace(panelLayout);
+          const matchingWorkspaceId =
+            await WorkspaceLayoutService.findMatchingWorkspace(panelLayout);
           setCurrentWorkspaceId(matchingWorkspaceId);
           setHasStateDeviation(false);
           return;
@@ -356,22 +428,42 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         const workspace = availableWorkspaces[currentWorkspaceId];
         if (workspace) {
           const deviation = WorkspaceLayoutService.hasStateDeviation(
-            { workspaceId: currentWorkspaceId, sizes: panelSizes, collapsed: panelCollapsedState },
-            workspace
+            {
+              workspaceId: currentWorkspaceId,
+              sizes: panelSizes,
+              collapsed: panelCollapsedState,
+            },
+            workspace,
           );
-          setHasStateDeviation(deviation.hasSizeDeviation || deviation.hasCollapsedDeviation);
+          setHasStateDeviation(
+            deviation.hasSizeDeviation || deviation.hasCollapsedDeviation,
+          );
         }
       };
 
       checkLayoutAndDrift();
-    }, [panelLayout, panelSizes, panelCollapsedState, workspacesLoaded, panelPreferencesLoaded, currentWorkspaceId, availableWorkspaces]);
+    }, [
+      panelLayout,
+      panelSizes,
+      panelCollapsedState,
+      workspacesLoaded,
+      panelPreferencesLoaded,
+      currentWorkspaceId,
+      availableWorkspaces,
+    ]);
 
     const persistCollapsedState = useCallback(
       async (collapsed: { left?: boolean; right?: boolean }) => {
         try {
-          await WorkspaceLayoutService.updateRepositoryCollapsed(repositoryKey, collapsed);
+          await WorkspaceLayoutService.updateRepositoryCollapsed(
+            repositoryKey,
+            collapsed,
+          );
         } catch (error) {
-          console.error('[RepositoryWorkspace] Failed to persist collapsed state:', error);
+          console.error(
+            '[RepositoryWorkspace] Failed to persist collapsed state:',
+            error,
+          );
         }
       },
       [repositoryKey],
@@ -410,7 +502,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
             collapsed: panelCollapsedState,
           });
         } catch (error) {
-          console.error('[RepositoryWorkspace] Failed to persist panel layout:', error);
+          console.error(
+            '[RepositoryWorkspace] Failed to persist panel layout:',
+            error,
+          );
         }
       },
       [repositoryKey, panelSizes, panelCollapsedState],
@@ -429,16 +524,26 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
     const persistPanelSizes = useCallback(
       async (sizes: { left: number; middle: number; right: number }) => {
         try {
-          await WorkspaceLayoutService.updateRepositorySizes(repositoryKey, sizes);
+          await WorkspaceLayoutService.updateRepositorySizes(
+            repositoryKey,
+            sizes,
+          );
         } catch (error) {
-          console.error('[RepositoryWorkspace] Failed to persist panel sizes:', error);
+          console.error(
+            '[RepositoryWorkspace] Failed to persist panel sizes:',
+            error,
+          );
         }
       },
       [repositoryKey],
     );
 
     // Debounce panel size changes to avoid too frequent saves
-    const [pendingPanelSizes, setPendingPanelSizes] = useState<{ left: number; middle: number; right: number } | null>(null);
+    const [pendingPanelSizes, setPendingPanelSizes] = useState<{
+      left: number;
+      middle: number;
+      right: number;
+    } | null>(null);
 
     useEffect(() => {
       if (!pendingPanelSizes || !panelPreferencesLoaded) return;
@@ -466,19 +571,28 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
       async (workspaceId: string) => {
         const workspace = availableWorkspaces[workspaceId];
         if (!workspace) {
-          console.error(`[RepositoryWorkspace] Workspace ${workspaceId} not found`);
+          console.error(
+            `[RepositoryWorkspace] Workspace ${workspaceId} not found`,
+          );
           return;
         }
 
-        const newSizes = workspace.defaultSizes || { left: 20, middle: 45, right: 35 };
-        const newCollapsed = workspace.defaultCollapsed || { left: false, right: false };
+        const newSizes = workspace.defaultSizes || {
+          left: 20,
+          middle: 45,
+          right: 35,
+        };
+        const newCollapsed = workspace.defaultCollapsed || {
+          left: false,
+          right: false,
+        };
 
         // Apply workspace layout
         setPanelLayout(workspace.layout);
         setPanelSizes(newSizes);
         setPanelCollapsedState(newCollapsed);
         setCurrentWorkspaceId(workspaceId);
-        setPanelResetKey(prev => prev + 1); // Force panel remount
+        setPanelResetKey((prev) => prev + 1); // Force panel remount
 
         // Save repository state (workspace + current sizes/collapsed)
         await WorkspaceLayoutService.setRepositoryState(repositoryKey, {
@@ -497,7 +611,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
           description?: string;
           includeSizes?: boolean;
           includeCollapsed?: boolean;
-        }
+        },
       ) => {
         try {
           const workspace = await WorkspaceLayoutService.createWorkspaceLayout(
@@ -506,12 +620,14 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
             {
               description: options?.description,
               defaultSizes: options?.includeSizes ? panelSizes : undefined,
-              defaultCollapsed: options?.includeCollapsed ? panelCollapsedState : undefined,
-            }
+              defaultCollapsed: options?.includeCollapsed
+                ? panelCollapsedState
+                : undefined,
+            },
           );
 
           // Update available workspaces
-          setAvailableWorkspaces(prev => ({
+          setAvailableWorkspaces((prev) => ({
             ...prev,
             [workspace.id]: workspace,
           }));
@@ -528,62 +644,72 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
 
           return workspace;
         } catch (error) {
-          console.error('[RepositoryWorkspace] Failed to save workspace:', error);
+          console.error(
+            '[RepositoryWorkspace] Failed to save workspace:',
+            error,
+          );
           throw error;
         }
       },
       [panelLayout, panelSizes, panelCollapsedState, repositoryKey],
     );
 
-    const handleUpdateWorkspaceDefaults = useCallback(
-      async () => {
-        if (!currentWorkspaceId) return;
+    const handleUpdateWorkspaceDefaults = useCallback(async () => {
+      if (!currentWorkspaceId) return;
 
-        try {
-          await WorkspaceLayoutService.updateWorkspaceFromRepositoryState(
-            currentWorkspaceId,
-            repositoryKey
-          );
+      try {
+        await WorkspaceLayoutService.updateWorkspaceFromRepositoryState(
+          currentWorkspaceId,
+          repositoryKey,
+        );
 
-          // Reload workspaces to reflect updated defaults
-          const workspaces = await WorkspaceLayoutService.getWorkspaceLayouts();
-          setAvailableWorkspaces(workspaces);
-          setHasStateDeviation(false);
-        } catch (error) {
-          console.error('[RepositoryWorkspace] Failed to update workspace defaults:', error);
-        }
-      },
-      [currentWorkspaceId, repositoryKey],
-    );
+        // Reload workspaces to reflect updated defaults
+        const workspaces = await WorkspaceLayoutService.getWorkspaceLayouts();
+        setAvailableWorkspaces(workspaces);
+        setHasStateDeviation(false);
+      } catch (error) {
+        console.error(
+          '[RepositoryWorkspace] Failed to update workspace defaults:',
+          error,
+        );
+      }
+    }, [currentWorkspaceId, repositoryKey]);
 
-    const handleResetToWorkspaceDefaults = useCallback(
-      async () => {
-        if (!currentWorkspaceId) return;
+    const handleResetToWorkspaceDefaults = useCallback(async () => {
+      if (!currentWorkspaceId) return;
 
-        const workspace = availableWorkspaces[currentWorkspaceId];
-        if (!workspace) return;
+      const workspace = availableWorkspaces[currentWorkspaceId];
+      if (!workspace) return;
 
-        try {
-          const defaultSizes = workspace.defaultSizes || { left: 20, middle: 45, right: 35 };
-          const defaultCollapsed = workspace.defaultCollapsed || { left: false, right: false };
+      try {
+        const defaultSizes = workspace.defaultSizes || {
+          left: 20,
+          middle: 45,
+          right: 35,
+        };
+        const defaultCollapsed = workspace.defaultCollapsed || {
+          left: false,
+          right: false,
+        };
 
-          // Update UI state immediately
-          setPanelSizes(defaultSizes);
-          setPanelCollapsedState(defaultCollapsed);
-          setHasStateDeviation(false);
-          setPanelResetKey(prev => prev + 1); // Force panel remount
+        // Update UI state immediately
+        setPanelSizes(defaultSizes);
+        setPanelCollapsedState(defaultCollapsed);
+        setHasStateDeviation(false);
+        setPanelResetKey((prev) => prev + 1); // Force panel remount
 
-          // Persist to repository state
-          await WorkspaceLayoutService.resetRepositoryToWorkspaceDefaults(
-            repositoryKey,
-            currentWorkspaceId
-          );
-        } catch (error) {
-          console.error('[RepositoryWorkspace] Failed to reset to workspace defaults:', error);
-        }
-      },
-      [currentWorkspaceId, repositoryKey, availableWorkspaces],
-    );
+        // Persist to repository state
+        await WorkspaceLayoutService.resetRepositoryToWorkspaceDefaults(
+          repositoryKey,
+          currentWorkspaceId,
+        );
+      } catch (error) {
+        console.error(
+          '[RepositoryWorkspace] Failed to reset to workspace defaults:',
+          error,
+        );
+      }
+    }, [currentWorkspaceId, repositoryKey, availableWorkspaces]);
 
     // Check which agents have MCP configured (once on mount)
     useEffect(() => {
@@ -628,28 +754,52 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
 
           // Register repository with monitoring service for local clones
           if (repository.localClones && repository.localClones.length > 0) {
-            const visibleClonePath = CloneVisibilityService.getVisibleClonePath(repository);
+            const visibleClonePath =
+              CloneVisibilityService.getVisibleClonePath(repository);
             if (visibleClonePath) {
               try {
                 // Start monitoring service if not already started
-                console.log('[RepositoryWorkspace] Starting monitoring service...');
+                console.log(
+                  '[RepositoryWorkspace] Starting monitoring service...',
+                );
                 await RepositoryMonitoringService.startMonitoring();
                 console.log('[RepositoryWorkspace] Monitoring service started');
 
-                console.log('[RepositoryWorkspace] Registering repository with monitoring service:', visibleClonePath);
-                await RepositoryMonitoringService.registerRepository(visibleClonePath);
-                console.log('[RepositoryWorkspace] Repository registered successfully');
+                console.log(
+                  '[RepositoryWorkspace] Registering repository with monitoring service:',
+                  visibleClonePath,
+                );
+                await RepositoryMonitoringService.registerRepository(
+                  visibleClonePath,
+                );
+                console.log(
+                  '[RepositoryWorkspace] Repository registered successfully',
+                );
 
                 // Enable git watching for the repository
-                console.log('[RepositoryWorkspace] Enabling git watching for repository:', visibleClonePath);
-                const result = await RepositoryMonitoringService.enableGitWatching(visibleClonePath);
+                console.log(
+                  '[RepositoryWorkspace] Enabling git watching for repository:',
+                  visibleClonePath,
+                );
+                const result =
+                  await RepositoryMonitoringService.enableGitWatching(
+                    visibleClonePath,
+                  );
                 if (result.success) {
-                  console.log('[RepositoryWorkspace] Git watching enabled successfully');
+                  console.log(
+                    '[RepositoryWorkspace] Git watching enabled successfully',
+                  );
                 } else {
-                  console.warn('[RepositoryWorkspace] Failed to enable git watching:', result.error);
+                  console.warn(
+                    '[RepositoryWorkspace] Failed to enable git watching:',
+                    result.error,
+                  );
                 }
               } catch (error) {
-                console.error('[RepositoryWorkspace] Failed to register repository:', error);
+                console.error(
+                  '[RepositoryWorkspace] Failed to register repository:',
+                  error,
+                );
               }
             }
           }
@@ -660,16 +810,22 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
 
       // Cleanup: disable git watching on unmount
       return () => {
-        const visibleClonePath = CloneVisibilityService.getVisibleClonePath(repository);
+        const visibleClonePath =
+          CloneVisibilityService.getVisibleClonePath(repository);
         if (visibleClonePath) {
           RepositoryMonitoringService.disableGitWatching(visibleClonePath)
             .then((result) => {
               if (result.success) {
-                console.log('[RepositoryWorkspace] Git watching disabled on unmount');
+                console.log(
+                  '[RepositoryWorkspace] Git watching disabled on unmount',
+                );
               }
             })
             .catch((error) => {
-              console.error('[RepositoryWorkspace] Failed to disable git watching on unmount:', error);
+              console.error(
+                '[RepositoryWorkspace] Failed to disable git watching on unmount:',
+                error,
+              );
             });
         }
       };
@@ -677,33 +833,48 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
 
     // Set up event highlight service - listen for agent events
     useEffect(() => {
-      const visibleClonePath = CloneVisibilityService.getVisibleClonePath(repository);
+      const visibleClonePath =
+        CloneVisibilityService.getVisibleClonePath(repository);
       if (!visibleClonePath) {
-        console.log('[RepositoryWorkspace] No visible clone path for event highlighting');
+        console.log(
+          '[RepositoryWorkspace] No visible clone path for event highlighting',
+        );
         return;
       }
 
-      console.log('[RepositoryWorkspace] Setting up event highlight service for:', visibleClonePath);
+      console.log(
+        '[RepositoryWorkspace] Setting up event highlight service for:',
+        visibleClonePath,
+      );
 
       // Set repository context
       eventHighlightService.setRepository(visibleClonePath);
 
       // Subscribe to processed events
       const unsubscribe = AgentSessionSDKService.onProcessedEvent((event) => {
-        console.log('[RepositoryWorkspace] Received agent event:', event.eventType, event.toolName);
+        console.log(
+          '[RepositoryWorkspace] Received agent event:',
+          event.eventType,
+          event.toolName,
+        );
         eventHighlightService.processEvent(event);
       });
 
       // Listen for highlight updates
       const handleHighlightUpdate = (layers: HighlightLayer[]) => {
-        console.log('[RepositoryWorkspace] Highlight layers updated:', layers.length);
+        console.log(
+          '[RepositoryWorkspace] Highlight layers updated:',
+          layers.length,
+        );
         setEventHighlightLayers(layers);
       };
 
       eventHighlightService.on('highlight-update', handleHighlightUpdate);
 
       return () => {
-        console.log('[RepositoryWorkspace] Cleaning up event highlight service');
+        console.log(
+          '[RepositoryWorkspace] Cleaning up event highlight service',
+        );
         unsubscribe();
         eventHighlightService.off('highlight-update', handleHighlightUpdate);
       };
@@ -786,7 +957,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         return;
       }
 
-      console.log('[RepositoryWorkspace] Registering event highlight layers:', eventHighlightLayers.length);
+      console.log(
+        '[RepositoryWorkspace] Registering event highlight layers:',
+        eventHighlightLayers.length,
+      );
 
       // Register all event highlight layers
       eventHighlightLayers.forEach((layer, idx) => {
@@ -835,7 +1009,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         return;
       }
 
-      console.log('[RepositoryWorkspace] Registering git highlight layers:', gitHighlightLayers.length);
+      console.log(
+        '[RepositoryWorkspace] Registering git highlight layers:',
+        gitHighlightLayers.length,
+      );
 
       // Register each git layer
       gitHighlightLayers.forEach((layer, idx) => {
@@ -861,7 +1038,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         return;
       }
 
-      console.log('[RepositoryWorkspace] Registering tools highlight layers:', toolsHighlightLayers.length);
+      console.log(
+        '[RepositoryWorkspace] Registering tools highlight layers:',
+        toolsHighlightLayers.length,
+      );
 
       // Register each tools layer
       toolsHighlightLayers.forEach((layer, idx) => {
@@ -887,7 +1067,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
       return new GitHubContentProvider(
         ghOwner || '',
         ghRepo || '',
-        selectedSource?.metadata?.currentBranch || repository.metadata?.defaultBranch || 'main',
+        selectedSource?.metadata?.currentBranch ||
+          repository.metadata?.defaultBranch ||
+          'main',
       );
     }, [
       ghOwner,
@@ -909,7 +1091,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
     // Handle task click - open task markdown in viewer
     const handleTaskClick = useCallback(
       async (task: any) => {
-        const taskDocPath = task.documentPath || `${repositoryPath}/.palace-work/tasks/active/${task.id}.task.md`;
+        const taskDocPath =
+          task.documentPath ||
+          `${repositoryPath}/.palace-work/tasks/active/${task.id}.task.md`;
         setSelectedDocPath(taskDocPath);
         setSelectedDocType('markdown');
         setRightPaneMode('document');
@@ -917,27 +1101,26 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
       [repositoryPath],
     );
 
-    const openFileInRightPane = useCallback(
-      async (filePath: string) => {
-        setSelectedFile(filePath);
+    const openFileInRightPane = useCallback(async (filePath: string) => {
+      setSelectedFile(filePath);
 
-        // Check if it's a markdown file
-        const isMarkdown = filePath.toLowerCase().endsWith('.md') || filePath.toLowerCase().endsWith('.mdx');
+      // Check if it's a markdown file
+      const isMarkdown =
+        filePath.toLowerCase().endsWith('.md') ||
+        filePath.toLowerCase().endsWith('.mdx');
 
-        if (isMarkdown) {
-          // Open in BOTH markdown viewer and code viewer (editor)
-          setSelectedDocPath(filePath);
-          setSelectedDocType('markdown');
-          setSelectedCodeFile(filePath);
-          setRightPaneMode('document');
-        } else {
-          // Show all other files in code viewer only
-          setSelectedCodeFile(filePath);
-          setRightPaneMode('document');
-        }
-      },
-      [],
-    );
+      if (isMarkdown) {
+        // Open in BOTH markdown viewer and code viewer (editor)
+        setSelectedDocPath(filePath);
+        setSelectedDocType('markdown');
+        setSelectedCodeFile(filePath);
+        setRightPaneMode('document');
+      } else {
+        // Show all other files in code viewer only
+        setSelectedCodeFile(filePath);
+        setRightPaneMode('document');
+      }
+    }, []);
 
     const handleFileClick = useCallback(
       (filePath: string) => {
@@ -947,7 +1130,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
     );
 
     const handleSearchFileSelect = useCallback(
-      async (filePath: string, _lineNumbers?: number[], _searchQuery?: string) => {
+      async (
+        filePath: string,
+        _lineNumbers?: number[],
+        _searchQuery?: string,
+      ) => {
         await openFileInRightPane(filePath);
       },
       [openFileInRightPane],
@@ -965,14 +1152,20 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
 
     // Handle folder filter changes to create highlight layers
     const handleFolderFiltersChange = useCallback(
-      (filters: Array<{ id: string; path: string; mode: 'include' | 'exclude' }>) => {
+      (
+        filters: Array<{
+          id: string;
+          path: string;
+          mode: 'include' | 'exclude';
+        }>,
+      ) => {
         if (filters.length === 0) {
           setFolderFilterHighlightLayers([]);
           return;
         }
 
         // Only create layers for included directories
-        const includedFilters = filters.filter(f => f.mode === 'include');
+        const includedFilters = filters.filter((f) => f.mode === 'include');
 
         if (includedFilters.length === 0) {
           setFolderFilterHighlightLayers([]);
@@ -987,7 +1180,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
           opacity: 0.4,
           priority: 18,
           borderWidth: 2,
-          items: includedFilters.map(filter => ({
+          items: includedFilters.map((filter) => ({
             path: filter.path,
             type: 'directory' as const,
           })),
@@ -999,15 +1192,12 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
     );
 
     // Tab and view change handlers
-    const handleTabChange = useCallback(
-      (tabId: string) => {
-        setActiveTab(tabId);
-        if (tabId !== 'docs') {
-          setSelectedDocPath(null);
-        }
-      },
-      [],
-    );
+    const handleTabChange = useCallback((tabId: string) => {
+      setActiveTab(tabId);
+      if (tabId !== 'docs') {
+        setSelectedDocPath(null);
+      }
+    }, []);
 
     // Create content provider for search
     const searchContentProvider = useMemo<ContentProvider>(() => {
@@ -1030,9 +1220,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
           name: `Analyzing ${packageName}`,
           color: '#0ea5e9',
           opacity: 0.9,
-          items: [
-            { path: packagePath, type: 'directory' as const },
-          ],
+          items: [{ path: packagePath, type: 'directory' as const }],
           enabled: true,
           priority: 10,
         };
@@ -1084,9 +1272,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
           name: `Selected ${packageName}`,
           color: '#22c55e',
           opacity: 0.9,
-          items: [
-            { path: packagePath, type: 'directory' as const },
-          ],
+          items: [{ path: packagePath, type: 'directory' as const }],
           enabled: true,
           priority: 5,
         };
@@ -1227,7 +1413,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
       let relativePath = selectedFile;
       if (selectedFile.includes('/')) {
         const parts = selectedFile.split('/');
-        const repoNameIndex = parts.findIndex((part) => part === repository.name);
+        const repoNameIndex = parts.findIndex(
+          (part) => part === repository.name,
+        );
         if (repoNameIndex !== -1 && repoNameIndex < parts.length - 1) {
           relativePath = parts.slice(repoNameIndex + 1).join('/');
         } else {
@@ -1413,9 +1601,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         fileTree: (
           <RepositoryPanelProvider
             repositoryPath={
-              selectedSource?.type === 'local'
-                ? selectedSource.location
-                : null
+              selectedSource?.type === 'local' ? selectedSource.location : null
             }
             actions={{ openFile: handleSearchFileSelect }}
           >
@@ -1438,9 +1624,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         gitChanges: (
           <RepositoryPanelProvider
             repositoryPath={
-              selectedSource?.type === 'local'
-                ? selectedSource.location
-                : null
+              selectedSource?.type === 'local' ? selectedSource.location : null
             }
             actions={{ openFile: handleFileClick }}
           >
@@ -1480,9 +1664,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         docs: (
           <AlexandriaDocsPanel
             repositoryPath={
-              selectedSource?.location ||
-              repository.localClones[0]?.path ||
-              ''
+              selectedSource?.location || repository.localClones[0]?.path || ''
             }
             onDocumentSelect={handleDocumentSelect}
             selectedDocument={selectedDocPath ?? undefined}
@@ -1491,9 +1673,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         agentEvents: (
           <AgentEventsPanel
             repositoryPath={
-              selectedSource?.type === 'local'
-                ? selectedSource.location
-                : null
+              selectedSource?.type === 'local' ? selectedSource.location : null
             }
             maxEvents={100}
           />
@@ -1501,9 +1681,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         agentContext: (
           <AgentContextTreePanel
             repositoryPath={
-              selectedSource?.type === 'local'
-                ? selectedSource.location
-                : null
+              selectedSource?.type === 'local' ? selectedSource.location : null
             }
             onFileSelect={handleSearchFileSelect}
           />
@@ -1521,9 +1699,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         drawings: (
           <RepositoryPanelProvider
             repositoryPath={
-              selectedSource?.type === 'local'
-                ? selectedSource.location
-                : null
+              selectedSource?.type === 'local' ? selectedSource.location : null
             }
             actions={{ openFile: handleSearchFileSelect }}
           >
@@ -1577,16 +1753,76 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
 
     // Build tabs from registry using panel content
     const tabs: PanelTabConfig[] = [
-      { id: 'fileTree', label: 'Files', icon: <FolderTree size={14} />, visible: true, content: panelContentMap.fileTree },
-      { id: 'search', label: 'Search', icon: <Search size={14} />, visible: true, content: panelContentMap.search },
-      { id: 'gitChanges', label: 'Git Changes', icon: <GitBranch size={14} />, visible: selectedSource?.type === 'local', content: panelContentMap.gitChanges },
-      { id: 'dependencies', label: 'Dependencies', icon: <Layers size={14} />, visible: true, content: panelContentMap.dependencies },
-      { id: 'tools', label: 'Tools', icon: <Wrench size={14} />, visible: true, content: panelContentMap.tools },
-      { id: 'docs', label: 'Docs', icon: <Book size={14} />, visible: true, content: panelContentMap.docs },
-      { id: 'drawings', label: 'Drawings', icon: <Pencil size={14} />, visible: selectedSource?.type === 'local', content: panelContentMap.drawings },
-      { id: 'agentEvents', label: 'Agent Events', icon: <Activity size={14} />, visible: true, content: panelContentMap.agentEvents },
-      { id: 'agentContext', label: 'Agent Context', icon: <Activity size={14} />, visible: true, content: panelContentMap.agentContext },
-      { id: 'tasks', label: 'Tasks', icon: <ListTodo size={14} />, visible: true, content: panelContentMap.tasks },
+      {
+        id: 'fileTree',
+        label: 'Files',
+        icon: <FolderTree size={14} />,
+        visible: true,
+        content: panelContentMap.fileTree,
+      },
+      {
+        id: 'search',
+        label: 'Search',
+        icon: <Search size={14} />,
+        visible: true,
+        content: panelContentMap.search,
+      },
+      {
+        id: 'gitChanges',
+        label: 'Git Changes',
+        icon: <GitBranch size={14} />,
+        visible: selectedSource?.type === 'local',
+        content: panelContentMap.gitChanges,
+      },
+      {
+        id: 'dependencies',
+        label: 'Dependencies',
+        icon: <Layers size={14} />,
+        visible: true,
+        content: panelContentMap.dependencies,
+      },
+      {
+        id: 'tools',
+        label: 'Tools',
+        icon: <Wrench size={14} />,
+        visible: true,
+        content: panelContentMap.tools,
+      },
+      {
+        id: 'docs',
+        label: 'Docs',
+        icon: <Book size={14} />,
+        visible: true,
+        content: panelContentMap.docs,
+      },
+      {
+        id: 'drawings',
+        label: 'Drawings',
+        icon: <Pencil size={14} />,
+        visible: selectedSource?.type === 'local',
+        content: panelContentMap.drawings,
+      },
+      {
+        id: 'agentEvents',
+        label: 'Agent Events',
+        icon: <Activity size={14} />,
+        visible: true,
+        content: panelContentMap.agentEvents,
+      },
+      {
+        id: 'agentContext',
+        label: 'Agent Context',
+        icon: <Activity size={14} />,
+        visible: true,
+        content: panelContentMap.agentContext,
+      },
+      {
+        id: 'tasks',
+        label: 'Tasks',
+        icon: <ListTodo size={14} />,
+        visible: true,
+        content: panelContentMap.tasks,
+      },
     ];
 
     // Create toolbar items
@@ -1703,40 +1939,39 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
     }, [visibleTabs, activeTab, handleTabChange]);
 
     // Memoize viewer panels
-    const codeViewerPanel = useMemo(
-      () => {
-        return (
-          <FilePreviewPanel
-            filePath={selectedCodeFile}
-            source={selectedSource}
-            contentProvider={fileViewerContentProvider}
-            onClose={() => {
-              setSelectedCodeFile(null);
-              setSelectedFile(null);
-            }}
-          />
-        );
-      },
-      [selectedCodeFile, selectedSource, fileViewerContentProvider],
-    );
+    const codeViewerPanel = useMemo(() => {
+      return (
+        <FilePreviewPanel
+          filePath={selectedCodeFile}
+          source={selectedSource}
+          contentProvider={fileViewerContentProvider}
+          onClose={() => {
+            setSelectedCodeFile(null);
+            setSelectedFile(null);
+          }}
+        />
+      );
+    }, [selectedCodeFile, selectedSource, fileViewerContentProvider]);
 
-    const markdownViewerPanel = useMemo(
-      () => {
-        const shouldShow = selectedDocType !== 'excalidraw';
-        return (
-          <MarkdownRenderingPanel
-            filePath={shouldShow ? selectedDocPath : null}
-            source={selectedSource}
-            contentProvider={fileViewerContentProvider}
-            onClose={() => {
-              setSelectedDocPath(null);
-              setSelectedDocType('markdown');
-            }}
-          />
-        );
-      },
-      [selectedDocPath, selectedDocType, selectedSource, fileViewerContentProvider],
-    );
+    const markdownViewerPanel = useMemo(() => {
+      const shouldShow = selectedDocType !== 'excalidraw';
+      return (
+        <MarkdownRenderingPanel
+          filePath={shouldShow ? selectedDocPath : null}
+          source={selectedSource}
+          contentProvider={fileViewerContentProvider}
+          onClose={() => {
+            setSelectedDocPath(null);
+            setSelectedDocType('markdown');
+          }}
+        />
+      );
+    }, [
+      selectedDocPath,
+      selectedDocType,
+      selectedSource,
+      fileViewerContentProvider,
+    ]);
 
     const excalidrawDiagramPanel = useMemo(
       () => (
@@ -1750,7 +1985,12 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
           }}
         />
       ),
-      [selectedDocPath, selectedDocType, selectedSource, fileViewerContentProvider],
+      [
+        selectedDocPath,
+        selectedDocType,
+        selectedSource,
+        fileViewerContentProvider,
+      ],
     );
 
     // Error handling
@@ -1831,7 +2071,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
           }
           rightSidebarCollapsed={panelCollapsedState.right ?? false}
           onToggleRightSidebar={() =>
-            handleRightPanelCollapsedChange(!(panelCollapsedState.right ?? false))
+            handleRightPanelCollapsedChange(
+              !(panelCollapsedState.right ?? false),
+            )
           }
           availableWorkspaces={availableWorkspaces}
           currentWorkspaceId={currentWorkspaceId}
@@ -1858,221 +2100,251 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
               flexDirection: 'column',
             }}
           >
-                <CityMapManager
-                  fileTree={fileTree}
-                  activeSource={selectedSource}
-                  gitEnabled={gitState?.enabled}
-                  headTree={gitState?.headTree}
-                  hasNoCommits={gitState?.hasNoCommits}
-                  viewMode="explore"
-                  renderCustomBadges={() => (
-                    <>
-                      {fileTreeSources.length > 1 && (
-                        <button
-                          onClick={() => {
-                            console.info('Open source selector');
-                          }}
-                          style={{
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            border: `1px solid ${theme.colors.border}`,
-                            backgroundColor: theme.colors.background,
-                            color: theme.colors.textSecondary,
-                            fontSize: 11,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {fileTreeSources.length} sources
-                        </button>
-                      )}
-                    </>
+            <CityMapManager
+              fileTree={fileTree}
+              activeSource={selectedSource}
+              gitEnabled={gitState?.enabled}
+              headTree={gitState?.headTree}
+              hasNoCommits={gitState?.hasNoCommits}
+              viewMode="explore"
+              renderCustomBadges={() => (
+                <>
+                  {fileTreeSources.length > 1 && (
+                    <button
+                      onClick={() => {
+                        console.info('Open source selector');
+                      }}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        border: `1px solid ${theme.colors.border}`,
+                        backgroundColor: theme.colors.background,
+                        color: theme.colors.textSecondary,
+                        fontSize: 11,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {fileTreeSources.length} sources
+                    </button>
                   )}
-                >
-                  {({ cityData: managedCityData, sourceBadges, isBuilding }) => {
-                    // City visualization panel (standalone, decoupled from document viewing)
-                    const cityPanel = (
-                      <CityVisualizationPanel
-                        cityData={managedCityData}
-                        treeStats={treeStats}
-                        onFileClick={handleFileClick}
-                        onHelpClick={() => setShowHelpModal(true)}
-                        loading={loading || isBuilding}
-                        loadingMessage="Loading repository structure"
-                        emptyMessage="Select a branch to explore"
-                        sourceBadges={sourceBadges}
-                        toolbarItems={toolbarItems}
-                        toolbarExpanded={toolbarExpanded}
-                      />
-                    );
-
-                    const propsPanelLayout = panelLayout || {
-                      left: 'left',
-                      middle: 'tabbedTerminal',
-                      right: 'middle',
-                    };
-
-                    // Tabbed Terminal panel
-                    const isTabbedTerminalVisible = propsPanelLayout.middle === 'tabbedTerminal' || propsPanelLayout.left === 'tabbedTerminal' || propsPanelLayout.right === 'tabbedTerminal';
-                    const tabbedTerminalPanel = selectedSource?.type === 'local' ? (
-                      <TabbedTerminalPanel
-                        directory={selectedSource.location}
-                        repositoryKey={repositoryKey}
-                        isVisible={isTabbedTerminalVisible}
-                        hideHeader={false}
-                        key={`tabbed-terminal-${selectedSource.location}`}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexDirection: 'column',
-                          backgroundColor: theme.colors.backgroundSecondary,
-                          color: theme.colors.textSecondary,
-                          padding: '20px',
-                          textAlign: 'center',
-                        }}
-                      >
-                        <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px', color: theme.colors.text }}>
-                          Terminal Unavailable
-                        </div>
-                        <div style={{ fontSize: '14px' }}>
-                          Terminal is only available for local repository clones
-                        </div>
-                      </div>
-                    );
-
-                    // Create all panel definitions
-                    const allPanels: PanelDefinitionWithContent[] = [
-                      ...leftPanelTabs,
-                      {
-                        id: 'tabbedTerminal',
-                        label: 'Tabbed Terminal',
-                        content: tabbedTerminalPanel,
-                      },
-                      {
-                        id: 'cityVisualization',
-                        label: 'City Visualization',
-                        content: cityPanel,
-                      },
-                      {
-                        id: 'codeViewer',
-                        label: 'Code Viewer',
-                        content: codeViewerPanel,
-                      },
-                      {
-                        id: 'markdownViewer',
-                        label: 'Markdown Viewer',
-                        content: markdownViewerPanel,
-                      },
-                      {
-                        id: 'excalidrawDiagram',
-                        label: 'Excalidraw Diagram',
-                        content: excalidrawDiagramPanel,
-                      },
-                    ];
-
-                    // Default layout
-                    const defaultLayout: PanelLayout = {
-                      left: {
-                        type: 'tabs',
-                        panels: ['fileTree', 'docs'],
-                        config: {
-                          defaultActiveTab: 0,
-                          tabPosition: 'top',
-                        } as TabsConfig,
-                      },
-                      middle: 'cityVisualization',
-                      right: {
-                        type: 'tabs',
-                        panels: ['search', 'gitChanges', 'dependencies', 'tools'],
-                        config: {
-                          defaultActiveTab: 0,
-                          tabPosition: 'top',
-                        } as TabsConfig,
-                      },
-                    };
-
-                    // Wait for panel preferences to be loaded
-                    if (!panelPreferencesLoaded) {
-                      return (
-                        <div
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            backgroundColor: theme.colors.background,
-                          }}
-                        >
-                          <div style={{ color: theme.colors.textSecondary }}>Loading...</div>
-                        </div>
-                      );
-                    }
-
-                    // Use provided layout or default
-                    const actualPanelLayout: PanelLayout = panelLayout || defaultLayout;
-
-                    return (
-                      <div
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          boxSizing: 'border-box',
-                        }}
-                      >
-                        <ConfigurablePanelLayout
-                          key={panelResetKey}
-                          panels={allPanels}
-                          layout={actualPanelLayout}
-                          collapsiblePanels={{ left: true, right: true }}
-                          defaultSizes={panelSizes ?? { left: 20, middle: 45, right: 35 }}
-                          minSizes={{ left: 15, middle: 30, right: 25 }}
-                          collapsed={{ left: panelCollapsedState.left ?? false, right: panelCollapsedState.right ?? false }}
-                          showCollapseButtons={false}
-                          onPanelResize={handlePanelSizesChange}
-                          onLeftCollapseComplete={() => handleLeftPanelCollapsedChange(true)}
-                          onLeftExpandComplete={() => handleLeftPanelCollapsedChange(false)}
-                          onRightCollapseComplete={() => handleRightPanelCollapsedChange(true)}
-                          onRightExpandComplete={() => handleRightPanelCollapsedChange(false)}
-                          style={{ height: '100%', width: '100%' }}
-                          theme={theme}
-                        />
-                      </div>
-                    );
-                  }}
-                </CityMapManager>
-                {/* File Viewer Modal */}
-                {showFileViewer && viewerFilePath && viewerRelativePath && (
-                  <RemoteFileViewerModal
-                    filePath={viewerFilePath}
-                    relativePath={viewerRelativePath}
-                    contentProvider={fileViewerContentProvider}
-                    onClose={() => {
-                      setShowFileViewer(false);
-                      setViewerFilePath(null);
-                      setViewerRelativePath(null);
-                    }}
-                    repository={{
-                      owner: ghOwner || '',
-                      repo: ghRepo || '',
-                      branch:
-                        selectedSource?.metadata?.currentBranch ||
-                        repository.metadata?.defaultBranch || 'main',
-                    }}
+                </>
+              )}
+            >
+              {({ cityData: managedCityData, sourceBadges, isBuilding }) => {
+                // City visualization panel (standalone, decoupled from document viewing)
+                const cityPanel = (
+                  <CityVisualizationPanel
+                    cityData={managedCityData}
+                    treeStats={treeStats}
+                    onFileClick={handleFileClick}
+                    onHelpClick={() => setShowHelpModal(true)}
+                    loading={loading || isBuilding}
+                    loadingMessage="Loading repository structure"
+                    emptyMessage="Select a branch to explore"
+                    sourceBadges={sourceBadges}
+                    toolbarItems={toolbarItems}
+                    toolbarExpanded={toolbarExpanded}
                   />
-                )}
+                );
 
-                {/* Help Modal */}
-                <HelpModal
-                  isOpen={showHelpModal}
-                  onClose={() => setShowHelpModal(false)}
-                  mode="explore"
-                />
-              </div>
+                const propsPanelLayout = panelLayout || {
+                  left: 'left',
+                  middle: 'tabbedTerminal',
+                  right: 'middle',
+                };
+
+                // Tabbed Terminal panel
+                const isTabbedTerminalVisible =
+                  propsPanelLayout.middle === 'tabbedTerminal' ||
+                  propsPanelLayout.left === 'tabbedTerminal' ||
+                  propsPanelLayout.right === 'tabbedTerminal';
+                const tabbedTerminalPanel =
+                  selectedSource?.type === 'local' ? (
+                    <TabbedTerminalPanel
+                      directory={selectedSource.location}
+                      repositoryKey={repositoryKey}
+                      isVisible={isTabbedTerminalVisible}
+                      hideHeader={false}
+                      key={`tabbed-terminal-${selectedSource.location}`}
+                      showAllTerminals={showAllTerminals}
+                      onShowAllTerminalsChange={setShowAllTerminals}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        color: theme.colors.textSecondary,
+                        padding: '20px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '16px',
+                          fontWeight: 600,
+                          marginBottom: '8px',
+                          color: theme.colors.text,
+                        }}
+                      >
+                        Terminal Unavailable
+                      </div>
+                      <div style={{ fontSize: '14px' }}>
+                        Terminal is only available for local repository clones
+                      </div>
+                    </div>
+                  );
+
+                // Create all panel definitions
+                const allPanels: PanelDefinitionWithContent[] = [
+                  ...leftPanelTabs,
+                  {
+                    id: 'tabbedTerminal',
+                    label: 'Tabbed Terminal',
+                    content: tabbedTerminalPanel,
+                  },
+                  {
+                    id: 'cityVisualization',
+                    label: 'City Visualization',
+                    content: cityPanel,
+                  },
+                  {
+                    id: 'codeViewer',
+                    label: 'Code Viewer',
+                    content: codeViewerPanel,
+                  },
+                  {
+                    id: 'markdownViewer',
+                    label: 'Markdown Viewer',
+                    content: markdownViewerPanel,
+                  },
+                  {
+                    id: 'excalidrawDiagram',
+                    label: 'Excalidraw Diagram',
+                    content: excalidrawDiagramPanel,
+                  },
+                ];
+
+                // Default layout
+                const defaultLayout: PanelLayout = {
+                  left: {
+                    type: 'tabs',
+                    panels: ['fileTree', 'docs'],
+                    config: {
+                      defaultActiveTab: 0,
+                      tabPosition: 'top',
+                    } as TabsConfig,
+                  },
+                  middle: 'cityVisualization',
+                  right: {
+                    type: 'tabs',
+                    panels: ['search', 'gitChanges', 'dependencies', 'tools'],
+                    config: {
+                      defaultActiveTab: 0,
+                      tabPosition: 'top',
+                    } as TabsConfig,
+                  },
+                };
+
+                // Wait for panel preferences to be loaded
+                if (!panelPreferencesLoaded) {
+                  return (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: theme.colors.background,
+                      }}
+                    >
+                      <div style={{ color: theme.colors.textSecondary }}>
+                        Loading...
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Use provided layout or default
+                const actualPanelLayout: PanelLayout =
+                  panelLayout || defaultLayout;
+
+                return (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <ConfigurablePanelLayout
+                      key={panelResetKey}
+                      panels={allPanels}
+                      layout={actualPanelLayout}
+                      collapsiblePanels={{ left: true, right: true }}
+                      defaultSizes={
+                        panelSizes ?? { left: 20, middle: 45, right: 35 }
+                      }
+                      minSizes={{ left: 15, middle: 30, right: 25 }}
+                      collapsed={{
+                        left: panelCollapsedState.left ?? false,
+                        right: panelCollapsedState.right ?? false,
+                      }}
+                      showCollapseButtons={false}
+                      onPanelResize={handlePanelSizesChange}
+                      onLeftCollapseComplete={() =>
+                        handleLeftPanelCollapsedChange(true)
+                      }
+                      onLeftExpandComplete={() =>
+                        handleLeftPanelCollapsedChange(false)
+                      }
+                      onRightCollapseComplete={() =>
+                        handleRightPanelCollapsedChange(true)
+                      }
+                      onRightExpandComplete={() =>
+                        handleRightPanelCollapsedChange(false)
+                      }
+                      style={{ height: '100%', width: '100%' }}
+                      theme={theme}
+                    />
+                  </div>
+                );
+              }}
+            </CityMapManager>
+            {/* File Viewer Modal */}
+            {showFileViewer && viewerFilePath && viewerRelativePath && (
+              <RemoteFileViewerModal
+                filePath={viewerFilePath}
+                relativePath={viewerRelativePath}
+                contentProvider={fileViewerContentProvider}
+                onClose={() => {
+                  setShowFileViewer(false);
+                  setViewerFilePath(null);
+                  setViewerRelativePath(null);
+                }}
+                repository={{
+                  owner: ghOwner || '',
+                  repo: ghRepo || '',
+                  branch:
+                    selectedSource?.metadata?.currentBranch ||
+                    repository.metadata?.defaultBranch ||
+                    'main',
+                }}
+              />
+            )}
+
+            {/* Help Modal */}
+            <HelpModal
+              isOpen={showHelpModal}
+              onClose={() => setShowHelpModal(false)}
+              mode="explore"
+            />
+          </div>
         </div>
 
         {/* Modals */}
@@ -2104,91 +2376,459 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
               id: 'fileTree',
               label: 'Files',
               icon: <FolderTree size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>File browser</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <FolderTree size={14} style={{ color: theme.colors.primary }} />
+                    <span style={{ fontWeight: 600 }}>src/</span>
+                  </div>
+                  <div style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <FileCode size={12} />
+                      <span>index.ts</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <FileCode size={12} />
+                      <span>utils.ts</span>
+                    </div>
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'search',
               label: 'Search',
               icon: <Search size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Search files and content</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 8px',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                    border: `1px solid ${theme.colors.border}`,
+                  }}>
+                    <Search size={12} style={{ color: theme.colors.textSecondary }} />
+                    <span style={{ color: theme.colors.textSecondary }}>Search files...</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                    3 results
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'gitChanges',
               label: 'Git Changes',
               icon: <GitBranch size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View git changes</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#22c55e' }}>
+                    <span>+</span>
+                    <span>new-file.ts</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b' }}>
+                    <span>M</span>
+                    <span>modified.ts</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444' }}>
+                    <span>-</span>
+                    <span>deleted.ts</span>
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'dependencies',
               label: 'Dependencies',
               icon: <Layers size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Package architecture</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Layers size={14} style={{ color: theme.colors.primary }} />
+                    <span style={{ fontWeight: 600 }}>root</span>
+                  </div>
+                  <div style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                      packages/core
+                    </div>
+                    <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                      packages/ui
+                    </div>
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'tools',
               label: 'Tools',
               icon: <Wrench size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Development tools</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 8px',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                  }}>
+                    <Wrench size={14} />
+                    <span>Build Tools</span>
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px 8px',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                  }}>
+                    <Activity size={14} />
+                    <span>Linters</span>
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'docs',
               label: 'Docs',
               icon: <Book size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Documentation viewer</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <FileText size={14} style={{ color: theme.colors.primary }} />
+                    <span>README.md</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <FileText size={14} style={{ color: theme.colors.primary }} />
+                    <span>CONTRIBUTING.md</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Book size={14} style={{ color: theme.colors.primary }} />
+                    <span>docs/</span>
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'drawings',
               label: 'Drawings',
               icon: <Pencil size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Browse and create Excalidraw drawings</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Pencil size={14} style={{ color: theme.colors.primary }} />
+                    <span>architecture.excalidraw</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Pencil size={14} style={{ color: theme.colors.primary }} />
+                    <span>flow-diagram.excalidraw</span>
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'agentEvents',
               label: 'Agent Events',
               icon: <Activity size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Monitor agent activity in real-time</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '11px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{
+                    padding: '6px',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                    borderLeft: `3px solid #3b82f6`,
+                  }}>
+                    <div style={{ fontWeight: 600 }}>Read</div>
+                    <div style={{ color: theme.colors.textSecondary }}>src/index.ts</div>
+                  </div>
+                  <div style={{
+                    padding: '6px',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                    borderLeft: `3px solid #22c55e`,
+                  }}>
+                    <div style={{ fontWeight: 600 }}>Write</div>
+                    <div style={{ color: theme.colors.textSecondary }}>src/utils.ts</div>
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'agentContext',
               label: 'Agent Context',
               icon: <Activity size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View files accessed by agents in a multi-tree view</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Context Trees</div>
+                  <div style={{ paddingLeft: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Activity size={12} style={{ color: theme.colors.primary }} />
+                      <span style={{ fontSize: '11px' }}>Session 1</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Activity size={12} style={{ color: theme.colors.primary }} />
+                      <span style={{ fontSize: '11px' }}>Session 2</span>
+                    </div>
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'tasks',
               label: 'Tasks',
               icon: <ListTodo size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View and manage repository tasks</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                  }}>
+                    <input type="checkbox" style={{ margin: 0 }} />
+                    <span>Implement feature X</span>
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '6px',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    borderRadius: '4px',
+                  }}>
+                    <input type="checkbox" checked style={{ margin: 0 }} />
+                    <span style={{ textDecoration: 'line-through', color: theme.colors.textSecondary }}>Fix bug Y</span>
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'cityVisualization',
               label: 'City Visualization',
               icon: <Building2 size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Code city view</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    height: '80px',
+                  }}
+                >
+                  <Building2 size={32} style={{ color: theme.colors.primary }} />
+                  <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>3D Code City</span>
+                </div>
+              ),
             },
             {
               id: 'tabbedTerminal',
               label: 'Tabbed Terminal',
               icon: <TerminalIcon size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Multi-tab terminal with agent support</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '11px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    gap: '4px',
+                    borderBottom: `1px solid ${theme.colors.border}`,
+                    paddingBottom: '4px',
+                  }}>
+                    <span style={{
+                      padding: '4px 8px',
+                      backgroundColor: theme.colors.primary,
+                      color: theme.colors.background,
+                      borderRadius: '4px 4px 0 0',
+                    }}>bash</span>
+                    <span style={{
+                      padding: '4px 8px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '4px 4px 0 0',
+                    }}>npm</span>
+                  </div>
+                  <div style={{
+                    fontFamily: 'monospace',
+                    color: theme.colors.textSecondary,
+                  }}>
+                    $ npm run dev
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'codeViewer',
               label: 'Code Viewer',
               icon: <FileCode size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View source code files</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '11px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  <div><span style={{ color: '#c678dd' }}>export</span> <span style={{ color: '#61afef' }}>function</span> <span style={{ color: '#e5c07b' }}>hello</span>() {'{'}</div>
+                  <div style={{ paddingLeft: '12px' }}>console.<span style={{ color: '#61afef' }}>log</span>(<span style={{ color: '#98c379' }}>'Hello'</span>);</div>
+                  <div>{'}'}</div>
+                </div>
+              ),
             },
             {
               id: 'markdownViewer',
               label: 'Markdown Viewer',
               icon: <FileText size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View markdown as document or slides</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{ fontSize: '14px', fontWeight: 600 }}>Markdown Preview</div>
+                  <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                    Renders .md files with syntax highlighting
+                  </div>
+                </div>
+              ),
             },
             {
               id: 'excalidrawDiagram',
               label: 'Excalidraw Diagram',
               icon: <Pencil size={16} />,
-              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View excalidraw diagrams</div>
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    height: '80px',
+                  }}
+                >
+                  <Presentation size={32} style={{ color: theme.colors.primary }} />
+                  <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>Diagram Editor</span>
+                </div>
+              ),
             },
           ]}
           currentLayout={panelLayout}
@@ -2196,13 +2836,14 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
         />
       </div>
     );
-  },
-);
+  });
 
 RepositoryWorkspaceInternal.displayName = 'RepositoryWorkspaceInternal';
 
 // Public wrapper component that provides context
-export const RepositoryWorkspace: React.FC<RepositoryWorkspaceProps> = (props) => {
+export const RepositoryWorkspace: React.FC<RepositoryWorkspaceProps> = (
+  props,
+) => {
   return (
     <HighlightLayersProvider>
       <GitChangesProvider>
