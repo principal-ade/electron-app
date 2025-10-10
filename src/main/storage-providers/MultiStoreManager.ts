@@ -885,6 +885,15 @@ export class MultiStoreManager extends EventEmitter {
           defaults: {},
         },
       },
+      {
+        name: StaticNamespaces.REPOSITORY_LINKS,
+        storageProvider: StorageProviderType.ELECTRON_STORE,
+        category: NamespaceCategory.CORE,
+        config: {
+          path: 'repository-links',
+          defaults: {},
+        },
+      },
     ];
 
     // Note: Dynamic namespaces (like agent-specific event stores) are added

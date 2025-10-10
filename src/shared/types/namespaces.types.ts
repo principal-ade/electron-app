@@ -25,6 +25,9 @@ export enum StaticNamespaces {
 
   // Secrets Management
   SECRETS_METADATA = 'secrets-metadata',
+
+  // Links Management
+  REPOSITORY_LINKS = 'repository-links',
 }
 
 /**

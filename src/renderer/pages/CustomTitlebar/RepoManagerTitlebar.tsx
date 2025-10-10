@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Settings } from 'lucide-react';
+import { Settings, Link2 } from 'lucide-react';
 import './CustomTitlebar.css';
 
 declare global {
@@ -19,6 +19,7 @@ interface RepoManagerTitlebarProps {
   repositoryOwner?: string;
   repositoryName?: string;
   onSettingsClick?: () => void;
+  onLinksClick?: () => void;
   hasUpdateAvailable?: boolean;
 }
 
@@ -26,6 +27,7 @@ export const RepoManagerTitlebar: React.FC<RepoManagerTitlebarProps> = ({
   repositoryOwner,
   repositoryName,
   onSettingsClick,
+  onLinksClick,
   hasUpdateAvailable,
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
@@ -72,6 +74,49 @@ export const RepoManagerTitlebar: React.FC<RepoManagerTitlebarProps> = ({
           {titleText}
         </div>
       </div>
+
+      {/* Links button */}
+      {onLinksClick && (
+        <button
+          onClick={onLinksClick}
+          style={{
+            position: 'absolute',
+            right: isMac ? '56px' : '190px', // Position to left of Settings button
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '32px',
+            height: '32px',
+            borderRadius: '6px',
+            border: 'none',
+            backgroundColor: 'transparent',
+            color: colorMode === 'dark' ? '#9ca3af' : '#6b7280',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            WebkitAppRegion: 'no-drag' as any,
+            zIndex: 10,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor =
+              colorMode === 'dark'
+                ? 'rgba(255, 255, 255, 0.1)'
+                : 'rgba(0, 0, 0, 0.05)';
+            e.currentTarget.style.color =
+              colorMode === 'dark' ? '#d1d5db' : '#374151';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color =
+              colorMode === 'dark' ? '#9ca3af' : '#6b7280';
+          }}
+          aria-label="Links"
+          title="Repository Links"
+        >
+          <Link2 size={18} />
+        </button>
+      )}
 
       {/* Settings button */}
       {onSettingsClick && (

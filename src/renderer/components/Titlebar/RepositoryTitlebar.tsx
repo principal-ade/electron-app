@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Layers, Key, ExternalLink } from 'lucide-react';
+import { Layout, Layers, Key, ExternalLink, Link2 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
@@ -21,6 +21,7 @@ export interface RepositoryTitlebarProps {
   selectedSource?: FileTreeSource | null;
   onSourceSelect?: (source: FileTreeSource) => void;
   onSecretsClick?: () => void;
+  onLinksClick?: () => void;
   onHelpClick?: () => void;
   onForkBadgeClick?: () => void;
   mode?: RepositoryMode;
@@ -56,6 +57,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   selectedSource,
   onSourceSelect,
   onSecretsClick,
+  onLinksClick,
   onHelpClick,
   onForkBadgeClick,
   mode,
@@ -150,6 +152,46 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           {displayName}
         </span>
 
+        {/* Open in IDE button */}
+        <TitlebarOpenInIDE repository={repository} />
+      </div>
+
+      {/* Center: Workspace selector */}
+      {availableWorkspaces && onWorkspaceSelect && (
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            zIndex: 1000,
+            // @ts-ignore - WebkitAppRegion is not in CSSProperties
+            WebkitAppRegion: 'no-drag',
+          }}
+        >
+          <WorkspaceSelector
+            availableWorkspaces={availableWorkspaces}
+            currentWorkspaceId={currentWorkspaceId ?? null}
+            onWorkspaceSelect={onWorkspaceSelect}
+            onSaveWorkspace={() => setShowSaveWorkspaceModal(true)}
+            hasStateDeviation={hasStateDeviation ?? false}
+            onUpdateWorkspaceDefaults={onUpdateWorkspaceDefaults}
+            onResetToWorkspaceDefaults={onResetToWorkspaceDefaults}
+          />
+        </div>
+      )}
+
+      {/* Right: Panel controls and actions */}
+      <div
+        style={{
+          position: 'absolute',
+          right: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
         {/* Secrets button - only show for local clones */}
         {hasLocalClone && onSecretsClick && (
           <button
@@ -183,8 +225,38 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           </button>
         )}
 
-        {/* Open in IDE button */}
-        <TitlebarOpenInIDE repository={repository} />
+        {/* Links button - only show for local clones */}
+        {hasLocalClone && onLinksClick && (
+          <button
+            onClick={onLinksClick}
+            style={{
+              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              width: '32px',
+              height: '32px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+            title="Manage repository links"
+          >
+            <Link2 size={14} />
+          </button>
+        )}
 
         {/* Dev Sidecar button */}
         <button
@@ -222,30 +294,52 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           <ExternalLink size={14} />
         </button>
 
-        {/* Workspace selector */}
-        {availableWorkspaces && onWorkspaceSelect && (
-          <WorkspaceSelector
-            availableWorkspaces={availableWorkspaces}
-            currentWorkspaceId={currentWorkspaceId ?? null}
-            onWorkspaceSelect={onWorkspaceSelect}
-            onSaveWorkspace={() => setShowSaveWorkspaceModal(true)}
-            hasStateDeviation={hasStateDeviation ?? false}
-            onUpdateWorkspaceDefaults={onUpdateWorkspaceDefaults}
-            onResetToWorkspaceDefaults={onResetToWorkspaceDefaults}
+        {onConfigurePanels && (
+          <button
+            onClick={onConfigurePanels}
+            title="Configure panel layout"
+            style={{
+              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              width: '32px',
+              height: '32px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+          >
+            <Layout size={14} />
+          </button>
+        )}
+        {showSidebarControls && onToggleSidebar && (
+          <ViewSidebarControls
+            position="left"
+            isCollapsed={sidebarCollapsed}
+            onToggle={onToggleSidebar}
           />
         )}
-      </div>
-
-      {/* Right: Panel controls and actions */}
-      <div
-        style={{
-          position: 'absolute',
-          right: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-        }}
-      >
+        {onToggleRightSidebar && (
+          <ViewSidebarControls
+            position="right"
+            side="right"
+            isCollapsed={rightSidebarCollapsed}
+            onToggle={onToggleRightSidebar}
+          />
+        )}
         {/* Minimize main window toggle */}
         <button
           onClick={handleToggleMainWindow}
@@ -281,52 +375,6 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
         >
           <Layers size={14} />
         </button>
-        {showSidebarControls && onToggleSidebar && (
-          <ViewSidebarControls
-            position="left"
-            isCollapsed={sidebarCollapsed}
-            onToggle={onToggleSidebar}
-          />
-        )}
-        {onToggleRightSidebar && (
-          <ViewSidebarControls
-            position="right"
-            side="right"
-            isCollapsed={rightSidebarCollapsed}
-            onToggle={onToggleRightSidebar}
-          />
-        )}
-        {onConfigurePanels && (
-          <button
-            onClick={onConfigurePanels}
-            title="Configure panel layout"
-            style={{
-              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-              background: 'transparent',
-              border: 'none',
-              color: theme.colors.textSecondary,
-              cursor: 'pointer',
-              padding: '6px',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-              width: '32px',
-              height: '32px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-              e.currentTarget.style.color = theme.colors.text;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = theme.colors.textSecondary;
-            }}
-          >
-            <Layout size={14} />
-          </button>
-        )}
       </div>
 
       {/* Save Workspace Modal */}

@@ -23,6 +23,7 @@ import { RepositoryTitlebar } from '../components/Titlebar';
 
 import type { Repository } from '../../shared/types/repository.types';
 import { SecretsModal } from './shared/SecretsModal';
+import { LinksModal } from './shared/LinksModal';
 import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
 import { BadgeInfoModal } from './shared/BadgeInfoModal';
 import { PanelConfiguratorModal } from './shared/PanelConfiguratorModal';
@@ -107,6 +108,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
 
     // Modal states
     const [showSecretsModal, setShowSecretsModal] = useState(false);
+    const [showLinksModal, setShowLinksModal] = useState(false);
     const [showSourceHelpModal, setShowSourceHelpModal] = useState(false);
     const [showBadgeInfoModal, setShowBadgeInfoModal] = useState(false);
     const [showPanelConfigModal, setShowPanelConfigModal] = useState(false);
@@ -2061,6 +2063,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           selectedSource={selectedSource}
           onSourceSelect={setSelectedSource}
           onSecretsClick={() => setShowSecretsModal(true)}
+          onLinksClick={() => setShowLinksModal(true)}
           onHelpClick={() => setShowSourceHelpModal(true)}
           onForkBadgeClick={() => setShowBadgeInfoModal(true)}
           onConfigurePanels={() => setShowPanelConfigModal(true)}
@@ -2351,6 +2354,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         <SecretsModal
           isOpen={showSecretsModal}
           onClose={() => setShowSecretsModal(false)}
+          repository={repository}
+          selectedSource={selectedSource}
+        />
+
+        <LinksModal
+          isOpen={showLinksModal}
+          onClose={() => setShowLinksModal(false)}
           repository={repository}
           selectedSource={selectedSource}
         />

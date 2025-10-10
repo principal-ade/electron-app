@@ -41,6 +41,7 @@ import { repositoryNotesApi } from './main-process-api-implementations/repositor
 import { palaceTasksApi } from './main-process-api-implementations/palaceTasksApi';
 import { repositoryMonitoringAPI } from './main-process-api-implementations/repositoryMonitoringApi';
 import { secretsAPI } from './main-process-api-implementations/secretsApi';
+import { linksAPI } from './main-process-api-implementations/linksApi';
 import { apiProxyApi } from './main-process-api-implementations/apiProxyApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
 import { orbitAPI } from './main-process-api-implementations/orbitApi';
@@ -116,6 +117,7 @@ const mainProcessExposure: MainProcessAPI = {
   palaceTasks: palaceTasksApi,
   repositoryMonitoring: repositoryMonitoringAPI,
   secrets: secretsAPI,
+  links: linksAPI,
   shell: shellAPI,
   system: systemAPI,
   terminal: terminalAPI,

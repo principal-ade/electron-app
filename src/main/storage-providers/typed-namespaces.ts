@@ -36,6 +36,42 @@ export interface SessionSummary {
 
 
 /**
+ * Links Management Data Types
+ */
+
+/**
+ * Repository link interface
+ */
+export interface RepositoryLink {
+  id: string;
+  label: string;
+  url: string;
+  description?: string;
+  category?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * Link metadata interface
+ */
+export interface LinkMetadata {
+  repoId: string;
+  repoPath: string;
+  createdAt: number;
+  updatedAt: number;
+  linkCount: number;
+}
+
+/**
+ * Stored links data structure
+ */
+export interface StoredLinks {
+  links: RepositoryLink[];
+  metadata: LinkMetadata;
+}
+
+/**
  * Docker Management Data Types
  */
 
@@ -167,6 +203,8 @@ export interface NamespaceDataTypes {
   // Secrets Management namespace
   [StaticNamespaces.SECRETS_METADATA]: SecretMetadata; // Metadata for encrypted secrets
 
+  // Links Management namespace
+  [StaticNamespaces.REPOSITORY_LINKS]: StoredLinks; // Repository links and bookmarks
 }
 
 /**
@@ -252,6 +290,14 @@ export class TypedNamespaceRegistry {
     this.register(StaticNamespaces.DOCKER_SESSIONS, {
       name: StaticNamespaces.DOCKER_SESSIONS,
       description: 'Docker analysis session tracking and history',
+      storageProvider: 'electron-store',
+      category: NamespaceCategory.CORE,
+    });
+
+    // Links Management
+    this.register(StaticNamespaces.REPOSITORY_LINKS, {
+      name: StaticNamespaces.REPOSITORY_LINKS,
+      description: 'Repository links and bookmarks',
       storageProvider: 'electron-store',
       category: NamespaceCategory.CORE,
     });

@@ -16,6 +16,7 @@ import { registerWindowManagerIpcHandlers } from './window/windowManagerHandlers
 import { registerModernWindowHandlers } from './window/modernWindowHandlers';
 import { registerStoreHandlers } from './stores/storeHandlers';
 import { registerSecretHandlers } from './stores/secretHandlers';
+import { registerLinksHandlers } from './stores/linksHandlers';
 import { getTypedStorageManager } from './storage-providers';
 import { registerGitHandlers } from './file-system/gitHandlers';
 import { setupShellHandlers } from './file-system/shellHandlers';
@@ -138,6 +139,7 @@ const registerAllIpcHandlers = async () => {
   registerRepositoryMonitoringHandlers(); // Register repository monitoring handlers
   registerActIntegrationHandlers();
   registerSecretHandlers();
+  await registerLinksHandlers();
   registerRepositoryHandlers();
   registerAlexandriaHandlers();
   registerAlexandriaDocsHandlers();

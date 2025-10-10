@@ -21,6 +21,7 @@ import type { RepositoryNotesAPI } from './RepositoryNotesAPI';
 import type { PalaceTasksAPI } from './PalaceTasksAPI';
 import type { RepositoryMonitoringAPI } from './RepositoryMonitoringAPI';
 import type { SecretsAPI } from './SecretsAPI';
+import type { LinksAPI } from './LinksAPI';
 import type { ShellAPI } from './ShellAPI';
 import type { StoreAPI } from './StoreAPI';
 import type { SystemAPI } from './SystemAPI';
@@ -105,6 +106,7 @@ export interface MainProcessAPI {
   palaceTasks: PalaceTasksAPI;
   repositoryMonitoring: RepositoryMonitoringAPI;
   secrets: SecretsAPI;
+  links: LinksAPI;
   shell: ShellAPI;
   system: SystemAPI;
   terminal: TerminalAPI;
