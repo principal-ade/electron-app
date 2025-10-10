@@ -25,7 +25,7 @@ export function registerPrincipalHandlers() {
       try {
         content = await fs.readFile(filePath, 'utf-8');
         exists = true;
-      } catch (err) {
+      } catch (_err) {
         // File doesn't exist, return null to let renderer create default
         return null;
       }

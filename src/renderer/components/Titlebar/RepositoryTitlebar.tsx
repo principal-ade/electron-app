@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Layers, Key } from 'lucide-react';
+import { Layout, Layers, Key, ExternalLink } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
@@ -11,6 +11,7 @@ import type { WorkspaceLayout } from '../../../shared/types/userPreferences.type
 import { ViewSidebarControls } from '../../principal-window/components/ViewSidebarControls/ViewSidebarControls';
 import { WindowService } from '../../main-process-api/WindowService';
 import { SaveWorkspaceModal } from '../../repo-manager/shared/SaveWorkspaceModal';
+import { DevSidecarService } from '../../main-process-api/DevSidecarService';
 
 export interface RepositoryTitlebarProps {
   repository?: Repository;
@@ -76,16 +77,52 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   const { theme } = useTheme();
   const [mainWindowMinimized, setMainWindowMinimized] = useState(false);
   const [showSaveWorkspaceModal, setShowSaveWorkspaceModal] = useState(false);
+  const [devSidecarSessionId, setDevSidecarSessionId] = useState<string | null>(null);
 
   // Listen for main window minimize state changes from other repo windows
   useEffect(() => {
     WindowService.onMainWindowMinimizeStateChange(setMainWindowMinimized);
   }, []);
 
+  // Listen for dev sidecar window events
+  useEffect(() => {
+    const unsubscribeCreated = DevSidecarService.onWindowCreated((info) => {
+      setDevSidecarSessionId(info.sessionId);
+    });
+    const unsubscribeClosed = DevSidecarService.onWindowClosed((sessionId) => {
+      if (sessionId === devSidecarSessionId) {
+        setDevSidecarSessionId(null);
+      }
+    });
+    return () => {
+      unsubscribeCreated();
+      unsubscribeClosed();
+    };
+  }, [devSidecarSessionId]);
+
   // Toggle main window minimized state
   const handleToggleMainWindow = async () => {
     await WindowService.toggleMainWindowMinimize(!mainWindowMinimized);
   };
+
+  // Handle dev sidecar button click
+  const handleDevSidecarClick = async () => {
+    if (devSidecarSessionId) {
+      // Focus existing window
+      await DevSidecarService.focusWindow(devSidecarSessionId);
+    } else {
+      // Create new window
+      try {
+        const info = await DevSidecarService.createWindow({
+          devServerUrl: 'http://localhost:3000', // Default URL, can be customized
+        });
+        setDevSidecarSessionId(info.sessionId);
+      } catch (error) {
+        console.error('[RepositoryTitlebar] Failed to create dev sidecar:', error);
+      }
+    }
+  };
+
   const displayName = repositoryName || repository?.name || 'Repository';
   const hasLocalClone = selectedSource?.type === 'local';
 
@@ -148,6 +185,42 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
 
         {/* Open in IDE button */}
         <TitlebarOpenInIDE repository={repository} />
+
+        {/* Dev Sidecar button */}
+        <button
+          onClick={handleDevSidecarClick}
+          style={{
+            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            background: devSidecarSessionId ? theme.colors.backgroundTertiary : 'transparent',
+            border: 'none',
+            color: devSidecarSessionId ? theme.colors.primary : theme.colors.textSecondary,
+            cursor: 'pointer',
+            padding: '6px',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s',
+            width: '32px',
+            height: '32px',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            e.currentTarget.style.color = theme.colors.primary;
+          }}
+          onMouseLeave={(e) => {
+            if (!devSidecarSessionId) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            } else {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.color = theme.colors.primary;
+            }
+          }}
+          title={devSidecarSessionId ? 'Focus dev preview window' : 'Open dev preview window'}
+        >
+          <ExternalLink size={14} />
+        </button>
 
         {/* Workspace selector */}
         {availableWorkspaces && onWorkspaceSelect && (

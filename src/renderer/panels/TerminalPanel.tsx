@@ -14,6 +14,8 @@ import { useTheme } from '@a24z/industry-theme';
 
 import { AgentSessionService } from '../main-process-api/AgentSessionService';
 import { TerminalService } from '../main-process-api/TerminalService';
+import { ShellService } from '../main-process-api/ShellService';
+import { DevSidecarService } from '../main-process-api/DevSidecarService';
 
 /* eslint-disable no-console */
 
@@ -71,6 +73,8 @@ function TerminalPanel({
     sessionId: string;
     customName?: string;
   } | null>(null);
+  const devSidecarSessionIdRef = useRef<string | null>(null);
+  const [devSidecarSessionId, setDevSidecarSessionId] = useState<string | null>(null);
 
   const createTerminalSession = useCallback(
     async (dir: string): Promise<string | null> => {
@@ -162,6 +166,23 @@ function TerminalPanel({
     }
   }, [agentSessionId, directory]);
 
+  // Keep ref in sync with state
+  useEffect(() => {
+    devSidecarSessionIdRef.current = devSidecarSessionId;
+  }, [devSidecarSessionId]);
+
+  // Listen for dev sidecar window events
+  useEffect(() => {
+    const unsubscribe = DevSidecarService.onWindowClosed((closedSessionId) => {
+      if (closedSessionId === devSidecarSessionId) {
+        setDevSidecarSessionId(null);
+      }
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [devSidecarSessionId]);
+
   // Create terminal session if needed or use provided one
   useEffect(() => {
     if (terminalId) {
@@ -244,7 +265,40 @@ function TerminalPanel({
     fitAddonRef.current = fitAddon;
     term.loadAddon(fitAddon);
 
-    const webLinksAddon = new WebLinksAddon();
+    // Configure WebLinksAddon with custom handler
+    const webLinksAddon = new WebLinksAddon(async (event, uri) => {
+      event.preventDefault();
+
+      // Check if it's a localhost URL
+      const isLocalhost = uri.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i);
+
+      if (isLocalhost) {
+        // Open localhost links in dev sidecar window
+        try {
+          const currentSessionId = devSidecarSessionIdRef.current;
+          if (currentSessionId) {
+            // Navigate existing window to the URL
+            await DevSidecarService.navigate(currentSessionId, uri);
+            await DevSidecarService.focusWindow(currentSessionId);
+          } else {
+            // Create new dev sidecar window with this URL
+            const info = await DevSidecarService.createWindow({
+              devServerUrl: uri,
+            });
+            setDevSidecarSessionId(info.sessionId);
+          }
+        } catch (err) {
+          console.error('[TerminalPanel] Failed to open link in dev sidecar:', uri, err);
+          // Fallback to external browser
+          ShellService.openExternal(uri).catch(console.error);
+        }
+      } else {
+        // Open non-localhost links in external browser
+        ShellService.openExternal(uri).catch(err => {
+          console.error('[TerminalPanel] Failed to open link:', uri, err);
+        });
+      }
+    });
     term.loadAddon(webLinksAddon);
 
     // Open terminal in the DOM

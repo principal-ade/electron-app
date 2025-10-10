@@ -230,7 +230,7 @@ export class ElectronCLI {
       if (result.success && result.stdout) {
         return result.stdout.trim();
       }
-    } catch (error) {
+    } catch (_error) {
       // Command not found
     }
     return null;

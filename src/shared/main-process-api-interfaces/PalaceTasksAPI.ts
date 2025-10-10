@@ -5,7 +5,6 @@
 import type {
   Task,
   TaskStatus,
-  TaskPriority,
   TaskQueryOptions as CoreTaskQueryOptions,
 } from '@a24z/core-library';
 

@@ -1,7 +1,6 @@
 import { app, ipcMain } from 'electron';
 import fs from 'fs';
 import path from 'path';
-import { APP_BRANDING } from '../shared/config/appBranding';
 import { initializeStorage } from './stores/initialization';
 // import { AgentSessionEventsHttpBridge } from './agent-session-events/AgentSessionEventsHttpBridge';
 import { startEventServer, stopEventServer, getEventServerManager } from './agent-session-events/EventServerManager';

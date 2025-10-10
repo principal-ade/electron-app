@@ -1,4 +1,5 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'child_process';
+import { spawn, type ChildProcessByStdio } from 'child_process';
+import type { Readable } from 'stream';
 import { EventEmitter } from 'events';
 import { randomBytes } from 'crypto';
 import { promises as fsPromises } from 'fs';
@@ -28,7 +29,7 @@ interface SecretsFileInfo {
 
 interface ExecutionContext {
   executionId: string;
-  process: ChildProcessWithoutNullStreams;
+  process: ChildProcessByStdio<null, Readable, Readable>;
   repoId: string;
   repoPath: string;
   workflowPath: string;
@@ -256,7 +257,7 @@ export class ActRunnerService extends EventEmitter {
 
   private streamProcessOutput(
     context: ExecutionContext,
-    process: ChildProcessWithoutNullStreams,
+    process: ChildProcessByStdio<null, Readable, Readable>,
   ) {
     if (process.stdout) {
       const stdoutReader = readline.createInterface({
@@ -369,7 +370,7 @@ export class ActRunnerService extends EventEmitter {
 
   private watchProcessLifecycle(
     context: ExecutionContext,
-    process: ChildProcessWithoutNullStreams,
+    process: ChildProcessByStdio<null, Readable, Readable>,
   ) {
     process.once('error', async (error) => {
       console.error('[ActRunnerService] Process error:', error);

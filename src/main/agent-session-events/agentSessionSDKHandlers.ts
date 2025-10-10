@@ -10,13 +10,10 @@ import { ipcMain } from 'electron';
 import {
   AgentSessionSDKAPIEvents,
   ProjectSessions,
-  SessionSummary
 } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
 import { getEventServerManager } from './EventServerManager';
 import { getObservabilityIntegration } from '../observability/ObservabilityIntegration';
-import type {
-  RepoNormalizedUniversalAgentSessionEvent
-} from '@principal-ai/agent-monitoring';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { SessionState } from '../../shared/event-processing/SessionEventProcessor';
 import { SupportedAgent } from '@principal-ai/agent-monitoring';
 
@@ -36,7 +33,10 @@ interface SDKSessionState extends SessionState {
  */
 class SessionCache {
   private sessions: Map<string, SDKSessionState> = new Map();
-  private eventsBySession: Map<string, RepoNormalizedUniversalAgentSessionEvent[]> = new Map();
+  private eventsBySession: Map<
+    string,
+    RepoNormalizedUniversalAgentSessionEvent[]
+  > = new Map();
 
   constructor() {
     // Subscribe to events from EventServerManager
@@ -47,9 +47,12 @@ class SessionCache {
     const eventManager = getEventServerManager();
 
     // Listen for processed events emitted by EventServerManager
-    eventManager.on('processed-event', (event: RepoNormalizedUniversalAgentSessionEvent) => {
-      this.handleNewEvent(event);
-    });
+    eventManager.on(
+      'processed-event',
+      (event: RepoNormalizedUniversalAgentSessionEvent) => {
+        this.handleNewEvent(event);
+      },
+    );
   }
 
   private handleNewEvent(event: RepoNormalizedUniversalAgentSessionEvent) {
@@ -68,7 +71,8 @@ class SessionCache {
         sessionId,
         provider: event.provider,
         repository: event.repository?.root || event.workingDirectory || '',
-        workingDirectory: event.repository?.root || event.workingDirectory || '',
+        workingDirectory:
+          event.repository?.root || event.workingDirectory || '',
         startTime: event.timestamp,
         lastUpdateTime: event.timestamp,
         firstAccess: event.timestamp,
@@ -108,7 +112,7 @@ class SessionCache {
       if (!projectMap.has(repository)) {
         projectMap.set(repository, {
           repository,
-          summaries: []
+          summaries: [],
         });
       }
 
@@ -135,14 +139,16 @@ class SessionCache {
     if (!session) return null;
 
     // Return SessionState without SDK-specific fields
-    const { provider, repository, startTime, lastUpdateTime, ...sessionState } = session;
+    const { provider, repository, startTime, lastUpdateTime, ...sessionState } =
+      session;
     return sessionState;
   }
 
-  getSessionEvents(sessionId: string): RepoNormalizedUniversalAgentSessionEvent[] | null {
+  getSessionEvents(
+    sessionId: string,
+  ): RepoNormalizedUniversalAgentSessionEvent[] | null {
     return this.eventsBySession.get(sessionId) || null;
   }
-
 }
 
 // Create singleton cache
@@ -178,19 +184,22 @@ export function registerAgentSessionSDKHandlers(): void {
         if (sdkAvailable) {
           // TODO: Once SDK supports querying sessions, use it here
           // For now, fall back to cache
-          console.log('[SDK Handlers] SDK available but session query not yet implemented');
+          console.log(
+            '[SDK Handlers] SDK available but session query not yet implemented',
+          );
         }
 
         // Use in-memory cache populated from live events
         const sessions = sessionCache.getSessionsByProject();
-        console.log(`[SDK Handlers] Returning ${sessions.length} projects from cache`);
+        console.log(
+          `[SDK Handlers] Returning ${sessions.length} projects from cache`,
+        );
         return sessions;
-
       } catch (error) {
         console.error('[SDK Handlers] Error getting active sessions:', error);
         return [];
       }
-    }
+    },
   );
 
   // Get sessions for a specific directory
@@ -201,18 +210,21 @@ export function registerAgentSessionSDKHandlers(): void {
         // Map directory to repository (in real implementation, find git root)
         // For now, use directory as-is
         const allProjects = sessionCache.getSessionsByProject();
-        const project = allProjects.find(p =>
-          p.repository === directory
+        const project = allProjects.find((p) => p.repository === directory);
+
+        console.log(
+          `[SDK Handlers] Found project for directory ${directory}:`,
+          !!project,
         );
-
-        console.log(`[SDK Handlers] Found project for directory ${directory}:`, !!project);
         return project || null;
-
       } catch (error) {
-        console.error('[SDK Handlers] Error getting sessions for directory:', error);
+        console.error(
+          '[SDK Handlers] Error getting sessions for directory:',
+          error,
+        );
         return null;
       }
-    }
+    },
   );
 
   // Get specific session
@@ -223,12 +235,11 @@ export function registerAgentSessionSDKHandlers(): void {
         const session = sessionCache.getSession(sessionId);
         console.log(`[SDK Handlers] Found session ${sessionId}:`, !!session);
         return session;
-
       } catch (error) {
         console.error('[SDK Handlers] Error getting session:', error);
         return null;
       }
-    }
+    },
   );
 
   // Get session events
@@ -237,16 +248,99 @@ export function registerAgentSessionSDKHandlers(): void {
     async (_event, sessionId: string) => {
       try {
         const events = sessionCache.getSessionEvents(sessionId);
-        console.log(`[SDK Handlers] Found ${events?.length || 0} events for session ${sessionId}`);
+        console.log(
+          `[SDK Handlers] Found ${events?.length || 0} events for session ${sessionId}`,
+        );
         return events;
-
       } catch (error) {
         console.error('[SDK Handlers] Error getting session events:', error);
         return null;
       }
-    }
+    },
   );
 
+  // Check event server health
+  ipcMain.handle(
+    AgentSessionSDKAPIEvents.CHECK_EVENT_SERVER_HEALTH,
+    async () => {
+      try {
+        const eventManager = getEventServerManager();
+        const status = eventManager.getStatus();
+
+        if (!status.isRunning) {
+          return {
+            isRunning: false,
+            healthStatus: 'unhealthy' as const,
+            error: 'Event server is not running',
+          };
+        }
+
+        // Try to fetch health from HTTP endpoint
+        try {
+          const http = require('http');
+          const response = await new Promise<{ status: number; data: any }>(
+            (resolve, reject) => {
+              const req = http.get(
+                `http://localhost:${status.port}/health`,
+                (res: any) => {
+                  let data = '';
+                  res.on('data', (chunk: string) => (data += chunk));
+                  res.on('end', () => {
+                    try {
+                      const parsed = JSON.parse(data);
+                      resolve({ status: res.statusCode || 200, data: parsed });
+                    } catch (e) {
+                      resolve({
+                        status: res.statusCode || 200,
+                        data: { status: 'ok' },
+                      });
+                    }
+                  });
+                },
+              );
+              req.on('error', reject);
+              req.setTimeout(5000, () => {
+                req.destroy();
+                reject(new Error('Health check timeout'));
+              });
+            },
+          );
+
+          if (response.status === 200) {
+            return {
+              isRunning: true,
+              port: status.port,
+              healthStatus: 'healthy' as const,
+            };
+          } else {
+            return {
+              isRunning: true,
+              port: status.port,
+              healthStatus: 'unhealthy' as const,
+              error: `HTTP ${response.status}`,
+            };
+          }
+        } catch (httpError) {
+          return {
+            isRunning: true,
+            port: status.port,
+            healthStatus: 'unhealthy' as const,
+            error: `Health check failed: ${httpError instanceof Error ? httpError.message : String(httpError)}`,
+          };
+        }
+      } catch (error) {
+        console.error(
+          '[SDK Handlers] Error checking event server health:',
+          error,
+        );
+        return {
+          isRunning: false,
+          healthStatus: 'unknown' as const,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    },
+  );
 
   console.log('[SDK Handlers] Agent session SDK handlers registered');
 }
@@ -256,7 +350,7 @@ export function registerAgentSessionSDKHandlers(): void {
  */
 export function unregisterAgentSessionSDKHandlers(): void {
   const events = Object.values(AgentSessionSDKAPIEvents);
-  events.forEach(event => {
+  events.forEach((event) => {
     ipcMain.removeHandler(event);
   });
   console.log('[SDK Handlers] Agent session SDK handlers unregistered');

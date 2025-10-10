@@ -5,13 +5,9 @@
  * (RepoNormalizedUniversalAgentSessionEvent) instead of the legacy format.
  */
 
-import type {
-  RepoNormalizedUniversalAgentSessionEvent,
-} from '@principal-ai/agent-monitoring';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import type { SessionState } from '../../shared/event-processing/SessionEventProcessor';
-import {
-  ProjectSessions,
-} from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
+import { ProjectSessions } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
 
 /**
  * SDK-based Session Service
@@ -62,18 +58,39 @@ export class AgentSessionSDKService {
   }
 
   /**
+   * Check event server health
+   */
+  static async checkEventServerHealth(): Promise<{
+    isRunning: boolean;
+    port?: number;
+    healthStatus?: 'healthy' | 'unhealthy' | 'unknown';
+    error?: string;
+  }> {
+    return window.mainProcess.agentSessionSDK.checkEventServerHealth();
+  }
+
+  /**
    * Subscribe to processed events
    * Returns an unsubscribe function
    */
   static onProcessedEvent(
     callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
   ): () => void {
-    console.log('[AgentSessionSDKService] Setting up onProcessedEvent subscription');
-    const unsubscribe = window.mainProcess.agentSessionSDK.onProcessedEvent((event) => {
-      console.log('[AgentSessionSDKService] Event received from IPC:', event.eventType);
-      callback(event);
-    });
-    console.log('[AgentSessionSDKService] Subscription set up, unsubscribe function created');
+    console.log(
+      '[AgentSessionSDKService] Setting up onProcessedEvent subscription',
+    );
+    const unsubscribe = window.mainProcess.agentSessionSDK.onProcessedEvent(
+      (event) => {
+        console.log(
+          '[AgentSessionSDKService] Event received from IPC:',
+          event.eventType,
+        );
+        callback(event);
+      },
+    );
+    console.log(
+      '[AgentSessionSDKService] Subscription set up, unsubscribe function created',
+    );
     return unsubscribe;
   }
 }

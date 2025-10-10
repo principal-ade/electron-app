@@ -21,6 +21,8 @@ export type RepositoryPanelId =
   // Excalidraw panels
   | 'excalidrawEditor'
   | 'drawingsList'
+  // Agent panels
+  | 'agentContext'
   // Legacy panel IDs (deprecated)
   | 'markdownDocument'
   | 'markdownSlides';

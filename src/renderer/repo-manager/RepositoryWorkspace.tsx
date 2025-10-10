@@ -76,6 +76,7 @@ import {
 } from './panels';
 import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
 import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
+import { AgentContextTreePanel } from '../panels/components/AgentContextTreePanel';
 import { useHighlightLayers } from '../contexts/HighlightLayersContext';
 import { CityVisualizationPanel } from '../panels/components/CityVisualizationPanel';
 import { TasksPanel } from '../panels/components/TasksPanel';
@@ -1497,6 +1498,16 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
             maxEvents={100}
           />
         ),
+        agentContext: (
+          <AgentContextTreePanel
+            repositoryPath={
+              selectedSource?.type === 'local'
+                ? selectedSource.location
+                : null
+            }
+            onFileSelect={handleSearchFileSelect}
+          />
+        ),
         tasks: (
           <TasksPanel
             repositoryPath={
@@ -1574,6 +1585,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
       { id: 'docs', label: 'Docs', icon: <Book size={14} />, visible: true, content: panelContentMap.docs },
       { id: 'drawings', label: 'Drawings', icon: <Pencil size={14} />, visible: selectedSource?.type === 'local', content: panelContentMap.drawings },
       { id: 'agentEvents', label: 'Agent Events', icon: <Activity size={14} />, visible: true, content: panelContentMap.agentEvents },
+      { id: 'agentContext', label: 'Agent Context', icon: <Activity size={14} />, visible: true, content: panelContentMap.agentContext },
       { id: 'tasks', label: 'Tasks', icon: <ListTodo size={14} />, visible: true, content: panelContentMap.tasks },
     ];
 
@@ -2135,6 +2147,12 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> = React.me
               label: 'Agent Events',
               icon: <Activity size={16} />,
               preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>Monitor agent activity in real-time</div>
+            },
+            {
+              id: 'agentContext',
+              label: 'Agent Context',
+              icon: <Activity size={16} />,
+              preview: <div style={{ padding: '8px', fontSize: '14px', color: theme.colors.text }}>View files accessed by agents in a multi-tree view</div>
             },
             {
               id: 'tasks',

@@ -66,28 +66,18 @@ export function registerPalaceTasksHandlers() {
   );
 
   // Update task status
+  // TODO: Waiting on @a24z/core-library to implement updateTaskStatus method
+  // Dependency task submitted - see .alexandria/work/tasks/active/
   ipcMain.handle(
     PalaceTasksAPIEvent.UPDATE_TASK_STATUS,
     async (
       _event,
-      repositoryPath: string,
-      taskId: string,
-      status: TaskStatus
+      _repositoryPath: string,
+      _taskId: string,
+      _status: TaskStatus
     ): Promise<boolean> => {
-      try {
-        const fsAdapter = new NodeFileSystemAdapter();
-        const validatedPath = MemoryPalace.validateRepositoryPath(
-          fsAdapter,
-          repositoryPath
-        ) as ValidatedRepositoryPath;
-        const palace = new MemoryPalace(validatedPath, fsAdapter);
-
-        palace.updateTaskStatus(taskId, status);
-        return true;
-      } catch (error) {
-        console.error('[PalaceTasksHandlers] Error updating task status:', error);
-        return false;
-      }
+      console.warn('[PalaceTasksHandlers] updateTaskStatus not yet implemented in @a24z/core-library');
+      return false;
     }
   );
 

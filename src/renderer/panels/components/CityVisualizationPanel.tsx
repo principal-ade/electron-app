@@ -132,109 +132,131 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
           backgroundColor: theme.colors.backgroundLight,
         }}
       >
-        {/* Title row */}
+        {/* First row: Title and actions */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '12px 16px',
+            padding: '4px 16px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            flexShrink: 0,
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              flex: 1,
-            }}
-          >
-            <MapIcon size={18} color={theme.colors.primary} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MapIcon size={16} style={{ color: theme.colors.primary }} />
+            <span style={{ fontWeight: 600, fontSize: '14px' }}>Project Structure</span>
 
-            <h3
-              style={{
-                fontSize: '16px',
-                fontWeight: 600,
-                color: theme.colors.text,
-                margin: 0,
-              }}
-            >
-              Project Structure
-            </h3>
-
-            {headerExtra}
-          </div>
-
-          {/* Stats and layer count */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* Stats badges */}
             {computedTreeStats &&
              typeof computedTreeStats.fileCount === 'number' &&
              typeof computedTreeStats.directoryCount === 'number' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: theme.colors.textSecondary }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <File size={14} />
-                  <span>{computedTreeStats.fileCount.toLocaleString()}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Folder size={14} />
-                  <span>{computedTreeStats.directoryCount.toLocaleString()}</span>
-                </div>
-              </div>
+              <>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: theme.colors.textSecondary,
+                    backgroundColor: theme.colors.background,
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <File size={12} />
+                  {computedTreeStats.fileCount.toLocaleString()}
+                </span>
+                <span
+                  style={{
+                    fontSize: '12px',
+                    color: theme.colors.textSecondary,
+                    backgroundColor: theme.colors.background,
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Folder size={12} />
+                  {computedTreeStats.directoryCount.toLocaleString()}
+                </span>
+              </>
             )}
 
             {highlightLayers.length > 0 && (
-              <div
+              <span
                 style={{
+                  fontSize: '12px',
+                  color: theme.colors.textSecondary,
+                  backgroundColor: theme.colors.background,
+                  padding: '2px 8px',
+                  borderRadius: '4px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: theme.colors.primary + '15',
-                  color: theme.colors.primary,
-                  fontSize: '11px',
-                  fontWeight: 500,
                 }}
               >
                 <Layers size={12} />
-                <span>{highlightLayers.length} layer{highlightLayers.length !== 1 ? 's' : ''}</span>
-              </div>
+                {highlightLayers.length} layer{highlightLayers.length !== 1 ? 's' : ''}
+              </span>
             )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {headerExtra}
 
             {/* Help button */}
             {onHelpClick && (
               <button
                 onClick={onHelpClick}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: '4px',
+                  height: '32px',
+                  padding: '0 12px',
+                  fontSize: '12px',
+                  backgroundColor: 'transparent',
+                  color: theme.colors.text,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '4px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  color: theme.colors.textSecondary,
+                  gap: '4px',
                 }}
                 title="Help"
               >
-                <HelpCircle size={18} />
+                <HelpCircle size={12} />
+                Help
               </button>
             )}
           </div>
         </div>
 
-        {/* Toolbar */}
-        {toolbarItems.length > 0 && (
-          <RepositoryToolbar
-            items={toolbarItems}
-            expanded={toolbarExpanded}
-          />
-        )}
+        {/* Second row: Toolbar and badges */}
+        {(toolbarItems.length > 0 || sourceBadges) && (
+          <div
+            style={{
+              padding: '8px 16px',
+              borderBottom: sourceBadges ? `1px solid ${theme.colors.border}` : 'none',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              flexShrink: 0,
+            }}
+          >
+            {/* Toolbar */}
+            {toolbarItems.length > 0 && (
+              <RepositoryToolbar
+                items={toolbarItems}
+                expanded={toolbarExpanded}
+              />
+            )}
 
-        {/* Source badges */}
-        {sourceBadges && (
-          <div style={{ padding: '8px 16px', paddingTop: 0 }}>
-            {sourceBadges}
+            {/* Source badges */}
+            {sourceBadges && (
+              <div>{sourceBadges}</div>
+            )}
           </div>
         )}
       </div>

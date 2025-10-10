@@ -7,7 +7,15 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Activity, ChevronDown, ChevronRight, Copy, Trash2, Filter } from 'lucide-react';
+import {
+  Activity,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Trash2,
+  Filter,
+  Heart,
+} from 'lucide-react';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
 
@@ -30,30 +38,47 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
   const [events, setEvents] = useState<EventEntry[]>([]);
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set());
   const [filterByRepo, setFilterByRepo] = useState(true);
-  const [selectedEventTypes, setSelectedEventTypes] = useState<Set<string>>(new Set());
+  const [selectedEventTypes, setSelectedEventTypes] = useState<Set<string>>(
+    new Set(),
+  );
   const [autoScroll, setAutoScroll] = useState(true);
+  const [healthStatus, setHealthStatus] = useState<
+    'checking' | 'healthy' | 'unhealthy' | 'unknown' | null
+  >(null);
+  const [isCheckingHealth, setIsCheckingHealth] = useState(false);
 
   // Listen for processed events
   useEffect(() => {
     let eventCounter = 0;
 
-    console.log('[AgentEventsPanel] Setting up event listener, repositoryPath:', repositoryPath);
+    console.log(
+      '[AgentEventsPanel] Setting up event listener, repositoryPath:',
+      repositoryPath,
+    );
 
     const unsubscribe = AgentSessionSDKService.onProcessedEvent((event) => {
       console.log('[AgentEventsPanel] Received event:', event.eventType, event);
 
       // Filter by repository if enabled
       if (filterByRepo && repositoryPath) {
-        const eventRepoPath = event.repositoryInfo?.root || event.workingDirectory;
-        console.log('[AgentEventsPanel] Filtering - eventRepoPath:', eventRepoPath, 'current:', repositoryPath);
+        const eventRepoPath =
+          event.repositoryInfo?.root || event.workingDirectory;
+        console.log(
+          '[AgentEventsPanel] Filtering - eventRepoPath:',
+          eventRepoPath,
+          'current:',
+          repositoryPath,
+        );
         if (eventRepoPath !== repositoryPath) {
-          console.log('[AgentEventsPanel] Event filtered out - different repository');
+          console.log(
+            '[AgentEventsPanel] Event filtered out - different repository',
+          );
           return;
         }
       }
 
       // Add event to list
-      setEvents(prev => {
+      setEvents((prev) => {
         const newEntry: EventEntry = {
           event,
           timestamp: Date.now(),
@@ -89,7 +114,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
   // Get unique event types for filtering
   const availableEventTypes = useMemo(() => {
     const types = new Set<string>();
-    events.forEach(entry => types.add(entry.event.eventType));
+    events.forEach((entry) => types.add(entry.event.eventType));
     return Array.from(types).sort();
   }, [events]);
 
@@ -98,11 +123,13 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
     if (selectedEventTypes.size === 0) {
       return events;
     }
-    return events.filter(entry => selectedEventTypes.has(entry.event.eventType));
+    return events.filter((entry) =>
+      selectedEventTypes.has(entry.event.eventType),
+    );
   }, [events, selectedEventTypes]);
 
   const toggleExpanded = useCallback((index: number) => {
-    setExpandedEvents(prev => {
+    setExpandedEvents((prev) => {
       const next = new Set(prev);
       if (next.has(index)) {
         next.delete(index);
@@ -113,9 +140,12 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
     });
   }, []);
 
-  const copyToClipboard = useCallback((event: RepoNormalizedUniversalAgentSessionEvent) => {
-    navigator.clipboard.writeText(JSON.stringify(event, null, 2));
-  }, []);
+  const copyToClipboard = useCallback(
+    (event: RepoNormalizedUniversalAgentSessionEvent) => {
+      navigator.clipboard.writeText(JSON.stringify(event, null, 2));
+    },
+    [],
+  );
 
   const clearEvents = useCallback(() => {
     setEvents([]);
@@ -123,7 +153,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
   }, []);
 
   const toggleEventTypeFilter = useCallback((eventType: string) => {
-    setSelectedEventTypes(prev => {
+    setSelectedEventTypes((prev) => {
       const next = new Set(prev);
       if (next.has(eventType)) {
         next.delete(eventType);
@@ -134,20 +164,35 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
     });
   }, []);
 
+  const checkEventServerHealth = useCallback(async () => {
+    setIsCheckingHealth(true);
+    try {
+      const result = await AgentSessionSDKService.checkEventServerHealth();
+      setHealthStatus(result.healthStatus || 'unknown');
+    } catch (error) {
+      console.error('Failed to check event server health:', error);
+      setHealthStatus('unknown');
+    } finally {
+      setIsCheckingHealth(false);
+    }
+  }, []);
+
   const getEventColor = (eventType: string): string => {
     const colorMap: Record<string, string> = {
-      file_read: '#3b82f6',     // Blue
-      file_write: '#22c55e',    // Green
-      file_edit: '#f59e0b',     // Amber
-      tool_use: '#8b5cf6',      // Purple
-      error: '#ef4444',         // Red
+      file_read: '#3b82f6', // Blue
+      file_write: '#22c55e', // Green
+      file_edit: '#f59e0b', // Amber
+      tool_use: '#8b5cf6', // Purple
+      error: '#ef4444', // Red
       session_start: '#10b981', // Emerald
-      session_end: '#6366f1',   // Indigo
+      session_end: '#6366f1', // Indigo
     };
     return colorMap[eventType] || '#6b7280'; // Gray default
   };
 
-  const extractFilePaths = (event: RepoNormalizedUniversalAgentSessionEvent): string[] => {
+  const extractFilePaths = (
+    event: RepoNormalizedUniversalAgentSessionEvent,
+  ): string[] => {
     const paths: string[] = [];
 
     switch (event.eventType) {
@@ -186,7 +231,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
       {/* Header */}
       <div
         style={{
-          padding: '12px 16px',
+          padding: '4px 16px',
           borderBottom: `1px solid ${theme.colors.border}`,
           display: 'flex',
           alignItems: 'center',
@@ -196,7 +241,9 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Activity size={16} style={{ color: theme.colors.primary }} />
-          <span style={{ fontWeight: 600, fontSize: '14px' }}>Agent Events</span>
+          <span style={{ fontWeight: 600, fontSize: '14px' }}>
+            Agent Events
+          </span>
           <span
             style={{
               fontSize: '12px',
@@ -206,18 +253,80 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
               borderRadius: '4px',
             }}
           >
-            {filteredEvents.length} {filteredEvents.length === maxEvents ? `(max)` : ''}
+            {filteredEvents.length}{' '}
+            {filteredEvents.length === maxEvents ? `(max)` : ''}
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Health check button */}
+          <button
+            onClick={checkEventServerHealth}
+            disabled={isCheckingHealth}
+            style={{
+              height: '32px',
+              padding: '0 12px',
+              fontSize: '12px',
+              backgroundColor:
+                healthStatus === 'healthy'
+                  ? theme.colors.success
+                  : healthStatus === 'unhealthy'
+                    ? theme.colors.warning
+                    : healthStatus === 'checking'
+                      ? theme.colors.primary
+                      : 'transparent',
+              color:
+                healthStatus === 'healthy' ||
+                healthStatus === 'unhealthy' ||
+                healthStatus === 'checking'
+                  ? '#fff'
+                  : theme.colors.text,
+              border: `1px solid ${
+                healthStatus === 'healthy'
+                  ? theme.colors.success
+                  : healthStatus === 'unhealthy'
+                    ? theme.colors.warning
+                    : healthStatus === 'checking'
+                      ? theme.colors.primary
+                      : theme.colors.border
+              }`,
+              borderRadius: '4px',
+              cursor: isCheckingHealth ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              opacity: isCheckingHealth ? 0.7 : 1,
+            }}
+            title={
+              healthStatus === 'healthy'
+                ? 'Event server is healthy'
+                : healthStatus === 'unhealthy'
+                  ? 'Event server is unhealthy'
+                  : healthStatus === 'checking'
+                    ? 'Checking server health...'
+                    : 'Check event server health'
+            }
+          >
+            <Heart size={12} />
+            {isCheckingHealth
+              ? 'Checking...'
+              : healthStatus === 'healthy'
+                ? 'Healthy'
+                : healthStatus === 'unhealthy'
+                  ? 'Unhealthy'
+                  : 'Check Health'}
+          </button>
+
           {/* Filter by repo toggle */}
           <button
             onClick={() => setFilterByRepo(!filterByRepo)}
             style={{
-              padding: '4px 8px',
+              height: '32px',
+              padding: '0 12px',
               fontSize: '12px',
-              backgroundColor: filterByRepo ? theme.colors.primary : 'transparent',
+              backgroundColor: filterByRepo
+                ? theme.colors.primary
+                : 'transparent',
               color: filterByRepo ? '#fff' : theme.colors.text,
               border: `1px solid ${filterByRepo ? theme.colors.primary : theme.colors.border}`,
               borderRadius: '4px',
@@ -226,7 +335,9 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
               alignItems: 'center',
               gap: '4px',
             }}
-            title={filterByRepo ? 'Filtering by repository' : 'Show all repositories'}
+            title={
+              filterByRepo ? 'Filtering by repository' : 'Show all repositories'
+            }
           >
             <Filter size={12} />
             {filterByRepo ? 'Filtered' : 'All Repos'}
@@ -236,9 +347,12 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
           <button
             onClick={() => setAutoScroll(!autoScroll)}
             style={{
-              padding: '4px 8px',
+              height: '32px',
+              padding: '0 12px',
               fontSize: '12px',
-              backgroundColor: autoScroll ? theme.colors.success : 'transparent',
+              backgroundColor: autoScroll
+                ? theme.colors.success
+                : 'transparent',
               color: autoScroll ? '#fff' : theme.colors.text,
               border: `1px solid ${autoScroll ? theme.colors.success : theme.colors.border}`,
               borderRadius: '4px',
@@ -254,10 +368,14 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
             onClick={clearEvents}
             disabled={events.length === 0}
             style={{
-              padding: '4px 8px',
+              height: '32px',
+              padding: '0 12px',
               fontSize: '12px',
               backgroundColor: 'transparent',
-              color: events.length === 0 ? theme.colors.textSecondary : theme.colors.text,
+              color:
+                events.length === 0
+                  ? theme.colors.textSecondary
+                  : theme.colors.text,
               border: `1px solid ${theme.colors.border}`,
               borderRadius: '4px',
               cursor: events.length === 0 ? 'not-allowed' : 'pointer',
@@ -286,23 +404,31 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
             flexShrink: 0,
           }}
         >
-          {availableEventTypes.map(eventType => (
+          {availableEventTypes.map((eventType) => (
             <button
               key={eventType}
               onClick={() => toggleEventTypeFilter(eventType)}
               style={{
                 padding: '4px 8px',
                 fontSize: '11px',
-                backgroundColor: selectedEventTypes.has(eventType) || selectedEventTypes.size === 0
-                  ? getEventColor(eventType)
-                  : 'transparent',
-                color: selectedEventTypes.has(eventType) || selectedEventTypes.size === 0
-                  ? '#fff'
-                  : theme.colors.textSecondary,
+                backgroundColor:
+                  selectedEventTypes.has(eventType) ||
+                  selectedEventTypes.size === 0
+                    ? getEventColor(eventType)
+                    : 'transparent',
+                color:
+                  selectedEventTypes.has(eventType) ||
+                  selectedEventTypes.size === 0
+                    ? '#fff'
+                    : theme.colors.textSecondary,
                 border: `1px solid ${getEventColor(eventType)}`,
                 borderRadius: '12px',
                 cursor: 'pointer',
-                opacity: selectedEventTypes.size === 0 || selectedEventTypes.has(eventType) ? 1 : 0.5,
+                opacity:
+                  selectedEventTypes.size === 0 ||
+                  selectedEventTypes.has(eventType)
+                    ? 1
+                    : 0.5,
               }}
             >
               {eventType}
@@ -328,9 +454,14 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
               color: theme.colors.textSecondary,
             }}
           >
-            <Activity size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
+            <Activity
+              size={32}
+              style={{ opacity: 0.3, marginBottom: '12px' }}
+            />
             <div style={{ fontSize: '14px' }}>
-              {events.length === 0 ? 'No events received yet' : 'No events match the filter'}
+              {events.length === 0
+                ? 'No events received yet'
+                : 'No events match the filter'}
             </div>
             <div style={{ fontSize: '12px', marginTop: '4px' }}>
               {filterByRepo && repositoryPath
@@ -370,14 +501,27 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                   >
                     <div style={{ flexShrink: 0, paddingTop: '2px' }}>
                       {isExpanded ? (
-                        <ChevronDown size={16} style={{ color: theme.colors.textSecondary }} />
+                        <ChevronDown
+                          size={16}
+                          style={{ color: theme.colors.textSecondary }}
+                        />
                       ) : (
-                        <ChevronRight size={16} style={{ color: theme.colors.textSecondary }} />
+                        <ChevronRight
+                          size={16}
+                          style={{ color: theme.colors.textSecondary }}
+                        />
                       )}
                     </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          marginBottom: '4px',
+                        }}
+                      >
                         <span
                           style={{
                             fontSize: '11px',
@@ -403,10 +547,20 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                             {entry.event.toolName}
                           </span>
                         )}
-                        <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
                           {entry.event.provider}
                         </span>
-                        <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
                           {new Date(entry.timestamp).toLocaleTimeString()}
                         </span>
                       </div>
@@ -424,7 +578,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                           📄 {filePaths[0]}
                           {filePaths.length > 1 && (
                             <span style={{ color: theme.colors.textSecondary }}>
-                              {' '}+{filePaths.length - 1} more
+                              {' '}
+                              +{filePaths.length - 1} more
                             </span>
                           )}
                         </div>
@@ -464,10 +619,18 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                     >
                       {/* Session info */}
                       <div style={{ marginBottom: '12px' }}>
-                        <div style={{ fontWeight: 600, marginBottom: '4px', color: theme.colors.textSecondary }}>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            marginBottom: '4px',
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
                           Session
                         </div>
-                        <div style={{ fontFamily: 'monospace', fontSize: '11px' }}>
+                        <div
+                          style={{ fontFamily: 'monospace', fontSize: '11px' }}
+                        >
                           {entry.event.sessionId}
                         </div>
                       </div>
@@ -475,16 +638,26 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                       {/* Repository info */}
                       {entry.event.repositoryInfo && (
                         <div style={{ marginBottom: '12px' }}>
-                          <div style={{ fontWeight: 600, marginBottom: '4px', color: theme.colors.textSecondary }}>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              marginBottom: '4px',
+                              color: theme.colors.textSecondary,
+                            }}
+                          >
                             Repository
                           </div>
                           <div style={{ fontSize: '11px' }}>
-                            <div>📦 {entry.event.repositoryInfo.owner}/{entry.event.repositoryInfo.repo}</div>
+                            <div>
+                              📦 {entry.event.repositoryInfo.owner}/
+                              {entry.event.repositoryInfo.repo}
+                            </div>
                             <div style={{ color: theme.colors.textSecondary }}>
                               📂 {entry.event.repositoryInfo.root}
                             </div>
                             <div style={{ color: theme.colors.textSecondary }}>
-                              🌿 {entry.event.repositoryInfo.branch || 'unknown'}
+                              🌿{' '}
+                              {entry.event.repositoryInfo.branch || 'unknown'}
                             </div>
                           </div>
                         </div>
@@ -493,10 +666,22 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                       {/* File paths */}
                       {filePaths.length > 0 && (
                         <div style={{ marginBottom: '12px' }}>
-                          <div style={{ fontWeight: 600, marginBottom: '4px', color: theme.colors.textSecondary }}>
+                          <div
+                            style={{
+                              fontWeight: 600,
+                              marginBottom: '4px',
+                              color: theme.colors.textSecondary,
+                            }}
+                          >
                             Files ({filePaths.length})
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '2px',
+                            }}
+                          >
                             {filePaths.map((path, idx) => (
                               <div
                                 key={idx}
@@ -522,7 +707,13 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
 
                       {/* Full event JSON */}
                       <div>
-                        <div style={{ fontWeight: 600, marginBottom: '4px', color: theme.colors.textSecondary }}>
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            marginBottom: '4px',
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
                           Complete Event JSON
                         </div>
                         <pre

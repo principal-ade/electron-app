@@ -55,6 +55,7 @@ export enum AgentSessionSDKAPIEvents {
 
   // Debug operations
   GET_RAW_SESSION_EVENTS = 'sdk-sessions:get-raw-events',
+  CHECK_EVENT_SERVER_HEALTH = 'sdk-sessions:check-event-server-health',
 
   // Events (for real-time updates)
   SESSION_CREATED = 'sdk-sessions:created',
@@ -86,6 +87,13 @@ export interface AgentSessionSDKAPI {
     sessionId: string,
   ) => Promise<RepoNormalizedUniversalAgentSessionEvent[] | null>;
 
+  // Check event server health
+  checkEventServerHealth: () => Promise<{
+    isRunning: boolean;
+    port?: number;
+    healthStatus?: 'healthy' | 'unhealthy' | 'unknown';
+    error?: string;
+  }>;
 
   onProcessedEvent: (
     callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,

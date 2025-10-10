@@ -9,6 +9,7 @@ import { GitChangesPanel } from './components/GitChangesPanel';
 import { ExcalidrawPanel } from './components/ExcalidrawPanel';
 import { DrawingsListPanel } from './components/DrawingsListPanel';
 import { ToolsPanel } from './components/ToolsPanel';
+import { AgentContextTreePanel } from './components/AgentContextTreePanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -162,6 +163,19 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
     defaultLocation: 'left',
     slices: [],
     render: () => <DrawingsListPanel />,
+  },
+  {
+    id: 'agentContext',
+    label: 'Agent Context',
+    description: 'View files accessed by agent sessions organized in a multi-tree view.',
+    defaultLocation: 'left',
+    slices: [],
+    render: ({ context, actions }) => (
+      <AgentContextTreePanel
+        repositoryPath={context.repositoryPath}
+        onFileSelect={actions.openFile}
+      />
+    ),
   },
 ];
 
