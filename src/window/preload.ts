@@ -30,7 +30,6 @@ import { storeAPI } from './main-process-api-implementations/storeApi';
 import { repositoryAPI } from './main-process-api-implementations/repositoryApi';
 import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi';
 import { alexandriaDocsAPI } from './main-process-api-implementations/alexandriaDocsApi';
-import { palaceRoomAPI } from './main-process-api-implementations/palaceRoomApi';
 import { shellAPI } from './main-process-api-implementations/shellApi';
 import { systemAPI } from './main-process-api-implementations/systemApi';
 import { userPromptAPI } from './main-process-api-implementations/userPromptApi';
@@ -50,7 +49,6 @@ import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
 import { principalAPI } from './main-process-api-implementations/principalApi';
 import { feedbackAPI } from './main-process-api-implementations/feedbackApi';
-import { roomDrawingAPI } from './main-process-api-implementations/roomDrawingApi';
 import { llmModelsAPI } from './main-process-api-implementations/llmModelsApi';
 import { testDebugAPI } from './main-process-api-implementations/testDebugApi';
 import { documentSearchAPI } from './main-process-api-implementations/documentSearchApi';
@@ -98,7 +96,6 @@ const mainProcessExposure: MainProcessAPI = {
   agentConfig: agentConfigAPI,
   alexandria: alexandriaAPI,
   alexandriaDocs: alexandriaDocsAPI,
-  palaceRoom: palaceRoomAPI,
   agentSession: agentSessionApi,
   agentSessionSDK: agentSessionSDKApi,
   agentSessionEvents: agentSessionEventsAPI,
@@ -107,7 +104,6 @@ const mainProcessExposure: MainProcessAPI = {
   authentication: authenticationAPI,
   clipboard: clipboardAPI,
   excalidraw: excalidrawAPI,
-  roomDrawing: roomDrawingAPI,
   repository: repositoryAPI,
   github: githubAPI,
   git: gitAPI,

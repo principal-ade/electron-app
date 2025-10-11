@@ -27,7 +27,6 @@ import { registerSystemHandlers } from './system/systemHandlers';
 import { registerFeedbackHandlers } from './services/ipc/feedback/feedbackHandlers';
 import { getTerminalManager } from './terminalWrapper';
 import { excalidrawHandlers } from './drawings/excalidrawHandlers';
-import { roomDrawingHandlers } from './drawings/roomDrawingHandlers';
 import { registerUserPromptHandlers } from './principal-mcp/userPromptHandlers';
 
 import { setupAgentConfigHandlers } from './agent-management/agentConfigHandlers';
@@ -35,7 +34,6 @@ import { registerFileSystemIpcHandlers } from './file-system/fileSystemHandlers'
 import { registerRepositoryHandlers } from './stores/RepositoryApiEventHandler';
 import { registerAlexandriaHandlers } from './stores/AlexandriaApiEventHandler';
 import { registerAlexandriaDocsHandlers } from './stores/AlexandriaDocsApiEventHandler';
-import { registerPalaceRoomHandlers } from './stores/PalaceRoomApiEventHandler';
 import { registerRepositoryNotesHandlers } from './principal-mcp/repositoryNotesHandlers';
 import { registerPalaceTasksHandlers } from './palace-tasks/palaceTasksHandlers';
 import { registerRepositoryMonitoringHandlers, getManager as getRepositoryMonitoringManager } from './repository-monitoring/ipcHandlers';
@@ -143,7 +141,6 @@ const registerAllIpcHandlers = async () => {
   registerRepositoryHandlers();
   registerAlexandriaHandlers();
   registerAlexandriaDocsHandlers();
-  registerPalaceRoomHandlers();
   registerRepositoryNotesHandlers();
   registerPalaceTasksHandlers();
   registerApiProxyHandlers();
@@ -232,7 +229,6 @@ const registerAllIpcHandlers = async () => {
 
   setupTypeSchemaHandlers();
   excalidrawHandlers.registerHandlers();
-  roomDrawingHandlers.registerHandlers();
   setupTypeExtractionHandlers();
   registerPackageManagerHandlers();
   registerSystemHandlers();

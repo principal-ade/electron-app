@@ -231,11 +231,7 @@ export class RepositoryCacheRegistry extends EventEmitter {
 
     entry.inflight = inflightPromise;
 
-    try {
-      await inflightPromise;
-    } catch (error) {
-      throw error;
-    }
+    await inflightPromise;
 
     const latest = this.ensureEntry(repoPath, slice) as InternalCacheEntry<K>;
     return { ...latest };
@@ -302,7 +298,7 @@ export class RepositoryCacheRegistry extends EventEmitter {
     entry.timestamp = this.now();
     delete entry.error;
     // Exclude inflight promise when emitting to ensure structured clone compatibility
-    const { inflight, ...serializable } = entry;
+    const { inflight: _inflight, ...serializable } = entry;
     this.emit('cacheUpdated', { repoPath, slice, entry: serializable } satisfies CacheUpdatedEvent<K>);
   }
 
@@ -314,7 +310,7 @@ export class RepositoryCacheRegistry extends EventEmitter {
     delete entry.data;
     delete entry.hash;
     // Exclude inflight promise when emitting to ensure structured clone compatibility
-    const { inflight, ...serializable } = entry;
+    const { inflight: _inflight2, ...serializable } = entry;
     this.emit('cacheUpdated', { repoPath, slice, entry: serializable } satisfies CacheUpdatedEvent<K>);
   }
 

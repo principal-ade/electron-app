@@ -12,6 +12,7 @@ import {
   type Lens,
   type LensResult,
   type ExecuteResult,
+  type Issue,
 } from '@principal-ai/codebase-quality-lenses';
 import { ElectronCLIBridgeExecutor } from './ElectronCLIBridgeExecutor';
 import type { ToolExecutionRequest, ToolExecutionResponse } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
@@ -116,19 +117,57 @@ export class QualityLensService {
       // Run the complete lens pipeline (execute → parse → format)
       const lensResult = await lens.run();
 
-      // Extract execution details from the lens result
-      const success = lensResult.success !== false; // success is true unless explicitly false
-      const exitCode = lensResult.success ? 0 : 1; // Approximate exit code based on success
+      // Determine actual success and exit code
+      // The lens may return success:true even when the tool exits with code 1 (e.g., ESLint with errors)
+      // We need to check the raw exit code and error metrics to determine actual success
+      let actualExitCode = 0;
+      let actualSuccess = true;
+
+      // First, check if there's a raw exit code from the execution
+      if (lensResult.raw?.exitCode !== undefined) {
+        actualExitCode = lensResult.raw.exitCode;
+        actualSuccess = actualExitCode === 0;
+      }
+      // If no raw data, fall back to checking for errors in the result
+      else if (lensResult.error) {
+        actualExitCode = 1;
+        actualSuccess = false;
+      }
+      // For linting tools, check if there are error-level issues
+      else if (lensResult.metrics?.issuesBySeverity?.error && lensResult.metrics.issuesBySeverity.error > 0) {
+        // Tool ran successfully but found errors - this is typically exit code 1 for linters
+        actualExitCode = 1;
+        actualSuccess = false;
+      } else {
+        // Use the lens's success field as fallback
+        actualSuccess = lensResult.success !== false;
+        actualExitCode = actualSuccess ? 0 : 1;
+      }
+
+      // Log the lens result for debugging
+      console.log(`[QualityLensService] Lens result:`, {
+        lensSuccess: lensResult.success,
+        actualSuccess,
+        actualExitCode,
+        rawExitCode: lensResult.raw?.exitCode,
+        errorCount: lensResult.metrics?.issuesBySeverity?.error || 0,
+        warningCount: lensResult.metrics?.issuesBySeverity?.warning || 0,
+        totalIssuesInArray: lensResult.issues?.length || 0,
+        issuesWithErrors: lensResult.issues?.filter(i => i.severity === 'error').length || 0,
+        hasError: !!lensResult.error,
+        errorMessage: lensResult.error?.message,
+        sampleIssues: lensResult.issues?.slice(0, 3).map(i => ({ file: i.file, severity: i.severity, message: i.message })) || [],
+      });
 
       return {
-        success,
+        success: actualSuccess,
         toolName,
         command,
         packagePath,
-        exitCode,
+        exitCode: actualExitCode,
         duration: Date.now() - startTime,
-        stdout: '', // Lens results don't expose raw stdout
-        stderr: lensResult.error?.message || '',
+        stdout: lensResult.raw?.stdout || '',
+        stderr: lensResult.raw?.stderr || lensResult.error?.message || '',
         lensResult,
       };
     } catch (error: any) {
@@ -163,6 +202,22 @@ export class QualityLensService {
 
       const result = await this.executor.execute(parsedCommand, parsedArgs, { cwd });
 
+      // Check if this is a Prettier command and parse its output
+      if (command.includes('prettier') || toolName.toLowerCase().includes('prettier')) {
+        const lensResult = this.parsePrettierOutput(result.stdout, result.stderr, cwd, result.exitCode);
+        return {
+          success: result.exitCode === 0,
+          toolName,
+          command,
+          packagePath,
+          exitCode: result.exitCode,
+          duration: Date.now() - startTime,
+          stdout: result.stdout,
+          stderr: result.stderr,
+          lensResult,
+        };
+      }
+
       return {
         success: result.exitCode === 0,
         toolName,
@@ -185,6 +240,99 @@ export class QualityLensService {
         stderr: error.message || 'Tool execution failed',
       };
     }
+  }
+
+  /**
+   * Parse Prettier output into a LensResult
+   */
+  private parsePrettierOutput(stdout: string, stderr: string, cwd: string, exitCode: number): LensResult {
+    const issues: Issue[] = [];
+    const analyzedFiles: Array<{ path: string; hasIssues: boolean }> = [];
+
+    // Parse --check output (stderr contains warnings)
+    const checkOutput = stderr || stdout;
+    const lines = checkOutput.split('\n');
+
+    for (const line of lines) {
+      // Match [warn] filename.ext format
+      const warnMatch = line.match(/^\[warn\]\s+(.+)$/);
+      if (warnMatch) {
+        const filePath = warnMatch[1].trim();
+        const relativePath = filePath.startsWith(cwd)
+          ? filePath.substring(cwd.length + 1)
+          : filePath;
+
+        issues.push({
+          file: relativePath,
+          line: 1,
+          column: 1,
+          severity: 'warning',
+          message: 'Code style issues found. Run Prettier with --write to fix.',
+          rule: 'prettier',
+          source: 'prettier',
+          category: 'formatting',
+        });
+
+        analyzedFiles.push({
+          path: relativePath,
+          hasIssues: true,
+        });
+      }
+
+      // Match "filename.ext 13ms (unchanged)" or "filename.ext 13ms" format from --write
+      const writeMatch = line.match(/^(.+?)\s+\d+ms(?:\s+\(unchanged\))?$/);
+      if (writeMatch) {
+        const filePath = writeMatch[1].trim();
+        const relativePath = filePath.startsWith(cwd)
+          ? filePath.substring(cwd.length + 1)
+          : filePath;
+
+        const wasChanged = !line.includes('(unchanged)');
+
+        analyzedFiles.push({
+          path: relativePath,
+          hasIssues: wasChanged,
+        });
+
+        // If file was changed, it had formatting issues
+        if (wasChanged) {
+          issues.push({
+            file: relativePath,
+            line: 1,
+            column: 1,
+            severity: 'warning',
+            message: 'File was reformatted by Prettier',
+            rule: 'prettier',
+            source: 'prettier',
+            category: 'formatting',
+          });
+        }
+      }
+    }
+
+    return {
+      lensName: 'prettier',
+      tool: 'prettier',
+      timestamp: Date.now(),
+      success: exitCode === 0,
+      issues,
+      analyzedFiles,
+      metrics: {
+        filesAnalyzed: analyzedFiles.length,
+        totalIssues: issues.length,
+        issuesBySeverity: {
+          error: 0,
+          warning: issues.length,
+          info: 0,
+          hint: 0,
+        },
+        executionTime: 0,
+        custom: {
+          filesWithIssues: analyzedFiles.filter(f => f.hasIssues).length,
+          filesFormatted: issues.length,
+        },
+      },
+    };
   }
 
   /**

@@ -71,7 +71,7 @@ export interface FileTreeStats {
 export interface LoadedFileTreeSource extends FileTreeSource {
   tree: FileTree; // The loaded FileSystemTree
   treeStats: FileTreeStats;
-  filterLayers?: any[]; // Filter layers that were applied
+  filterLayers?: unknown[]; // Filter layers that were applied
 }
 
 /**

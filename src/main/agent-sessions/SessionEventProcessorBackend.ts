@@ -63,16 +63,16 @@ export function updateRecordFromState(
 
   // Update counts and arrays
   if (state.fileAccesses !== undefined) {
-    updated.fileAccesses = state.fileAccesses as any; // Cast to match AgentSessionRecord type
+    updated.fileAccesses = state.fileAccesses;
   }
   if (state.fileWrites !== undefined) {
-    updated.fileWrites = state.fileWrites as any; // Cast to match AgentSessionRecord type
+    updated.fileWrites = state.fileWrites;
   }
   if (state.toolCalls !== undefined) {
-    updated.toolCalls = state.toolCalls as any; // Cast to match AgentSessionRecord type
+    updated.toolCalls = state.toolCalls;
   }
   if (state.webAccesses !== undefined) {
-    updated.webAccesses = state.webAccesses as any; // Cast to match AgentSessionRecord type
+    updated.webAccesses = state.webAccesses;
   }
   if (state.bashCommands !== undefined) {
     updated.bashCommands = state.bashCommands;
@@ -113,7 +113,7 @@ export async function processEventForSession(
   let session = await getSession(event.sessionId);
   if (!session) {
     // Initialize new session
-    const initialState = sessionEventProcessor.initializeSession(
+    const _initialState = sessionEventProcessor.initializeSession(
       event.sessionId,
       event.workingDirectory || '',
     );

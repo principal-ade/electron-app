@@ -1,3 +1,5 @@
+import type { AgentSessionRecord } from '../../shared/sessionTypes';
+
 export interface SessionContext {
   id: string;
   name: string;
@@ -26,7 +28,7 @@ export interface SessionContext {
   preservedContent?: {
     analysis?: string; // Raw markdown from analysis
     notes?: string; // User notes
-    metadata?: Record<string, any>; // Custom metadata
+    metadata?: Record<string, unknown>; // Custom metadata
   };
 
   // Source session info
@@ -47,7 +49,7 @@ export interface SessionContextStore {
 
 // Helper type for creating context from session
 export interface CreateContextOptions {
-  session: import('../../main/services/store').AgentSessionRecord;
+  session: AgentSessionRecord;
   name?: string;
   description?: string;
   notes?: string;

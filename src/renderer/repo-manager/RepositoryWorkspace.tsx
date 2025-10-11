@@ -2163,15 +2163,24 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   propsPanelLayout.right === 'tabbedTerminal';
                 const tabbedTerminalPanel =
                   selectedSource?.type === 'local' ? (
-                    <TabbedTerminalPanel
-                      directory={selectedSource.location}
-                      repositoryKey={repositoryKey}
-                      isVisible={isTabbedTerminalVisible}
-                      hideHeader={false}
-                      key={`tabbed-terminal-${selectedSource.location}`}
-                      showAllTerminals={showAllTerminals}
-                      onShowAllTerminalsChange={setShowAllTerminals}
-                    />
+                    <div
+                      style={{
+                        height: '100%',
+                        width: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                    >
+                      <TabbedTerminalPanel
+                        directory={selectedSource.location}
+                        repositoryKey={repositoryKey}
+                        isVisible={isTabbedTerminalVisible}
+                        hideHeader={false}
+                        key={`tabbed-terminal-${selectedSource.location}`}
+                        showAllTerminals={showAllTerminals}
+                        onShowAllTerminalsChange={setShowAllTerminals}
+                      />
+                    </div>
                   ) : (
                     <div
                       style={{
@@ -2397,16 +2406,44 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '6px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <FolderTree size={14} style={{ color: theme.colors.primary }} />
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <FolderTree
+                      size={14}
+                      style={{ color: theme.colors.primary }}
+                    />
                     <span style={{ fontWeight: 600 }}>src/</span>
                   </div>
-                  <div style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div
+                    style={{
+                      paddingLeft: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
                       <FileCode size={12} />
                       <span>index.ts</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
                       <FileCode size={12} />
                       <span>utils.ts</span>
                     </div>
@@ -2429,19 +2466,31 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '8px',
                   }}
                 >
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 8px',
-                    backgroundColor: theme.colors.backgroundTertiary,
-                    borderRadius: '4px',
-                    border: `1px solid ${theme.colors.border}`,
-                  }}>
-                    <Search size={12} style={{ color: theme.colors.textSecondary }} />
-                    <span style={{ color: theme.colors.textSecondary }}>Search files...</span>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 8px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '4px',
+                      border: `1px solid ${theme.colors.border}`,
+                    }}
+                  >
+                    <Search
+                      size={12}
+                      style={{ color: theme.colors.textSecondary }}
+                    />
+                    <span style={{ color: theme.colors.textSecondary }}>
+                      Search files...
+                    </span>
                   </div>
-                  <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
                     3 results
                   </div>
                 </div>
@@ -2462,15 +2511,36 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '6px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#22c55e' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      color: '#22c55e',
+                    }}
+                  >
                     <span>+</span>
                     <span>new-file.ts</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      color: '#f59e0b',
+                    }}
+                  >
                     <span>M</span>
                     <span>modified.ts</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      color: '#ef4444',
+                    }}
+                  >
                     <span>-</span>
                     <span>deleted.ts</span>
                   </div>
@@ -2492,15 +2562,38 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '6px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
                     <Layers size={14} style={{ color: theme.colors.primary }} />
                     <span style={{ fontWeight: 600 }}>root</span>
                   </div>
-                  <div style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                  <div
+                    style={{
+                      paddingLeft: '20px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
                       packages/core
                     </div>
-                    <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
                       packages/ui
                     </div>
                   </div>
@@ -2522,25 +2615,29 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '8px',
                   }}
                 >
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '6px 8px',
-                    backgroundColor: theme.colors.backgroundTertiary,
-                    borderRadius: '4px',
-                  }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 8px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '4px',
+                    }}
+                  >
                     <Wrench size={14} />
                     <span>Build Tools</span>
                   </div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '6px 8px',
-                    backgroundColor: theme.colors.backgroundTertiary,
-                    borderRadius: '4px',
-                  }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px 8px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '4px',
+                    }}
+                  >
                     <Activity size={14} />
                     <span>Linters</span>
                   </div>
@@ -2562,15 +2659,39 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '6px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <FileText size={14} style={{ color: theme.colors.primary }} />
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <FileText
+                      size={14}
+                      style={{ color: theme.colors.primary }}
+                    />
                     <span>README.md</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <FileText size={14} style={{ color: theme.colors.primary }} />
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <FileText
+                      size={14}
+                      style={{ color: theme.colors.primary }}
+                    />
                     <span>CONTRIBUTING.md</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
                     <Book size={14} style={{ color: theme.colors.primary }} />
                     <span>docs/</span>
                   </div>
@@ -2592,11 +2713,23 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '6px',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
                     <Pencil size={14} style={{ color: theme.colors.primary }} />
                     <span>architecture.excalidraw</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
                     <Pencil size={14} style={{ color: theme.colors.primary }} />
                     <span>flow-diagram.excalidraw</span>
                   </div>
@@ -2618,23 +2751,31 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '6px',
                   }}
                 >
-                  <div style={{
-                    padding: '6px',
-                    backgroundColor: theme.colors.backgroundTertiary,
-                    borderRadius: '4px',
-                    borderLeft: `3px solid #3b82f6`,
-                  }}>
+                  <div
+                    style={{
+                      padding: '6px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '4px',
+                      borderLeft: `3px solid #3b82f6`,
+                    }}
+                  >
                     <div style={{ fontWeight: 600 }}>Read</div>
-                    <div style={{ color: theme.colors.textSecondary }}>src/index.ts</div>
+                    <div style={{ color: theme.colors.textSecondary }}>
+                      src/index.ts
+                    </div>
                   </div>
-                  <div style={{
-                    padding: '6px',
-                    backgroundColor: theme.colors.backgroundTertiary,
-                    borderRadius: '4px',
-                    borderLeft: `3px solid #22c55e`,
-                  }}>
+                  <div
+                    style={{
+                      padding: '6px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '4px',
+                      borderLeft: `3px solid #22c55e`,
+                    }}
+                  >
                     <div style={{ fontWeight: 600 }}>Write</div>
-                    <div style={{ color: theme.colors.textSecondary }}>src/utils.ts</div>
+                    <div style={{ color: theme.colors.textSecondary }}>
+                      src/utils.ts
+                    </div>
                   </div>
                 </div>
               ),
@@ -2654,14 +2795,41 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '6px',
                   }}
                 >
-                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>Context Trees</div>
-                  <div style={{ paddingLeft: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Activity size={12} style={{ color: theme.colors.primary }} />
+                  <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+                    Context Trees
+                  </div>
+                  <div
+                    style={{
+                      paddingLeft: '12px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <Activity
+                        size={12}
+                        style={{ color: theme.colors.primary }}
+                      />
                       <span style={{ fontSize: '11px' }}>Session 1</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Activity size={12} style={{ color: theme.colors.primary }} />
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <Activity
+                        size={12}
+                        style={{ color: theme.colors.primary }}
+                      />
                       <span style={{ fontSize: '11px' }}>Session 2</span>
                     </div>
                   </div>
@@ -2683,27 +2851,38 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '6px',
                   }}
                 >
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '6px',
-                    backgroundColor: theme.colors.backgroundTertiary,
-                    borderRadius: '4px',
-                  }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '4px',
+                    }}
+                  >
                     <input type="checkbox" style={{ margin: 0 }} />
                     <span>Implement feature X</span>
                   </div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    padding: '6px',
-                    backgroundColor: theme.colors.backgroundTertiary,
-                    borderRadius: '4px',
-                  }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '6px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '4px',
+                    }}
+                  >
                     <input type="checkbox" checked style={{ margin: 0 }} />
-                    <span style={{ textDecoration: 'line-through', color: theme.colors.textSecondary }}>Fix bug Y</span>
+                    <span
+                      style={{
+                        textDecoration: 'line-through',
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      Fix bug Y
+                    </span>
                   </div>
                 </div>
               ),
@@ -2726,8 +2905,18 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     height: '80px',
                   }}
                 >
-                  <Building2 size={32} style={{ color: theme.colors.primary }} />
-                  <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>3D Code City</span>
+                  <Building2
+                    size={32}
+                    style={{ color: theme.colors.primary }}
+                  />
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    3D Code City
+                  </span>
                 </div>
               ),
             },
@@ -2746,28 +2935,40 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '6px',
                   }}
                 >
-                  <div style={{
-                    display: 'flex',
-                    gap: '4px',
-                    borderBottom: `1px solid ${theme.colors.border}`,
-                    paddingBottom: '4px',
-                  }}>
-                    <span style={{
-                      padding: '4px 8px',
-                      backgroundColor: theme.colors.primary,
-                      color: theme.colors.background,
-                      borderRadius: '4px 4px 0 0',
-                    }}>bash</span>
-                    <span style={{
-                      padding: '4px 8px',
-                      backgroundColor: theme.colors.backgroundTertiary,
-                      borderRadius: '4px 4px 0 0',
-                    }}>npm</span>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '4px',
+                      borderBottom: `1px solid ${theme.colors.border}`,
+                      paddingBottom: '4px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: theme.colors.primary,
+                        color: theme.colors.background,
+                        borderRadius: '4px 4px 0 0',
+                      }}
+                    >
+                      bash
+                    </span>
+                    <span
+                      style={{
+                        padding: '4px 8px',
+                        backgroundColor: theme.colors.backgroundTertiary,
+                        borderRadius: '4px 4px 0 0',
+                      }}
+                    >
+                      npm
+                    </span>
                   </div>
-                  <div style={{
-                    fontFamily: 'monospace',
-                    color: theme.colors.textSecondary,
-                  }}>
+                  <div
+                    style={{
+                      fontFamily: 'monospace',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
                     $ npm run dev
                   </div>
                 </div>
@@ -2789,8 +2990,15 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     fontFamily: 'monospace',
                   }}
                 >
-                  <div><span style={{ color: '#c678dd' }}>export</span> <span style={{ color: '#61afef' }}>function</span> <span style={{ color: '#e5c07b' }}>hello</span>() {'{'}</div>
-                  <div style={{ paddingLeft: '12px' }}>console.<span style={{ color: '#61afef' }}>log</span>(<span style={{ color: '#98c379' }}>'Hello'</span>);</div>
+                  <div>
+                    <span style={{ color: '#c678dd' }}>export</span>{' '}
+                    <span style={{ color: '#61afef' }}>function</span>{' '}
+                    <span style={{ color: '#e5c07b' }}>hello</span>() {'{'}
+                  </div>
+                  <div style={{ paddingLeft: '12px' }}>
+                    console.<span style={{ color: '#61afef' }}>log</span>(
+                    <span style={{ color: '#98c379' }}>'Hello'</span>);
+                  </div>
                   <div>{'}'}</div>
                 </div>
               ),
@@ -2810,8 +3018,15 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     gap: '8px',
                   }}
                 >
-                  <div style={{ fontSize: '14px', fontWeight: 600 }}>Markdown Preview</div>
-                  <div style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600 }}>
+                    Markdown Preview
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
                     Renders .md files with syntax highlighting
                   </div>
                 </div>
@@ -2835,8 +3050,18 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     height: '80px',
                   }}
                 >
-                  <Presentation size={32} style={{ color: theme.colors.primary }} />
-                  <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>Diagram Editor</span>
+                  <Presentation
+                    size={32}
+                    style={{ color: theme.colors.primary }}
+                  />
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    Diagram Editor
+                  </span>
                 </div>
               ),
             },

@@ -74,19 +74,14 @@ export class GitRemoteService {
   private static async fetchDefaultBranch(repoPath: string): Promise<string | undefined> {
     const timeout = 3000; // 3 seconds
 
-    try {
-      const output = await this.execGitWithTimeout(
-        ['ls-remote', '--symref', 'origin', 'HEAD'],
-        repoPath,
-        timeout
-      );
+    const output = await this.execGitWithTimeout(
+      ['ls-remote', '--symref', 'origin', 'HEAD'],
+      repoPath,
+      timeout
+    );
 
-      const match = output.match(/ref: refs\/heads\/(\S+)\s+HEAD/);
-      return match?.[1];
-    } catch (error) {
-      // Return undefined on error, caller will handle
-      throw error;
-    }
+    const match = output.match(/ref: refs\/heads\/(\S+)\s+HEAD/);
+    return match?.[1];
   }
 
   /**
@@ -96,26 +91,22 @@ export class GitRemoteService {
   private static async fetchRemoteBranches(repoPath: string): Promise<string[]> {
     const timeout = 3000; // 3 seconds
 
-    try {
-      const output = await this.execGitWithTimeout(
-        ['ls-remote', '--heads', 'origin'],
-        repoPath,
-        timeout
-      );
+    const output = await this.execGitWithTimeout(
+      ['ls-remote', '--heads', 'origin'],
+      repoPath,
+      timeout
+    );
 
-      if (!output) return [];
+    if (!output) return [];
 
-      return output
-        .split('\n')
-        .filter(line => line.trim())
-        .map(line => {
-          const match = line.match(/refs\/heads\/(.+)$/);
-          return match?.[1];
-        })
-        .filter((branch): branch is string => !!branch);
-    } catch (error) {
-      throw error;
-    }
+    return output
+      .split('\n')
+      .filter(line => line.trim())
+      .map(line => {
+        const match = line.match(/refs\/heads\/(.+)$/);
+        return match?.[1];
+      })
+      .filter((branch): branch is string => !!branch);
   }
 
   /**
@@ -155,7 +146,7 @@ export class GitRemoteService {
         behind: status.behind,
         upToDate: status.ahead === 0 && status.behind === 0,
       };
-    } catch (error) {
+    } catch (_error) {
       return undefined;
     }
   }

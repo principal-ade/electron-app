@@ -409,7 +409,7 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
 
         // Collect all file paths from the working tree
         const collectFiles = (tree: FileTree, path = '') => {
-          if ('files' in tree && tree.files) {
+          if ('files' in tree && tree.files && Array.isArray(tree.files)) {
             tree.files.forEach((file: { path?: string }) => {
               if (file.path) {
                 allFiles.push(file.path);

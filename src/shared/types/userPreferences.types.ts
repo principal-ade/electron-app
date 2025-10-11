@@ -26,7 +26,6 @@ export type RepositoryViewType = 'exploration';
 export type InteractiveShellNavigationView =
   | 'repository'
   | 'terminal'
-  | 'rooms'
   | 'search'
   | 'settings'
   | 'monitoring'
@@ -157,10 +156,6 @@ export interface UserPreferences {
   // Panel layout preferences (sizes and collapsed state)
   panelLayouts?: {
     repositoryExplorer?: {
-      sizes?: { left: number; middle: number; right: number };
-      collapsed?: { left?: boolean; right?: boolean };
-    };
-    roomsManager?: {
       sizes?: { left: number; middle: number; right: number };
       collapsed?: { left?: boolean; right?: boolean };
     };

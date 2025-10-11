@@ -170,7 +170,7 @@ export class RepositoryMonitoringServer {
   }
 
   private toGitStatusMetadata(status: GitStatusWithFiles): GitStatusMetadata {
-    const { modifiedFiles, untrackedFiles, stagedFiles, createdFiles, deletedFiles, ...metadata } = status;
+    const { modifiedFiles: _modifiedFiles, untrackedFiles: _untrackedFiles, stagedFiles: _stagedFiles, createdFiles: _createdFiles, deletedFiles: _deletedFiles, ...metadata } = status;
     return metadata;
   }
 

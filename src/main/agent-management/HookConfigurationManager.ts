@@ -14,6 +14,12 @@ import * as path from 'path';
 import { EnvironmentConfig } from '../utils/environmentConfig';
 
 /**
+ * Hook event data - represents raw event data from agent hooks
+ * Uses Record<string, unknown> as these are dynamic event objects with varying shapes
+ */
+type HookEventData = Record<string, unknown>;
+
+/**
  * Result type for hook operations
  */
 export interface HookOperationResult {
@@ -426,7 +432,7 @@ export class HookConfigurationManager {
     events?: Array<{
       agent: SupportedAgent;
       filePath: string;
-      events: any[];
+      events: HookEventData[];
     }>;
     error?: string;
   }> {
@@ -434,7 +440,7 @@ export class HookConfigurationManager {
       const results: Array<{
         agent: SupportedAgent;
         filePath: string;
-        events: any[];
+        events: HookEventData[];
       }> = [];
 
       // Get list of agents to check
@@ -448,9 +454,10 @@ export class HookConfigurationManager {
           const claudeResult = await this.claudeManager.readFallbackEvents();
           if (claudeResult.success && claudeResult.events) {
             results.push(
-              ...claudeResult.events.map((e: any) => ({
-                ...e,
+              ...claudeResult.events.map((e) => ({
                 agent: 'claude' as SupportedAgent,
+                filePath: e.filePath,
+                events: e.events as HookEventData[],
               })),
             );
           }

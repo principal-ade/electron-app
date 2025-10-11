@@ -2,7 +2,6 @@ import { useTheme } from '@a24z/industry-theme';
 import {
   Github,
   Terminal,
-  DoorClosed,
   Search,
   Settings,
   Activity,
@@ -75,7 +74,6 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   );
 
   const navItems: NavItem[] = [
-    { id: 'rooms', icon: <DoorClosed size={20} />, label: 'Rooms' },
     { id: 'repository', icon: <Github size={20} />, label: 'Repos' },
     { id: 'terminal', icon: <Terminal size={20} />, label: 'Term' },
     { id: 'search', icon: <Search size={20} />, label: 'Search' },

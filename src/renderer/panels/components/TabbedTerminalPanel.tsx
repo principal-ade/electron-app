@@ -77,6 +77,18 @@ export const TabbedTerminalPanel = forwardRef<
           return newTabs;
         });
         setActiveTabId(tabId);
+
+        // Trigger resize for the newly active terminal after DOM updates
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            const terminalRef = terminalRefs.current.get(tabId);
+            if (terminalRef) {
+              // Force a resize by temporarily hiding and showing
+              // This ensures xterm.js recalculates dimensions
+              terminalRef.scrollToBottom();
+            }
+          }, 50);
+        });
       },
       [activeTabId, sessionIds],
     );
@@ -267,19 +279,28 @@ export const TabbedTerminalPanel = forwardRef<
             e.stopPropagation();
 
             // Import services dynamically to avoid circular dependencies
-            const { RepositoryService } = await import('../../main-process-api/RepositoryService');
-            const { WindowService } = await import('../../main-process-api/WindowService');
+            const { RepositoryService } = await import(
+              '../../main-process-api/RepositoryService'
+            );
+            const { WindowService } = await import(
+              '../../main-process-api/WindowService'
+            );
 
             try {
               // Find the repository that contains this directory
-              const repo = await RepositoryService.getRepositoryByLocalPath(activeTab.directory);
+              const repo = await RepositoryService.getRepositoryByLocalPath(
+                activeTab.directory,
+              );
 
               if (repo) {
                 // Open the repository dashboard
                 await WindowService.openRepositoryDashboard(repo as any);
               }
             } catch (error) {
-              console.error('[TabbedTerminalPanel] Failed to open repository:', error);
+              console.error(
+                '[TabbedTerminalPanel] Failed to open repository:',
+                error,
+              );
             }
           }
           return;
@@ -304,7 +325,15 @@ export const TabbedTerminalPanel = forwardRef<
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [tabs, switchTab, activeTabId, closeTab, addNewTab, activeTab, directory]);
+    }, [
+      tabs,
+      switchTab,
+      activeTabId,
+      closeTab,
+      addNewTab,
+      activeTab,
+      directory,
+    ]);
 
     return (
       <div
@@ -510,17 +539,29 @@ export const TabbedTerminalPanel = forwardRef<
         )}
 
         {/* Terminal content */}
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div
+          style={{
+            flex: 1,
+            display: 'grid',
+            gridTemplateAreas: '"terminal"',
+            overflow: 'hidden',
+            width: '100%',
+            height: '100%',
+            minHeight: 0,
+          }}
+        >
           {tabs.map((tab) => {
             const isActiveTab = tab.id === activeTabId;
             return (
               <div
                 key={tab.id}
                 style={{
-                  position: 'absolute',
-                  inset: 0,
+                  gridArea: 'terminal',
                   display: isActiveTab ? 'block' : 'none',
-                  zIndex: isActiveTab ? 1 : 0,
+                  height: '100%',
+                  width: '100%',
+                  minHeight: 0,
+                  position: 'relative',
                 }}
               >
                 <TerminalPanel

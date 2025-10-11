@@ -6,7 +6,6 @@ import { RepositoryExplorer } from '../../views/RepositoryExplorer';
 import { MarkdownSearch } from '../../views/MarkdownSearch';
 import { Settings } from '../../views/Settings';
 import { TerminalManager } from '../../views/TerminalManager';
-import { RoomsManager } from '../../views/RoomsManager';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
@@ -16,12 +15,10 @@ import './IntegratedShell.css';
 export type NavigationView = InteractiveShellNavigationView;
 
 // Helper to map view to panel layout key
-const getViewKey = (view: NavigationView): 'repositoryExplorer' | 'roomsManager' | 'terminalManager' | 'authView' | null => {
+const getViewKey = (view: NavigationView): 'repositoryExplorer' | 'terminalManager' | 'authView' | null => {
   switch (view) {
     case 'repository':
       return 'repositoryExplorer';
-    case 'rooms':
-      return 'roomsManager';
     case 'terminal':
       return 'terminalManager';
     case 'auth':
@@ -36,8 +33,6 @@ const getViewDefaults = (view: NavigationView): { left: boolean; right: boolean 
   switch (view) {
     case 'repository':
       return { left: false, right: false }; // No right panel for repository (uses nested panels instead)
-    case 'rooms':
-      return { left: false, right: true };
     case 'terminal':
       return { left: false, right: false }; // No right panel for terminal
     case 'auth':
@@ -48,14 +43,13 @@ const getViewDefaults = (view: NavigationView): { left: boolean; right: boolean 
 };
 
 export const IntegratedShell: React.FC = () => {
-  const [activeView, setActiveView] = useState<NavigationView>('rooms');
+  const [activeView, setActiveView] = useState<NavigationView>('repository');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const { theme, mode } = useTheme();
 
   // Store collapsed states per view to avoid animation glitches when switching
   const [viewCollapsedStates, setViewCollapsedStates] = useState<Record<string, { left: boolean; right: boolean }>>({
     repository: { left: false, right: false }, // No right panel for repository
-    rooms: { left: false, right: true },
     terminal: { left: false, right: false },
     auth: { left: false, right: false },
     monitoring: { left: false, right: false },
@@ -82,7 +76,7 @@ export const IntegratedShell: React.FC = () => {
         const newViewStates = { ...viewCollapsedStates };
 
         // Load each view's collapsed state
-        const views: NavigationView[] = ['repository', 'rooms', 'terminal', 'auth'];
+        const views: NavigationView[] = ['repository', 'terminal', 'auth'];
         for (const view of views) {
           const viewKey = getViewKey(view);
           const defaults = getViewDefaults(view);
@@ -283,10 +277,10 @@ export const IntegratedShell: React.FC = () => {
 
       <div className="main-content">
         <IntegratedTitlebar
-          showSidebarControl={activeView === 'repository' || activeView === 'terminal' || activeView === 'rooms'}
+          showSidebarControl={activeView === 'repository' || activeView === 'terminal'}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={handleToggleSidebar}
-          showRightSidebarControl={activeView === 'rooms'}
+          showRightSidebarControl={false}
           rightSidebarCollapsed={rightSidebarCollapsed}
           onToggleRightSidebar={handleToggleRightSidebar}
         />
@@ -333,7 +327,6 @@ export const IntegratedShell: React.FC = () => {
               />
             )}
             {activeView === 'terminal' && <TerminalManager sidebarCollapsed={sidebarCollapsed} />}
-            {activeView === 'rooms' && <RoomsManager sidebarCollapsed={sidebarCollapsed} rightSidebarCollapsed={rightSidebarCollapsed} />}
             {activeView === 'search' && <MarkdownSearch />}
             {activeView === 'monitoring' && <SystemMonitor sidebarCollapsed={sidebarCollapsed} />}
             {activeView === 'settings' && <Settings />}

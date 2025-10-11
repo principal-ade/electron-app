@@ -15,6 +15,7 @@ import {
   WorkerResponse,
   WorkerCommandType,
 } from './types';
+import { terminalEnvironment } from '../terminalEnvironment';
 
 export class CLIBridge extends EventEmitter {
   private workers: Map<string, UtilityProcess> = new Map();
@@ -115,15 +116,19 @@ export class CLIBridge extends EventEmitter {
 
       this.log('info', `Spawning ${name} worker from: ${workerPath}`);
 
+      // Get the full user PATH from terminal environment to ensure
+      // all user-installed tools (npm, git, etc.) are available
+      const userPath = await terminalEnvironment.getUserPath();
+
       // Pass SSH-related environment variables to the worker for Git SSH operations
       const workerEnv = {
         ...process.env,
+        // Use full user PATH to find npm, git, and other tools
+        PATH: userPath,
         // Ensure SSH agent socket is passed
         SSH_AUTH_SOCK: process.env.SSH_AUTH_SOCK,
         // Ensure HOME is set for SSH key lookup
         HOME: process.env.HOME,
-        // Pass PATH to find ssh binary
-        PATH: process.env.PATH,
       };
 
       const worker = utilityProcess.fork(workerPath, [], {

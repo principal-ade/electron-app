@@ -106,7 +106,7 @@ class SessionCache {
   getSessionsByProject(): ProjectSessions[] {
     const projectMap = new Map<string, ProjectSessions>();
 
-    for (const [sessionId, session] of this.sessions) {
+    for (const [_sessionId, session] of this.sessions) {
       const repository = session.repository || 'unknown';
 
       if (!projectMap.has(repository)) {
@@ -139,7 +139,7 @@ class SessionCache {
     if (!session) return null;
 
     // Return SessionState without SDK-specific fields
-    const { provider, repository, startTime, lastUpdateTime, ...sessionState } =
+    const { provider: _provider, repository: _repository, startTime: _startTime, lastUpdateTime: _lastUpdateTime, ...sessionState } =
       session;
     return sessionState;
   }
@@ -230,7 +230,7 @@ export function registerAgentSessionSDKHandlers(): void {
   // Get specific session
   ipcMain.handle(
     AgentSessionSDKAPIEvents.GET_SESSION,
-    async (_event, sessionId: string, repository: string) => {
+    async (_event, sessionId: string, _repository: string) => {
       try {
         const session = sessionCache.getSession(sessionId);
         console.log(`[SDK Handlers] Found session ${sessionId}:`, !!session);
@@ -278,18 +278,18 @@ export function registerAgentSessionSDKHandlers(): void {
         // Try to fetch health from HTTP endpoint
         try {
           const http = require('http');
-          const response = await new Promise<{ status: number; data: any }>(
+          const response = await new Promise<{ status: number; data: unknown }>(
             (resolve, reject) => {
               const req = http.get(
                 `http://localhost:${status.port}/health`,
-                (res: any) => {
+                (res: { statusCode?: number; on: (event: string, callback: (data: unknown) => void) => void }) => {
                   let data = '';
-                  res.on('data', (chunk: string) => (data += chunk));
+                  res.on('data', (chunk: unknown) => (data += String(chunk)));
                   res.on('end', () => {
                     try {
                       const parsed = JSON.parse(data);
                       resolve({ status: res.statusCode || 200, data: parsed });
-                    } catch (e) {
+                    } catch (_e) {
                       resolve({
                         status: res.statusCode || 200,
                         data: { status: 'ok' },

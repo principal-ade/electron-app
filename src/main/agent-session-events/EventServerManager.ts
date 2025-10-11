@@ -147,7 +147,7 @@ export class EventServerManager extends EventEmitter {
       this.log('info', 'Event server worker spawned successfully');
     });
 
-    this.worker.on('message', (msg: any) => {
+    this.worker.on('message', (msg: ServerToMainMessage) => {
       this.handleWorkerMessage(msg);
     });
 
@@ -192,7 +192,7 @@ export class EventServerManager extends EventEmitter {
         reject(new Error('Event server failed to start within timeout'));
       }, 10000);
 
-      const handler = (msg: any) => {
+      const handler = (msg: ServerToMainMessage) => {
         if (msg.type === 'ready') {
           clearTimeout(timeout);
           this.serverPort = msg.port || 3043;
@@ -225,10 +225,10 @@ export class EventServerManager extends EventEmitter {
       } else if (isWindowBroadcastMessage(msg)) {
         this.handleWindowBroadcast(msg);
       } else if (msg.type === 'SERVER_ERROR') {
-        this.log('error', `Server error: ${(msg as any).error}`);
-        this.emit('server-error', new Error((msg as any).error));
+        this.log('error', `Server error: ${msg.error}`);
+        this.emit('server-error', new Error(msg.error));
       } else if (msg.type === 'SERVER_STATS') {
-        this.emit('server-stats', (msg as any).stats);
+        this.emit('server-stats', msg.stats);
       }
     } catch (error) {
       this.log('error', `Error handling worker message: ${error}`);
@@ -241,7 +241,7 @@ export class EventServerManager extends EventEmitter {
   private setupObservability(): void {
     // Get singleton instance but don't initialize yet
     this.observability = getObservabilityIntegration({
-      environment: (process.env.NODE_ENV as any) || 'development',
+      environment: (process.env.NODE_ENV as 'development' | 'production' | 'test' | undefined) || 'development',
       debug: process.env.DEBUG_OBSERVABILITY === 'true',
     });
 
@@ -296,7 +296,7 @@ export class EventServerManager extends EventEmitter {
   /**
    * Handle processed events from server
    */
-  private async handleProcessedEvent(msg: any): Promise<void> {
+  private async handleProcessedEvent(msg: ProcessedEventMessage): Promise<void> {
     const repoNormalizedEvent = msg.event;
 
     // Validate session ID
@@ -346,7 +346,7 @@ export class EventServerManager extends EventEmitter {
   /**
    * Handle repository info requests from server
    */
-  private async handleRepositoryInfoRequest(msg: any): Promise<void> {
+  private async handleRepositoryInfoRequest(msg: RepositoryInfoRequestMessage): Promise<void> {
     try {
       const repoInfo = await repositoryCache.getRepositoryForPath(msg.absolutePath);
 
@@ -383,14 +383,14 @@ export class EventServerManager extends EventEmitter {
   /**
    * Handle window broadcast requests from server
    */
-  private handleWindowBroadcast(msg: any): void {
+  private handleWindowBroadcast(msg: WindowBroadcastMessage): void {
     try {
       const windows = BrowserWindow.getAllWindows();
       windows.forEach((window) => {
-        window.webContents.send(msg.event, msg.data);
+        window.webContents.send(msg.channel, msg.data);
       });
 
-      this.log('debug', `Broadcasted ${msg.event} to ${windows.length} windows`);
+      this.log('debug', `Broadcasted ${msg.channel} to ${windows.length} windows`);
     } catch (error) {
       this.log('error', `Window broadcast failed: ${error}`);
     }

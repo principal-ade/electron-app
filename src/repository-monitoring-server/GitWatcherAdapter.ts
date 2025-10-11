@@ -207,7 +207,7 @@ export class GitWatcherAdapter extends EventEmitter {
   private handleWorkspaceChange(repoPath: string, event: string, filePath: string): void {
     const changeType = this.mapWorkspaceEventType(event);
     if (!changeType) {
-      console.debug(`[GitWatcherAdapter] Ignoring workspace event ${event} for ${filePath}`);
+      console.info(`[GitWatcherAdapter] Ignoring workspace event ${event} for ${filePath}`);
       return;
     }
 

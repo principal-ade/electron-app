@@ -119,8 +119,8 @@ export const SidecarLogsApp: React.FC = () => {
         {entries.length === 0 ? (
           <div className="logs-empty">Waiting for output…</div>
         ) : (
-          entries.map((entry, index) => (
-            <LogLine key={`${entry.timestamp}-${index}`} entry={entry} />
+          entries.map((entry) => (
+            <LogLine key={`${entry.timestamp}-${entry.stream}-${entry.message.substring(0, 20)}`} entry={entry} />
           ))
         )}
       </div>

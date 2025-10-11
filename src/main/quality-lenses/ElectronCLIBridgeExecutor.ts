@@ -54,6 +54,14 @@ export class ElectronCLIBridgeExecutor implements Executor {
         timeout: options.timeout,
       });
 
+      console.log(`[ElectronCLIBridgeExecutor] Command executed:`, {
+        command,
+        args,
+        exitCode: result.exitCode,
+        stdoutLength: result.stdout?.length || 0,
+        stderrLength: result.stderr?.length || 0,
+      });
+
       return {
         stdout: result.stdout || '',
         stderr: result.stderr || '',

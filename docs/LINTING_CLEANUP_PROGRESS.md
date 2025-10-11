@@ -748,6 +748,97 @@ Update this section after each cleanup session:
 - Shared directory went from 10 TypeScript errors → 0 (config fix for Jest types)
 - Overall codebase: 255 → 241 TypeScript errors (5.5% reduction in this session, 35 total fixed from 10/06)
 
+### 2025-10-10 - Small Issues Cleanup (Smallest to Largest)
+- **Overall Before**: 1528 total ESLint issues (1034 errors, 494 warnings), 248 TypeScript errors, 353 console.log warnings
+- **Overall After**: 1505 total ESLint issues (1014 errors, 491 warnings), 243 TypeScript errors, 349 console.log warnings
+- **Total Improvement**: 23 ESLint issues fixed (1.5% reduction), 5 TypeScript errors fixed (2.0% reduction), 4 console.log warnings fixed
+- **TypeScript Errors**: 248 → 243 (-5, 2.0% reduction)
+- **Console.log warnings**: 353 → 349 (-4)
+
+**Areas cleaned (now 100% clean)**:
+1. **repository-monitoring-server**: 12 ESLint issues → 0 ✅
+   - Removed useless try/catch wrappers (3 occurrences)
+   - Changed console.debug to console.info (1 occurrence)
+   - Prefixed unused destructured variables with `_` (7 occurrences)
+   - Prefixed unused error variable with `_` (1 occurrence)
+
+2. **renderer/dev-sidecar-logs**: 1 ESLint issue → 0 ✅
+   - Fixed array index key by using content-based keys (`${entry.timestamp}-${entry.stream}-${entry.message.substring(0, 20)}`)
+
+3. **renderer/test-scripts**: DELETED ✅
+   - Removed unused testCacheEventFlow.ts file (4 ESLint issues, dead code)
+
+4. **renderer/providers**: DELETED ✅
+   - Removed unused ElectronPackageManagerApiProvider.ts (2 ESLint issues, mostly unimplemented stubs)
+
+5. **renderer/contexts**: 1 TypeScript error → 0 ✅
+   - Added `Array.isArray()` type guard for `tree.files` to fix forEach error
+
+6. **renderer/types**: 3 ESLint + 1 TypeScript → 0 ✅
+   - Changed `any` to `unknown` in file-tree-source.ts
+   - Changed `any` to `Record<string, unknown>` in session.types.ts and sessionContext.ts
+   - Fixed inline import by converting to proper import statement at top
+   - Fixed cross-boundary import path from `../../main/services/store` to `../../shared/sessionTypes`
+
+7. **renderer/App.tsx**: 2 TypeScript errors → 0 ✅
+   - Fixed `viewMode` type from `string | undefined` to `'single' | 'book' | undefined`
+   - Fixed `RepositoryMapsData.repository` type from `{ owner?: string; name?: string }` to proper `Repository` type
+   - Added guard for undefined repository data before rendering RepositoryWorkspace
+
+**Current state:**
+- **Eight directories now 100% clean**: shared, window, repository-monitoring-server, titlebar, event-processing-server, pure-core, renderer/dev-sidecar-logs, renderer/types ✅
+- **All TypeScript errors isolated to renderer**: 243 errors (100%)
+- **ESLint remaining**: renderer: 179, main: 77
+
+### 2025-10-11 - Main Directory Systematic Cleanup (In Progress)
+- **Overall Before**: 1505 total ESLint issues (1014 errors, 491 warnings), 243 TypeScript errors, 349 console.log warnings
+- **Overall After**: 1482 total ESLint issues (991 errors, 491 warnings), 243 TypeScript errors, 349 console.log warnings
+- **Total Improvement**: 23 ESLint errors fixed (1.5% reduction)
+- **ESLint Errors**: 1014 → 991 (-23)
+
+**Main directory cleanup (systematic file-by-file approach)**:
+
+**Files completed (3 files, 23 errors fixed)**:
+1. **agent-session-events/agentSessionSDKHandlers.ts**: 9 errors → 0 ✅
+   - Prefixed unused variables with `_` (sessionId, provider, repository, startTime, lastUpdateTime, repository param, e)
+   - Typed `any` parameters with proper types: `ServerToMainMessage` for message handlers
+   - Typed `any` in Promise with proper types: `{ status: number; data: unknown }`
+   - Typed HTTP response object with explicit callback types
+   - **Remaining**: 3 warnings (non-null assertions - low priority)
+
+2. **agent-session-events/EventServerManager.ts**: 9 errors → 0 ✅
+   - Imported proper message types from `../../event-processing-server/types`
+   - Typed `any` message parameters with `ServerToMainMessage`, `ProcessedEventMessage`, `RepositoryInfoRequestMessage`, `WindowBroadcastMessage`
+   - Removed unnecessary type casts: `(msg as any).error` → `msg.error` (proper union type narrowing)
+   - Fixed environment type: `process.env.NODE_ENV as 'development' | 'production' | 'test' | undefined`
+   - Fixed property access: `msg.event` → `msg.channel` (correct property name in WindowBroadcastMessage)
+
+3. **agent-sessions/SessionEventProcessorBackend.ts**: 5 errors → 0 ✅
+   - Removed unnecessary `any` casts - types already matched between SessionState and AgentSessionRecord:
+     - `state.fileAccesses as any` → `state.fileAccesses` (same type structure)
+     - `state.fileWrites as any` → `state.fileWrites`
+     - `state.toolCalls as any` → `state.toolCalls`
+     - `state.webAccesses as any` → `state.webAccesses`
+   - Prefixed unused variable: `initialState` → `_initialState`
+
+**Key learnings:**
+- Many `any` casts are unnecessary - the types often already match and just need proper imports
+- Message types should come from the shared types file (event-processing-server/types.ts)
+- Union type narrowing works well with proper type guards (isProcessedEventMessage, etc.)
+- Record types with complex nested structures can be safely assigned without casts
+
+**Main directory status:**
+- **Before**: 77 ESLint issues
+- **After**: 54 ESLint issues ✅
+- **Progress**: 23 errors fixed (30% reduction!)
+- **Remaining files**: ~23 files with various issues (mostly `any` types, unused vars, empty functions)
+
+**Next priority files** (by error count):
+1. agent-sessions/agentSessionService.ts - 15 errors
+2. principal-mcp/PrincipalMCPBridge.ts - 23 errors
+3. file-system/shellHandlers.ts - 7 errors
+4. quality-lenses files - 6 errors total
+
 ---
 
 **Note**: Run the tracking commands above periodically to monitor progress and update the tables accordingly.

@@ -121,6 +121,23 @@ class CommandExecutor {
         };
       }
 
+      // For npm/yarn/pnpm run scripts that execute linters/type checkers/tests,
+      // non-zero exit code is normal when issues are found
+      if ((command === 'npm' || command === 'yarn' || command === 'pnpm') &&
+          args[0] === 'run') {
+        // These scripts (lint, typecheck, test) return exit code 1 when they find issues
+        // This is expected behavior, not an error
+        // Return the output with the exit code so the lens can parse it
+        return {
+          id,
+          type: 'complete',
+          data: stdout,
+          stderr: stderr,
+          exitCode: exitCode,
+          duration: Date.now() - startTime
+        };
+      }
+
       // For other commands, treat non-zero exit as error
       throw error;
     }

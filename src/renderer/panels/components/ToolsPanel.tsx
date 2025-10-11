@@ -811,7 +811,19 @@ export function createHighlightLayersFromLensResults(
 
         result.lensResult.issues.forEach(issue => {
           if (issue.file) {
-            const fullPath = issue.file.startsWith('/') ? issue.file : `${packagePath}/${issue.file}`;
+            // Build the full path, handling empty packagePath
+            let fullPath: string;
+            if (issue.file.startsWith('/')) {
+              // Already absolute
+              fullPath = issue.file;
+            } else if (packagePath) {
+              // Has package path, prepend it
+              fullPath = `${packagePath}/${issue.file}`;
+            } else {
+              // Root package, use relative path as-is
+              fullPath = issue.file;
+            }
+
             console.log(`[createHighlightLayers] Issue file path:`, {
               originalPath: issue.file,
               packagePath,

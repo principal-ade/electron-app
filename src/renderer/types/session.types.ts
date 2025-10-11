@@ -21,7 +21,7 @@ export interface UIAgentSessionData extends Partial<AgentSessionRecord> {
 
   // Optional metadata
   customName?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 
 // Last action/event tracking
   lastAction?: {

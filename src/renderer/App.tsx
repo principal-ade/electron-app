@@ -15,10 +15,12 @@ import { AppVersionManagerService } from './main-process-api/AppVersionManagerSe
 // Import MarkdownView directly (not lazy loaded)
 import { MarkdownView } from './pages/MarkdownView';
 
+import type { Repository } from '../shared/types/repository.types';
+
 // Type definitions for window init data
 interface MarkdownViewData {
   filePath?: string;
-  viewMode?: string;
+  viewMode?: 'single' | 'book';
   projectName?: string;
 }
 
@@ -27,10 +29,7 @@ interface MultiFileEditorData {
 }
 
 interface RepositoryMapsData {
-  repository?: {
-    owner?: string;
-    name?: string;
-  };
+  repository?: Repository;
   mode?: string;
 }
 
@@ -284,10 +283,16 @@ function AppContent({
     }
 
     const repoData = windowInitData as RepositoryMapsData | null;
+
+    // Don't render if no repository data
+    if (!repoData?.repository) {
+      return <LoadingFallback />;
+    }
+
     return (
       <Suspense fallback={<LoadingFallback />}>
         <RepositoryWorkspace
-          repository={repoData?.repository}
+          repository={repoData.repository}
           onBack={() => window.close()}
           hasUpdateAvailable={hasUpdateAvailable}
         />

@@ -12,7 +12,6 @@ import { useTheme } from '@a24z/industry-theme';
 import { debounce } from 'lodash';
 import { ExcalidrawStorageService } from '../../main-process-api/ExcalidrawStorageService';
 import { AlexandriaDrawingService } from '../../main-process-api/AlexandriaDrawingService';
-import { RoomDrawingService } from '../../main-process-api/RoomDrawingService';
 import {
   diagramEventBus,
   DIAGRAM_EVENTS,
@@ -41,8 +40,6 @@ interface ExcalidrawWrapperProps {
   showNameEditor?: boolean;
   // Control which storage to use
   useAlexandriaStorage?: boolean;
-  // Room-aware drawing support
-  roomId?: string;
   // Expose save function to parent
   saveRef?: React.MutableRefObject<(() => Promise<void>) | null>;
 }
@@ -62,7 +59,6 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
   showNewDiagramButton = true, // Default to true for backward compatibility
   showNameEditor = true, // Default to true for backward compatibility
   useAlexandriaStorage = false, // Default to false for backward compatibility
-  roomId,
   saveRef,
 }) => {
   const { theme } = useTheme();
@@ -244,9 +240,8 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
       projectPath,
       currentLibraryItems,
       useAlexandriaStorage,
-      roomId,
     };
-  }, [excalidrawAPI, currentDiagramName, projectPath, currentLibraryItems, useAlexandriaStorage, roomId]);
+  }, [excalidrawAPI, currentDiagramName, projectPath, currentLibraryItems, useAlexandriaStorage]);
 
   // Track if this is the first save for draft naming
   const [draftNumber, setDraftNumber] = useState<number | null>(null);
@@ -254,7 +249,7 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
 
   // Auto-save functionality using refs to avoid re-renders
   const handleSave = useCallback(async () => {
-    const { excalidrawAPI, projectPath, currentLibraryItems, useAlexandriaStorage, roomId } =
+    const { excalidrawAPI, projectPath, currentLibraryItems, useAlexandriaStorage } =
       saveDataRef.current;
     const { diagramName } = saveDataRef.current;
 
@@ -315,43 +310,15 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
       let savedId: string;
 
       if (useAlexandriaStorage && projectPath) {
-        // If we have a roomId, use the room-aware service
-        if (roomId) {
-          const drawingName = saveName || 'Untitled Drawing';
-          // If we already have a diagram ID, we're updating an existing drawing
-          const existingId = currentDiagramIdRef.current || currentDiagramId;
-
-          if (existingId) {
-            // Update existing drawing - pass the ID to update instead of creating new
-            const drawingIdFromService = await RoomDrawingService.updateRoomDrawing(
-              projectPath,
-              roomId,
-              existingId,
-              drawingName,
-              data
-            );
-            savedId = drawingIdFromService || existingId;
-          } else {
-            // Create new drawing
-            const drawingIdFromService = await RoomDrawingService.saveRoomDrawing(
-              projectPath,
-              roomId,
-              drawingName,
-              data
-            );
-            savedId = drawingIdFromService || saveName;
-          }
-        } else {
-          // Fall back to Alexandria service for non-room drawings
-          const fileName = currentDiagramIdRef.current || currentDiagramId || saveName;
-          const fileNameWithExt = fileName.endsWith('.excalidraw') ? fileName : `${fileName}.excalidraw`;
-          await AlexandriaDrawingService.saveDiagram(
-            fileNameWithExt,
-            data,
-            projectPath
-          );
-          savedId = fileName.replace('.excalidraw', '');
-        }
+        // Use Alexandria service for drawings
+        const fileName = currentDiagramIdRef.current || currentDiagramId || saveName;
+        const fileNameWithExt = fileName.endsWith('.excalidraw') ? fileName : `${fileName}.excalidraw`;
+        await AlexandriaDrawingService.saveDiagram(
+          fileNameWithExt,
+          data,
+          projectPath
+        );
+        savedId = fileName.replace('.excalidraw', '');
       } else {
         // Save to app-data storage
         savedId = await ExcalidrawStorageService.saveDiagram(
