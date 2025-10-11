@@ -37,10 +37,8 @@ export const packageManagerApi: PackageManagerAPI = {
   onVulnerabilityCheckProgress: (
     callback: (data: CheckProgressData) => void,
   ) => {
-    const handler = (
-      _event: IpcRendererEvent,
-      data: CheckProgressData,
-    ) => callback(data);
+    const handler = (_event: IpcRendererEvent, data: CheckProgressData) =>
+      callback(data);
     ipcRenderer.on(
       PackageManagerAPIEvent.VULNERABILITY_CHECK_PROGRESS,
       handler,
@@ -54,10 +52,8 @@ export const packageManagerApi: PackageManagerAPI = {
   },
 
   onLicenseCheckProgress: (callback: (data: CheckProgressData) => void) => {
-    const handler = (
-      _event: IpcRendererEvent,
-      data: CheckProgressData,
-    ) => callback(data);
+    const handler = (_event: IpcRendererEvent, data: CheckProgressData) =>
+      callback(data);
     ipcRenderer.on(PackageManagerAPIEvent.LICENSE_CHECK_PROGRESS, handler);
     return () => {
       ipcRenderer.removeListener(

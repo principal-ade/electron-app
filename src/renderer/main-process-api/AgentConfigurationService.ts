@@ -83,7 +83,11 @@ export class AgentConfigurationService {
   static async addMCPToAgent(
     agentType: SupportedAgent,
     serverName: string = APP_BRANDING.MCP_SERVER_CONFIG_KEY,
-  ): Promise<{ success: boolean; error?: string; status?: { hasMCP: boolean; mcpCount: number } }> {
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    status?: { hasMCP: boolean; mcpCount: number };
+  }> {
     try {
       const result = await window.mainProcess.agentConfig.addMCPToAgent(
         agentType,
@@ -102,7 +106,11 @@ export class AgentConfigurationService {
   static async removeMCPFromAgent(
     agentType: SupportedAgent,
     serverName: string = APP_BRANDING.MCP_SERVER_CONFIG_KEY,
-  ): Promise<{ success: boolean; error?: string; status?: { hasMCP: boolean; mcpCount: number } }> {
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    status?: { hasMCP: boolean; mcpCount: number };
+  }> {
     try {
       const result = await window.mainProcess.agentConfig.removeMCPFromAgent(
         agentType,
@@ -155,11 +163,12 @@ export class AgentConfigurationService {
     return result.filePath;
   }
 
-  static async readAgentSettings(agentType: SupportedAgent): Promise<AgentSettings | null> {
+  static async readAgentSettings(
+    agentType: SupportedAgent,
+  ): Promise<AgentSettings | null> {
     try {
-      const result = await window.mainProcess.agentConfig.readAgentSettings(
-        agentType,
-      );
+      const result =
+        await window.mainProcess.agentConfig.readAgentSettings(agentType);
       return result.success ? result.settings : null;
     } catch (error) {
       console.error(`Failed to read ${agentType} settings:`, error);

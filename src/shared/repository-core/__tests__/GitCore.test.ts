@@ -14,7 +14,7 @@ describe('GitCore.getStatus', () => {
 
   it('classifies unstaged deletions as deleted when porcelain output preserves leading spaces', async () => {
     mockExecSync.mockReturnValue(
-      [' D deleted-file.txt', '?? untracked-file.txt'].join('\n') + '\n'
+      [' D deleted-file.txt', '?? untracked-file.txt'].join('\n') + '\n',
     );
 
     const status = await GitCore.getStatus('/fake/path');

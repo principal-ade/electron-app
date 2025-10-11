@@ -1,9 +1,4 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useRef,
-} from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { useTheme } from '@a24z/industry-theme';
 import { Calendar, Filter, Search, Check, FolderOpen } from 'lucide-react';
@@ -28,8 +23,12 @@ export const MarkdownSearch: React.FC = () => {
   );
   const [showFilters, setShowFilters] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [selectedRepositories, setSelectedRepositories] = useState<string[]>([]);
-  const [allRepositories, setAllRepositories] = useState<Array<{ path: string; name: string }>>([]);
+  const [selectedRepositories, setSelectedRepositories] = useState<string[]>(
+    [],
+  );
+  const [allRepositories, setAllRepositories] = useState<
+    Array<{ path: string; name: string }>
+  >([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize service and index Alexandria repositories
@@ -41,7 +40,6 @@ export const MarkdownSearch: React.FC = () => {
         // Get Alexandria repositories and index them
         const repositories = await AlexandriaService.getRepositories();
 
-
         // Use batch indexing for all repositories
         if (repositories.length > 0) {
           const reposToIndex = repositories
@@ -51,7 +49,7 @@ export const MarkdownSearch: React.FC = () => {
           // Store all repositories for filtering
           setAllRepositories(reposToIndex);
           // By default, all repositories are selected
-          setSelectedRepositories(reposToIndex.map(r => r.path));
+          setSelectedRepositories(reposToIndex.map((r) => r.path));
 
           if (reposToIndex.length > 0) {
             try {
@@ -68,8 +66,7 @@ export const MarkdownSearch: React.FC = () => {
         const status = await documentSearchService.getStatus();
         setIndexStatus(status);
         setIsInitialized(true);
-      } catch (_error) {
-      }
+      } catch (_error) {}
     };
     init();
 
@@ -98,7 +95,10 @@ export const MarkdownSearch: React.FC = () => {
         setIsSearching(true);
         documentSearchService
           .search(searchQuery, {
-            repositories: selectedRepositories.length > 0 ? selectedRepositories : undefined
+            repositories:
+              selectedRepositories.length > 0
+                ? selectedRepositories
+                : undefined,
           })
           .then((results) => {
             setSearchResults(results);
@@ -155,7 +155,7 @@ export const MarkdownSearch: React.FC = () => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
       }}
     >
       {/* Header */}
@@ -195,15 +195,19 @@ export const MarkdownSearch: React.FC = () => {
             }}
           >
             <Filter size={18} />
-            {selectedRepositories.length > 0 && selectedRepositories.length < allRepositories.length && (
-              <div
-                className="absolute -top-1 -right-1 w-2 h-2 rounded-full"
-                style={{ backgroundColor: theme.colors.primary }}
-              />
-            )}
+            {selectedRepositories.length > 0 &&
+              selectedRepositories.length < allRepositories.length && (
+                <div
+                  className="absolute -top-1 -right-1 w-2 h-2 rounded-full"
+                  style={{ backgroundColor: theme.colors.primary }}
+                />
+              )}
           </button>
           <div className="flex-1 flex items-center justify-end gap-4">
-            <div className="flex items-center gap-4 text-xs" style={{ color: theme.colors.textSecondary }}>
+            <div
+              className="flex items-center gap-4 text-xs"
+              style={{ color: theme.colors.textSecondary }}
+            >
               <span className="flex items-center gap-1">
                 <Calendar size={14} />
                 {indexStatus?.lastUpdate
@@ -231,14 +235,18 @@ export const MarkdownSearch: React.FC = () => {
           }}
         >
           <div className="mb-3">
-            <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: theme.colors.text }}>
+            <h3
+              className="text-sm font-semibold flex items-center gap-2"
+              style={{ color: theme.colors.text }}
+            >
               <FolderOpen size={16} />
               Filter by Repository
               <span
                 className="text-xs font-normal ml-2"
                 style={{ color: theme.colors.textSecondary }}
               >
-                ({selectedRepositories.length} of {allRepositories.length} selected)
+                ({selectedRepositories.length} of {allRepositories.length}{' '}
+                selected)
               </span>
             </h3>
           </div>
@@ -250,31 +258,47 @@ export const MarkdownSearch: React.FC = () => {
                   key={repo.path}
                   onClick={() => {
                     if (isSelected) {
-                      setSelectedRepositories(prev => prev.filter(p => p !== repo.path));
+                      setSelectedRepositories((prev) =>
+                        prev.filter((p) => p !== repo.path),
+                      );
                     } else {
-                      setSelectedRepositories(prev => [...prev, repo.path]);
+                      setSelectedRepositories((prev) => [...prev, repo.path]);
                     }
                   }}
                   className="flex items-center gap-2 px-3 py-2 rounded cursor-pointer transition-colors hover:opacity-80"
                   style={{
-                    backgroundColor: isSelected ? `${theme.colors.primary}20` : theme.colors.background,
+                    backgroundColor: isSelected
+                      ? `${theme.colors.primary}20`
+                      : theme.colors.background,
                     border: `1px solid ${isSelected ? theme.colors.primary : theme.colors.border}`,
                   }}
                 >
                   <div
                     className="w-4 h-4 rounded flex items-center justify-center flex-shrink-0"
                     style={{
-                      backgroundColor: isSelected ? theme.colors.primary : 'transparent',
-                      border: isSelected ? 'none' : `1px solid ${theme.colors.border}`,
+                      backgroundColor: isSelected
+                        ? theme.colors.primary
+                        : 'transparent',
+                      border: isSelected
+                        ? 'none'
+                        : `1px solid ${theme.colors.border}`,
                     }}
                   >
                     {isSelected && (
-                      <Check size={12} color={theme.colors.background} strokeWidth={3} />
+                      <Check
+                        size={12}
+                        color={theme.colors.background}
+                        strokeWidth={3}
+                      />
                     )}
                   </div>
                   <span
                     className="text-xs truncate"
-                    style={{ color: isSelected ? theme.colors.primary : theme.colors.text }}
+                    style={{
+                      color: isSelected
+                        ? theme.colors.primary
+                        : theme.colors.text,
+                    }}
                     title={repo.name}
                   >
                     {repo.name}
@@ -285,7 +309,9 @@ export const MarkdownSearch: React.FC = () => {
           </div>
           <div className="mt-3 flex gap-2">
             <button
-              onClick={() => setSelectedRepositories(allRepositories.map(r => r.path))}
+              onClick={() =>
+                setSelectedRepositories(allRepositories.map((r) => r.path))
+              }
               className="text-xs px-3 py-1 rounded border transition-colors"
               style={{
                 borderColor: theme.colors.border,

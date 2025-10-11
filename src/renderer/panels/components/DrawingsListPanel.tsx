@@ -18,7 +18,9 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
   const { repositoryPath } = useRepositoryPanelContext();
   const [drawings, setDrawings] = useState<DiagramListItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
+  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(
+    null,
+  );
 
   const loadDrawings = async () => {
     if (!repositoryPath) {
@@ -29,10 +31,12 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
 
     setLoading(true);
     try {
-      const drawingsList = await AlexandriaDrawingService.listDiagrams(repositoryPath);
+      const drawingsList =
+        await AlexandriaDrawingService.listDiagrams(repositoryPath);
       // Sort by most recently updated first
-      drawingsList.sort((a, b) =>
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      drawingsList.sort(
+        (a, b) =>
+          new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       );
       setDrawings(drawingsList);
     } catch (err) {
@@ -54,7 +58,10 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
     }
   };
 
-  const handleDeleteDrawing = async (drawing: DiagramListItem, e: React.MouseEvent) => {
+  const handleDeleteDrawing = async (
+    drawing: DiagramListItem,
+    e: React.MouseEvent,
+  ) => {
     e.stopPropagation();
 
     if (!confirm(`Are you sure you want to delete "${drawing.name}"?`)) {
@@ -67,7 +74,10 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
       ? drawing.id
       : `${drawing.id}.excalidraw`;
 
-    const success = await AlexandriaDrawingService.deleteDiagram(fileName, repositoryPath);
+    const success = await AlexandriaDrawingService.deleteDiagram(
+      fileName,
+      repositoryPath,
+    );
     if (success) {
       // Reload the list
       await loadDrawings();
@@ -284,7 +294,8 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
                 }}
                 onMouseEnter={(e) => {
                   if (selectedDrawingId !== drawing.id) {
-                    e.currentTarget.style.backgroundColor = theme.colors.backgroundLight;
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundLight;
                   }
                 }}
                 onMouseLeave={(e) => {

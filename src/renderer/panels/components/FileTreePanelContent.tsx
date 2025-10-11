@@ -17,7 +17,8 @@ interface FileTreePanelContentProps {
 export const FileTreePanelContent: React.FC<FileTreePanelContentProps> = ({
   onFileSelect,
 }) => {
-  const { fileTree, loading, isSliceLoading, repositoryPath } = useRepositoryPanelContext();
+  const { fileTree, loading, isSliceLoading, repositoryPath } =
+    useRepositoryPanelContext();
 
   const fileTreeLoading = isSliceLoading('fileTree');
 

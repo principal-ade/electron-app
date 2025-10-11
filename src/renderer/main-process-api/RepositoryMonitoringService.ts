@@ -25,7 +25,9 @@ export class RepositoryMonitoringService {
    */
   static async getFileTree(repoPath: string): Promise<FileTree | null> {
     try {
-      return await window.mainProcess.repositoryMonitoring.getFileTree(repoPath);
+      return await window.mainProcess.repositoryMonitoring.getFileTree(
+        repoPath,
+      );
     } catch (error) {
       console.error('[RepositoryMonitoring] Error getting file tree:', error);
       return null;
@@ -35,9 +37,13 @@ export class RepositoryMonitoringService {
   /**
    * Get packages from a repository
    */
-  static async getPackages(repoPath: string): Promise<{ packages: PackageLayer[]; summary: PackageSummary } | null> {
+  static async getPackages(
+    repoPath: string,
+  ): Promise<{ packages: PackageLayer[]; summary: PackageSummary } | null> {
     try {
-      return await window.mainProcess.repositoryMonitoring.getPackages(repoPath);
+      return await window.mainProcess.repositoryMonitoring.getPackages(
+        repoPath,
+      );
     } catch (error) {
       console.error('[RepositoryMonitoring] Error getting packages:', error);
       return null;
@@ -47,11 +53,18 @@ export class RepositoryMonitoringService {
   /**
    * Get the registry-backed cache snapshot for a repository
    */
-  static async getRepositoryCacheSnapshot(repoPath: string): Promise<RepositoryCacheSnapshot> {
+  static async getRepositoryCacheSnapshot(
+    repoPath: string,
+  ): Promise<RepositoryCacheSnapshot> {
     try {
-      return await window.mainProcess.repositoryMonitoring.getRepositoryCacheSnapshot(repoPath);
+      return await window.mainProcess.repositoryMonitoring.getRepositoryCacheSnapshot(
+        repoPath,
+      );
     } catch (error) {
-      console.error('[RepositoryMonitoring] Error getting cache snapshot:', error);
+      console.error(
+        '[RepositoryMonitoring] Error getting cache snapshot:',
+        error,
+      );
       return { repoPath, slices: {} };
     }
   }
@@ -59,36 +72,66 @@ export class RepositoryMonitoringService {
   /**
    * Register a repository for monitoring
    */
-  static async registerRepository(repoPath: string): Promise<RepositoryMonitoringResult> {
+  static async registerRepository(
+    repoPath: string,
+  ): Promise<RepositoryMonitoringResult> {
     try {
-      return await window.mainProcess.repositoryMonitoring.registerRepository(repoPath);
+      return await window.mainProcess.repositoryMonitoring.registerRepository(
+        repoPath,
+      );
     } catch (error) {
-      console.error('[RepositoryMonitoring] Error registering repository:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error(
+        '[RepositoryMonitoring] Error registering repository:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 
   /**
    * Unregister a repository from monitoring
    */
-  static async unregisterRepository(repoPath: string): Promise<RepositoryMonitoringResult> {
+  static async unregisterRepository(
+    repoPath: string,
+  ): Promise<RepositoryMonitoringResult> {
     try {
-      return await window.mainProcess.repositoryMonitoring.unregisterRepository(repoPath);
+      return await window.mainProcess.repositoryMonitoring.unregisterRepository(
+        repoPath,
+      );
     } catch (error) {
-      console.error('[RepositoryMonitoring] Error unregistering repository:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error(
+        '[RepositoryMonitoring] Error unregistering repository:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 
   /**
    * Refresh repository data (clear cache and rebuild)
    */
-  static async refreshRepository(repoPath: string): Promise<RepositoryMonitoringResult> {
+  static async refreshRepository(
+    repoPath: string,
+  ): Promise<RepositoryMonitoringResult> {
     try {
-      return await window.mainProcess.repositoryMonitoring.refreshRepository(repoPath);
+      return await window.mainProcess.repositoryMonitoring.refreshRepository(
+        repoPath,
+      );
     } catch (error) {
-      console.error('[RepositoryMonitoring] Error refreshing repository:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error(
+        '[RepositoryMonitoring] Error refreshing repository:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 
@@ -99,7 +142,10 @@ export class RepositoryMonitoringService {
     try {
       return await window.mainProcess.repositoryMonitoring.getMonitoringStatus();
     } catch (error) {
-      console.error('[RepositoryMonitoring] Error getting monitoring status:', error);
+      console.error(
+        '[RepositoryMonitoring] Error getting monitoring status:',
+        error,
+      );
       // Return empty status on error
       return {
         repositories: [],
@@ -139,7 +185,9 @@ export class RepositoryMonitoringService {
    */
   static async getGitStatus(repoPath: string): Promise<GitStatus | null> {
     try {
-      return await window.mainProcess.repositoryMonitoring.getGitStatus(repoPath);
+      return await window.mainProcess.repositoryMonitoring.getGitStatus(
+        repoPath,
+      );
     } catch (error) {
       console.error('[RepositoryMonitoring] Error getting git status:', error);
       return null;
@@ -149,11 +197,18 @@ export class RepositoryMonitoringService {
   /**
    * Get git status with file lists for a repository
    */
-  static async getGitStatusWithFiles(repoPath: string): Promise<GitStatusWithFiles | null> {
+  static async getGitStatusWithFiles(
+    repoPath: string,
+  ): Promise<GitStatusWithFiles | null> {
     try {
-      return await window.mainProcess.repositoryMonitoring.getGitStatusWithFiles(repoPath);
+      return await window.mainProcess.repositoryMonitoring.getGitStatusWithFiles(
+        repoPath,
+      );
     } catch (error) {
-      console.error('[RepositoryMonitoring] Error getting git status with files:', error);
+      console.error(
+        '[RepositoryMonitoring] Error getting git status with files:',
+        error,
+      );
       return null;
     }
   }
@@ -161,35 +216,62 @@ export class RepositoryMonitoringService {
   /**
    * Enable git watching for a repository
    */
-  static async enableGitWatching(repoPath: string): Promise<RepositoryMonitoringResult> {
+  static async enableGitWatching(
+    repoPath: string,
+  ): Promise<RepositoryMonitoringResult> {
     try {
-      return await window.mainProcess.repositoryMonitoring.enableGitWatching(repoPath);
+      return await window.mainProcess.repositoryMonitoring.enableGitWatching(
+        repoPath,
+      );
     } catch (error) {
-      console.error('[RepositoryMonitoring] Error enabling git watching:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error(
+        '[RepositoryMonitoring] Error enabling git watching:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 
   /**
    * Disable git watching for a repository
    */
-  static async disableGitWatching(repoPath: string): Promise<RepositoryMonitoringResult> {
+  static async disableGitWatching(
+    repoPath: string,
+  ): Promise<RepositoryMonitoringResult> {
     try {
-      return await window.mainProcess.repositoryMonitoring.disableGitWatching(repoPath);
+      return await window.mainProcess.repositoryMonitoring.disableGitWatching(
+        repoPath,
+      );
     } catch (error) {
-      console.error('[RepositoryMonitoring] Error disabling git watching:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error(
+        '[RepositoryMonitoring] Error disabling git watching:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 
   /**
    * Get git remote info for a repository
    */
-  static async getGitRemoteInfo(repoPath: string): Promise<GitRemoteInfo | null> {
+  static async getGitRemoteInfo(
+    repoPath: string,
+  ): Promise<GitRemoteInfo | null> {
     try {
-      return await window.mainProcess.repositoryMonitoring.getGitRemoteInfo(repoPath);
+      return await window.mainProcess.repositoryMonitoring.getGitRemoteInfo(
+        repoPath,
+      );
     } catch (error) {
-      console.error('[RepositoryMonitoring] Error getting git remote info:', error);
+      console.error(
+        '[RepositoryMonitoring] Error getting git remote info:',
+        error,
+      );
       return null;
     }
   }
@@ -197,12 +279,22 @@ export class RepositoryMonitoringService {
   /**
    * Invalidate git remote cache for a repository
    */
-  static async invalidateGitRemoteCache(repoPath: string): Promise<RepositoryMonitoringResult> {
+  static async invalidateGitRemoteCache(
+    repoPath: string,
+  ): Promise<RepositoryMonitoringResult> {
     try {
-      return await window.mainProcess.repositoryMonitoring.invalidateGitRemoteCache(repoPath);
+      return await window.mainProcess.repositoryMonitoring.invalidateGitRemoteCache(
+        repoPath,
+      );
     } catch (error) {
-      console.error('[RepositoryMonitoring] Error invalidating git remote cache:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      console.error(
+        '[RepositoryMonitoring] Error invalidating git remote cache:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
     }
   }
 
@@ -218,14 +310,18 @@ export class RepositoryMonitoringService {
   /**
    * Subscribe to cache synchronization events emitted by the worker
    */
-  static onCacheSync(callback: (event: RepositoryCacheSyncEvent) => void): () => void {
+  static onCacheSync(
+    callback: (event: RepositoryCacheSyncEvent) => void,
+  ): () => void {
     return window.mainProcess.repositoryMonitoring.onCacheSync(callback);
   }
 
   /**
    * Execute a tool using quality lenses
    */
-  static async executeTool(request: ToolExecutionRequest): Promise<ToolExecutionResponse | null> {
+  static async executeTool(
+    request: ToolExecutionRequest,
+  ): Promise<ToolExecutionResponse | null> {
     try {
       return await window.mainProcess.repositoryMonitoring.executeTool(request);
     } catch (error) {

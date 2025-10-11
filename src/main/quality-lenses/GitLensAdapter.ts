@@ -89,7 +89,9 @@ export class GitLensAdapter {
    * @param directory - The directory to get commit info for
    * @returns Commit details including date, author, message, or null if not available
    */
-  public async getLastCommitInfo(directory: string): Promise<CommitInfo | null> {
+  public async getLastCommitInfo(
+    directory: string,
+  ): Promise<CommitInfo | null> {
     try {
       // Configure GitLens with commit details enabled
       this.gitLens.configure({

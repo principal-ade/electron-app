@@ -29,6 +29,7 @@ import { SimpleCityVisualization } from './city';
 ```
 
 **Props:**
+
 - `repository`: The repository to visualize
 - `cityData`: Pre-built CityData object (optional)
 - `isBuilding`: Whether city data is currently being built
@@ -53,6 +54,7 @@ import { RepositoryCityVisualization } from './city';
 ```
 
 **Props:**
+
 - `repository`: The repository to visualize
 - `highlightLayers`: Optional highlight layers
 - `showGitChanges`: Whether to show git HEAD vs working tree
@@ -71,6 +73,7 @@ const result = await cityService.buildCityData(repository);
 ```
 
 **Methods:**
+
 - `buildCityData(repository, options)`: Build city data for a repository
 - `canVisualize(repository)`: Check if repository can be visualized
 - `getRepositoryStats(repository)`: Get quick file/directory stats
@@ -87,12 +90,12 @@ export const MyRepositoryPanel = ({ repository }) => {
   const [cityData, setCityData] = useState(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [treeStats, setTreeStats] = useState(null);
-  
+
   const cityService = useMemo(() => RepositoryCityService.getInstance(), []);
 
   const buildCityData = useCallback(async () => {
     if (!repository) return;
-    
+
     setIsBuilding(true);
     try {
       const result = await cityService.buildCityData(repository);

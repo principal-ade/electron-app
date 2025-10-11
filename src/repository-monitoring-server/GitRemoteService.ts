@@ -34,24 +34,43 @@ export class GitRemoteService {
     ]);
 
     // Process results
-    const [defaultBranchResult, remoteBranchesResult, accessibilityResult] = results;
+    const [defaultBranchResult, remoteBranchesResult, accessibilityResult] =
+      results;
 
-    if (defaultBranchResult.status === 'fulfilled' && defaultBranchResult.value) {
+    if (
+      defaultBranchResult.status === 'fulfilled' &&
+      defaultBranchResult.value
+    ) {
       remoteInfo.defaultBranch = defaultBranchResult.value;
     } else if (defaultBranchResult.status === 'rejected') {
-      console.warn(`[GitRemoteService] Failed to fetch default branch:`, defaultBranchResult.reason);
+      console.warn(
+        `[GitRemoteService] Failed to fetch default branch:`,
+        defaultBranchResult.reason,
+      );
     }
 
-    if (remoteBranchesResult.status === 'fulfilled' && remoteBranchesResult.value) {
+    if (
+      remoteBranchesResult.status === 'fulfilled' &&
+      remoteBranchesResult.value
+    ) {
       remoteInfo.remoteBranches = remoteBranchesResult.value;
     } else if (remoteBranchesResult.status === 'rejected') {
-      console.warn(`[GitRemoteService] Failed to fetch remote branches:`, remoteBranchesResult.reason);
+      console.warn(
+        `[GitRemoteService] Failed to fetch remote branches:`,
+        remoteBranchesResult.reason,
+      );
     }
 
-    if (accessibilityResult.status === 'fulfilled' && accessibilityResult.value) {
+    if (
+      accessibilityResult.status === 'fulfilled' &&
+      accessibilityResult.value
+    ) {
       remoteInfo.accessible = accessibilityResult.value;
     } else if (accessibilityResult.status === 'rejected') {
-      console.warn(`[GitRemoteService] Failed to check accessibility:`, accessibilityResult.reason);
+      console.warn(
+        `[GitRemoteService] Failed to check accessibility:`,
+        accessibilityResult.reason,
+      );
     }
 
     // Get upstream status from local git data (fast, no network)
@@ -71,13 +90,15 @@ export class GitRemoteService {
    * Fetch default branch from remote with timeout
    * Uses ls-remote to check remote HEAD
    */
-  private static async fetchDefaultBranch(repoPath: string): Promise<string | undefined> {
+  private static async fetchDefaultBranch(
+    repoPath: string,
+  ): Promise<string | undefined> {
     const timeout = 3000; // 3 seconds
 
     const output = await this.execGitWithTimeout(
       ['ls-remote', '--symref', 'origin', 'HEAD'],
       repoPath,
-      timeout
+      timeout,
     );
 
     const match = output.match(/ref: refs\/heads\/(\S+)\s+HEAD/);
@@ -88,21 +109,23 @@ export class GitRemoteService {
    * Fetch remote branches with timeout
    * Uses ls-remote to list all remote heads
    */
-  private static async fetchRemoteBranches(repoPath: string): Promise<string[]> {
+  private static async fetchRemoteBranches(
+    repoPath: string,
+  ): Promise<string[]> {
     const timeout = 3000; // 3 seconds
 
     const output = await this.execGitWithTimeout(
       ['ls-remote', '--heads', 'origin'],
       repoPath,
-      timeout
+      timeout,
     );
 
     if (!output) return [];
 
     return output
       .split('\n')
-      .filter(line => line.trim())
-      .map(line => {
+      .filter((line) => line.trim())
+      .map((line) => {
         const match = line.match(/refs\/heads\/(.+)$/);
         return match?.[1];
       })
@@ -113,14 +136,16 @@ export class GitRemoteService {
    * Check if remote is accessible
    * Simply tries ls-remote with exit code check
    */
-  private static async checkRemoteAccessibility(repoPath: string): Promise<boolean> {
+  private static async checkRemoteAccessibility(
+    repoPath: string,
+  ): Promise<boolean> {
     const timeout = 3000; // 3 seconds
 
     try {
       await this.execGitWithTimeout(
         ['ls-remote', '--exit-code', 'origin'],
         repoPath,
-        timeout
+        timeout,
       );
       return true;
     } catch {
@@ -132,11 +157,14 @@ export class GitRemoteService {
    * Get upstream status from local git data (no network call)
    * This uses ahead/behind counts already in local repo
    */
-  private static async getUpstreamStatus(repoPath: string): Promise<{
-    ahead: number;
-    behind: number;
-    upToDate: boolean;
-  } | undefined> {
+  private static async getUpstreamStatus(repoPath: string): Promise<
+    | {
+        ahead: number;
+        behind: number;
+        upToDate: boolean;
+      }
+    | undefined
+  > {
     try {
       // This uses local data only, no network call
       const status = await GitCore.getDetailedStatus(repoPath);
@@ -155,7 +183,11 @@ export class GitRemoteService {
    * Execute git command with timeout using child_process.spawn
    * This is a lightweight implementation that doesn't block the event loop
    */
-  private static execGitWithTimeout(args: string[], cwd: string, timeoutMs: number): Promise<string> {
+  private static execGitWithTimeout(
+    args: string[],
+    cwd: string,
+    timeoutMs: number,
+  ): Promise<string> {
     return new Promise((resolve, reject) => {
       const { spawn } = require('child_process');
 
@@ -176,7 +208,11 @@ export class GitRemoteService {
       const timer = setTimeout(() => {
         timedOut = true;
         child.kill('SIGTERM');
-        reject(new Error(`Git command timed out after ${timeoutMs}ms: git ${args.join(' ')}`));
+        reject(
+          new Error(
+            `Git command timed out after ${timeoutMs}ms: git ${args.join(' ')}`,
+          ),
+        );
       }, timeoutMs);
 
       child.stdout?.on('data', (data: Buffer) => {
@@ -195,7 +231,11 @@ export class GitRemoteService {
         if (code === 0) {
           resolve(stdout.trim());
         } else {
-          reject(new Error(`Git command failed with code ${code}: ${stderr || 'No error message'}`));
+          reject(
+            new Error(
+              `Git command failed with code ${code}: ${stderr || 'No error message'}`,
+            ),
+          );
         }
       });
 

@@ -4,7 +4,7 @@ import type {
   SearchResult,
   BrowseFilters,
   BrowseResult,
-  AlexandriaLayout
+  AlexandriaLayout,
 } from '@a24z/callimachus';
 
 export enum CallimachusEvents {
@@ -52,5 +52,5 @@ export type {
   SearchResult,
   BrowseFilters,
   BrowseResult,
-  AlexandriaLayout
+  AlexandriaLayout,
 };

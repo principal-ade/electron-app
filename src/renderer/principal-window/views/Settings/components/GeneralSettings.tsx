@@ -8,7 +8,10 @@ import { ThemeService } from '../../../../services/ThemeService';
 import type { EditorId } from '../../../../../shared/types/editor.types';
 import { EDITOR_LABELS } from '../../../../../shared/types/editor.types';
 import type { UserPreferences } from '../../../../../shared/types/userPreferences.types';
-import { predefinedThemes, getThemeNames } from '../../../../themes/predefinedThemes';
+import {
+  predefinedThemes,
+  getThemeNames,
+} from '../../../../themes/predefinedThemes';
 import AppIcon from '../../../../../../assets/icons/icon-48x48.png';
 
 export const GeneralSettings: React.FC = () => {
@@ -16,7 +19,8 @@ export const GeneralSettings: React.FC = () => {
   const [currentVersion, setCurrentVersion] = useState('0.0.0');
   const [isDevMode, setIsDevMode] = useState(false);
   const [defaultEditor, setDefaultEditor] = useState<EditorId>('vscode');
-  const [defaultCloneDirectory, setDefaultCloneDirectory] = useState<string>('');
+  const [defaultCloneDirectory, setDefaultCloneDirectory] =
+    useState<string>('');
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
   const [selectedTheme, setSelectedTheme] = useState<string>('default');
   const [pendingTheme, setPendingTheme] = useState<string | null>(null);
@@ -365,7 +369,7 @@ export const GeneralSettings: React.FC = () => {
                   await UserPreferencesService.updatePreferences({
                     titlebarButtons: {
                       theme: enabled,
-                      customize: showCustomizeButton
+                      customize: showCustomizeButton,
                     },
                   });
                 }}
@@ -392,7 +396,7 @@ export const GeneralSettings: React.FC = () => {
                   await UserPreferencesService.updatePreferences({
                     titlebarButtons: {
                       theme: showThemeButton,
-                      customize: enabled
+                      customize: enabled,
                     },
                   });
                 }}
@@ -490,7 +494,8 @@ export const GeneralSettings: React.FC = () => {
                 transition: 'all 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = theme.colors.background;
@@ -512,7 +517,9 @@ export const GeneralSettings: React.FC = () => {
                 border: 'none',
                 backgroundColor: theme.colors.primary,
                 color: 'white',
-                cursor: defaultCloneDirectory?.trim() ? 'pointer' : 'not-allowed',
+                cursor: defaultCloneDirectory?.trim()
+                  ? 'pointer'
+                  : 'not-allowed',
                 fontSize: '14px',
                 fontWeight: 500,
                 opacity: defaultCloneDirectory?.trim() ? 1 : 0.5,
@@ -667,7 +674,8 @@ export const GeneralSettings: React.FC = () => {
                 color: theme.colors.textSecondary,
               }}
             >
-              {predefinedThemes[pendingTheme || selectedTheme]?.description || 'Standard theme'}
+              {predefinedThemes[pendingTheme || selectedTheme]?.description ||
+                'Standard theme'}
             </span>
           </div>
         </div>

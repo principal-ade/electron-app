@@ -4,7 +4,10 @@ import * as path from 'path';
 import { webContents } from 'electron';
 import { EventEmitter } from 'events';
 import { MemoryPalace, NodeFileSystemAdapter } from '@a24z/core-library';
-import type { CreateTaskInput, ValidatedRepositoryPath } from '@a24z/core-library';
+import type {
+  CreateTaskInput,
+  ValidatedRepositoryPath,
+} from '@a24z/core-library';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
@@ -94,15 +97,19 @@ export class PrincipalMCPBridge extends EventEmitter {
     return `slide-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
   }
 
-  private parseSlides(content: string): { slides: string[], slideIds: string[] } {
+  private parseSlides(content: string): {
+    slides: string[];
+    slideIds: string[];
+  } {
     // Split by horizontal rules (---) which serve as slide delimiters
     const slides = content
       .split(/\n---\n/)
       .filter((slide) => slide.trim().length > 0);
-    
-    const processedSlides = slides.length > 0 ? slides : ['# New Document\n\nStart writing...'];
+
+    const processedSlides =
+      slides.length > 0 ? slides : ['# New Document\n\nStart writing...'];
     const slideIds = processedSlides.map(() => this.generateSlideId());
-    
+
     return { slides: processedSlides, slideIds };
   }
 
@@ -151,7 +158,6 @@ export class PrincipalMCPBridge extends EventEmitter {
     }
   }
 
-
   private recordOperation(operation: SlideOperation) {
     this.operationHistory.push(operation);
     // Keep only last 100 operations
@@ -190,172 +196,205 @@ export class PrincipalMCPBridge extends EventEmitter {
     });
 
     // Submit Dependency Task
-    this.app.post('/dependencies/submit', async (req: Request, res: Response) => {
-      try {
-        const request: SubmitDependencyTaskRequest = req.body;
-        
-        // Validate required fields
-        if (!request.dependencyId || !request.taskSummary || !request.taskDetails) {
-          res.status(400).json({ 
-            success: false, 
-            message: 'dependencyId, taskSummary, and taskDetails are required' 
-          });
-          return;
-        }
-
-        const taskId = `task-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-
-        // Resolve dependency using repository monitoring server
-        let dependencyResolution = null;
+    this.app.post(
+      '/dependencies/submit',
+      async (req: Request, res: Response) => {
         try {
-          const repositoryMonitoring = getRepositoryMonitoringManager();
-          dependencyResolution = await repositoryMonitoring.resolveDependency(
-            request.dependencyId, 
-            request.repositoryRoot
-          );
-          
-          console.log('[Principal MCP Bridge] Dependency resolution result:', dependencyResolution);
-        } catch (error) {
-          console.error('[Principal MCP Bridge] Failed to resolve dependency:', error);
-        }
+          const request: SubmitDependencyTaskRequest = req.body;
 
-        // Build response with resolution information
-        const response: any = {
-          success: true,
-          taskId,
-          repository: request.repositoryRoot,
-          message: 'Dependency task submitted successfully',
-          resolution: dependencyResolution || {
-            dependencyId: request.dependencyId,
-            found: false,
-            message: 'Dependency resolution unavailable'
+          // Validate required fields
+          if (
+            !request.dependencyId ||
+            !request.taskSummary ||
+            !request.taskDetails
+          ) {
+            res.status(400).json({
+              success: false,
+              message:
+                'dependencyId, taskSummary, and taskDetails are required',
+            });
+            return;
           }
-        };
 
-        // Add specific information based on resolution results
-        if (dependencyResolution?.found) {
-          if (dependencyResolution.alexandriaEntry) {
-            response.message = `Found registered repository: ${dependencyResolution.alexandriaEntry.name}`;
-            response.alexandriaEntry = dependencyResolution.alexandriaEntry;
+          const taskId = `task-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-            // Write task to dependency's Memory Palace
-            try {
-              const dependencyPath = dependencyResolution.alexandriaEntry.path;
-              const fsAdapter = new NodeFileSystemAdapter();
-              const validatedPath = MemoryPalace.validateRepositoryPath(
-                fsAdapter,
-                dependencyPath
-              ) as ValidatedRepositoryPath;
-              const palace = new MemoryPalace(validatedPath, fsAdapter);
+          // Resolve dependency using repository monitoring server
+          let dependencyResolution = null;
+          try {
+            const repositoryMonitoring = getRepositoryMonitoringManager();
+            dependencyResolution = await repositoryMonitoring.resolveDependency(
+              request.dependencyId,
+              request.repositoryRoot,
+            );
 
-              // Compose task content
-              const content = request.taskDetails.trim().startsWith('#')
-                ? request.taskDetails
-                : `# ${request.taskSummary}\n\n${request.taskDetails}`;
+            console.log(
+              '[Principal MCP Bridge] Dependency resolution result:',
+              dependencyResolution,
+            );
+          } catch (error) {
+            console.error(
+              '[Principal MCP Bridge] Failed to resolve dependency:',
+              error,
+            );
+          }
 
-              // Create task input
-              const taskInput: CreateTaskInput = {
-                content,
-                directoryPath: '' as any, // Root of dependency repo
-                priority: request.priority,
-                tags: request.tags,
-                anchors: request.anchors?.map(anchor => anchor as any) || [],
-              };
+          // Build response with resolution information
+          const response: any = {
+            success: true,
+            taskId,
+            repository: request.repositoryRoot,
+            message: 'Dependency task submitted successfully',
+            resolution: dependencyResolution || {
+              dependencyId: request.dependencyId,
+              found: false,
+              message: 'Dependency resolution unavailable',
+            },
+          };
 
-              // Determine sender ID from source repository
-              const senderName = request.repositoryRoot
-                ? fsAdapter.getRepositoryName(request.repositoryRoot as ValidatedRepositoryPath)
-                : 'external';
+          // Add specific information based on resolution results
+          if (dependencyResolution?.found) {
+            if (dependencyResolution.alexandriaEntry) {
+              response.message = `Found registered repository: ${dependencyResolution.alexandriaEntry.name}`;
+              response.alexandriaEntry = dependencyResolution.alexandriaEntry;
 
               // Write task to dependency's Memory Palace
-              const task = palace.receiveTask(taskInput, senderName);
+              try {
+                const dependencyPath =
+                  dependencyResolution.alexandriaEntry.path;
+                const fsAdapter = new NodeFileSystemAdapter();
+                const validatedPath = MemoryPalace.validateRepositoryPath(
+                  fsAdapter,
+                  dependencyPath,
+                ) as ValidatedRepositoryPath;
+                const palace = new MemoryPalace(validatedPath, fsAdapter);
 
-              response.taskWritten = true;
-              response.taskPath = task.id;
-              response.dependencyRepository = dependencyPath;
+                // Compose task content
+                const content = request.taskDetails.trim().startsWith('#')
+                  ? request.taskDetails
+                  : `# ${request.taskSummary}\n\n${request.taskDetails}`;
 
-              console.log(`[Principal MCP Bridge] Task written to ${dependencyPath}/.palace-work/tasks/active/${task.id}.task.md`);
-            } catch (error) {
-              console.error('[Principal MCP Bridge] Failed to write task to dependency Memory Palace:', error);
-              response.taskWritten = false;
-              response.taskWriteError = error instanceof Error ? error.message : 'Unknown error';
+                // Create task input
+                const taskInput: CreateTaskInput = {
+                  content,
+                  directoryPath: '' as any, // Root of dependency repo
+                  priority: request.priority,
+                  tags: request.tags,
+                  anchors:
+                    request.anchors?.map((anchor) => anchor as any) || [],
+                };
+
+                // Determine sender ID from source repository
+                const senderName = request.repositoryRoot
+                  ? fsAdapter.getRepositoryName(
+                      request.repositoryRoot as ValidatedRepositoryPath,
+                    )
+                  : 'external';
+
+                // Write task to dependency's Memory Palace
+                const task = palace.receiveTask(taskInput, senderName);
+
+                response.taskWritten = true;
+                response.taskPath = task.id;
+                response.dependencyRepository = dependencyPath;
+
+                console.log(
+                  `[Principal MCP Bridge] Task written to ${dependencyPath}/.palace-work/tasks/active/${task.id}.task.md`,
+                );
+              } catch (error) {
+                console.error(
+                  '[Principal MCP Bridge] Failed to write task to dependency Memory Palace:',
+                  error,
+                );
+                response.taskWritten = false;
+                response.taskWriteError =
+                  error instanceof Error ? error.message : 'Unknown error';
+              }
+            } else if (dependencyResolution.packageInfo) {
+              response.message = `Dependency already exists in ${dependencyResolution.packageInfo.packagePath}`;
+              response.existingPackage = dependencyResolution.packageInfo;
             }
-          } else if (dependencyResolution.packageInfo) {
-            response.message = `Dependency already exists in ${dependencyResolution.packageInfo.packagePath}`;
-            response.existingPackage = dependencyResolution.packageInfo;
+
+            if (dependencyResolution.suggestions) {
+              response.installationSuggestions =
+                dependencyResolution.suggestions;
+            }
+          } else {
+            response.message = `Dependency '${request.dependencyId}' not found in registered repositories`;
           }
 
-          if (dependencyResolution.suggestions) {
-            response.installationSuggestions = dependencyResolution.suggestions;
-          }
-        } else {
-          response.message = `Dependency '${request.dependencyId}' not found in registered repositories`;
-        }
-
-        res.json(response);
-
-      } catch (error: any) {
-        res.status(500).json({ 
-          success: false, 
-          message: error.message 
-        });
-      }
-    });
-
-    // Resolve Dependency (without submitting task)
-    this.app.post('/dependencies/resolve', async (req: Request, res: Response) => {
-      try {
-        const { dependencyId, repositoryRoot } = req.body;
-        
-        // Validate required fields
-        if (!dependencyId) {
-          res.status(400).json({ 
-            success: false, 
-            message: 'dependencyId is required' 
-          });
-          return;
-        }
-
-        // Resolve dependency using repository monitoring server
-        try {
-          const repositoryMonitoring = getRepositoryMonitoringManager();
-          const dependencyResolution = await repositoryMonitoring.resolveDependency(
-            dependencyId, 
-            repositoryRoot
-          );
-          
-          console.log('[Principal MCP Bridge] Dependency resolution result:', dependencyResolution);
-          
-          res.json({
-            success: true,
-            ...dependencyResolution
-          });
-        } catch (error) {
-          console.error('[Principal MCP Bridge] Failed to resolve dependency:', error);
+          res.json(response);
+        } catch (error: any) {
           res.status(500).json({
             success: false,
-            message: 'Failed to resolve dependency',
-            error: error instanceof Error ? error.message : 'Unknown error'
+            message: error.message,
           });
         }
+      },
+    );
 
-      } catch (error: any) {
-        res.status(500).json({ 
-          success: false, 
-          message: error.message 
-        });
-      }
-    });
+    // Resolve Dependency (without submitting task)
+    this.app.post(
+      '/dependencies/resolve',
+      async (req: Request, res: Response) => {
+        try {
+          const { dependencyId, repositoryRoot } = req.body;
+
+          // Validate required fields
+          if (!dependencyId) {
+            res.status(400).json({
+              success: false,
+              message: 'dependencyId is required',
+            });
+            return;
+          }
+
+          // Resolve dependency using repository monitoring server
+          try {
+            const repositoryMonitoring = getRepositoryMonitoringManager();
+            const dependencyResolution =
+              await repositoryMonitoring.resolveDependency(
+                dependencyId,
+                repositoryRoot,
+              );
+
+            console.log(
+              '[Principal MCP Bridge] Dependency resolution result:',
+              dependencyResolution,
+            );
+
+            res.json({
+              success: true,
+              ...dependencyResolution,
+            });
+          } catch (error) {
+            console.error(
+              '[Principal MCP Bridge] Failed to resolve dependency:',
+              error,
+            );
+            res.status(500).json({
+              success: false,
+              message: 'Failed to resolve dependency',
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+          }
+        } catch (error: any) {
+          res.status(500).json({
+            success: false,
+            message: error.message,
+          });
+        }
+      },
+    );
 
     // Start Planning Session - Document Open
     this.app.post('/document/open', async (req: Request, res: Response) => {
       try {
         const request: DocumentOpenRequest = req.body;
-        
+
         if (!request.agentName) {
-          res.status(400).json({ 
-            success: false, 
-            message: 'agentName is required' 
+          res.status(400).json({
+            success: false,
+            message: 'agentName is required',
           });
           return;
         }
@@ -404,228 +443,247 @@ export class PrincipalMCPBridge extends EventEmitter {
     });
 
     // Create Slide
-    this.app.post('/planning/create-slide', async (req: Request, res: Response) => {
-      try {
-        const { title, content, afterSlideId } = req.body;
-        
-        if (!title) {
-          res.status(400).json({ 
-            success: false, 
-            message: 'title is required' 
-          });
-          return;
-        }
+    this.app.post(
+      '/planning/create-slide',
+      async (req: Request, res: Response) => {
+        try {
+          const { title, content, afterSlideId } = req.body;
 
-        if (!this.currentDocument) {
-          res.status(400).json({ 
-            success: false, 
-            message: 'No document is currently open' 
-          });
-          return;
-        }
-
-        const slideId = this.generateSlideId();
-        const slideContent = content || `# ${title}\n\nContent here...`;
-        
-        let insertIndex = this.currentDocument.slides.length;
-        
-        // Find insertion point if afterSlideId is provided
-        if (afterSlideId) {
-          const afterIndex = this.currentDocument.slideIds.findIndex(id => id === afterSlideId);
-          if (afterIndex !== -1) {
-            insertIndex = afterIndex + 1;
+          if (!title) {
+            res.status(400).json({
+              success: false,
+              message: 'title is required',
+            });
+            return;
           }
+
+          if (!this.currentDocument) {
+            res.status(400).json({
+              success: false,
+              message: 'No document is currently open',
+            });
+            return;
+          }
+
+          const slideId = this.generateSlideId();
+          const slideContent = content || `# ${title}\n\nContent here...`;
+
+          let insertIndex = this.currentDocument.slides.length;
+
+          // Find insertion point if afterSlideId is provided
+          if (afterSlideId) {
+            const afterIndex = this.currentDocument.slideIds.findIndex(
+              (id) => id === afterSlideId,
+            );
+            if (afterIndex !== -1) {
+              insertIndex = afterIndex + 1;
+            }
+          }
+
+          // Insert slide and slideId
+          this.currentDocument.slides.splice(insertIndex, 0, slideContent);
+          this.currentDocument.slideIds.splice(insertIndex, 0, slideId);
+          this.currentDocument.content = this.joinSlides(
+            this.currentDocument.slides,
+          );
+          this.currentDocument.metadata.totalSlides =
+            this.currentDocument.slides.length;
+
+          this.recordOperation({
+            type: 'create',
+            params: { slideId, title, insertIndex },
+            timestamp: Date.now(),
+          });
+
+          res.json({
+            success: true,
+            slideId,
+          });
+        } catch (error: any) {
+          res.status(500).json({
+            success: false,
+            message: error.message,
+          });
         }
-
-        // Insert slide and slideId
-        this.currentDocument.slides.splice(insertIndex, 0, slideContent);
-        this.currentDocument.slideIds.splice(insertIndex, 0, slideId);
-        this.currentDocument.content = this.joinSlides(this.currentDocument.slides);
-        this.currentDocument.metadata.totalSlides = this.currentDocument.slides.length;
-
-        this.recordOperation({
-          type: 'create',
-          params: { slideId, title, insertIndex },
-          timestamp: Date.now(),
-        });
-
-        res.json({
-          success: true,
-          slideId,
-        });
-
-      } catch (error: any) {
-        res.status(500).json({ 
-          success: false, 
-          message: error.message 
-        });
-      }
-    });
+      },
+    );
 
     // Update Slide
-    this.app.post('/planning/update-slide', async (req: Request, res: Response) => {
-      try {
-        const { slideId, title, content } = req.body;
-        
-        if (!slideId) {
-          res.status(400).json({ 
-            success: false, 
-            message: 'slideId is required' 
+    this.app.post(
+      '/planning/update-slide',
+      async (req: Request, res: Response) => {
+        try {
+          const { slideId, title, content } = req.body;
+
+          if (!slideId) {
+            res.status(400).json({
+              success: false,
+              message: 'slideId is required',
+            });
+            return;
+          }
+
+          if (!this.currentDocument) {
+            res.status(400).json({
+              success: false,
+              message: 'No document is currently open',
+            });
+            return;
+          }
+
+          const slideIndex = this.currentDocument.slideIds.findIndex(
+            (id) => id === slideId,
+          );
+          if (slideIndex === -1) {
+            res.status(404).json({
+              success: false,
+              message: 'Slide not found',
+            });
+            return;
+          }
+
+          // Update slide content
+          if (content !== undefined) {
+            this.currentDocument.slides[slideIndex] = content;
+          } else if (title !== undefined) {
+            // If only title is provided, update the first line (assuming it's a header)
+            const lines = this.currentDocument.slides[slideIndex].split('\n');
+            lines[0] = `# ${title}`;
+            this.currentDocument.slides[slideIndex] = lines.join('\n');
+          }
+
+          this.currentDocument.content = this.joinSlides(
+            this.currentDocument.slides,
+          );
+
+          this.recordOperation({
+            type: 'update',
+            params: { slideId, slideIndex },
+            timestamp: Date.now(),
           });
-          return;
-        }
 
-        if (!this.currentDocument) {
-          res.status(400).json({ 
-            success: false, 
-            message: 'No document is currently open' 
+          res.json({
+            success: true,
           });
-          return;
-        }
-
-        const slideIndex = this.currentDocument.slideIds.findIndex(id => id === slideId);
-        if (slideIndex === -1) {
-          res.status(404).json({ 
-            success: false, 
-            message: 'Slide not found' 
+        } catch (error: any) {
+          res.status(500).json({
+            success: false,
+            message: error.message,
           });
-          return;
         }
-
-        // Update slide content
-        if (content !== undefined) {
-          this.currentDocument.slides[slideIndex] = content;
-        } else if (title !== undefined) {
-          // If only title is provided, update the first line (assuming it's a header)
-          const lines = this.currentDocument.slides[slideIndex].split('\n');
-          lines[0] = `# ${title}`;
-          this.currentDocument.slides[slideIndex] = lines.join('\n');
-        }
-
-        this.currentDocument.content = this.joinSlides(this.currentDocument.slides);
-
-        this.recordOperation({
-          type: 'update',
-          params: { slideId, slideIndex },
-          timestamp: Date.now(),
-        });
-
-        res.json({
-          success: true,
-        });
-
-      } catch (error: any) {
-        res.status(500).json({ 
-          success: false, 
-          message: error.message 
-        });
-      }
-    });
+      },
+    );
 
     // Get Current Slide
-    this.app.post('/planning/current-slide', async (req: Request, res: Response) => {
-      try {
-        const { includeContent = true } = req.body;
+    this.app.post(
+      '/planning/current-slide',
+      async (req: Request, res: Response) => {
+        try {
+          const { includeContent = true } = req.body;
 
-        if (!this.currentDocument) {
-          res.status(400).json({ 
-            success: false, 
-            message: 'No document is currently open' 
+          if (!this.currentDocument) {
+            res.status(400).json({
+              success: false,
+              message: 'No document is currently open',
+            });
+            return;
+          }
+
+          const currentSlideIndex = this.currentDocument.currentSlide;
+          const slideId = this.currentDocument.slideIds[currentSlideIndex];
+          const slideContent = this.currentDocument.slides[currentSlideIndex];
+
+          // Extract title from first line (assuming it's a header)
+          const lines = slideContent.split('\n');
+          const title = lines[0].replace(/^#\s*/, '');
+
+          const response: any = {
+            success: true,
+            slideId,
+            title,
+            position: currentSlideIndex,
+          };
+
+          if (includeContent) {
+            response.content = slideContent;
+          }
+
+          res.json(response);
+        } catch (error: any) {
+          res.status(500).json({
+            success: false,
+            message: error.message,
           });
-          return;
         }
-
-        const currentSlideIndex = this.currentDocument.currentSlide;
-        const slideId = this.currentDocument.slideIds[currentSlideIndex];
-        const slideContent = this.currentDocument.slides[currentSlideIndex];
-        
-        // Extract title from first line (assuming it's a header)
-        const lines = slideContent.split('\n');
-        const title = lines[0].replace(/^#\s*/, '');
-
-        const response: any = {
-          success: true,
-          slideId,
-          title,
-          position: currentSlideIndex,
-        };
-
-        if (includeContent) {
-          response.content = slideContent;
-        }
-
-        res.json(response);
-
-      } catch (error: any) {
-        res.status(500).json({ 
-          success: false, 
-          message: error.message 
-        });
-      }
-    });
+      },
+    );
 
     // Navigate to Slide
-    this.app.post('/planning/navigate-to-slide', async (req: Request, res: Response) => {
-      try {
-        const { slideId } = req.body;
-        
-        if (!slideId) {
-          res.status(400).json({ 
-            success: false, 
-            message: 'slideId is required' 
+    this.app.post(
+      '/planning/navigate-to-slide',
+      async (req: Request, res: Response) => {
+        try {
+          const { slideId } = req.body;
+
+          if (!slideId) {
+            res.status(400).json({
+              success: false,
+              message: 'slideId is required',
+            });
+            return;
+          }
+
+          if (!this.currentDocument) {
+            res.status(400).json({
+              success: false,
+              message: 'No document is currently open',
+            });
+            return;
+          }
+
+          const slideIndex = this.currentDocument.slideIds.findIndex(
+            (id) => id === slideId,
+          );
+          if (slideIndex === -1) {
+            res.status(404).json({
+              success: false,
+              message: 'Slide not found',
+            });
+            return;
+          }
+
+          this.currentDocument.currentSlide = slideIndex;
+
+          this.recordOperation({
+            type: 'navigate',
+            params: { slideId, slideIndex },
+            timestamp: Date.now(),
           });
-          return;
-        }
 
-        if (!this.currentDocument) {
-          res.status(400).json({ 
-            success: false, 
-            message: 'No document is currently open' 
+          // Notify renderer windows
+          this.notifyWindows('slide-navigated', {
+            filePath: this.currentDocument.filePath,
+            currentSlide: this.currentDocument.currentSlide,
+            slideId,
+            content: this.currentDocument.slides[slideIndex],
+            totalSlides: this.currentDocument.slides.length,
           });
-          return;
-        }
 
-        const slideIndex = this.currentDocument.slideIds.findIndex(id => id === slideId);
-        if (slideIndex === -1) {
-          res.status(404).json({ 
-            success: false, 
-            message: 'Slide not found' 
+          res.json({
+            success: true,
+            slideId,
           });
-          return;
+        } catch (error: any) {
+          res.status(500).json({
+            success: false,
+            message: error.message,
+          });
         }
-
-        this.currentDocument.currentSlide = slideIndex;
-        
-        this.recordOperation({
-          type: 'navigate',
-          params: { slideId, slideIndex },
-          timestamp: Date.now(),
-        });
-
-        // Notify renderer windows
-        this.notifyWindows('slide-navigated', {
-          filePath: this.currentDocument.filePath,
-          currentSlide: this.currentDocument.currentSlide,
-          slideId,
-          content: this.currentDocument.slides[slideIndex],
-          totalSlides: this.currentDocument.slides.length,
-        });
-
-        res.json({
-          success: true,
-          slideId,
-        });
-
-      } catch (error: any) {
-        res.status(500).json({ 
-          success: false, 
-          message: error.message 
-        });
-      }
-    });
+      },
+    );
 
     // Legacy endpoints for backward compatibility
-    
+
     // Load or create document (legacy)
     this.app.post('/document/load', async (req: Request, res: Response) => {
       try {

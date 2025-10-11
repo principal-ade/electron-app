@@ -8,10 +8,7 @@ export { ElectronCLI, electronCLI } from './ElectronCLI';
 export { CLIBridge } from './CLIBridge';
 export { GitExecutor } from './executors/GitExecutor';
 export type { GitStatus } from '../../shared/types/repository.types';
-export type {
-  GitRemote,
-  GitDiffStats,
-} from './executors/GitExecutor';
+export type { GitRemote, GitDiffStats } from './executors/GitExecutor';
 export * from './types';
 
 // Quick start example:

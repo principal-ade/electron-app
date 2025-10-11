@@ -10,15 +10,24 @@ import {
 
 export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
   getFileTree: async (repoPath: string) => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_FILE_TREE, repoPath);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.GET_FILE_TREE,
+      repoPath,
+    );
   },
 
   getPackages: async (repoPath: string) => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_PACKAGES, repoPath);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.GET_PACKAGES,
+      repoPath,
+    );
   },
 
   getRepositoryCacheSnapshot: async (repoPath: string) => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_CACHE_SNAPSHOT, repoPath);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.GET_CACHE_SNAPSHOT,
+      repoPath,
+    );
   },
 
   registerRepository: async (repoPath: string) => {
@@ -26,7 +35,10 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
   },
 
   unregisterRepository: async (repoPath: string) => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.UNREGISTER, repoPath);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.UNREGISTER,
+      repoPath,
+    );
   },
 
   refreshRepository: async (repoPath: string) => {
@@ -34,7 +46,9 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
   },
 
   getMonitoringStatus: async () => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_MONITORING_STATUS);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.GET_MONITORING_STATUS,
+    );
   },
 
   startMonitoring: async () => {
@@ -46,54 +60,99 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
   },
 
   getGitStatus: async (repoPath: string) => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_GIT_STATUS, repoPath);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.GET_GIT_STATUS,
+      repoPath,
+    );
   },
 
   getGitStatusWithFiles: async (repoPath: string) => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_GIT_STATUS_WITH_FILES, repoPath);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.GET_GIT_STATUS_WITH_FILES,
+      repoPath,
+    );
   },
 
   enableGitWatching: async (repoPath: string) => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.ENABLE_GIT_WATCHING, repoPath);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.ENABLE_GIT_WATCHING,
+      repoPath,
+    );
   },
 
   disableGitWatching: async (repoPath: string) => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.DISABLE_GIT_WATCHING, repoPath);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.DISABLE_GIT_WATCHING,
+      repoPath,
+    );
   },
 
   getGitRemoteInfo: async (repoPath: string) => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_GIT_REMOTE_INFO, repoPath);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.GET_GIT_REMOTE_INFO,
+      repoPath,
+    );
   },
 
   invalidateGitRemoteCache: async (repoPath: string) => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.INVALIDATE_GIT_REMOTE_CACHE, repoPath);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.INVALIDATE_GIT_REMOTE_CACHE,
+      repoPath,
+    );
   },
 
-  onGitStatusChanged: (callback: (status: GitStatusMetadata) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, status: GitStatusMetadata) => callback(status);
+  onGitStatusChanged: (
+    callback: (status: GitStatusMetadata) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      status: GitStatusMetadata,
+    ) => callback(status);
     ipcRenderer.on(RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED, handler);
     return () => {
-      ipcRenderer.removeListener(RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED, handler);
+      ipcRenderer.removeListener(
+        RepositoryMonitoringAPIEvent.GIT_STATUS_CHANGED,
+        handler,
+      );
     };
   },
 
-  onWorkspaceChange: (callback: (event: WorkspaceChangeEventPayload) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, payload: WorkspaceChangeEventPayload) => callback(payload);
+  onWorkspaceChange: (
+    callback: (event: WorkspaceChangeEventPayload) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: WorkspaceChangeEventPayload,
+    ) => callback(payload);
     ipcRenderer.on(RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED, handler);
     return () => {
-      ipcRenderer.removeListener(RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED, handler);
+      ipcRenderer.removeListener(
+        RepositoryMonitoringAPIEvent.WORKSPACE_CHANGED,
+        handler,
+      );
     };
   },
 
-  onCacheSync: (callback: (event: RepositoryCacheSyncEvent) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, payload: RepositoryCacheSyncEvent) => callback(payload);
+  onCacheSync: (
+    callback: (event: RepositoryCacheSyncEvent) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: RepositoryCacheSyncEvent,
+    ) => callback(payload);
     ipcRenderer.on(RepositoryMonitoringAPIEvent.CACHE_SYNC, handler);
     return () => {
-      ipcRenderer.removeListener(RepositoryMonitoringAPIEvent.CACHE_SYNC, handler);
+      ipcRenderer.removeListener(
+        RepositoryMonitoringAPIEvent.CACHE_SYNC,
+        handler,
+      );
     };
   },
 
   executeTool: async (request: ToolExecutionRequest) => {
-    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.EXECUTE_TOOL, request);
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.EXECUTE_TOOL,
+      request,
+    );
   },
 };

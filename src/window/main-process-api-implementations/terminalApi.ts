@@ -13,7 +13,11 @@ export const terminalAPI: TerminalAPI = {
   },
 
   getOrCreate: async (directory: string, context?: string): Promise<string> => {
-    return ipcRenderer.invoke(TerminalAPIEvents.GET_OR_CREATE, directory, context);
+    return ipcRenderer.invoke(
+      TerminalAPIEvents.GET_OR_CREATE,
+      directory,
+      context,
+    );
   },
 
   createWithCommand: async (
@@ -56,12 +60,15 @@ export const terminalAPI: TerminalAPI = {
     return ipcRenderer.invoke(TerminalAPIEvents.FOCUS_WINDOW, windowId);
   },
 
-  getOpenWindows: async (): Promise<Array<{ terminalId: string; windowId: number }>> => {
+  getOpenWindows: async (): Promise<
+    Array<{ terminalId: string; windowId: number }>
+  > => {
     return ipcRenderer.invoke(TerminalAPIEvents.GET_OPEN_WINDOWS);
   },
 
   onData: (callback: (data: TerminalData) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, data: TerminalData) => callback(data);
+    const listener = (_event: Electron.IpcRendererEvent, data: TerminalData) =>
+      callback(data);
     ipcRenderer.on(TerminalAPIEvents.ON_DATA, listener);
     return () => {
       ipcRenderer.removeListener(TerminalAPIEvents.ON_DATA, listener);
@@ -69,7 +76,8 @@ export const terminalAPI: TerminalAPI = {
   },
 
   onExit: (callback: (exit: TerminalExit) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, exit: TerminalExit) => callback(exit);
+    const listener = (_event: Electron.IpcRendererEvent, exit: TerminalExit) =>
+      callback(exit);
     ipcRenderer.on(TerminalAPIEvents.ON_EXIT, listener);
     return () => {
       ipcRenderer.removeListener(TerminalAPIEvents.ON_EXIT, listener);

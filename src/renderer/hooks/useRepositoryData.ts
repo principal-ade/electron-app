@@ -4,7 +4,10 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { RepositoryDataCache, type RepositoryCacheData } from '../services/RepositoryDataCache';
+import {
+  RepositoryDataCache,
+  type RepositoryCacheData,
+} from '../services/RepositoryDataCache';
 import type { AlexandriaEntry } from '@a24z/core-library';
 
 /**
@@ -74,7 +77,7 @@ interface UseRepositoryDataResult {
  */
 export function useRepositoryData(
   repoPath: string | null,
-  options: UseRepositoryDataOptions = {}
+  options: UseRepositoryDataOptions = {},
 ): UseRepositoryDataResult {
   const { autoLoad = true, maxAge = 5 * 60 * 1000, subscribe = true } = options;
 
@@ -119,8 +122,15 @@ export function useRepositoryData(
         setData(null);
       }
     } catch (err) {
-      console.error(`[useRepositoryData] Error loading data for ${repoPath}:`, err);
-      setError(err instanceof Error ? err : new Error('Failed to load repository data'));
+      console.error(
+        `[useRepositoryData] Error loading data for ${repoPath}:`,
+        err,
+      );
+      setError(
+        err instanceof Error
+          ? err
+          : new Error('Failed to load repository data'),
+      );
       setData(null);
     } finally {
       setLoading(false);
@@ -144,8 +154,15 @@ export function useRepositoryData(
       setLastUpdated(Date.now());
       setIsStale(false);
     } catch (err) {
-      console.error(`[useRepositoryData] Error refreshing data for ${repoPath}:`, err);
-      setError(err instanceof Error ? err : new Error('Failed to refresh repository data'));
+      console.error(
+        `[useRepositoryData] Error refreshing data for ${repoPath}:`,
+        err,
+      );
+      setError(
+        err instanceof Error
+          ? err
+          : new Error('Failed to refresh repository data'),
+      );
     } finally {
       setLoading(false);
     }
@@ -176,7 +193,7 @@ export function useRepositoryData(
           setData(updatedData);
           setLastUpdated(Date.now());
           setIsStale(false);
-        }
+        },
       );
     }
 
@@ -224,13 +241,13 @@ export function useRepositoryData(
  */
 export function useMultipleRepositoryData(
   repoPaths: string[],
-  options: UseRepositoryDataOptions = {}
+  options: UseRepositoryDataOptions = {},
 ): Map<string, UseRepositoryDataResult> {
   const results = new Map<string, UseRepositoryDataResult>();
 
   // This is a simplified implementation
   // In a real app, you'd want to optimize this to batch requests
-  repoPaths.forEach(path => {
+  repoPaths.forEach((path) => {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const result = useRepositoryData(path, options);
     results.set(path, result);
@@ -249,12 +266,17 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
 
   const cache = useRef(RepositoryDataCache.getInstance());
   const componentId = useRef(generateComponentId());
-  const alexandriaServiceRef = useRef<typeof import('../main-process-api/AlexandriaService').AlexandriaService | null>(null);
+  const alexandriaServiceRef = useRef<
+    | typeof import('../main-process-api/AlexandriaService').AlexandriaService
+    | null
+  >(null);
   const subscriptionsRef = useRef(new Map<string, () => void>());
 
   const upsertRepositoryData = useCallback((repoData: RepositoryCacheData) => {
-    setRepositories(prev => {
-      const index = prev.findIndex(entry => entry.repository.path === repoData.repository.path);
+    setRepositories((prev) => {
+      const index = prev.findIndex(
+        (entry) => entry.repository.path === repoData.repository.path,
+      );
       if (index !== -1) {
         const updated = [...prev];
         updated[index] = repoData;
@@ -270,18 +292,28 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
       return;
     }
 
-    setRepositories(prev => {
-      const index = prev.findIndex(entry => entry.repository.path === repoPath);
+    setRepositories((prev) => {
+      const index = prev.findIndex(
+        (entry) => entry.repository.path === repoPath,
+      );
       if (index === -1) {
         // Repository not in array yet, add it with minimal cache data
-        return [...prev, {
-          repository: repo,
-          gitStatus: null,
-          gitBranch: null,
-          branchStatus: { ahead: 0, behind: 0, canFastForward: false, needsUpstream: false },
-          markdownFiles: [],
-          lastFullRefresh: Date.now(),
-        }];
+        return [
+          ...prev,
+          {
+            repository: repo,
+            gitStatus: null,
+            gitBranch: null,
+            branchStatus: {
+              ahead: 0,
+              behind: 0,
+              canFastForward: false,
+              needsUpstream: false,
+            },
+            markdownFiles: [],
+            lastFullRefresh: Date.now(),
+          },
+        ];
       }
 
       const updated = [...prev];
@@ -296,25 +328,32 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
     });
   }, []);
 
-  const ensureSubscription = useCallback((repoPath: string) => {
-    if (options.subscribe === false) {
-      return;
-    }
+  const ensureSubscription = useCallback(
+    (repoPath: string) => {
+      if (options.subscribe === false) {
+        return;
+      }
 
-    if (subscriptionsRef.current.has(repoPath)) {
-      return;
-    }
+      if (subscriptionsRef.current.has(repoPath)) {
+        return;
+      }
 
-    const subscriptionId = `${componentId.current}:${repoPath}`;
-    const unsubscribe = cache.current.subscribe(repoPath, subscriptionId, (updatedData) => {
-      upsertRepositoryData(updatedData);
-    });
+      const subscriptionId = `${componentId.current}:${repoPath}`;
+      const unsubscribe = cache.current.subscribe(
+        repoPath,
+        subscriptionId,
+        (updatedData) => {
+          upsertRepositoryData(updatedData);
+        },
+      );
 
-    subscriptionsRef.current.set(repoPath, unsubscribe);
-  }, [options.subscribe, upsertRepositoryData]);
+      subscriptionsRef.current.set(repoPath, unsubscribe);
+    },
+    [options.subscribe, upsertRepositoryData],
+  );
 
   const markRepoLoaded = useCallback(() => {
-    setLoading(prev => (prev ? false : prev));
+    setLoading((prev) => (prev ? false : prev));
   }, []);
 
   const loadAllRepositories = useCallback(async () => {
@@ -323,7 +362,9 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
 
     try {
       if (!alexandriaServiceRef.current) {
-        const { AlexandriaService } = await import('../main-process-api/AlexandriaService');
+        const { AlexandriaService } = await import(
+          '../main-process-api/AlexandriaService'
+        );
         alexandriaServiceRef.current = AlexandriaService;
       }
 
@@ -356,7 +397,10 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
             }
 
             try {
-              const cachedData = cache.current.get(repoPath, componentId.current);
+              const cachedData = cache.current.get(
+                repoPath,
+                componentId.current,
+              );
               if (cachedData) {
                 // Already have cached data, skip
                 return;
@@ -367,20 +411,31 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
               upsertRepositoryData(freshData);
               updateRepositoryInfo(repo);
             } catch (err) {
-              console.error(`[useAllRepositories] Failed to load repository ${repoPath}:`, err);
+              console.error(
+                `[useAllRepositories] Failed to load repository ${repoPath}:`,
+                err,
+              );
             }
-          })
-        ).catch(err => {
+          }),
+        ).catch((err) => {
           console.error('[useAllRepositories] Error loading cache data:', err);
         });
       }
     } catch (err) {
       console.error('[useAllRepositories] Error loading repositories:', err);
-      setError(err instanceof Error ? err : new Error('Failed to load repositories'));
+      setError(
+        err instanceof Error ? err : new Error('Failed to load repositories'),
+      );
     } finally {
       setLoading(false);
     }
-  }, [options.autoLoad, upsertRepositoryData, updateRepositoryInfo, markRepoLoaded, ensureSubscription]);
+  }, [
+    options.autoLoad,
+    upsertRepositoryData,
+    updateRepositoryInfo,
+    markRepoLoaded,
+    ensureSubscription,
+  ]);
 
   useEffect(() => {
     loadAllRepositories();
@@ -389,36 +444,51 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
     let unsubscribeAlexandria: (() => void) | null = null;
 
     if (options.subscribe !== false) {
-      import('../main-process-api/AlexandriaService').then(({ AlexandriaService }) => {
-        alexandriaServiceRef.current = AlexandriaService;
+      import('../main-process-api/AlexandriaService').then(
+        ({ AlexandriaService }) => {
+          alexandriaServiceRef.current = AlexandriaService;
 
-        unsubscribeAlexandria = AlexandriaService.onRepositoryChange((event) => {
-          console.log('[useAllRepositories] Received repository change event:', event);
+          unsubscribeAlexandria = AlexandriaService.onRepositoryChange(
+            (event) => {
+              console.log(
+                '[useAllRepositories] Received repository change event:',
+                event,
+              );
 
-          if (event.type === 'removed') {
-            // Remove the repository from the list immediately
-            setRepositories(prev => prev.filter(r => r.repository.name !== event.name));
-          } else if (event.type === 'added' && event.repository?.path) {
-            const repoPath = event.repository.path as string;
-            cache.current.load(repoPath).then((data) => {
-              if (data) {
-                upsertRepositoryData(data);
-                ensureSubscription(repoPath);
+              if (event.type === 'removed') {
+                // Remove the repository from the list immediately
+                setRepositories((prev) =>
+                  prev.filter((r) => r.repository.name !== event.name),
+                );
+              } else if (event.type === 'added' && event.repository?.path) {
+                const repoPath = event.repository.path as string;
+                cache.current
+                  .load(repoPath)
+                  .then((data) => {
+                    if (data) {
+                      upsertRepositoryData(data);
+                      ensureSubscription(repoPath);
+                    }
+                  })
+                  .catch((err) => {
+                    console.error(
+                      '[useAllRepositories] Failed to load added repository:',
+                      err,
+                    );
+                    updateRepositoryInfo(event.repository!);
+                    ensureSubscription(repoPath);
+                  });
+              } else if (event.type === 'updated' && event.repository) {
+                updateRepositoryInfo(event.repository);
+                const repoPath = event.repository.path as string | undefined;
+                if (repoPath) {
+                  ensureSubscription(repoPath);
+                }
               }
-            }).catch((err) => {
-              console.error('[useAllRepositories] Failed to load added repository:', err);
-              updateRepositoryInfo(event.repository!);
-              ensureSubscription(repoPath);
-            });
-          } else if (event.type === 'updated' && event.repository) {
-            updateRepositoryInfo(event.repository);
-            const repoPath = event.repository.path as string | undefined;
-            if (repoPath) {
-              ensureSubscription(repoPath);
-            }
-          }
-        });
-      });
+            },
+          );
+        },
+      );
     }
 
     // Cleanup - capture refs in variables to avoid stale closure issues
@@ -426,17 +496,25 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
       if (unsubscribeAlexandria) {
         unsubscribeAlexandria();
       }
-      subscriptionsRef.current.forEach(unsubscribe => unsubscribe());
+      subscriptionsRef.current.forEach((unsubscribe) => unsubscribe());
       subscriptionsRef.current.clear();
     };
-  }, [options.subscribe, loadAllRepositories, upsertRepositoryData, updateRepositoryInfo, ensureSubscription]);
+  }, [
+    options.subscribe,
+    loadAllRepositories,
+    upsertRepositoryData,
+    updateRepositoryInfo,
+    ensureSubscription,
+  ]);
 
   useEffect(() => {
     if (options.subscribe === false) {
       return;
     }
 
-    const activePaths = new Set(repositories.map(entry => entry.repository.path));
+    const activePaths = new Set(
+      repositories.map((entry) => entry.repository.path),
+    );
     subscriptionsRef.current.forEach((unsubscribe, path) => {
       if (!activePaths.has(path)) {
         unsubscribe();

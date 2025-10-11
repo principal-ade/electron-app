@@ -1,7 +1,11 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
-import { PanelConfigurator, type PanelLayout, type PanelDefinition } from '@a24z/panels';
+import {
+  PanelConfigurator,
+  type PanelLayout,
+  type PanelDefinition,
+} from '@a24z/panels';
 
 export interface PanelConfiguratorModalProps {
   isOpen: boolean;
@@ -84,7 +88,8 @@ export const PanelConfiguratorModal: React.FC<PanelConfiguratorModalProps> = ({
               borderRadius: '4px',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -103,7 +108,8 @@ export const PanelConfiguratorModal: React.FC<PanelConfiguratorModalProps> = ({
             lineHeight: 1.5,
           }}
         >
-          Click a slot, then click a panel to assign it. Click two slots to swap their content.
+          Click a slot, then click a panel to assign it. Click two slots to swap
+          their content.
         </p>
 
         {/* Panel Configurator */}

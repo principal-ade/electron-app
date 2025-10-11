@@ -229,7 +229,9 @@ export function registerSecureTokenHandlers(): void {
 
   // Check if authenticated
   ipcMain.handle(SecureTokenAPIEvent.IS_AUTHENTICATED, async () => {
-    const token = await getSecureTokenIPC().getStorage().getToken(TOKEN_KEYS.ORBIT_AUTH);
+    const token = await getSecureTokenIPC()
+      .getStorage()
+      .getToken(TOKEN_KEYS.ORBIT_AUTH);
     return token !== null;
   });
 

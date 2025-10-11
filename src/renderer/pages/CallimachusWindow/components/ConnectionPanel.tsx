@@ -18,10 +18,10 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const [pixeltableUrl, setPixeltableUrl] = useState(
-    localStorage.getItem('callimachus-url') || 'http://localhost:8000/api/v1'
+    localStorage.getItem('callimachus-url') || 'http://localhost:8000/api/v1',
   );
   const [apiKey, setApiKey] = useState(
-    localStorage.getItem('callimachus-apikey') || ''
+    localStorage.getItem('callimachus-apikey') || '',
   );
   const [isConnecting, setIsConnecting] = useState(false);
 
@@ -55,10 +55,13 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({
   };
 
   return (
-    <div className="rounded-lg border p-4" style={{
-      backgroundColor: theme.colors.backgroundSecondary,
-      borderColor: theme.colors.border
-    }}>
+    <div
+      className="rounded-lg border p-4"
+      style={{
+        backgroundColor: theme.colors.backgroundSecondary,
+        borderColor: theme.colors.border,
+      }}
+    >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Server size={20} style={{ color: theme.colors.primary }} />
@@ -87,7 +90,10 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({
       {!isConnected ? (
         <div className="space-y-4">
           <div>
-            <label htmlFor="pixeltable-url" className="block text-sm font-medium mb-1">
+            <label
+              htmlFor="pixeltable-url"
+              className="block text-sm font-medium mb-1"
+            >
               Pixeltable URL
             </label>
             <input
@@ -137,7 +143,10 @@ export const ConnectionPanel: React.FC<ConnectionPanelProps> = ({
             onClick={handleConnect}
             disabled={isConnecting || !pixeltableUrl}
             style={{
-              backgroundColor: isConnecting || !pixeltableUrl ? theme.colors.backgroundSecondary : theme.colors.primary,
+              backgroundColor:
+                isConnecting || !pixeltableUrl
+                  ? theme.colors.backgroundSecondary
+                  : theme.colors.primary,
               color: theme.colors.background,
               opacity: isConnecting || !pixeltableUrl ? 0.5 : 1,
             }}

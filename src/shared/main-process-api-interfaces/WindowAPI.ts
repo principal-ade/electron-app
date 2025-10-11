@@ -10,7 +10,6 @@ export interface StoreViewerOptions {
   namespace?: string;
 }
 
-
 /**
  * Request to open local files in an editor window
  */
@@ -59,7 +58,6 @@ export interface WindowAPI {
    */
   openStoreViewer(options?: StoreViewerOptions): Promise<void>;
 
-
   /**
    * Open an editor window for local files
    * @param request - Request containing local file paths and window configuration
@@ -82,7 +80,7 @@ export interface WindowAPI {
   openMarkdownView(
     filePath: string,
     projectName: string,
-    options?: { viewMode?: 'single' | 'book' }
+    options?: { viewMode?: 'single' | 'book' },
   ): Promise<void>;
 
   /**
@@ -107,6 +105,7 @@ export interface WindowAPI {
    * Listen for main window minimize state changes
    * @param callback - Called when the main window minimize state changes
    */
-  onMainWindowMinimizeStateChange(callback: (isMinimized: boolean) => void): void;
-
+  onMainWindowMinimizeStateChange(
+    callback: (isMinimized: boolean) => void,
+  ): void;
 }

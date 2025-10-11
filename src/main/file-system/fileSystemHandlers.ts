@@ -287,9 +287,14 @@ export class ElectronFileSystemAdapter {
     if (this.fileWatcher) {
       try {
         await this.fileWatcher.close();
-        console.info('[File System] Closed previous file watcher before starting a new one.');
+        console.info(
+          '[File System] Closed previous file watcher before starting a new one.',
+        );
       } catch (closeError) {
-        console.warn('[File System] Failed to close existing file watcher cleanly:', closeError);
+        console.warn(
+          '[File System] Failed to close existing file watcher cleanly:',
+          closeError,
+        );
       }
       this.fileWatcher = null;
     }
@@ -428,7 +433,9 @@ export class ElectronFileSystemAdapter {
             isCurrentFile: true,
           });
         } else {
-          console.warn('[File System] Target window destroyed, skipping file-change event');
+          console.warn(
+            '[File System] Target window destroyed, skipping file-change event',
+          );
         }
       });
     return fileWatcher;
@@ -488,7 +495,9 @@ export class ElectronFileSystemAdapter {
                   timestamp: new Date().toISOString(),
                 });
               } else {
-                console.warn('[File System] Target window destroyed, skipping git-status-change event');
+                console.warn(
+                  '[File System] Target window destroyed, skipping git-status-change event',
+                );
               }
             } catch (error) {
               console.error('[File System] Error getting git status:', error);
@@ -532,7 +541,9 @@ export class ElectronFileSystemAdapter {
               stats,
             });
           } else {
-            console.warn('[File System] Target window destroyed, skipping directory add event');
+            console.warn(
+              '[File System] Target window destroyed, skipping directory add event',
+            );
           }
         }
       })
@@ -546,7 +557,9 @@ export class ElectronFileSystemAdapter {
               path: unlinkedPath,
             });
           } else {
-            console.warn('[File System] Target window destroyed, skipping directory unlink event');
+            console.warn(
+              '[File System] Target window destroyed, skipping directory unlink event',
+            );
           }
         }
       })
@@ -559,7 +572,9 @@ export class ElectronFileSystemAdapter {
             path: addedDirPath,
           });
         } else {
-          console.warn('[File System] Target window destroyed, skipping directory addDir event');
+          console.warn(
+            '[File System] Target window destroyed, skipping directory addDir event',
+          );
         }
       })
       .on('unlinkDir', (unlinkedDirPath) => {
@@ -571,7 +586,9 @@ export class ElectronFileSystemAdapter {
             path: unlinkedDirPath,
           });
         } else {
-          console.warn('[File System] Target window destroyed, skipping directory unlinkDir event');
+          console.warn(
+            '[File System] Target window destroyed, skipping directory unlinkDir event',
+          );
         }
       });
   }
@@ -615,7 +632,9 @@ export class ElectronFileSystemAdapter {
             initial: true,
           });
         } else {
-          console.warn('[File System] Main window destroyed, skipping initial git status');
+          console.warn(
+            '[File System] Main window destroyed, skipping initial git status',
+          );
         }
 
         return true;
@@ -669,14 +688,19 @@ export class ElectronFileSystemAdapter {
 
   async stopWatchingFile(filePath: string): Promise<boolean> {
     if (!this.fileWatcher) {
-      console.info('[File System] stopWatchingFile: No active file watcher to stop.');
+      console.info(
+        '[File System] stopWatchingFile: No active file watcher to stop.',
+      );
       return false;
     }
     if (this.currentlyWatchingPath && this.currentlyWatchingPath !== filePath) {
-      console.warn('[File System] stopWatchingFile: Requested path does not match current watcher. Ignoring request.', {
-        current: this.currentlyWatchingPath,
-        requested: filePath,
-      });
+      console.warn(
+        '[File System] stopWatchingFile: Requested path does not match current watcher. Ignoring request.',
+        {
+          current: this.currentlyWatchingPath,
+          requested: filePath,
+        },
+      );
       return false;
     }
 
@@ -1036,7 +1060,9 @@ export class ElectronFileSystemAdapter {
               path: unlinkedPath,
             });
           } else {
-            console.warn('[File System] Main window destroyed or null, skipping files-change event');
+            console.warn(
+              '[File System] Main window destroyed or null, skipping files-change event',
+            );
           }
         })
         .on('error', (error) => {
@@ -1074,7 +1100,6 @@ export class ElectronFileSystemAdapter {
     }
     return true;
   }
-
 }
 
 // New function to register IPC Handlers globally
@@ -1188,7 +1213,7 @@ export function registerFileSystemIpcHandlers(
         console.error(`[FileSystem] Failed to delete file: ${filePath}`, error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
     },
@@ -1567,7 +1592,6 @@ export function registerFileSystemIpcHandlers(
       return appWindow.fileSystemAdapter.getCurrentWorkingDirectory();
     },
   );
-
 
   console.log('[File System] Global IPC handlers registered.');
 }

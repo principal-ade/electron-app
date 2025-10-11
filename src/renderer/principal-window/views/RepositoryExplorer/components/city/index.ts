@@ -9,4 +9,7 @@ export { RepositoryCityVisualization } from '../RepositoryCityVisualization';
 export type { RepositoryCityVisualizationProps } from '../RepositoryCityVisualization';
 
 export { RepositoryCityService } from '../../services/RepositoryCityService';
-export type { CityBuildResult, CityBuildOptions } from '../../services/RepositoryCityService';
+export type {
+  CityBuildResult,
+  CityBuildOptions,
+} from '../../services/RepositoryCityService';

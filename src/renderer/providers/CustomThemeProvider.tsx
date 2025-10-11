@@ -11,7 +11,9 @@ interface CustomThemeProviderProps {
 export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
   children,
 }) => {
-  const [selectedTheme, setSelectedTheme] = useState<Theme | undefined>(undefined);
+  const [selectedTheme, setSelectedTheme] = useState<Theme | undefined>(
+    undefined,
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -27,10 +29,7 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
       }
       setIsLoading(false);
 
-      console.info(
-        '[CustomThemeProvider] Initial theme loaded:',
-        themeName,
-      );
+      console.info('[CustomThemeProvider] Initial theme loaded:', themeName);
     };
 
     loadInitialTheme();
@@ -54,17 +53,9 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
   // Show loading or use default theme while loading
   if (isLoading || !selectedTheme) {
     const defaultTheme = getThemeByName('default');
-    return (
-      <ThemeProvider theme={defaultTheme}>
-        {children}
-      </ThemeProvider>
-    );
+    return <ThemeProvider theme={defaultTheme}>{children}</ThemeProvider>;
   }
 
   // Render with the selected theme
-  return (
-    <ThemeProvider theme={selectedTheme}>
-      {children}
-    </ThemeProvider>
-  );
+  return <ThemeProvider theme={selectedTheme}>{children}</ThemeProvider>;
 };

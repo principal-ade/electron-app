@@ -8,7 +8,7 @@ import type {
   ExecuteResult,
   ExecuteOptions,
   StreamOptions,
-  StreamResult
+  StreamResult,
 } from '@principal-ai/codebase-quality-lenses';
 import { electronCLI } from '../electron-cli-bridge';
 import { Readable } from 'stream';
@@ -42,7 +42,7 @@ export class ElectronCLIBridgeExecutor implements Executor {
   async execute(
     command: string,
     args: string[] = [],
-    options: ExecuteOptions = {}
+    options: ExecuteOptions = {},
   ): Promise<ExecuteResult> {
     await this.ensureInitialized();
 
@@ -90,13 +90,13 @@ export class ElectronCLIBridgeExecutor implements Executor {
   stream(
     command: string,
     args: string[] = [],
-    options: StreamOptions = {}
+    options: StreamOptions = {},
   ): StreamResult {
     // Create dummy streams for now as GitLens doesn't use streaming
     const stdout = new Readable({ read() {} });
     const stderr = new Readable({ read() {} });
 
-    const exitPromise = this.execute(command, args, options).then(result => {
+    const exitPromise = this.execute(command, args, options).then((result) => {
       stdout.push(result.stdout);
       stdout.push(null);
       stderr.push(result.stderr);
@@ -111,7 +111,7 @@ export class ElectronCLIBridgeExecutor implements Executor {
       kill: () => {
         stdout.destroy();
         stderr.destroy();
-      }
+      },
     };
   }
 
@@ -132,7 +132,9 @@ export class ElectronCLIBridgeExecutor implements Executor {
       // For other commands, try a simple execution test
       // Most commands support --version or --help
       const testArgs = command === 'npm' ? ['--version'] : ['--version'];
-      const result = await electronCLI.execute(command, testArgs, { timeout: 5000 });
+      const result = await electronCLI.execute(command, testArgs, {
+        timeout: 5000,
+      });
       return result.exitCode === 0;
     } catch (error) {
       // If execution fails, command is not available

@@ -48,8 +48,11 @@ class ObservabilityServiceClass {
   /**
    * Test connection with provided configuration
    */
-  async testConnection(config: ObservabilityConfig): Promise<ConnectionTestResult> {
-    const result = await window.mainProcess.observability.testConnection(config);
+  async testConnection(
+    config: ObservabilityConfig,
+  ): Promise<ConnectionTestResult> {
+    const result =
+      await window.mainProcess.observability.testConnection(config);
     return result;
   }
 

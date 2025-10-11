@@ -52,15 +52,20 @@ export class FileSystemCore {
   private static addDirectoryIgnorePatterns(
     accumulator: Set<string>,
     dirName: string,
-    repoPosixPath: string
+    repoPosixPath: string,
   ): void {
-    FileSystemCore.getDirectoryGlobVariants(dirName).forEach((pattern) => accumulator.add(pattern));
+    FileSystemCore.getDirectoryGlobVariants(dirName).forEach((pattern) =>
+      accumulator.add(pattern),
+    );
     const absoluteBase = `${repoPosixPath}/${dirName}`.replace(/\\/g, '/');
     accumulator.add(absoluteBase);
     accumulator.add(`${absoluteBase}/**`);
   }
 
-  private static convertGitignorePatternToGlobs(pattern: string, repoPosixPath: string): string[] {
+  private static convertGitignorePatternToGlobs(
+    pattern: string,
+    repoPosixPath: string,
+  ): string[] {
     const trimmed = pattern.trim();
 
     if (!trimmed || trimmed.startsWith('#')) {
@@ -120,7 +125,9 @@ export class FileSystemCore {
     return results;
   }
 
-  private static async getGitignoreGlobPatterns(repoPath: string): Promise<string[]> {
+  private static async getGitignoreGlobPatterns(
+    repoPath: string,
+  ): Promise<string[]> {
     try {
       const gitignorePath = path.join(repoPath, '.gitignore');
       if (!fs.existsSync(gitignorePath)) {
@@ -132,24 +139,33 @@ export class FileSystemCore {
         return [];
       }
 
-      const repoPosixPath = FileSystemCore.normalizeToPosix(path.resolve(repoPath));
+      const repoPosixPath = FileSystemCore.normalizeToPosix(
+        path.resolve(repoPath),
+      );
 
       return fileContents
         .split(/\r?\n/)
-        .flatMap((line) => FileSystemCore.convertGitignorePatternToGlobs(line, repoPosixPath))
+        .flatMap((line) =>
+          FileSystemCore.convertGitignorePatternToGlobs(line, repoPosixPath),
+        )
         .filter(Boolean);
     } catch (error) {
-      console.warn('[FileSystemCore] Failed to read .gitignore patterns:', error);
+      console.warn(
+        '[FileSystemCore] Failed to read .gitignore patterns:',
+        error,
+      );
       return [];
     }
   }
 
   static async getWatchIgnoreGlobs(
     repoPath: string,
-    options?: { additionalPatterns?: string[] }
+    options?: { additionalPatterns?: string[] },
   ): Promise<string[]> {
     const patterns = new Set<string>();
-    const repoPosixPath = FileSystemCore.normalizeToPosix(path.resolve(repoPath));
+    const repoPosixPath = FileSystemCore.normalizeToPosix(
+      path.resolve(repoPath),
+    );
 
     // Always ignore .git directories
     FileSystemCore.addDirectoryIgnorePatterns(patterns, '.git', repoPosixPath);
@@ -157,7 +173,11 @@ export class FileSystemCore {
 
     // Include universal directories
     for (const dirName of FileSystemCore.getUniversalDirectories()) {
-      FileSystemCore.addDirectoryIgnorePatterns(patterns, dirName, repoPosixPath);
+      FileSystemCore.addDirectoryIgnorePatterns(
+        patterns,
+        dirName,
+        repoPosixPath,
+      );
     }
 
     // Merge additional patterns (already globbed)
@@ -168,26 +188,32 @@ export class FileSystemCore {
     });
 
     // Merge .gitignore-derived globs
-    const gitignoreGlobs = await FileSystemCore.getGitignoreGlobPatterns(repoPath);
+    const gitignoreGlobs =
+      await FileSystemCore.getGitignoreGlobPatterns(repoPath);
     gitignoreGlobs.forEach((pattern) => patterns.add(pattern));
 
     return Array.from(patterns);
   }
 
   private static compileGlobMatchers(patterns: string[]): Minimatch[] {
-    return patterns.map((pattern) => new Minimatch(pattern.replace(/\\/g, '/'), {
-      dot: true,
-      nocase: false,
-      matchBase: !pattern.includes('/'),
-    }));
+    return patterns.map(
+      (pattern) =>
+        new Minimatch(pattern.replace(/\\/g, '/'), {
+          dot: true,
+          nocase: false,
+          matchBase: !pattern.includes('/'),
+        }),
+    );
   }
 
   static createWatchIgnorePredicate(
     repoPath: string,
-    patterns: string[]
+    patterns: string[],
   ): (targetPath: string, stats?: fs.Stats) => boolean {
     const matchers = FileSystemCore.compileGlobMatchers(patterns);
-    const repoPosixPath = FileSystemCore.normalizeToPosix(path.resolve(repoPath));
+    const repoPosixPath = FileSystemCore.normalizeToPosix(
+      path.resolve(repoPath),
+    );
 
     return (targetPath: string | undefined): boolean => {
       if (!targetPath) {
@@ -195,10 +221,13 @@ export class FileSystemCore {
       }
 
       const normalizedTarget = FileSystemCore.normalizeToPosix(targetPath);
-      const isInsideRepo = normalizedTarget === repoPosixPath || normalizedTarget.startsWith(`${repoPosixPath}/`);
-      const relativeTarget = isInsideRepo && normalizedTarget.length > repoPosixPath.length
-        ? normalizedTarget.slice(repoPosixPath.length + 1)
-        : undefined;
+      const isInsideRepo =
+        normalizedTarget === repoPosixPath ||
+        normalizedTarget.startsWith(`${repoPosixPath}/`);
+      const relativeTarget =
+        isInsideRepo && normalizedTarget.length > repoPosixPath.length
+          ? normalizedTarget.slice(repoPosixPath.length + 1)
+          : undefined;
 
       if (normalizedTarget.startsWith(`${repoPosixPath}/.git`)) {
         return true;
@@ -222,7 +251,7 @@ export class FileSystemCore {
    */
   static async buildFilteredFileTree(
     directoryPath: string,
-    options?: FileSystemCoreOptions
+    options?: FileSystemCoreOptions,
   ): Promise<FileTreeResult> {
     try {
       // Default options
@@ -231,7 +260,7 @@ export class FileSystemCore {
 
       // Extract universal patterns from the config
       const universalPatterns = FileSystemCore.getUniversalDirectories().map(
-        (dir) => `**/${dir}/**`
+        (dir) => `**/${dir}/**`,
       );
 
       // Combine with any additional patterns
@@ -243,7 +272,7 @@ export class FileSystemCore {
       ];
 
       console.info(
-        `[FileSystemCore] Using globby with gitignore=${gitignore}, ${ignorePatterns.length} ignore patterns`
+        `[FileSystemCore] Using globby with gitignore=${gitignore}, ${ignorePatterns.length} ignore patterns`,
       );
 
       // Use globby to get all files and directories
@@ -258,7 +287,7 @@ export class FileSystemCore {
       });
 
       // Convert relative paths to absolute paths
-      const absolutePaths = paths.map(p => path.join(directoryPath, p));
+      const absolutePaths = paths.map((p) => path.join(directoryPath, p));
 
       // Optionally gather stats
       let stats: FileStats[] | undefined;
@@ -289,7 +318,7 @@ export class FileSystemCore {
     } catch (error) {
       console.error(
         `[FileSystemCore] Error building filtered file tree for ${directoryPath}:`,
-        error
+        error,
       );
       return { paths: [], stats: [] };
     }

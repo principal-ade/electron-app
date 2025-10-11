@@ -1,8 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle2, Circle, Clock, XCircle, Calendar, AlertCircle, FileText, Trash2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  Circle,
+  Clock,
+  XCircle,
+  Calendar,
+  AlertCircle,
+  FileText,
+  Trash2,
+} from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { PalaceTasksService } from '../../main-process-api/PalaceTasksService';
-import type { Task, TaskStatus } from '../../../shared/main-process-api-interfaces/PalaceTasksAPI';
+import type {
+  Task,
+  TaskStatus,
+} from '../../../shared/main-process-api-interfaces/PalaceTasksAPI';
 
 interface TasksPanelProps {
   repositoryPath: string;
@@ -108,7 +120,7 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
   // Extract title from task content (first line with # stripped)
   const getTaskTitle = (content: string): string => {
     const lines = content.split('\n');
-    const titleLine = lines.find(line => line.trim().startsWith('#'));
+    const titleLine = lines.find((line) => line.trim().startsWith('#'));
     if (titleLine) {
       return titleLine.replace(/^#+\s*/, '').trim();
     }
@@ -121,25 +133,33 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
     }
   };
 
-  const handleDeleteTask = useCallback(async (task: Task, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent task click when deleting
+  const handleDeleteTask = useCallback(
+    async (task: Task, event: React.MouseEvent) => {
+      event.stopPropagation(); // Prevent task click when deleting
 
-    const confirmed = window.confirm(`Are you sure you want to delete this task?\n\n${getTaskTitle(task.content)}`);
-    if (!confirmed) return;
+      const confirmed = window.confirm(
+        `Are you sure you want to delete this task?\n\n${getTaskTitle(task.content)}`,
+      );
+      if (!confirmed) return;
 
-    try {
-      const success = await PalaceTasksService.deleteTask(repositoryPath, task.id);
-      if (success) {
-        // Remove the task from the local state
-        setTasks(prevTasks => prevTasks.filter(t => t.id !== task.id));
-      } else {
+      try {
+        const success = await PalaceTasksService.deleteTask(
+          repositoryPath,
+          task.id,
+        );
+        if (success) {
+          // Remove the task from the local state
+          setTasks((prevTasks) => prevTasks.filter((t) => t.id !== task.id));
+        } else {
+          setError('Failed to delete task');
+        }
+      } catch (err) {
+        console.error('Failed to delete task:', err);
         setError('Failed to delete task');
       }
-    } catch (err) {
-      console.error('Failed to delete task:', err);
-      setError('Failed to delete task');
-    }
-  }, [repositoryPath]);
+    },
+    [repositoryPath],
+  );
 
   return (
     <div
@@ -186,7 +206,13 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
               fontSize: theme.fontSizes[1],
             }}
           >
-            <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
+            <div
+              style={{
+                marginBottom: '8px',
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
               <CheckCircle2 size={32} style={{ opacity: 0.5 }} />
             </div>
             <div>No pending tasks</div>
@@ -213,13 +239,15 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                 }}
                 onMouseEnter={(e) => {
                   if (onTaskClick) {
-                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
                     e.currentTarget.style.borderColor = theme.colors.primary;
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (onTaskClick) {
-                    e.currentTarget.style.backgroundColor = theme.colors.background;
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.background;
                     e.currentTarget.style.borderColor = theme.colors.border;
                   }
                 }}
@@ -233,7 +261,12 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                     marginBottom: '8px',
                   }}
                 >
-                  <div style={{ color: getStatusColor(task.status), marginTop: '2px' }}>
+                  <div
+                    style={{
+                      color: getStatusColor(task.status),
+                      marginTop: '2px',
+                    }}
+                  >
                     {getStatusIcon(task.status)}
                   </div>
                   <div style={{ flex: 1 }}>
@@ -258,7 +291,13 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                       </div>
                     )}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
                     {task.priority && (
                       <span
                         style={{
@@ -289,11 +328,13 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.backgroundColor = `${theme.colors.error}15`;
-                        e.currentTarget.style.color = theme.colors.error || '#ef4444';
+                        e.currentTarget.style.color =
+                          theme.colors.error || '#ef4444';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = theme.colors.textSecondary;
+                        e.currentTarget.style.color =
+                          theme.colors.textSecondary;
                       }}
                       title="Delete task"
                     >
@@ -340,7 +381,13 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                     gap: '8px',
                   }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
                     <Calendar size={10} />
                     {getRelativeTime(task.receivedAt)}
                   </span>

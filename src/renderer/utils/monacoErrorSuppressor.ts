@@ -9,19 +9,19 @@ export function suppressMonacoCancellationErrors() {
   const originalReject = Promise.reject;
 
   // Override Promise.reject to filter out Monaco cancellation errors
-  Promise.reject = function(reason: any) {
+  Promise.reject = function (reason: any) {
     // Check if this is a Monaco cancellation error
-    if (reason && (
-      reason.message === 'Canceled' ||
-      reason.toString() === 'Canceled' ||
-      reason.toString() === 'Canceled: Canceled' ||
-      (reason.stack && (
-        reason.stack.includes('Delayer.cancel') ||
-        reason.stack.includes('Delayer.dispose') ||
-        reason.stack.includes('DisposableStore') ||
-        reason.stack.includes('WordHighlighter')
-      ))
-    )) {
+    if (
+      reason &&
+      (reason.message === 'Canceled' ||
+        reason.toString() === 'Canceled' ||
+        reason.toString() === 'Canceled: Canceled' ||
+        (reason.stack &&
+          (reason.stack.includes('Delayer.cancel') ||
+            reason.stack.includes('Delayer.dispose') ||
+            reason.stack.includes('DisposableStore') ||
+            reason.stack.includes('WordHighlighter'))))
+    ) {
       // Return a resolved promise instead of rejected for Monaco cancellation errors
       // This prevents the error from propagating to React's error overlay
       return Promise.resolve(undefined) as any;
@@ -33,9 +33,13 @@ export function suppressMonacoCancellationErrors() {
 
   // Also patch the global error event to catch any that slip through
   const originalAddEventListener = window.addEventListener;
-  window.addEventListener = function(event: string, handler: any, ...args: any[]) {
+  window.addEventListener = function (
+    event: string,
+    handler: any,
+    ...args: any[]
+  ) {
     if (event === 'error' || event === 'unhandledrejection') {
-      const wrappedHandler = function(e: any) {
+      const wrappedHandler = function (e: any) {
         const error = e.reason || e.error || e;
         const errorStr = error?.toString() || '';
         const stack = error?.stack || '';
@@ -56,7 +60,12 @@ export function suppressMonacoCancellationErrors() {
 
         return handler.call(this, e);
       };
-      return originalAddEventListener.call(this, event, wrappedHandler, ...args);
+      return originalAddEventListener.call(
+        this,
+        event,
+        wrappedHandler,
+        ...args,
+      );
     }
     return originalAddEventListener.call(this, event, handler, ...args);
   } as any;
@@ -67,27 +76,29 @@ export function suppressMonacoCancellationErrors() {
   const originalConsoleLog = console.log;
 
   const shouldSuppress = (str: string) => {
-    return str.includes('Canceled') ||
-           str.includes('Delayer.cancel') ||
-           str.includes('Delayer.dispose') ||
-           str.includes('DisposableStore') ||
-           str.includes('WordHighlighter.dispose') ||
-           str.includes('WordHighlighter');
+    return (
+      str.includes('Canceled') ||
+      str.includes('Delayer.cancel') ||
+      str.includes('Delayer.dispose') ||
+      str.includes('DisposableStore') ||
+      str.includes('WordHighlighter.dispose') ||
+      str.includes('WordHighlighter')
+    );
   };
 
-  console.error = function(...args: any[]) {
+  console.error = function (...args: any[]) {
     const errorStr = args.join(' ');
     if (shouldSuppress(errorStr)) return;
     return originalConsoleError.apply(console, args);
   };
 
-  console.warn = function(...args: any[]) {
+  console.warn = function (...args: any[]) {
     const errorStr = args.join(' ');
     if (shouldSuppress(errorStr)) return;
     return originalConsoleWarn.apply(console, args);
   };
 
-  console.log = function(...args: any[]) {
+  console.log = function (...args: any[]) {
     const errorStr = args.join(' ');
     if (shouldSuppress(errorStr)) return;
     return originalConsoleLog.apply(console, args);
@@ -95,13 +106,16 @@ export function suppressMonacoCancellationErrors() {
 
   // Patch setTimeout/setInterval to catch errors in async callbacks
   const originalSetTimeout = window.setTimeout;
-  window.setTimeout = function(callback: any, delay?: number, ...args: any[]) {
+  window.setTimeout = function (callback: any, delay?: number, ...args: any[]) {
     if (typeof callback === 'function') {
-      const wrappedCallback = function() {
+      const wrappedCallback = function () {
         try {
           return callback.apply(this, arguments);
         } catch (error: any) {
-          if (error?.message?.includes('Canceled') || error?.toString()?.includes('Canceled')) {
+          if (
+            error?.message?.includes('Canceled') ||
+            error?.toString()?.includes('Canceled')
+          ) {
             // Suppress the error
             return;
           }

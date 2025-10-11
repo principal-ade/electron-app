@@ -2,7 +2,14 @@
  * Tests for RepositoryMonitoringServer
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from '@jest/globals';
 import { RepositoryMonitoringServer } from './RepositoryMonitoringServer';
 import { GitCore } from '../shared/repository-core/GitCore';
 import { MonitoringInternalEvent, type RepositoryState } from './types';
@@ -33,8 +40,12 @@ jest.mock('./GitWatcherAdapter', () => {
 describe('RepositoryMonitoringServer', () => {
   let server: RepositoryMonitoringServer;
 
-  const getRepositoryState = (repoPath: string): RepositoryState | undefined => {
-    return ((server as any).repositories as Map<string, RepositoryState>).get(repoPath);
+  const getRepositoryState = (
+    repoPath: string,
+  ): RepositoryState | undefined => {
+    return ((server as any).repositories as Map<string, RepositoryState>).get(
+      repoPath,
+    );
   };
 
   beforeEach(() => {
@@ -64,7 +75,9 @@ describe('RepositoryMonitoringServer', () => {
         behind: 1,
       };
 
-      mockedGitCore.getDetailedStatus.mockResolvedValue(mockDetailedStatus as any);
+      mockedGitCore.getDetailedStatus.mockResolvedValue(
+        mockDetailedStatus as any,
+      );
 
       const status = await server.getGitStatus(testRepoPath);
 
@@ -79,7 +92,9 @@ describe('RepositoryMonitoringServer', () => {
         watchingEnabled: false,
         lastChangedAt: undefined,
       });
-      expect(mockedGitCore.getDetailedStatus).toHaveBeenCalledWith(testRepoPath);
+      expect(mockedGitCore.getDetailedStatus).toHaveBeenCalledWith(
+        testRepoPath,
+      );
     });
 
     it('should handle git status errors gracefully', async () => {
@@ -123,7 +138,10 @@ describe('RepositoryMonitoringServer', () => {
 
       expect(mockedGitCore.enableFSMonitor).toHaveBeenCalledWith(testRepoPath);
       const gitWatcher = gitWatcherAdapterInstances[0];
-      expect(gitWatcher.startWatching).toHaveBeenCalledWith(testRepoPath, 'minimal');
+      expect(gitWatcher.startWatching).toHaveBeenCalledWith(
+        testRepoPath,
+        'minimal',
+      );
 
       const state = getRepositoryState(testRepoPath);
       expect(state?.gitWatchingEnabled).toBe(true);
@@ -147,7 +165,10 @@ describe('RepositoryMonitoringServer', () => {
 
       expect(mockedGitCore.enableFSMonitor).toHaveBeenCalledWith(testRepoPath);
       const gitWatcher = gitWatcherAdapterInstances[0];
-      expect(gitWatcher.startWatching).toHaveBeenCalledWith(testRepoPath, 'fallback');
+      expect(gitWatcher.startWatching).toHaveBeenCalledWith(
+        testRepoPath,
+        'fallback',
+      );
 
       const state = getRepositoryState(testRepoPath);
       expect(state?.gitWatchingEnabled).toBe(true);
@@ -219,7 +240,11 @@ describe('RepositoryMonitoringServer', () => {
 
       const fileTreeCache = (server as any).fileTreeCache as Map<string, any>;
       const packageCache = (server as any).packageCache as Map<string, any>;
-      fileTreeCache.set(testRepoPath, { tree: {} as any, timestamp: Date.now(), sha: 'abc' });
+      fileTreeCache.set(testRepoPath, {
+        tree: {} as any,
+        timestamp: Date.now(),
+        sha: 'abc',
+      });
       packageCache.set(testRepoPath, {
         packages: [],
         summary: {
@@ -234,19 +259,24 @@ describe('RepositoryMonitoringServer', () => {
       });
 
       const gitWatcher = gitWatcherAdapterInstances[0];
-      const workspaceHandler = gitWatcher.on.mock.calls.find(([eventName]) => eventName === MonitoringInternalEvent.WORKSPACE_CHANGED)?.[1];
+      const workspaceHandler = gitWatcher.on.mock.calls.find(
+        ([eventName]) =>
+          eventName === MonitoringInternalEvent.WORKSPACE_CHANGED,
+      )?.[1];
       expect(typeof workspaceHandler).toBe('function');
 
-      const gitStatusSpy = jest.spyOn(server, 'getGitStatus').mockResolvedValue({
-        repoPath: testRepoPath,
-        branch: 'main',
-        isDirty: false,
-        hasUntracked: false,
-        hasStaged: false,
-        ahead: 0,
-        behind: 0,
-        watchingEnabled: true,
-      });
+      const gitStatusSpy = jest
+        .spyOn(server, 'getGitStatus')
+        .mockResolvedValue({
+          repoPath: testRepoPath,
+          branch: 'main',
+          isDirty: false,
+          hasUntracked: false,
+          hasStaged: false,
+          ahead: 0,
+          behind: 0,
+          watchingEnabled: true,
+        });
 
       if (workspaceHandler) {
         (workspaceHandler as any)({ repoPath: testRepoPath, state: undefined });
@@ -265,7 +295,9 @@ describe('RepositoryMonitoringServer', () => {
     });
 
     it('should throw when enabling watching for an unregistered repository', async () => {
-      await expect(server.enableGitWatching('/unregistered/repo')).rejects.toThrow('Repository /unregistered/repo not registered');
+      await expect(
+        server.enableGitWatching('/unregistered/repo'),
+      ).rejects.toThrow('Repository /unregistered/repo not registered');
     });
   });
 });

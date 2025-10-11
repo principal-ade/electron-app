@@ -89,6 +89,9 @@ export class TerminalEnvironment {
 
       for (const shell of shells) {
         try {
+          console.log(
+            `[TerminalEnvironment] Attempting to get PATH from ${shell}...`,
+          );
           const result = execSync(`${shell} -l -c "echo $PATH"`, {
             encoding: 'utf8',
             timeout: 5000,
@@ -101,14 +104,30 @@ export class TerminalEnvironment {
           });
 
           if (result && result.trim()) {
-            paths.push(result.trim());
+            const pathValue = result.trim();
+            paths.push(pathValue);
             console.log(`[TerminalEnvironment] Got PATH from ${shell}`);
+            console.log(
+              `[TerminalEnvironment] PATH contains ${pathValue.split(':').length} directories`,
+            );
+            // Check if Bun is in the PATH
+            if (pathValue.includes('.bun/bin')) {
+              console.log(`[TerminalEnvironment] ✓ Bun found in shell PATH`);
+            } else {
+              console.warn(
+                `[TerminalEnvironment] ⚠ Bun NOT found in shell PATH`,
+              );
+            }
             break;
+          } else {
+            console.warn(
+              `[TerminalEnvironment] Shell ${shell} returned empty PATH`,
+            );
           }
         } catch (e) {
-          console.debug(
+          console.warn(
             `[TerminalEnvironment] Failed to get PATH from ${shell}:`,
-            e,
+            e instanceof Error ? e.message : e,
           );
         }
       }
@@ -119,6 +138,7 @@ export class TerminalEnvironment {
         '/opt/homebrew/bin', // Apple Silicon Macs
         path.join(os.homedir(), '.local', 'bin'),
         path.join(os.homedir(), 'bin'),
+        path.join(os.homedir(), '.bun', 'bin'), // Bun package manager
         '/usr/bin',
         '/bin',
         '/usr/sbin',
@@ -165,6 +185,28 @@ export class TerminalEnvironment {
       console.log(
         `[TerminalEnvironment] Resolved PATH with ${allPathElements.size} directories`,
       );
+
+      // Log detailed PATH composition
+      const pathArray = Array.from(allPathElements);
+      console.log(
+        `[TerminalEnvironment] PATH composition breakdown:`,
+      );
+      console.log(
+        `  - From shell extraction: ${paths.length > 0 ? paths[0].split(':').length : 0} directories`,
+      );
+      console.log(
+        `  - Additional paths found: ${additionalPaths.filter((p) => require('fs').existsSync(p)).length} directories`,
+      );
+      console.log(`  - From process.env.PATH: ${process.env.PATH?.split(':').length || 0} directories`);
+
+      // Check final PATH for important tools
+      const bunPath = pathArray.find((p) => p.includes('.bun/bin'));
+      if (bunPath) {
+        console.log(`[TerminalEnvironment] ✓ Final PATH includes Bun: ${bunPath}`);
+      } else {
+        console.warn(`[TerminalEnvironment] ⚠ Final PATH MISSING Bun`);
+      }
+
       return this.userPath;
     } catch (error) {
       console.error('[TerminalEnvironment] Failed to get user PATH:', error);

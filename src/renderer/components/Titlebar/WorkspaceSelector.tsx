@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Layout, ChevronDown, Check, Save, RefreshCw, RotateCcw } from 'lucide-react';
+import {
+  Layout,
+  ChevronDown,
+  Check,
+  Save,
+  RefreshCw,
+  RotateCcw,
+} from 'lucide-react';
 import type { WorkspaceLayout } from '../../../shared/types/userPreferences.types';
 
 interface WorkspaceSelectorProps {
@@ -87,7 +94,8 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({
             height: '32px',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
             e.currentTarget.style.borderColor = theme.colors.primary;
           }}
           onMouseLeave={(e) => {
@@ -171,7 +179,13 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({
                       flex: 1,
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
                       <span style={{ fontWeight: 500 }}>{workspace.name}</span>
                       {workspace.isBuiltIn && (
                         <span
@@ -281,39 +295,41 @@ export const WorkspaceSelector: React.FC<WorkspaceSelectorProps> = ({
       )}
 
       {/* Reset Button - only show when workspace has deviations */}
-      {hasStateDeviation && currentWorkspaceId && onResetToWorkspaceDefaults && (
-        <button
-          onClick={onResetToWorkspaceDefaults}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 10px',
-            backgroundColor: 'transparent',
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: '6px',
-            fontSize: '13px',
-            fontWeight: 500,
-            color: theme.colors.text,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            height: '32px',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor =
-              theme.colors.backgroundSecondary;
-            e.currentTarget.style.borderColor = theme.colors.primary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.borderColor = theme.colors.border;
-          }}
-          title="Reset to workspace defaults"
-        >
-          <RotateCcw size={14} />
-          <span>Reset</span>
-        </button>
-      )}
+      {hasStateDeviation &&
+        currentWorkspaceId &&
+        onResetToWorkspaceDefaults && (
+          <button
+            onClick={onResetToWorkspaceDefaults}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 10px',
+              backgroundColor: 'transparent',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              color: theme.colors.text,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              height: '32px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+            title="Reset to workspace defaults"
+          >
+            <RotateCcw size={14} />
+            <span>Reset</span>
+          </button>
+        )}
     </div>
   );
 };

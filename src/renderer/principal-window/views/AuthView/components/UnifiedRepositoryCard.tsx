@@ -1,5 +1,13 @@
 import { useTheme } from '@a24z/industry-theme';
-import { Cloud, HardDrive, ExternalLink, Lock, FolderOpen, Download, GitFork } from 'lucide-react';
+import {
+  Cloud,
+  HardDrive,
+  ExternalLink,
+  Lock,
+  FolderOpen,
+  Download,
+  GitFork,
+} from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import type { GitHubRepository } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
@@ -7,7 +15,9 @@ import type { GitHubRepository } from '../../../../../shared/main-process-api-in
 interface UnifiedRepositoryCardProps {
   repository: AlexandriaEntry | EnhancedAlexandriaEntry | GitHubRepository;
   isRemote: boolean;
-  onOpen: (repo: AlexandriaEntry | EnhancedAlexandriaEntry | GitHubRepository) => void;
+  onOpen: (
+    repo: AlexandriaEntry | EnhancedAlexandriaEntry | GitHubRepository,
+  ) => void;
 }
 
 export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
@@ -19,7 +29,12 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
 
   // Helper to determine if it's a GitHub repository type
   const isGitHubRepo = (repo: unknown): repo is GitHubRepository => {
-    return typeof repo === 'object' && repo !== null && 'clone_url' in repo && 'owner' in repo;
+    return (
+      typeof repo === 'object' &&
+      repo !== null &&
+      'clone_url' in repo &&
+      'owner' in repo
+    );
   };
 
   // Extract common properties
@@ -78,10 +93,15 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
       window.open(repository.html_url, '_blank');
     } else if (repository.remoteUrl) {
       // Try to construct GitHub URL from remote URL
-      const match = repository.remoteUrl.match(/github\.com[:/]([^/]+)\/(.+?)(\.git)?$/);
+      const match = repository.remoteUrl.match(
+        /github\.com[:/]([^/]+)\/(.+?)(\.git)?$/,
+      );
       if (match) {
         const [, owner, repo] = match;
-        window.open(`https://github.com/${owner}/${repo.replace('.git', '')}`, '_blank');
+        window.open(
+          `https://github.com/${owner}/${repo.replace('.git', '')}`,
+          '_blank',
+        );
       }
     }
   };
@@ -154,7 +174,9 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
             alignItems: 'center',
             gap: '4px',
             padding: '4px 8px',
-            backgroundColor: isRemote ? `${theme.colors.info}20` : `${theme.colors.success}20`,
+            backgroundColor: isRemote
+              ? `${theme.colors.info}20`
+              : `${theme.colors.success}20`,
             color: isRemote ? theme.colors.info : theme.colors.success,
             borderRadius: '12px',
             fontSize: '11px',
@@ -205,9 +227,7 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
               Fork
             </div>
           )}
-          {isPrivate() && (
-            <Lock size={14} color={theme.colors.textSecondary} />
-          )}
+          {isPrivate() && <Lock size={14} color={theme.colors.textSecondary} />}
         </div>
         <p
           style={{
@@ -226,7 +246,6 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
           {getDescription() || 'No description'}
         </p>
       </div>
-
 
       {/* Action button */}
       <div
@@ -297,10 +316,12 @@ export const UnifiedRepositoryCard: React.FC<UnifiedRepositoryCardProps> = ({
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
             }}
           >
             <ExternalLink size={14} />

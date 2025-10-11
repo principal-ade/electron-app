@@ -22,10 +22,7 @@ export const principalAPI: PrincipalAPI = {
    * Listen for slide update events
    */
   onSlideUpdated: (callback: (data: SlideUpdatedEvent) => void) => {
-    const subscription = (
-      _event: IpcRendererEvent,
-      data: SlideUpdatedEvent,
-    ) =>
+    const subscription = (_event: IpcRendererEvent, data: SlideUpdatedEvent) =>
       callback(data);
     ipcRenderer.on(PrincipalEvent.SLIDE_UPDATED, subscription);
     return () =>
@@ -39,8 +36,7 @@ export const principalAPI: PrincipalAPI = {
     const subscription = (
       _event: IpcRendererEvent,
       data: SlideNavigatedEvent,
-    ) =>
-      callback(data);
+    ) => callback(data);
     ipcRenderer.on(PrincipalEvent.SLIDE_NAVIGATED, subscription);
     return () =>
       ipcRenderer.removeListener(PrincipalEvent.SLIDE_NAVIGATED, subscription);
@@ -53,8 +49,7 @@ export const principalAPI: PrincipalAPI = {
     const subscription = (
       _event: IpcRendererEvent,
       data: DocumentLoadedEvent,
-    ) =>
-      callback(data);
+    ) => callback(data);
     ipcRenderer.on(PrincipalEvent.DOCUMENT_LOADED, subscription);
     return () =>
       ipcRenderer.removeListener(PrincipalEvent.DOCUMENT_LOADED, subscription);
@@ -67,8 +62,7 @@ export const principalAPI: PrincipalAPI = {
     const subscription = (
       _event: IpcRendererEvent,
       data: AgentDocumentRequest,
-    ) =>
-      callback(data);
+    ) => callback(data);
     ipcRenderer.on(PrincipalEvent.AGENT_DOCUMENT_REQUEST, subscription);
     return () =>
       ipcRenderer.removeListener(

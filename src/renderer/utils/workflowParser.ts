@@ -92,7 +92,10 @@ function extractSecretsFromJob(job: any, secrets: Set<string>): void {
 /**
  * Extract secret references from env object
  */
-function extractSecretsFromEnv(env: Record<string, any>, secrets: Set<string>): void {
+function extractSecretsFromEnv(
+  env: Record<string, any>,
+  secrets: Set<string>,
+): void {
   for (const value of Object.values(env)) {
     if (typeof value === 'string') {
       extractSecretsFromString(value, secrets);
@@ -103,7 +106,10 @@ function extractSecretsFromEnv(env: Record<string, any>, secrets: Set<string>): 
 /**
  * Extract secret references from any object
  */
-function extractSecretsFromObject(obj: Record<string, any>, secrets: Set<string>): void {
+function extractSecretsFromObject(
+  obj: Record<string, any>,
+  secrets: Set<string>,
+): void {
   for (const value of Object.values(obj)) {
     if (typeof value === 'string') {
       extractSecretsFromString(value, secrets);

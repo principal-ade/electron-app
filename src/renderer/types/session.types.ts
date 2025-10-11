@@ -23,7 +23,7 @@ export interface UIAgentSessionData extends Partial<AgentSessionRecord> {
   customName?: string;
   metadata?: Record<string, unknown>;
 
-// Last action/event tracking
+  // Last action/event tracking
   lastAction?: {
     tool: string;
     filename: string;
@@ -54,4 +54,3 @@ export interface EnhancedUIAgentSessionData extends UIAgentSessionData {
   statusColor: string;
   statusText: string;
 }
-

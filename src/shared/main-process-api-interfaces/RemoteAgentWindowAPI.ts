@@ -1,4 +1,9 @@
-import { RemoteAgentConfig, RemoteAgentWindowOptions, RemoteAgentWindowState, RemoteAgentMessage } from '../types/remoteAgent.types';
+import {
+  RemoteAgentConfig,
+  RemoteAgentWindowOptions,
+  RemoteAgentWindowState,
+  RemoteAgentMessage,
+} from '../types/remoteAgent.types';
 
 export enum RemoteAgentWindowEvent {
   OPEN_REMOTE_AGENT = 'remote-agent:open',
@@ -16,16 +21,33 @@ export enum RemoteAgentWindowEvent {
 }
 
 export interface RemoteAgentWindowAPI {
-  openRemoteAgent: (config: RemoteAgentConfig, options?: RemoteAgentWindowOptions) => Promise<string>;
+  openRemoteAgent: (
+    config: RemoteAgentConfig,
+    options?: RemoteAgentWindowOptions,
+  ) => Promise<string>;
   closeRemoteAgent: (agentId: string) => Promise<void>;
   focusRemoteAgent: (agentId: string) => Promise<void>;
   switchToAgent: (agentId: string) => Promise<void>;
   listRemoteAgents: () => Promise<RemoteAgentConfig[]>;
   getActiveAgentId: () => Promise<string | null>;
   getRemoteAgentState: (agentId: string) => Promise<RemoteAgentWindowState>;
-  sendMessageToRemoteAgent: (agentId: string, message: RemoteAgentMessage) => Promise<void>;
-  onRemoteAgentStateChanged: (callback: (agentId: string, state: RemoteAgentWindowState) => void) => () => void;
-  onRemoteAgentMessage: (callback: (agentId: string, message: RemoteAgentMessage) => void) => () => void;
-  onRemoteAgentListChanged: (callback: (agents: RemoteAgentConfig[], activeAgentId: string | null) => void) => () => void;
-  onRemoteAgentActiveChanged: (callback: (agentId: string) => void) => () => void;
+  sendMessageToRemoteAgent: (
+    agentId: string,
+    message: RemoteAgentMessage,
+  ) => Promise<void>;
+  onRemoteAgentStateChanged: (
+    callback: (agentId: string, state: RemoteAgentWindowState) => void,
+  ) => () => void;
+  onRemoteAgentMessage: (
+    callback: (agentId: string, message: RemoteAgentMessage) => void,
+  ) => () => void;
+  onRemoteAgentListChanged: (
+    callback: (
+      agents: RemoteAgentConfig[],
+      activeAgentId: string | null,
+    ) => void,
+  ) => () => void;
+  onRemoteAgentActiveChanged: (
+    callback: (agentId: string) => void,
+  ) => () => void;
 }

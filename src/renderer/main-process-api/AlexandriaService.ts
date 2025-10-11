@@ -34,7 +34,10 @@ export class AlexandriaService {
     return window.mainProcess.alexandria.registerRepository(name, path);
   }
 
-  static async removeRepository(name: string, deleteLocal?: boolean): Promise<boolean> {
+  static async removeRepository(
+    name: string,
+    deleteLocal?: boolean,
+  ): Promise<boolean> {
     return window.mainProcess.alexandria.removeRepository(name, deleteLocal);
   }
 

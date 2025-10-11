@@ -19,13 +19,13 @@ export function registerPalaceTasksHandlers() {
     async (
       _event,
       repositoryPath: string,
-      options?: TaskQueryOptions
+      options?: TaskQueryOptions,
     ): Promise<GetTasksResponse> => {
       try {
         const fsAdapter = new NodeFileSystemAdapter();
         const validatedPath = MemoryPalace.validateRepositoryPath(
           fsAdapter,
-          repositoryPath
+          repositoryPath,
         ) as ValidatedRepositoryPath;
         const palace = new MemoryPalace(validatedPath, fsAdapter);
 
@@ -42,18 +42,22 @@ export function registerPalaceTasksHandlers() {
           total: 0,
         };
       }
-    }
+    },
   );
 
   // Get a specific task by ID
   ipcMain.handle(
     PalaceTasksAPIEvent.GET_TASK,
-    async (_event, repositoryPath: string, taskId: string): Promise<Task | null> => {
+    async (
+      _event,
+      repositoryPath: string,
+      taskId: string,
+    ): Promise<Task | null> => {
       try {
         const fsAdapter = new NodeFileSystemAdapter();
         const validatedPath = MemoryPalace.validateRepositoryPath(
           fsAdapter,
-          repositoryPath
+          repositoryPath,
         ) as ValidatedRepositoryPath;
         const palace = new MemoryPalace(validatedPath, fsAdapter);
 
@@ -62,7 +66,7 @@ export function registerPalaceTasksHandlers() {
         console.error('[PalaceTasksHandlers] Error getting task:', error);
         return null;
       }
-    }
+    },
   );
 
   // Update task status
@@ -74,22 +78,28 @@ export function registerPalaceTasksHandlers() {
       _event,
       _repositoryPath: string,
       _taskId: string,
-      _status: TaskStatus
+      _status: TaskStatus,
     ): Promise<boolean> => {
-      console.warn('[PalaceTasksHandlers] updateTaskStatus not yet implemented in @a24z/core-library');
+      console.warn(
+        '[PalaceTasksHandlers] updateTaskStatus not yet implemented in @a24z/core-library',
+      );
       return false;
-    }
+    },
   );
 
   // Delete a task permanently
   ipcMain.handle(
     PalaceTasksAPIEvent.DELETE_TASK,
-    async (_event, repositoryPath: string, taskId: string): Promise<boolean> => {
+    async (
+      _event,
+      repositoryPath: string,
+      taskId: string,
+    ): Promise<boolean> => {
       try {
         const fsAdapter = new NodeFileSystemAdapter();
         const validatedPath = MemoryPalace.validateRepositoryPath(
           fsAdapter,
-          repositoryPath
+          repositoryPath,
         ) as ValidatedRepositoryPath;
         const palace = new MemoryPalace(validatedPath, fsAdapter);
 
@@ -98,7 +108,7 @@ export function registerPalaceTasksHandlers() {
         console.error('[PalaceTasksHandlers] Error deleting task:', error);
         return false;
       }
-    }
+    },
   );
 
   console.log('[PalaceTasksHandlers] Palace tasks IPC handlers registered');

@@ -9,7 +9,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { MultiFileTree } from '@a24z/dynamic-file-tree';
-import type { LoadedFileTreeSource, FileTreeSource } from '@principal-ai/repository-abstraction';
+import type {
+  LoadedFileTreeSource,
+  FileTreeSource,
+} from '@principal-ai/repository-abstraction';
 import { AgentContextTrackingService } from '../../services/AgentContextTrackingService';
 import { Activity, Trash2, RefreshCw } from 'lucide-react';
 
@@ -28,7 +31,10 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
 
   // Load initial sources
   useEffect(() => {
-    console.log('[AgentContextTreePanel] Loading sources for repository:', repositoryPath);
+    console.log(
+      '[AgentContextTreePanel] Loading sources for repository:',
+      repositoryPath,
+    );
     loadSources();
   }, [repositoryPath]);
 
@@ -48,9 +54,12 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
     setLoading(true);
     try {
       const treeSources = AgentContextTrackingService.getSessionsAsTreeSources(
-        repositoryPath || undefined
+        repositoryPath || undefined,
       );
-      console.log('[AgentContextTreePanel] Loaded sources:', treeSources.length);
+      console.log(
+        '[AgentContextTreePanel] Loaded sources:',
+        treeSources.length,
+      );
       setSources(treeSources);
     } catch (error) {
       console.error('[AgentContextTreePanel] Error loading sources:', error);
@@ -62,12 +71,17 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
 
   const handleFileSelect = useCallback(
     (source: FileTreeSource, filePath: string) => {
-      console.log('[AgentContextTreePanel] File selected:', filePath, 'from session:', source.id);
+      console.log(
+        '[AgentContextTreePanel] File selected:',
+        filePath,
+        'from session:',
+        source.id,
+      );
       if (onFileSelect) {
         onFileSelect(filePath);
       }
     },
-    [onFileSelect]
+    [onFileSelect],
   );
 
   const handleClearAll = useCallback(() => {
@@ -128,7 +142,9 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Activity size={16} style={{ color: theme.colors.primary }} />
-            <span style={{ fontWeight: 600, fontSize: '14px' }}>Agent Context</span>
+            <span style={{ fontWeight: 600, fontSize: '14px' }}>
+              Agent Context
+            </span>
             <span
               style={{
                 fontSize: '12px',
@@ -176,11 +192,16 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
           }}
         >
           <div>
-            <Activity size={48} style={{ opacity: 0.3, marginBottom: '16px' }} />
+            <Activity
+              size={48}
+              style={{ opacity: 0.3, marginBottom: '16px' }}
+            />
             <div style={{ fontSize: '14px', marginBottom: '8px' }}>
               No agent context available
             </div>
-            <div style={{ fontSize: '12px', color: theme.colors.textSecondary }}>
+            <div
+              style={{ fontSize: '12px', color: theme.colors.textSecondary }}
+            >
               Files accessed by agents will appear here
             </div>
           </div>
@@ -212,7 +233,9 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Activity size={16} style={{ color: theme.colors.primary }} />
-          <span style={{ fontWeight: 600, fontSize: '14px' }}>Agent Context</span>
+          <span style={{ fontWeight: 600, fontSize: '14px' }}>
+            Agent Context
+          </span>
           <span
             style={{
               fontSize: '12px',
@@ -267,7 +290,10 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
               padding: '0 12px',
               fontSize: '12px',
               backgroundColor: 'transparent',
-              color: sources.length === 0 ? theme.colors.textSecondary : theme.colors.text,
+              color:
+                sources.length === 0
+                  ? theme.colors.textSecondary
+                  : theme.colors.text,
               border: `1px solid ${theme.colors.border}`,
               borderRadius: '4px',
               cursor: sources.length === 0 ? 'not-allowed' : 'pointer',

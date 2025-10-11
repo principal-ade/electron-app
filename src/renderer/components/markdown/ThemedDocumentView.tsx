@@ -62,7 +62,9 @@ export const ThemedDocumentView: React.FC<ThemedDocumentViewProps> = ({
   }, [useCustomTheme]);
 
   // Determine which theme to use: explicit > custom > app
-  const themeToUse = explicitTheme || (shouldUseCustom && markdownTheme ? markdownTheme : appTheme);
+  const themeToUse =
+    explicitTheme ||
+    (shouldUseCustom && markdownTheme ? markdownTheme : appTheme);
 
   return <DocumentView {...props} theme={themeToUse} />;
 };

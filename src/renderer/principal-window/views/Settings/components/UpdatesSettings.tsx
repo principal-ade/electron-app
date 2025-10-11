@@ -54,7 +54,9 @@ export const UpdatesSettings: React.FC = () => {
       setIsChecking(false);
     };
 
-    const handleUpdateError = (err: Error | { message?: string; toString(): string }) => {
+    const handleUpdateError = (
+      err: Error | { message?: string; toString(): string },
+    ) => {
       const errorMessage = parseUpdateError(err);
       if (isDownloadingRef.current) {
         setDownloadError(errorMessage);
@@ -100,7 +102,9 @@ export const UpdatesSettings: React.FC = () => {
       AppVersionManagerService.onUpdateAvailable(handleUpdateAvailable),
       AppVersionManagerService.onUpdateNotAvailable(handleUpdateNotAvailable),
       AppVersionManagerService.onUpdateError(handleUpdateError),
-      AppVersionManagerService.onUpdateDownloadProgress(handleUpdateDownloadProgress),
+      AppVersionManagerService.onUpdateDownloadProgress(
+        handleUpdateDownloadProgress,
+      ),
       AppVersionManagerService.onUpdateDownloaded(handleUpdateDownloaded),
       AppVersionManagerService.onUpdateCheckComplete(handleUpdateCheckComplete),
     ];
@@ -110,26 +114,46 @@ export const UpdatesSettings: React.FC = () => {
     AppVersionManagerService.checkForUpdateSilently();
 
     return () => {
-      unsubscribe.forEach(fn => fn());
+      unsubscribe.forEach((fn) => fn());
     };
   }, []);
 
-  const parseUpdateError = (err: Error | { message?: string; toString(): string }): string => {
+  const parseUpdateError = (
+    err: Error | { message?: string; toString(): string },
+  ): string => {
     let errorMessage = err.message || err.toString();
 
-    if (errorMessage.includes('ENOENT') || errorMessage.includes('no such file')) {
+    if (
+      errorMessage.includes('ENOENT') ||
+      errorMessage.includes('no such file')
+    ) {
       return 'Update file not found. The update server may be temporarily unavailable.';
-    } else if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('connect')) {
+    } else if (
+      errorMessage.includes('ECONNREFUSED') ||
+      errorMessage.includes('connect')
+    ) {
       return 'Cannot connect to update server. Please check your internet connection.';
     } else if (errorMessage.includes('ETIMEDOUT')) {
       return 'Update server timeout. Please try again later.';
-    } else if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+    } else if (
+      errorMessage.includes('403') ||
+      errorMessage.includes('Forbidden')
+    ) {
       return 'Access denied. The update may not be available for your platform.';
-    } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+    } else if (
+      errorMessage.includes('404') ||
+      errorMessage.includes('Not Found')
+    ) {
       return 'Update not found. There may be no update available for your version.';
-    } else if (errorMessage.includes('CERT') || errorMessage.includes('certificate')) {
+    } else if (
+      errorMessage.includes('CERT') ||
+      errorMessage.includes('certificate')
+    ) {
       return 'Certificate error. Please check your system date/time or proxy settings.';
-    } else if (errorMessage.includes('sha512') || errorMessage.includes('checksum')) {
+    } else if (
+      errorMessage.includes('sha512') ||
+      errorMessage.includes('checksum')
+    ) {
       return 'Update verification failed. The update file may be corrupted or the server configuration may be incorrect.';
     }
     return errorMessage;
@@ -247,7 +271,9 @@ export const UpdatesSettings: React.FC = () => {
             >
               <RefreshCw
                 size={16}
-                style={isChecking ? { animation: 'spin 1s linear infinite' } : {}}
+                style={
+                  isChecking ? { animation: 'spin 1s linear infinite' } : {}
+                }
               />
               {isChecking
                 ? 'Checking...'
@@ -329,8 +355,8 @@ export const UpdatesSettings: React.FC = () => {
                 color: theme.colors.text,
               }}
             >
-              <strong>Current:</strong> v{currentVersion} → <strong>Available:</strong> v
-              {availableVersion}
+              <strong>Current:</strong> v{currentVersion} →{' '}
+              <strong>Available:</strong> v{availableVersion}
             </p>
           </div>
 
@@ -359,7 +385,8 @@ export const UpdatesSettings: React.FC = () => {
                       verticalAlign: 'text-bottom',
                     }}
                   />
-                  Development mode: Updates are detected but not automatically downloaded.
+                  Development mode: Updates are detected but not automatically
+                  downloaded.
                 </p>
               </div>
               <button
@@ -377,7 +404,9 @@ export const UpdatesSettings: React.FC = () => {
                   setIsDownloading(true);
                   setDownloadError(null);
                   setDownloadProgress(0);
-                  setUpdateStatus("Test downloading update (won't auto-install)...");
+                  setUpdateStatus(
+                    "Test downloading update (won't auto-install)...",
+                  );
                   AppVersionManagerService.testDownloadUpdate();
                 }}
                 disabled={isDownloading || !updateAvailable}
@@ -402,7 +431,9 @@ export const UpdatesSettings: React.FC = () => {
                       : isDownloading
                         ? theme.colors.backgroundTertiary
                         : theme.colors.warning,
-                    color: isDownloading ? theme.colors.textSecondary : '#ffffff',
+                    color: isDownloading
+                      ? theme.colors.textSecondary
+                      : '#ffffff',
                     border: 'none',
                     borderRadius: '8px',
                     cursor: isDownloading ? 'not-allowed' : 'pointer',
@@ -506,8 +537,9 @@ export const UpdatesSettings: React.FC = () => {
             lineHeight: 1.6,
           }}
         >
-          The application checks for updates on startup and every hour while running. Updates
-          are downloaded automatically and you'll be prompted to restart when ready.
+          The application checks for updates on startup and every hour while
+          running. Updates are downloaded automatically and you'll be prompted
+          to restart when ready.
         </p>
       </div>
     </div>

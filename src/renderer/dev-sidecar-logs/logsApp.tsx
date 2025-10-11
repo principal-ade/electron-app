@@ -23,7 +23,10 @@ const LogLine: React.FC<LogLineProps> = ({ entry }) => {
 };
 
 export const SidecarLogsApp: React.FC = () => {
-  const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const searchParams = useMemo(
+    () => new URLSearchParams(window.location.search),
+    [],
+  );
   const sessionId = searchParams.get('sessionId') ?? undefined;
   const [entries, setEntries] = useState<DevServerLogEntry[]>([]);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -46,23 +49,27 @@ export const SidecarLogsApp: React.FC = () => {
         console.error('[DevSidecar] Failed to fetch buffered logs', error);
       });
 
-    const unsubscribeOutput = window.mainProcess.devSidecar.onServerOutput((entry) => {
-      if (entry.sessionId !== sessionId) return;
-      setEntries((prev) => {
-        const next = [...prev, entry];
-        if (next.length > 2000) {
-          return next.slice(next.length - 2000);
-        }
-        return next;
-      });
-    });
+    const unsubscribeOutput = window.mainProcess.devSidecar.onServerOutput(
+      (entry) => {
+        if (entry.sessionId !== sessionId) return;
+        setEntries((prev) => {
+          const next = [...prev, entry];
+          if (next.length > 2000) {
+            return next.slice(next.length - 2000);
+          }
+          return next;
+        });
+      },
+    );
 
-    const unsubscribeStatus = window.mainProcess.devSidecar.onServerStatus((payload) => {
-      if (payload.sessionId !== sessionId) return;
-      if (payload.status === 'starting') {
-        setEntries([]);
-      }
-    });
+    const unsubscribeStatus = window.mainProcess.devSidecar.onServerStatus(
+      (payload) => {
+        if (payload.sessionId !== sessionId) return;
+        if (payload.status === 'starting') {
+          setEntries([]);
+        }
+      },
+    );
 
     return () => {
       isMounted = false;
@@ -89,7 +96,9 @@ export const SidecarLogsApp: React.FC = () => {
         <header className="logs-header">
           <h1>Logs</h1>
         </header>
-        <div className="logs-empty">Missing session id. Unable to stream logs.</div>
+        <div className="logs-empty">
+          Missing session id. Unable to stream logs.
+        </div>
       </div>
     );
   }
@@ -120,7 +129,10 @@ export const SidecarLogsApp: React.FC = () => {
           <div className="logs-empty">Waiting for output…</div>
         ) : (
           entries.map((entry) => (
-            <LogLine key={`${entry.timestamp}-${entry.stream}-${entry.message.substring(0, 20)}`} entry={entry} />
+            <LogLine
+              key={`${entry.timestamp}-${entry.stream}-${entry.message.substring(0, 20)}`}
+              entry={entry}
+            />
           ))
         )}
       </div>

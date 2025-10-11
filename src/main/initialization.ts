@@ -3,7 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import { initializeStorage } from './stores/initialization';
 // import { AgentSessionEventsHttpBridge } from './agent-session-events/AgentSessionEventsHttpBridge';
-import { startEventServer, stopEventServer, getEventServerManager } from './agent-session-events/EventServerManager';
+import {
+  startEventServer,
+  stopEventServer,
+  getEventServerManager,
+} from './agent-session-events/EventServerManager';
 import {
   startPrincipalMCPBridge,
   stopPrincipalMCPBridge,
@@ -36,7 +40,10 @@ import { registerAlexandriaHandlers } from './stores/AlexandriaApiEventHandler';
 import { registerAlexandriaDocsHandlers } from './stores/AlexandriaDocsApiEventHandler';
 import { registerRepositoryNotesHandlers } from './principal-mcp/repositoryNotesHandlers';
 import { registerPalaceTasksHandlers } from './palace-tasks/palaceTasksHandlers';
-import { registerRepositoryMonitoringHandlers, getManager as getRepositoryMonitoringManager } from './repository-monitoring/ipcHandlers';
+import {
+  registerRepositoryMonitoringHandlers,
+  getManager as getRepositoryMonitoringManager,
+} from './repository-monitoring/ipcHandlers';
 import { RepositoryRegistrationManager } from './repository-monitoring/RepositoryRegistrationManager';
 import { registerApiProxyHandlers } from './services/ApiProxyService';
 import { JWTService } from './services/JWTService';
@@ -273,15 +280,23 @@ export const initializeServices = async () => {
   // This registers all repositories with the monitoring server and enables git watching
   setTimeout(async () => {
     try {
-      console.log('[Main Process] Initializing repository monitoring registration...');
+      console.log(
+        '[Main Process] Initializing repository monitoring registration...',
+      );
       // Use the singleton monitoring manager instance that IPC handlers use
       const monitoringManager = getRepositoryMonitoringManager();
 
-      const registrationManager = RepositoryRegistrationManager.getInstance(monitoringManager);
+      const registrationManager =
+        RepositoryRegistrationManager.getInstance(monitoringManager);
       await registrationManager.initialize();
-      console.log('[Main Process] Repository monitoring registration complete.');
+      console.log(
+        '[Main Process] Repository monitoring registration complete.',
+      );
     } catch (error) {
-      console.error('[Main Process] Failed to initialize repository monitoring:', error);
+      console.error(
+        '[Main Process] Failed to initialize repository monitoring:',
+        error,
+      );
     }
   }, 2000); // Delay to ensure storage is fully initialized
 
@@ -325,4 +340,3 @@ export const shutdownServices = async () => {
     console.log('[Main Process] Remote agent windows closed.');
   }
 };
-

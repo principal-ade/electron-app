@@ -139,8 +139,13 @@ class SessionCache {
     if (!session) return null;
 
     // Return SessionState without SDK-specific fields
-    const { provider: _provider, repository: _repository, startTime: _startTime, lastUpdateTime: _lastUpdateTime, ...sessionState } =
-      session;
+    const {
+      provider: _provider,
+      repository: _repository,
+      startTime: _startTime,
+      lastUpdateTime: _lastUpdateTime,
+      ...sessionState
+    } = session;
     return sessionState;
   }
 
@@ -282,7 +287,13 @@ export function registerAgentSessionSDKHandlers(): void {
             (resolve, reject) => {
               const req = http.get(
                 `http://localhost:${status.port}/health`,
-                (res: { statusCode?: number; on: (event: string, callback: (data: unknown) => void) => void }) => {
+                (res: {
+                  statusCode?: number;
+                  on: (
+                    event: string,
+                    callback: (data: unknown) => void,
+                  ) => void;
+                }) => {
                   let data = '';
                   res.on('data', (chunk: unknown) => (data += String(chunk)));
                   res.on('end', () => {

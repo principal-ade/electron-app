@@ -1,16 +1,27 @@
 import React, { useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Globe, Bot, RefreshCw, Settings as SettingsIcon, Activity } from 'lucide-react';
+import {
+  Globe,
+  Bot,
+  RefreshCw,
+  Settings as SettingsIcon,
+  Activity,
+} from 'lucide-react';
 import { GeneralSettings } from './components/GeneralSettings';
 import { AIAssistantsSettings } from './components/AIAssistantsSettings';
 import { UpdatesSettings } from './components/UpdatesSettings';
 import { ObservabilitySettings } from './components/ObservabilitySettings';
 
-type SettingsCategory = 'general' | 'ai-assistants' | 'updates' | 'observability';
+type SettingsCategory =
+  | 'general'
+  | 'ai-assistants'
+  | 'updates'
+  | 'observability';
 
 export const Settings: React.FC = () => {
   const { theme } = useTheme();
-  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('general');
+  const [activeCategory, setActiveCategory] =
+    useState<SettingsCategory>('general');
   const [updateAvailable] = useState(false); // This will be connected to UpdatesSettings state later if needed
 
   return (

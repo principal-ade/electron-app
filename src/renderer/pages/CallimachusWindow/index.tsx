@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { CallimachusClient } from '@a24z/callimachus';
-import type { CallimachusConfig, SearchResult, AlexandriaLayout } from '@a24z/callimachus';
+import type {
+  CallimachusConfig,
+  SearchResult,
+  AlexandriaLayout,
+} from '@a24z/callimachus';
 import { ConnectionPanel } from './components/ConnectionPanel';
 import { SearchInterface } from './components/SearchInterface';
 import { ResultsDisplay } from './components/ResultsDisplay';
@@ -44,7 +48,7 @@ export const CallimachusWindow: React.FC = () => {
         setConnectionError(
           initError instanceof Error
             ? `Initialization failed: ${initError.message}`
-            : 'Failed to initialize Pixeltable tables'
+            : 'Failed to initialize Pixeltable tables',
         );
         setIsConnected(false);
         return;
@@ -67,13 +71,15 @@ export const CallimachusWindow: React.FC = () => {
         setConnectionError(
           testError instanceof Error
             ? `Connection failed: ${testError.message}. Make sure Pixeltable is running at ${config.pixeltable?.apiUrl}`
-            : 'Connection test failed. Check if Pixeltable server is running.'
+            : 'Connection test failed. Check if Pixeltable server is running.',
         );
         setIsConnected(false);
       }
     } catch (error) {
       console.error('Client creation failed:', error);
-      setConnectionError(error instanceof Error ? error.message : 'Failed to create client');
+      setConnectionError(
+        error instanceof Error ? error.message : 'Failed to create client',
+      );
       setIsConnected(false);
     }
   };
@@ -97,9 +103,10 @@ export const CallimachusWindow: React.FC = () => {
       setSearchResults(results);
     } catch (error) {
       console.error('Search error:', error);
-      const errorMessage = error instanceof Error
-        ? `Search failed: ${error.message}`
-        : 'Search failed';
+      const errorMessage =
+        error instanceof Error
+          ? `Search failed: ${error.message}`
+          : 'Search failed';
       setSearchError(errorMessage);
       setSearchResults([]);
     } finally {
@@ -144,10 +151,7 @@ export const CallimachusWindow: React.FC = () => {
               error={searchError}
             />
 
-            <ResultsDisplay
-              results={searchResults}
-              isLoading={isSearching}
-            />
+            <ResultsDisplay results={searchResults} isLoading={isSearching} />
           </>
         )}
       </div>

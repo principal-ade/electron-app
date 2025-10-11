@@ -4,7 +4,10 @@
  * This prototype helps identify gaps in the data model
  */
 
-import type { PackageLayer, PackageCommand } from '@principal-ai/codebase-composition';
+import type {
+  PackageLayer,
+  PackageCommand,
+} from '@principal-ai/codebase-composition';
 import type { ToolConfiguration } from '@principal-ai/codebase-quality-lenses';
 import path from 'path';
 
@@ -32,7 +35,7 @@ export class PackageLayerToToolConfigBridge {
     if (!packageLayer.configFiles?.eslint) {
       analysis.missingData.push('No ESLint configuration detected');
       analysis.recommendations.push(
-        'PackageLayer should detect if eslint is installed as a dependency even without config file'
+        'PackageLayer should detect if eslint is installed as a dependency even without config file',
       );
       return analysis;
     }
@@ -44,12 +47,14 @@ export class PackageLayerToToolConfigBridge {
 
     if (!hasESLintDependency) {
       analysis.missingData.push('ESLint not found in dependencies');
-      analysis.assumptions.push('Assuming ESLint is available globally or via npx');
+      analysis.assumptions.push(
+        'Assuming ESLint is available globally or via npx',
+      );
     }
 
     // Look for ESLint command in available commands
     const eslintCommand = packageLayer.packageData.availableCommands?.find(
-      cmd => cmd.name === 'lint' || cmd.name.includes('eslint')
+      (cmd) => cmd.name === 'lint' || cmd.name.includes('eslint'),
     );
 
     // Try to determine the package manager
@@ -70,20 +75,20 @@ export class PackageLayerToToolConfigBridge {
     if (eslintCommand) {
       // Parse existing command to extract args
       analysis.assumptions.push(
-        `Using existing command: ${eslintCommand.command}`
+        `Using existing command: ${eslintCommand.command}`,
       );
 
       // This is a gap - we need to parse the command string
       analysis.missingData.push(
-        'Need to parse command string to extract actual ESLint arguments'
+        'Need to parse command string to extract actual ESLint arguments',
       );
       analysis.recommendations.push(
-        'PackageCommand should store parsed command and args separately, not as a single string'
+        'PackageCommand should store parsed command and args separately, not as a single string',
       );
 
       // Attempt basic parsing (this is fragile)
       const parts = eslintCommand.command.split(' ');
-      const eslintIndex = parts.findIndex(p => p.includes('eslint'));
+      const eslintIndex = parts.findIndex((p) => p.includes('eslint'));
       if (eslintIndex >= 0) {
         toolConfig.args = ['eslint', ...parts.slice(eslintIndex + 1)];
       } else {
@@ -98,7 +103,7 @@ export class PackageLayerToToolConfigBridge {
 
       analysis.missingData.push('No existing lint command to reference');
       analysis.recommendations.push(
-        'PackageLayer should detect common tool patterns even without explicit scripts'
+        'PackageLayer should detect common tool patterns even without explicit scripts',
       );
     }
 
@@ -123,7 +128,7 @@ export class PackageLayerToToolConfigBridge {
       'No information about ESLint plugins or extended configs',
       'No information about ignored files/patterns',
       'No cache directory information',
-      'No information about fix mode availability'
+      'No information about fix mode availability',
     );
 
     analysis.recommendations.push(
@@ -131,7 +136,7 @@ export class PackageLayerToToolConfigBridge {
       'ConfigFile should include parsed content for inline configs',
       'Need a way to detect tool capabilities (e.g., --fix support)',
       'Should detect .eslintignore file as part of ESLint config',
-      'Should parse extends/plugins from ESLint config for better command generation'
+      'Should parse extends/plugins from ESLint config for better command generation',
     );
 
     analysis.success = true;
@@ -167,9 +172,10 @@ export class PackageLayerToToolConfigBridge {
 
     // Look for TypeScript command
     const tscCommand = packageLayer.packageData.availableCommands?.find(
-      cmd => cmd.name === 'typecheck' ||
-             cmd.name === 'tsc' ||
-             cmd.name.includes('type')
+      (cmd) =>
+        cmd.name === 'typecheck' ||
+        cmd.name === 'tsc' ||
+        cmd.name.includes('type'),
     );
 
     const packageManager = packageLayer.packageData.packageManager;
@@ -186,7 +192,9 @@ export class PackageLayerToToolConfigBridge {
     };
 
     if (tscCommand) {
-      analysis.assumptions.push(`Found existing command: ${tscCommand.command}`);
+      analysis.assumptions.push(
+        `Found existing command: ${tscCommand.command}`,
+      );
       analysis.missingData.push('Need to parse TypeScript command arguments');
     } else {
       analysis.assumptions.push('Using default tsc --noEmit');
@@ -196,13 +204,13 @@ export class PackageLayerToToolConfigBridge {
       'No information about TypeScript version',
       'No information about project references',
       'No information about include/exclude patterns',
-      'Cannot determine if incremental compilation is enabled'
+      'Cannot determine if incremental compilation is enabled',
     );
 
     analysis.recommendations.push(
       'Should parse tsconfig.json to understand compilation scope',
       'Should detect build vs check commands separately',
-      'Should understand composite projects and references'
+      'Should understand composite projects and references',
     );
 
     analysis.success = true;
@@ -223,10 +231,12 @@ export class PackageLayerToToolConfigBridge {
     };
 
     // Check for test frameworks
-    const hasJest = packageLayer.configFiles?.jest ||
-                    packageLayer.packageData.devDependencies['jest'];
-    const hasVitest = packageLayer.configFiles?.vitest ||
-                      packageLayer.packageData.devDependencies['vitest'];
+    const hasJest =
+      packageLayer.configFiles?.jest ||
+      packageLayer.packageData.devDependencies['jest'];
+    const hasVitest =
+      packageLayer.configFiles?.vitest ||
+      packageLayer.packageData.devDependencies['vitest'];
 
     if (!hasJest && !hasVitest) {
       analysis.missingData.push('No test framework detected');
@@ -234,13 +244,13 @@ export class PackageLayerToToolConfigBridge {
     }
 
     const testCommand = packageLayer.packageData.availableCommands?.find(
-      cmd => cmd.name === 'test' || cmd.name.includes('test')
+      (cmd) => cmd.name === 'test' || cmd.name.includes('test'),
     );
 
     if (!testCommand) {
       analysis.missingData.push('No test command found in scripts');
       analysis.recommendations.push(
-        'Should detect test commands even without explicit scripts'
+        'Should detect test commands even without explicit scripts',
       );
     }
 
@@ -248,13 +258,13 @@ export class PackageLayerToToolConfigBridge {
       'Cannot determine test runner (Jest vs Vitest vs other)',
       'No information about coverage settings',
       'No information about test file patterns',
-      'Cannot determine if watch mode is available'
+      'Cannot determine if watch mode is available',
     );
 
     analysis.recommendations.push(
       'PackageLayer should identify which test framework is primary',
       'Should parse test configuration for coverage thresholds',
-      'Should detect test file patterns from config'
+      'Should detect test file patterns from config',
     );
 
     return analysis;
@@ -307,7 +317,7 @@ export class PackageLayerToToolConfigBridge {
 
       if (analysis.missingData.length > 0) {
         report += '### Missing Data\n';
-        analysis.missingData.forEach(item => {
+        analysis.missingData.forEach((item) => {
           report += `- ${item}\n`;
         });
         report += '\n';
@@ -315,7 +325,7 @@ export class PackageLayerToToolConfigBridge {
 
       if (analysis.assumptions.length > 0) {
         report += '### Assumptions Made\n';
-        analysis.assumptions.forEach(item => {
+        analysis.assumptions.forEach((item) => {
           report += `- ${item}\n`;
         });
         report += '\n';
@@ -323,7 +333,7 @@ export class PackageLayerToToolConfigBridge {
 
       if (analysis.recommendations.length > 0) {
         report += '### Recommendations for codebase-composition\n';
-        analysis.recommendations.forEach(item => {
+        analysis.recommendations.forEach((item) => {
           report += `- ${item}\n`;
         });
         report += '\n';

@@ -3,7 +3,7 @@ import type {
   GitHubRepository,
   GitHubOrganization,
   GitHubUser,
-  TokenInfo
+  TokenInfo,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export class GithubService {
@@ -28,11 +28,7 @@ export class GithubService {
   }
 
   static async getTree(owner: string, repo: string, branch: string) {
-    const result = await window.mainProcess.github.getTree(
-      owner,
-      repo,
-      branch,
-    );
+    const result = await window.mainProcess.github.getTree(owner, repo, branch);
     return result;
   }
 
@@ -75,16 +71,21 @@ export class GithubService {
     return result;
   }
 
-  static async getUserRepositories(options?: RepositoryFetchOptions): Promise<GitHubRepository[]> {
+  static async getUserRepositories(
+    options?: RepositoryFetchOptions,
+  ): Promise<GitHubRepository[]> {
     const result = await window.mainProcess.github.getUserRepositories(options);
     return result || [];
   }
 
   static async getOrgRepositories(
     org: string,
-    options?: RepositoryFetchOptions
+    options?: RepositoryFetchOptions,
   ): Promise<GitHubRepository[]> {
-    const result = await window.mainProcess.github.getOrgRepositories(org, options);
+    const result = await window.mainProcess.github.getOrgRepositories(
+      org,
+      options,
+    );
     return result || [];
   }
 

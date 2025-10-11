@@ -423,8 +423,8 @@ export class DocumentIndexingService {
         filtered = filtered.filter((result) => {
           // The filePath contains the full path to the document
           // We need to check if it starts with any of the selected repository paths
-          return request.repositories!.some(repoPath =>
-            result.filePath.startsWith(repoPath)
+          return request.repositories!.some((repoPath) =>
+            result.filePath.startsWith(repoPath),
           );
         });
       }

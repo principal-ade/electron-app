@@ -2,7 +2,10 @@
  * Types for communication between event processing server and main process
  */
 
-import type { RepositoryInfo, SupportedAgent } from '@principal-ai/agent-monitoring';
+import type {
+  RepositoryInfo,
+  SupportedAgent,
+} from '@principal-ai/agent-monitoring';
 
 /**
  * Configuration for the event processing server
@@ -159,13 +162,14 @@ export type MainToServerMessage =
  */
 const randomSuffix = () => Math.random().toString(36).slice(2, 8);
 
-const generateMessageId = (prefix: string): string => `${prefix}-${Date.now()}-${randomSuffix()}`;
+const generateMessageId = (prefix: string): string =>
+  `${prefix}-${Date.now()}-${randomSuffix()}`;
 
 export function createStorageRequestMessage(
   operation: 'GET' | 'SET' | 'DELETE',
   namespace: string,
   key: string,
-  data?: unknown
+  data?: unknown,
 ): StorageRequestMessage {
   return {
     type: 'STORAGE_REQUEST',
@@ -178,7 +182,9 @@ export function createStorageRequestMessage(
   };
 }
 
-export function createRepositoryInfoRequestMessage(absolutePath: string): RepositoryInfoRequestMessage {
+export function createRepositoryInfoRequestMessage(
+  absolutePath: string,
+): RepositoryInfoRequestMessage {
   return {
     type: 'REPOSITORY_INFO_REQUEST',
     id: generateMessageId('repo-info'),
@@ -187,7 +193,10 @@ export function createRepositoryInfoRequestMessage(absolutePath: string): Reposi
   };
 }
 
-export function createWindowBroadcastMessage(channel: string, data: unknown): WindowBroadcastMessage {
+export function createWindowBroadcastMessage(
+  channel: string,
+  data: unknown,
+): WindowBroadcastMessage {
   return {
     type: 'WINDOW_BROADCAST',
     id: generateMessageId('broadcast'),
@@ -201,7 +210,7 @@ export function createProcessingCompleteMessage(
   requestId: string,
   success: boolean,
   eventData?: unknown,
-  error?: string
+  error?: string,
 ): ProcessingCompleteMessage {
   return {
     type: 'PROCESSING_COMPLETE',
@@ -216,22 +225,32 @@ export function createProcessingCompleteMessage(
 /**
  * Type guards
  */
-export function isProcessEventMessage(msg: MainToServerMessage): msg is ProcessEventMessage {
+export function isProcessEventMessage(
+  msg: MainToServerMessage,
+): msg is ProcessEventMessage {
   return msg.type === 'PROCESS_EVENT';
 }
 
-export function isStorageRequestMessage(msg: ServerToMainMessage): msg is StorageRequestMessage {
+export function isStorageRequestMessage(
+  msg: ServerToMainMessage,
+): msg is StorageRequestMessage {
   return msg.type === 'STORAGE_REQUEST';
 }
 
-export function isWindowBroadcastMessage(msg: ServerToMainMessage): msg is WindowBroadcastMessage {
+export function isWindowBroadcastMessage(
+  msg: ServerToMainMessage,
+): msg is WindowBroadcastMessage {
   return msg.type === 'WINDOW_BROADCAST';
 }
 
-export function isRepositoryInfoRequestMessage(msg: ServerToMainMessage): msg is RepositoryInfoRequestMessage {
+export function isRepositoryInfoRequestMessage(
+  msg: ServerToMainMessage,
+): msg is RepositoryInfoRequestMessage {
   return msg.type === 'REPOSITORY_INFO_REQUEST';
 }
 
-export function isProcessedEventMessage(msg: ServerToMainMessage): msg is ProcessedEventMessage {
+export function isProcessedEventMessage(
+  msg: ServerToMainMessage,
+): msg is ProcessedEventMessage {
   return msg.type === 'PROCESSED_EVENT';
 }

@@ -86,7 +86,9 @@ export const IndexRepositoryButton: React.FC<IndexRepositoryButtonProps> = ({
           opacity: isIndexing ? 0.6 : 1,
           cursor: isIndexing ? 'not-allowed' : 'pointer',
         }}
-        title={isIndexing ? 'Indexing repositories...' : 'Re-index all repositories'}
+        title={
+          isIndexing ? 'Indexing repositories...' : 'Re-index all repositories'
+        }
       >
         {isIndexing ? (
           <Loader2 size={16} className="animate-spin" />
@@ -105,7 +107,10 @@ export const IndexRepositoryButton: React.FC<IndexRepositoryButtonProps> = ({
           zIndex: 1000,
         }}
       >
-        {lastResult || (isIndexing ? 'Indexing repositories...' : 'Re-index all repositories')}
+        {lastResult ||
+          (isIndexing
+            ? 'Indexing repositories...'
+            : 'Re-index all repositories')}
       </div>
     </div>
   );

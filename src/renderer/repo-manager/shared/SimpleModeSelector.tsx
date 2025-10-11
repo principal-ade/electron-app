@@ -46,7 +46,8 @@ export const SimpleModeSelector: React.FC<SimpleModeSelectorProps> = ({
     >
       {modes.map((modeOption) => {
         const isActive = mode === modeOption.value;
-        const isDisabled = disabled || (modeOption.requiresClone && !hasLocalClones);
+        const isDisabled =
+          disabled || (modeOption.requiresClone && !hasLocalClones);
 
         return (
           <button
@@ -61,26 +62,27 @@ export const SimpleModeSelector: React.FC<SimpleModeSelectorProps> = ({
               padding: '6px 16px',
               borderRadius: '6px',
               border: 'none',
-              background: isActive
-                ? theme.colors.background
-                : 'transparent',
-              cursor: isDisabled ? 'not-allowed' : isActive ? 'default' : 'pointer',
+              background: isActive ? theme.colors.background : 'transparent',
+              cursor: isDisabled
+                ? 'not-allowed'
+                : isActive
+                  ? 'default'
+                  : 'pointer',
               fontSize: '13px',
               color: isActive
                 ? modeOption.color
                 : isDisabled
-                ? theme.colors.textTertiary
-                : theme.colors.textSecondary,
+                  ? theme.colors.textTertiary
+                  : theme.colors.textSecondary,
               fontWeight: isActive ? 600 : 500,
               transition: 'all 0.2s',
-              boxShadow: isActive
-                ? '0 1px 3px rgba(0,0,0,0.1)'
-                : 'none',
+              boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               opacity: isDisabled ? 0.5 : 1,
             }}
             onMouseEnter={(e) => {
               if (!isDisabled && !isActive) {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
                 e.currentTarget.style.color = theme.colors.text;
               }
             }}

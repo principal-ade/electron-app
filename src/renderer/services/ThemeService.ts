@@ -16,9 +16,16 @@ function deepMerge<T extends object>(target: T, source: Partial<T>): T {
   const output = { ...target };
 
   for (const key in source) {
-    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+    if (
+      source[key] &&
+      typeof source[key] === 'object' &&
+      !Array.isArray(source[key])
+    ) {
       if (key in target && typeof target[key] === 'object') {
-        (output as any)[key] = deepMerge(target[key] as any, source[key] as any);
+        (output as any)[key] = deepMerge(
+          target[key] as any,
+          source[key] as any,
+        );
       } else {
         (output as any)[key] = source[key];
       }

@@ -450,7 +450,12 @@ export class GitRepositoryService {
    */
   async getUncommittedChanges(directory: string): Promise<string[]> {
     const status = await this.getGitStatus(directory);
-    return [...new Set([...status.staged.map(f => f.path), ...status.unstaged.map(f => f.path)])];
+    return [
+      ...new Set([
+        ...status.staged.map((f) => f.path),
+        ...status.unstaged.map((f) => f.path),
+      ]),
+    ];
   }
 
   /**

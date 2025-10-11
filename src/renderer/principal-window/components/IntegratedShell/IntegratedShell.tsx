@@ -15,7 +15,9 @@ import './IntegratedShell.css';
 export type NavigationView = InteractiveShellNavigationView;
 
 // Helper to map view to panel layout key
-const getViewKey = (view: NavigationView): 'repositoryExplorer' | 'terminalManager' | 'authView' | null => {
+const getViewKey = (
+  view: NavigationView,
+): 'repositoryExplorer' | 'terminalManager' | 'authView' | null => {
   switch (view) {
     case 'repository':
       return 'repositoryExplorer';
@@ -29,7 +31,9 @@ const getViewKey = (view: NavigationView): 'repositoryExplorer' | 'terminalManag
 };
 
 // Default collapsed states per view
-const getViewDefaults = (view: NavigationView): { left: boolean; right: boolean } => {
+const getViewDefaults = (
+  view: NavigationView,
+): { left: boolean; right: boolean } => {
   switch (view) {
     case 'repository':
       return { left: false, right: false }; // No right panel for repository (uses nested panels instead)
@@ -48,7 +52,9 @@ export const IntegratedShell: React.FC = () => {
   const { theme, mode } = useTheme();
 
   // Store collapsed states per view to avoid animation glitches when switching
-  const [viewCollapsedStates, setViewCollapsedStates] = useState<Record<string, { left: boolean; right: boolean }>>({
+  const [viewCollapsedStates, setViewCollapsedStates] = useState<
+    Record<string, { left: boolean; right: boolean }>
+  >({
     repository: { left: false, right: false }, // No right panel for repository
     terminal: { left: false, right: false },
     auth: { left: false, right: false },
@@ -125,7 +131,7 @@ export const IntegratedShell: React.FC = () => {
     const newCollapsed = !sidebarCollapsed;
 
     // Update state for current view
-    setViewCollapsedStates(prev => ({
+    setViewCollapsedStates((prev) => ({
       ...prev,
       [activeView]: {
         ...prev[activeView],
@@ -158,7 +164,7 @@ export const IntegratedShell: React.FC = () => {
     const newCollapsed = !rightSidebarCollapsed;
 
     // Update state for current view
-    setViewCollapsedStates(prev => ({
+    setViewCollapsedStates((prev) => ({
       ...prev,
       [activeView]: {
         ...prev[activeView],
@@ -195,7 +201,7 @@ export const IntegratedShell: React.FC = () => {
     const currentLeftCollapsed =
       viewCollapsedStates[activeView]?.left ?? getViewDefaults(activeView).left;
 
-    setViewCollapsedStates(prev => ({
+    setViewCollapsedStates((prev) => ({
       ...prev,
       [activeView]: {
         ...prev[activeView],
@@ -215,7 +221,7 @@ export const IntegratedShell: React.FC = () => {
               },
             },
           },
-        }).catch(error => {
+        }).catch((error) => {
           console.error('Failed to save right sidebar collapsed state:', error);
         });
       }
@@ -230,7 +236,7 @@ export const IntegratedShell: React.FC = () => {
     const currentLeftCollapsed =
       viewCollapsedStates[activeView]?.left ?? getViewDefaults(activeView).left;
 
-    setViewCollapsedStates(prev => ({
+    setViewCollapsedStates((prev) => ({
       ...prev,
       [activeView]: {
         ...prev[activeView],
@@ -250,16 +256,17 @@ export const IntegratedShell: React.FC = () => {
               },
             },
           },
-        }).catch(error => {
+        }).catch((error) => {
           console.error('Failed to save right sidebar collapsed state:', error);
         });
       }
     }
   };
 
-  const backgroundColor = mode === 'dark' && theme.modes?.dark?.background
-    ? theme.modes.dark.background
-    : theme.colors.background;
+  const backgroundColor =
+    mode === 'dark' && theme.modes?.dark?.background
+      ? theme.modes.dark.background
+      : theme.colors.background;
 
   return (
     <div
@@ -277,7 +284,9 @@ export const IntegratedShell: React.FC = () => {
 
       <div className="main-content">
         <IntegratedTitlebar
-          showSidebarControl={activeView === 'repository' || activeView === 'terminal'}
+          showSidebarControl={
+            activeView === 'repository' || activeView === 'terminal'
+          }
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={handleToggleSidebar}
           showRightSidebarControl={false}
@@ -291,32 +300,37 @@ export const IntegratedShell: React.FC = () => {
           style={{
             position: 'absolute',
             top: 0,
-            left: 0,  // Start at 0 since parent already starts after sidebar
+            left: 0, // Start at 0 since parent already starts after sidebar
             right: 0,
             bottom: 0,
-            backgroundColor: mode === 'dark' && theme.modes?.dark?.backgroundSecondary
-              ? theme.modes.dark.backgroundSecondary
-              : theme.colors.backgroundSecondary,
+            backgroundColor:
+              mode === 'dark' && theme.modes?.dark?.backgroundSecondary
+                ? theme.modes.dark.backgroundSecondary
+                : theme.colors.backgroundSecondary,
             borderTopLeftRadius: '8px', // Rounded corner creates the cutout effect
             overflow: 'hidden',
             pointerEvents: 'none', // Allow clicks through to titlebar
           }}
         >
-          <div className="view-container" style={{
-            marginTop: '56px', // Space for titlebar
-            marginLeft: '0',
-            marginRight: '6px',
-            marginBottom: '6px',
-            height: 'calc(100% - 62px)', // Account for margins and titlebar
-            boxSizing: 'border-box',
-            overflow: 'auto',
-            border: `1px solid ${theme.colors.border}`,
-            borderRadius: '8px',
-            backgroundColor: mode === 'dark' && theme.modes?.dark?.background
-              ? theme.modes.dark.background
-              : theme.colors.background,
-            pointerEvents: 'auto', // Re-enable pointer events for content
-          }}>
+          <div
+            className="view-container"
+            style={{
+              marginTop: '56px', // Space for titlebar
+              marginLeft: '0',
+              marginRight: '6px',
+              marginBottom: '6px',
+              height: 'calc(100% - 62px)', // Account for margins and titlebar
+              boxSizing: 'border-box',
+              overflow: 'auto',
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '8px',
+              backgroundColor:
+                mode === 'dark' && theme.modes?.dark?.background
+                  ? theme.modes.dark.background
+                  : theme.colors.background,
+              pointerEvents: 'auto', // Re-enable pointer events for content
+            }}
+          >
             {/* Views will be rendered here based on activeView */}
             {activeView === 'repository' && (
               <RepositoryExplorer
@@ -326,9 +340,13 @@ export const IntegratedShell: React.FC = () => {
                 onCollapseRightPanel={collapseRightSidebar}
               />
             )}
-            {activeView === 'terminal' && <TerminalManager sidebarCollapsed={sidebarCollapsed} />}
+            {activeView === 'terminal' && (
+              <TerminalManager sidebarCollapsed={sidebarCollapsed} />
+            )}
             {activeView === 'search' && <MarkdownSearch />}
-            {activeView === 'monitoring' && <SystemMonitor sidebarCollapsed={sidebarCollapsed} />}
+            {activeView === 'monitoring' && (
+              <SystemMonitor sidebarCollapsed={sidebarCollapsed} />
+            )}
             {activeView === 'settings' && <Settings />}
             {activeView === 'auth' && <AuthView />}
           </div>

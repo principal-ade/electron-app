@@ -117,7 +117,10 @@ export const DependenciesPanel: React.FC<DependenciesPanelProps> = ({
       if (selectedPackage !== singlePackagePath) {
         setSelectedPackage(singlePackagePath);
         // Notify parent about auto-selection
-        onPackageSelected?.(singlePackagePath, packageLayers[0].packageData.name);
+        onPackageSelected?.(
+          singlePackagePath,
+          packageLayers[0].packageData.name,
+        );
       }
     }
   }, [packageLayers, selectedPackage, onPackageSelected]);
@@ -1081,24 +1084,36 @@ Please check for breaking changes and compatibility issues before updating.`;
         <div>
           <button
             onClick={handleAnalyze}
-            disabled={selectedPackage === '__placeholder__' || selectedPackage === undefined || isAnalyzing}
+            disabled={
+              selectedPackage === '__placeholder__' ||
+              selectedPackage === undefined ||
+              isAnalyzing
+            }
             style={{
               width: '100%',
               padding: '10px',
               borderRadius: '6px',
               border: 'none',
               backgroundColor:
-                selectedPackage === '__placeholder__' || selectedPackage === undefined || isAnalyzing
+                selectedPackage === '__placeholder__' ||
+                selectedPackage === undefined ||
+                isAnalyzing
                   ? theme.colors.backgroundLight
                   : theme.colors.primary,
               color:
-                selectedPackage === '__placeholder__' || selectedPackage === undefined || isAnalyzing
+                selectedPackage === '__placeholder__' ||
+                selectedPackage === undefined ||
+                isAnalyzing
                   ? theme.colors.textSecondary
                   : '#fff',
               fontSize: '13px',
               fontWeight: 500,
               cursor:
-                selectedPackage === '__placeholder__' || selectedPackage === undefined || isAnalyzing ? 'not-allowed' : 'pointer',
+                selectedPackage === '__placeholder__' ||
+                selectedPackage === undefined ||
+                isAnalyzing
+                  ? 'not-allowed'
+                  : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

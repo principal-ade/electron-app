@@ -1,5 +1,8 @@
 import React from 'react';
-import type { RepositoryPanelId, RepositoryPanelVisibility } from '../../shared/types/repositoryPanel.types';
+import type {
+  RepositoryPanelId,
+  RepositoryPanelVisibility,
+} from '../../shared/types/repositoryPanel.types';
 import type {
   RepositoryPanelActions,
   RepositoryPanelContextValue,
@@ -30,7 +33,8 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
   {
     id: 'gitChanges',
     label: 'Git Changes',
-    description: 'Review staged, unstaged, and untracked changes for the repository.',
+    description:
+      'Review staged, unstaged, and untracked changes for the repository.',
     defaultLocation: 'left',
     slices: ['git'],
     render: ({ actions }) => <GitChangesPanel onFileClick={actions.openFile} />,
@@ -38,14 +42,16 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
   {
     id: 'files',
     label: 'Markdown Documents',
-    description: 'Recently updated markdown documentation discovered in the repository.',
+    description:
+      'Recently updated markdown documentation discovered in the repository.',
     defaultLocation: 'left',
     slices: ['markdown'],
   },
   {
     id: 'gitStatus',
     label: 'Git Status',
-    description: 'Branch details, upstream alignment, and the latest commit metadata.',
+    description:
+      'Branch details, upstream alignment, and the latest commit metadata.',
     defaultLocation: 'left',
     slices: ['git'],
   },
@@ -59,7 +65,8 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
   {
     id: 'cityVisualization',
     label: 'City Visualization',
-    description: 'Interactive code-city visualization derived from the repository structure.',
+    description:
+      'Interactive code-city visualization derived from the repository structure.',
     defaultLocation: 'right',
     slices: ['fileTree'],
   },
@@ -73,7 +80,8 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
   {
     id: 'packageInfo',
     label: 'Package Information',
-    description: 'Package insights and dependency layers detected in the codebase.',
+    description:
+      'Package insights and dependency layers detected in the codebase.',
     defaultLocation: 'right',
     slices: ['packages'],
   },
@@ -167,7 +175,8 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
   {
     id: 'agentContext',
     label: 'Agent Context',
-    description: 'View files accessed by agent sessions organized in a multi-tree view.',
+    description:
+      'View files accessed by agent sessions organized in a multi-tree view.',
     defaultLocation: 'left',
     slices: [],
     render: ({ context, actions }) => (

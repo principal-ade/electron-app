@@ -81,7 +81,7 @@ export const FileTreeContextMenu: React.FC<FileTreeContextMenuProps> = ({
 
     // Confirm deletion
     const confirmed = window.confirm(
-      `Are you sure you want to delete ${isFolder ? 'folder' : 'file'} "${filePath}"?\n\nThis will move it to the trash.`
+      `Are you sure you want to delete ${isFolder ? 'folder' : 'file'} "${filePath}"?\n\nThis will move it to the trash.`,
     );
 
     if (confirmed) {
@@ -123,8 +123,12 @@ export const FileTreeContextMenu: React.FC<FileTreeContextMenuProps> = ({
   // Adjust position if menu would go off screen
   const menuWidth = 220;
   const menuHeight = menuItems.length * 36 + 8;
-  const adjustedX = x + menuWidth > window.innerWidth ? window.innerWidth - menuWidth - 10 : x;
-  const adjustedY = y + menuHeight > window.innerHeight ? window.innerHeight - menuHeight - 10 : y;
+  const adjustedX =
+    x + menuWidth > window.innerWidth ? window.innerWidth - menuWidth - 10 : x;
+  const adjustedY =
+    y + menuHeight > window.innerHeight
+      ? window.innerHeight - menuHeight - 10
+      : y;
 
   const menuContent = (
     <div

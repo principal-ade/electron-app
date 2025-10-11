@@ -241,7 +241,13 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
       currentLibraryItems,
       useAlexandriaStorage,
     };
-  }, [excalidrawAPI, currentDiagramName, projectPath, currentLibraryItems, useAlexandriaStorage]);
+  }, [
+    excalidrawAPI,
+    currentDiagramName,
+    projectPath,
+    currentLibraryItems,
+    useAlexandriaStorage,
+  ]);
 
   // Track if this is the first save for draft naming
   const [draftNumber, setDraftNumber] = useState<number | null>(null);
@@ -249,8 +255,12 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
 
   // Auto-save functionality using refs to avoid re-renders
   const handleSave = useCallback(async () => {
-    const { excalidrawAPI, projectPath, currentLibraryItems, useAlexandriaStorage } =
-      saveDataRef.current;
+    const {
+      excalidrawAPI,
+      projectPath,
+      currentLibraryItems,
+      useAlexandriaStorage,
+    } = saveDataRef.current;
     const { diagramName } = saveDataRef.current;
 
     if (!excalidrawAPI) {
@@ -311,12 +321,15 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
 
       if (useAlexandriaStorage && projectPath) {
         // Use Alexandria service for drawings
-        const fileName = currentDiagramIdRef.current || currentDiagramId || saveName;
-        const fileNameWithExt = fileName.endsWith('.excalidraw') ? fileName : `${fileName}.excalidraw`;
+        const fileName =
+          currentDiagramIdRef.current || currentDiagramId || saveName;
+        const fileNameWithExt = fileName.endsWith('.excalidraw')
+          ? fileName
+          : `${fileName}.excalidraw`;
         await AlexandriaDrawingService.saveDiagram(
           fileNameWithExt,
           data,
-          projectPath
+          projectPath,
         );
         savedId = fileName.replace('.excalidraw', '');
       } else {
@@ -515,17 +528,19 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
           // Auto-save only if content actually changed (not just selection/viewport)
           if (!isInitialLoadRef.current && !isLoadingDiagram) {
             // Create a simple hash of elements to detect actual content changes
-            const contentHash = JSON.stringify(elements.map(el => ({
-              id: el.id,
-              type: el.type,
-              x: el.x,
-              y: el.y,
-              width: el.width,
-              height: el.height,
-              // Include other properties that indicate actual content changes
-              text: 'text' in el ? el.text : undefined,
-              points: 'points' in el ? el.points : undefined,
-            })));
+            const contentHash = JSON.stringify(
+              elements.map((el) => ({
+                id: el.id,
+                type: el.type,
+                x: el.x,
+                y: el.y,
+                width: el.width,
+                height: el.height,
+                // Include other properties that indicate actual content changes
+                text: 'text' in el ? el.text : undefined,
+                points: 'points' in el ? el.points : undefined,
+              })),
+            );
 
             if (contentHash !== lastSavedContentRef.current) {
               lastSavedContentRef.current = contentHash;

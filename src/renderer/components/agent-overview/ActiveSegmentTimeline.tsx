@@ -708,7 +708,7 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                         // Using runCommand as fallback
                         const result = await ShellService.runCommand(
                           `grep ${event.data.parameters?.pattern || ''} ${event.data.parameters?.path || ''}`,
-                          { cwd: session.workingDirectory }
+                          { cwd: session.workingDirectory },
                         );
                         setGrepResults((prev) => ({
                           ...prev,
@@ -855,7 +855,11 @@ export const ActiveSegmentTimeline: React.FC<ActiveSegmentTimelineProps> = ({
                         // Using runCommand as fallback
                         const result = await ShellService.runCommand(
                           event.data.parameters?.command || '',
-                          { cwd: event.data.parameters?.cwd || session.workingDirectory }
+                          {
+                            cwd:
+                              event.data.parameters?.cwd ||
+                              session.workingDirectory,
+                          },
                         );
                         setBashResults((prev) => ({
                           ...prev,

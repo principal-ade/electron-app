@@ -162,7 +162,10 @@ export async function registerLinksHandlers(): Promise<void> {
         }
 
         if (!repoId || !link) {
-          return { success: false, error: 'Repository ID and link are required' };
+          return {
+            success: false,
+            error: 'Repository ID and link are required',
+          };
         }
 
         return await linksDomain.addLink(repoId, link);
@@ -183,14 +186,22 @@ export async function registerLinksHandlers(): Promise<void> {
       updates: Partial<RepositoryLink>,
     ): Promise<LinkOperationResult> => {
       try {
-        console.log('[LinksHandlers] Updating link:', linkId, 'in repository:', repoId);
+        console.log(
+          '[LinksHandlers] Updating link:',
+          linkId,
+          'in repository:',
+          repoId,
+        );
 
         if (!validateSource(event)) {
           return { success: false, error: 'Unauthorized source' };
         }
 
         if (!repoId || !linkId || !updates) {
-          return { success: false, error: 'Repository ID, link ID, and updates are required' };
+          return {
+            success: false,
+            error: 'Repository ID, link ID, and updates are required',
+          };
         }
 
         return await linksDomain.updateLink(repoId, linkId, updates);
@@ -210,14 +221,22 @@ export async function registerLinksHandlers(): Promise<void> {
       linkId: string,
     ): Promise<LinkOperationResult> => {
       try {
-        console.log('[LinksHandlers] Removing link:', linkId, 'from repository:', repoId);
+        console.log(
+          '[LinksHandlers] Removing link:',
+          linkId,
+          'from repository:',
+          repoId,
+        );
 
         if (!validateSource(event)) {
           return { success: false, error: 'Unauthorized source' };
         }
 
         if (!repoId || !linkId) {
-          return { success: false, error: 'Repository ID and link ID are required' };
+          return {
+            success: false,
+            error: 'Repository ID and link ID are required',
+          };
         }
 
         return await linksDomain.removeLink(repoId, linkId);

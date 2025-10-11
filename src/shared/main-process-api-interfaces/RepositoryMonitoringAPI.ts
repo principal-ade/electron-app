@@ -161,8 +161,8 @@ export type GitStatus = GitStatusMetadata;
 
 export interface ResourceSnapshot {
   timestamp: number;
-  memory: number;  // RSS in bytes
-  cpu: number;     // Percentage 0-100
+  memory: number; // RSS in bytes
+  cpu: number; // Percentage 0-100
 }
 
 export interface RepositoryInfo {
@@ -179,16 +179,20 @@ export interface WorkspaceChangeEventPayload {
 }
 
 export interface MonitoringStatus {
-  repositories: RepositoryInfo[];  // List of registered repositories with details
-  currentMemory: number;   // Current RSS in bytes
-  currentCpu: number;      // Current CPU percentage
-  history: ResourceSnapshot[];  // Last 30 snapshots (1 minute of data)
+  repositories: RepositoryInfo[]; // List of registered repositories with details
+  currentMemory: number; // Current RSS in bytes
+  currentCpu: number; // Current CPU percentage
+  history: ResourceSnapshot[]; // Last 30 snapshots (1 minute of data)
 }
 
 export interface RepositoryMonitoringAPI {
   getFileTree(repoPath: string): Promise<FileTree | null>;
-  getPackages(repoPath: string): Promise<{ packages: PackageLayer[]; summary: PackageSummary } | null>;
-  getRepositoryCacheSnapshot(repoPath: string): Promise<RepositoryCacheSnapshot>;
+  getPackages(
+    repoPath: string,
+  ): Promise<{ packages: PackageLayer[]; summary: PackageSummary } | null>;
+  getRepositoryCacheSnapshot(
+    repoPath: string,
+  ): Promise<RepositoryCacheSnapshot>;
   registerRepository(repoPath: string): Promise<RepositoryMonitoringResult>;
   unregisterRepository(repoPath: string): Promise<RepositoryMonitoringResult>;
   refreshRepository(repoPath: string): Promise<RepositoryMonitoringResult>;
@@ -200,9 +204,13 @@ export interface RepositoryMonitoringAPI {
   enableGitWatching(repoPath: string): Promise<RepositoryMonitoringResult>;
   disableGitWatching(repoPath: string): Promise<RepositoryMonitoringResult>;
   onGitStatusChanged(callback: (status: GitStatusMetadata) => void): () => void;
-  onWorkspaceChange(callback: (event: WorkspaceChangeEventPayload) => void): () => void;
+  onWorkspaceChange(
+    callback: (event: WorkspaceChangeEventPayload) => void,
+  ): () => void;
   onCacheSync(callback: (event: RepositoryCacheSyncEvent) => void): () => void;
   executeTool(request: ToolExecutionRequest): Promise<ToolExecutionResponse>;
   getGitRemoteInfo(repoPath: string): Promise<GitRemoteInfo | null>;
-  invalidateGitRemoteCache(repoPath: string): Promise<RepositoryMonitoringResult>;
+  invalidateGitRemoteCache(
+    repoPath: string,
+  ): Promise<RepositoryMonitoringResult>;
 }

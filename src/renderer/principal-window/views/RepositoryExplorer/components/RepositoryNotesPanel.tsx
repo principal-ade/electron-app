@@ -32,12 +32,15 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      const response = await RepositoryNotesService.getNotesForPath(repositoryPath);
+      const response =
+        await RepositoryNotesService.getNotesForPath(repositoryPath);
 
       if (response && Array.isArray(response.notes)) {
         // Handle the nested note structure where each item has a 'note' property
         const processedNotes = response.notes
-          .filter((item: NoteWrapper) => item.note && typeof item.note === 'object')
+          .filter(
+            (item: NoteWrapper) => item.note && typeof item.note === 'object',
+          )
           .map((item: NoteWrapper) => ({
             ...item.note,
             // Keep any additional properties from the wrapper if needed
@@ -75,9 +78,12 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
 
     try {
       setDeletingNoteId(noteId);
-      const success = await RepositoryNotesService.deleteNote(remoteUrl, noteId);
+      const success = await RepositoryNotesService.deleteNote(
+        remoteUrl,
+        noteId,
+      );
       if (success) {
-        setNotes(prev => prev.filter(note => note.id !== noteId));
+        setNotes((prev) => prev.filter((note) => note.id !== noteId));
       } else {
         alert('Failed to delete note');
       }
@@ -140,7 +146,9 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
         <span>Notes</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {(isLoading || notes.length > 0) && (
-            <span style={{ fontSize: theme.fontSizes[1], fontWeight: 'normal' }}>
+            <span
+              style={{ fontSize: theme.fontSizes[1], fontWeight: 'normal' }}
+            >
               {isLoading ? 'Loading...' : `${notes.length} notes`}
             </span>
           )}
@@ -224,7 +232,13 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
               fontSize: theme.fontSizes[1],
             }}
           >
-            <div style={{ marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
+            <div
+              style={{
+                marginBottom: '8px',
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
               <FileText size={32} style={{ opacity: 0.5 }} />
             </div>
             <div>No notes yet</div>
@@ -253,7 +267,9 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
               >
                 {/* Delete button */}
                 <button
-                  onClick={() => handleDeleteNote(note.id, note.gitInfo.remoteUrl || '')}
+                  onClick={() =>
+                    handleDeleteNote(note.id, note.gitInfo.remoteUrl || '')
+                  }
                   disabled={deletingNoteId === note.id}
                   style={{
                     position: 'absolute',
@@ -267,7 +283,8 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: deletingNoteId === note.id ? 'not-allowed' : 'pointer',
+                    cursor:
+                      deletingNoteId === note.id ? 'not-allowed' : 'pointer',
                     color: theme.colors.error || '#ef4444',
                     opacity: 0.7,
                     transition: 'all 0.2s',
@@ -347,7 +364,13 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
                     flexWrap: 'wrap',
                   }}
                 >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                    }}
+                  >
                     <Calendar size={10} />
                     {getRelativeTime(note.timestamp)}
                   </span>

@@ -27,7 +27,10 @@ export const actRunnerAPI: ActRunnerAPI = {
     channel: string,
     callback: (event: ActRunnerWorkflowEvent) => void,
   ): () => void {
-    const handler = (_event: IpcRendererEvent, data: ActRunnerWorkflowEvent) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      data: ActRunnerWorkflowEvent,
+    ) => {
       callback(data);
     };
 

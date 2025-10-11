@@ -3,7 +3,10 @@ import * as fs from 'fs-extra';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { ExcalidrawAPIEvents } from '../../window/main-process-api-implementations/excalidrawApi';
-import { ExcalidrawDiagram, ExcalidrawDiagramData } from '../../shared/main-process-api-interfaces/ExcalidrawAPI';
+import {
+  ExcalidrawDiagram,
+  ExcalidrawDiagramData,
+} from '../../shared/main-process-api-interfaces/ExcalidrawAPI';
 import { MemoryPalace, NodeFileSystemAdapter } from '@a24z/core-library';
 
 class ExcalidrawHandlers {
@@ -42,7 +45,9 @@ class ExcalidrawHandlers {
         } catch (parseError) {
           console.error(
             'Failed to parse index.json, creating backup and starting fresh:',
-            parseError instanceof Error ? parseError.message : String(parseError),
+            parseError instanceof Error
+              ? parseError.message
+              : String(parseError),
           );
 
           // Backup the corrupted file
@@ -214,7 +219,10 @@ class ExcalidrawHandlers {
       return { success: true };
     } catch (error) {
       console.error('Failed to save diagram:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -229,7 +237,10 @@ class ExcalidrawHandlers {
       return { success: true, data: diagram };
     } catch (error) {
       console.error('Failed to load diagram:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -258,7 +269,10 @@ class ExcalidrawHandlers {
       return { success: true, data: diagrams };
     } catch (error) {
       console.error('Failed to list diagrams:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -279,7 +293,10 @@ class ExcalidrawHandlers {
       return { success: true };
     } catch (error) {
       console.error('Failed to delete diagram:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -307,7 +324,10 @@ class ExcalidrawHandlers {
       };
     } catch (error) {
       console.error('Failed to export diagram:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -328,36 +348,62 @@ class ExcalidrawHandlers {
       }
       return this.memoryInstances.get(repositoryPath) || null;
     } catch (error) {
-      console.error('[ExcalidrawHandlers] Failed to get MemoryPalace instance:', error);
+      console.error(
+        '[ExcalidrawHandlers] Failed to get MemoryPalace instance:',
+        error,
+      );
       return null;
     }
   }
 
-  async saveAlexandriaDiagram(event: IpcMainInvokeEvent, name: string, data: ExcalidrawDiagramData, repositoryPath: string) {
+  async saveAlexandriaDiagram(
+    event: IpcMainInvokeEvent,
+    name: string,
+    data: ExcalidrawDiagramData,
+    repositoryPath: string,
+  ) {
     try {
       const memory = this.getMemoryInstance(repositoryPath);
       if (!memory) {
-        return { success: false, error: 'Failed to initialize Alexandria storage' };
+        return {
+          success: false,
+          error: 'Failed to initialize Alexandria storage',
+        };
       }
 
       // Ensure name has .excalidraw extension
-      const fileName = name.endsWith('.excalidraw') ? name : `${name}.excalidraw`;
+      const fileName = name.endsWith('.excalidraw')
+        ? name
+        : `${name}.excalidraw`;
 
       // Save the drawing using MemoryPalace public method
       memory.saveDrawing(fileName, JSON.stringify(data, null, 2));
 
       return { success: true, fileName };
     } catch (error) {
-      console.error('[ExcalidrawHandlers] Failed to save Alexandria diagram:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      console.error(
+        '[ExcalidrawHandlers] Failed to save Alexandria diagram:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
-  async loadAlexandriaDiagram(event: IpcMainInvokeEvent, fileName: string, repositoryPath: string) {
+  async loadAlexandriaDiagram(
+    event: IpcMainInvokeEvent,
+    fileName: string,
+    repositoryPath: string,
+  ) {
     try {
       const memory = this.getMemoryInstance(repositoryPath);
       if (!memory) {
-        return { success: false, error: 'Failed to initialize Alexandria storage' };
+        return {
+          success: false,
+          error: 'Failed to initialize Alexandria storage',
+        };
       }
 
       // Load the drawing using MemoryPalace public method
@@ -371,16 +417,28 @@ class ExcalidrawHandlers {
       const data = JSON.parse(content);
       return { success: true, data };
     } catch (error) {
-      console.error('[ExcalidrawHandlers] Failed to load Alexandria diagram:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      console.error(
+        '[ExcalidrawHandlers] Failed to load Alexandria diagram:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
-  async listAlexandriaDiagrams(event: IpcMainInvokeEvent, repositoryPath: string) {
+  async listAlexandriaDiagrams(
+    event: IpcMainInvokeEvent,
+    repositoryPath: string,
+  ) {
     try {
       const memory = this.getMemoryInstance(repositoryPath);
       if (!memory) {
-        return { success: false, error: 'Failed to initialize Alexandria storage' };
+        return {
+          success: false,
+          error: 'Failed to initialize Alexandria storage',
+        };
       }
 
       // List drawings with metadata using MemoryPalace public method
@@ -388,7 +446,9 @@ class ExcalidrawHandlers {
 
       // Convert to the expected format, loading each drawing to get its actual name
       const diagrams = [];
-      for (const drawing of drawings.filter(d => d.format === 'excalidraw' || d.name.endsWith('.excalidraw'))) {
+      for (const drawing of drawings.filter(
+        (d) => d.format === 'excalidraw' || d.name.endsWith('.excalidraw'),
+      )) {
         try {
           // Load the drawing content to get the name from appState
           const content = memory.loadDrawing(drawing.name);
@@ -402,7 +462,10 @@ class ExcalidrawHandlers {
                 displayName = data.appState.name;
               }
             } catch (parseErr) {
-              console.warn(`Failed to parse drawing ${drawing.name}:`, parseErr);
+              console.warn(
+                `Failed to parse drawing ${drawing.name}:`,
+                parseErr,
+              );
             }
           }
 
@@ -421,16 +484,29 @@ class ExcalidrawHandlers {
 
       return { success: true, data: diagrams };
     } catch (error) {
-      console.error('[ExcalidrawHandlers] Failed to list Alexandria diagrams:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      console.error(
+        '[ExcalidrawHandlers] Failed to list Alexandria diagrams:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
-  async deleteAlexandriaDiagram(event: IpcMainInvokeEvent, fileName: string, repositoryPath: string) {
+  async deleteAlexandriaDiagram(
+    event: IpcMainInvokeEvent,
+    fileName: string,
+    repositoryPath: string,
+  ) {
     try {
       const memory = this.getMemoryInstance(repositoryPath);
       if (!memory) {
-        return { success: false, error: 'Failed to initialize Alexandria storage' };
+        return {
+          success: false,
+          error: 'Failed to initialize Alexandria storage',
+        };
       }
 
       // Delete the drawing using MemoryPalace public method
@@ -438,8 +514,14 @@ class ExcalidrawHandlers {
 
       return { success };
     } catch (error) {
-      console.error('[ExcalidrawHandlers] Failed to delete Alexandria diagram:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      console.error(
+        '[ExcalidrawHandlers] Failed to delete Alexandria diagram:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 

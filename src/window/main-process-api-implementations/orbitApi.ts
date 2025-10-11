@@ -34,7 +34,10 @@ export const orbitAPI: OrbitAPI = {
   /**
    * Join a signaling room for collaboration
    */
-  joinRoom: async (token: string, repoUrl: string): Promise<OrbitJoinResponse> => {
+  joinRoom: async (
+    token: string,
+    repoUrl: string,
+  ): Promise<OrbitJoinResponse> => {
     return ipcRenderer.invoke('orbit:joinRoom', token, repoUrl);
   },
 

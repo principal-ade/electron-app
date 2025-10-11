@@ -160,7 +160,8 @@ try {
     minimize: () => ipcRenderer.send('window-minimize'),
     maximize: () => ipcRenderer.send('window-maximize'),
     close: () => ipcRenderer.send('window-close'),
-    closeWithConfirmation: () => ipcRenderer.invoke('window-close-with-confirmation'),
+    closeWithConfirmation: () =>
+      ipcRenderer.invoke('window-close-with-confirmation'),
     isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
     onMaximizeChange: (callback: (isMaximized: boolean) => void) => {
       ipcRenderer.on('window-maximized-changed', (_, isMaximized) =>

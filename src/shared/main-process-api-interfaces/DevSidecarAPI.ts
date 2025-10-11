@@ -65,7 +65,8 @@ export interface RestartDevSidecarServerPayload {
   newPort?: number;
 }
 
-export interface DevSidecarServerStatusResponse extends DevServerStatusPayload {}
+export interface DevSidecarServerStatusResponse
+  extends DevServerStatusPayload {}
 
 export interface DevSidecarAPI {
   createWindow: (
@@ -102,9 +103,7 @@ export interface DevSidecarAPI {
   onServerError: (
     listener: (payload: DevSidecarServerStatusResponse) => void,
   ) => () => void;
-  onServerOutput: (
-    listener: (entry: DevServerLogEntry) => void,
-  ) => () => void;
+  onServerOutput: (listener: (entry: DevServerLogEntry) => void) => () => void;
   onLogsToggled: (
     listener: (payload: { sessionId: string; visible: boolean }) => void,
   ) => () => void;

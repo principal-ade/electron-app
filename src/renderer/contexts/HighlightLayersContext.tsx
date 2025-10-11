@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useCallback, useState, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useState,
+  ReactNode,
+} from 'react';
 
 export interface HighlightItem {
   path: string;
@@ -31,7 +37,8 @@ interface HighlightLayersContextValue {
   getLayer: (id: string) => HighlightLayer | undefined;
 }
 
-const HighlightLayersContext = createContext<HighlightLayersContextValue | null>(null);
+const HighlightLayersContext =
+  createContext<HighlightLayersContextValue | null>(null);
 
 interface HighlightLayersProviderProps {
   children: ReactNode;
@@ -43,7 +50,9 @@ interface HighlightLayersProviderProps {
  * Components can independently register their highlight layers (search results,
  * git changes, packages, notes, etc.) and the city visualization consumes them all.
  */
-export function HighlightLayersProvider({ children }: HighlightLayersProviderProps) {
+export function HighlightLayersProvider({
+  children,
+}: HighlightLayersProviderProps) {
   const [layers, setLayers] = useState<Map<string, HighlightLayer>>(new Map());
 
   const getAllLayers = useCallback(() => {
@@ -51,16 +60,19 @@ export function HighlightLayersProvider({ children }: HighlightLayersProviderPro
   }, [layers]);
 
   // These callbacks don't need layers in dependencies since they use setLayers with updater function
-  const registerLayer = useCallback((id: string, layerData: Omit<HighlightLayer, 'id'>) => {
-    setLayers(prev => {
-      const next = new Map(prev);
-      next.set(id, { ...layerData, id });
-      return next;
-    });
-  }, []); // No dependencies - stable reference
+  const registerLayer = useCallback(
+    (id: string, layerData: Omit<HighlightLayer, 'id'>) => {
+      setLayers((prev) => {
+        const next = new Map(prev);
+        next.set(id, { ...layerData, id });
+        return next;
+      });
+    },
+    [],
+  ); // No dependencies - stable reference
 
   const unregisterLayer = useCallback((id: string) => {
-    setLayers(prev => {
+    setLayers((prev) => {
       const next = new Map(prev);
       next.delete(id);
       return next;
@@ -68,7 +80,7 @@ export function HighlightLayersProvider({ children }: HighlightLayersProviderPro
   }, []); // No dependencies - stable reference
 
   const setLayerEnabled = useCallback((id: string, enabled: boolean) => {
-    setLayers(prev => {
+    setLayers((prev) => {
       const layer = prev.get(id);
       if (!layer) return prev;
 
@@ -78,9 +90,12 @@ export function HighlightLayersProvider({ children }: HighlightLayersProviderPro
     });
   }, []); // No dependencies - stable reference
 
-  const getLayer = useCallback((id: string) => {
-    return layers.get(id);
-  }, [layers]);
+  const getLayer = useCallback(
+    (id: string) => {
+      return layers.get(id);
+    },
+    [layers],
+  );
 
   const value: HighlightLayersContextValue = {
     getAllLayers,
@@ -128,7 +143,9 @@ export function HighlightLayersProvider({ children }: HighlightLayersProviderPro
 export function useHighlightLayers(): HighlightLayersContextValue {
   const context = useContext(HighlightLayersContext);
   if (!context) {
-    throw new Error('useHighlightLayers must be used within a HighlightLayersProvider');
+    throw new Error(
+      'useHighlightLayers must be used within a HighlightLayersProvider',
+    );
   }
   return context;
 }

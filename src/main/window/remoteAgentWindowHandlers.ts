@@ -10,14 +10,21 @@ import {
  * Register IPC handlers for remote agent window management
  */
 export function registerRemoteAgentWindowHandlers(
-  remoteAgentWindowManager: RemoteAgentWindowManager
+  remoteAgentWindowManager: RemoteAgentWindowManager,
 ): void {
   // Open remote agent
   ipcMain.handle(
     RemoteAgentWindowEvent.OPEN_REMOTE_AGENT,
-    async (event, config: RemoteAgentConfig, options?: RemoteAgentWindowOptions) => {
+    async (
+      event,
+      config: RemoteAgentConfig,
+      options?: RemoteAgentWindowOptions,
+    ) => {
       try {
-        const agentId = await remoteAgentWindowManager.openRemoteAgent(config, options);
+        const agentId = await remoteAgentWindowManager.openRemoteAgent(
+          config,
+          options,
+        );
         return { success: true, agentId };
       } catch (error) {
         console.error('Failed to open remote agent:', error);
@@ -26,7 +33,7 @@ export function registerRemoteAgentWindowHandlers(
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    }
+    },
   );
 
   // Close remote agent
@@ -43,7 +50,7 @@ export function registerRemoteAgentWindowHandlers(
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    }
+    },
   );
 
   // Focus remote agent
@@ -60,7 +67,7 @@ export function registerRemoteAgentWindowHandlers(
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    }
+    },
   );
 
   // List remote agents
@@ -91,7 +98,7 @@ export function registerRemoteAgentWindowHandlers(
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    }
+    },
   );
 
   // Send message to remote agent
@@ -108,7 +115,7 @@ export function registerRemoteAgentWindowHandlers(
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    }
+    },
   );
 
   // Switch to agent
@@ -125,7 +132,7 @@ export function registerRemoteAgentWindowHandlers(
           error: error instanceof Error ? error.message : 'Unknown error',
         };
       }
-    }
+    },
   );
 
   // Get active agent ID

@@ -77,5 +77,4 @@ export class ElectronFileSystemAdapter implements FileSystemAdapter {
       return null;
     }
   }
-
 }

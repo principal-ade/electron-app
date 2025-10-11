@@ -2,7 +2,10 @@ import React, { useEffect } from 'react';
 import { Bot, Lock, Unlock, Wand2 } from 'lucide-react';
 
 import {
-  AgentInfo, getAgentInfo, SupportedAgent, } from '@principal-ai/agent-monitoring';
+  AgentInfo,
+  getAgentInfo,
+  SupportedAgent,
+} from '@principal-ai/agent-monitoring';
 
 import type { Theme } from '@a24z/industry-theme';
 import { useTheme } from '@a24z/industry-theme';
@@ -651,8 +654,9 @@ export const DetailedConfigurationView: React.FC<
                   OpenCode Plugin System
                 </h4>
                 <p className="text-sm text-slate-400 mb-4">
-                  OpenCode uses a plugin-based monitoring system instead of traditional hooks.
-                  The plugin provides better integration and performance.
+                  OpenCode uses a plugin-based monitoring system instead of
+                  traditional hooks. The plugin provides better integration and
+                  performance.
                 </p>
                 <div
                   className="flex items-center gap-2 p-3 rounded-md"
@@ -676,7 +680,8 @@ export const DetailedConfigurationView: React.FC<
                 </div>
                 {!agentStatus?.hasHooks && (
                   <p className="text-xs text-slate-500 mt-3">
-                    To install the plugin, use the OpenCode extension manager or run:
+                    To install the plugin, use the OpenCode extension manager or
+                    run:
                     <code className="block mt-1 p-2 bg-black/20 rounded text-blue-400">
                       opencode --install-plugin principal-monitoring
                     </code>

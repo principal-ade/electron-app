@@ -33,8 +33,12 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
 }) => {
   const { theme } = useTheme();
   const [showDropdown, setShowDropdown] = useState(false);
-  const [availableSources, setAvailableSources] = useState<FileTreeSource[]>([]);
-  const [customAvatarUrls, setCustomAvatarUrls] = useState<Record<string, string>>({});
+  const [availableSources, setAvailableSources] = useState<FileTreeSource[]>(
+    [],
+  );
+  const [customAvatarUrls, setCustomAvatarUrls] = useState<
+    Record<string, string>
+  >({});
 
   // Initialize available sources
   useEffect(() => {
@@ -49,7 +53,9 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
       if (repository?.localClones) {
         for (const clone of repository.localClones) {
           if (clone.customAvatarPath) {
-            const url = await RepositoryService.getAvatarUrl(clone.customAvatarPath);
+            const url = await RepositoryService.getAvatarUrl(
+              clone.customAvatarPath,
+            );
             if (url) urls[clone.path] = url;
           }
         }
@@ -75,8 +81,10 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
 
   if (!selectedSource) return null;
 
-  const sourceName = SourceSelectionService.getSourceDisplayName(selectedSource);
-  const sourceType = SourceSelectionService.getSourceTypeDisplayName(selectedSource);
+  const sourceName =
+    SourceSelectionService.getSourceDisplayName(selectedSource);
+  const sourceType =
+    SourceSelectionService.getSourceTypeDisplayName(selectedSource);
 
   return (
     <div
@@ -118,7 +126,7 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
               <RepositoryAvatar
                 repository={repository}
                 localClone={repository.localClones?.find(
-                  (c) => c.path === selectedSource.location
+                  (c) => c.path === selectedSource.location,
                 )}
                 customAvatarUrl={customAvatarUrls[selectedSource.location]}
                 size={12}
@@ -155,8 +163,10 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
             }}
           >
             {availableSources.map((source) => {
-              const displayName = SourceSelectionService.getSourceDisplayName(source);
-              const sourceTypeName = SourceSelectionService.getSourceTypeDisplayName(source);
+              const displayName =
+                SourceSelectionService.getSourceDisplayName(source);
+              const sourceTypeName =
+                SourceSelectionService.getSourceTypeDisplayName(source);
               const isCurrentSource = selectedSource?.id === source.id;
 
               return (
@@ -166,7 +176,7 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
                     if (!isCurrentSource) {
                       SourceSelectionService.setSelectedSource(
                         repository.remoteUrl,
-                        source.id
+                        source.id,
                       );
                       onSourceSelect?.(source);
                     }
@@ -189,7 +199,8 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
                   }}
                   onMouseEnter={(e) => {
                     if (!isCurrentSource) {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundSecondary;
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -198,13 +209,19 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
                     }
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
                     {source.type === 'local' ? (
                       customAvatarUrls[source.location] ? (
                         <RepositoryAvatar
                           repository={repository}
                           localClone={repository.localClones?.find(
-                            (c) => c.path === source.location
+                            (c) => c.path === source.location,
                           )}
                           customAvatarUrl={customAvatarUrls[source.location]}
                           size={14}
@@ -216,7 +233,13 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
                     ) : (
                       <GitBranch size={14} />
                     )}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                      }}
+                    >
                       <span>{displayName}</span>
                       <span
                         style={{
@@ -229,7 +252,9 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
                       </span>
                     </div>
                   </div>
-                  {isCurrentSource && <Check size={12} color={theme.colors.primary} />}
+                  {isCurrentSource && (
+                    <Check size={12} color={theme.colors.primary} />
+                  )}
                 </button>
               );
             })}
@@ -253,7 +278,8 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
             transition: 'background-color 0.2s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
@@ -280,7 +306,8 @@ export const TitlebarSourceSelector: React.FC<TitlebarSourceSelectorProps> = ({
             transition: 'background-color 0.2s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';

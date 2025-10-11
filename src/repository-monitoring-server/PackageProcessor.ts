@@ -29,7 +29,10 @@ class WorkerFileSystemAdapter implements FileSystemAdapter {
       const content = await fs.readFile(absolutePath, 'utf-8');
       return { content };
     } catch (error) {
-      console.error(`[WorkerFileSystemAdapter] Failed to read ${filePath}:`, error);
+      console.error(
+        `[WorkerFileSystemAdapter] Failed to read ${filePath}:`,
+        error,
+      );
       return null;
     }
   }
@@ -56,7 +59,10 @@ class WorkerFileSystemAdapter implements FileSystemAdapter {
       const entries = await fs.readdir(absolutePath);
       return entries;
     } catch (error) {
-      console.error(`[WorkerFileSystemAdapter] Failed to read directory ${dirPath}:`, error);
+      console.error(
+        `[WorkerFileSystemAdapter] Failed to read directory ${dirPath}:`,
+        error,
+      );
       return [];
     }
   }
@@ -78,8 +84,14 @@ class WorkerFileSystemAdapter implements FileSystemAdapter {
   async buildFilteredFileTree(
     _directoryPath: string,
     _patterns?: string[],
-    _sourceDirectory?: string
-  ): Promise<{ paths: string[]; stats?: Map<string, { size: number; isDirectory: boolean; lastModified: Date }> }> {
+    _sourceDirectory?: string,
+  ): Promise<{
+    paths: string[];
+    stats?: Map<
+      string,
+      { size: number; isDirectory: boolean; lastModified: Date }
+    >;
+  }> {
     // This method is not used by PackageLayerModule.discoverPackages
     // It's only used in other contexts, so we provide a stub implementation
     return { paths: [] };
@@ -101,7 +113,7 @@ export class PackageProcessor {
    */
   async extractPackages(
     fileTree: FileTree,
-    repoPath: string
+    repoPath: string,
   ): Promise<PackageLayer[]> {
     try {
       // Create file reader adapter for this repository
@@ -114,10 +126,13 @@ export class PackageProcessor {
       };
 
       // Discover packages using the standard module
-      const packages = await this.packageModule.discoverPackages(fileTree, fileReader);
+      const packages = await this.packageModule.discoverPackages(
+        fileTree,
+        fileReader,
+      );
 
       console.info(
-        `[PackageProcessor] Found ${packages.length} packages in ${repoPath}`
+        `[PackageProcessor] Found ${packages.length} packages in ${repoPath}`,
       );
 
       return packages;
@@ -134,40 +149,40 @@ export class PackageProcessor {
    */
   async getPackageSummary(packages: PackageLayer[]): Promise<PackageSummary> {
     // Find the root package (path is empty string for root)
-    const rootPackage = packages.find(
-      p => p.packageData.path === ''
-    );
+    const rootPackage = packages.find((p) => p.packageData.path === '');
 
     // Find workspace packages (everything except root)
-    const workspacePackages = packages.filter(
-      p => p.packageData.path !== ''
-    );
+    const workspacePackages = packages.filter((p) => p.packageData.path !== '');
 
     // Aggregate all dependencies
     const allDependencies = new Set<string>();
     const allDevDependencies = new Set<string>();
 
-    packages.forEach(pkg => {
+    packages.forEach((pkg) => {
       // Add regular dependencies
       if (pkg.packageData.dependencies) {
-        Object.keys(pkg.packageData.dependencies).forEach(dep => allDependencies.add(dep));
+        Object.keys(pkg.packageData.dependencies).forEach((dep) =>
+          allDependencies.add(dep),
+        );
       }
       // Add dev dependencies
       if (pkg.packageData.devDependencies) {
-        Object.keys(pkg.packageData.devDependencies).forEach(dep => allDevDependencies.add(dep));
+        Object.keys(pkg.packageData.devDependencies).forEach((dep) =>
+          allDevDependencies.add(dep),
+        );
       }
     });
 
     // Get available scripts/commands from root package
     const availableScripts = rootPackage?.packageData.availableCommands
-      ? rootPackage.packageData.availableCommands.map(cmd => cmd.name)
+      ? rootPackage.packageData.availableCommands.map((cmd) => cmd.name)
       : [];
 
     return {
       isMonorepo: workspacePackages.length > 0,
       rootPackageName: rootPackage?.packageData.name,
       totalPackages: packages.length,
-      workspacePackages: workspacePackages.map(p => ({
+      workspacePackages: workspacePackages.map((p) => ({
         name: p.packageData.name,
         path: p.packageData.path,
       })),

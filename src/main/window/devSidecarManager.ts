@@ -104,7 +104,8 @@ export class DevSidecarManager extends EventEmitter {
       logsView,
       activeView: 'dev-server',
       devServerState: undefined,
-      desiredUrl: payload.devServerUrl ?? `http://localhost:${DEV_SIDECAR_DEFAULT_PORT}`,
+      desiredUrl:
+        payload.devServerUrl ?? `http://localhost:${DEV_SIDECAR_DEFAULT_PORT}`,
     };
 
     this.sessions.set(sessionId, session);
@@ -177,7 +178,8 @@ export class DevSidecarManager extends EventEmitter {
       return { visible: false };
     }
 
-    const nextView = session.activeView === 'dev-server' ? 'logs' : 'dev-server';
+    const nextView =
+      session.activeView === 'dev-server' ? 'logs' : 'dev-server';
     this.showView(session, nextView);
     const visible = nextView === 'logs';
 
@@ -327,7 +329,9 @@ export class DevSidecarManager extends EventEmitter {
     }
   }
 
-  async stopServer(payload: { sessionId: string }): Promise<{ success: boolean }> {
+  async stopServer(payload: {
+    sessionId: string;
+  }): Promise<{ success: boolean }> {
     const session = this.sessions.get(payload.sessionId);
     if (!session || !session.devServerState?.process) {
       if (session?.devServerState) {
@@ -416,7 +420,10 @@ export class DevSidecarManager extends EventEmitter {
         window.removeBrowserView(devServerView);
         window.removeBrowserView(logsView);
       }
-      if (session.devServerState?.process && !session.devServerState.process.killed) {
+      if (
+        session.devServerState?.process &&
+        !session.devServerState.process.killed
+      ) {
         session.devServerState.process.kill();
       }
       this.sessions.delete(session.sessionId);
@@ -426,10 +433,7 @@ export class DevSidecarManager extends EventEmitter {
     });
   }
 
-  private showView(
-    session: DevSidecarSession,
-    view: 'dev-server' | 'logs',
-  ) {
+  private showView(session: DevSidecarSession, view: 'dev-server' | 'logs') {
     const { window, devServerView, logsView } = session;
     if (window.isDestroyed()) return;
 
@@ -449,9 +453,10 @@ export class DevSidecarManager extends EventEmitter {
     if (window.isDestroyed()) return;
 
     const bounds = window.getContentBounds();
-    const targetView = session.activeView === 'dev-server'
-      ? session.devServerView
-      : session.logsView;
+    const targetView =
+      session.activeView === 'dev-server'
+        ? session.devServerView
+        : session.logsView;
 
     targetView.setBounds({
       x: 0,
@@ -471,9 +476,7 @@ export class DevSidecarManager extends EventEmitter {
     payload: StartDevSidecarServerPayload,
   ): DevServerDescriptor {
     const defaultCommand = payload.command ?? 'npm';
-    const defaultArgs = payload.command
-      ? payload.args ?? []
-      : ['run', 'dev'];
+    const defaultArgs = payload.command ? (payload.args ?? []) : ['run', 'dev'];
     const cwd = payload.descriptor?.cwd ?? payload.projectPath;
 
     const env = {
@@ -486,7 +489,8 @@ export class DevSidecarManager extends EventEmitter {
       args: payload.descriptor?.args ?? payload.args ?? defaultArgs,
       cwd,
       env,
-      port: payload.descriptor?.port ?? payload.port ?? DEV_SIDECAR_DEFAULT_PORT,
+      port:
+        payload.descriptor?.port ?? payload.port ?? DEV_SIDECAR_DEFAULT_PORT,
       fallbackPort: payload.descriptor?.fallbackPort,
       readyPattern:
         payload.descriptor?.readyPattern ??
@@ -501,7 +505,10 @@ export class DevSidecarManager extends EventEmitter {
 
   private buildServerUrl(descriptor: DevServerDescriptor): string {
     if (descriptor.urlTemplate) {
-      return descriptor.urlTemplate.replace(':port', String(descriptor.port ?? DEV_SIDECAR_DEFAULT_PORT));
+      return descriptor.urlTemplate.replace(
+        ':port',
+        String(descriptor.port ?? DEV_SIDECAR_DEFAULT_PORT),
+      );
     }
     return `http://localhost:${descriptor.port ?? DEV_SIDECAR_DEFAULT_PORT}`;
   }
@@ -550,10 +557,7 @@ export class DevSidecarManager extends EventEmitter {
         state.logs.splice(0, state.logs.length - MAX_LOG_ENTRIES);
       }
       if (!session.logsView.webContents.isDestroyed()) {
-        session.logsView.webContents.send(
-          DevSidecarEvent.SERVER_OUTPUT,
-          entry,
-        );
+        session.logsView.webContents.send(DevSidecarEvent.SERVER_OUTPUT, entry);
       }
       sendToAllWindows(DevSidecarEvent.SERVER_OUTPUT, entry);
     }

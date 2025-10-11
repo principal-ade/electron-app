@@ -25,7 +25,7 @@ export class GitCore {
   private static execGit(
     args: string[],
     cwd: string,
-    options: { throwOnError?: boolean } = {}
+    options: { throwOnError?: boolean } = {},
   ): string {
     const { throwOnError = true } = options;
 
@@ -94,7 +94,7 @@ export class GitCore {
       const deleted: Array<{ path: string; lastModified?: string }> = [];
 
       if (statusOutput) {
-        const lines = statusOutput.split('\n').filter(line => line.trim());
+        const lines = statusOutput.split('\n').filter((line) => line.trim());
 
         for (const line of lines) {
           const status = line.substring(0, 2);
@@ -164,7 +164,10 @@ export class GitCore {
    */
   static async isGitRepository(repoPath: string): Promise<boolean> {
     try {
-      const result = this.execGit(['rev-parse', '--is-inside-work-tree'], repoPath);
+      const result = this.execGit(
+        ['rev-parse', '--is-inside-work-tree'],
+        repoPath,
+      );
       return result === 'true';
     } catch {
       return false;
@@ -189,7 +192,7 @@ export class GitCore {
    */
   static async isFSMonitorSupported(repoPath: string): Promise<boolean> {
     const version = await this.getGitVersion(repoPath);
-    const [major, minor] = version.split('.').map(n => parseInt(n, 10));
+    const [major, minor] = version.split('.').map((n) => parseInt(n, 10));
     return major > 2 || (major === 2 && minor >= 36);
   }
 
@@ -199,7 +202,7 @@ export class GitCore {
   static async enableFSMonitor(repoPath: string): Promise<boolean> {
     try {
       // Check if supported
-      if (!await this.isFSMonitorSupported(repoPath)) {
+      if (!(await this.isFSMonitorSupported(repoPath))) {
         return false;
       }
 
@@ -220,13 +223,19 @@ export class GitCore {
         try {
           this.execGit(['fsmonitor--daemon', 'start'], repoPath);
         } catch (startError) {
-          console.error(`[GitCore] Failed to start FSMonitor daemon:`, startError);
+          console.error(
+            `[GitCore] Failed to start FSMonitor daemon:`,
+            startError,
+          );
         }
       }
 
       // Verify FSMonitor actually works by checking daemon status
       try {
-        const daemonStatus = this.execGit(['fsmonitor--daemon', 'status'], repoPath);
+        const daemonStatus = this.execGit(
+          ['fsmonitor--daemon', 'status'],
+          repoPath,
+        );
 
         if (!daemonStatus.includes('is watching')) {
           // Try to stop and restart the daemon
@@ -239,7 +248,10 @@ export class GitCore {
           this.execGit(['fsmonitor--daemon', 'start'], repoPath);
 
           // Check status again
-          const newStatus = this.execGit(['fsmonitor--daemon', 'status'], repoPath);
+          const newStatus = this.execGit(
+            ['fsmonitor--daemon', 'status'],
+            repoPath,
+          );
           if (!newStatus.includes('is watching')) {
             throw new Error('FSMonitor daemon failed to start');
           }
@@ -264,7 +276,10 @@ export class GitCore {
         return false;
       }
     } catch (error) {
-      console.error(`[GitCore] Failed to enable FSMonitor for ${repoPath}:`, error);
+      console.error(
+        `[GitCore] Failed to enable FSMonitor for ${repoPath}:`,
+        error,
+      );
       return false;
     }
   }
@@ -274,7 +289,9 @@ export class GitCore {
    */
   static async isFSMonitorEnabled(repoPath: string): Promise<boolean> {
     try {
-      const value = this.execGit(['config', 'core.fsmonitor'], repoPath, { throwOnError: false });
+      const value = this.execGit(['config', 'core.fsmonitor'], repoPath, {
+        throwOnError: false,
+      });
       return value === 'builtin';
     } catch {
       return false;
@@ -286,7 +303,11 @@ export class GitCore {
    */
   static async getAheadCount(repoPath: string): Promise<number> {
     try {
-      const result = this.execGit(['rev-list', '--count', '@{u}..HEAD'], repoPath, { throwOnError: false });
+      const result = this.execGit(
+        ['rev-list', '--count', '@{u}..HEAD'],
+        repoPath,
+        { throwOnError: false },
+      );
       return result ? parseInt(result, 10) : 0;
     } catch {
       return 0;
@@ -298,7 +319,11 @@ export class GitCore {
    */
   static async getBehindCount(repoPath: string): Promise<number> {
     try {
-      const result = this.execGit(['rev-list', '--count', 'HEAD..@{u}'], repoPath, { throwOnError: false });
+      const result = this.execGit(
+        ['rev-list', '--count', 'HEAD..@{u}'],
+        repoPath,
+        { throwOnError: false },
+      );
       return result ? parseInt(result, 10) : 0;
     } catch {
       return 0;
@@ -308,12 +333,19 @@ export class GitCore {
   /**
    * Get ISO timestamp of the most recent commit on current branch
    */
-  static async getMostRecentCommitTimestamp(repoPath: string): Promise<string | null> {
+  static async getMostRecentCommitTimestamp(
+    repoPath: string,
+  ): Promise<string | null> {
     try {
-      const result = this.execGit(['log', '-1', '--format=%cI'], repoPath, { throwOnError: false });
+      const result = this.execGit(['log', '-1', '--format=%cI'], repoPath, {
+        throwOnError: false,
+      });
       return result || null;
     } catch (error) {
-      console.warn(`[GitCore] Could not get last commit time for ${repoPath}:`, error);
+      console.warn(
+        `[GitCore] Could not get last commit time for ${repoPath}:`,
+        error,
+      );
       return null;
     }
   }
@@ -323,10 +355,15 @@ export class GitCore {
    */
   static async getRemoteUrl(repoPath: string): Promise<string | null> {
     try {
-      const result = this.execGit(['remote', 'get-url', 'origin'], repoPath, { throwOnError: false });
+      const result = this.execGit(['remote', 'get-url', 'origin'], repoPath, {
+        throwOnError: false,
+      });
       return result || null;
     } catch (error) {
-      console.warn(`[GitCore] Could not get remote URL for ${repoPath}:`, error);
+      console.warn(
+        `[GitCore] Could not get remote URL for ${repoPath}:`,
+        error,
+      );
       return null;
     }
   }
@@ -341,7 +378,11 @@ export class GitCore {
     timestamp: string;
   } | null> {
     try {
-      const result = this.execGit(['log', '-1', '--format=%H%n%an%n%s%n%cI'], repoPath, { throwOnError: false });
+      const result = this.execGit(
+        ['log', '-1', '--format=%H%n%an%n%s%n%cI'],
+        repoPath,
+        { throwOnError: false },
+      );
       if (!result) return null;
 
       const lines = result.split('\n');
@@ -354,7 +395,10 @@ export class GitCore {
         timestamp: lines[3],
       };
     } catch (error) {
-      console.warn(`[GitCore] Could not get last commit details for ${repoPath}:`, error);
+      console.warn(
+        `[GitCore] Could not get last commit details for ${repoPath}:`,
+        error,
+      );
       return null;
     }
   }
@@ -381,7 +425,11 @@ export class GitCore {
 
       return {
         branch,
-        isDirty: status.unstaged.length > 0 || status.staged.length > 0 || status.untracked.length > 0 || status.deleted.length > 0,
+        isDirty:
+          status.unstaged.length > 0 ||
+          status.staged.length > 0 ||
+          status.untracked.length > 0 ||
+          status.deleted.length > 0,
         hasUntracked: status.untracked.length > 0,
         hasStaged: status.staged.length > 0,
         ahead,
@@ -389,7 +437,10 @@ export class GitCore {
         files: status, // Return the file status to avoid duplicate calls
       };
     } catch (error) {
-      console.warn(`[GitCore] Could not get detailed status for ${repoPath}:`, error);
+      console.warn(
+        `[GitCore] Could not get detailed status for ${repoPath}:`,
+        error,
+      );
       return {
         branch: 'main',
         isDirty: false,

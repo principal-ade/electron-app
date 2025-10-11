@@ -31,7 +31,8 @@ export interface CacheUpdatedEvent<K extends CacheSlice = CacheSlice> {
   entry: CacheEntry<CacheSliceDataMap[K]>;
 }
 
-interface InternalCacheEntry<K extends CacheSlice = CacheSlice> extends CacheEntry<CacheSliceDataMap[K]> {
+interface InternalCacheEntry<K extends CacheSlice = CacheSlice>
+  extends CacheEntry<CacheSliceDataMap[K]> {
   inflight?: Promise<CacheSliceDataMap[K]>;
 }
 
@@ -59,7 +60,10 @@ function stableStringify(value: unknown): string {
     .sort(([a], [b]) => a.localeCompare(b));
 
   return `{${entries
-    .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`)
+    .map(
+      ([key, entryValue]) =>
+        `${JSON.stringify(key)}:${stableStringify(entryValue)}`,
+    )
     .join(',')}}`;
 }
 
@@ -69,9 +73,15 @@ function defaultHash(payload: unknown): string {
 
 function serializeError(error: unknown): CacheError {
   if (error && typeof error === 'object') {
-    const typed = error as { message?: unknown; stack?: unknown; name?: unknown; code?: unknown };
+    const typed = error as {
+      message?: unknown;
+      stack?: unknown;
+      name?: unknown;
+      code?: unknown;
+    };
     return {
-      message: typeof typed.message === 'string' ? typed.message : 'Unknown error',
+      message:
+        typeof typed.message === 'string' ? typed.message : 'Unknown error',
       name: typeof typed.name === 'string' ? typed.name : undefined,
       stack: typeof typed.stack === 'string' ? typed.stack : undefined,
       code:
@@ -117,7 +127,9 @@ export class RepositoryCacheRegistry extends EventEmitter {
   ): this;
   override on(
     event: string | symbol,
-    listener: ((payload: CacheUpdatedEvent) => void) | ((...args: unknown[]) => void),
+    listener:
+      | ((payload: CacheUpdatedEvent) => void)
+      | ((...args: unknown[]) => void),
   ): this {
     return super.on(event, listener);
   }
@@ -128,7 +140,9 @@ export class RepositoryCacheRegistry extends EventEmitter {
   ): this;
   override once(
     event: string | symbol,
-    listener: ((payload: CacheUpdatedEvent) => void) | ((...args: unknown[]) => void),
+    listener:
+      | ((payload: CacheUpdatedEvent) => void)
+      | ((...args: unknown[]) => void),
   ): this {
     return super.once(event, listener);
   }
@@ -139,7 +153,9 @@ export class RepositoryCacheRegistry extends EventEmitter {
   ): this;
   override off(
     event: string | symbol,
-    listener: ((payload: CacheUpdatedEvent) => void) | ((...args: unknown[]) => void),
+    listener:
+      | ((payload: CacheUpdatedEvent) => void)
+      | ((...args: unknown[]) => void),
   ): this {
     return super.off(event, listener);
   }
@@ -147,7 +163,10 @@ export class RepositoryCacheRegistry extends EventEmitter {
   /**
    * Returns the current cache entry for a repository slice if available.
    */
-  get<K extends CacheSlice>(repoPath: string, slice: K): CacheEntry<CacheSliceDataMap[K]> | undefined {
+  get<K extends CacheSlice>(
+    repoPath: string,
+    slice: K,
+  ): CacheEntry<CacheSliceDataMap[K]> | undefined {
     const repoCache = this.cache.get(repoPath);
     if (!repoCache) {
       return undefined;
@@ -190,7 +209,9 @@ export class RepositoryCacheRegistry extends EventEmitter {
     await this.scheduleRebuild(repoPath, slice, builder);
     const refreshed = this.get(repoPath, slice);
     if (!refreshed) {
-      throw new Error(`Cache entry missing after rebuild for ${repoPath}:${slice}`);
+      throw new Error(
+        `Cache entry missing after rebuild for ${repoPath}:${slice}`,
+      );
     }
 
     return refreshed as CacheEntry<CacheSliceDataMap[K]>;
@@ -222,7 +243,10 @@ export class RepositoryCacheRegistry extends EventEmitter {
           throw error;
         }
       }).finally(() => {
-        const latest = this.ensureEntry(repoPath, slice) as InternalCacheEntry<K>;
+        const latest = this.ensureEntry(
+          repoPath,
+          slice,
+        ) as InternalCacheEntry<K>;
         delete latest.inflight;
       });
 
@@ -253,7 +277,10 @@ export class RepositoryCacheRegistry extends EventEmitter {
   /**
    * Invalidates the cache slice, forcing consumers to refetch data.
    */
-  invalidate<K extends CacheSlice>(repoPath: string, slice: K): CacheEntry<CacheSliceDataMap[K]> {
+  invalidate<K extends CacheSlice>(
+    repoPath: string,
+    slice: K,
+  ): CacheEntry<CacheSliceDataMap[K]> {
     const entry = this.ensureEntry(repoPath, slice) as InternalCacheEntry<K>;
     entry.version = this.bumpVersion(repoPath, slice);
     entry.timestamp = this.now();
@@ -261,11 +288,18 @@ export class RepositoryCacheRegistry extends EventEmitter {
     delete entry.hash;
     delete entry.error;
     delete entry.inflight;
-    this.emit('cacheUpdated', { repoPath, slice, entry: { ...entry } } satisfies CacheUpdatedEvent<K>);
+    this.emit('cacheUpdated', {
+      repoPath,
+      slice,
+      entry: { ...entry },
+    } satisfies CacheUpdatedEvent<K>);
     return { ...entry };
   }
 
-  private ensureEntry<K extends CacheSlice>(repoPath: string, slice: K): InternalCacheEntry<K> {
+  private ensureEntry<K extends CacheSlice>(
+    repoPath: string,
+    slice: K,
+  ): InternalCacheEntry<K> {
     let repoCache = this.cache.get(repoPath);
     if (!repoCache) {
       repoCache = new Map();
@@ -299,10 +333,18 @@ export class RepositoryCacheRegistry extends EventEmitter {
     delete entry.error;
     // Exclude inflight promise when emitting to ensure structured clone compatibility
     const { inflight: _inflight, ...serializable } = entry;
-    this.emit('cacheUpdated', { repoPath, slice, entry: serializable } satisfies CacheUpdatedEvent<K>);
+    this.emit('cacheUpdated', {
+      repoPath,
+      slice,
+      entry: serializable,
+    } satisfies CacheUpdatedEvent<K>);
   }
 
-  private applyError<K extends CacheSlice>(repoPath: string, slice: K, error: unknown): void {
+  private applyError<K extends CacheSlice>(
+    repoPath: string,
+    slice: K,
+    error: unknown,
+  ): void {
     const entry = this.ensureEntry(repoPath, slice) as InternalCacheEntry<K>;
     entry.version = this.bumpVersion(repoPath, slice);
     entry.timestamp = this.now();
@@ -311,7 +353,11 @@ export class RepositoryCacheRegistry extends EventEmitter {
     delete entry.hash;
     // Exclude inflight promise when emitting to ensure structured clone compatibility
     const { inflight: _inflight2, ...serializable } = entry;
-    this.emit('cacheUpdated', { repoPath, slice, entry: serializable } satisfies CacheUpdatedEvent<K>);
+    this.emit('cacheUpdated', {
+      repoPath,
+      slice,
+      entry: serializable,
+    } satisfies CacheUpdatedEvent<K>);
   }
 
   private enqueueBuild(task: BuildTask): Promise<void> {
@@ -338,7 +384,10 @@ export class RepositoryCacheRegistry extends EventEmitter {
   }
 
   private processQueue(): void {
-    while (this.activeBuilds < this.options.concurrency && this.buildQueue.length > 0) {
+    while (
+      this.activeBuilds < this.options.concurrency &&
+      this.buildQueue.length > 0
+    ) {
       const next = this.buildQueue.shift();
       if (next) {
         void next();
@@ -365,8 +414,12 @@ export class RepositoryCacheRegistry extends EventEmitter {
     return repoVersions.get(slice) ?? 0;
   }
 
-  private bumpVersion<K extends CacheSlice>(repoPath: string, slice: K): number {
-    const repoVersions = this.versions.get(repoPath) ?? new Map<CacheSlice, number>();
+  private bumpVersion<K extends CacheSlice>(
+    repoPath: string,
+    slice: K,
+  ): number {
+    const repoVersions =
+      this.versions.get(repoPath) ?? new Map<CacheSlice, number>();
     this.versions.set(repoPath, repoVersions);
     const nextVersion = (repoVersions.get(slice) ?? 0) + 1;
     repoVersions.set(slice, nextVersion);

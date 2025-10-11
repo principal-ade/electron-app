@@ -12,7 +12,10 @@ import type { PackageLayer } from '@principal-ai/codebase-composition';
 import { FileTreeBuilder } from './FileTreeBuilder';
 import { PackageProcessor } from './PackageProcessor';
 import { GitCore } from '../shared/repository-core/GitCore';
-import { RepositoryCacheRegistry, type CacheUpdatedEvent } from './cache/RepositoryCacheRegistry';
+import {
+  RepositoryCacheRegistry,
+  type CacheUpdatedEvent,
+} from './cache/RepositoryCacheRegistry';
 import type {
   RepositoryState,
   CachedFileTree,
@@ -38,11 +41,15 @@ export class RepositoryMonitoringServer {
   private fileTreeCache: Map<string, CachedFileTree> = new Map();
   private fileTreeBuilder: FileTreeBuilder;
   private packageProcessor: PackageProcessor;
-  private packageCache: Map<string, { packages: PackageLayer[]; summary: PackageSummary; timestamp: number }> = new Map();
+  private packageCache: Map<
+    string,
+    { packages: PackageLayer[]; summary: PackageSummary; timestamp: number }
+  > = new Map();
   private gitWatcherAdapter: GitWatcherAdapter;
   private gitStatusRefreshTimers: Map<string, NodeJS.Timeout> = new Map();
   private cacheRegistry: RepositoryCacheRegistry;
-  private rebuildTimers: Map<string, Map<CacheSlice, NodeJS.Timeout>> = new Map();
+  private rebuildTimers: Map<string, Map<CacheSlice, NodeJS.Timeout>> =
+    new Map();
 
   constructor() {
     this.fileTreeBuilder = new FileTreeBuilder();
@@ -59,13 +66,19 @@ export class RepositoryMonitoringServer {
     });
 
     // Subscribe to git state events from the library
-    this.gitWatcherAdapter.on(MonitoringInternalEvent.GIT_STATE_EVENT, (payload: GitStateEventPayload) => {
-      this.handleGitStateEvent(payload);
-    });
+    this.gitWatcherAdapter.on(
+      MonitoringInternalEvent.GIT_STATE_EVENT,
+      (payload: GitStateEventPayload) => {
+        this.handleGitStateEvent(payload);
+      },
+    );
 
-    this.gitWatcherAdapter.on(MonitoringInternalEvent.WORKSPACE_CHANGED, (event: WorkspaceChangeEventPayload) => {
-      this.handleWorkspaceChangeEvent(event);
-    });
+    this.gitWatcherAdapter.on(
+      MonitoringInternalEvent.WORKSPACE_CHANGED,
+      (event: WorkspaceChangeEventPayload) => {
+        this.handleWorkspaceChangeEvent(event);
+      },
+    );
   }
 
   /**
@@ -88,7 +101,10 @@ export class RepositoryMonitoringServer {
           state.lastLocalChange = lastCommit;
         }
       } catch (error) {
-        console.warn(`[RepositoryMonitoring] Could not determine initial commit time for ${path}:`, error);
+        console.warn(
+          `[RepositoryMonitoring] Could not determine initial commit time for ${path}:`,
+          error,
+        );
       }
 
       this.repositories.set(path, state);
@@ -136,7 +152,10 @@ export class RepositoryMonitoringServer {
 
       case 'packages':
         if (entry.data) {
-          const packagesData = entry.data as { packages: PackageLayer[]; summary: PackageSummary };
+          const packagesData = entry.data as {
+            packages: PackageLayer[];
+            summary: PackageSummary;
+          };
           this.packageCache.set(repoPath, {
             packages: packagesData.packages,
             summary: packagesData.summary,
@@ -170,7 +189,14 @@ export class RepositoryMonitoringServer {
   }
 
   private toGitStatusMetadata(status: GitStatusWithFiles): GitStatusMetadata {
-    const { modifiedFiles: _modifiedFiles, untrackedFiles: _untrackedFiles, stagedFiles: _stagedFiles, createdFiles: _createdFiles, deletedFiles: _deletedFiles, ...metadata } = status;
+    const {
+      modifiedFiles: _modifiedFiles,
+      untrackedFiles: _untrackedFiles,
+      stagedFiles: _stagedFiles,
+      createdFiles: _createdFiles,
+      deletedFiles: _deletedFiles,
+      ...metadata
+    } = status;
     return metadata;
   }
 
@@ -186,7 +212,11 @@ export class RepositoryMonitoringServer {
     }
   }
 
-  private scheduleCacheRebuild<K extends CacheSlice>(repoPath: string, slice: K, delay = this.getRebuildDelay(slice)): void {
+  private scheduleCacheRebuild<K extends CacheSlice>(
+    repoPath: string,
+    slice: K,
+    delay = this.getRebuildDelay(slice),
+  ): void {
     let repoTimers = this.rebuildTimers.get(repoPath);
     if (!repoTimers) {
       repoTimers = new Map();
@@ -198,17 +228,22 @@ export class RepositoryMonitoringServer {
       clearTimeout(existingTimer);
     }
 
-    const timer = setTimeout(() => {
-      repoTimers?.delete(slice);
-      void this.cacheRegistry
-        .scheduleRebuild(repoPath, slice, () => this.buildCacheSlice(repoPath, slice))
-        .catch(error => {
-          console.error(
-            `[RepositoryMonitoring] Failed to rebuild cache slice ${slice} for ${repoPath}:`,
-            error,
-          );
-        });
-    }, Math.max(0, delay));
+    const timer = setTimeout(
+      () => {
+        repoTimers?.delete(slice);
+        void this.cacheRegistry
+          .scheduleRebuild(repoPath, slice, () =>
+            this.buildCacheSlice(repoPath, slice),
+          )
+          .catch((error) => {
+            console.error(
+              `[RepositoryMonitoring] Failed to rebuild cache slice ${slice} for ${repoPath}:`,
+              error,
+            );
+          });
+      },
+      Math.max(0, delay),
+    );
 
     repoTimers.set(slice, timer);
   }
@@ -219,13 +254,21 @@ export class RepositoryMonitoringServer {
   ): Promise<CacheSliceDataMap[K]> {
     switch (slice) {
       case 'gitStatus':
-        return (await this.buildGitStatusSlice(repoPath)) as CacheSliceDataMap[K];
+        return (await this.buildGitStatusSlice(
+          repoPath,
+        )) as CacheSliceDataMap[K];
       case 'fileTree':
-        return (await this.buildFileTreeSlice(repoPath)) as CacheSliceDataMap[K];
+        return (await this.buildFileTreeSlice(
+          repoPath,
+        )) as CacheSliceDataMap[K];
       case 'packages':
-        return (await this.buildPackagesSlice(repoPath)) as CacheSliceDataMap[K];
+        return (await this.buildPackagesSlice(
+          repoPath,
+        )) as CacheSliceDataMap[K];
       case 'gitRemote':
-        return (await this.buildGitRemoteSlice(repoPath)) as CacheSliceDataMap[K];
+        return (await this.buildGitRemoteSlice(
+          repoPath,
+        )) as CacheSliceDataMap[K];
       default: {
         const exhaustive: never = slice;
         throw new Error(`Unsupported cache slice: ${exhaustive}`);
@@ -244,32 +287,45 @@ export class RepositoryMonitoringServer {
   }
 
   private async buildPackagesSlice(repoPath: string) {
-    const fileTreeEntry = await this.cacheRegistry.getOrBuild(repoPath, 'fileTree', () =>
-      this.buildFileTreeSlice(repoPath),
+    const fileTreeEntry = await this.cacheRegistry.getOrBuild(
+      repoPath,
+      'fileTree',
+      () => this.buildFileTreeSlice(repoPath),
     );
 
     if (!fileTreeEntry.data) {
       throw new Error(`File tree unavailable for packages slice: ${repoPath}`);
     }
 
-    const packages = await this.packageProcessor.extractPackages(fileTreeEntry.data, repoPath);
+    const packages = await this.packageProcessor.extractPackages(
+      fileTreeEntry.data,
+      repoPath,
+    );
     const summary = await this.packageProcessor.getPackageSummary(packages);
 
     return { packages, summary };
   }
 
-  private async buildGitStatusSlice(repoPath: string): Promise<GitStatusWithFiles> {
+  private async buildGitStatusSlice(
+    repoPath: string,
+  ): Promise<GitStatusWithFiles> {
     const state = this.repositories.get(repoPath);
 
     if (state && !state.lastLocalChange) {
-      const initialCommit = await GitCore.getMostRecentCommitTimestamp(repoPath);
+      const initialCommit =
+        await GitCore.getMostRecentCommitTimestamp(repoPath);
       if (initialCommit) {
         state.lastLocalChange = initialCommit;
       }
     }
 
     const detailedStatus = await GitCore.getDetailedStatus(repoPath);
-    const fileStatus = detailedStatus.files || { staged: [], unstaged: [], untracked: [], deleted: [] };
+    const fileStatus = detailedStatus.files || {
+      staged: [],
+      unstaged: [],
+      untracked: [],
+      deleted: [],
+    };
 
     const status: GitStatusWithFiles = {
       repoPath,
@@ -280,12 +336,13 @@ export class RepositoryMonitoringServer {
       ahead: detailedStatus.ahead,
       behind: detailedStatus.behind,
       watchingEnabled: state?.gitWatchingEnabled || false,
-      lastChangedAt: state?.lastLocalChange || state?.lastGitStatus?.lastChangedAt,
-      modifiedFiles: fileStatus.unstaged?.map(f => f.path) || [],
-      untrackedFiles: fileStatus.untracked?.map(f => f.path) || [],
-      stagedFiles: fileStatus.staged?.map(f => f.path) || [],
-      createdFiles: fileStatus.untracked?.map(f => f.path) || [],
-      deletedFiles: fileStatus.deleted?.map(f => f.path) || [],
+      lastChangedAt:
+        state?.lastLocalChange || state?.lastGitStatus?.lastChangedAt,
+      modifiedFiles: fileStatus.unstaged?.map((f) => f.path) || [],
+      untrackedFiles: fileStatus.untracked?.map((f) => f.path) || [],
+      stagedFiles: fileStatus.staged?.map((f) => f.path) || [],
+      createdFiles: fileStatus.untracked?.map((f) => f.path) || [],
+      deletedFiles: fileStatus.deleted?.map((f) => f.path) || [],
     };
 
     if (state) {
@@ -296,20 +353,28 @@ export class RepositoryMonitoringServer {
   }
 
   private async buildGitRemoteSlice(repoPath: string): Promise<GitRemoteInfo> {
-    console.info(`[RepositoryMonitoring] Building gitRemote cache for ${repoPath}`);
+    console.info(
+      `[RepositoryMonitoring] Building gitRemote cache for ${repoPath}`,
+    );
 
     try {
       const remoteInfo = await GitRemoteService.buildRemoteInfo(repoPath);
 
-      console.info(`[RepositoryMonitoring] gitRemote cache built for ${repoPath}`, {
-        accessible: remoteInfo.accessible,
-        defaultBranch: remoteInfo.defaultBranch,
-        branchCount: remoteInfo.remoteBranches.length,
-      });
+      console.info(
+        `[RepositoryMonitoring] gitRemote cache built for ${repoPath}`,
+        {
+          accessible: remoteInfo.accessible,
+          defaultBranch: remoteInfo.defaultBranch,
+          branchCount: remoteInfo.remoteBranches.length,
+        },
+      );
 
       return remoteInfo;
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Failed to build gitRemote cache for ${repoPath}:`, error);
+      console.error(
+        `[RepositoryMonitoring] Failed to build gitRemote cache for ${repoPath}:`,
+        error,
+      );
 
       // Return fallback with just remote URL
       const remoteUrl = await GitCore.getRemoteUrl(repoPath).catch(() => null);
@@ -338,7 +403,9 @@ export class RepositoryMonitoringServer {
     };
   }
 
-  private createFallbackGitStatusWithFiles(repoPath: string): GitStatusWithFiles {
+  private createFallbackGitStatusWithFiles(
+    repoPath: string,
+  ): GitStatusWithFiles {
     const base = this.createFallbackGitStatus(repoPath);
     return {
       ...base,
@@ -356,13 +423,16 @@ export class RepositoryMonitoringServer {
   async getFileTree(path: string): Promise<FileTree | null> {
     // Check cache first
     const cached = this.fileTreeCache.get(path);
-    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) { // 5 min cache
+    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+      // 5 min cache
       return cached.tree;
     }
 
     // Build new FileTree
     try {
-      const entry = await this.cacheRegistry.getOrBuild(path, 'fileTree', () => this.buildFileTreeSlice(path));
+      const entry = await this.cacheRegistry.getOrBuild(path, 'fileTree', () =>
+        this.buildFileTreeSlice(path),
+      );
       if (entry.data) {
         this.fileTreeCache.set(path, {
           tree: entry.data,
@@ -374,7 +444,10 @@ export class RepositoryMonitoringServer {
 
       return cached?.tree ?? null;
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Failed to build FileTree for ${path}:`, error);
+      console.error(
+        `[RepositoryMonitoring] Failed to build FileTree for ${path}:`,
+        error,
+      );
       return cached?.tree ?? null;
     }
   }
@@ -382,16 +455,21 @@ export class RepositoryMonitoringServer {
   /**
    * Get packages from a repository
    */
-  async getPackages(repoPath: string): Promise<{ packages: PackageLayer[]; summary: PackageSummary } | null> {
+  async getPackages(
+    repoPath: string,
+  ): Promise<{ packages: PackageLayer[]; summary: PackageSummary } | null> {
     // Check cache first
     const cached = this.packageCache.get(repoPath);
-    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) { // 5 min cache
+    if (cached && Date.now() - cached.timestamp < 5 * 60 * 1000) {
+      // 5 min cache
       return { packages: cached.packages, summary: cached.summary };
     }
 
     try {
-      const entry = await this.cacheRegistry.getOrBuild(repoPath, 'packages', () =>
-        this.buildPackagesSlice(repoPath),
+      const entry = await this.cacheRegistry.getOrBuild(
+        repoPath,
+        'packages',
+        () => this.buildPackagesSlice(repoPath),
       );
 
       if (entry.data) {
@@ -403,29 +481,53 @@ export class RepositoryMonitoringServer {
         return entry.data;
       }
 
-      return cached ? { packages: cached.packages, summary: cached.summary } : null;
+      return cached
+        ? { packages: cached.packages, summary: cached.summary }
+        : null;
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Failed to extract packages for ${repoPath}:`, error);
-      return cached ? { packages: cached.packages, summary: cached.summary } : null;
+      console.error(
+        `[RepositoryMonitoring] Failed to extract packages for ${repoPath}:`,
+        error,
+      );
+      return cached
+        ? { packages: cached.packages, summary: cached.summary }
+        : null;
     }
   }
 
-  async getRepositoryCacheSnapshot(repoPath: string): Promise<RepositoryCacheSnapshot> {
+  async getRepositoryCacheSnapshot(
+    repoPath: string,
+  ): Promise<RepositoryCacheSnapshot> {
     await Promise.all([
       this.cacheRegistry
-        .getOrBuild(repoPath, 'gitStatus', () => this.buildGitStatusSlice(repoPath))
-        .catch(error => {
-          console.error(`[RepositoryMonitoring] Failed to warm git status slice for ${repoPath}:`, error);
+        .getOrBuild(repoPath, 'gitStatus', () =>
+          this.buildGitStatusSlice(repoPath),
+        )
+        .catch((error) => {
+          console.error(
+            `[RepositoryMonitoring] Failed to warm git status slice for ${repoPath}:`,
+            error,
+          );
         }),
       this.cacheRegistry
-        .getOrBuild(repoPath, 'fileTree', () => this.buildFileTreeSlice(repoPath))
-        .catch(error => {
-          console.error(`[RepositoryMonitoring] Failed to warm file tree slice for ${repoPath}:`, error);
+        .getOrBuild(repoPath, 'fileTree', () =>
+          this.buildFileTreeSlice(repoPath),
+        )
+        .catch((error) => {
+          console.error(
+            `[RepositoryMonitoring] Failed to warm file tree slice for ${repoPath}:`,
+            error,
+          );
         }),
       this.cacheRegistry
-        .getOrBuild(repoPath, 'packages', () => this.buildPackagesSlice(repoPath))
-        .catch(error => {
-          console.error(`[RepositoryMonitoring] Failed to warm packages slice for ${repoPath}:`, error);
+        .getOrBuild(repoPath, 'packages', () =>
+          this.buildPackagesSlice(repoPath),
+        )
+        .catch((error) => {
+          console.error(
+            `[RepositoryMonitoring] Failed to warm packages slice for ${repoPath}:`,
+            error,
+          );
         }),
     ]);
 
@@ -440,19 +542,34 @@ export class RepositoryMonitoringServer {
     this.packageCache.delete(path);
     await Promise.all([
       this.cacheRegistry
-        .scheduleRebuild(path, 'fileTree', () => this.buildCacheSlice(path, 'fileTree'))
-        .catch(error => {
-          console.error(`[RepositoryMonitoring] Failed to rebuild file tree during refresh for ${path}:`, error);
+        .scheduleRebuild(path, 'fileTree', () =>
+          this.buildCacheSlice(path, 'fileTree'),
+        )
+        .catch((error) => {
+          console.error(
+            `[RepositoryMonitoring] Failed to rebuild file tree during refresh for ${path}:`,
+            error,
+          );
         }),
       this.cacheRegistry
-        .scheduleRebuild(path, 'packages', () => this.buildCacheSlice(path, 'packages'))
-        .catch(error => {
-          console.error(`[RepositoryMonitoring] Failed to rebuild packages during refresh for ${path}:`, error);
+        .scheduleRebuild(path, 'packages', () =>
+          this.buildCacheSlice(path, 'packages'),
+        )
+        .catch((error) => {
+          console.error(
+            `[RepositoryMonitoring] Failed to rebuild packages during refresh for ${path}:`,
+            error,
+          );
         }),
       this.cacheRegistry
-        .scheduleRebuild(path, 'gitStatus', () => this.buildCacheSlice(path, 'gitStatus'))
-        .catch(error => {
-          console.error(`[RepositoryMonitoring] Failed to rebuild git status during refresh for ${path}:`, error);
+        .scheduleRebuild(path, 'gitStatus', () =>
+          this.buildCacheSlice(path, 'gitStatus'),
+        )
+        .catch((error) => {
+          console.error(
+            `[RepositoryMonitoring] Failed to rebuild git status during refresh for ${path}:`,
+            error,
+          );
         }),
     ]);
 
@@ -460,9 +577,15 @@ export class RepositoryMonitoringServer {
     try {
       const gitStatus = await this.getGitStatus(path);
       // Notify adapter about git status change
-      this.gitWatcherAdapter.emit(MonitoringInternalEvent.GIT_STATUS_CHANGED, gitStatus);
+      this.gitWatcherAdapter.emit(
+        MonitoringInternalEvent.GIT_STATUS_CHANGED,
+        gitStatus,
+      );
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Failed to refresh git status for ${path}:`, error);
+      console.error(
+        `[RepositoryMonitoring] Failed to refresh git status for ${path}:`,
+        error,
+      );
     }
   }
 
@@ -472,8 +595,10 @@ export class RepositoryMonitoringServer {
   async getGitStatus(repoPath: string): Promise<GitStatusMetadata> {
     console.info(`[RepositoryMonitoring] getGitStatus called for ${repoPath}`);
     try {
-      const entry = await this.cacheRegistry.getOrBuild(repoPath, 'gitStatus', () =>
-        this.buildGitStatusSlice(repoPath),
+      const entry = await this.cacheRegistry.getOrBuild(
+        repoPath,
+        'gitStatus',
+        () => this.buildGitStatusSlice(repoPath),
       );
 
       if (entry.data) {
@@ -487,7 +612,10 @@ export class RepositoryMonitoringServer {
 
       return this.createFallbackGitStatus(repoPath);
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Failed to get git status for ${repoPath}:`, error);
+      console.error(
+        `[RepositoryMonitoring] Failed to get git status for ${repoPath}:`,
+        error,
+      );
       return this.createFallbackGitStatus(repoPath);
     }
   }
@@ -496,10 +624,14 @@ export class RepositoryMonitoringServer {
    * Get git status with file lists
    */
   async getGitStatusWithFiles(repoPath: string): Promise<GitStatusWithFiles> {
-    console.info(`[RepositoryMonitoring] getGitStatusWithFiles called for ${repoPath}`);
+    console.info(
+      `[RepositoryMonitoring] getGitStatusWithFiles called for ${repoPath}`,
+    );
     try {
-      const entry = await this.cacheRegistry.getOrBuild(repoPath, 'gitStatus', () =>
-        this.buildGitStatusSlice(repoPath),
+      const entry = await this.cacheRegistry.getOrBuild(
+        repoPath,
+        'gitStatus',
+        () => this.buildGitStatusSlice(repoPath),
       );
 
       if (entry.data) {
@@ -508,7 +640,10 @@ export class RepositoryMonitoringServer {
 
       return this.createFallbackGitStatusWithFiles(repoPath);
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Failed to get git status with files for ${repoPath}:`, error);
+      console.error(
+        `[RepositoryMonitoring] Failed to get git status with files for ${repoPath}:`,
+        error,
+      );
       return this.createFallbackGitStatusWithFiles(repoPath);
     }
   }
@@ -517,10 +652,14 @@ export class RepositoryMonitoringServer {
    * Get git remote information for a repository
    */
   async getGitRemoteInfo(repoPath: string): Promise<GitRemoteInfo | null> {
-    console.info(`[RepositoryMonitoring] getGitRemoteInfo called for ${repoPath}`);
+    console.info(
+      `[RepositoryMonitoring] getGitRemoteInfo called for ${repoPath}`,
+    );
     try {
-      const entry = await this.cacheRegistry.getOrBuild(repoPath, 'gitRemote', () =>
-        this.buildGitRemoteSlice(repoPath),
+      const entry = await this.cacheRegistry.getOrBuild(
+        repoPath,
+        'gitRemote',
+        () => this.buildGitRemoteSlice(repoPath),
       );
 
       if (entry.data) {
@@ -529,7 +668,10 @@ export class RepositoryMonitoringServer {
 
       return null;
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Failed to get git remote info for ${repoPath}:`, error);
+      console.error(
+        `[RepositoryMonitoring] Failed to get git remote info for ${repoPath}:`,
+        error,
+      );
       return null;
     }
   }
@@ -539,17 +681,22 @@ export class RepositoryMonitoringServer {
    * This will force a fresh fetch on next access
    */
   async invalidateGitRemoteCache(repoPath: string): Promise<void> {
-    console.info(`[RepositoryMonitoring] Invalidating gitRemote cache for ${repoPath}`);
+    console.info(
+      `[RepositoryMonitoring] Invalidating gitRemote cache for ${repoPath}`,
+    );
     this.cacheRegistry.invalidate(repoPath, 'gitRemote');
 
     // Trigger background rebuild
-    await this.cacheRegistry.scheduleRebuild(
-      repoPath,
-      'gitRemote',
-      () => this.buildGitRemoteSlice(repoPath)
-    ).catch(error => {
-      console.error(`[RepositoryMonitoring] Failed to rebuild gitRemote cache for ${repoPath}:`, error);
-    });
+    await this.cacheRegistry
+      .scheduleRebuild(repoPath, 'gitRemote', () =>
+        this.buildGitRemoteSlice(repoPath),
+      )
+      .catch((error) => {
+        console.error(
+          `[RepositoryMonitoring] Failed to rebuild gitRemote cache for ${repoPath}:`,
+          error,
+        );
+      });
   }
 
   /**
@@ -569,11 +716,15 @@ export class RepositoryMonitoringServer {
       // Attempt to enable fsmonitor for improved performance information
       const fsMonitorEnabled = await GitCore.enableFSMonitor(repoPath);
       state.fsMonitorEnabled = fsMonitorEnabled;
-      const workspaceMode: 'minimal' | 'fallback' = fsMonitorEnabled ? 'minimal' : 'fallback';
+      const workspaceMode: 'minimal' | 'fallback' = fsMonitorEnabled
+        ? 'minimal'
+        : 'fallback';
       state.watchingMode = workspaceMode;
 
       // Start library-based git state and workspace event watching
-      console.info(`[RepositoryMonitoring] Starting git state event watching for ${repoPath}`);
+      console.info(
+        `[RepositoryMonitoring] Starting git state event watching for ${repoPath}`,
+      );
       await this.gitWatcherAdapter.startWatching(repoPath, workspaceMode);
       state.gitWatchingEnabled = true;
       state.isWatching = true;
@@ -581,7 +732,10 @@ export class RepositoryMonitoringServer {
       // Do initial status check
       await this.getGitStatus(repoPath);
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Failed to enable git watching for ${repoPath}:`, error);
+      console.error(
+        `[RepositoryMonitoring] Failed to enable git watching for ${repoPath}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -658,9 +812,13 @@ export class RepositoryMonitoringServer {
       try {
         // Rebuild git status in cache - this will emit CACHE_SYNC event
         // Use buildGitStatusSlice directly to force a fresh build instead of using cached data
-        await this.cacheRegistry.scheduleRebuild(repoPath, 'gitStatus', async () => {
-          return await this.buildGitStatusSlice(repoPath);
-        });
+        await this.cacheRegistry.scheduleRebuild(
+          repoPath,
+          'gitStatus',
+          async () => {
+            return await this.buildGitStatusSlice(repoPath);
+          },
+        );
 
         if (process.parentPort) {
           const status = this.cacheRegistry.get(repoPath, 'gitStatus');
@@ -673,7 +831,10 @@ export class RepositoryMonitoringServer {
           });
         }
       } catch (error) {
-        console.error(`[RepositoryMonitoring] Failed to refresh git status after workspace change for ${repoPath}:`, error);
+        console.error(
+          `[RepositoryMonitoring] Failed to refresh git status after workspace change for ${repoPath}:`,
+          error,
+        );
       }
     }, delay);
 
@@ -684,7 +845,9 @@ export class RepositoryMonitoringServer {
    * Handle git state events from the library-based watcher
    * These are specific state transitions (commit, branch-switch, merge, etc.)
    */
-  private async handleGitStateEvent(payload: GitStateEventPayload): Promise<void> {
+  private async handleGitStateEvent(
+    payload: GitStateEventPayload,
+  ): Promise<void> {
     const { event, affectedCacheFields } = payload;
 
     console.info(`[RepositoryMonitoring] Git state event received:`, {
@@ -742,10 +905,14 @@ export class RepositoryMonitoringServer {
    * Resolve dependency information by checking registered repositories
    * Returns AlexandriaEntry-like information if the dependency is found as a registered repository
    */
-  async resolveDependency(request: DependencyResolutionRequest): Promise<DependencyResolutionResult> {
+  async resolveDependency(
+    request: DependencyResolutionRequest,
+  ): Promise<DependencyResolutionResult> {
     const { dependencyId, repositoryRoot } = request;
-    
-    console.info(`[RepositoryMonitoring] Resolving dependency: ${dependencyId}`);
+
+    console.info(
+      `[RepositoryMonitoring] Resolving dependency: ${dependencyId}`,
+    );
 
     const result: DependencyResolutionResult = {
       dependencyId,
@@ -755,13 +922,19 @@ export class RepositoryMonitoringServer {
     try {
       // First, check if the dependency exists in the current repository (if provided)
       if (repositoryRoot && this.repositories.has(repositoryRoot)) {
-        const packageInfo = await this.checkDependencyInRepository(dependencyId, repositoryRoot);
+        const packageInfo = await this.checkDependencyInRepository(
+          dependencyId,
+          repositoryRoot,
+        );
         if (packageInfo) {
           result.found = true;
           result.packageInfo = packageInfo;
-          
+
           // Generate installation suggestions based on package structure
-          const suggestions = await this.generateInstallationSuggestions(dependencyId, repositoryRoot);
+          const suggestions = await this.generateInstallationSuggestions(
+            dependencyId,
+            repositoryRoot,
+          );
           if (suggestions) {
             result.suggestions = suggestions;
           }
@@ -769,7 +942,8 @@ export class RepositoryMonitoringServer {
       }
 
       // Check if the dependency matches any registered repository by name
-      const matchingRepo = await this.findRepositoryByDependencyId(dependencyId);
+      const matchingRepo =
+        await this.findRepositoryByDependencyId(dependencyId);
       if (matchingRepo) {
         result.found = true;
         result.alexandriaEntry = matchingRepo;
@@ -785,7 +959,10 @@ export class RepositoryMonitoringServer {
 
       return result;
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Error resolving dependency ${dependencyId}:`, error);
+      console.error(
+        `[RepositoryMonitoring] Error resolving dependency ${dependencyId}:`,
+        error,
+      );
       return result;
     }
   }
@@ -794,8 +971,8 @@ export class RepositoryMonitoringServer {
    * Check if a dependency exists in a specific repository's packages
    */
   private async checkDependencyInRepository(
-    dependencyId: string, 
-    repositoryPath: string
+    dependencyId: string,
+    repositoryPath: string,
   ): Promise<DependencyResolutionResult['packageInfo'] | null> {
     try {
       const packagesResult = await this.getPackages(repositoryPath);
@@ -804,7 +981,7 @@ export class RepositoryMonitoringServer {
       // Search through all packages for the dependency
       for (const pkg of packagesResult.packages) {
         const { dependencies, devDependencies } = pkg.packageData;
-        
+
         // Check regular dependencies
         if (dependencies && dependencies[dependencyId]) {
           return {
@@ -828,7 +1005,10 @@ export class RepositoryMonitoringServer {
 
       return null;
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Error checking dependency in repository:`, error);
+      console.error(
+        `[RepositoryMonitoring] Error checking dependency in repository:`,
+        error,
+      );
       return null;
     }
   }
@@ -838,7 +1018,7 @@ export class RepositoryMonitoringServer {
    * This helps identify if the dependency is actually a local/internal package
    */
   private async findRepositoryByDependencyId(
-    dependencyId: string
+    dependencyId: string,
   ): Promise<DependencyResolutionResult['alexandriaEntry'] | null> {
     try {
       // Check all registered repositories
@@ -852,7 +1032,7 @@ export class RepositoryMonitoringServer {
           if (pkg.packageData.name === dependencyId) {
             // Found a matching package! Create AlexandriaEntry-like info
             const gitInfo = await this.getBasicGitInfo(repoPath);
-            
+
             return {
               name: pkg.packageData.name || dependencyId,
               path: repoPath,
@@ -870,7 +1050,7 @@ export class RepositoryMonitoringServer {
         const repoName = repoPath.split('/').pop() || '';
         if (repoName === dependencyId || repoName.includes(dependencyId)) {
           const gitInfo = await this.getBasicGitInfo(repoPath);
-          
+
           return {
             name: repoName,
             path: repoPath,
@@ -886,7 +1066,10 @@ export class RepositoryMonitoringServer {
 
       return null;
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Error finding repository by dependency ID:`, error);
+      console.error(
+        `[RepositoryMonitoring] Error finding repository by dependency ID:`,
+        error,
+      );
       return null;
     }
   }
@@ -896,35 +1079,41 @@ export class RepositoryMonitoringServer {
    */
   private async generateInstallationSuggestions(
     dependencyId: string,
-    repositoryPath: string
+    repositoryPath: string,
   ): Promise<DependencyResolutionResult['suggestions'] | null> {
     try {
       const packagesResult = await this.getPackages(repositoryPath);
       if (!packagesResult) return null;
 
       const { packages, summary } = packagesResult;
-      
+
       // Determine package manager from available scripts
       let packageManager = 'npm'; // default
-      if (summary.availableScripts.some(script => script.includes('yarn'))) {
+      if (summary.availableScripts.some((script) => script.includes('yarn'))) {
         packageManager = 'yarn';
-      } else if (summary.availableScripts.some(script => script.includes('pnpm'))) {
+      } else if (
+        summary.availableScripts.some((script) => script.includes('pnpm'))
+      ) {
         packageManager = 'pnpm';
       }
 
       // Generate install commands
       const installCommands: string[] = [];
-      
+
       if (summary.isMonorepo && packages.length > 1) {
         // For monorepos, suggest workspace-specific installation
-        const workspacePackages = packages.filter(p => p.packageData.path !== '');
-        
+        const workspacePackages = packages.filter(
+          (p) => p.packageData.path !== '',
+        );
+
         if (workspacePackages.length > 0) {
           // Suggest the first workspace package as target
           const targetPackage = workspacePackages[0];
-          installCommands.push(`${packageManager} add ${dependencyId} --workspace=${targetPackage.packageData.name || targetPackage.packageData.path}`);
+          installCommands.push(
+            `${packageManager} add ${dependencyId} --workspace=${targetPackage.packageData.name || targetPackage.packageData.path}`,
+          );
         }
-        
+
         // Also suggest root installation
         installCommands.push(`${packageManager} add ${dependencyId}`);
       } else {
@@ -937,11 +1126,16 @@ export class RepositoryMonitoringServer {
 
       return {
         installCommands,
-        targetPackage: summary.isMonorepo ? packages.find(p => p.packageData.path !== '')?.packageData.name : undefined,
+        targetPackage: summary.isMonorepo
+          ? packages.find((p) => p.packageData.path !== '')?.packageData.name
+          : undefined,
         packageManager,
       };
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Error generating installation suggestions:`, error);
+      console.error(
+        `[RepositoryMonitoring] Error generating installation suggestions:`,
+        error,
+      );
       return null;
     }
   }
@@ -971,9 +1165,11 @@ export class RepositoryMonitoringServer {
         lastCommitHash: commitDetails?.hash,
       };
     } catch (error) {
-      console.error(`[RepositoryMonitoring] Error getting git info for ${repoPath}:`, error);
+      console.error(
+        `[RepositoryMonitoring] Error getting git info for ${repoPath}:`,
+        error,
+      );
       return null;
     }
   }
-
 }

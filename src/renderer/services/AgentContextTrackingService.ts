@@ -6,7 +6,10 @@
  */
 
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
-import type { LoadedFileTreeSource, FileTreeSource } from '@principal-ai/repository-abstraction';
+import type {
+  LoadedFileTreeSource,
+  FileTreeSource,
+} from '@principal-ai/repository-abstraction';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { AgentSessionSDKService } from '../main-process-api/AgentSessionSDKService';
 
@@ -42,7 +45,9 @@ export interface AgentSessionContext {
  */
 export class AgentContextTrackingService {
   private static sessions = new Map<string, AgentSessionContext>();
-  private static listeners = new Set<(sessions: Map<string, AgentSessionContext>) => void>();
+  private static listeners = new Set<
+    (sessions: Map<string, AgentSessionContext>) => void
+  >();
   private static isInitialized = false;
 
   /**
@@ -67,8 +72,11 @@ export class AgentContextTrackingService {
   /**
    * Process an incoming agent event
    */
-  private static processEvent(event: RepoNormalizedUniversalAgentSessionEvent): void {
-    const { sessionId, repository, files, toolName, operation, timestamp } = event;
+  private static processEvent(
+    event: RepoNormalizedUniversalAgentSessionEvent,
+  ): void {
+    const { sessionId, repository, files, toolName, operation, timestamp } =
+      event;
 
     // Only process events with file information
     if (!files || files.length === 0) {
@@ -86,11 +94,13 @@ export class AgentContextTrackingService {
       session = {
         sessionId,
         repositoryPath,
-        repositoryInfo: repository ? {
-          owner: repository.owner || '',
-          repo: repository.repo || '',
-          branch: repository.branch,
-        } : undefined,
+        repositoryInfo: repository
+          ? {
+              owner: repository.owner || '',
+              repo: repository.repo || '',
+              branch: repository.branch,
+            }
+          : undefined,
         files: new Map(),
         startTime: timestamp,
         lastActivity: timestamp,
@@ -103,24 +113,25 @@ export class AgentContextTrackingService {
 
     // Process each file in the event
     for (const fileInfo of files) {
-      const absolutePath = fileInfo.absolutePath;
-
       // Skip non-repository files
       if (!fileInfo.repository) {
         continue;
       }
 
+      // Use relative path for repository files
+      const filePath = fileInfo.repository.relativePath;
+
       // Get or create file access info
-      let accessInfo = session.files.get(absolutePath);
+      let accessInfo = session.files.get(filePath);
       if (!accessInfo) {
         accessInfo = {
-          path: absolutePath,
+          path: filePath,
           operations: new Set(),
           firstAccessed: timestamp,
           lastAccessed: timestamp,
           sessionId,
         };
-        session.files.set(absolutePath, accessInfo);
+        session.files.set(filePath, accessInfo);
       }
 
       // Add operation if available
@@ -166,9 +177,11 @@ export class AgentContextTrackingService {
   /**
    * Get sessions for a specific repository
    */
-  static getSessionsForRepository(repositoryPath: string): AgentSessionContext[] {
+  static getSessionsForRepository(
+    repositoryPath: string,
+  ): AgentSessionContext[] {
     return Array.from(this.sessions.values()).filter(
-      session => session.repositoryPath === repositoryPath
+      (session) => session.repositoryPath === repositoryPath,
     );
   }
 
@@ -182,14 +195,16 @@ export class AgentContextTrackingService {
   /**
    * Convert session contexts to LoadedFileTreeSource format for MultiFileTree
    */
-  static getSessionsAsTreeSources(repositoryPath?: string): LoadedFileTreeSource[] {
+  static getSessionsAsTreeSources(
+    repositoryPath?: string,
+  ): LoadedFileTreeSource[] {
     const sessions = repositoryPath
       ? this.getSessionsForRepository(repositoryPath)
       : Array.from(this.sessions.values());
 
     const builder = new PathsFileTreeBuilder();
 
-    return sessions.map(session => {
+    return sessions.map((session) => {
       // Get all file paths
       const filePaths = Array.from(session.files.keys());
 
@@ -243,7 +258,9 @@ export class AgentContextTrackingService {
   /**
    * Subscribe to session updates
    */
-  static subscribe(listener: (sessions: Map<string, AgentSessionContext>) => void): () => void {
+  static subscribe(
+    listener: (sessions: Map<string, AgentSessionContext>) => void,
+  ): () => void {
     this.listeners.add(listener);
 
     // Return unsubscribe function
@@ -257,11 +274,14 @@ export class AgentContextTrackingService {
    */
   private static notifyListeners(): void {
     const sessionsCopy = this.getSessions();
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       try {
         listener(sessionsCopy);
       } catch (error) {
-        console.error('[AgentContextTrackingService] Error in listener:', error);
+        console.error(
+          '[AgentContextTrackingService] Error in listener:',
+          error,
+        );
       }
     });
   }

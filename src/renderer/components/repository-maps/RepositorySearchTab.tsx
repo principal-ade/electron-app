@@ -39,7 +39,9 @@ interface RepositorySearchTabProps {
   selectedFile?: string | null;
   onSearchResultsChange?: (results: string[]) => void; // For highlight layers
   onSearchResultHover?: (filePath: string | null) => void; // For hover highlight
-  onFolderFiltersChange?: (filters: Array<{ id: string; path: string; mode: 'include' | 'exclude' }>) => void; // For folder filter highlights
+  onFolderFiltersChange?: (
+    filters: Array<{ id: string; path: string; mode: 'include' | 'exclude' }>,
+  ) => void; // For folder filter highlights
 }
 
 export const RepositorySearchTab: React.FC<RepositorySearchTabProps> = ({
@@ -53,7 +55,6 @@ export const RepositorySearchTab: React.FC<RepositorySearchTabProps> = ({
   onSearchResultHover,
   onFolderFiltersChange,
 }) => {
-
   const { theme } = useTheme();
   const [selectedTreeId, setSelectedTreeId] = useState<string | null>(null);
   const [defaultEditor, setDefaultEditor] = useState<EditorId>(DEFAULT_EDITOR);
@@ -125,7 +126,6 @@ export const RepositorySearchTab: React.FC<RepositorySearchTabProps> = ({
   // Convert FileTree to FileSystemTree format for LocalSearchPanel
   const fileSystemTree = useMemo(() => {
     if (!selectedFileTree) return null;
-
 
     // Ensure allFiles and allDirectories are arrays
     const allFiles = Array.isArray(selectedFileTree.allFiles)
@@ -224,17 +224,17 @@ export const RepositorySearchTab: React.FC<RepositorySearchTabProps> = ({
       {/* Search panel */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
         <LocalSearchPanel
-            fileSystemTree={fileSystemTree}
-            baseDirectory={activeFileTreeSource.location}
-            onFileSelect={handleFileSelect}
-            selectedFile={selectedFile}
-            onOpenInEditor={showEditorSelector ? handleOpenInEditor : undefined}
-            selectedEditor={EDITOR_LABELS[defaultEditor]}
-            onDirectoryFiltersChange={onFolderFiltersChange}
-            headerExtra={
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                {/* Content search availability indicator */}
-                {contentProvider && !contentProvider.canProvideContent() && (
+          fileSystemTree={fileSystemTree}
+          baseDirectory={activeFileTreeSource.location}
+          onFileSelect={handleFileSelect}
+          selectedFile={selectedFile}
+          onOpenInEditor={showEditorSelector ? handleOpenInEditor : undefined}
+          selectedEditor={EDITOR_LABELS[defaultEditor]}
+          onDirectoryFiltersChange={onFolderFiltersChange}
+          headerExtra={
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              {/* Content search availability indicator */}
+              {contentProvider && !contentProvider.canProvideContent() && (
                 <div
                   style={{
                     display: 'flex',

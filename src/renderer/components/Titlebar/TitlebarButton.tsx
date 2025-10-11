@@ -26,9 +26,10 @@ export const TitlebarButton: React.FC<TitlebarButtonProps> = ({
   const { theme, colorMode } = useTheme();
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
-  const buttonPosition = position === 'right'
-    ? { right: isMac ? '16px' : '150px' }
-    : { left: isMac ? '80px' : '16px' };
+  const buttonPosition =
+    position === 'right'
+      ? { right: isMac ? '16px' : '150px' }
+      : { left: isMac ? '80px' : '16px' };
 
   return (
     <button

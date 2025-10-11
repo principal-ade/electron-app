@@ -1,7 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { Palette } from 'lucide-react';
-import { predefinedThemes, getThemeNames } from '../../../themes/predefinedThemes';
+import {
+  predefinedThemes,
+  getThemeNames,
+} from '../../../themes/predefinedThemes';
 import { ThemeService } from '../../../services/ThemeService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
@@ -15,7 +18,7 @@ export const ThemeDropdown: React.FC = () => {
   useEffect(() => {
     // Load current theme preference
     UserPreferencesService.getPreferences()
-      .then(prefs => {
+      .then((prefs) => {
         if (prefs.selectedTheme) {
           setSelectedTheme(prefs.selectedTheme);
         }
@@ -33,7 +36,10 @@ export const ThemeDropdown: React.FC = () => {
   useEffect(() => {
     // Close dropdown when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     };
@@ -53,13 +59,15 @@ export const ThemeDropdown: React.FC = () => {
     await ThemeService.applyTheme(themeName, true);
   };
 
-  const backgroundColor = mode === 'dark' && theme.modes?.dark?.backgroundSecondary
-    ? theme.modes.dark.backgroundSecondary
-    : theme.colors.backgroundSecondary;
+  const backgroundColor =
+    mode === 'dark' && theme.modes?.dark?.backgroundSecondary
+      ? theme.modes.dark.backgroundSecondary
+      : theme.colors.backgroundSecondary;
 
-  const accentColor = mode === 'dark' && theme.modes?.dark?.accent
-    ? theme.modes.dark.accent
-    : theme.colors.accent;
+  const accentColor =
+    mode === 'dark' && theme.modes?.dark?.accent
+      ? theme.modes.dark.accent
+      : theme.colors.accent;
 
   const hoverColor = theme.colors.backgroundHover || 'rgba(255, 255, 255, 0.1)';
 
@@ -70,7 +78,7 @@ export const ThemeDropdown: React.FC = () => {
       style={{
         position: 'relative',
         WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-        zIndex: 100
+        zIndex: 100,
       }}
     >
       <button
@@ -95,7 +103,7 @@ export const ThemeDropdown: React.FC = () => {
           transition: 'all 0.2s ease',
           WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
           position: 'relative',
-          zIndex: 101
+          zIndex: 101,
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.backgroundColor = hoverColor;
@@ -136,9 +144,7 @@ export const ThemeDropdown: React.FC = () => {
                 style={{
                   width: '100%',
                   padding: '10px 16px',
-                  backgroundColor: isSelected
-                    ? hoverColor
-                    : 'transparent',
+                  backgroundColor: isSelected ? hoverColor : 'transparent',
                   border: 'none',
                   color: isSelected ? accentColor : theme.colors.text,
                   cursor: 'pointer',
@@ -153,7 +159,8 @@ export const ThemeDropdown: React.FC = () => {
                 }}
                 onMouseEnter={(e) => {
                   if (!isSelected) {
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.backgroundColor =
+                      'rgba(255, 255, 255, 0.05)';
                   }
                 }}
                 onMouseLeave={(e) => {
@@ -165,10 +172,12 @@ export const ThemeDropdown: React.FC = () => {
                 <div style={{ fontWeight: isSelected ? 600 : 400 }}>
                   {themeInfo.name}
                 </div>
-                <div style={{
-                  fontSize: '11px',
-                  opacity: 0.7,
-                }}>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    opacity: 0.7,
+                  }}
+                >
                   {themeInfo.description}
                 </div>
               </button>

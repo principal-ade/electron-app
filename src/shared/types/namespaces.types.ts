@@ -55,4 +55,3 @@ export function isValidNamespace(
 ): namespace is StorageNamespaces {
   return isStaticNamespace(namespace);
 }
-

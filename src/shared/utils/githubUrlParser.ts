@@ -6,7 +6,9 @@
  * - git@github.com:owner/repo.git
  * - git://github.com/owner/repo.git
  */
-export function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
+export function parseGitHubUrl(
+  url: string,
+): { owner: string; repo: string } | null {
   if (!url) return null;
 
   try {
@@ -23,7 +25,9 @@ export function parseGitHubUrl(url: string): { owner: string; repo: string } | n
     }
 
     // Handle HTTPS and git:// URLs
-    const httpsMatch = cleanUrl.match(/(?:https?:\/\/|git:\/\/)?github\.com\/([^/]+)\/(.+)/);
+    const httpsMatch = cleanUrl.match(
+      /(?:https?:\/\/|git:\/\/)?github\.com\/([^/]+)\/(.+)/,
+    );
     if (httpsMatch) {
       return {
         owner: httpsMatch[1],

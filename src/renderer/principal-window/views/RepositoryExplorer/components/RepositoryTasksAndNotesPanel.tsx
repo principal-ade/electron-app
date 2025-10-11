@@ -10,11 +10,9 @@ interface RepositoryTasksAndNotesPanelProps {
   onTaskClick?: (task: Task) => void;
 }
 
-export const RepositoryTasksAndNotesPanel: React.FC<RepositoryTasksAndNotesPanelProps> = ({
-  repositoryPath,
-  isLoading: externalLoading = false,
-  onTaskClick,
-}) => {
+export const RepositoryTasksAndNotesPanel: React.FC<
+  RepositoryTasksAndNotesPanelProps
+> = ({ repositoryPath, isLoading: externalLoading = false, onTaskClick }) => {
   const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState<'tasks' | 'notes'>('tasks');
 
@@ -45,8 +43,14 @@ export const RepositoryTasksAndNotesPanel: React.FC<RepositoryTasksAndNotesPanel
             padding: '8px 16px',
             backgroundColor: 'transparent',
             border: 'none',
-            borderBottom: activeTab === 'tasks' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
-            color: activeTab === 'tasks' ? theme.colors.primary : theme.colors.textSecondary,
+            borderBottom:
+              activeTab === 'tasks'
+                ? `2px solid ${theme.colors.primary}`
+                : '2px solid transparent',
+            color:
+              activeTab === 'tasks'
+                ? theme.colors.primary
+                : theme.colors.textSecondary,
             fontSize: theme.fontSizes[1],
             fontWeight: 600,
             cursor: 'pointer',
@@ -61,8 +65,14 @@ export const RepositoryTasksAndNotesPanel: React.FC<RepositoryTasksAndNotesPanel
             padding: '8px 16px',
             backgroundColor: 'transparent',
             border: 'none',
-            borderBottom: activeTab === 'notes' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
-            color: activeTab === 'notes' ? theme.colors.primary : theme.colors.textSecondary,
+            borderBottom:
+              activeTab === 'notes'
+                ? `2px solid ${theme.colors.primary}`
+                : '2px solid transparent',
+            color:
+              activeTab === 'notes'
+                ? theme.colors.primary
+                : theme.colors.textSecondary,
             fontSize: theme.fontSizes[1],
             fontWeight: 600,
             cursor: 'pointer',
@@ -89,7 +99,10 @@ export const RepositoryTasksAndNotesPanel: React.FC<RepositoryTasksAndNotesPanel
           />
         </div>
       ) : (
-        <RepositoryNotesPanel repositoryPath={repositoryPath} isLoading={externalLoading} />
+        <RepositoryNotesPanel
+          repositoryPath={repositoryPath}
+          isLoading={externalLoading}
+        />
       )}
     </div>
   );

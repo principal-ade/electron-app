@@ -11,7 +11,7 @@ export interface SaveWorkspaceModalProps {
       description?: string;
       includeSizes?: boolean;
       includeCollapsed?: boolean;
-    }
+    },
   ) => Promise<void>;
 }
 
@@ -125,7 +125,8 @@ export const SaveWorkspaceModal: React.FC<SaveWorkspaceModalProps> = ({
             }}
             onMouseEnter={(e) => {
               if (!isSaving) {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
               }
             }}
             onMouseLeave={(e) => {
@@ -145,7 +146,8 @@ export const SaveWorkspaceModal: React.FC<SaveWorkspaceModalProps> = ({
             lineHeight: 1.5,
           }}
         >
-          Save your current panel layout as a workspace that you can quickly switch to later.
+          Save your current panel layout as a workspace that you can quickly
+          switch to later.
         </p>
 
         {/* Name Input */}
@@ -343,7 +345,8 @@ export const SaveWorkspaceModal: React.FC<SaveWorkspaceModalProps> = ({
             }}
             onMouseEnter={(e) => {
               if (!isSaving) {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
               }
             }}
             onMouseLeave={(e) => {

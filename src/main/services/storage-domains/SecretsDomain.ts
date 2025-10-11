@@ -14,7 +14,12 @@ export interface StoredSecret {
 }
 
 export class SecretsDomain {
-  private auditLog: Array<{ level: string; message: string; timestamp: number; data?: any }> = [];
+  private auditLog: Array<{
+    level: string;
+    message: string;
+    timestamp: number;
+    data?: any;
+  }> = [];
 
   constructor(private storage: UnifiedSecureStorage) {}
 
@@ -26,7 +31,10 @@ export class SecretsDomain {
       data,
     };
     this.auditLog.push(entry);
-    console.log(`[SecretsDomain Audit] ${level.toUpperCase()}: ${message}`, data || '');
+    console.log(
+      `[SecretsDomain Audit] ${level.toUpperCase()}: ${message}`,
+      data || '',
+    );
 
     if (this.auditLog.length > 100) {
       this.auditLog = this.auditLog.slice(-50);
@@ -53,7 +61,7 @@ export class SecretsDomain {
   async storeSecrets(
     repoId: string,
     repoPath: string,
-    secrets: Record<string, any>
+    secrets: Record<string, any>,
   ): Promise<{ success: boolean; error?: string; metadata?: SecretMetadata }> {
     try {
       if (!this.validateSecrets(secrets)) {
@@ -87,7 +95,11 @@ export class SecretsDomain {
         return data;
       });
 
-      this.logAudit('info', `Stored ${metadata.secretCount} secrets for repository`, { repoId });
+      this.logAudit(
+        'info',
+        `Stored ${metadata.secretCount} secrets for repository`,
+        { repoId },
+      );
 
       return { success: true, metadata };
     } catch (error: any) {
@@ -158,7 +170,9 @@ export class SecretsDomain {
 
   async getAllMetadata(): Promise<SecretMetadata[]> {
     const data = await this.storage.getData();
-    return Object.values(data.secrets).map((secret) => (secret as StoredSecret).metadata);
+    return Object.values(data.secrets).map(
+      (secret) => (secret as StoredSecret).metadata,
+    );
   }
 
   async clearAll(): Promise<void> {
@@ -169,7 +183,12 @@ export class SecretsDomain {
     });
   }
 
-  getAuditLog(): Array<{ level: string; message: string; timestamp: number; data?: any }> {
+  getAuditLog(): Array<{
+    level: string;
+    message: string;
+    timestamp: number;
+    data?: any;
+  }> {
     return [...this.auditLog];
   }
 }

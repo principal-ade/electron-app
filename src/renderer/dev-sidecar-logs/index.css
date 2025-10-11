@@ -1,6 +1,7 @@
 :root {
   color-scheme: dark;
-  font-family: 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', Menlo, monospace;
+  font-family:
+    'JetBrains Mono', 'Fira Code', 'SFMono-Regular', Menlo, monospace;
 }
 
 html,
@@ -74,7 +75,11 @@ body {
   flex: 1;
   overflow: auto;
   padding: 16px;
-  background: radial-gradient(circle at top, rgba(37, 99, 235, 0.12), transparent 55%);
+  background: radial-gradient(
+    circle at top,
+    rgba(37, 99, 235, 0.12),
+    transparent 55%
+  );
 }
 
 .log-line {

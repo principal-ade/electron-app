@@ -38,10 +38,20 @@ export const LinksModal: React.FC<LinksModalProps> = ({
 
   // State for editing
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ label: '', url: '', description: '', category: '' });
+  const [editForm, setEditForm] = useState({
+    label: '',
+    url: '',
+    description: '',
+    category: '',
+  });
 
   // State for adding new link
-  const [newLink, setNewLink] = useState({ label: '', url: '', description: '', category: '' });
+  const [newLink, setNewLink] = useState({
+    label: '',
+    url: '',
+    description: '',
+    category: '',
+  });
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -348,7 +358,8 @@ export const LinksModal: React.FC<LinksModalProps> = ({
               lineHeight: '1.5',
             }}
           >
-            <strong>Quick Access:</strong> Store important URLs for documentation, CI/CD pipelines, deployment dashboards, and more.
+            <strong>Quick Access:</strong> Store important URLs for
+            documentation, CI/CD pipelines, deployment dashboards, and more.
           </div>
         </div>
 
@@ -401,7 +412,13 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                   >
                     Saved Links
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
                     {links.map((link) => {
                       const isEditing = editingId === link.id;
                       const isCopied = copiedId === link.id;
@@ -417,12 +434,23 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                           }}
                         >
                           {isEditing ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div
+                              style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px',
+                              }}
+                            >
                               <input
                                 type="text"
                                 placeholder="Label"
                                 value={editForm.label}
-                                onChange={(e) => setEditForm({ ...editForm, label: e.target.value })}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    label: e.target.value,
+                                  })
+                                }
                                 style={{
                                   padding: '8px',
                                   backgroundColor: theme.colors.background,
@@ -437,7 +465,12 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                 type="text"
                                 placeholder="URL"
                                 value={editForm.url}
-                                onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    url: e.target.value,
+                                  })
+                                }
                                 style={{
                                   padding: '8px',
                                   backgroundColor: theme.colors.background,
@@ -453,7 +486,12 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                 type="text"
                                 placeholder="Description (optional)"
                                 value={editForm.description}
-                                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    description: e.target.value,
+                                  })
+                                }
                                 style={{
                                   padding: '8px',
                                   backgroundColor: theme.colors.background,
@@ -468,7 +506,12 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                 type="text"
                                 placeholder="Category (optional)"
                                 value={editForm.category}
-                                onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                                onChange={(e) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    category: e.target.value,
+                                  })
+                                }
                                 style={{
                                   padding: '8px',
                                   backgroundColor: theme.colors.background,
@@ -479,12 +522,19 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                   outline: 'none',
                                 }}
                               />
-                              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  gap: '8px',
+                                  justifyContent: 'flex-end',
+                                }}
+                              >
                                 <button
                                   onClick={() => setEditingId(null)}
                                   style={{
                                     padding: '6px 12px',
-                                    backgroundColor: theme.colors.backgroundTertiary,
+                                    backgroundColor:
+                                      theme.colors.backgroundTertiary,
                                     color: theme.colors.text,
                                     border: `1px solid ${theme.colors.border}`,
                                     borderRadius: '4px',
@@ -514,10 +564,30 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                             </div>
                           ) : (
                             <>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'flex-start',
+                                  marginBottom: '8px',
+                                }}
+                              >
                                 <div style={{ flex: 1 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                    <span style={{ fontSize: '14px', fontWeight: 600, color: theme.colors.text }}>
+                                  <div
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      marginBottom: '4px',
+                                    }}
+                                  >
+                                    <span
+                                      style={{
+                                        fontSize: '14px',
+                                        fontWeight: 600,
+                                        color: theme.colors.text,
+                                      }}
+                                    >
                                       {link.label}
                                     </span>
                                     {link.category && (
@@ -525,7 +595,8 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                         style={{
                                           fontSize: '11px',
                                           padding: '2px 6px',
-                                          backgroundColor: theme.colors.backgroundTertiary,
+                                          backgroundColor:
+                                            theme.colors.backgroundTertiary,
                                           borderRadius: '3px',
                                           color: theme.colors.textSecondary,
                                         }}
@@ -547,12 +618,24 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                     {link.url}
                                   </div>
                                   {link.description && (
-                                    <div style={{ fontSize: '12px', color: theme.colors.textSecondary, marginTop: '4px' }}>
+                                    <div
+                                      style={{
+                                        fontSize: '12px',
+                                        color: theme.colors.textSecondary,
+                                        marginTop: '4px',
+                                      }}
+                                    >
                                       {link.description}
                                     </div>
                                   )}
                                 </div>
-                                <div style={{ display: 'flex', gap: '4px', marginLeft: '12px' }}>
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    gap: '4px',
+                                    marginLeft: '12px',
+                                  }}
+                                >
                                   <button
                                     onClick={() => copyLink(link.url, link.id)}
                                     style={{
@@ -560,13 +643,19 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                       backgroundColor: 'transparent',
                                       border: 'none',
                                       cursor: 'pointer',
-                                      color: isCopied ? theme.colors.success || '#10b981' : theme.colors.textSecondary,
+                                      color: isCopied
+                                        ? theme.colors.success || '#10b981'
+                                        : theme.colors.textSecondary,
                                       display: 'flex',
                                       alignItems: 'center',
                                     }}
                                     title={isCopied ? 'Copied!' : 'Copy URL'}
                                   >
-                                    {isCopied ? <Check size={16} /> : <Copy size={16} />}
+                                    {isCopied ? (
+                                      <Check size={16} />
+                                    ) : (
+                                      <Copy size={16} />
+                                    )}
                                   </button>
                                   <button
                                     onClick={() => openLink(link.url)}
@@ -599,7 +688,9 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                     <Edit2 size={16} />
                                   </button>
                                   <button
-                                    onClick={() => deleteLink(link.id, link.label)}
+                                    onClick={() =>
+                                      deleteLink(link.id, link.label)
+                                    }
                                     style={{
                                       padding: '6px',
                                       backgroundColor: 'transparent',
@@ -636,12 +727,20 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                 >
                   Add New Link
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
                   <input
                     type="text"
                     placeholder="Label (e.g., 'Documentation', 'CI Pipeline')"
                     value={newLink.label}
-                    onChange={(e) => setNewLink({ ...newLink, label: e.target.value })}
+                    onChange={(e) =>
+                      setNewLink({ ...newLink, label: e.target.value })
+                    }
                     style={{
                       padding: '8px 12px',
                       backgroundColor: theme.colors.backgroundSecondary,
@@ -656,7 +755,9 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                     type="text"
                     placeholder="URL (e.g., 'https://docs.example.com')"
                     value={newLink.url}
-                    onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+                    onChange={(e) =>
+                      setNewLink({ ...newLink, url: e.target.value })
+                    }
                     style={{
                       padding: '8px 12px',
                       backgroundColor: theme.colors.backgroundSecondary,
@@ -672,7 +773,9 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                     type="text"
                     placeholder="Description (optional)"
                     value={newLink.description}
-                    onChange={(e) => setNewLink({ ...newLink, description: e.target.value })}
+                    onChange={(e) =>
+                      setNewLink({ ...newLink, description: e.target.value })
+                    }
                     style={{
                       padding: '8px 12px',
                       backgroundColor: theme.colors.backgroundSecondary,
@@ -688,7 +791,9 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                       type="text"
                       placeholder="Category (optional)"
                       value={newLink.category}
-                      onChange={(e) => setNewLink({ ...newLink, category: e.target.value })}
+                      onChange={(e) =>
+                        setNewLink({ ...newLink, category: e.target.value })
+                      }
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && newLink.label && newLink.url) {
                           addLink();
@@ -722,7 +827,10 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                         borderRadius: '6px',
                         fontSize: '13px',
                         fontWeight: 500,
-                        cursor: newLink.label && newLink.url ? 'pointer' : 'not-allowed',
+                        cursor:
+                          newLink.label && newLink.url
+                            ? 'pointer'
+                            : 'not-allowed',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',

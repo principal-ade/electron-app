@@ -15,14 +15,20 @@ interface TerminalManagerProps {
   sidebarCollapsed?: boolean;
 }
 
-export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollapsed = false }) => {
+export const TerminalManager: React.FC<TerminalManagerProps> = ({
+  sidebarCollapsed = false,
+}) => {
   const { theme } = useTheme();
   const [terminals, setTerminals] = useState<TerminalInfo[]>([]);
-  const [selectedTerminal, setSelectedTerminal] = useState<TerminalInfo | null>(null);
+  const [selectedTerminal, setSelectedTerminal] = useState<TerminalInfo | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [terminalWindows, setTerminalWindows] = useState<Map<string, number>>(new Map());
+  const [terminalWindows, setTerminalWindows] = useState<Map<string, number>>(
+    new Map(),
+  );
   const [creatingTerminal, setCreatingTerminal] = useState(false);
   const [panelSizes, setPanelSizes] = useState({ left: 25, right: 75 });
 
@@ -92,7 +98,7 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
     // Subscribe to terminal window events
     const unsubscribeReady = TerminalService.onWindowReady((data) => {
       const { terminalId, windowId } = data;
-      setTerminalWindows(prev => {
+      setTerminalWindows((prev) => {
         const newMap = new Map(prev);
         newMap.set(terminalId, windowId);
         return newMap;
@@ -102,7 +108,7 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
     const unsubscribeClose = TerminalService.onWindowClose((data) => {
       if (data.terminalId) {
         const { terminalId } = data;
-        setTerminalWindows(prev => {
+        setTerminalWindows((prev) => {
           const newMap = new Map(prev);
           newMap.delete(terminalId);
           return newMap;
@@ -167,7 +173,7 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
 
       // Find and select the new terminal
       const terminalList = await TerminalService.list();
-      const newTerminal = terminalList?.find(t => t.id === sessionId);
+      const newTerminal = terminalList?.find((t) => t.id === sessionId);
       if (newTerminal) {
         setSelectedTerminal(newTerminal);
       }
@@ -193,37 +199,43 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
   // Helper to get session number for terminals in the same directory
   const getSessionNumber = (terminal: TerminalInfo) => {
     const sameDirTerminals = terminals
-      .filter(t => t.directory === terminal.directory)
+      .filter((t) => t.directory === terminal.directory)
       .sort((a, b) => a.createdAt - b.createdAt);
 
-    const index = sameDirTerminals.findIndex(t => t.id === terminal.id);
+    const index = sameDirTerminals.findIndex((t) => t.id === terminal.id);
     return sameDirTerminals.length > 1 ? index + 1 : 0;
   };
 
   // Render left panel - Terminal list sidebar
   const renderLeftPanel = () => {
     return (
-      <div style={{
-        height: '100%',
-        backgroundColor: theme.colors.backgroundSecondary,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '16px',
-          borderBottom: `1px solid ${theme.colors.border}`,
+      <div
+        style={{
+          height: '100%',
+          backgroundColor: theme.colors.backgroundSecondary,
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <h3 style={{
-            fontSize: theme.fontSizes[2],
-            fontWeight: 600,
-            color: theme.colors.text,
-            margin: 0,
-          }}>
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '16px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <h3
+            style={{
+              fontSize: theme.fontSizes[2],
+              fontWeight: 600,
+              color: theme.colors.text,
+              margin: 0,
+            }}
+          >
             Terminal Sessions
           </h3>
 
@@ -267,48 +279,61 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
               }}
               title="Refresh"
             >
-              <RefreshCw size={16} style={{
-                animation: refreshing ? 'spin 1s linear infinite' : 'none'
-              }} />
+              <RefreshCw
+                size={16}
+                style={{
+                  animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                }}
+              />
             </button>
           </div>
         </div>
 
         {/* Terminal List */}
-        <div style={{
-          flex: 1,
-          overflow: 'auto',
-        }}>
+        <div
+          style={{
+            flex: 1,
+            overflow: 'auto',
+          }}
+        >
           {loading ? (
-            <div style={{
-              padding: '20px',
-              textAlign: 'center',
-              color: theme.colors.textSecondary,
-              fontSize: theme.fontSizes[1],
-            }}>
+            <div
+              style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: theme.colors.textSecondary,
+                fontSize: theme.fontSizes[1],
+              }}
+            >
               Loading sessions...
             </div>
           ) : error ? (
-            <div style={{
-              padding: '20px',
-              textAlign: 'center',
-              color: theme.colors.error,
-              fontSize: theme.fontSizes[1],
-            }}>
+            <div
+              style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: theme.colors.error,
+                fontSize: theme.fontSizes[1],
+              }}
+            >
               {error}
             </div>
           ) : terminals.length === 0 ? (
-            <div style={{
-              padding: '20px',
-              textAlign: 'center',
-              color: theme.colors.textSecondary,
-              fontSize: theme.fontSizes[1],
-            }}>
+            <div
+              style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: theme.colors.textSecondary,
+                fontSize: theme.fontSizes[1],
+              }}
+            >
               No active terminal sessions
-              <div style={{
-                marginTop: '8px',
-                fontSize: theme.fontSizes[0],
-              }}>
+              <div
+                style={{
+                  marginTop: '8px',
+                  fontSize: theme.fontSizes[0],
+                }}
+              >
                 Open a terminal from a repository to see it here
               </div>
             </div>
@@ -347,7 +372,9 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
     return (
       <TerminalDetailsPanel
         terminal={selectedTerminal}
-        hasWindow={selectedTerminal ? terminalWindows.has(selectedTerminal.id) : false}
+        hasWindow={
+          selectedTerminal ? terminalWindows.has(selectedTerminal.id) : false
+        }
         onPopOut={handlePopOut}
         formatTime={formatTime}
         theme={theme}
@@ -361,7 +388,9 @@ export const TerminalManager: React.FC<TerminalManagerProps> = ({ sidebarCollaps
         leftPanel={renderLeftPanel()}
         rightPanel={renderRightPanel()}
         minSize={15}
-        defaultSize={panelState.type === 'two-panel' ? panelState.sizes.left : 25}
+        defaultSize={
+          panelState.type === 'two-panel' ? panelState.sizes.left : 25
+        }
         collapsibleSide="left"
         collapsed={panelState.collapsed.left}
         style={{ height: '100%', width: '100%' }}

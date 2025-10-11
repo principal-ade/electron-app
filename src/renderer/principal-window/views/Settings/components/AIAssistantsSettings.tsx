@@ -12,11 +12,14 @@ import type { UserPreferences } from '../../../../../shared/types/userPreference
 
 export const AIAssistantsSettings: React.FC = () => {
   const { theme } = useTheme();
-  const [agentStatus, setAgentStatus] = useState<AgentInstallationStatus | null>(null);
+  const [agentStatus, setAgentStatus] =
+    useState<AgentInstallationStatus | null>(null);
   const [activeAgentView, setActiveAgentView] = useState<
     'claude' | 'cline' | 'opencode' | null
   >(null);
-  const [agentViewLayout, setAgentViewLayout] = useState<'simple' | 'detailed'>('simple');
+  const [agentViewLayout, setAgentViewLayout] = useState<'simple' | 'detailed'>(
+    'simple',
+  );
   const [showJulesButton, setShowJulesButton] = useState(false);
   const [showCodexButton, setShowCodexButton] = useState(false);
 
@@ -113,7 +116,8 @@ export const AIAssistantsSettings: React.FC = () => {
                 margin: '0 0 16px 0',
               }}
             >
-              Choose which remote agent quick access buttons appear in the titlebar.
+              Choose which remote agent quick access buttons appear in the
+              titlebar.
             </p>
             <div
               style={{
@@ -198,7 +202,8 @@ export const AIAssistantsSettings: React.FC = () => {
                       width: '40px',
                       height: '40px',
                       borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #D4500F20, #D4500F40)',
+                      background:
+                        'linear-gradient(135deg, #D4500F20, #D4500F40)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -295,7 +300,8 @@ export const AIAssistantsSettings: React.FC = () => {
                       width: '40px',
                       height: '40px',
                       borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #8B5CF620, #8B5CF640)',
+                      background:
+                        'linear-gradient(135deg, #8B5CF620, #8B5CF640)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -392,7 +398,8 @@ export const AIAssistantsSettings: React.FC = () => {
                       width: '40px',
                       height: '40px',
                       borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #10b98120, #10b98140)',
+                      background:
+                        'linear-gradient(135deg, #10b98120, #10b98140)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',

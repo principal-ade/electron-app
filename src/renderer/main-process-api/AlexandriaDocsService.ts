@@ -6,7 +6,7 @@
 import type { AlexandriaEntry } from '@a24z/core-library';
 import type {
   AlexandriaDocsWithExclusions,
-  ComprehensiveDocuments
+  ComprehensiveDocuments,
 } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
 
 export class AlexandriaDocsService {

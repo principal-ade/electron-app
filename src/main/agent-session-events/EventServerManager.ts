@@ -17,7 +17,10 @@ import {
   isProcessedEventMessage,
 } from '../../event-processing-server/types';
 import { AgentSessionSDKAPIEvents } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
-import { getObservabilityIntegration, ObservabilityIntegration } from '../observability/ObservabilityIntegration';
+import {
+  getObservabilityIntegration,
+  ObservabilityIntegration,
+} from '../observability/ObservabilityIntegration';
 
 /**
  * Configuration for EventServerManager
@@ -85,9 +88,11 @@ export class EventServerManager extends EventEmitter {
       this.isRunning = true;
       this.restartAttempts = 0;
 
-      this.log('info', `Event processing server started on port ${this.serverPort}`);
+      this.log(
+        'info',
+        `Event processing server started on port ${this.serverPort}`,
+      );
       this.emit('started', this.serverPort);
-
     } catch (error) {
       this.log('error', `Failed to start event server: ${error}`);
       throw error;
@@ -117,7 +122,8 @@ export class EventServerManager extends EventEmitter {
 
     // Verify the worker file exists
     if (!fs.existsSync(workerPath)) {
-      const errorMsg = `Worker bundle not found at: ${workerPath}\n` +
+      const errorMsg =
+        `Worker bundle not found at: ${workerPath}\n` +
         'The event-worker bundle has not been compiled by webpack.\n' +
         'Please ensure webpack is configured with the event-worker entry point and has compiled successfully.';
       this.log('error', errorMsg);
@@ -137,7 +143,7 @@ export class EventServerManager extends EventEmitter {
       env: {
         ...process.env,
         NODE_ENV: process.env.NODE_ENV || 'development',
-      }
+      },
     });
 
     this.log('info', 'Utility process fork() called');
@@ -241,7 +247,12 @@ export class EventServerManager extends EventEmitter {
   private setupObservability(): void {
     // Get singleton instance but don't initialize yet
     this.observability = getObservabilityIntegration({
-      environment: (process.env.NODE_ENV as 'development' | 'production' | 'test' | undefined) || 'development',
+      environment:
+        (process.env.NODE_ENV as
+          | 'development'
+          | 'production'
+          | 'test'
+          | undefined) || 'development',
       debug: process.env.DEBUG_OBSERVABILITY === 'true',
     });
 
@@ -253,7 +264,10 @@ export class EventServerManager extends EventEmitter {
     // Listen for initialization events
     this.observability.on('initialized', () => {
       this.observabilityInitialized = true;
-      this.log('info', 'Observability integration is now active and forwarding events');
+      this.log(
+        'info',
+        'Observability integration is now active and forwarding events',
+      );
     });
 
     // Listen for shutdown events
@@ -285,7 +299,10 @@ export class EventServerManager extends EventEmitter {
         this.observabilityInitialized = true;
         this.log('info', 'Observability integration initialized and ready');
       } else {
-        this.log('debug', 'Observability not configured yet - waiting for configuration');
+        this.log(
+          'debug',
+          'Observability not configured yet - waiting for configuration',
+        );
       }
     } catch (error) {
       this.log('debug', `Observability not ready: ${error}`);
@@ -296,12 +313,21 @@ export class EventServerManager extends EventEmitter {
   /**
    * Handle processed events from server
    */
-  private async handleProcessedEvent(msg: ProcessedEventMessage): Promise<void> {
+  private async handleProcessedEvent(
+    msg: ProcessedEventMessage,
+  ): Promise<void> {
     const repoNormalizedEvent = msg.event;
 
     // Validate session ID
-    if (!repoNormalizedEvent.sessionId || typeof repoNormalizedEvent.sessionId !== 'string' || repoNormalizedEvent.sessionId.trim() === '') {
-      this.log('error', `Invalid session ID, skipping event: ${repoNormalizedEvent.sessionId}`);
+    if (
+      !repoNormalizedEvent.sessionId ||
+      typeof repoNormalizedEvent.sessionId !== 'string' ||
+      repoNormalizedEvent.sessionId.trim() === ''
+    ) {
+      this.log(
+        'error',
+        `Invalid session ID, skipping event: ${repoNormalizedEvent.sessionId}`,
+      );
       return;
     }
 
@@ -326,29 +352,41 @@ export class EventServerManager extends EventEmitter {
     // Determine if this is a new session (first event for this session)
     const isNewSession = repoNormalizedEvent.eventType === 'start';
 
-    const eventName = isNewSession ?
-      AgentSessionSDKAPIEvents.SESSION_CREATED :
-      AgentSessionSDKAPIEvents.SESSION_UPDATED;
+    const eventName = isNewSession
+      ? AgentSessionSDKAPIEvents.SESSION_CREATED
+      : AgentSessionSDKAPIEvents.SESSION_UPDATED;
 
     windows.forEach((window) => {
       window.webContents.send(eventName, {
         sessionId: normalizedSessionId,
-        repository: repoNormalizedEvent.repository?.root || repoNormalizedEvent.workingDirectory,
+        repository:
+          repoNormalizedEvent.repository?.root ||
+          repoNormalizedEvent.workingDirectory,
       });
 
       // Also send the raw SDK event for components that need it
-      window.webContents.send(AgentSessionSDKAPIEvents.PROCESSED_EVENT, repoNormalizedEvent);
+      window.webContents.send(
+        AgentSessionSDKAPIEvents.PROCESSED_EVENT,
+        repoNormalizedEvent,
+      );
     });
 
-    this.log('info', `Processed and broadcast event for session: ${normalizedSessionId}`);
+    this.log(
+      'info',
+      `Processed and broadcast event for session: ${normalizedSessionId}`,
+    );
   }
 
   /**
    * Handle repository info requests from server
    */
-  private async handleRepositoryInfoRequest(msg: RepositoryInfoRequestMessage): Promise<void> {
+  private async handleRepositoryInfoRequest(
+    msg: RepositoryInfoRequestMessage,
+  ): Promise<void> {
     try {
-      const repoInfo = await repositoryCache.getRepositoryForPath(msg.absolutePath);
+      const repoInfo = await repositoryCache.getRepositoryForPath(
+        msg.absolutePath,
+      );
 
       let repositoryInfo = null;
       if (repoInfo?.gitInfo.root) {
@@ -368,7 +406,6 @@ export class EventServerManager extends EventEmitter {
         timestamp: Date.now(),
         repositoryInfo,
       });
-
     } catch (error) {
       this.sendToWorker({
         type: 'REPOSITORY_INFO_RESPONSE',
@@ -390,7 +427,10 @@ export class EventServerManager extends EventEmitter {
         window.webContents.send(msg.channel, msg.data);
       });
 
-      this.log('debug', `Broadcasted ${msg.channel} to ${windows.length} windows`);
+      this.log(
+        'debug',
+        `Broadcasted ${msg.channel} to ${windows.length} windows`,
+      );
     } catch (error) {
       this.log('error', `Window broadcast failed: ${error}`);
     }
@@ -431,7 +471,10 @@ export class EventServerManager extends EventEmitter {
       this.restartAttempts < this.config.maxRestartAttempts
     ) {
       this.restartAttempts++;
-      this.log('info', `Attempting to restart event server (attempt ${this.restartAttempts})`);
+      this.log(
+        'info',
+        `Attempting to restart event server (attempt ${this.restartAttempts})`,
+      );
 
       setTimeout(() => {
         this.start().catch((error) => {
@@ -512,7 +555,9 @@ export class EventServerManager extends EventEmitter {
 
     if (messageLevelIndex >= currentLevelIndex) {
       const timestamp = new Date().toISOString();
-      console.log(`[${timestamp}] [EventServerManager] [${level.toUpperCase()}] ${message}`);
+      console.log(
+        `[${timestamp}] [EventServerManager] [${level.toUpperCase()}] ${message}`,
+      );
     }
   }
 }

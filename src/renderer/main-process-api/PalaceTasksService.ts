@@ -8,28 +8,34 @@ import type {
 export class PalaceTasksService {
   static async getTasks(
     repositoryPath: string,
-    options?: TaskQueryOptions
+    options?: TaskQueryOptions,
   ): Promise<GetTasksResponse> {
     return window.mainProcess.palaceTasks.getTasks(repositoryPath, options);
   }
 
-  static async getTask(repositoryPath: string, taskId: string): Promise<Task | null> {
+  static async getTask(
+    repositoryPath: string,
+    taskId: string,
+  ): Promise<Task | null> {
     return window.mainProcess.palaceTasks.getTask(repositoryPath, taskId);
   }
 
   static async updateTaskStatus(
     repositoryPath: string,
     taskId: string,
-    status: TaskStatus
+    status: TaskStatus,
   ): Promise<boolean> {
     return window.mainProcess.palaceTasks.updateTaskStatus(
       repositoryPath,
       taskId,
-      status
+      status,
     );
   }
 
-  static async deleteTask(repositoryPath: string, taskId: string): Promise<boolean> {
+  static async deleteTask(
+    repositoryPath: string,
+    taskId: string,
+  ): Promise<boolean> {
     return window.mainProcess.palaceTasks.deleteTask(repositoryPath, taskId);
   }
 }

@@ -1,6 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { FileText, Code, Hash, ChevronRight, ChevronDown, File } from 'lucide-react';
+import {
+  FileText,
+  Code,
+  Hash,
+  ChevronRight,
+  ChevronDown,
+  File,
+} from 'lucide-react';
 import type { SearchResult, DocumentType } from '@a24z/markdown-search';
 
 interface DocumentSearchResultsProps {
@@ -31,7 +38,7 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
   const groupedResults = useMemo(() => {
     const groups = new Map<string, SearchResult[]>();
 
-    results.forEach(result => {
+    results.forEach((result) => {
       const filePath = result.filePath || result.fileName;
       if (!groups.has(filePath)) {
         groups.set(filePath, []);
@@ -108,7 +115,6 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
   // @a24z/markdown-search supports metadata in indexing (see MARKDOWN_SEARCH_FEATURE_REQUEST.md)
   // For now, we don't display repository info in search results
 
-
   if (isSearching) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -147,15 +153,23 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
     <div className="h-full overflow-y-auto overflow-x-hidden">
       {groupedResults.map(([filePath, fileResults]) => {
         const isExpanded = expandedFiles.has(filePath);
-        const hasSelectedResult = fileResults.some(r => r.id === selectedDocument?.id);
+        const hasSelectedResult = fileResults.some(
+          (r) => r.id === selectedDocument?.id,
+        );
 
         return (
-          <div key={filePath} className="border-b" style={{ borderColor: theme.colors.border }}>
+          <div
+            key={filePath}
+            className="border-b"
+            style={{ borderColor: theme.colors.border }}
+          >
             {/* File Header */}
             <div
               className="px-4 py-3 cursor-pointer transition-colors flex items-center gap-2"
               style={{
-                backgroundColor: hasSelectedResult ? `${theme.colors.primary}10` : theme.colors.backgroundSecondary,
+                backgroundColor: hasSelectedResult
+                  ? `${theme.colors.primary}10`
+                  : theme.colors.backgroundSecondary,
               }}
               onClick={(e) => toggleFileExpansion(filePath, e)}
               onMouseEnter={(e) => {
@@ -165,7 +179,8 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
               }}
               onMouseLeave={(e) => {
                 if (!hasSelectedResult) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundSecondary;
                 }
               }}
             >
@@ -173,21 +188,35 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
                 className="p-0.5 -m-0.5"
                 style={{ color: theme.colors.textSecondary }}
               >
-                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                {isExpanded ? (
+                  <ChevronDown size={16} />
+                ) : (
+                  <ChevronRight size={16} />
+                )}
               </button>
               <File size={16} style={{ color: theme.colors.primary }} />
               <div className="flex-1 flex items-center justify-between">
                 <div>
-                  <div className="font-medium text-sm" style={{ color: theme.colors.text }}>
+                  <div
+                    className="font-medium text-sm"
+                    style={{ color: theme.colors.text }}
+                  >
                     {filePath.split('/').pop()}
                   </div>
-                  <div className="text-xs" style={{ color: theme.colors.textSecondary }}>
+                  <div
+                    className="text-xs"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
                     {filePath}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs" style={{ color: theme.colors.textSecondary }}>
-                    {fileResults.length} {fileResults.length === 1 ? 'match' : 'matches'}
+                  <span
+                    className="text-xs"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
+                    {fileResults.length}{' '}
+                    {fileResults.length === 1 ? 'match' : 'matches'}
                   </span>
                 </div>
               </div>
@@ -195,14 +224,22 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
 
             {/* Section Matches */}
             {isExpanded && (
-              <div className="bg-opacity-50" style={{ backgroundColor: `${theme.colors.backgroundSecondary}50` }}>
+              <div
+                className="bg-opacity-50"
+                style={{
+                  backgroundColor: `${theme.colors.backgroundSecondary}50`,
+                }}
+              >
                 {fileResults.map((result) => (
                   <div
                     key={result.id}
                     onClick={() => onDocumentSelect(result)}
                     className="px-4 py-2 ml-6 border-l-2 cursor-pointer transition-colors"
                     style={{
-                      borderColor: selectedDocument?.id === result.id ? theme.colors.primary : 'transparent',
+                      borderColor:
+                        selectedDocument?.id === result.id
+                          ? theme.colors.primary
+                          : 'transparent',
                       backgroundColor:
                         selectedDocument?.id === result.id
                           ? `${theme.colors.primary}15`
@@ -221,7 +258,10 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
                   >
                     {/* Section Title */}
                     <div className="flex items-start gap-2 mb-1">
-                      <div className="mt-0.5" style={{ color: theme.colors.primary }}>
+                      <div
+                        className="mt-0.5"
+                        style={{ color: theme.colors.primary }}
+                      >
                         {getDocumentIcon(result.type)}
                       </div>
                       <div className="flex-1">
@@ -235,58 +275,84 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
                         </h4>
                         <div className="flex items-center gap-2">
                           {/* Show section info if available */}
-                          {result.sectionIndex !== undefined && result.totalSectionsInFile && (
-                            <span className="text-xs" style={{ color: theme.colors.accent }}>
-                              Section {result.sectionIndex + 1}/{result.totalSectionsInFile}
-                            </span>
-                          )}
+                          {result.sectionIndex !== undefined &&
+                            result.totalSectionsInFile && (
+                              <span
+                                className="text-xs"
+                                style={{ color: theme.colors.accent }}
+                              >
+                                Section {result.sectionIndex + 1}/
+                                {result.totalSectionsInFile}
+                              </span>
+                            )}
                           {/* Show if match is only in title */}
                           {result.matches.length > 0 &&
-                           result.matches.every(m => m.field === 'title' || (!m.context.before.trim() && !m.context.after.trim())) && (
-                            <span className="text-xs italic" style={{ color: theme.colors.textSecondary, opacity: 0.7 }}>
-                              Match in title
-                            </span>
-                          )}
+                            result.matches.every(
+                              (m) =>
+                                m.field === 'title' ||
+                                (!m.context.before.trim() &&
+                                  !m.context.after.trim()),
+                            ) && (
+                              <span
+                                className="text-xs italic"
+                                style={{
+                                  color: theme.colors.textSecondary,
+                                  opacity: 0.7,
+                                }}
+                              >
+                                Match in title
+                              </span>
+                            )}
                         </div>
                       </div>
                     </div>
 
                     {/* Match Preview - Only show if we have meaningful content */}
-                    {result.matches.length > 0 && result.matches.some(m => m.field === 'content' && (m.context.before.trim() || m.context.after.trim())) && (
-                      <div className="ml-6 space-y-1">
-                        {result.matches
-                          .filter(match => match.field === 'content' && (match.context.before.trim() || match.context.after.trim()))
-                          .slice(0, 1)
-                          .map((match) => (
-                            <div
-                              key={`match-${match.field}-${match.matchedText}-${match.context.before.slice(-10)}`}
-                              className="text-xs"
-                              style={{
-                                color: theme.colors.textSecondary,
-                                lineHeight: 1.5,
-                              }}
-                            >
-                              <div className="truncate">
-                                <span style={{ opacity: 0.7 }}>
-                                  ...{match.context.before.slice(-40).trim()}
-                                </span>
-                                <span
-                                  style={{
-                                    backgroundColor: `${theme.colors.primary}30`,
-                                    padding: '0 2px',
-                                    borderRadius: '2px',
-                                  }}
-                                >
-                                  {match.matchedText}
-                                </span>
-                                <span style={{ opacity: 0.7 }}>
-                                  {match.context.after.slice(0, 40).trim()}...
-                                </span>
+                    {result.matches.length > 0 &&
+                      result.matches.some(
+                        (m) =>
+                          m.field === 'content' &&
+                          (m.context.before.trim() || m.context.after.trim()),
+                      ) && (
+                        <div className="ml-6 space-y-1">
+                          {result.matches
+                            .filter(
+                              (match) =>
+                                match.field === 'content' &&
+                                (match.context.before.trim() ||
+                                  match.context.after.trim()),
+                            )
+                            .slice(0, 1)
+                            .map((match) => (
+                              <div
+                                key={`match-${match.field}-${match.matchedText}-${match.context.before.slice(-10)}`}
+                                className="text-xs"
+                                style={{
+                                  color: theme.colors.textSecondary,
+                                  lineHeight: 1.5,
+                                }}
+                              >
+                                <div className="truncate">
+                                  <span style={{ opacity: 0.7 }}>
+                                    ...{match.context.before.slice(-40).trim()}
+                                  </span>
+                                  <span
+                                    style={{
+                                      backgroundColor: `${theme.colors.primary}30`,
+                                      padding: '0 2px',
+                                      borderRadius: '2px',
+                                    }}
+                                  >
+                                    {match.matchedText}
+                                  </span>
+                                  <span style={{ opacity: 0.7 }}>
+                                    {match.context.after.slice(0, 40).trim()}...
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
+                            ))}
+                        </div>
+                      )}
                   </div>
                 ))}
               </div>

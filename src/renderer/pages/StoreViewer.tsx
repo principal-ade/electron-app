@@ -944,7 +944,6 @@ export const StoreViewer: React.FC<StoreViewerProps> = () => {
                       <Trash2 size={16} />
                       <span>Clean Sessions &gt; 7 Days</span>
                     </button>
-
                   </div>
                 </div>
               </div>

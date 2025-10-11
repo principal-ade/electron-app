@@ -13,9 +13,7 @@ interface TursoConfig {
   url: string;
   authToken?: string;
 }
-import type {
-  RepoNormalizedUniversalAgentSessionEvent,
-} from '@principal-ai/agent-monitoring';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 
 export interface ObservabilityConfig {
@@ -42,7 +40,9 @@ export class ObservabilityIntegration extends EventEmitter {
     this.storage = UnifiedSecureStorage.getInstance();
 
     // Don't initialize SDK in constructor - wait for initialize() to be called
-    console.log('[ObservabilityIntegration] Created, waiting for initialization');
+    console.log(
+      '[ObservabilityIntegration] Created, waiting for initialization',
+    );
   }
 
   /**
@@ -61,7 +61,10 @@ export class ObservabilityIntegration extends EventEmitter {
         };
       }
     } catch (error) {
-      console.error('[ObservabilityIntegration] Failed to load configuration:', error);
+      console.error(
+        '[ObservabilityIntegration] Failed to load configuration:',
+        error,
+      );
     }
     return null;
   }
@@ -77,7 +80,11 @@ export class ObservabilityIntegration extends EventEmitter {
     secrets.enabled = config.enabled ? 'true' : 'false';
     secrets.debug = config.debug ? 'true' : 'false';
 
-    await this.storage.storeSecrets('observability-config', 'observability-config', secrets);
+    await this.storage.storeSecrets(
+      'observability-config',
+      'observability-config',
+      secrets,
+    );
     this.config = config;
   }
 
@@ -111,7 +118,8 @@ export class ObservabilityIntegration extends EventEmitter {
 
       // Check if we have Turso configuration
       const tursoUrl = this.config.tursoUrl || process.env.TURSO_DATABASE_URL;
-      const tursoAuthToken = this.config.tursoAuthToken || process.env.TURSO_AUTH_TOKEN;
+      const tursoAuthToken =
+        this.config.tursoAuthToken || process.env.TURSO_AUTH_TOKEN;
 
       if (!tursoUrl || this.config.enabled === false) {
         console.log(
@@ -218,7 +226,9 @@ export class ObservabilityIntegration extends EventEmitter {
   /**
    * Test connection with provided configuration
    */
-  async testConnection(config: ObservabilityConfig): Promise<{ success: boolean; error?: string }> {
+  async testConnection(
+    config: ObservabilityConfig,
+  ): Promise<{ success: boolean; error?: string }> {
     if (!config.tursoUrl) {
       return { success: false, error: 'Turso Database URL is required' };
     }
@@ -242,10 +252,14 @@ export class ObservabilityIntegration extends EventEmitter {
 
       return { success: true };
     } catch (error) {
-      console.error('[ObservabilityIntegration] Connection test failed:', error);
+      console.error(
+        '[ObservabilityIntegration] Connection test failed:',
+        error,
+      );
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        error:
+          error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   }

@@ -144,7 +144,9 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
       }
       // For remote sources, use content provider if available
       else if (contentProvider) {
-        const relativePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+        const relativePath = filePath.startsWith('/')
+          ? filePath.substring(1)
+          : filePath;
         content = await contentProvider.readFileContent(relativePath);
       }
 
@@ -218,7 +220,9 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         }
       } catch (err) {
         if (latestFilePathRef.current === absolutePath) {
-          setSaveError(err instanceof Error ? err.message : 'Failed to save file');
+          setSaveError(
+            err instanceof Error ? err.message : 'Failed to save file',
+          );
         }
       } finally {
         if (latestFilePathRef.current === absolutePath) {
@@ -285,12 +289,14 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         }}
       >
         <FileText size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
-        <div style={{
-          fontSize: theme.fontSizes[3],
-          fontWeight: 600,
-          marginBottom: '12px',
-          color: theme.colors.text,
-        }}>
+        <div
+          style={{
+            fontSize: theme.fontSizes[3],
+            fontWeight: 600,
+            marginBottom: '12px',
+            color: theme.colors.text,
+          }}
+        >
           File Preview
         </div>
         <div style={{ fontSize: theme.fontSizes[1] }}>
@@ -320,8 +326,19 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           backgroundColor: theme.colors.backgroundSecondary,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-          <FileText size={16} style={{ color: theme.colors.primary, flexShrink: 0 }} />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          <FileText
+            size={16}
+            style={{ color: theme.colors.primary, flexShrink: 0 }}
+          />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div
               style={{
@@ -359,19 +376,39 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           {isEditable && (
             <>
               {saveError ? (
-                <span style={{ color: theme.colors.error, fontSize: theme.fontSizes[0] }}>
+                <span
+                  style={{
+                    color: theme.colors.error,
+                    fontSize: theme.fontSizes[0],
+                  }}
+                >
                   Save failed: {saveError}
                 </span>
               ) : isSaving ? (
-                <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[0] }}>
+                <span
+                  style={{
+                    color: theme.colors.textSecondary,
+                    fontSize: theme.fontSizes[0],
+                  }}
+                >
                   Saving...
                 </span>
               ) : isDirty ? (
-                <span style={{ color: theme.colors.primary, fontSize: theme.fontSizes[0] }}>
+                <span
+                  style={{
+                    color: theme.colors.primary,
+                    fontSize: theme.fontSizes[0],
+                  }}
+                >
                   Unsaved changes
                 </span>
               ) : (
-                <span style={{ color: theme.colors.textSecondary, fontSize: theme.fontSizes[0] }}>
+                <span
+                  style={{
+                    color: theme.colors.textSecondary,
+                    fontSize: theme.fontSizes[0],
+                  }}
+                >
                   Saved
                 </span>
               )}
@@ -410,7 +447,8 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                 transition: 'background-color 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';

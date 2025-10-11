@@ -43,7 +43,9 @@ export class AlexandriaRegistryService {
       entries.map(async (entry) => {
         try {
           // Get last commit info from git
-          const commitInfo = await gitClientFactory.getLastCommitInfo(entry.path);
+          const commitInfo = await gitClientFactory.getLastCommitInfo(
+            entry.path,
+          );
 
           if (commitInfo && commitInfo.date) {
             // Update the github field with last commit date only (per type constraints)
@@ -67,7 +69,7 @@ export class AlexandriaRegistryService {
 
         // Return original entry if no git info available
         return entry;
-      })
+      }),
     );
 
     return enrichedEntries;
@@ -179,7 +181,10 @@ export class AlexandriaRegistryService {
         /github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/,
       );
       if (!match) {
-        console.log('[fetchGitHubMetadata] Could not parse GitHub URL:', remoteUrl);
+        console.log(
+          '[fetchGitHubMetadata] Could not parse GitHub URL:',
+          remoteUrl,
+        );
         return null;
       }
 
@@ -199,7 +204,9 @@ export class AlexandriaRegistryService {
       if (response.status === 404) {
         // Repository is private or doesn't exist
         // Use git CLI fallback with parsed info
-        console.log('[fetchGitHubMetadata] Repository is private, using git CLI info');
+        console.log(
+          '[fetchGitHubMetadata] Repository is private, using git CLI info',
+        );
         return {
           owner: owner,
           name: repoName,
@@ -208,7 +215,10 @@ export class AlexandriaRegistryService {
       }
 
       if (!response.ok) {
-        console.error('[fetchGitHubMetadata] API request failed:', response.status);
+        console.error(
+          '[fetchGitHubMetadata] API request failed:',
+          response.status,
+        );
         // Still return basic info from parsed URL
         return {
           owner: owner,
@@ -216,7 +226,7 @@ export class AlexandriaRegistryService {
         };
       }
 
-      const data = await response.json() as {
+      const data = (await response.json()) as {
         owner?: { login: string };
         name?: string;
         description?: string;
@@ -273,7 +283,10 @@ export class AlexandriaRegistryService {
         const originRemote = remotes.find((r) => r.name === 'origin');
         remoteUrl = originRemote?.url;
       } catch (error) {
-        console.log('[registerRepository] Could not get remote URL from git:', error);
+        console.log(
+          '[registerRepository] Could not get remote URL from git:',
+          error,
+        );
       }
     }
 
@@ -287,9 +300,15 @@ export class AlexandriaRegistryService {
         try {
           // Use the new updateGitHubMetadata method from Alexandria
           await this.outpostManager.updateGitHubMetadata(name, githubMetadata);
-          console.log('[registerRepository] Updated GitHub metadata for:', name);
+          console.log(
+            '[registerRepository] Updated GitHub metadata for:',
+            name,
+          );
         } catch (error) {
-          console.error('[registerRepository] Failed to update GitHub metadata:', error);
+          console.error(
+            '[registerRepository] Failed to update GitHub metadata:',
+            error,
+          );
         }
       }
     }
@@ -365,7 +384,9 @@ export class AlexandriaRegistryService {
       if (deleteLocal && repository.path) {
         try {
           await FileSystemService.deleteDirectory(repository.path);
-          console.log(`Deleted local files for repository: ${name} at ${repository.path}`);
+          console.log(
+            `Deleted local files for repository: ${name} at ${repository.path}`,
+          );
         } catch (error) {
           console.error(`Failed to delete local files for ${name}:`, error);
           // Continue even if deletion fails - registry removal succeeded
@@ -422,13 +443,25 @@ export class AlexandriaRegistryService {
     try {
       // Update GitHub metadata using git CLI fallback
       if (!repo.github?.owner || repo.github.owner === 'local') {
-        const githubMetadata = await this.fetchGitHubMetadata(repo.path, repo.remoteUrl);
+        const githubMetadata = await this.fetchGitHubMetadata(
+          repo.path,
+          repo.remoteUrl,
+        );
         if (githubMetadata) {
           try {
-            await this.outpostManager.updateGitHubMetadata(name, githubMetadata);
-            console.log('[refreshRepository] Updated GitHub metadata for:', name);
+            await this.outpostManager.updateGitHubMetadata(
+              name,
+              githubMetadata,
+            );
+            console.log(
+              '[refreshRepository] Updated GitHub metadata for:',
+              name,
+            );
           } catch (error) {
-            console.error('[refreshRepository] Failed to update GitHub metadata:', error);
+            console.error(
+              '[refreshRepository] Failed to update GitHub metadata:',
+              error,
+            );
           }
         }
       }
@@ -597,7 +630,10 @@ export class AlexandriaRegistryService {
    * @param useGitignore - Whether to respect .gitignore files (default: true)
    * @returns Array of all markdown file paths
    */
-  async getAllMarkdownDocuments(name: string, useGitignore = true): Promise<string[]> {
+  async getAllMarkdownDocuments(
+    name: string,
+    useGitignore = true,
+  ): Promise<string[]> {
     const entry = await this.getRepository(name);
     if (!entry) {
       throw new Error(`Repository not found: ${name}`);
@@ -612,7 +648,10 @@ export class AlexandriaRegistryService {
    * @param useGitignore - Whether to respect .gitignore files (default: true)
    * @returns Array of all markdown file paths
    */
-  async getAllMarkdownDocumentsByPath(path: string, useGitignore = true): Promise<string[]> {
+  async getAllMarkdownDocumentsByPath(
+    path: string,
+    useGitignore = true,
+  ): Promise<string[]> {
     const entry = await this.getRepositoryByPath(path);
     if (!entry) {
       throw new Error(`Repository not found at path: ${path}`);
@@ -630,22 +669,41 @@ export class AlexandriaRegistryService {
 
     for (const entry of entries) {
       // Check if GitHub metadata is missing or shows as 'local'
-      if (!entry.github?.owner || entry.github.owner === 'local' || entry.github.owner === 'unknown') {
-        console.log(`[refreshAllGitHubMetadata] Refreshing metadata for: ${entry.name}`);
+      if (
+        !entry.github?.owner ||
+        entry.github.owner === 'local' ||
+        entry.github.owner === 'unknown'
+      ) {
+        console.log(
+          `[refreshAllGitHubMetadata] Refreshing metadata for: ${entry.name}`,
+        );
 
         try {
-          const githubMetadata = await this.fetchGitHubMetadata(entry.path, entry.remoteUrl);
+          const githubMetadata = await this.fetchGitHubMetadata(
+            entry.path,
+            entry.remoteUrl,
+          );
           if (githubMetadata) {
-            await this.outpostManager.updateGitHubMetadata(entry.name, githubMetadata);
-            console.log(`[refreshAllGitHubMetadata] Updated GitHub metadata for: ${entry.name}`);
+            await this.outpostManager.updateGitHubMetadata(
+              entry.name,
+              githubMetadata,
+            );
+            console.log(
+              `[refreshAllGitHubMetadata] Updated GitHub metadata for: ${entry.name}`,
+            );
           }
         } catch (error) {
-          console.error(`[refreshAllGitHubMetadata] Failed to update ${entry.name}:`, error);
+          console.error(
+            `[refreshAllGitHubMetadata] Failed to update ${entry.name}:`,
+            error,
+          );
         }
       }
     }
 
-    console.log('[refreshAllGitHubMetadata] Finished refreshing GitHub metadata');
+    console.log(
+      '[refreshAllGitHubMetadata] Finished refreshing GitHub metadata',
+    );
   }
 
   /**
@@ -655,7 +713,10 @@ export class AlexandriaRegistryService {
    * @param useGitignore - Whether to respect .gitignore files (default: true)
    * @returns Array of untracked markdown file paths
    */
-  async getUntrackedDocuments(name: string, useGitignore = true): Promise<string[]> {
+  async getUntrackedDocuments(
+    name: string,
+    useGitignore = true,
+  ): Promise<string[]> {
     const entry = await this.getRepository(name);
     if (!entry) {
       throw new Error(`Repository not found: ${name}`);
@@ -670,7 +731,10 @@ export class AlexandriaRegistryService {
    * @param useGitignore - Whether to respect .gitignore files (default: true)
    * @returns Array of untracked markdown file paths
    */
-  async getUntrackedDocumentsByPath(path: string, useGitignore = true): Promise<string[]> {
+  async getUntrackedDocumentsByPath(
+    path: string,
+    useGitignore = true,
+  ): Promise<string[]> {
     const entry = await this.getRepositoryByPath(path);
     if (!entry) {
       throw new Error(`Repository not found at path: ${path}`);
@@ -686,7 +750,10 @@ export class AlexandriaRegistryService {
    * @param useGitignore - Whether to respect .gitignore files (default: true)
    * @returns Object with categorized document arrays
    */
-  async getComprehensiveDocuments(name: string, useGitignore = true): Promise<{
+  async getComprehensiveDocuments(
+    name: string,
+    useGitignore = true,
+  ): Promise<{
     tracked: string[];
     untracked: string[];
     excluded: string[];
@@ -700,7 +767,9 @@ export class AlexandriaRegistryService {
     const [tracked, untracked, excluded, all] = await Promise.all([
       this.outpostManager.getAlexandriaEntryDocs(entry),
       this.outpostManager.getUntrackedDocs(entry, useGitignore),
-      Promise.resolve(this.outpostManager.getAlexandriaEntryExcludedDocs(entry)),
+      Promise.resolve(
+        this.outpostManager.getAlexandriaEntryExcludedDocs(entry),
+      ),
       this.outpostManager.getAllDocs(entry, useGitignore),
     ]);
 

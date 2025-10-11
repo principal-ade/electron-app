@@ -20,7 +20,9 @@ export interface GroupedRepositories {
 /**
  * Extract organization name from a repository
  */
-export function extractOrganization(repo: AlexandriaEntry | EnhancedAlexandriaEntry): string {
+export function extractOrganization(
+  repo: AlexandriaEntry | EnhancedAlexandriaEntry,
+): string {
   // First try GitHub owner
   if (repo.github?.owner) {
     return repo.github.owner;
@@ -53,7 +55,9 @@ export function extractOrganization(repo: AlexandriaEntry | EnhancedAlexandriaEn
 /**
  * Determine organization type based on repository information
  */
-export function getOrganizationType(repo: AlexandriaEntry | EnhancedAlexandriaEntry): OrganizationType {
+export function getOrganizationType(
+  repo: AlexandriaEntry | EnhancedAlexandriaEntry,
+): OrganizationType {
   if (repo.github?.owner) {
     return 'github';
   }
@@ -67,10 +71,13 @@ export function getOrganizationType(repo: AlexandriaEntry | EnhancedAlexandriaEn
  * Group repositories by organization
  */
 export function groupRepositoriesByOrganization(
-  repositories: (AlexandriaEntry | EnhancedAlexandriaEntry)[]
+  repositories: (AlexandriaEntry | EnhancedAlexandriaEntry)[],
 ): GroupedRepositories {
   const organizations = new Map<string, OrganizationInfo>();
-  const repositoriesByOrg = new Map<string, (AlexandriaEntry | EnhancedAlexandriaEntry)[]>();
+  const repositoriesByOrg = new Map<
+    string,
+    (AlexandriaEntry | EnhancedAlexandriaEntry)[]
+  >();
 
   for (const repo of repositories) {
     const orgName = extractOrganization(repo);
@@ -113,7 +120,9 @@ export function groupRepositoriesByOrganization(
 /**
  * Get the last activity timestamp for a repository
  */
-export function getRepositoryLastActivity(repo: AlexandriaEntry | EnhancedAlexandriaEntry): number {
+export function getRepositoryLastActivity(
+  repo: AlexandriaEntry | EnhancedAlexandriaEntry,
+): number {
   const enhanced = repo as EnhancedAlexandriaEntry;
   if (enhanced.mostRecentChange) {
     return new Date(enhanced.mostRecentChange).getTime();
@@ -130,7 +139,9 @@ export function getRepositoryLastActivity(repo: AlexandriaEntry | EnhancedAlexan
 /**
  * Sort organizations by type and name
  */
-export function sortOrganizations(organizations: OrganizationInfo[]): OrganizationInfo[] {
+export function sortOrganizations(
+  organizations: OrganizationInfo[],
+): OrganizationInfo[] {
   return organizations.sort((a, b) => {
     // First priority: User's personal repos (isUser flag) at the top
     if (a.isUser && !b.isUser) return -1;

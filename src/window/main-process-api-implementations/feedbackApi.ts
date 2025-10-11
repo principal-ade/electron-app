@@ -28,10 +28,7 @@ export const feedbackAPI: FeedbackAPI = {
    * Listen for feedback modal show events
    */
   onShowModal: (callback: (data: FeedbackModalData) => void) => {
-    const subscription = (
-      _event: IpcRendererEvent,
-      data: FeedbackModalData,
-    ) =>
+    const subscription = (_event: IpcRendererEvent, data: FeedbackModalData) =>
       callback(data);
     ipcRenderer.on(FeedbackEvent.SHOW_MODAL, subscription);
     return () =>

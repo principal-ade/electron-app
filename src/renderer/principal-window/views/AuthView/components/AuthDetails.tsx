@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { LogIn, LogOut, Loader2, Shield, CheckCircle, XCircle, Key, Building, RefreshCw, ExternalLink } from 'lucide-react';
+import {
+  LogIn,
+  LogOut,
+  Loader2,
+  Shield,
+  CheckCircle,
+  XCircle,
+  Key,
+  Building,
+  RefreshCw,
+  ExternalLink,
+} from 'lucide-react';
 import { gitSyncConnectionManager } from '../../../../services/git-sync/GitSyncConnectionManager';
 import { GithubService } from '../../../../main-process-api/GithubService';
 import type { TokenInfo } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
@@ -8,16 +19,16 @@ import type { TokenInfo } from '../../../../../shared/main-process-api-interface
 // Mapping of GitHub scopes to human-readable descriptions
 export const SCOPE_DESCRIPTIONS: Record<string, string> = {
   // Repository scopes
-  'repo': 'Full control of private repositories',
+  repo: 'Full control of private repositories',
   'repo:status': 'Access commit status',
-  'repo_deployment': 'Access deployment status',
-  'public_repo': 'Access public repositories',
+  repo_deployment: 'Access deployment status',
+  public_repo: 'Access public repositories',
   'repo:invite': 'Access repository invitations',
-  'security_events': 'Read and write security events',
-  'delete_repo': 'Delete repositories',
+  security_events: 'Read and write security events',
+  delete_repo: 'Delete repositories',
 
   // Workflow scope
-  'workflow': 'Update GitHub Actions workflows',
+  workflow: 'Update GitHub Actions workflows',
 
   // Package scopes
   'write:packages': 'Upload packages to GitHub Package Registry',
@@ -31,7 +42,7 @@ export const SCOPE_DESCRIPTIONS: Record<string, string> = {
   'manage_runners:org': 'Manage organization runners',
 
   // User scopes
-  'user': 'Update all user data',
+  user: 'Update all user data',
   'read:user': 'Read all user profile data',
   'user:email': 'Access user email addresses',
   'user:follow': 'Follow and unfollow users',
@@ -47,10 +58,10 @@ export const SCOPE_DESCRIPTIONS: Record<string, string> = {
   'read:ssh_signing_key': 'Read user SSH signing keys',
 
   // Gist scope
-  'gist': 'Create gists',
+  gist: 'Create gists',
 
   // Notifications scope
-  'notifications': 'Access notifications',
+  notifications: 'Access notifications',
 
   // Project scopes
   'admin:project': 'Full control of projects',
@@ -201,9 +212,15 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
             >
               Authentication Status
               {isAuthenticated ? (
-                <CheckCircle size={20} style={{ color: theme.colors.success || '#10b981' }} />
+                <CheckCircle
+                  size={20}
+                  style={{ color: theme.colors.success || '#10b981' }}
+                />
               ) : (
-                <XCircle size={20} style={{ color: theme.colors.textSecondary }} />
+                <XCircle
+                  size={20}
+                  style={{ color: theme.colors.textSecondary }}
+                />
               )}
             </h2>
           </div>
@@ -324,55 +341,58 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                   color: theme.colors.textSecondary,
                 }}
               >
-                You are currently not authenticated. Sign in with your GitHub account to access repository features and synchronization.
+                You are currently not authenticated. Sign in with your GitHub
+                account to access repository features and synchronization.
               </p>
 
-              {loginError && loginError !== 'Authentication already in progress' && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 16px',
-                    backgroundColor: theme.colors.error
-                      ? `${theme.colors.error}20`
-                      : '#ef444420',
-                    border: `1px solid ${theme.colors.error || '#ef4444'}40`,
-                    borderRadius: '8px',
-                    marginBottom: '16px',
-                  }}
-                >
-                  <span
+              {loginError &&
+                loginError !== 'Authentication already in progress' && (
+                  <div
                     style={{
-                      fontSize: '13px',
-                      color: theme.colors.error || '#ef4444',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      backgroundColor: theme.colors.error
+                        ? `${theme.colors.error}20`
+                        : '#ef444420',
+                      border: `1px solid ${theme.colors.error || '#ef4444'}40`,
+                      borderRadius: '8px',
+                      marginBottom: '16px',
                     }}
                   >
-                    {loginError}
-                  </span>
-                  <button
-                    onClick={() => clearLoginError()}
-                    style={{
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: '4px',
-                      color: theme.colors.error || '#ef4444',
-                      fontSize: '16px',
-                      fontWeight: 'bold',
-                      lineHeight: 1,
-                    }}
-                    title="Dismiss"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        color: theme.colors.error || '#ef4444',
+                      }}
+                    >
+                      {loginError}
+                    </span>
+                    <button
+                      onClick={() => clearLoginError()}
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: '4px',
+                        color: theme.colors.error || '#ef4444',
+                        fontSize: '16px',
+                        fontWeight: 'bold',
+                        lineHeight: 1,
+                      }}
+                      title="Dismiss"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
 
               <button
                 onClick={async () => {
                   try {
-                    const forceRetry = loginError === 'Authentication already in progress';
+                    const forceRetry =
+                      loginError === 'Authentication already in progress';
                     await login(forceRetry);
                     console.info('Login completed successfully');
                   } catch (error: unknown) {
@@ -412,7 +432,8 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                       : 'Login with GitHub'
                 }
                 disabled={
-                  isLoggingIn && loginError !== 'Authentication already in progress'
+                  isLoggingIn &&
+                  loginError !== 'Authentication already in progress'
                 }
               >
                 {isLoggingIn ? (
@@ -471,7 +492,9 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                   onClick={async () => {
                     // Open GitHub OAuth app settings to manage granted permissions
                     // This is the specific OAuth app ID for your application
-                    await ShellService.openExternal('https://github.com/settings/connections/applications/Ov23liw7kWJ0kctIrSs3');
+                    await ShellService.openExternal(
+                      'https://github.com/settings/connections/applications/Ov23liw7kWJ0kctIrSs3',
+                    );
                   }}
                   style={{
                     display: 'flex',
@@ -515,26 +538,42 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                   }}
                   onMouseEnter={(e) => {
                     if (!loadingTokenInfo) {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundSecondary;
                     }
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  <RefreshCw size={14} className={loadingTokenInfo ? 'spinning' : ''} />
+                  <RefreshCw
+                    size={14}
+                    className={loadingTokenInfo ? 'spinning' : ''}
+                  />
                   Refresh
                 </button>
               </div>
             </div>
 
             {loadingTokenInfo ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: theme.colors.textSecondary }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
                 <Loader2 size={16} className="spinning" />
                 Loading token information...
               </div>
             ) : tokenError ? (
-              <div style={{ color: theme.colors.error || '#ef4444', fontSize: '14px' }}>
+              <div
+                style={{
+                  color: theme.colors.error || '#ef4444',
+                  fontSize: '14px',
+                }}
+              >
                 {tokenError}
               </div>
             ) : (
@@ -559,7 +598,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                     }}
                   >
                     {tokenInfo.scopes.length > 0 ? (
-                      tokenInfo.scopes.map(scope => (
+                      tokenInfo.scopes.map((scope) => (
                         <div
                           key={scope}
                           style={{
@@ -571,11 +610,20 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                           }}
                           title={formatScope(scope)}
                         >
-                          <span style={{ fontFamily: 'monospace', fontWeight: 500 }}>{scope}</span>
+                          <span
+                            style={{ fontFamily: 'monospace', fontWeight: 500 }}
+                          >
+                            {scope}
+                          </span>
                         </div>
                       ))
                     ) : (
-                      <span style={{ color: theme.colors.textSecondary, fontSize: '14px' }}>
+                      <span
+                        style={{
+                          color: theme.colors.textSecondary,
+                          fontSize: '14px',
+                        }}
+                      >
                         No specific scopes granted
                       </span>
                     )}
@@ -589,7 +637,8 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                         fontStyle: 'italic',
                       }}
                     >
-                      To change permissions, create a new token with different scopes via the Manage Token button.
+                      To change permissions, create a new token with different
+                      scopes via the Manage Token button.
                     </p>
                   )}
                 </div>
@@ -614,11 +663,12 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+                        gridTemplateColumns:
+                          'repeat(auto-fill, minmax(250px, 1fr))',
                         gap: '12px',
                       }}
                     >
-                      {tokenInfo.organizations.map(org => (
+                      {tokenInfo.organizations.map((org) => (
                         <div
                           key={org.login}
                           style={{
@@ -682,10 +732,12 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                     }}
                   >
                     <span>
-                      API Rate Limit: {tokenInfo.rateLimit.remaining} / {tokenInfo.rateLimit.limit}
+                      API Rate Limit: {tokenInfo.rateLimit.remaining} /{' '}
+                      {tokenInfo.rateLimit.limit}
                     </span>
                     <span>
-                      Resets: {new Date(tokenInfo.rateLimit.reset).toLocaleTimeString()}
+                      Resets:{' '}
+                      {new Date(tokenInfo.rateLimit.reset).toLocaleTimeString()}
                     </span>
                   </div>
                 )}
@@ -750,8 +802,16 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                       justifyContent: 'center',
                     }}
                   >
-                    <svg width="24" height="24" viewBox="0 0 16 16" fill="white">
-                      <path fillRule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                    <svg
+                      width="24"
+                      height="24"
+                      viewBox="0 0 16 16"
+                      fill="white"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+                      />
                     </svg>
                   </div>
                   <div>

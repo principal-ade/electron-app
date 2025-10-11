@@ -62,7 +62,10 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
 
   async removeRepository(name: string, deleteLocal?: boolean) {
     const existing = await this.registryService.getRepository(name);
-    const success = await this.registryService.removeRepository(name, deleteLocal);
+    const success = await this.registryService.removeRepository(
+      name,
+      deleteLocal,
+    );
     if (success) {
       // Broadcast the event to all windows
       this.broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_REMOVED, {
@@ -106,20 +109,28 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
 
     try {
       const monitoringManager = getRepositoryMonitoringManager();
-      const registrationManager = RepositoryRegistrationManager.getInstance(monitoringManager);
+      const registrationManager =
+        RepositoryRegistrationManager.getInstance(monitoringManager);
       await registrationManager.handleRepositoryAdded(repo);
     } catch (error) {
-      console.error('[Alexandria] Failed to register repository with monitoring:', error);
+      console.error(
+        '[Alexandria] Failed to register repository with monitoring:',
+        error,
+      );
     }
   }
 
   private async unregisterFromMonitoring(repoPath: string): Promise<void> {
     try {
       const monitoringManager = getRepositoryMonitoringManager();
-      const registrationManager = RepositoryRegistrationManager.getInstance(monitoringManager);
+      const registrationManager =
+        RepositoryRegistrationManager.getInstance(monitoringManager);
       await registrationManager.handleRepositoryRemoved(repoPath);
     } catch (error) {
-      console.error('[Alexandria] Failed to unregister repository from monitoring:', error);
+      console.error(
+        '[Alexandria] Failed to unregister repository from monitoring:',
+        error,
+      );
     }
   }
 
@@ -157,8 +168,10 @@ export function registerAlexandriaHandlers(): void {
   ipcMain.handle(AlexandriaAPIEvent.REGISTER, (_, name: string, path: string) =>
     handler.registerRepository(name, path),
   );
-  ipcMain.handle(AlexandriaAPIEvent.REMOVE, (_, name: string, deleteLocal?: boolean) =>
-    handler.removeRepository(name, deleteLocal),
+  ipcMain.handle(
+    AlexandriaAPIEvent.REMOVE,
+    (_, name: string, deleteLocal?: boolean) =>
+      handler.removeRepository(name, deleteLocal),
   );
   ipcMain.handle(AlexandriaAPIEvent.SEARCH, (_, query: string) =>
     handler.searchRepositories(query),

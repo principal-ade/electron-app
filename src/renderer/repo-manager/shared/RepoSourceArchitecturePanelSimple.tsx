@@ -48,9 +48,7 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
   // State
   const [analyzingLayers, setAnalyzingLayers] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fileSystemTree, setFileSystemTree] = useState<FileTree | null>(
-    null,
-  );
+  const [fileSystemTree, setFileSystemTree] = useState<FileTree | null>(null);
 
   // Get file tree from cache for local sources
   const repositoryPath = source.type === 'local' ? source.location : null;
@@ -100,17 +98,26 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
 
         // Use RepositoryMonitoringService for local sources (it's much faster and more accurate)
         if (source.type === 'local' && source.location) {
-          console.debug('[ArchitecturePanel] Using RepositoryMonitoringService for packages...');
-          const result = await RepositoryMonitoringService.getPackages(source.location);
+          console.debug(
+            '[ArchitecturePanel] Using RepositoryMonitoringService for packages...',
+          );
+          const result = await RepositoryMonitoringService.getPackages(
+            source.location,
+          );
           if (!result) {
-            throw new Error('Failed to get packages from repository monitoring service');
+            throw new Error(
+              'Failed to get packages from repository monitoring service',
+            );
           }
 
           const packageResult = result.packages;
-          console.debug('[ArchitecturePanel] Got packages from monitoring service:', {
-            count: packageResult.length,
-            isMonorepo: result.summary.isMonorepo,
-          });
+          console.debug(
+            '[ArchitecturePanel] Got packages from monitoring service:',
+            {
+              count: packageResult.length,
+              isMonorepo: result.summary.isMonorepo,
+            },
+          );
 
           setLocalPackageLayers(packageResult);
           if (!packageLayersProp) {
@@ -121,7 +128,9 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
         }
 
         // For remote sources, we don't support package analysis yet
-        throw new Error('Package analysis is only supported for local repositories');
+        throw new Error(
+          'Package analysis is only supported for local repositories',
+        );
       } catch (err) {
         console.error('Error analyzing layers:', err);
       } finally {
@@ -130,7 +139,14 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
     };
 
     analyzeLayers();
-  }, [fileSystemTree, adapters, packageLayersProp, source.type, source.location, onPackageLayersChanged]);
+  }, [
+    fileSystemTree,
+    adapters,
+    packageLayersProp,
+    source.type,
+    source.location,
+    onPackageLayersChanged,
+  ]);
 
   // Handle refresh
   const handleRefresh = async () => {

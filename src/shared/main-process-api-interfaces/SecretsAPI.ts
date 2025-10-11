@@ -118,7 +118,10 @@ export interface SecretsAPI {
   /**
    * Get multiple specific secret values
    */
-  getMultiple: (repoId: string, keys: string[]) => Promise<Record<string, string>>;
+  getMultiple: (
+    repoId: string,
+    keys: string[],
+  ) => Promise<Record<string, string>>;
 
   /**
    * Copy a secret directly to clipboard without exposing it to renderer

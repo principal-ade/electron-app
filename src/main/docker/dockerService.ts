@@ -539,7 +539,7 @@ ENTRYPOINT ["knip"]
 
       // Build the Docker image
       const { stdout, stderr } = await execAsync(
-        `"${this.dockerPath}" build -t principal-ade/knip:latest -f "${dockerfilePath}" "${tmpDir}"`
+        `"${this.dockerPath}" build -t principal-ade/knip:latest -f "${dockerfilePath}" "${tmpDir}"`,
       );
 
       console.log('Docker build output:', stdout);

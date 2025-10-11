@@ -47,11 +47,12 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
     try {
       setIsLoadingTags(true);
       // Get all notes for the repository to extract available tags
-      const { notes } = await RepositoryNotesService.getNotesForPath(repositoryPath);
+      const { notes } =
+        await RepositoryNotesService.getNotesForPath(repositoryPath);
       // Extract unique tags from all notes
       const tagSet = new Set<string>();
-      notes.forEach(note => {
-        note.tags?.forEach(tag => tagSet.add(tag));
+      notes.forEach((note) => {
+        note.tags?.forEach((tag) => tagSet.add(tag));
       });
       setAvailableTags(Array.from(tagSet).sort());
     } catch (err) {
@@ -94,10 +95,8 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
   };
 
   const handleTagToggle = (tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -158,7 +157,8 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
             color: theme.colors.textSecondary,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';
@@ -276,14 +276,16 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
                     }}
                     onMouseEnter={(e) => {
                       if (!selectedTags.includes(tag)) {
-                        e.currentTarget.style.borderColor = theme.colors.primary;
+                        e.currentTarget.style.borderColor =
+                          theme.colors.primary;
                         e.currentTarget.style.color = theme.colors.primary;
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!selectedTags.includes(tag)) {
                         e.currentTarget.style.borderColor = theme.colors.border;
-                        e.currentTarget.style.color = theme.colors.textSecondary;
+                        e.currentTarget.style.color =
+                          theme.colors.textSecondary;
                       }
                     }}
                   >
@@ -348,7 +350,8 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
               }}
               onMouseEnter={(e) => {
                 if (!isSubmitting) {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundSecondary;
                 }
               }}
               onMouseLeave={(e) => {
@@ -370,8 +373,11 @@ export const AddNoteModal: React.FC<AddNoteModalProps> = ({
                 color: theme.colors.background,
                 fontSize: theme.fontSizes[1],
                 fontWeight: 500,
-                cursor: (isSubmitting || !noteContent.trim()) ? 'not-allowed' : 'pointer',
-                opacity: (isSubmitting || !noteContent.trim()) ? 0.6 : 1,
+                cursor:
+                  isSubmitting || !noteContent.trim()
+                    ? 'not-allowed'
+                    : 'pointer',
+                opacity: isSubmitting || !noteContent.trim() ? 0.6 : 1,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',

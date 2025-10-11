@@ -85,7 +85,9 @@ class AuthService {
           if (!currentState.isAuthenticated) {
             console.log('[AuthService] Already unauthenticated, not clearing');
           } else {
-            console.log('[AuthService] WARNING: Currently authenticated but no stored credentials found');
+            console.log(
+              '[AuthService] WARNING: Currently authenticated but no stored credentials found',
+            );
             // Don't clear - this might be a transient storage issue
           }
         }
@@ -237,7 +239,9 @@ class AuthService {
       console.log('[AuthService] Reading from UnifiedSecureStorage...');
 
       // Get token and metadata from unified storage
-      const tokenData = await this.storage.getTokenWithMetadata(TOKEN_KEYS.GITHUB_TOKEN);
+      const tokenData = await this.storage.getTokenWithMetadata(
+        TOKEN_KEYS.GITHUB_TOKEN,
+      );
 
       if (!tokenData) {
         console.log('[AuthService] No stored credentials found');
@@ -305,9 +309,7 @@ class AuthService {
    */
   async initializeAuthState(): Promise<void> {
     try {
-      console.log(
-        '[AuthService] Initializing auth state on startup...',
-      );
+      console.log('[AuthService] Initializing auth state on startup...');
 
       // Try to get stored auth - this will decrypt credentials
       const storedAuth = await this.getStoredAuth();

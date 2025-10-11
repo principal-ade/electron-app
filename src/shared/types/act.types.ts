@@ -67,8 +67,7 @@ export interface ActRunnerWorkflowProgressEvent
   raw: string;
 }
 
-export interface ActRunnerWorkflowStepEvent
-  extends ActRunnerWorkflowEventBase {
+export interface ActRunnerWorkflowStepEvent extends ActRunnerWorkflowEventBase {
   type: 'step';
   status: 'success' | 'failure' | 'running';
   label: string;

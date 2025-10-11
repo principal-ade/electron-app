@@ -14,7 +14,10 @@ interface ReadyMessage {
 
 type OutgoingMessage = ServerToMainMessage | ReadyMessage;
 
-console.info('[EventProcessingWorker] Script loaded, HttpEventServer:', typeof HttpEventServer);
+console.info(
+  '[EventProcessingWorker] Script loaded, HttpEventServer:',
+  typeof HttpEventServer,
+);
 
 // Track if we've sent the ready signal
 let readySent = false;
@@ -26,12 +29,14 @@ function extractMessage(raw: unknown): unknown {
   return raw;
 }
 
-function isMainToServerMessage(message: unknown): message is MainToServerMessage {
+function isMainToServerMessage(
+  message: unknown,
+): message is MainToServerMessage {
   return Boolean(
     message &&
-    typeof message === 'object' &&
-    'type' in message &&
-    typeof (message as { type: unknown }).type === 'string'
+      typeof message === 'object' &&
+      'type' in message &&
+      typeof (message as { type: unknown }).type === 'string',
   );
 }
 
@@ -39,11 +44,17 @@ function isMainToServerMessage(message: unknown): message is MainToServerMessage
 function handleMessage(rawMessage: unknown): void {
   const message = extractMessage(rawMessage);
   if (!isMainToServerMessage(message)) {
-    console.warn('[EventProcessingWorker] Ignoring message with unexpected shape:', rawMessage);
+    console.warn(
+      '[EventProcessingWorker] Ignoring message with unexpected shape:',
+      rawMessage,
+    );
     return;
   }
 
-  console.info('[EventProcessingWorker] Received message from main:', message.type);
+  console.info(
+    '[EventProcessingWorker] Received message from main:',
+    message.type,
+  );
 
   if (server) {
     server.handleMainResponse(message);
@@ -52,13 +63,20 @@ function handleMessage(rawMessage: unknown): void {
 
 // Function to send messages to main process
 function sendToMain(message: OutgoingMessage): void {
-  console.info('[EventProcessingWorker] Attempting to send message to main:', message.type);
+  console.info(
+    '[EventProcessingWorker] Attempting to send message to main:',
+    message.type,
+  );
   try {
     // Electron utility processes use process.parentPort
     if (process.parentPort) {
-      console.info('[EventProcessingWorker] Using process.parentPort.postMessage');
+      console.info(
+        '[EventProcessingWorker] Using process.parentPort.postMessage',
+      );
       process.parentPort.postMessage(message);
-      console.info('[EventProcessingWorker] Message sent via process.parentPort');
+      console.info(
+        '[EventProcessingWorker] Message sent via process.parentPort',
+      );
     } else if (process.send) {
       // Fallback to process.send for child processes
       console.info('[EventProcessingWorker] Using process.send');
@@ -68,7 +86,10 @@ function sendToMain(message: OutgoingMessage): void {
       console.error('[EventProcessingWorker] No IPC mechanism available');
     }
   } catch (error) {
-    console.error('[EventProcessingWorker] Failed to send message to main:', error);
+    console.error(
+      '[EventProcessingWorker] Failed to send message to main:',
+      error,
+    );
   }
 }
 
@@ -77,15 +98,22 @@ let server: HttpEventServer;
 
 async function initialize(): Promise<void> {
   try {
-    console.info('[EventProcessingWorker] Initializing HTTP event processing server...');
-    console.info('[EventProcessingWorker] HttpEventServer available:', typeof HttpEventServer);
+    console.info(
+      '[EventProcessingWorker] Initializing HTTP event processing server...',
+    );
+    console.info(
+      '[EventProcessingWorker] HttpEventServer available:',
+      typeof HttpEventServer,
+    );
 
     server = new HttpEventServer(sendToMain, {
       logLevel: process.env.DEBUG_EVENT_SERVER === 'true' ? 'debug' : 'info',
       enableObservability: process.env.DISABLE_OBSERVABILITY !== 'true',
       maxConcurrentEvents: parseInt(process.env.MAX_CONCURRENT_EVENTS || '10'),
       requestTimeoutMs: parseInt(process.env.REQUEST_TIMEOUT_MS || '30000'),
-      statsReportingIntervalMs: parseInt(process.env.STATS_REPORTING_INTERVAL_MS || '60000')
+      statsReportingIntervalMs: parseInt(
+        process.env.STATS_REPORTING_INTERVAL_MS || '60000',
+      ),
     });
 
     // Start the HTTP server
@@ -99,14 +127,19 @@ async function initialize(): Promise<void> {
       sendToMain({
         type: 'ready',
         timestamp: Date.now(),
-        port: stats.port
+        port: stats.port,
       });
       readySent = true;
-      console.info('[EventProcessingWorker] Ready signal sent to main process, listening on port', stats.port);
+      console.info(
+        '[EventProcessingWorker] Ready signal sent to main process, listening on port',
+        stats.port,
+      );
     }
-
   } catch (error) {
-    console.error('[EventProcessingWorker] Failed to initialize server:', error);
+    console.error(
+      '[EventProcessingWorker] Failed to initialize server:',
+      error,
+    );
     process.exit(1);
   }
 }
@@ -128,12 +161,15 @@ if (process.parentPort) {
 process.on('SIGTERM', () => {
   console.info('[EventProcessingWorker] Received SIGTERM, shutting down...');
   if (server) {
-    server.stop().then(() => {
-      process.exit(0);
-    }).catch((error) => {
-      console.error('[EventProcessingWorker] Error during shutdown:', error);
-      process.exit(1);
-    });
+    server
+      .stop()
+      .then(() => {
+        process.exit(0);
+      })
+      .catch((error) => {
+        console.error('[EventProcessingWorker] Error during shutdown:', error);
+        process.exit(1);
+      });
   } else {
     process.exit(0);
   }
@@ -142,12 +178,15 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   console.info('[EventProcessingWorker] Received SIGINT, shutting down...');
   if (server) {
-    server.stop().then(() => {
-      process.exit(0);
-    }).catch((error) => {
-      console.error('[EventProcessingWorker] Error during shutdown:', error);
-      process.exit(1);
-    });
+    server
+      .stop()
+      .then(() => {
+        process.exit(0);
+      })
+      .catch((error) => {
+        console.error('[EventProcessingWorker] Error during shutdown:', error);
+        process.exit(1);
+      });
   } else {
     process.exit(0);
   }
@@ -161,7 +200,7 @@ process.on('uncaughtException', (error) => {
     id: 'uncaught-exception',
     timestamp: Date.now(),
     error: error.message,
-    context: { stack: error.stack }
+    context: { stack: error.stack },
   });
   process.exit(1);
 });
@@ -173,7 +212,7 @@ process.on('unhandledRejection', (reason, _promise) => {
     id: 'unhandled-rejection',
     timestamp: Date.now(),
     error: reason instanceof Error ? reason.message : String(reason),
-    context: { stack: reason instanceof Error ? reason.stack : undefined }
+    context: { stack: reason instanceof Error ? reason.stack : undefined },
   });
 });
 

@@ -47,9 +47,12 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
       }
 
       // Construct absolute path inline
-      const absolutePath = isLocalFile && sourceLocation
-        ? (filePath.startsWith('/') ? filePath : `${sourceLocation}/${filePath}`)
-        : filePath;
+      const absolutePath =
+        isLocalFile && sourceLocation
+          ? filePath.startsWith('/')
+            ? filePath
+            : `${sourceLocation}/${filePath}`
+          : filePath;
 
       latestFilePathRef.current = absolutePath;
 
@@ -66,7 +69,9 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
         }
         // For remote sources, use content provider if available
         else if (contentProvider) {
-          const relativePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+          const relativePath = filePath.startsWith('/')
+            ? filePath.substring(1)
+            : filePath;
           content = await contentProvider.readFileContent(relativePath);
         }
 
@@ -224,8 +229,14 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
                   setCurrentSlide(0);
                 }}
                 style={{
-                  background: viewMode === 'document' ? theme.colors.primary : 'transparent',
-                  color: viewMode === 'document' ? theme.colors.background : theme.colors.textSecondary,
+                  background:
+                    viewMode === 'document'
+                      ? theme.colors.primary
+                      : 'transparent',
+                  color:
+                    viewMode === 'document'
+                      ? theme.colors.background
+                      : theme.colors.textSecondary,
                   border: 'none',
                   padding: '4px 12px',
                   cursor: 'pointer',
@@ -242,8 +253,14 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
                   setCurrentSlide(0);
                 }}
                 style={{
-                  background: viewMode === 'slides' ? theme.colors.primary : 'transparent',
-                  color: viewMode === 'slides' ? theme.colors.background : theme.colors.textSecondary,
+                  background:
+                    viewMode === 'slides'
+                      ? theme.colors.primary
+                      : 'transparent',
+                  color:
+                    viewMode === 'slides'
+                      ? theme.colors.background
+                      : theme.colors.textSecondary,
                   border: 'none',
                   padding: '4px 12px',
                   cursor: 'pointer',

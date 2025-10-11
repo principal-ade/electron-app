@@ -53,7 +53,9 @@ export class TerminalService {
     return window.mainProcess.terminal.focusWindow(windowId);
   }
 
-  static async getOpenWindows(): Promise<Array<{ terminalId: string; windowId: number }>> {
+  static async getOpenWindows(): Promise<
+    Array<{ terminalId: string; windowId: number }>
+  > {
     return window.mainProcess.terminal.getOpenWindows();
   }
 
@@ -66,13 +68,21 @@ export class TerminalService {
   }
 
   static onWindowReady(
-    callback: (data: { terminalId: string; agentSessionId?: string; windowId: number }) => void,
+    callback: (data: {
+      terminalId: string;
+      agentSessionId?: string;
+      windowId: number;
+    }) => void,
   ): () => void {
     return window.mainProcess.terminal.onWindowReady?.(callback) || (() => {});
   }
 
   static onWindowClose(
-    callback: (data: { terminalId?: string; agentSessionId?: string; windowId: number }) => void,
+    callback: (data: {
+      terminalId?: string;
+      agentSessionId?: string;
+      windowId: number;
+    }) => void,
   ): () => void {
     return window.mainProcess.terminal.onWindowClose?.(callback) || (() => {});
   }

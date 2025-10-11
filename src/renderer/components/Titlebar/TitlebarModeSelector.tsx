@@ -1,5 +1,8 @@
 import React from 'react';
-import { SimpleModeSelector, type RepositoryMode } from '../../repo-manager/shared/SimpleModeSelector';
+import {
+  SimpleModeSelector,
+  type RepositoryMode,
+} from '../../repo-manager/shared/SimpleModeSelector';
 
 interface TitlebarModeSelectorProps {
   mode: RepositoryMode;
@@ -15,12 +18,14 @@ export const TitlebarModeSelector: React.FC<TitlebarModeSelectorProps> = ({
   position = 'center',
 }) => {
   return (
-    <div style={{
-      WebkitAppRegion: 'no-drag' as any,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
+    <div
+      style={{
+        WebkitAppRegion: 'no-drag' as any,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
       <SimpleModeSelector
         mode={mode}
         onModeChange={onModeChange}

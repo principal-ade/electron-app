@@ -20,7 +20,10 @@ export function registerObservabilityHandlers(): void {
       console.error('[ObservabilityHandlers] Failed to get config:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get configuration',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to get configuration',
       };
     }
   });
@@ -28,34 +31,44 @@ export function registerObservabilityHandlers(): void {
   /**
    * Save observability configuration
    */
-  ipcMain.handle('observability:saveConfig', async (event, config: ObservabilityConfig) => {
-    try {
-      await observability.updateConfiguration(config);
-      return { success: true };
-    } catch (error) {
-      console.error('[ObservabilityHandlers] Failed to save config:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to save configuration',
-      };
-    }
-  });
+  ipcMain.handle(
+    'observability:saveConfig',
+    async (event, config: ObservabilityConfig) => {
+      try {
+        await observability.updateConfiguration(config);
+        return { success: true };
+      } catch (error) {
+        console.error('[ObservabilityHandlers] Failed to save config:', error);
+        return {
+          success: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to save configuration',
+        };
+      }
+    },
+  );
 
   /**
    * Test observability connection
    */
-  ipcMain.handle('observability:testConnection', async (event, config: ObservabilityConfig) => {
-    try {
-      const result = await observability.testConnection(config);
-      return result;
-    } catch (error) {
-      console.error('[ObservabilityHandlers] Connection test failed:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Connection test failed',
-      };
-    }
-  });
+  ipcMain.handle(
+    'observability:testConnection',
+    async (event, config: ObservabilityConfig) => {
+      try {
+        const result = await observability.testConnection(config);
+        return result;
+      } catch (error) {
+        console.error('[ObservabilityHandlers] Connection test failed:', error);
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Connection test failed',
+        };
+      }
+    },
+  );
 
   /**
    * Get observability status and statistics

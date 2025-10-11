@@ -49,7 +49,8 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
       setAlexandriaEntry(entry);
 
       // Get comprehensive documents including tracked and untracked
-      const comprehensiveDocs = await AlexandriaDocsService.getComprehensiveDocuments(entry);
+      const comprehensiveDocs =
+        await AlexandriaDocsService.getComprehensiveDocuments(entry);
       const { tracked, untracked, excluded } = comprehensiveDocs;
 
       // Convert document paths to our format
@@ -334,7 +335,13 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                     gap: '8px',
                   }}
                 >
-                  <div style={{ position: 'relative', flexShrink: 0, marginTop: '2px' }}>
+                  <div
+                    style={{
+                      position: 'relative',
+                      flexShrink: 0,
+                      marginTop: '2px',
+                    }}
+                  >
                     <FileText
                       size={16}
                       color={
@@ -358,7 +365,11 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
-                      title={doc.isTracked ? 'Tracked (in CodebaseView)' : 'Untracked'}
+                      title={
+                        doc.isTracked
+                          ? 'Tracked (in CodebaseView)'
+                          : 'Untracked'
+                      }
                     >
                       {doc.isTracked ? (
                         <Eye size={6} color="white" />
@@ -381,7 +392,13 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                     >
                       {doc.name}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
                       <div
                         style={{
                           fontSize: '11px',

@@ -98,9 +98,13 @@ describe('GitClientFactory', () => {
     });
 
     it('should handle errors when checking git availability', async () => {
-      mockGitExecutor.checkAvailability.mockRejectedValue(new Error('Command not found'));
+      mockGitExecutor.checkAvailability.mockRejectedValue(
+        new Error('Command not found'),
+      );
 
-      await expect(GitClientFactory.checkGitAvailability()).rejects.toThrow('Command not found');
+      await expect(GitClientFactory.checkGitAvailability()).rejects.toThrow(
+        'Command not found',
+      );
     });
   });
 
@@ -198,9 +202,13 @@ describe('GitClientFactory', () => {
     it('should handle errors gracefully', async () => {
       const directory = '/not/a/repo';
 
-      mockGitExecutor.getRemotes.mockRejectedValue(new Error('Not a git repository'));
+      mockGitExecutor.getRemotes.mockRejectedValue(
+        new Error('Not a git repository'),
+      );
 
-      await expect(GitClientFactory.getRemotes(directory)).rejects.toThrow('Not a git repository');
+      await expect(GitClientFactory.getRemotes(directory)).rejects.toThrow(
+        'Not a git repository',
+      );
     });
   });
 
@@ -224,9 +232,13 @@ describe('GitClientFactory', () => {
     it('should handle errors gracefully', async () => {
       const directory = '/not/a/repo';
 
-      (gitLensAdapter.getGitStatus as jest.Mock).mockRejectedValue(new Error('Not a git repository'));
+      (gitLensAdapter.getGitStatus as jest.Mock).mockRejectedValue(
+        new Error('Not a git repository'),
+      );
 
-      await expect(GitClientFactory.getGitStatus(directory)).rejects.toThrow('Not a git repository');
+      await expect(GitClientFactory.getGitStatus(directory)).rejects.toThrow(
+        'Not a git repository',
+      );
     });
 
     it('should handle empty git status', async () => {
@@ -270,9 +282,13 @@ describe('GitClientFactory', () => {
     it('should handle errors gracefully', async () => {
       const directory = '/not/a/repo';
 
-      (gitLensAdapter.getCurrentBranch as jest.Mock).mockRejectedValue(new Error('Not a git repository'));
+      (gitLensAdapter.getCurrentBranch as jest.Mock).mockRejectedValue(
+        new Error('Not a git repository'),
+      );
 
-      await expect(GitClientFactory.getCurrentBranch(directory)).rejects.toThrow('Not a git repository');
+      await expect(
+        GitClientFactory.getCurrentBranch(directory),
+      ).rejects.toThrow('Not a git repository');
     });
   });
 
@@ -292,9 +308,13 @@ describe('GitClientFactory', () => {
     it('should handle errors gracefully', async () => {
       const directory = '/not/a/repo';
 
-      mockGitExecutor.getLocalBranches.mockRejectedValue(new Error('Not a git repository'));
+      mockGitExecutor.getLocalBranches.mockRejectedValue(
+        new Error('Not a git repository'),
+      );
 
-      await expect(GitClientFactory.getLocalBranches(directory)).rejects.toThrow('Not a git repository');
+      await expect(
+        GitClientFactory.getLocalBranches(directory),
+      ).rejects.toThrow('Not a git repository');
     });
   });
 
@@ -314,9 +334,13 @@ describe('GitClientFactory', () => {
     it('should handle errors gracefully', async () => {
       const directory = '/not/a/repo';
 
-      mockGitExecutor.getRemoteBranches.mockRejectedValue(new Error('Not a git repository'));
+      mockGitExecutor.getRemoteBranches.mockRejectedValue(
+        new Error('Not a git repository'),
+      );
 
-      await expect(GitClientFactory.getRemoteBranches(directory)).rejects.toThrow('Not a git repository');
+      await expect(
+        GitClientFactory.getRemoteBranches(directory),
+      ).rejects.toThrow('Not a git repository');
     });
   });
 
@@ -325,7 +349,9 @@ describe('GitClientFactory', () => {
       const directory = '/test/project';
       const commitHash = 'abc123def456';
 
-      (gitLensAdapter.getCurrentCommit as jest.Mock).mockResolvedValue(commitHash);
+      (gitLensAdapter.getCurrentCommit as jest.Mock).mockResolvedValue(
+        commitHash,
+      );
 
       const result = await GitClientFactory.getCurrentCommit(directory);
 
@@ -357,7 +383,10 @@ describe('GitClientFactory', () => {
       );
 
       expect(result).toBe(configValue);
-      expect(mockGitExecutor.getConfig).toHaveBeenCalledWith(directory, 'remote.origin.url');
+      expect(mockGitExecutor.getConfig).toHaveBeenCalledWith(
+        directory,
+        'remote.origin.url',
+      );
     });
 
     it('should return null when config is not set', async () => {
@@ -376,10 +405,12 @@ describe('GitClientFactory', () => {
     it('should handle errors gracefully', async () => {
       const directory = '/not/a/repo';
 
-      mockGitExecutor.getConfig.mockRejectedValue(new Error('Not a git repository'));
+      mockGitExecutor.getConfig.mockRejectedValue(
+        new Error('Not a git repository'),
+      );
 
       await expect(
-        GitClientFactory.getConfig(directory, 'remote.origin.url')
+        GitClientFactory.getConfig(directory, 'remote.origin.url'),
       ).rejects.toThrow('Not a git repository');
     });
   });
@@ -403,7 +434,9 @@ describe('GitClientFactory', () => {
         message: 'Test commit',
       };
 
-      (gitLensAdapter.getLastCommitInfo as jest.Mock).mockResolvedValue(mockCommitInfo);
+      (gitLensAdapter.getLastCommitInfo as jest.Mock).mockResolvedValue(
+        mockCommitInfo,
+      );
 
       const result = await GitClientFactory.getLastCommitInfo(directory);
 

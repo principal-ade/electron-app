@@ -16,13 +16,13 @@ export const palaceTasksApi: PalaceTasksAPI = {
   updateTaskStatus: (
     repositoryPath: string,
     taskId: string,
-    status: TaskStatus
+    status: TaskStatus,
   ) =>
     ipcRenderer.invoke(
       PalaceTasksAPIEvent.UPDATE_TASK_STATUS,
       repositoryPath,
       taskId,
-      status
+      status,
     ),
 
   deleteTask: (repositoryPath: string, taskId: string) =>

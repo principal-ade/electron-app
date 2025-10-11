@@ -32,7 +32,9 @@ export class TokenDomain {
     return tokenData.token;
   }
 
-  async getTokenWithMetadata(key: string): Promise<{ token: string; metadata: any } | null> {
+  async getTokenWithMetadata(
+    key: string,
+  ): Promise<{ token: string; metadata: any } | null> {
     const data = await this.storage.getData();
     const tokenData = data.tokens[key] as TokenData | undefined;
 

@@ -19,7 +19,10 @@ const STATUS_CLASS: Record<DevServerLifecycleStatus, string> = {
 };
 
 export const SidecarApp: React.FC = () => {
-  const searchParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const searchParams = useMemo(
+    () => new URLSearchParams(window.location.search),
+    [],
+  );
   const sessionId = searchParams.get('sessionId') ?? undefined;
   const projectPath = searchParams.get('projectPath') ?? undefined;
   const descriptorCommand = searchParams.get('command') ?? undefined;
@@ -49,7 +52,11 @@ export const SidecarApp: React.FC = () => {
       setStatus(payload.status as DevServerLifecycleStatus);
       setCurrentUrl(payload.url ?? undefined);
       setLastError(payload.lastError ?? undefined);
-      if (payload.status === 'running' || payload.status === 'stopped' || payload.status === 'error') {
+      if (
+        payload.status === 'running' ||
+        payload.status === 'stopped' ||
+        payload.status === 'error'
+      ) {
         setIsProcessing(false);
       }
     };
@@ -59,10 +66,12 @@ export const SidecarApp: React.FC = () => {
       window.mainProcess.devSidecar.onServerStarted(handleStatus),
       window.mainProcess.devSidecar.onServerStopped(handleStatus),
       window.mainProcess.devSidecar.onServerError(handleStatus),
-      window.mainProcess.devSidecar.onLogsToggled(({ sessionId: id, visible }) => {
-        if (id !== sessionId) return;
-        setLogsVisible(visible);
-      }),
+      window.mainProcess.devSidecar.onLogsToggled(
+        ({ sessionId: id, visible }) => {
+          if (id !== sessionId) return;
+          setLogsVisible(visible);
+        },
+      ),
     ];
 
     window.mainProcess.devSidecar
@@ -182,8 +191,13 @@ export const SidecarApp: React.FC = () => {
   }, [sessionId]);
 
   const controlsDisabled = !sessionId || isProcessing;
-  const startDisabled = controlsDisabled || !canControlServer || status === 'running' || status === 'starting';
-  const stopDisabled = controlsDisabled || status === 'stopped' || status === 'idle';
+  const startDisabled =
+    controlsDisabled ||
+    !canControlServer ||
+    status === 'running' ||
+    status === 'starting';
+  const stopDisabled =
+    controlsDisabled || status === 'stopped' || status === 'idle';
 
   if (!sessionId) {
     return (
@@ -192,7 +206,10 @@ export const SidecarApp: React.FC = () => {
           <h1>Dev Sidecar</h1>
         </header>
         <main className="sidecar-body">
-          <p className="sidecar-warning">Missing session id. Ensure the window is launched via the terminal integration.</p>
+          <p className="sidecar-warning">
+            Missing session id. Ensure the window is launched via the terminal
+            integration.
+          </p>
         </main>
       </div>
     );
@@ -203,10 +220,16 @@ export const SidecarApp: React.FC = () => {
       <header className="sidecar-header" style={{ WebkitAppRegion: 'drag' }}>
         <div className="sidecar-title">
           <h1>Dev Sidecar</h1>
-          <span className={`status-pill ${STATUS_CLASS[status]}`}>{STATUS_LABELS[status]}</span>
+          <span className={`status-pill ${STATUS_CLASS[status]}`}>
+            {STATUS_LABELS[status]}
+          </span>
         </div>
         <div className="sidecar-actions" style={{ WebkitAppRegion: 'no-drag' }}>
-          <button type="button" onClick={handleFocus} disabled={controlsDisabled}>
+          <button
+            type="button"
+            onClick={handleFocus}
+            disabled={controlsDisabled}
+          >
             Focus
           </button>
           <button type="button" onClick={handleStart} disabled={startDisabled}>
@@ -218,17 +241,31 @@ export const SidecarApp: React.FC = () => {
           <button
             type="button"
             onClick={handleRestart}
-            disabled={controlsDisabled || !canControlServer || status === 'starting'}
+            disabled={
+              controlsDisabled || !canControlServer || status === 'starting'
+            }
           >
             Restart
           </button>
-          <button type="button" onClick={handleReload} disabled={controlsDisabled}>
+          <button
+            type="button"
+            onClick={handleReload}
+            disabled={controlsDisabled}
+          >
             Reload
           </button>
-          <button type="button" onClick={handleDevTools} disabled={controlsDisabled}>
+          <button
+            type="button"
+            onClick={handleDevTools}
+            disabled={controlsDisabled}
+          >
             DevTools
           </button>
-          <button type="button" onClick={handleToggleLogs} disabled={!sessionId}>
+          <button
+            type="button"
+            onClick={handleToggleLogs}
+            disabled={!sessionId}
+          >
             {logsVisible ? 'Hide Logs' : 'Show Logs'}
           </button>
         </div>
@@ -255,8 +292,14 @@ export const SidecarApp: React.FC = () => {
           <h2>Instructions</h2>
           <ul>
             <li>Use the controls above to manage the dev server lifecycle.</li>
-            <li>Logs open in a dedicated BrowserView so you can inspect build output.</li>
-            <li>The window automatically loads the dev server URL once it reports ready.</li>
+            <li>
+              Logs open in a dedicated BrowserView so you can inspect build
+              output.
+            </li>
+            <li>
+              The window automatically loads the dev server URL once it reports
+              ready.
+            </li>
           </ul>
         </section>
       </main>

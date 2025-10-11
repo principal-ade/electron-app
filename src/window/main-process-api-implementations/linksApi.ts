@@ -31,7 +31,7 @@ export const linksAPI: LinksAPI = {
 
   addLink: (
     repoId: string,
-    link: Omit<RepositoryLink, 'id' | 'createdAt' | 'updatedAt'>
+    link: Omit<RepositoryLink, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<LinkOperationResult> => {
     return ipcRenderer.invoke(LinksEvents.ADD_LINK, repoId, link);
   },
@@ -39,12 +39,15 @@ export const linksAPI: LinksAPI = {
   updateLink: (
     repoId: string,
     linkId: string,
-    updates: Partial<RepositoryLink>
+    updates: Partial<RepositoryLink>,
   ): Promise<LinkOperationResult> => {
     return ipcRenderer.invoke(LinksEvents.UPDATE_LINK, repoId, linkId, updates);
   },
 
-  removeLink: (repoId: string, linkId: string): Promise<LinkOperationResult> => {
+  removeLink: (
+    repoId: string,
+    linkId: string,
+  ): Promise<LinkOperationResult> => {
     return ipcRenderer.invoke(LinksEvents.REMOVE_LINK, repoId, linkId);
   },
 

@@ -38,8 +38,17 @@ export const windowAPI: WindowAPI = {
   /**
    * Open a markdown viewer window for a single file path
    */
-  openMarkdownView: (filePath: string, projectName: string, options?: { viewMode?: 'single' | 'book' }) =>
-    ipcRenderer.invoke(WindowEvent.OPEN_MARKDOWN_VIEW, filePath, projectName, options),
+  openMarkdownView: (
+    filePath: string,
+    projectName: string,
+    options?: { viewMode?: 'single' | 'book' },
+  ) =>
+    ipcRenderer.invoke(
+      WindowEvent.OPEN_MARKDOWN_VIEW,
+      filePath,
+      projectName,
+      options,
+    ),
 
   /**
    * Open Repository Dashboard for Alexandria repositories
@@ -62,10 +71,14 @@ export const windowAPI: WindowAPI = {
   /**
    * Listen for main window minimize state changes
    */
-  onMainWindowMinimizeStateChange: (callback: (isMinimized: boolean) => void) => {
-    ipcRenderer.on(WindowEvent.MAIN_WINDOW_MINIMIZE_STATE_CHANGED, (_event, isMinimized: boolean) => {
-      callback(isMinimized);
-    });
+  onMainWindowMinimizeStateChange: (
+    callback: (isMinimized: boolean) => void,
+  ) => {
+    ipcRenderer.on(
+      WindowEvent.MAIN_WINDOW_MINIMIZE_STATE_CHANGED,
+      (_event, isMinimized: boolean) => {
+        callback(isMinimized);
+      },
+    );
   },
-
 };

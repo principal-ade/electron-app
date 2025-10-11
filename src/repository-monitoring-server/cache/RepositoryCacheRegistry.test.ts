@@ -41,7 +41,9 @@ describe('RepositoryCacheRegistry', () => {
   });
 
   it('builds data once and serves cached entries afterwards', async () => {
-    const builder = jest.fn<() => Promise<CacheSliceDataMap['gitStatus']>>().mockResolvedValue(createGitStatus());
+    const builder = jest
+      .fn<() => Promise<CacheSliceDataMap['gitStatus']>>()
+      .mockResolvedValue(createGitStatus());
 
     const first = await registry.getOrBuild(repoPath, 'gitStatus', builder);
     tick();
@@ -77,11 +79,17 @@ describe('RepositoryCacheRegistry', () => {
 
   it('records errors when rebuild fails', async () => {
     const error = new Error('builder failed');
-    const builder = jest.fn<() => Promise<CacheSliceDataMap['gitStatus']>>().mockRejectedValue(error);
+    const builder = jest
+      .fn<() => Promise<CacheSliceDataMap['gitStatus']>>()
+      .mockRejectedValue(error);
 
-    await expect(registry.scheduleRebuild(repoPath, 'gitStatus', builder)).rejects.toThrow('builder failed');
+    await expect(
+      registry.scheduleRebuild(repoPath, 'gitStatus', builder),
+    ).rejects.toThrow('builder failed');
 
-    const entry = registry.get(repoPath, 'gitStatus') as CacheEntry<CacheSliceDataMap['gitStatus']>;
+    const entry = registry.get(repoPath, 'gitStatus') as CacheEntry<
+      CacheSliceDataMap['gitStatus']
+    >;
     expect(entry.version).toBe(1);
     expect(entry.error).toEqual(
       expect.objectContaining({
@@ -93,7 +101,9 @@ describe('RepositoryCacheRegistry', () => {
   });
 
   it('invalidates entries and increments version', async () => {
-    const builder = jest.fn<() => Promise<CacheSliceDataMap['gitStatus']>>().mockResolvedValue(createGitStatus());
+    const builder = jest
+      .fn<() => Promise<CacheSliceDataMap['gitStatus']>>()
+      .mockResolvedValue(createGitStatus());
     const built = await registry.getOrBuild(repoPath, 'gitStatus', builder);
     expect(built.version).toBe(1);
 

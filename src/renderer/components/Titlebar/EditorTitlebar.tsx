@@ -24,12 +24,17 @@ export const EditorTitlebar: React.FC<EditorTitlebarProps> = ({
   const subtitle = isRemote && repository ? ` - ${repository}` : '';
 
   return (
-    <BaseTitlebar title={
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <FileText size={16} />
-        <span>{title}{subtitle}</span>
-      </div>
-    }>
+    <BaseTitlebar
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FileText size={16} />
+          <span>
+            {title}
+            {subtitle}
+          </span>
+        </div>
+      }
+    >
       {isRemote && onOpenInGitHub && (
         <TitlebarButton
           onClick={onOpenInGitHub}

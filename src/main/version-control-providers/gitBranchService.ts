@@ -338,7 +338,9 @@ export class GitBranchService {
     // This should be moved to gitRemote cache slice
     // See: docs/design/GIT_REMOTE_INFORMATION_ARCHITECTURE.md
 
-    console.warn('[GitBranchService] fetchRemoteInfo is currently disabled to prevent blocking operations');
+    console.warn(
+      '[GitBranchService] fetchRemoteInfo is currently disabled to prevent blocking operations',
+    );
     return false;
 
     // try {

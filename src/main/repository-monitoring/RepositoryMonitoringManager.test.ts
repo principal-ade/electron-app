@@ -3,7 +3,14 @@
  * Tests the manager that controls the repository monitoring utility process
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from '@jest/globals';
 import { EventEmitter } from 'events';
 import * as path from 'path';
 
@@ -77,7 +84,7 @@ describe('RepositoryMonitoringManager', () => {
         {
           serviceName: 'repository-monitoring-server',
           stdio: 'pipe',
-        }
+        },
       );
     });
 
@@ -182,7 +189,9 @@ describe('RepositoryMonitoringManager', () => {
       // Fast-forward time to trigger timeout
       jest.advanceTimersByTime(31000);
 
-      await expect(resultPromise).rejects.toThrow('Request timeout: getFileTree');
+      await expect(resultPromise).rejects.toThrow(
+        'Request timeout: getFileTree',
+      );
 
       jest.useRealTimers();
     });
@@ -342,7 +351,7 @@ describe('RepositoryMonitoringManager', () => {
         expect.objectContaining({
           type: 'enableGitWatching',
           path: '/test/repo',
-        })
+        }),
       );
     });
 
@@ -360,7 +369,7 @@ describe('RepositoryMonitoringManager', () => {
         expect.objectContaining({
           type: 'disableGitWatching',
           path: '/test/repo',
-        })
+        }),
       );
     });
   });
@@ -371,13 +380,13 @@ describe('RepositoryMonitoringManager', () => {
 
       const expectedPath = path.join(
         path.dirname(__filename),
-        '../repository-monitoring-server/worker-entry.js'
+        '../repository-monitoring-server/worker-entry.js',
       );
 
       expect(utilityProcess.fork).toHaveBeenCalledWith(
         expect.stringContaining('repository-monitoring-server/worker-entry.js'),
         expect.anything(),
-        expect.anything()
+        expect.anything(),
       );
     });
   });

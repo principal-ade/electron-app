@@ -22,35 +22,43 @@ export function registerModernWindowHandlers(): void {
     'The multi-file editor is temporarily unavailable while we migrate to the new Monaco experience.';
 
   // Toggle main window minimize/restore
-  ipcMain.handle(WindowEvent.TOGGLE_MAIN_WINDOW_MINIMIZE, async (_event, shouldMinimize: boolean) => {
-    const { getMainWindowId } = require('./types');
-    const { applicationWindows } = require('./types');
+  ipcMain.handle(
+    WindowEvent.TOGGLE_MAIN_WINDOW_MINIMIZE,
+    async (_event, shouldMinimize: boolean) => {
+      const { getMainWindowId } = require('./types');
+      const { applicationWindows } = require('./types');
 
-    const mainWindowId = getMainWindowId();
-    if (!mainWindowId) {
-      console.warn('[modernWindowHandlers] Main window ID not set');
-      return;
-    }
-
-    const mainAppWindow = applicationWindows.get(mainWindowId);
-    if (!mainAppWindow?.window || mainAppWindow.window.isDestroyed()) {
-      console.warn('[modernWindowHandlers] Main window not found or destroyed');
-      return;
-    }
-
-    if (shouldMinimize) {
-      mainAppWindow.window.minimize();
-    } else {
-      mainAppWindow.window.restore();
-    }
-
-    // Broadcast the state change to all windows
-    applicationWindows.forEach((appWindow: IModernApplicationWindow) => {
-      if (appWindow.window && !appWindow.window.isDestroyed()) {
-        appWindow.window.webContents.send(WindowEvent.MAIN_WINDOW_MINIMIZE_STATE_CHANGED, shouldMinimize);
+      const mainWindowId = getMainWindowId();
+      if (!mainWindowId) {
+        console.warn('[modernWindowHandlers] Main window ID not set');
+        return;
       }
-    });
-  });
+
+      const mainAppWindow = applicationWindows.get(mainWindowId);
+      if (!mainAppWindow?.window || mainAppWindow.window.isDestroyed()) {
+        console.warn(
+          '[modernWindowHandlers] Main window not found or destroyed',
+        );
+        return;
+      }
+
+      if (shouldMinimize) {
+        mainAppWindow.window.minimize();
+      } else {
+        mainAppWindow.window.restore();
+      }
+
+      // Broadcast the state change to all windows
+      applicationWindows.forEach((appWindow: IModernApplicationWindow) => {
+        if (appWindow.window && !appWindow.window.isDestroyed()) {
+          appWindow.window.webContents.send(
+            WindowEvent.MAIN_WINDOW_MINIMIZE_STATE_CHANGED,
+            shouldMinimize,
+          );
+        }
+      });
+    },
+  );
 
   // Store Viewer Window
   ipcMain.handle(
@@ -96,7 +104,7 @@ export function registerModernWindowHandlers(): void {
     },
   );
 
-// Open Local Files in Editor Window
+  // Open Local Files in Editor Window
   ipcMain.handle(
     WindowEvent.OPEN_LOCAL_FILES,
     async (
@@ -250,7 +258,7 @@ export function registerModernWindowHandlers(): void {
     },
   );
 
-// Markdown File Dialog and Window
+  // Markdown File Dialog and Window
   ipcMain.handle(WindowEvent.OPEN_MARKDOWN_FILE_DIALOG, async (_event) => {
     const result = await dialog.showOpenDialog({
       properties: ['openFile'],
@@ -259,12 +267,12 @@ export function registerModernWindowHandlers(): void {
         { name: 'All Files', extensions: ['*'] },
       ],
     });
-  
+
     if (!result.canceled && result.filePaths.length > 0) {
       const filePath = result.filePaths[0];
       const fileName = path.basename(filePath);
       const windowName = `markdown-${filePath}`;
-  
+
       const window = createSpecialWindow(
         windowName,
         {
@@ -278,9 +286,9 @@ export function registerModernWindowHandlers(): void {
           externalLinkHandler: true,
         },
       );
-  
+
       if (!window) return;
-  
+
       // Load with file data
       const encodedData = encodeURIComponent(
         JSON.stringify({
@@ -289,73 +297,77 @@ export function registerModernWindowHandlers(): void {
         }),
       );
       const url = `${resolveHtmlPath('index.html')}#markdown-view/${encodedData}`;
-  
+
       window.window.loadURL(url);
     }
   });
 
   // Open a markdown view window for a specific file path (renderer can call this directly)
-  ipcMain.handle(WindowEvent.OPEN_MARKDOWN_VIEW, async (_event, filePath: string, projectName: string, options?: { viewMode?: 'single' | 'book' }) => {
-    if (!filePath || typeof filePath !== 'string') return;
+  ipcMain.handle(
+    WindowEvent.OPEN_MARKDOWN_VIEW,
+    async (
+      _event,
+      filePath: string,
+      projectName: string,
+      options?: { viewMode?: 'single' | 'book' },
+    ) => {
+      if (!filePath || typeof filePath !== 'string') return;
 
-    try {
-      const fileName = path.basename(filePath);
-      const windowName = `markdown-${filePath}`;
+      try {
+        const fileName = path.basename(filePath);
+        const windowName = `markdown-${filePath}`;
 
-      // Get screen dimensions for full-size window
-      const primaryDisplay = screen.getPrimaryDisplay();
-      const { width: screenWidth, height: screenHeight } =
-        primaryDisplay.workAreaSize;
+        // Get screen dimensions for full-size window
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { width: screenWidth, height: screenHeight } =
+          primaryDisplay.workAreaSize;
 
-      // If viewMode is 'single', position window on right half of screen
-      const isRightHalf = options?.viewMode === 'single';
-      const windowConfig = isRightHalf
-        ? {
-            width: Math.floor(screenWidth / 2),
-            height: screenHeight,
-            x: Math.floor(screenWidth / 2),
-            y: 0,
-            minWidth: 600,
-            minHeight: 400,
-            title: `${projectName}: ${fileName}`,
-          }
-        : {
-            width: 1200,
-            height: 800,
-            minWidth: 800,
-            minHeight: 600,
-            title: `${projectName}: ${fileName}`,
-          };
+        // If viewMode is 'single', position window on right half of screen
+        const isRightHalf = options?.viewMode === 'single';
+        const windowConfig = isRightHalf
+          ? {
+              width: Math.floor(screenWidth / 2),
+              height: screenHeight,
+              x: Math.floor(screenWidth / 2),
+              y: 0,
+              minWidth: 600,
+              minHeight: 400,
+              title: `${projectName}: ${fileName}`,
+            }
+          : {
+              width: 1200,
+              height: 800,
+              minWidth: 800,
+              minHeight: 600,
+              title: `${projectName}: ${fileName}`,
+            };
 
-      const window = createSpecialWindow(
-        windowName,
-        windowConfig,
-        {
+        const window = createSpecialWindow(windowName, windowConfig, {
           fileSystemAdapter: true,
           contentSecurityPolicy: true,
           externalLinkHandler: true,
           maximizeOnShow: !isRightHalf, // Don't maximize if positioning on right half
-        },
-      );
+        });
 
-      if (!window) return;
+        if (!window) return;
 
-      // Load with file data
-      const encodedData = encodeURIComponent(
-        JSON.stringify({
-          mode: 'markdown-view',
-          filePath,
-          projectName,
-          viewMode: options?.viewMode,
-        }),
-      );
-      const url = `${resolveHtmlPath('index.html')}#markdown-view/${encodedData}`;
+        // Load with file data
+        const encodedData = encodeURIComponent(
+          JSON.stringify({
+            mode: 'markdown-view',
+            filePath,
+            projectName,
+            viewMode: options?.viewMode,
+          }),
+        );
+        const url = `${resolveHtmlPath('index.html')}#markdown-view/${encodedData}`;
 
-      window.window.loadURL(url);
-    } catch (err) {
-      console.error('[modernWindowHandlers] OPEN_MARKDOWN_VIEW error:', err);
-    }
-  });
+        window.window.loadURL(url);
+      } catch (err) {
+        console.error('[modernWindowHandlers] OPEN_MARKDOWN_VIEW error:', err);
+      }
+    },
+  );
 
   // Callimachus Pattern Discovery Window
   ipcMain.handle(WindowEvent.OPEN_CALLIMACHUS_WINDOW, async () => {
@@ -411,5 +423,4 @@ export function registerModernWindowHandlers(): void {
     const url = resolveHtmlPath('palace-room-workspace.html');
     window.window.loadURL(url);
   });
-
 }

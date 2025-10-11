@@ -3,7 +3,10 @@
  */
 
 import { ipcMain } from 'electron';
-import type { AlexandriaDocsAPI, ComprehensiveDocuments } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
+import type {
+  AlexandriaDocsAPI,
+  ComprehensiveDocuments,
+} from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
 import { AlexandriaDocsAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
 import type { AlexandriaEntry } from '@a24z/core-library';
@@ -44,7 +47,9 @@ export class AlexandriaDocsApiEventHandler implements AlexandriaDocsAPI {
     );
   }
 
-  async getComprehensiveDocuments(entry: AlexandriaEntry): Promise<ComprehensiveDocuments> {
+  async getComprehensiveDocuments(
+    entry: AlexandriaEntry,
+  ): Promise<ComprehensiveDocuments> {
     // Use the entry's name to get comprehensive documents (always respecting .gitignore)
     if (!entry.name) {
       throw new Error('Alexandria entry must have a name');

@@ -77,18 +77,20 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
         display: 'flex',
         alignItems: 'center',
         position: 'relative',
-        ...style
+        ...style,
       }}
     >
       {/* Left-side content container */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        marginLeft: isMac ? '80px' : '20px',
-        gap: '8px',
-      }}>
-        {React.Children.toArray(children).filter((child: any) =>
-          child?.props?.position === 'left'
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          marginLeft: isMac ? '80px' : '20px',
+          gap: '8px',
+        }}
+      >
+        {React.Children.toArray(children).filter(
+          (child: any) => child?.props?.position === 'left',
         )}
       </div>
 
@@ -107,44 +109,50 @@ export const BaseTitlebar: React.FC<BaseTitlebarProps> = ({
       )}
 
       {/* Center content (replaces title) */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        WebkitAppRegion: 'drag' as any,
-      }}>
-        {React.Children.toArray(children).filter((child: any) =>
-          child?.props?.position === 'center'
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          WebkitAppRegion: 'drag' as any,
+        }}
+      >
+        {React.Children.toArray(children).filter(
+          (child: any) => child?.props?.position === 'center',
         )}
         {/* Show title only if no center content */}
-        {React.Children.toArray(children).filter((child: any) =>
-          child?.props?.position === 'center'
-        ).length === 0 && title && (
-          <div
-            className="titlebar-title"
-            style={{
-              color: accentColor,
-              fontSize: theme.fontSizes[3],
-              fontFamily: theme.fonts.heading,
-              WebkitAppRegion: 'no-drag' as any,
-            }}
-            onClick={onTitleClick}
-          >
-            {title}
-          </div>
-        )}
+        {React.Children.toArray(children).filter(
+          (child: any) => child?.props?.position === 'center',
+        ).length === 0 &&
+          title && (
+            <div
+              className="titlebar-title"
+              style={{
+                color: accentColor,
+                fontSize: theme.fontSizes[3],
+                fontFamily: theme.fonts.heading,
+                WebkitAppRegion: 'no-drag' as any,
+              }}
+              onClick={onTitleClick}
+            >
+              {title}
+            </div>
+          )}
       </div>
 
       {/* Right-side content container */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        marginLeft: 'auto',
-        marginRight: showWindowControls && !isMac ? '0' : '20px',
-      }}>
-        {React.Children.toArray(children).filter((child: any) =>
-          !child?.props?.position || child?.props?.position === 'right'
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          marginLeft: 'auto',
+          marginRight: showWindowControls && !isMac ? '0' : '20px',
+        }}
+      >
+        {React.Children.toArray(children).filter(
+          (child: any) =>
+            !child?.props?.position || child?.props?.position === 'right',
         )}
       </div>
 

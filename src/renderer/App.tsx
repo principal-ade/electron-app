@@ -274,7 +274,6 @@ function AppContent({
     );
   }
 
-
   if (currentView === 'repositoryMaps') {
     // Pass windowInitData to the window object so RepositoryManager can access mode
     if (windowInitData) {
@@ -305,10 +304,10 @@ function AppContent({
 
 function App() {
   const [hasUpdateAvailable, setHasUpdateAvailable] = React.useState(false);
-  const [markdownProjectName, setMarkdownProjectName] = React.useState<string | null>(null);
+  const [markdownProjectName, setMarkdownProjectName] = React.useState<
+    string | null
+  >(null);
   // Removed landingPageActions as add project buttons are now in the repository list header
-
-
 
   // Store project name on window for AppContent to access
   React.useEffect(() => {

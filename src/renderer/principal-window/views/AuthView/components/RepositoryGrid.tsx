@@ -1,6 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Package, Search, X, Cloud, ToggleLeft, ToggleRight } from 'lucide-react';
+import {
+  Package,
+  Search,
+  X,
+  Cloud,
+  ToggleLeft,
+  ToggleRight,
+} from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import type { GitHubRepository } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
@@ -26,7 +33,8 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [showRemote, setShowRemote] = useState(true);
   const [showCloneModal, setShowCloneModal] = useState(false);
-  const [selectedRepoForClone, setSelectedRepoForClone] = useState<GitHubRepository | null>(null);
+  const [selectedRepoForClone, setSelectedRepoForClone] =
+    useState<GitHubRepository | null>(null);
 
   // Filter local repositories based on search query
   const filteredLocalRepositories = useMemo(() => {
@@ -58,7 +66,7 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
 
     // Filter by selected organization
     if (selectedOrg) {
-      filtered = filtered.filter(repo => repo.owner.login === selectedOrg);
+      filtered = filtered.filter((repo) => repo.owner.login === selectedOrg);
     }
 
     // Filter by search query
@@ -85,13 +93,19 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
   // Create a unified list of all repositories
   const allRepositories = useMemo(() => {
     // Create maps for quick lookup
-    const localRepoMap = new Map<string, typeof filteredLocalRepositories[0]>();
-    const remoteRepoMap = new Map<string, typeof filteredRemoteRepositories[0]>();
+    const localRepoMap = new Map<
+      string,
+      (typeof filteredLocalRepositories)[0]
+    >();
+    const remoteRepoMap = new Map<
+      string,
+      (typeof filteredRemoteRepositories)[0]
+    >();
 
     // Track local repos by multiple keys for better matching
     const localRepoNameSet = new Set<string>();
 
-    filteredLocalRepositories.forEach(repo => {
+    filteredLocalRepositories.forEach((repo) => {
       // Try to extract owner from various sources
       let owner: string | undefined = repo.github?.owner;
 
@@ -113,7 +127,7 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
       localRepoNameSet.add(repo.name.toLowerCase());
     });
 
-    filteredRemoteRepositories.forEach(repo => {
+    filteredRemoteRepositories.forEach((repo) => {
       const key = `${repo.owner.login}/${repo.name}`.toLowerCase();
       remoteRepoMap.set(key, repo);
     });
@@ -127,7 +141,7 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
     }> = [];
 
     // Add all local repositories, enriching with remote data if available
-    filteredLocalRepositories.forEach(repo => {
+    filteredLocalRepositories.forEach((repo) => {
       // Try to find matching remote repo
       let owner: string | undefined = repo.github?.owner;
 
@@ -139,7 +153,7 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
         }
       }
 
-      let remoteData: typeof filteredRemoteRepositories[0] | undefined;
+      let remoteData: (typeof filteredRemoteRepositories)[0] | undefined;
       if (owner) {
         const key = `${owner}/${repo.name}`.toLowerCase();
         remoteData = remoteRepoMap.get(key);
@@ -168,11 +182,12 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
     });
 
     // Add remote repositories that aren't already local
-    filteredRemoteRepositories.forEach(repo => {
+    filteredRemoteRepositories.forEach((repo) => {
       const key = `${repo.owner.login}/${repo.name}`.toLowerCase();
 
       // Check if this remote repo exists locally by either full key or just name
-      const existsLocally = localRepoMap.has(key) || localRepoNameSet.has(repo.name.toLowerCase());
+      const existsLocally =
+        localRepoMap.has(key) || localRepoNameSet.has(repo.name.toLowerCase());
 
       if (!existsLocally) {
         combined.push({
@@ -184,7 +199,9 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
     });
 
     // Sort alphabetically by name
-    return combined.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+    return combined.sort((a, b) =>
+      a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
+    );
   }, [filteredLocalRepositories, filteredRemoteRepositories]);
 
   const totalCount = allRepositories.length;
@@ -208,7 +225,11 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
     );
   }
 
-  if (repositories.length === 0 && remoteRepositories.length === 0 && !searchQuery) {
+  if (
+    repositories.length === 0 &&
+    remoteRepositories.length === 0 &&
+    !searchQuery
+  ) {
     return (
       <div
         style={{
@@ -283,8 +304,12 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
               alignItems: 'center',
               gap: '8px',
               padding: '8px 12px',
-              backgroundColor: showRemote ? `${theme.colors.primary}20` : theme.colors.backgroundTertiary,
-              color: showRemote ? theme.colors.primary : theme.colors.textSecondary,
+              backgroundColor: showRemote
+                ? `${theme.colors.primary}20`
+                : theme.colors.backgroundTertiary,
+              color: showRemote
+                ? theme.colors.primary
+                : theme.colors.textSecondary,
               border: `1px solid ${showRemote ? theme.colors.primary : theme.colors.border}`,
               borderRadius: '6px',
               fontSize: '13px',
@@ -294,12 +319,14 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
             }}
             onMouseEnter={(e) => {
               if (!showRemote) {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
               }
             }}
             onMouseLeave={(e) => {
               if (!showRemote) {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
               }
             }}
           >
@@ -316,75 +343,76 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
               maxWidth: '300px',
             }}
           >
-          <input
-            type="text"
-            placeholder="Search repositories..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 32px 8px 36px',
-              fontSize: '14px',
-              backgroundColor: theme.colors.backgroundTertiary,
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '6px',
-              outline: 'none',
-              transition: 'all 0.2s',
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.primary;
-              e.currentTarget.style.boxShadow = `0 0 0 3px ${theme.colors.primary}20`;
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = theme.colors.border;
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          />
-          <Search
-            size={16}
-            style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: theme.colors.textSecondary,
-              pointerEvents: 'none',
-            }}
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
+            <input
+              type="text"
+              placeholder="Search repositories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               style={{
-                position: 'absolute',
-                right: '8px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                padding: '4px',
-                backgroundColor: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                color: theme.colors.textSecondary,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '3px',
+                width: '100%',
+                padding: '8px 32px 8px 36px',
+                fontSize: '14px',
+                backgroundColor: theme.colors.backgroundTertiary,
+                color: theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '6px',
+                outline: 'none',
                 transition: 'all 0.2s',
               }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                e.currentTarget.style.color = theme.colors.text;
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.boxShadow = `0 0 0 3px ${theme.colors.primary}20`;
               }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = theme.colors.textSecondary;
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.boxShadow = 'none';
               }}
-              title="Clear search"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
+            />
+            <Search
+              size={16}
+              style={{
+                position: 'absolute',
+                left: '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: theme.colors.textSecondary,
+                pointerEvents: 'none',
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  padding: '4px',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: theme.colors.textSecondary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '3px',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }}
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -413,7 +441,9 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
                     setSelectedRepoForClone(repo as GitHubRepository);
                     setShowCloneModal(true);
                   } else {
-                    onOpenRepository(repo as AlexandriaEntry | EnhancedAlexandriaEntry);
+                    onOpenRepository(
+                      repo as AlexandriaEntry | EnhancedAlexandriaEntry,
+                    );
                   }
                 }}
               />

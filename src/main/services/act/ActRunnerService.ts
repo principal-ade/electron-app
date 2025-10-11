@@ -57,7 +57,8 @@ export class ActRunnerService extends EventEmitter {
   constructor(options: { actBinaryPath?: string } = {}) {
     super();
     this.storage = UnifiedSecureStorage.getInstance();
-    this.preferredBinary = options.actBinaryPath ?? process.env.ACT_BINARY_PATH ?? undefined;
+    this.preferredBinary =
+      options.actBinaryPath ?? process.env.ACT_BINARY_PATH ?? undefined;
   }
 
   async validateRunRequirements(
@@ -84,7 +85,10 @@ export class ActRunnerService extends EventEmitter {
     } catch (error) {
       repoAccessible = false;
       messages.push('Repository path is not accessible on disk.');
-      console.error('[ActRunnerService] Repository path not accessible:', error);
+      console.error(
+        '[ActRunnerService] Repository path not accessible:',
+        error,
+      );
     }
 
     const actInstalled = await this.validateInstallation();
@@ -93,7 +97,9 @@ export class ActRunnerService extends EventEmitter {
     }
 
     if (!repoAccessible) {
-      messages.push('Resolve repository path issues before attempting to run workflows.');
+      messages.push(
+        'Resolve repository path issues before attempting to run workflows.',
+      );
     }
 
     return {
@@ -119,7 +125,8 @@ export class ActRunnerService extends EventEmitter {
     if (!repoStat) {
       return {
         success: false,
-        error: 'Repository path is not accessible. Verify the repository exists locally.',
+        error:
+          'Repository path is not accessible. Verify the repository exists locally.',
       };
     }
 
@@ -210,7 +217,8 @@ export class ActRunnerService extends EventEmitter {
     }
 
     const candidates = [this.preferredBinary, 'act'].filter(
-      (value): value is string => typeof value === 'string' && value.trim().length > 0,
+      (value): value is string =>
+        typeof value === 'string' && value.trim().length > 0,
     );
 
     for (const candidate of candidates) {
@@ -224,11 +232,16 @@ export class ActRunnerService extends EventEmitter {
     return false;
   }
 
-  private async ensureRepositoryPath(repoPath: string): Promise<fs.Stats | null> {
+  private async ensureRepositoryPath(
+    repoPath: string,
+  ): Promise<fs.Stats | null> {
     try {
       return await fsPromises.stat(repoPath);
     } catch (error) {
-      console.error('[ActRunnerService] Unable to stat repository path:', error);
+      console.error(
+        '[ActRunnerService] Unable to stat repository path:',
+        error,
+      );
       return null;
     }
   }
@@ -337,9 +350,9 @@ export class ActRunnerService extends EventEmitter {
     }
   }
 
-  private detectStepInformation(message: string):
-    | { status: 'success' | 'failure' | 'running'; label: string }
-    | null {
+  private detectStepInformation(
+    message: string,
+  ): { status: 'success' | 'failure' | 'running'; label: string } | null {
     const trimmed = message.trim();
 
     const successMatch = trimmed.match(/^(?:✔|✓|✅)\s*(.+)$/);
@@ -376,7 +389,8 @@ export class ActRunnerService extends EventEmitter {
       console.error('[ActRunnerService] Process error:', error);
       const errorEvent: ActRunnerWorkflowErrorEvent = {
         type: 'error',
-        message: error instanceof Error ? error.message : 'Unknown process error',
+        message:
+          error instanceof Error ? error.message : 'Unknown process error',
         raw: error instanceof Error ? error.message : String(error),
         ...this.buildEventBase(context),
       };
@@ -485,7 +499,9 @@ export class ActRunnerService extends EventEmitter {
 
     try {
       await fsPromises.unlink(info.filePath).catch(() => {});
-      await fsPromises.rm(info.directory, { recursive: true, force: true }).catch(() => {});
+      await fsPromises
+        .rm(info.directory, { recursive: true, force: true })
+        .catch(() => {});
     } catch (error) {
       console.warn('[ActRunnerService] Failed to cleanup secrets file:', error);
     }

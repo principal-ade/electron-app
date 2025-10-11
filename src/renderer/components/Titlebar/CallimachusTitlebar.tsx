@@ -15,21 +15,25 @@ export const CallimachusTitlebar: React.FC<CallimachusTitlebarProps> = ({
   onSettings,
 }) => {
   return (
-    <BaseTitlebar title={
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Search size={16} />
-        <span>Pattern Discovery</span>
-        {isConnected && (
-          <span style={{
-            fontSize: '12px',
-            opacity: 0.7,
-            marginLeft: '4px'
-          }}>
-            (Connected)
-          </span>
-        )}
-      </div>
-    }>
+    <BaseTitlebar
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Search size={16} />
+          <span>Pattern Discovery</span>
+          {isConnected && (
+            <span
+              style={{
+                fontSize: '12px',
+                opacity: 0.7,
+                marginLeft: '4px',
+              }}
+            >
+              (Connected)
+            </span>
+          )}
+        </div>
+      }
+    >
       {onSettings && (
         <TitlebarButton
           onClick={onSettings}

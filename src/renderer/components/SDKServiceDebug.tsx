@@ -17,7 +17,9 @@ export const SDKServiceDebug: React.FC = () => {
 
   const handleResetStats = () => {
     // Reset by reloading the window
-    if (confirm('Reset SDK service tracking stats? This will reload the window.')) {
+    if (
+      confirm('Reset SDK service tracking stats? This will reload the window.')
+    ) {
       window.location.reload();
     }
   };

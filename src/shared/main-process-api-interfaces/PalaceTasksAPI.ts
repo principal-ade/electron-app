@@ -30,7 +30,10 @@ export interface PalaceTasksAPI {
   /**
    * Get tasks for a repository
    */
-  getTasks(repositoryPath: string, options?: TaskQueryOptions): Promise<GetTasksResponse>;
+  getTasks(
+    repositoryPath: string,
+    options?: TaskQueryOptions,
+  ): Promise<GetTasksResponse>;
 
   /**
    * Get a specific task by ID
@@ -43,7 +46,7 @@ export interface PalaceTasksAPI {
   updateTaskStatus(
     repositoryPath: string,
     taskId: string,
-    status: TaskStatus
+    status: TaskStatus,
   ): Promise<boolean>;
 
   /**

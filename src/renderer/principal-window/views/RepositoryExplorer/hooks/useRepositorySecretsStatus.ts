@@ -67,9 +67,16 @@ export function useRepositorySecretsStatus(
       const exists = await SecretsService.exists(repoId);
       setIsConfigured(Boolean(exists));
     } catch (err) {
-      console.error('[useRepositorySecretsStatus] Failed to verify secrets configuration:', err);
+      console.error(
+        '[useRepositorySecretsStatus] Failed to verify secrets configuration:',
+        err,
+      );
       setIsConfigured(false);
-      setError(err instanceof Error ? err.message : 'Failed to verify repository secrets');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to verify repository secrets',
+      );
     } finally {
       setIsLoading(false);
       setHasChecked(true);

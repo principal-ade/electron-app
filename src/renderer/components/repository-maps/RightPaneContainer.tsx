@@ -590,8 +590,8 @@ export const RightPaneContainer: React.FC<RightPaneContainerProps> = ({
                         }}
                       >
                         {hoverInfo.fileTooltip?.text ||
-                          (hoverInfo.hoveredDistrict?.path?.split('/').pop() ||
-                           hoverInfo.hoveredDistrict?.path) ||
+                          hoverInfo.hoveredDistrict?.path?.split('/').pop() ||
+                          hoverInfo.hoveredDistrict?.path ||
                           'Unknown'}
                       </div>
                       {/* Full path */}

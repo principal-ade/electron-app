@@ -29,7 +29,9 @@ const utilityProcess = process as UtilityProcess;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
-const isMainToServerMessage = (value: unknown): value is MainToServerMessage => {
+const isMainToServerMessage = (
+  value: unknown,
+): value is MainToServerMessage => {
   if (!isRecord(value)) {
     return false;
   }
@@ -38,7 +40,9 @@ const isMainToServerMessage = (value: unknown): value is MainToServerMessage => 
   return typeof candidate.type === 'string';
 };
 
-const extractMainToServerMessage = (rawMessage: unknown): MainToServerMessage | null => {
+const extractMainToServerMessage = (
+  rawMessage: unknown,
+): MainToServerMessage | null => {
   if (isRecord(rawMessage) && 'data' in rawMessage) {
     const nested = (rawMessage as { data: unknown }).data;
     if (isMainToServerMessage(nested)) {
@@ -73,7 +77,8 @@ async function initialize(): Promise<void> {
     console.error('[RepositoryMonitoring] Failed to initialize:', error);
     sendToMain({
       type: 'error',
-      error: error instanceof Error ? error.message : 'Unknown initialization error',
+      error:
+        error instanceof Error ? error.message : 'Unknown initialization error',
     });
   }
 }
@@ -85,11 +90,18 @@ async function handleMessage(rawMessage: unknown): Promise<void> {
   const message = extractMainToServerMessage(rawMessage);
 
   if (!message) {
-    console.warn('[RepositoryMonitoring] Received invalid message:', rawMessage);
+    console.warn(
+      '[RepositoryMonitoring] Received invalid message:',
+      rawMessage,
+    );
     return;
   }
 
-  console.info('[RepositoryMonitoring] Received message:', message.type, message.id);
+  console.info(
+    '[RepositoryMonitoring] Received message:',
+    message.type,
+    message.id,
+  );
 
   // Ensure server is initialized
   if (!server) {
@@ -130,7 +142,8 @@ async function handleMessage(rawMessage: unknown): Promise<void> {
         break;
 
       case 'getRepositoryCacheSnapshot':
-        if (!message.path) throw new Error('Path required for getRepositoryCacheSnapshot');
+        if (!message.path)
+          throw new Error('Path required for getRepositoryCacheSnapshot');
         result = await server.getRepositoryCacheSnapshot(message.path);
         break;
 
@@ -159,13 +172,18 @@ async function handleMessage(rawMessage: unknown): Promise<void> {
 
       case 'getRepositoryDetails': {
         // Return detailed repository information
-        const details: Array<{ path: string; gitWatchingEnabled: boolean; fsMonitorEnabled: boolean; watchingMode: 'minimal' | 'fallback' | 'none' }> = [];
+        const details: Array<{
+          path: string;
+          gitWatchingEnabled: boolean;
+          fsMonitorEnabled: boolean;
+          watchingMode: 'minimal' | 'fallback' | 'none';
+        }> = [];
         for (const [path, state] of server['repositories'].entries()) {
           details.push({
             path,
             gitWatchingEnabled: state.gitWatchingEnabled || false,
             fsMonitorEnabled: state.fsMonitorEnabled || false,
-            watchingMode: state.watchingMode || 'none'
+            watchingMode: state.watchingMode || 'none',
           });
         }
         result = details;
@@ -189,35 +207,41 @@ async function handleMessage(rawMessage: unknown): Promise<void> {
         break;
 
       case 'getGitStatusWithFiles':
-        if (!message.path) throw new Error('Path required for getGitStatusWithFiles');
+        if (!message.path)
+          throw new Error('Path required for getGitStatusWithFiles');
         result = await server.getGitStatusWithFiles(message.path);
         break;
 
       case 'enableGitWatching':
-        if (!message.path) throw new Error('Path required for enableGitWatching');
+        if (!message.path)
+          throw new Error('Path required for enableGitWatching');
         await server.enableGitWatching(message.path);
         result = { success: true };
         break;
 
       case 'disableGitWatching':
-        if (!message.path) throw new Error('Path required for disableGitWatching');
+        if (!message.path)
+          throw new Error('Path required for disableGitWatching');
         await server.disableGitWatching(message.path);
         result = { success: true };
         break;
 
       case 'getGitRemoteInfo':
-        if (!message.path) throw new Error('Path required for getGitRemoteInfo');
+        if (!message.path)
+          throw new Error('Path required for getGitRemoteInfo');
         result = await server.getGitRemoteInfo(message.path);
         break;
 
       case 'invalidateGitRemoteCache':
-        if (!message.path) throw new Error('Path required for invalidateGitRemoteCache');
+        if (!message.path)
+          throw new Error('Path required for invalidateGitRemoteCache');
         await server.invalidateGitRemoteCache(message.path);
         result = { success: true };
         break;
 
       case 'resolveDependency':
-        if (!message.dependencyRequest) throw new Error('Dependency request required for resolveDependency');
+        if (!message.dependencyRequest)
+          throw new Error('Dependency request required for resolveDependency');
         result = await server.resolveDependency(message.dependencyRequest);
         break;
 
@@ -262,7 +286,10 @@ function sendToMain(message: ServerToMainMessage): void {
       console.error('[RepositoryMonitoring] No IPC mechanism available');
     }
   } catch (error) {
-    console.error('[RepositoryMonitoring] Failed to send message to main:', error);
+    console.error(
+      '[RepositoryMonitoring] Failed to send message to main:',
+      error,
+    );
   }
 }
 
@@ -298,7 +325,12 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('[RepositoryMonitoring] Unhandled rejection at:', promise, 'reason:', reason);
+  console.error(
+    '[RepositoryMonitoring] Unhandled rejection at:',
+    promise,
+    'reason:',
+    reason,
+  );
   sendToMain({
     type: 'error',
     error: `Unhandled rejection: ${reason}`,

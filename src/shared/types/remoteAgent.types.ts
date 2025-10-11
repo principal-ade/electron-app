@@ -1,25 +1,25 @@
 import { BrowserWindow, BrowserView } from 'electron';
 
 export interface RemoteAgentConfig {
-  id: string;                    // Unique identifier for the remote agent
-  name: string;                   // Display name
-  url: string;                    // Cloud remote agent URL
-  icon?: string;                  // Optional icon URL
-  capabilities?: string[];        // Remote agent capabilities
-  requiresAuth?: boolean;         // Whether auth is required
+  id: string; // Unique identifier for the remote agent
+  name: string; // Display name
+  url: string; // Cloud remote agent URL
+  icon?: string; // Optional icon URL
+  capabilities?: string[]; // Remote agent capabilities
+  requiresAuth?: boolean; // Whether auth is required
   metadata?: Record<string, unknown>; // Additional metadata
 }
 
 export interface RemoteAgentWindow {
-  id: string;                    // Remote agent ID
-  windowId: number;               // Electron window ID
-  window: BrowserWindow;          // Window instance
-  view?: BrowserView;             // Optional BrowserView when flag enabled
+  id: string; // Remote agent ID
+  windowId: number; // Electron window ID
+  window: BrowserWindow; // Window instance
+  view?: BrowserView; // Optional BrowserView when flag enabled
   webContents: Electron.WebContents; // Unified webContents for window or view
-  config: RemoteAgentConfig;      // Remote agent configuration
-  state: RemoteAgentWindowState;  // Current state
-  createdAt: Date;               // Creation timestamp
-  lastActiveAt: Date;            // Last activity timestamp
+  config: RemoteAgentConfig; // Remote agent configuration
+  state: RemoteAgentWindowState; // Current state
+  createdAt: Date; // Creation timestamp
+  lastActiveAt: Date; // Last activity timestamp
 }
 
 export enum RemoteAgentWindowState {
@@ -27,7 +27,7 @@ export enum RemoteAgentWindowState {
   READY = 'ready',
   ERROR = 'error',
   DISCONNECTED = 'disconnected',
-  AUTHENTICATED = 'authenticated'
+  AUTHENTICATED = 'authenticated',
 }
 
 export interface RemoteAgentWindowOptions {

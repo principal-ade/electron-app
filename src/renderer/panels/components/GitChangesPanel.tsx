@@ -93,13 +93,15 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
         const normalizedPath = path.endsWith('/') ? path.slice(0, -1) : path;
 
         // Check if this path is a directory by seeing if any files in the tree start with it
-        const matchingFiles = fileTree.allFiles.filter(file =>
-          file.path.startsWith(normalizedPath + '/') || file.path === normalizedPath
+        const matchingFiles = fileTree.allFiles.filter(
+          (file) =>
+            file.path.startsWith(normalizedPath + '/') ||
+            file.path === normalizedPath,
         );
 
         if (matchingFiles.length > 0) {
           // This is a directory - add all matching files
-          expandedPaths.push(...matchingFiles.map(f => f.path));
+          expandedPaths.push(...matchingFiles.map((f) => f.path));
         } else {
           // This is a file - add it directly
           expandedPaths.push(normalizedPath);
@@ -110,7 +112,9 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     };
 
     // Expand untracked directories to show all files
-    const expandedUntracked = expandDirectories(gitStatus.untracked.map((f) => f.path));
+    const expandedUntracked = expandDirectories(
+      gitStatus.untracked.map((f) => f.path),
+    );
 
     const allChangedFiles = [
       ...gitStatus.staged.map((f) => f.path),

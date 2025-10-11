@@ -44,10 +44,14 @@ import {
 class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
   constructor(
     private homeDir: string,
-    private requestRepositoryInfo: (absolutePath: string) => Promise<RepositoryInfo | null>
+    private requestRepositoryInfo: (
+      absolutePath: string,
+    ) => Promise<RepositoryInfo | null>,
   ) {}
 
-  async getRawRepositoryInfo(absolutePath: string): Promise<RepositoryInfo | null> {
+  async getRawRepositoryInfo(
+    absolutePath: string,
+  ): Promise<RepositoryInfo | null> {
     return this.requestRepositoryInfo(absolutePath);
   }
 
@@ -71,7 +75,10 @@ class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
       const crypto = require('crypto');
       const hostname = os.hostname();
       const platform = process.platform;
-      return crypto.createHash('sha256').update(`${hostname}-${platform}`).digest('hex');
+      return crypto
+        .createHash('sha256')
+        .update(`${hostname}-${platform}`)
+        .digest('hex');
     }
   }
 
@@ -116,7 +123,7 @@ export class EventProcessingServer extends EventEmitter {
 
   constructor(
     sendToMain: (message: ServerToMainMessage) => void,
-    config: Partial<EventProcessingServerConfig> = {}
+    config: Partial<EventProcessingServerConfig> = {},
   ) {
     super();
 
@@ -141,7 +148,7 @@ export class EventProcessingServer extends EventEmitter {
       os.homedir(),
       async (absolutePath: string): Promise<RepositoryInfo | null> => {
         return this.requestRepositoryInfo(absolutePath);
-      }
+      },
     );
 
     // Create metrics for monitoring
@@ -152,7 +159,10 @@ export class EventProcessingServer extends EventEmitter {
         this.lastProcessedEvent = Date.now();
 
         if (durationMs > 100) {
-          this.log('warn', `Slow processing: ${durationMs}ms for ${agent} event`);
+          this.log(
+            'warn',
+            `Slow processing: ${durationMs}ms for ${agent} event`,
+          );
         }
       },
       onError: (error, context) => {
@@ -209,7 +219,9 @@ export class EventProcessingServer extends EventEmitter {
   /**
    * Process an event through the pipeline
    */
-  private async handleProcessEvent(message: ProcessEventMessage): Promise<void> {
+  private async handleProcessEvent(
+    message: ProcessEventMessage,
+  ): Promise<void> {
     const startTime = Date.now();
 
     try {
@@ -223,7 +235,7 @@ export class EventProcessingServer extends EventEmitter {
       // Step 1: Process through pipeline
       const repoNormalizedEvent = await this.pipeline.processRawEvent(
         message.provider,
-        message.rawData
+        message.rawData,
       );
 
       // Step 2: Log important events
@@ -234,31 +246,35 @@ export class EventProcessingServer extends EventEmitter {
 
       // Step 4: Send completion message
       const duration = Date.now() - startTime;
-      this.sendToMain(createProcessingCompleteMessage(
-        message.id,
-        true,
-        repoNormalizedEvent
-      ));
+      this.sendToMain(
+        createProcessingCompleteMessage(message.id, true, repoNormalizedEvent),
+      );
 
       this.log('info', `Event processed successfully in ${duration}ms`);
-
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.log('error', `Event processing failed after ${duration}ms: ${error}`);
+      this.log(
+        'error',
+        `Event processing failed after ${duration}ms: ${error}`,
+      );
 
-      this.sendToMain(createProcessingCompleteMessage(
-        message.id,
-        false,
-        undefined,
-        (error as Error).message
-      ));
+      this.sendToMain(
+        createProcessingCompleteMessage(
+          message.id,
+          false,
+          undefined,
+          (error as Error).message,
+        ),
+      );
     }
   }
 
   /**
    * Request repository information from main process
    */
-  private requestRepositoryInfo(absolutePath: string): Promise<RepositoryInfo | null> {
+  private requestRepositoryInfo(
+    absolutePath: string,
+  ): Promise<RepositoryInfo | null> {
     return this.makeRequest('REPOSITORY_INFO_REQUEST', {
       absolutePath,
     }) as Promise<RepositoryInfo | null>;
@@ -267,7 +283,10 @@ export class EventProcessingServer extends EventEmitter {
   /**
    * Generic request handler with timeout and promise management
    */
-  private makeRequest(type: string, data: Record<string, unknown>): Promise<unknown> {
+  private makeRequest(
+    type: string,
+    data: Record<string, unknown>,
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const id = this.generateRequestId();
 
@@ -291,7 +310,7 @@ export class EventProcessingServer extends EventEmitter {
         type,
         id,
         timestamp: Date.now(),
-        ...data
+        ...data,
       } as ServerToMainMessage;
 
       this.sendToMain(message);
@@ -304,7 +323,10 @@ export class EventProcessingServer extends EventEmitter {
   private handleStorageResponse(message: StorageResponseMessage): void {
     const pending = this.pendingRequests.get(message.id);
     if (!pending) {
-      this.log('warn', `Received storage response for unknown request: ${message.id}`);
+      this.log(
+        'warn',
+        `Received storage response for unknown request: ${message.id}`,
+      );
       return;
     }
 
@@ -325,10 +347,15 @@ export class EventProcessingServer extends EventEmitter {
   /**
    * Handle repository info response from main process
    */
-  private handleRepositoryInfoResponse(message: RepositoryInfoResponseMessage): void {
+  private handleRepositoryInfoResponse(
+    message: RepositoryInfoResponseMessage,
+  ): void {
     const pending = this.pendingRequests.get(message.id);
     if (!pending) {
-      this.log('warn', `Received repository info response for unknown request: ${message.id}`);
+      this.log(
+        'warn',
+        `Received repository info response for unknown request: ${message.id}`,
+      );
       return;
     }
 
@@ -353,7 +380,10 @@ export class EventProcessingServer extends EventEmitter {
   private logEvent(event: RepoNormalizedUniversalAgentSessionEvent): void {
     // Log conversation lifecycle events
     if (event.eventType && event.eventType.toString().includes('start')) {
-      this.log('info', `Session started: ${event.sessionId} in ${event.workingDirectory}`);
+      this.log(
+        'info',
+        `Session started: ${event.sessionId} in ${event.workingDirectory}`,
+      );
     } else if (event.eventType && event.eventType.toString().includes('stop')) {
       this.log('info', `Session stopped: ${event.sessionId}`);
     }
@@ -362,7 +392,10 @@ export class EventProcessingServer extends EventEmitter {
     if (event.toolName) {
       const fileCount = event.files?.length || 0;
       if (fileCount > 0) {
-        this.log('info', `Tool ${event.toolName} accessed ${fileCount} file(s)`);
+        this.log(
+          'info',
+          `Tool ${event.toolName} accessed ${fileCount} file(s)`,
+        );
       }
     }
   }
@@ -370,14 +403,18 @@ export class EventProcessingServer extends EventEmitter {
   /**
    * Emit session events via main process
    */
-  private async emitSessionEvents(event: RepoNormalizedUniversalAgentSessionEvent): Promise<void> {
+  private async emitSessionEvents(
+    event: RepoNormalizedUniversalAgentSessionEvent,
+  ): Promise<void> {
     const normalizedSessionId = event.sessionId.trim();
 
     // Send window broadcast messages
-    this.sendToMain(createWindowBroadcastMessage('SESSION_UPDATED', {
-      sessionId: normalizedSessionId,
-      directory: event.workingDirectory,
-    }));
+    this.sendToMain(
+      createWindowBroadcastMessage('SESSION_UPDATED', {
+        sessionId: normalizedSessionId,
+        directory: event.workingDirectory,
+      }),
+    );
   }
 
   /**
@@ -410,7 +447,7 @@ export class EventProcessingServer extends EventEmitter {
       type: 'SERVER_STATS',
       id: message.id,
       timestamp: Date.now(),
-      stats: this.getStats()
+      stats: this.getStats(),
     });
   }
 
@@ -422,7 +459,7 @@ export class EventProcessingServer extends EventEmitter {
       type: 'SERVER_STATS',
       id: message.id,
       timestamp: Date.now(),
-      stats: this.getStats()
+      stats: this.getStats(),
     });
   }
 
@@ -435,7 +472,7 @@ export class EventProcessingServer extends EventEmitter {
       id: requestId,
       timestamp: Date.now(),
       error: error.message,
-      context: { stack: error.stack }
+      context: { stack: error.stack },
     });
   }
 
@@ -443,7 +480,9 @@ export class EventProcessingServer extends EventEmitter {
    * Start periodic stats reporting
    */
   private startStatsReporting(): void {
-    const interval = this.config.statsReportingIntervalMs ?? DEFAULT_CONFIG.statsReportingIntervalMs;
+    const interval =
+      this.config.statsReportingIntervalMs ??
+      DEFAULT_CONFIG.statsReportingIntervalMs;
 
     if (interval > 0) {
       setInterval(() => {
@@ -467,8 +506,11 @@ export class EventProcessingServer extends EventEmitter {
       uptime: Date.now() - this.startTime,
       memoryUsage: process.memoryUsage(),
       pendingRequests: this.pendingRequests.size,
-      averageProcessingTime: this.processedEventCount > 0 ? this.totalProcessingTime / this.processedEventCount : 0,
-      lastProcessedEvent: this.lastProcessedEvent
+      averageProcessingTime:
+        this.processedEventCount > 0
+          ? this.totalProcessingTime / this.processedEventCount
+          : 0,
+      lastProcessedEvent: this.lastProcessedEvent,
     };
   }
 
@@ -482,8 +524,17 @@ export class EventProcessingServer extends EventEmitter {
   /**
    * Logging utility
    */
-  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string, context?: unknown): void {
-    const levels: Array<'debug' | 'info' | 'warn' | 'error'> = ['debug', 'info', 'warn', 'error'];
+  private log(
+    level: 'debug' | 'info' | 'warn' | 'error',
+    message: string,
+    context?: unknown,
+  ): void {
+    const levels: Array<'debug' | 'info' | 'warn' | 'error'> = [
+      'debug',
+      'info',
+      'warn',
+      'error',
+    ];
     const configuredLevel = this.config.logLevel ?? 'info';
     const currentLevelIndex = levels.indexOf(configuredLevel);
     const messageLevelIndex = levels.indexOf(level);

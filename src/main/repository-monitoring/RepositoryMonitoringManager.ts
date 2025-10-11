@@ -75,7 +75,10 @@ export class RepositoryMonitoringManager extends EventEmitter {
 
     if (this.config.autoStart) {
       this.start().catch((error) => {
-        this.log('error', `Failed to auto-start repository monitoring server: ${error}`);
+        this.log(
+          'error',
+          `Failed to auto-start repository monitoring server: ${error}`,
+        );
       });
     }
   }
@@ -110,7 +113,10 @@ export class RepositoryMonitoringManager extends EventEmitter {
       // Wait for ready signal
       return this.readyPromise;
     } catch (error) {
-      this.log('error', `Failed to start repository monitoring server: ${error}`);
+      this.log(
+        'error',
+        `Failed to start repository monitoring server: ${error}`,
+      );
       throw error;
     }
   }
@@ -140,7 +146,10 @@ export class RepositoryMonitoringManager extends EventEmitter {
     if (!app.isPackaged) {
       // Development: use the webpack-compiled bundle
       // The bundle is created by webpack and placed in .erb/dll
-      workerPath = path.join(__dirname, 'repository-monitoring-worker.bundle.dev.js');
+      workerPath = path.join(
+        __dirname,
+        'repository-monitoring-worker.bundle.dev.js',
+      );
 
       // __dirname in dev is .erb/dll, so the file should be right there
       this.log('debug', `Looking for development worker at: ${workerPath}`);
@@ -153,7 +162,8 @@ export class RepositoryMonitoringManager extends EventEmitter {
 
     // Verify the worker file exists
     if (!fs.existsSync(workerPath)) {
-      const errorMsg = `Worker bundle not found at: ${workerPath}\n` +
+      const errorMsg =
+        `Worker bundle not found at: ${workerPath}\n` +
         'The repository-monitoring-worker bundle has not been compiled by webpack.\n' +
         'Please ensure webpack is configured with the repository-monitoring-worker entry point and has compiled successfully.';
       this.log('error', errorMsg);
@@ -249,7 +259,10 @@ export class RepositoryMonitoringManager extends EventEmitter {
         break;
 
       default:
-        this.log('warn', `Unknown message type from worker: ${(msg as any).type}`);
+        this.log(
+          'warn',
+          `Unknown message type from worker: ${(msg as any).type}`,
+        );
     }
   }
 
@@ -273,7 +286,10 @@ export class RepositoryMonitoringManager extends EventEmitter {
     if (!this.shutdownRequested && this.config.restartOnCrash) {
       if (this.restartAttempts < this.config.maxRestartAttempts) {
         this.restartAttempts++;
-        this.log('info', `Attempting to restart worker (attempt ${this.restartAttempts}/${this.config.maxRestartAttempts})`);
+        this.log(
+          'info',
+          `Attempting to restart worker (attempt ${this.restartAttempts}/${this.config.maxRestartAttempts})`,
+        );
 
         setTimeout(() => {
           this.start().catch((error) => {
@@ -281,7 +297,10 @@ export class RepositoryMonitoringManager extends EventEmitter {
           });
         }, 1000 * this.restartAttempts); // Exponential backoff
       } else {
-        this.log('error', 'Max restart attempts reached. Worker will not be restarted.');
+        this.log(
+          'error',
+          'Max restart attempts reached. Worker will not be restarted.',
+        );
         this.emit('fatal-error', new Error('Worker process failed to restart'));
       }
     }
@@ -292,7 +311,9 @@ export class RepositoryMonitoringManager extends EventEmitter {
   /**
    * Send a request to the worker and wait for response
    */
-  private async sendRequest(message: Omit<MainToServerMessage, 'id'>): Promise<any> {
+  private async sendRequest(
+    message: Omit<MainToServerMessage, 'id'>,
+  ): Promise<any> {
     if (!this.isReady) {
       await this.waitForReady();
     }
@@ -363,7 +384,10 @@ export class RepositoryMonitoringManager extends EventEmitter {
   /**
    * Log messages based on level
    */
-  private log(level: 'debug' | 'info' | 'warn' | 'error', message: string): void {
+  private log(
+    level: 'debug' | 'info' | 'warn' | 'error',
+    message: string,
+  ): void {
     const levels = ['debug', 'info', 'warn', 'error'];
     const configLevelIndex = levels.indexOf(this.config.logLevel);
     const messageLevelIndex = levels.indexOf(level);
@@ -411,14 +435,18 @@ export class RepositoryMonitoringManager extends EventEmitter {
   /**
    * Get packages information for a repository
    */
-  async getPackages(path: string): Promise<{ packages: PackageLayer[]; summary: PackageSummary } | null> {
+  async getPackages(
+    path: string,
+  ): Promise<{ packages: PackageLayer[]; summary: PackageSummary } | null> {
     return this.sendRequest({ type: 'getPackages', path });
   }
 
   /**
    * Get the repository cache snapshot composed by the worker-side registry
    */
-  async getRepositoryCacheSnapshot(path: string): Promise<RepositoryCacheSnapshot> {
+  async getRepositoryCacheSnapshot(
+    path: string,
+  ): Promise<RepositoryCacheSnapshot> {
     return this.sendRequest({ type: 'getRepositoryCacheSnapshot', path });
   }
 
@@ -511,7 +539,9 @@ export class RepositoryMonitoringManager extends EventEmitter {
     let repositories: RepositoryInfo[] = [];
     try {
       if (this.isReady && this.worker) {
-        const response = await this.sendRequest({ type: 'getRepositoryDetails' });
+        const response = await this.sendRequest({
+          type: 'getRepositoryDetails',
+        });
         repositories = response || [];
       }
     } catch (error) {
@@ -540,7 +570,10 @@ export class RepositoryMonitoringManager extends EventEmitter {
         const elapsedMs = Date.now() - this.lastCpuCheck;
         const elapsedUser = cpuUsage.user - this.lastCpuUsage.user;
         const elapsedSystem = cpuUsage.system - this.lastCpuUsage.system;
-        currentCpu = Math.min(100, Math.max(0, ((elapsedUser + elapsedSystem) / 1000 / elapsedMs) * 100));
+        currentCpu = Math.min(
+          100,
+          Math.max(0, ((elapsedUser + elapsedSystem) / 1000 / elapsedMs) * 100),
+        );
 
         this.lastCpuUsage = cpuUsage;
         this.lastCpuCheck = Date.now();
@@ -611,10 +644,13 @@ export class RepositoryMonitoringManager extends EventEmitter {
   /**
    * Resolve dependency information using the repository monitoring server
    */
-  async resolveDependency(dependencyId: string, repositoryRoot?: string): Promise<DependencyResolutionResult> {
-    return this.sendRequest({ 
-      type: 'resolveDependency', 
-      dependencyRequest: { dependencyId, repositoryRoot } 
+  async resolveDependency(
+    dependencyId: string,
+    repositoryRoot?: string,
+  ): Promise<DependencyResolutionResult> {
+    return this.sendRequest({
+      type: 'resolveDependency',
+      dependencyRequest: { dependencyId, repositoryRoot },
     });
   }
 }

@@ -19,7 +19,7 @@ export const DEFAULT_CONFIG: EventProcessingServerConfig = {
   enableObservability: true,
   maxConcurrentEvents: 10,
   requestTimeoutMs: 30000,
-  statsReportingIntervalMs: 60000
+  statsReportingIntervalMs: 60000,
 };
 
 // Pending request tracking

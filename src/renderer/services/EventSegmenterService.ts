@@ -164,7 +164,9 @@ export class EventSegmenterService {
   /**
    * Hybrid segmentation - combines todo and stop events
    */
-  private segmentHybrid(events: RepoNormalizedUniversalAgentSessionEvent[]): EventSegment[] {
+  private segmentHybrid(
+    events: RepoNormalizedUniversalAgentSessionEvent[],
+  ): EventSegment[] {
     const segments: EventSegment[] = [];
     let currentTodo: TodoInfo | null = null;
     let segmentStart = 0;

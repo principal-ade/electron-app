@@ -13,9 +13,7 @@ export const RemoteAgentTitlebar: React.FC = () => {
   const borderColor = theme.colors?.border || '#444';
   const textColor = theme.colors?.text || '#fff';
 
-  const buildAgentButtonStyle = (
-    agentId: string,
-  ): React.CSSProperties => {
+  const buildAgentButtonStyle = (agentId: string): React.CSSProperties => {
     const isSelected = activeAgentId === agentId;
     const isHovered = hoveredAgentId === agentId;
 
@@ -30,7 +28,8 @@ export const RemoteAgentTitlebar: React.FC = () => {
       display: 'flex',
       alignItems: 'center',
       gap: '8px',
-      transition: 'color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
+      transition:
+        'color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease',
       fontSize: '13px',
       color: isSelected ? accentColor : textColor,
       boxShadow: isSelected
@@ -43,9 +42,7 @@ export const RemoteAgentTitlebar: React.FC = () => {
     };
   };
 
-  const buildCloseButtonStyle = (
-    agentId: string,
-  ): React.CSSProperties => {
+  const buildCloseButtonStyle = (agentId: string): React.CSSProperties => {
     const isSelected = activeAgentId === agentId;
 
     return {
@@ -74,25 +71,29 @@ export const RemoteAgentTitlebar: React.FC = () => {
 
   useEffect(() => {
     // Subscribe to agent list changes
-    const unsubscribeList = window.mainProcess.remoteAgentWindow.onRemoteAgentListChanged(
-      (agentList, activeId) => {
-        setAgents(agentList);
-        setActiveAgentId(activeId);
-      }
-    );
+    const unsubscribeList =
+      window.mainProcess.remoteAgentWindow.onRemoteAgentListChanged(
+        (agentList, activeId) => {
+          setAgents(agentList);
+          setActiveAgentId(activeId);
+        },
+      );
 
     // Subscribe to active agent changes
-    const unsubscribeActive = window.mainProcess.remoteAgentWindow.onRemoteAgentActiveChanged(
-      (agentId) => {
-        setActiveAgentId(agentId);
-      }
-    );
+    const unsubscribeActive =
+      window.mainProcess.remoteAgentWindow.onRemoteAgentActiveChanged(
+        (agentId) => {
+          setActiveAgentId(agentId);
+        },
+      );
 
     // Load initial state
     (async () => {
       try {
-        const agentList = await window.mainProcess.remoteAgentWindow.listRemoteAgents();
-        const activeId = await window.mainProcess.remoteAgentWindow.getActiveAgentId();
+        const agentList =
+          await window.mainProcess.remoteAgentWindow.listRemoteAgents();
+        const activeId =
+          await window.mainProcess.remoteAgentWindow.getActiveAgentId();
         setAgents(agentList);
         setActiveAgentId(activeId);
       } catch (error) {
@@ -135,7 +136,9 @@ export const RemoteAgentTitlebar: React.FC = () => {
         padding: '0 10px 0 80px',
         WebkitAppRegion: 'drag',
         color: theme.colors?.text || '#fff',
-        fontFamily: theme.fonts?.body || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        fontFamily:
+          theme.fonts?.body ||
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
       }}
     >
       <div style={{ flex: 1 }}>
@@ -157,9 +160,9 @@ export const RemoteAgentTitlebar: React.FC = () => {
             style={buildAgentButtonStyle(agent.id)}
             onMouseEnter={() => setHoveredAgentId(agent.id)}
             onMouseLeave={() => {
-              setHoveredAgentId((current) => (
-                current === agent.id ? null : current
-              ));
+              setHoveredAgentId((current) =>
+                current === agent.id ? null : current,
+              );
             }}
           >
             <span>{agent.name}</span>

@@ -35,9 +35,7 @@ export class WindowService {
    * Open an editor window for local files
    * @param request - Request containing local file paths and window configuration
    */
-  static async openLocalFiles(
-    request: OpenLocalFilesRequest,
-  ): Promise<void> {
+  static async openLocalFiles(request: OpenLocalFilesRequest): Promise<void> {
     window.alert(
       'The multi-file editor is temporarily unavailable while we migrate to the new Monaco experience.',
     );
@@ -54,9 +52,7 @@ export class WindowService {
    * Open an editor window for remote GitHub files
    * @param request - Request containing repository info and file paths
    */
-  static async openRemoteFiles(
-    request: OpenRemoteFilesRequest,
-  ): Promise<void> {
+  static async openRemoteFiles(request: OpenRemoteFilesRequest): Promise<void> {
     window.alert(
       'The multi-file editor is temporarily unavailable while we migrate to the new Monaco experience.',
     );
@@ -80,10 +76,14 @@ export class WindowService {
   static async openMarkdownView(
     filePath: string,
     projectName: string,
-    options?: { viewMode?: 'single' | 'book' }
+    options?: { viewMode?: 'single' | 'book' },
   ): Promise<void> {
     try {
-      await window.mainProcess.window.openMarkdownView(filePath, projectName, options);
+      await window.mainProcess.window.openMarkdownView(
+        filePath,
+        projectName,
+        options,
+      );
     } catch (error) {
       console.error('[WindowService] Failed to open markdown view:', error);
       throw new Error('Failed to open markdown view window');
@@ -128,7 +128,9 @@ export class WindowService {
    * Toggle main window minimize/restore
    * @param shouldMinimize - true to minimize, false to restore
    */
-  static async toggleMainWindowMinimize(shouldMinimize: boolean): Promise<void> {
+  static async toggleMainWindowMinimize(
+    shouldMinimize: boolean,
+  ): Promise<void> {
     try {
       await window.mainProcess.window.toggleMainWindowMinimize(shouldMinimize);
     } catch (error) {
@@ -144,7 +146,9 @@ export class WindowService {
    * Listen for main window minimize state changes
    * @param callback - Called when the main window minimize state changes
    */
-  static onMainWindowMinimizeStateChange(callback: (isMinimized: boolean) => void): void {
+  static onMainWindowMinimizeStateChange(
+    callback: (isMinimized: boolean) => void,
+  ): void {
     try {
       window.mainProcess.window.onMainWindowMinimizeStateChange(callback);
     } catch (error) {
@@ -154,5 +158,4 @@ export class WindowService {
       );
     }
   }
-
 }

@@ -20,7 +20,8 @@ export const AgentConnectionVisualizer: React.FC<
 > = ({ agentType, isInstalled, hasHooks, hasMCP = false, className = '' }) => {
   const { theme } = useTheme();
   const agentConfig = getAgentInfo(agentType);
-  const [isHoveringPrincipalADE, setIsHoveringPrincipalADE] = React.useState(false);
+  const [isHoveringPrincipalADE, setIsHoveringPrincipalADE] =
+    React.useState(false);
   const [selectedComponent, setSelectedComponent] = React.useState<
     'agent' | 'principal-ade' | 'mcp' | null
   >(null);
@@ -155,7 +156,9 @@ export const AgentConnectionVisualizer: React.FC<
               style={{ paddingTop: '4px' }}
             >
               <Database
-                size={isHoveringPrincipalADE && hasHooks && isInstalled ? 22 : 20}
+                size={
+                  isHoveringPrincipalADE && hasHooks && isInstalled ? 22 : 20
+                }
                 className="transition-all duration-200"
                 style={{
                   color:
@@ -177,7 +180,9 @@ export const AgentConnectionVisualizer: React.FC<
                       ? theme.colors.primary
                       : theme.colors.textSecondary,
                   fontWeight:
-                    isHoveringPrincipalADE && hasHooks && isInstalled ? 600 : 500,
+                    isHoveringPrincipalADE && hasHooks && isInstalled
+                      ? 600
+                      : 500,
                 }}
               >
                 Principal ADE

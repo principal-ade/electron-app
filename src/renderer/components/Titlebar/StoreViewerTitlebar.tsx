@@ -24,12 +24,14 @@ export const StoreViewerTitlebar: React.FC<StoreViewerTitlebarProps> = ({
   }
 
   return (
-    <BaseTitlebar title={
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Database size={16} />
-        <span>{titleText}</span>
-      </div>
-    }>
+    <BaseTitlebar
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Database size={16} />
+          <span>{titleText}</span>
+        </div>
+      }
+    >
       {onRefresh && (
         <TitlebarButton
           onClick={onRefresh}

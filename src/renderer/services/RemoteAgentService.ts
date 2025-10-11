@@ -12,11 +12,13 @@ export class RemoteAgentService {
   private stateChangeListeners: Set<
     (agentId: string, state: RemoteAgentWindowState) => void
   > = new Set();
-  private messageListeners: Set<(agentId: string, message: any) => void> = new Set();
+  private messageListeners: Set<(agentId: string, message: any) => void> =
+    new Set();
   private agentListListeners: Set<
     (agents: RemoteAgentConfig[], activeAgentId: string | null) => void
   > = new Set();
-  private activeAgentListeners: Set<(agentId: string | null) => void> = new Set();
+  private activeAgentListeners: Set<(agentId: string | null) => void> =
+    new Set();
   private unsubscribeStateChange?: () => void;
   private unsubscribeMessage?: () => void;
   private unsubscribeListChange?: () => void;
@@ -34,10 +36,13 @@ export class RemoteAgentService {
    */
   async openRemoteAgent(
     config: RemoteAgentConfig,
-    options?: RemoteAgentWindowOptions
+    options?: RemoteAgentWindowOptions,
   ): Promise<string> {
     try {
-      const agentId = await RemoteAgentWindowService.openRemoteAgent(config, options);
+      const agentId = await RemoteAgentWindowService.openRemoteAgent(
+        config,
+        options,
+      );
       return agentId;
     } catch (error) {
       console.error('Failed to open remote agent:', error);
@@ -130,7 +135,9 @@ export class RemoteAgentService {
   /**
    * Subscribe to state changes
    */
-  onStateChange(callback: (agentId: string, state: RemoteAgentWindowState) => void): () => void {
+  onStateChange(
+    callback: (agentId: string, state: RemoteAgentWindowState) => void,
+  ): () => void {
     this.stateChangeListeners.add(callback);
 
     // Return unsubscribe function
@@ -155,7 +162,10 @@ export class RemoteAgentService {
    * Subscribe to agent list changes
    */
   onAgentListChange(
-    callback: (agents: RemoteAgentConfig[], activeAgentId: string | null) => void
+    callback: (
+      agents: RemoteAgentConfig[],
+      activeAgentId: string | null,
+    ) => void,
   ): () => void {
     this.agentListListeners.add(callback);
     callback(this.agentList, this.activeAgentId);
@@ -189,8 +199,8 @@ export class RemoteAgentService {
    */
   private setupEventListeners(): void {
     // Listen for state changes
-    this.unsubscribeStateChange = RemoteAgentWindowService.onRemoteAgentStateChanged(
-      (agentId, state) => {
+    this.unsubscribeStateChange =
+      RemoteAgentWindowService.onRemoteAgentStateChanged((agentId, state) => {
         this.stateChangeListeners.forEach((listener) => {
           try {
             listener(agentId, state);
@@ -198,33 +208,36 @@ export class RemoteAgentService {
             console.error('Error in state change listener:', error);
           }
         });
-      }
-    );
+      });
 
     // Listen for messages
-    this.unsubscribeMessage = RemoteAgentWindowService.onRemoteAgentMessage((agentId, message) => {
-      this.messageListeners.forEach((listener) => {
-        try {
-          listener(agentId, message);
-        } catch (error) {
-          console.error('Error in message listener:', error);
-        }
-      });
-    });
-
-    this.unsubscribeListChange = RemoteAgentWindowService.onRemoteAgentListChanged(
-      (agents, activeAgentId) => {
-        this.agentList = agents;
-        this.activeAgentId = activeAgentId;
-        this.notifyAgentListListeners();
-        this.notifyActiveAgentListeners();
+    this.unsubscribeMessage = RemoteAgentWindowService.onRemoteAgentMessage(
+      (agentId, message) => {
+        this.messageListeners.forEach((listener) => {
+          try {
+            listener(agentId, message);
+          } catch (error) {
+            console.error('Error in message listener:', error);
+          }
+        });
       },
     );
 
-    this.unsubscribeActiveChange = RemoteAgentWindowService.onRemoteAgentActiveChanged((agentId) => {
-      this.activeAgentId = agentId;
-      this.notifyActiveAgentListeners();
-    });
+    this.unsubscribeListChange =
+      RemoteAgentWindowService.onRemoteAgentListChanged(
+        (agents, activeAgentId) => {
+          this.agentList = agents;
+          this.activeAgentId = activeAgentId;
+          this.notifyAgentListListeners();
+          this.notifyActiveAgentListeners();
+        },
+      );
+
+    this.unsubscribeActiveChange =
+      RemoteAgentWindowService.onRemoteAgentActiveChanged((agentId) => {
+        this.activeAgentId = agentId;
+        this.notifyActiveAgentListeners();
+      });
   }
 
   /**

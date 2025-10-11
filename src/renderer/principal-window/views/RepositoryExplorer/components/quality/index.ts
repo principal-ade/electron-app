@@ -3,5 +3,5 @@ export type {
   ExtendedQualityMetrics,
   QualityTier,
   QualitySuggestion,
-  AnalysisOptions
+  AnalysisOptions,
 } from './MockQualityMetricsService';

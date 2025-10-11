@@ -18,6 +18,7 @@ Main Process                    Event Processing Server (Utility Process)
 The event processing server runs automatically when the app starts.
 
 ### Environment Variables
+
 ```bash
 # Run both processors and compare results
 EVENT_PROCESSOR_COMPARISON_MODE=true
@@ -42,33 +43,41 @@ STATS_REPORTING_INTERVAL_MS=60000  # Stats reporting interval
 ## Processing Modes
 
 ### 1. V2 Only (Default)
+
 ```bash
 USE_EVENT_PROCESSING_SERVER=false
 ```
+
 (Deprecated - no longer used)
 
 ### 2. Server Only
+
 ```bash
 USE_EVENT_PROCESSING_SERVER=true
 ```
+
 - All events processed by the server
 - Main process acts as thin proxy
 - Maximum performance improvement
 
 ### 3. Comparison Mode
+
 ```bash
 EVENT_PROCESSOR_COMPARISON_MODE=true
 ```
+
 - Runs both V2 and server processors
 - Compares results and logs differences
 - Returns server result if successful, falls back to V2
 - Useful for validation during migration
 
 ### 4. Gradual Rollout
+
 ```bash
 EVENT_PROCESSOR_GRADUAL_ROLLOUT=true
 EVENT_SERVER_ROLLOUT_PERCENTAGE=50
 ```
+
 - Splits traffic between V2 and server
 - Percentage controls how much traffic goes to server
 - Allows gradual migration with monitoring
@@ -97,15 +106,17 @@ src/event-processing-server/
 ## Monitoring
 
 ### Statistics
+
 ```typescript
 const stats = eventProcessor.getStats();
 console.log(stats);
 ```
 
 ### Comparison Results (in comparison mode)
+
 ```typescript
 const comparisons = eventProcessor.getComparisonResults(10);
-comparisons.forEach(result => {
+comparisons.forEach((result) => {
   if (result.differencesFound.length > 0) {
     console.warn('Differences found:', result.differencesFound);
   }
@@ -113,6 +124,7 @@ comparisons.forEach(result => {
 ```
 
 ### Event Listeners
+
 ```typescript
 eventProcessor.on('comparison-result', (result) => {
   // Handle comparison results
@@ -126,6 +138,7 @@ eventProcessor.on('server-error', (error) => {
 ## Testing
 
 ### Development Testing
+
 ```bash
 # Test with comparison mode
 EVENT_PROCESSOR_COMPARISON_MODE=true npm start
@@ -138,6 +151,7 @@ EVENT_PROCESSOR_GRADUAL_ROLLOUT=true EVENT_SERVER_ROLLOUT_PERCENTAGE=10 npm star
 ```
 
 ### Performance Testing
+
 ```bash
 # Enable debug logging to see timing information
 EVENT_PROCESSOR_LOG_LEVEL=debug npm start
@@ -146,22 +160,26 @@ EVENT_PROCESSOR_LOG_LEVEL=debug npm start
 ## Migration Strategy
 
 1. **Phase 1: Setup (Zero Risk)**
+
    ```bash
    USE_EVENT_PROCESSING_SERVER=false  # Keep existing behavior
    ```
 
 2. **Phase 2: Validation**
+
    ```bash
    EVENT_PROCESSOR_COMPARISON_MODE=true  # Run both, compare results
    ```
 
 3. **Phase 3: Gradual Rollout**
+
    ```bash
    EVENT_PROCESSOR_GRADUAL_ROLLOUT=true
    EVENT_SERVER_ROLLOUT_PERCENTAGE=10  # Start with 10%
    ```
 
 4. **Phase 4: Full Migration**
+
    ```bash
    USE_EVENT_PROCESSING_SERVER=true  # 100% server processing
    ```
@@ -173,6 +191,7 @@ EVENT_PROCESSOR_LOG_LEVEL=debug npm start
 ## Rollback Plan
 
 If issues occur, simply change environment variable:
+
 ```bash
 USE_EVENT_PROCESSING_SERVER=false
 ```
@@ -182,6 +201,7 @@ No code changes needed - the application will restart with the original V2 proce
 ## Performance Benefits
 
 Expected improvements:
+
 - **Main process responsiveness**: 50-80% reduction in event loop blocking
 - **Event processing throughput**: 30-50% increase in concurrent processing
 - **Memory isolation**: Event processing memory usage isolated from main process
@@ -190,21 +210,25 @@ Expected improvements:
 ## Troubleshooting
 
 ### Server Won't Start
+
 - Check that `worker-entry.cjs` exists and is executable
 - Verify CLIBridge is properly initialized
 - Check server logs for startup errors
 
 ### Events Not Processing
+
 - Verify server is ready (check logs for "ready signal")
 - Check for timeout errors in proxy logs
 - Monitor pending request counts
 
 ### Performance Issues
+
 - Enable debug logging to see processing times
 - Monitor server statistics for bottlenecks
 - Check memory usage in both processes
 
 ### Comparison Mode Differences
+
 - Review comparison results for patterns
 - Check if differences are acceptable
 - Investigate specific event types that differ

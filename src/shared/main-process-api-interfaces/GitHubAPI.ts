@@ -248,11 +248,11 @@ export interface GitHubAPI {
     request: GitHubConfigRequest,
   ) => Promise<ConfigFetchResponse>;
   getUserRepositories: (
-    options?: RepositoryFetchOptions
+    options?: RepositoryFetchOptions,
   ) => Promise<GitHubRepository[]>;
   getOrgRepositories: (
     org: string,
-    options?: RepositoryFetchOptions
+    options?: RepositoryFetchOptions,
   ) => Promise<GitHubRepository[]>;
   getUserOrganizations: () => Promise<GitHubOrganization[]>;
   getTokenScopes: () => Promise<string[]>;

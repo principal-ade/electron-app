@@ -304,15 +304,18 @@ export function setupShellHandlers() {
   });
 
   // Show item in file manager (Finder/Explorer)
-  ipcMain.handle(ShellAPIEvent.SHOW_ITEM_IN_FOLDER, async (_, filePath: string) => {
-    try {
-      shell.showItemInFolder(path.resolve(filePath));
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error showing item in folder:', error);
-      return { success: false, error: error.message };
-    }
-  });
+  ipcMain.handle(
+    ShellAPIEvent.SHOW_ITEM_IN_FOLDER,
+    async (_, filePath: string) => {
+      try {
+        shell.showItemInFolder(path.resolve(filePath));
+        return { success: true };
+      } catch (error: any) {
+        console.error('Error showing item in folder:', error);
+        return { success: false, error: error.message };
+      }
+    },
+  );
 
   // Open a terminal in the specified directory
   ipcMain.handle(

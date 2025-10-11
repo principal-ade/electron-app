@@ -73,7 +73,6 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
     }
   }, [document?.sectionIndex]);
 
-
   const handleCopyPath = async () => {
     if (document?.filePath) {
       await navigator.clipboard.writeText(document.filePath);
@@ -160,11 +159,13 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
 
         {/* Metadata */}
         <div className="flex items-center gap-4 mt-3 text-xs">
-          {document.sectionIndex !== undefined && document.totalSectionsInFile && (
-            <span style={{ color: theme.colors.primary }}>
-              Section {document.sectionIndex + 1} of {document.totalSectionsInFile}
-            </span>
-          )}
+          {document.sectionIndex !== undefined &&
+            document.totalSectionsInFile && (
+              <span style={{ color: theme.colors.primary }}>
+                Section {document.sectionIndex + 1} of{' '}
+                {document.totalSectionsInFile}
+              </span>
+            )}
           {document.metadata?.wordCount && (
             <span style={{ color: theme.colors.textSecondary }}>
               {document.metadata.wordCount} words
@@ -225,7 +226,11 @@ export const DocumentViewer: React.FC<DocumentViewerProps> = ({
               slides={[fullContent]} // Let MarkdownDocumentViewer handle slide parsing
               currentSlide={currentSlide}
               theme={theme}
-              showSegmented={document?.totalSectionsInFile ? document.totalSectionsInFile > 1 : false}
+              showSegmented={
+                document?.totalSectionsInFile
+                  ? document.totalSectionsInFile > 1
+                  : false
+              }
               onContentChange={() => {}}
               onSlideNavigate={(slideNum: number) => setCurrentSlide(slideNum)}
               onCheckboxChange={() => {}}

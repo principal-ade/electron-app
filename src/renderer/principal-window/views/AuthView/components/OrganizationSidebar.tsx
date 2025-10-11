@@ -1,5 +1,13 @@
 import { useTheme } from '@a24z/industry-theme';
-import { Building, Folder, Github, GitBranch, Users, User, Settings } from 'lucide-react';
+import {
+  Building,
+  Folder,
+  Github,
+  GitBranch,
+  Users,
+  User,
+  Settings,
+} from 'lucide-react';
 import type { OrganizationInfo } from '../utils/repositoryOrganizer';
 
 interface GitHubUser {
@@ -62,14 +70,17 @@ export const OrganizationSidebar: React.FC<OrganizationSidebarProps> = ({
           padding: '16px',
           border: 'none',
           borderBottom: `2px solid ${showAuthView ? theme.colors.primary : theme.colors.border}`,
-          backgroundColor: showAuthView ? `${theme.colors.primary}10` : 'transparent',
+          backgroundColor: showAuthView
+            ? `${theme.colors.primary}10`
+            : 'transparent',
           cursor: 'pointer',
           transition: 'all 0.2s',
           textAlign: 'left',
         }}
         onMouseEnter={(e) => {
           if (!showAuthView) {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundTertiary;
           }
         }}
         onMouseLeave={(e) => {
@@ -115,7 +126,9 @@ export const OrganizationSidebar: React.FC<OrganizationSidebarProps> = ({
                 style={{
                   fontSize: '14px',
                   fontWeight: 600,
-                  color: showAuthView ? theme.colors.primary : theme.colors.text,
+                  color: showAuthView
+                    ? theme.colors.primary
+                    : theme.colors.text,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -154,7 +167,9 @@ export const OrganizationSidebar: React.FC<OrganizationSidebarProps> = ({
                 style={{
                   fontSize: '14px',
                   fontWeight: 600,
-                  color: showAuthView ? theme.colors.primary : theme.colors.text,
+                  color: showAuthView
+                    ? theme.colors.primary
+                    : theme.colors.text,
                 }}
               >
                 Not Signed In
@@ -173,7 +188,9 @@ export const OrganizationSidebar: React.FC<OrganizationSidebarProps> = ({
         <Settings
           size={16}
           style={{
-            color: showAuthView ? theme.colors.primary : theme.colors.textSecondary,
+            color: showAuthView
+              ? theme.colors.primary
+              : theme.colors.textSecondary,
             flexShrink: 0,
           }}
         />
@@ -204,7 +221,9 @@ export const OrganizationSidebar: React.FC<OrganizationSidebarProps> = ({
             color: theme.colors.textSecondary,
           }}
         >
-          {organizations.length} organization{organizations.length !== 1 ? 's' : ''}, {totalRepositories} repositories
+          {organizations.length} organization
+          {organizations.length !== 1 ? 's' : ''}, {totalRepositories}{' '}
+          repositories
         </p>
       </div>
 
@@ -233,19 +252,22 @@ export const OrganizationSidebar: React.FC<OrganizationSidebarProps> = ({
             marginBottom: '4px',
             border: 'none',
             borderRadius: '6px',
-            backgroundColor: !showAuthView && selectedOrg === null
-              ? `${theme.colors.primary}15`
-              : 'transparent',
-            color: !showAuthView && selectedOrg === null
-              ? theme.colors.primary
-              : theme.colors.text,
+            backgroundColor:
+              !showAuthView && selectedOrg === null
+                ? `${theme.colors.primary}15`
+                : 'transparent',
+            color:
+              !showAuthView && selectedOrg === null
+                ? theme.colors.primary
+                : theme.colors.text,
             cursor: 'pointer',
             transition: 'all 0.2s',
             textAlign: 'left',
           }}
           onMouseEnter={(e) => {
             if (selectedOrg !== null || showAuthView) {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
             }
           }}
           onMouseLeave={(e) => {
@@ -275,9 +297,10 @@ export const OrganizationSidebar: React.FC<OrganizationSidebarProps> = ({
             style={{
               fontSize: '12px',
               color: theme.colors.textSecondary,
-              backgroundColor: selectedOrg === null
-                ? `${theme.colors.primary}20`
-                : theme.colors.backgroundTertiary,
+              backgroundColor:
+                selectedOrg === null
+                  ? `${theme.colors.primary}20`
+                  : theme.colors.backgroundTertiary,
               padding: '2px 8px',
               borderRadius: '12px',
               fontWeight: 500,
@@ -315,19 +338,22 @@ export const OrganizationSidebar: React.FC<OrganizationSidebarProps> = ({
               marginBottom: '4px',
               border: 'none',
               borderRadius: '6px',
-              backgroundColor: !showAuthView && selectedOrg === org.name
-                ? `${theme.colors.primary}15`
-                : 'transparent',
-              color: !showAuthView && selectedOrg === org.name
-                ? theme.colors.primary
-                : theme.colors.text,
+              backgroundColor:
+                !showAuthView && selectedOrg === org.name
+                  ? `${theme.colors.primary}15`
+                  : 'transparent',
+              color:
+                !showAuthView && selectedOrg === org.name
+                  ? theme.colors.primary
+                  : theme.colors.text,
               cursor: 'pointer',
               transition: 'all 0.2s',
               textAlign: 'left',
             }}
             onMouseEnter={(e) => {
               if (selectedOrg !== org.name || showAuthView) {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
               }
             }}
             onMouseLeave={(e) => {
@@ -376,9 +402,10 @@ export const OrganizationSidebar: React.FC<OrganizationSidebarProps> = ({
               style={{
                 fontSize: '12px',
                 color: theme.colors.textSecondary,
-                backgroundColor: selectedOrg === org.name
-                  ? `${theme.colors.primary}20`
-                  : theme.colors.backgroundTertiary,
+                backgroundColor:
+                  selectedOrg === org.name
+                    ? `${theme.colors.primary}20`
+                    : theme.colors.backgroundTertiary,
                 padding: '2px 8px',
                 borderRadius: '12px',
                 fontWeight: 500,

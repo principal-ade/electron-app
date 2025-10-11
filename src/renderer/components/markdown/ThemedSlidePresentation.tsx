@@ -21,11 +21,9 @@ export type ThemedSlidePresentationProps = SlidePresentationProps & {
   theme?: any; // Optional explicit theme override
 };
 
-export const ThemedSlidePresentation: React.FC<ThemedSlidePresentationProps> = ({
-  useCustomTheme = false,
-  theme: explicitTheme,
-  ...props
-}) => {
+export const ThemedSlidePresentation: React.FC<
+  ThemedSlidePresentationProps
+> = ({ useCustomTheme = false, theme: explicitTheme, ...props }) => {
   const { theme: appTheme } = useTheme();
   const [markdownTheme, setMarkdownTheme] = React.useState<any>(null);
   const [shouldUseCustom, setShouldUseCustom] = React.useState(false);
@@ -62,7 +60,9 @@ export const ThemedSlidePresentation: React.FC<ThemedSlidePresentationProps> = (
   }, [useCustomTheme]);
 
   // Determine which theme to use: explicit > custom > app
-  const themeToUse = explicitTheme || (shouldUseCustom && markdownTheme ? markdownTheme : appTheme);
+  const themeToUse =
+    explicitTheme ||
+    (shouldUseCustom && markdownTheme ? markdownTheme : appTheme);
 
   return <SlidePresentation {...props} theme={themeToUse} />;
 };

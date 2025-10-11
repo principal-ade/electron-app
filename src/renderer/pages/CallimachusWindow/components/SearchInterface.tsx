@@ -26,9 +26,15 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
     onSearch(query);
 
     // Add to recent searches
-    const updatedSearches = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5);
+    const updatedSearches = [
+      query,
+      ...recentSearches.filter((s) => s !== query),
+    ].slice(0, 5);
     setRecentSearches(updatedSearches);
-    localStorage.setItem('callimachus-recent-searches', JSON.stringify(updatedSearches));
+    localStorage.setItem(
+      'callimachus-recent-searches',
+      JSON.stringify(updatedSearches),
+    );
   };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -72,7 +78,10 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
             disabled={isSearching || !query.trim()}
             className="px-4 py-2 rounded font-medium transition-colors flex items-center gap-2"
             style={{
-              backgroundColor: isSearching || !query.trim() ? theme.colors.backgroundSecondary : theme.colors.primary,
+              backgroundColor:
+                isSearching || !query.trim()
+                  ? theme.colors.backgroundSecondary
+                  : theme.colors.primary,
               color: theme.colors.background,
               opacity: isSearching || !query.trim() ? 0.5 : 1,
             }}
@@ -112,7 +121,8 @@ export const SearchInterface: React.FC<SearchInterfaceProps> = ({
                   e.currentTarget.style.color = theme.colors.background;
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundSecondary;
                   e.currentTarget.style.color = theme.colors.text;
                 }}
               >

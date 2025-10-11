@@ -149,7 +149,9 @@ export class AgentSessionService {
    * @param events - Array of normalized events
    * @returns Array of file paths that were written to (using relative paths when available)
    */
-  static extractWrittenFiles(events: RepoNormalizedUniversalAgentSessionEvent[]): string[] {
+  static extractWrittenFiles(
+    events: RepoNormalizedUniversalAgentSessionEvent[],
+  ): string[] {
     const writtenFiles = new Set<string>();
 
     for (const event of events) {

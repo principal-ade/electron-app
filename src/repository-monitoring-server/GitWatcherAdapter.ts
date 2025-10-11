@@ -4,7 +4,10 @@
  * Emits GIT_STATE_EVENT for state transitions (separate from status snapshots)
  */
 
-import { RepositoryMonitor, ChokidarWorkspaceWatcherAdapter } from '@principal-ai/repository-monitoring';
+import {
+  RepositoryMonitor,
+  ChokidarWorkspaceWatcherAdapter,
+} from '@principal-ai/repository-monitoring';
 import type {
   GitEvent,
   GitState,
@@ -41,19 +44,27 @@ export class GitWatcherAdapter extends EventEmitter {
   private lastKnownState: Map<string, GitState> = new Map();
   private workspaceWatchers: Map<string, WorkspaceWatcherAdapter> = new Map();
 
-  constructor(_server: RepositoryMonitoringServer, config: GitWatcherAdapterConfig = {}) {
+  constructor(
+    _server: RepositoryMonitoringServer,
+    config: GitWatcherAdapterConfig = {},
+  ) {
     super();
     this.config = {
       debounceMs: config.debounceMs || 500,
       watchMode: config.watchMode || 'watch',
-      workspaceWatcherFactory: config.workspaceWatcherFactory || (() => new ChokidarWorkspaceWatcherAdapter()),
+      workspaceWatcherFactory:
+        config.workspaceWatcherFactory ||
+        (() => new ChokidarWorkspaceWatcherAdapter()),
     };
   }
 
   /**
    * Start watching a repository for git events
    */
-  async startWatching(repoPath: string, mode: 'minimal' | 'fallback' = 'fallback'): Promise<void> {
+  async startWatching(
+    repoPath: string,
+    mode: 'minimal' | 'fallback' = 'fallback',
+  ): Promise<void> {
     // Don't create duplicate monitors
     if (this.repositoryMonitors.has(repoPath)) {
       console.info(`[GitWatcherAdapter] Already watching ${repoPath}`);
@@ -61,7 +72,9 @@ export class GitWatcherAdapter extends EventEmitter {
     }
 
     try {
-      console.info(`[GitWatcherAdapter] Starting git event watching for ${repoPath}`);
+      console.info(
+        `[GitWatcherAdapter] Starting git event watching for ${repoPath}`,
+      );
 
       // Create the repository monitor with options
       const options: RepositoryMonitorOptions = {
@@ -89,7 +102,10 @@ export class GitWatcherAdapter extends EventEmitter {
       });
 
       monitor.on('error', (error: Error) => {
-        console.error(`[GitWatcherAdapter] Monitor error for ${repoPath}:`, error);
+        console.error(
+          `[GitWatcherAdapter] Monitor error for ${repoPath}:`,
+          error,
+        );
       });
 
       // Start watching
@@ -100,9 +116,14 @@ export class GitWatcherAdapter extends EventEmitter {
 
       await this.startWorkspaceWatcher(repoPath, mode);
 
-      console.info(`[GitWatcherAdapter] Successfully started watching ${repoPath}`);
+      console.info(
+        `[GitWatcherAdapter] Successfully started watching ${repoPath}`,
+      );
     } catch (error) {
-      console.error(`[GitWatcherAdapter] Failed to start watching ${repoPath}:`, error);
+      console.error(
+        `[GitWatcherAdapter] Failed to start watching ${repoPath}:`,
+        error,
+      );
       await this.stopWatching(repoPath);
       throw error;
     }
@@ -128,7 +149,10 @@ export class GitWatcherAdapter extends EventEmitter {
       this.lastKnownState.delete(repoPath);
       console.info(`[GitWatcherAdapter] Stopped watching ${repoPath}`);
     } catch (error) {
-      console.error(`[GitWatcherAdapter] Error stopping watch for ${repoPath}:`, error);
+      console.error(
+        `[GitWatcherAdapter] Error stopping watch for ${repoPath}:`,
+        error,
+      );
     }
   }
 
@@ -159,7 +183,10 @@ export class GitWatcherAdapter extends EventEmitter {
     this.emit(MonitoringInternalEvent.GIT_STATE_EVENT, payload);
   }
 
-  private async startWorkspaceWatcher(repoPath: string, mode: 'minimal' | 'fallback'): Promise<void> {
+  private async startWorkspaceWatcher(
+    repoPath: string,
+    mode: 'minimal' | 'fallback',
+  ): Promise<void> {
     if (this.workspaceWatchers.has(repoPath)) {
       return;
     }
@@ -167,7 +194,9 @@ export class GitWatcherAdapter extends EventEmitter {
     const watcher = this.config.workspaceWatcherFactory?.();
 
     if (!watcher) {
-      console.warn('[GitWatcherAdapter] Workspace watcher factory returned no instance, skipping workspace watching');
+      console.warn(
+        '[GitWatcherAdapter] Workspace watcher factory returned no instance, skipping workspace watching',
+      );
       return;
     }
 
@@ -179,22 +208,37 @@ export class GitWatcherAdapter extends EventEmitter {
         this.handleWorkspaceChange(repoPath, event, filePath);
       },
       onReady: () => {
-        console.info(`[GitWatcherAdapter] Workspace watcher ready for ${repoPath}`);
+        console.info(
+          `[GitWatcherAdapter] Workspace watcher ready for ${repoPath}`,
+        );
       },
       onClose: () => {
-        console.info(`[GitWatcherAdapter] Workspace watcher closed for ${repoPath}`);
+        console.info(
+          `[GitWatcherAdapter] Workspace watcher closed for ${repoPath}`,
+        );
         this.workspaceWatchers.delete(repoPath);
       },
       onRestart: (reason: string) => {
-        console.info(`[GitWatcherAdapter] Workspace watcher restarting for ${repoPath}: ${reason}`);
+        console.info(
+          `[GitWatcherAdapter] Workspace watcher restarting for ${repoPath}: ${reason}`,
+        );
       },
       onError: (error: unknown) => {
-        console.warn(`[GitWatcherAdapter] Workspace watcher error for ${repoPath}:`, error);
+        console.warn(
+          `[GitWatcherAdapter] Workspace watcher error for ${repoPath}:`,
+          error,
+        );
       },
       onFatalError: (error: unknown) => {
-        console.error(`[GitWatcherAdapter] Workspace watcher fatal error for ${repoPath}:`, error);
+        console.error(
+          `[GitWatcherAdapter] Workspace watcher fatal error for ${repoPath}:`,
+          error,
+        );
         void watcher.stop().catch((stopError: unknown) => {
-          console.error(`[GitWatcherAdapter] Failed to stop workspace watcher after fatal error for ${repoPath}:`, stopError);
+          console.error(
+            `[GitWatcherAdapter] Failed to stop workspace watcher after fatal error for ${repoPath}:`,
+            stopError,
+          );
         });
         this.workspaceWatchers.delete(repoPath);
         this.emitWorkspaceError(repoPath, error);
@@ -204,14 +248,22 @@ export class GitWatcherAdapter extends EventEmitter {
     this.workspaceWatchers.set(repoPath, watcher);
   }
 
-  private handleWorkspaceChange(repoPath: string, event: string, filePath: string): void {
+  private handleWorkspaceChange(
+    repoPath: string,
+    event: string,
+    filePath: string,
+  ): void {
     const changeType = this.mapWorkspaceEventType(event);
     if (!changeType) {
-      console.info(`[GitWatcherAdapter] Ignoring workspace event ${event} for ${filePath}`);
+      console.info(
+        `[GitWatcherAdapter] Ignoring workspace event ${event} for ${filePath}`,
+      );
       return;
     }
 
-    const relativePath = path.relative(repoPath, filePath || repoPath).replace(/\\/g, '/');
+    const relativePath = path
+      .relative(repoPath, filePath || repoPath)
+      .replace(/\\/g, '/');
     const change: FileChange = {
       type: changeType,
       path: relativePath,
@@ -336,7 +388,7 @@ export class GitWatcherAdapter extends EventEmitter {
   async dispose(): Promise<void> {
     console.info('[GitWatcherAdapter] Disposing all monitors...');
     const promises = Array.from(this.repositoryMonitors.keys()).map(
-      repoPath => this.stopWatching(repoPath)
+      (repoPath) => this.stopWatching(repoPath),
     );
     await Promise.all(promises);
     this.removeAllListeners();

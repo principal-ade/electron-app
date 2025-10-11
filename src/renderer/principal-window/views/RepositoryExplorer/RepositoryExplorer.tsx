@@ -8,13 +8,19 @@ import {
 import '@a24z/panels/panels.css';
 import { useTheme } from '@a24z/industry-theme';
 
-import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../shared/types/repository.types';
+import type {
+  EnhancedAlexandriaEntry,
+  GitStatus,
+} from '../../../../shared/types/repository.types';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { WindowService } from '../../../main-process-api/WindowService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 
-import { useRepositoryData, useAllRepositories } from '../../../hooks/useRepositoryData';
+import {
+  useRepositoryData,
+  useAllRepositories,
+} from '../../../hooks/useRepositoryData';
 import { useComponentTracking } from './components/withComponentTracking';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 
@@ -44,13 +50,21 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   );
 
   const [showGitCloneModal, setShowGitCloneModal] = useState(false);
-  const [selectedRepositoryPath, setSelectedRepositoryPath] = useState<string | null>(null);
+  const [selectedRepositoryPath, setSelectedRepositoryPath] = useState<
+    string | null
+  >(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyWithChanges, setShowOnlyWithChanges] = useState(false);
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
-  const [panelSizes, setPanelSizes] = useState({ left: 20, middle: 50, right: 30 });
+  const [panelSizes, setPanelSizes] = useState({
+    left: 20,
+    middle: 50,
+    right: 30,
+  });
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
-  const [rightPanelTab, setRightPanelTab] = useState<'preview' | 'terminal' | 'markdown'>('preview');
+  const [rightPanelTab, setRightPanelTab] = useState<
+    'preview' | 'terminal' | 'markdown'
+  >('preview');
 
   const handleFileSelect = useCallback(
     (filePath: string | null) => {
@@ -76,24 +90,33 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   });
 
   // Use the cache to get all repositories
-  const { repositories: cachedRepos, loading: isLoadingRepos, refresh: refreshRepos } = useAllRepositories({
+  const {
+    repositories: cachedRepos,
+    loading: isLoadingRepos,
+    refresh: refreshRepos,
+  } = useAllRepositories({
     autoLoad: true,
     subscribe: true,
   });
 
   // Use cached data for selected repository
-  const { data: selectedRepoData, loading: isLoadingSelectedRepo } = useRepositoryData(selectedRepositoryPath, {
-    autoLoad: true,
-    subscribe: true,
-  });
+  const { data: selectedRepoData, loading: isLoadingSelectedRepo } =
+    useRepositoryData(selectedRepositoryPath, {
+      autoLoad: true,
+      subscribe: true,
+    });
 
   // Extract repositories list from cached data
   const repositories = useMemo(() => {
     return cachedRepos
-      .map(cached => cached.repository)
+      .map((cached) => cached.repository)
       .sort((a, b) => {
-        const aTime = a.mostRecentChange ? new Date(a.mostRecentChange).getTime() : 0;
-        const bTime = b.mostRecentChange ? new Date(b.mostRecentChange).getTime() : 0;
+        const aTime = a.mostRecentChange
+          ? new Date(a.mostRecentChange).getTime()
+          : 0;
+        const bTime = b.mostRecentChange
+          ? new Date(b.mostRecentChange).getTime()
+          : 0;
         return bTime - aTime;
       });
   }, [cachedRepos]);
@@ -103,12 +126,22 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
 
   // Extract data for details panel from cached data
   const markdownFiles = selectedRepoData?.markdownFiles || [];
-  const gitStatus: GitStatus = selectedRepoData?.gitStatus ? {
-    staged: selectedRepoData.gitStatus.stagedFiles.map(f => ({ path: f })),
-    unstaged: selectedRepoData.gitStatus.modifiedFiles.map(f => ({ path: f })),
-    untracked: selectedRepoData.gitStatus.untrackedFiles.map(f => ({ path: f })),
-    deleted: selectedRepoData.gitStatus.deletedFiles.map(f => ({ path: f })),
-  } : { staged: [], unstaged: [], untracked: [], deleted: [] };
+  const gitStatus: GitStatus = selectedRepoData?.gitStatus
+    ? {
+        staged: selectedRepoData.gitStatus.stagedFiles.map((f) => ({
+          path: f,
+        })),
+        unstaged: selectedRepoData.gitStatus.modifiedFiles.map((f) => ({
+          path: f,
+        })),
+        untracked: selectedRepoData.gitStatus.untrackedFiles.map((f) => ({
+          path: f,
+        })),
+        deleted: selectedRepoData.gitStatus.deletedFiles.map((f) => ({
+          path: f,
+        })),
+      }
+    : { staged: [], unstaged: [], untracked: [], deleted: [] };
 
   // Load user preferences
   useEffect(() => {
@@ -125,8 +158,13 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
       }
 
       // Restore previously selected repository
-      if (preferences.landingPage?.selectedRepository && !selectedRepositoryPath) {
-        const savedRepo = repositories.find(r => r.name === preferences.landingPage?.selectedRepository);
+      if (
+        preferences.landingPage?.selectedRepository &&
+        !selectedRepositoryPath
+      ) {
+        const savedRepo = repositories.find(
+          (r) => r.name === preferences.landingPage?.selectedRepository,
+        );
         if (savedRepo) {
           setSelectedRepositoryPath(savedRepo.path);
         }
@@ -140,7 +178,11 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
 
   // Auto-select first repository if none selected
   useEffect(() => {
-    if (!selectedRepositoryPath && repositories.length > 0 && preferencesLoaded) {
+    if (
+      !selectedRepositoryPath &&
+      repositories.length > 0 &&
+      preferencesLoaded
+    ) {
       setSelectedRepositoryPath(repositories[0].path);
     }
   }, [repositories, selectedRepositoryPath, preferencesLoaded]);
@@ -183,10 +225,11 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
       const selectedPath = result.filePaths?.[0];
       if (selectedPath) {
         // Check if repository already exists
-        const existingRepo = repositories.find(repo =>
-          repo.path === selectedPath ||
-          repo.path === selectedPath.replace(/\/$/, '') ||
-          repo.path === selectedPath + '/'
+        const existingRepo = repositories.find(
+          (repo) =>
+            repo.path === selectedPath ||
+            repo.path === selectedPath.replace(/\/$/, '') ||
+            repo.path === selectedPath + '/',
         );
 
         if (existingRepo) {
@@ -197,7 +240,10 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         const name = selectedPath.split('/').pop() || 'unnamed';
 
         // Register with Alexandria and monitoring
-        const registeredRepo = await AlexandriaService.registerRepository(name, selectedPath);
+        const registeredRepo = await AlexandriaService.registerRepository(
+          name,
+          selectedPath,
+        );
 
         // Select the newly added repository
         setSelectedRepositoryPath(registeredRepo.path);
@@ -215,10 +261,12 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
 
   // Handle repository removal
   const handleRepositoryRemoved = (removedRepoName: string) => {
-    const removedRepo = repositories.find(r => r.name === removedRepoName);
+    const removedRepo = repositories.find((r) => r.name === removedRepoName);
     if (removedRepo && selectedRepositoryPath === removedRepo.path) {
       // Select next available repository
-      const remainingRepos = repositories.filter(r => r.name !== removedRepoName);
+      const remainingRepos = repositories.filter(
+        (r) => r.name !== removedRepoName,
+      );
       const nextRepo = remainingRepos.length > 0 ? remainingRepos[0] : null;
       setSelectedRepositoryPath(nextRepo?.path || null);
     }
@@ -230,9 +278,12 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   }, []);
 
   // Handle repository added from Git clone modal
-  const handleRepositoryAdded = useCallback(async (repo: EnhancedAlexandriaEntry) => {
-    setSelectedRepositoryPath(repo.path);
-  }, []);
+  const handleRepositoryAdded = useCallback(
+    async (repo: EnhancedAlexandriaEntry) => {
+      setSelectedRepositoryPath(repo.path);
+    },
+    [],
+  );
 
   // Filter repositories based on search and changes filter
   const filteredRepositories = repositories.filter((repo) => {
@@ -268,7 +319,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
 
   // Get repository status from cache
   const getRepositoryStatus = (repoPath: string) => {
-    const cached = cachedRepos.find(r => r.repository.path === repoPath);
+    const cached = cachedRepos.find((r) => r.repository.path === repoPath);
     if (!cached) return null;
 
     return {
@@ -313,17 +364,31 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
           }}
         >
           {isLoadingRepos ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: theme.colors.textSecondary }}>
+            <div
+              style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: theme.colors.textSecondary,
+              }}
+            >
               Loading repositories...
             </div>
           ) : filteredRepositories.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: theme.colors.textSecondary }}>
+            <div
+              style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: theme.colors.textSecondary,
+              }}
+            >
               {repositories.length === 0
                 ? 'No repositories yet. Add one to get started!'
                 : 'No repositories match your filters.'}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}
+            >
               {filteredRepositories.map((repo) => {
                 const status = getRepositoryStatus(repo.path);
                 const isSelected = selectedRepositoryPath === repo.path;
@@ -335,15 +400,20 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
                     onClick={() => setSelectedRepositoryPath(repo.path)}
                     style={{
                       padding: '12px',
-                      backgroundColor: isSelected ? `${theme.colors.primary}15` : 'transparent',
-                      border: isSelected ? `1px solid ${theme.colors.primary}` : '1px solid transparent',
+                      backgroundColor: isSelected
+                        ? `${theme.colors.primary}15`
+                        : 'transparent',
+                      border: isSelected
+                        ? `1px solid ${theme.colors.primary}`
+                        : '1px solid transparent',
                       borderRadius: '8px',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected) {
-                        e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.backgroundTertiary;
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -352,15 +422,31 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
                       }
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', width: '100%' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        width: '100%',
+                      }}
+                    >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div style={{ minWidth: 0, flex: 1, marginRight: '8px' }}>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                          }}
+                        >
+                          <div
+                            style={{ minWidth: 0, flex: 1, marginRight: '8px' }}
+                          >
                             <div
                               style={{
                                 fontSize: theme.fontSizes[2],
                                 fontWeight: isSelected ? 600 : 500,
-                                color: isSelected ? theme.colors.primary : theme.colors.text,
+                                color: isSelected
+                                  ? theme.colors.primary
+                                  : theme.colors.text,
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
@@ -379,7 +465,11 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
                                 flexWrap: 'wrap',
                               }}
                             >
-                              <span>{repo.github?.owner || repo.remoteUrl?.split('/')[3] || 'local'}</span>
+                              <span>
+                                {repo.github?.owner ||
+                                  repo.remoteUrl?.split('/')[3] ||
+                                  'local'}
+                              </span>
                               <span
                                 style={{
                                   display: 'flex',
@@ -393,7 +483,8 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
                                 <GitBranch size={10} />
                                 {status?.branch || repo.gitBranch || 'main'}
                               </span>
-                              {(status?.hasUncommittedChanges || repo.isDirty) && (
+                              {(status?.hasUncommittedChanges ||
+                                repo.isDirty) && (
                                 <span
                                   style={{
                                     display: 'flex',
@@ -406,7 +497,12 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
                                     fontWeight: 600,
                                   }}
                                 >
-                                  ● {status ? (status.staged + status.unstaged + status.untracked) : repo.dirtyFileCount}
+                                  ●{' '}
+                                  {status
+                                    ? status.staged +
+                                      status.unstaged +
+                                      status.untracked
+                                    : repo.dirtyFileCount}
                                 </span>
                               )}
                             </div>
@@ -429,18 +525,22 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
                                       alignItems: 'center',
                                       gap: '2px',
                                       padding: '1px 4px',
-                                      backgroundColor: status.behind > 0
-                                        ? `${theme.colors.warning}10`
-                                        : `${theme.colors.info}10`,
-                                      color: status.behind > 0
-                                        ? theme.colors.warning
-                                        : theme.colors.info,
+                                      backgroundColor:
+                                        status.behind > 0
+                                          ? `${theme.colors.warning}10`
+                                          : `${theme.colors.info}10`,
+                                      color:
+                                        status.behind > 0
+                                          ? theme.colors.warning
+                                          : theme.colors.info,
                                       borderRadius: '3px',
                                       fontWeight: 500,
                                     }}
                                   >
                                     {status.ahead > 0 && `↑${status.ahead}`}
-                                    {status.ahead > 0 && status.behind > 0 && ' '}
+                                    {status.ahead > 0 &&
+                                      status.behind > 0 &&
+                                      ' '}
                                     {status.behind > 0 && `↓${status.behind}`}
                                   </span>
                                 )}
@@ -450,7 +550,11 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
                                   </span>
                                 )}
                                 {status.needsUpstream && (
-                                  <span style={{ color: theme.colors.textSecondary }}>
+                                  <span
+                                    style={{
+                                      color: theme.colors.textSecondary,
+                                    }}
+                                  >
                                     ⊘ No upstream
                                   </span>
                                 )}
@@ -460,12 +564,16 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
                           <div
                             style={{
                               fontSize: theme.fontSizes[0],
-                              color: repo.isDirty ? theme.colors.warning : theme.colors.textSecondary,
+                              color: repo.isDirty
+                                ? theme.colors.warning
+                                : theme.colors.textSecondary,
                               whiteSpace: 'nowrap',
                               fontWeight: repo.isDirty ? 500 : 400,
                             }}
                           >
-                            {getRelativeTime(repo.mostRecentChange || repo.github?.lastCommit)}
+                            {getRelativeTime(
+                              repo.mostRecentChange || repo.github?.lastCommit,
+                            )}
                           </div>
                         </div>
                       </div>
@@ -515,7 +623,10 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
 
   return (
     <HighlightLayersProvider>
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }} {...trackingProps}>
+      <div
+        style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+        {...trackingProps}
+      >
         <style>{`
           @keyframes flashHighlight {
             0%, 100% {
@@ -541,41 +652,57 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         />
 
         <ConfigurablePanelLayout
-        panels={[
-          {
-            id: 'repository-list',
-            label: 'Repository List',
-            content: renderLeftPanel(),
-          },
-          {
-            id: 'repository-details',
-            label: 'Repository Details',
-            content: renderMiddlePanel(),
-          },
-          {
-            id: 'empty-panel',
-            label: 'Empty',
-            content: renderRightPanel(),
-          },
-        ]}
-        layout={{
-          left: 'repository-list',
-          middle: 'repository-details',
-          right: null,
-        }}
-        collapsiblePanels={{ left: true, right: false }}
-        defaultSizes={panelState.type === 'three-panel' ? panelState.sizes : { left: 20, middle: 80, right: 0 }}
-        minSizes={{ left: 15, middle: 40, right: 0 }}
-        collapsed={{ left: panelState.collapsed?.left || false, right: true }}
-        style={{ height: '100%', width: '100%' }}
-        theme={theme}
-        showCollapseButtons={false}
-        onPanelResize={panelState.type === 'three-panel' ? panelState.handlePanelResize : undefined}
-        onLeftCollapseComplete={panelState.handleLeftCollapseComplete}
-        onLeftExpandComplete={panelState.handleLeftExpandComplete}
-        onRightCollapseComplete={panelState.type === 'three-panel' ? panelState.handleRightCollapseComplete : undefined}
-        onRightExpandComplete={panelState.type === 'three-panel' ? panelState.handleRightExpandComplete : undefined}
-      />
+          panels={[
+            {
+              id: 'repository-list',
+              label: 'Repository List',
+              content: renderLeftPanel(),
+            },
+            {
+              id: 'repository-details',
+              label: 'Repository Details',
+              content: renderMiddlePanel(),
+            },
+            {
+              id: 'empty-panel',
+              label: 'Empty',
+              content: renderRightPanel(),
+            },
+          ]}
+          layout={{
+            left: 'repository-list',
+            middle: 'repository-details',
+            right: null,
+          }}
+          collapsiblePanels={{ left: true, right: false }}
+          defaultSizes={
+            panelState.type === 'three-panel'
+              ? panelState.sizes
+              : { left: 20, middle: 80, right: 0 }
+          }
+          minSizes={{ left: 15, middle: 40, right: 0 }}
+          collapsed={{ left: panelState.collapsed?.left || false, right: true }}
+          style={{ height: '100%', width: '100%' }}
+          theme={theme}
+          showCollapseButtons={false}
+          onPanelResize={
+            panelState.type === 'three-panel'
+              ? panelState.handlePanelResize
+              : undefined
+          }
+          onLeftCollapseComplete={panelState.handleLeftCollapseComplete}
+          onLeftExpandComplete={panelState.handleLeftExpandComplete}
+          onRightCollapseComplete={
+            panelState.type === 'three-panel'
+              ? panelState.handleRightCollapseComplete
+              : undefined
+          }
+          onRightExpandComplete={
+            panelState.type === 'three-panel'
+              ? panelState.handleRightExpandComplete
+              : undefined
+          }
+        />
       </div>
     </HighlightLayersProvider>
   );

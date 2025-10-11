@@ -845,7 +845,8 @@ export class OptimizedDockerService {
       if (configResult?.source === 'repository' && configResult.config) {
         // Use existing config file
         const configFile = toolConfig.configFiles.find(
-          (_f) => configResult.config && typeof configResult.config === 'object',
+          (_f) =>
+            configResult.config && typeof configResult.config === 'object',
         );
         if (configFile) {
           command.push('--config', configFile);

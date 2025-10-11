@@ -30,7 +30,9 @@ export const SessionEventViewerModal: React.FC<
   SessionEventViewerModalProps
 > = ({ sessionId, sessionName, isOpen, onClose }) => {
   const { theme } = useTheme();
-  const [events, setEvents] = useState<RepoNormalizedUniversalAgentSessionEvent[]>([]);
+  const [events, setEvents] = useState<
+    RepoNormalizedUniversalAgentSessionEvent[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] =
     useState<RepoNormalizedUniversalAgentSessionEvent | null>(null);

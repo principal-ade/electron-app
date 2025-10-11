@@ -39,7 +39,9 @@ export const FilePanel: React.FC<FilePanelProps> = ({
   contentLoader,
 }) => {
   const [showDiff, setShowDiff] = useState(false);
-  const [gitStatus, setGitStatus] = useState<'modified' | 'added' | 'deleted' | 'untracked' | null>(null);
+  const [gitStatus, setGitStatus] = useState<
+    'modified' | 'added' | 'deleted' | 'untracked' | null
+  >(null);
   const [hasGitChanges, setHasGitChanges] = useState(false);
   const [isCheckingGit, setIsCheckingGit] = useState(false);
   const [editable, setEditable] = useState(initialEditable);
@@ -92,12 +94,10 @@ export const FilePanel: React.FC<FilePanelProps> = ({
         } else {
           // Check if it's an untracked file
           try {
-            const untrackedResult = await GitService.execCommand(repositoryPath, [
-              'ls-files',
-              '--others',
-              '--exclude-standard',
-              relativeFilePath
-            ]);
+            const untrackedResult = await GitService.execCommand(
+              repositoryPath,
+              ['ls-files', '--others', '--exclude-standard', relativeFilePath],
+            );
 
             if (untrackedResult.stdout?.trim()) {
               setGitStatus('untracked');
@@ -168,7 +168,9 @@ export const FilePanel: React.FC<FilePanelProps> = ({
           await onSave(content);
         } else if (repositoryPath) {
           // If no custom save handler, try to save to the file system
-          const { FileSystemService } = await import('../main-process-api/FileSystemService');
+          const { FileSystemService } = await import(
+            '../main-process-api/FileSystemService'
+          );
           await FileSystemService.writeFile(filePath, content);
         }
       }}

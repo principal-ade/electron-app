@@ -12,9 +12,7 @@ class SessionContextService {
   // Get all contexts for a directory
   async getContextsForDirectory(directory: string): Promise<SessionContext[]> {
     try {
-      const result = await StoreService.get(
-        `${this.STORAGE_KEY}:${directory}`,
-      );
+      const result = await StoreService.get(`${this.STORAGE_KEY}:${directory}`);
       const store = result as SessionContextStore | undefined;
       return store?.contexts || [];
     } catch (error) {
@@ -39,10 +37,7 @@ class SessionContextService {
       lastUpdated: Date.now(),
     };
 
-    await StoreService.set(
-      `${this.STORAGE_KEY}:${directory}`,
-      store,
-    );
+    await StoreService.set(`${this.STORAGE_KEY}:${directory}`, store);
   }
 
   // Delete a context
@@ -55,10 +50,7 @@ class SessionContextService {
       lastUpdated: Date.now(),
     };
 
-    await StoreService.set(
-      `${this.STORAGE_KEY}:${directory}`,
-      store,
-    );
+    await StoreService.set(`${this.STORAGE_KEY}:${directory}`, store);
   }
 
   // Create context from session

@@ -75,8 +75,6 @@ export class AgentSessionService {
     );
   }
 
-
-
   // Extract file path from tool parameters
   private extractFilePathFromTool(
     toolName: string,
@@ -1004,7 +1002,6 @@ export class AgentSessionService {
     }
   }
 
-
   // Populate git info for all sessions that don't have it (can be called during migration or maintenance)
   async populateGitInfoForExistingSessions(): Promise<{
     updated: number;
@@ -1075,10 +1072,6 @@ export class AgentSessionService {
     const globalSessions = await this.getGlobalSessions();
     return globalSessions.sessions[sessionId] || null;
   }
-
-
-
-
 
   // Debug methods for git repository detection
   clearGitRepositoryCache(): void {

@@ -66,7 +66,10 @@ export class CLIBridge extends EventEmitter {
       if (app.isPackaged) {
         // Production: app is packaged, worker should be in dist/main/workers
         workerPath = path.join(__dirname, 'workers', scriptName);
-        this.log('info', `Production mode: looking for worker at ${workerPath}`);
+        this.log(
+          'info',
+          `Production mode: looking for worker at ${workerPath}`,
+        );
       } else {
         // Development: running from source
         // In development, __dirname will be in dist/main after TypeScript compilation
@@ -97,8 +100,8 @@ export class CLIBridge extends EventEmitter {
         } else {
           throw new Error(
             `Worker script not found in development. Tried:\n` +
-            `  - ${srcWorkerPath}\n` +
-            `  - ${distWorkerPath}`
+              `  - ${srcWorkerPath}\n` +
+              `  - ${distWorkerPath}`,
           );
         }
         this.log('info', `Development mode: found worker at ${workerPath}`);
@@ -108,9 +111,9 @@ export class CLIBridge extends EventEmitter {
       if (!fs.existsSync(workerPath)) {
         throw new Error(
           `Worker script not found at: ${workerPath}\n` +
-          `isPackaged: ${app.isPackaged}\n` +
-          `__dirname: ${__dirname}\n` +
-          `app.getAppPath(): ${app.getAppPath()}`
+            `isPackaged: ${app.isPackaged}\n` +
+            `__dirname: ${__dirname}\n` +
+            `app.getAppPath(): ${app.getAppPath()}`,
         );
       }
 

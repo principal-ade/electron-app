@@ -383,7 +383,11 @@ export const RepositorySwitcherModal: React.FC<
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleSelectRepository(repo, 'maintain', true);
+                                  handleSelectRepository(
+                                    repo,
+                                    'maintain',
+                                    true,
+                                  );
                                 }}
                                 style={{
                                   display: 'flex',

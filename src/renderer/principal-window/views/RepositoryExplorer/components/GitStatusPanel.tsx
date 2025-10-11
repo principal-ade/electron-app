@@ -41,7 +41,8 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
   const commitMessage = repository.lastCommitMessage;
   const lines = commitMessage.split('\n');
   const firstLine = lines[0];
-  const hasMoreContent = lines.length > 1 && lines.slice(1).some((line: string) => line.trim());
+  const hasMoreContent =
+    lines.length > 1 && lines.slice(1).some((line: string) => line.trim());
 
   return (
     <div
@@ -148,7 +149,9 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
               <span>•</span>
             )}
             {repository.lastCommitHash && (
-              <span style={{ fontFamily: theme.fonts.monospace, fontSize: '9px' }}>
+              <span
+                style={{ fontFamily: theme.fonts.monospace, fontSize: '9px' }}
+              >
                 {repository.lastCommitHash.substring(0, 8)}
               </span>
             )}

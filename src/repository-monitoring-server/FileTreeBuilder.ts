@@ -4,7 +4,11 @@
  * Works in utility process without Electron dependencies
  */
 
-import { GitFileTreeBuilder, type FileTree, type GitSource } from '@principal-ai/repository-abstraction';
+import {
+  GitFileTreeBuilder,
+  type FileTree,
+  type GitSource,
+} from '@principal-ai/repository-abstraction';
 import { FileSystemCore } from '../shared/repository-core/FileSystemCore';
 import { GitCore } from '../shared/repository-core/GitCore';
 import * as path from 'path';
@@ -18,17 +22,22 @@ export class FileTreeBuilder {
    */
   async buildFileTree(repoPath: string): Promise<FileTree> {
     // 1. Get files from file system using shared FileSystemCore
-    const { paths, stats } = await FileSystemCore.buildFilteredFileTree(repoPath, {
-      gitignore: true,
-      includeStats: true,
-    });
+    const { paths, stats } = await FileSystemCore.buildFilteredFileTree(
+      repoPath,
+      {
+        gitignore: true,
+        includeStats: true,
+      },
+    );
 
     const toPosix = (value: string) => value.replace(/\\/g, '/');
 
     const fileEntries = (stats ?? [])
-      .filter(stat => !stat.isDirectory)
-      .map(stat => ({
-        path: toPosix(stat.path.endsWith('/') ? stat.path.slice(0, -1) : stat.path),
+      .filter((stat) => !stat.isDirectory)
+      .map((stat) => ({
+        path: toPosix(
+          stat.path.endsWith('/') ? stat.path.slice(0, -1) : stat.path,
+        ),
         size: stat.size,
         lastModified: stat.lastModified,
       }));
@@ -46,11 +55,11 @@ export class FileTreeBuilder {
         ? fileEntries
         : paths.map((filePath: string) => ({
             path: toPosix(path.relative(repoPath, filePath)),
-          })))
-        .map(file => ({
-          ...file,
-          path: file.path,
-        })),
+          }))
+      ).map((file) => ({
+        ...file,
+        path: file.path,
+      })),
     };
 
     // 4. Use GitFileTreeBuilder to create properly structured FileTree

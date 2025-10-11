@@ -13,7 +13,9 @@ export const RepositoryProvider: React.FC<{
   onAddGithubLink?: () => void;
 }> = ({ children, onAddLocalRepository, onAddGithubLink }) => {
   return (
-    <RepositoryContext.Provider value={{ onAddLocalRepository, onAddGithubLink }}>
+    <RepositoryContext.Provider
+      value={{ onAddLocalRepository, onAddGithubLink }}
+    >
       {children}
     </RepositoryContext.Provider>
   );
@@ -22,7 +24,9 @@ export const RepositoryProvider: React.FC<{
 export const useRepositoryActions = () => {
   const context = useContext(RepositoryContext);
   if (!context) {
-    throw new Error('useRepositoryActions must be used within a RepositoryProvider');
+    throw new Error(
+      'useRepositoryActions must be used within a RepositoryProvider',
+    );
   }
   return context;
 };

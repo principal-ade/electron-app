@@ -42,7 +42,7 @@ export interface RepositoryTitlebarProps {
       description?: string;
       includeSizes?: boolean;
       includeCollapsed?: boolean;
-    }
+    },
   ) => Promise<void>;
   hasStateDeviation?: boolean;
   onUpdateWorkspaceDefaults?: () => void;
@@ -79,7 +79,9 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   const { theme } = useTheme();
   const [mainWindowMinimized, setMainWindowMinimized] = useState(false);
   const [showSaveWorkspaceModal, setShowSaveWorkspaceModal] = useState(false);
-  const [devSidecarSessionId, setDevSidecarSessionId] = useState<string | null>(null);
+  const [devSidecarSessionId, setDevSidecarSessionId] = useState<string | null>(
+    null,
+  );
 
   // Listen for main window minimize state changes from other repo windows
   useEffect(() => {
@@ -120,7 +122,10 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
         });
         setDevSidecarSessionId(info.sessionId);
       } catch (error) {
-        console.error('[RepositoryTitlebar] Failed to create dev sidecar:', error);
+        console.error(
+          '[RepositoryTitlebar] Failed to create dev sidecar:',
+          error,
+        );
       }
     }
   };
@@ -197,7 +202,8 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           <button
             onClick={onSecretsClick}
             style={{
-              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
               background: 'transparent',
               border: 'none',
               color: theme.colors.textSecondary,
@@ -212,7 +218,8 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
               height: '32px',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
               e.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(e) => {
@@ -230,7 +237,8 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           <button
             onClick={onLinksClick}
             style={{
-              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
               background: 'transparent',
               border: 'none',
               color: theme.colors.textSecondary,
@@ -245,7 +253,8 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
               height: '32px',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
               e.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(e) => {
@@ -262,10 +271,15 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
         <button
           onClick={handleDevSidecarClick}
           style={{
-            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-            background: devSidecarSessionId ? theme.colors.backgroundTertiary : 'transparent',
+            WebkitAppRegion:
+              'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            background: devSidecarSessionId
+              ? theme.colors.backgroundTertiary
+              : 'transparent',
             border: 'none',
-            color: devSidecarSessionId ? theme.colors.primary : theme.colors.textSecondary,
+            color: devSidecarSessionId
+              ? theme.colors.primary
+              : theme.colors.textSecondary,
             cursor: 'pointer',
             padding: '6px',
             borderRadius: '4px',
@@ -277,7 +291,8 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             height: '32px',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundTertiary;
             e.currentTarget.style.color = theme.colors.primary;
           }}
           onMouseLeave={(e) => {
@@ -285,11 +300,16 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
               e.currentTarget.style.backgroundColor = 'transparent';
               e.currentTarget.style.color = theme.colors.textSecondary;
             } else {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
               e.currentTarget.style.color = theme.colors.primary;
             }
           }}
-          title={devSidecarSessionId ? 'Focus dev preview window' : 'Open dev preview window'}
+          title={
+            devSidecarSessionId
+              ? 'Focus dev preview window'
+              : 'Open dev preview window'
+          }
         >
           <ExternalLink size={14} />
         </button>
@@ -299,7 +319,8 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             onClick={onConfigurePanels}
             title="Configure panel layout"
             style={{
-              WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
               background: 'transparent',
               border: 'none',
               color: theme.colors.textSecondary,
@@ -314,7 +335,8 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
               height: '32px',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
               e.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(e) => {
@@ -343,10 +365,15 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
         {/* Minimize main window toggle */}
         <button
           onClick={handleToggleMainWindow}
-          title={mainWindowMinimized ? 'Restore main window' : 'Minimize main window'}
+          title={
+            mainWindowMinimized ? 'Restore main window' : 'Minimize main window'
+          }
           style={{
-            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-            background: mainWindowMinimized ? theme.colors.backgroundTertiary : 'transparent',
+            WebkitAppRegion:
+              'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            background: mainWindowMinimized
+              ? theme.colors.backgroundTertiary
+              : 'transparent',
             border: 'none',
             color: mainWindowMinimized ? theme.colors.text : theme.colors.muted,
             cursor: 'pointer',
@@ -360,7 +387,8 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             height: '32px',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundTertiary;
             e.currentTarget.style.color = theme.colors.text;
           }}
           onMouseLeave={(e) => {
@@ -368,7 +396,8 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
               e.currentTarget.style.backgroundColor = 'transparent';
               e.currentTarget.style.color = theme.colors.muted;
             } else {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
               e.currentTarget.style.color = theme.colors.text;
             }
           }}

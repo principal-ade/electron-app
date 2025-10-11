@@ -527,7 +527,6 @@ export class HookConfigurationManager {
     error?: string;
   }> {
     try {
-
       // For other agents, use the existing implementation
       // Create backup with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');

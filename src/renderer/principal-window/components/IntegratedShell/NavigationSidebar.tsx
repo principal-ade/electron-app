@@ -5,7 +5,7 @@ import {
   Search,
   Settings,
   Activity,
-  User
+  User,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import type { NavigationView } from './IntegratedShell';
@@ -29,61 +29,74 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const { theme, mode } = useTheme();
   const { isAuthenticated, user } = useAuth();
 
-  const backgroundColor = mode === 'dark' && theme.modes?.dark?.backgroundSecondary
-    ? theme.modes.dark.backgroundSecondary
-    : theme.colors.backgroundSecondary;
+  const backgroundColor =
+    mode === 'dark' && theme.modes?.dark?.backgroundSecondary
+      ? theme.modes.dark.backgroundSecondary
+      : theme.colors.backgroundSecondary;
 
-  const accentColor = mode === 'dark' && theme.modes?.dark?.accent
-    ? theme.modes.dark.accent
-    : theme.colors.accent;
+  const accentColor =
+    mode === 'dark' && theme.modes?.dark?.accent
+      ? theme.modes.dark.accent
+      : theme.colors.accent;
 
   // Create auth icon - either avatar or User icon
-  const authIcon = isAuthenticated && user ? (
-    user.avatarUrl ? (
-      <img
-        src={user.avatarUrl}
-        alt={user.login}
-        style={{
-          width: '24px',
-          height: '24px',
-          borderRadius: '50%',
-          objectFit: 'cover',
-          border: `1px solid ${theme.colors.border}`,
-        }}
-      />
+  const authIcon =
+    isAuthenticated && user ? (
+      user.avatarUrl ? (
+        <img
+          src={user.avatarUrl}
+          alt={user.login}
+          style={{
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            objectFit: 'cover',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        />
+      ) : (
+        <div
+          style={{
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            backgroundColor: theme.colors.primary,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: theme.colors.background,
+            fontWeight: 600,
+            fontSize: '12px',
+          }}
+        >
+          {user.login?.[0]?.toUpperCase() || 'U'}
+        </div>
+      )
     ) : (
-      <div
-        style={{
-          width: '24px',
-          height: '24px',
-          borderRadius: '50%',
-          backgroundColor: theme.colors.primary,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: theme.colors.background,
-          fontWeight: 600,
-          fontSize: '12px',
-        }}
-      >
-        {user.login?.[0]?.toUpperCase() || 'U'}
-      </div>
-    )
-  ) : (
-    <User size={20} />
-  );
+      <User size={20} />
+    );
 
   const navItems: NavItem[] = [
     { id: 'repository', icon: <Github size={20} />, label: 'Repos' },
     { id: 'terminal', icon: <Terminal size={20} />, label: 'Term' },
     { id: 'search', icon: <Search size={20} />, label: 'Search' },
-    { id: 'monitoring', icon: <Activity size={20} />, label: 'Monitor', position: 'bottom' },
-    { id: 'settings', icon: <Settings size={20} />, label: 'Settings', position: 'bottom' },
+    {
+      id: 'monitoring',
+      icon: <Activity size={20} />,
+      label: 'Monitor',
+      position: 'bottom',
+    },
+    {
+      id: 'settings',
+      icon: <Settings size={20} />,
+      label: 'Settings',
+      position: 'bottom',
+    },
     { id: 'auth', icon: authIcon, label: '', position: 'bottom' },
   ];
 
-  const topItems = navItems.filter(item => item.position !== 'bottom');
-  const bottomItems = navItems.filter(item => item.position === 'bottom');
+  const topItems = navItems.filter((item) => item.position !== 'bottom');
+  const bottomItems = navItems.filter((item) => item.position === 'bottom');
 
   const renderNavItem = (item: NavItem) => (
     <button
@@ -102,7 +115,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         gap: '4px',
         border: 'none',
         background: 'transparent',
-        color: activeView === item.id ? accentColor : theme.colors.textSecondary,
+        color:
+          activeView === item.id ? accentColor : theme.colors.textSecondary,
         cursor: 'pointer',
         position: 'relative',
       }}
@@ -115,7 +129,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: '8px',
-          background: activeView === item.id ? accentColor + '20' : 'transparent',
+          background:
+            activeView === item.id ? accentColor + '20' : 'transparent',
           transition: 'all 0.2s ease',
         }}
         onMouseEnter={(e) => {
@@ -132,12 +147,14 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         {item.icon}
       </div>
       {item.label && (
-        <span style={{
-          fontSize: '11px',
-          fontWeight: activeView === item.id ? '600' : '400',
-          lineHeight: 1,
-          textAlign: 'center',
-        }}>
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: activeView === item.id ? '600' : '400',
+            lineHeight: 1,
+            textAlign: 'center',
+          }}
+        >
           {item.label}
         </span>
       )}
@@ -158,14 +175,14 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
       }}
     >
-      <div style={{ flex: 1 }}>
-        {topItems.map(renderNavItem)}
-      </div>
+      <div style={{ flex: 1 }}>{topItems.map(renderNavItem)}</div>
 
-      <div style={{
-        paddingTop: '8px',
-        paddingBottom: '16px',
-      }}>
+      <div
+        style={{
+          paddingTop: '8px',
+          paddingBottom: '16px',
+        }}
+      >
         {bottomItems.map(renderNavItem)}
       </div>
     </div>

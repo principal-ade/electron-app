@@ -32,9 +32,15 @@ export const TitlebarGitChanges: React.FC<TitlebarGitChangesProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (buttonRef.current && !buttonRef.current.contains(event.target as Node)) {
+      if (
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
         const dropdownElement = document.querySelector('.git-changes-dropdown');
-        if (dropdownElement && !dropdownElement.contains(event.target as Node)) {
+        if (
+          dropdownElement &&
+          !dropdownElement.contains(event.target as Node)
+        ) {
           setShowDropdown(false);
         }
       }
@@ -52,9 +58,10 @@ export const TitlebarGitChanges: React.FC<TitlebarGitChangesProps> = ({
     return null;
   }
 
-  const buttonPosition = position === 'right'
-    ? { right: isMac ? '100px' : '220px' }
-    : { left: isMac ? '120px' : '60px' };
+  const buttonPosition =
+    position === 'right'
+      ? { right: isMac ? '100px' : '220px' }
+      : { left: isMac ? '120px' : '60px' };
 
   const handleButtonClick = () => {
     setShowDropdown(!showDropdown);

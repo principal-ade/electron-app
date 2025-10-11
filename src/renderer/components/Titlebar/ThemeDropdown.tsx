@@ -15,7 +15,7 @@ export const ThemeDropdown: React.FC = () => {
   useEffect(() => {
     // Load current theme preference
     UserPreferencesService.getPreferences()
-      .then(prefs => {
+      .then((prefs) => {
         if (prefs.selectedTheme) {
           setSelectedTheme(prefs.selectedTheme);
         }
@@ -33,7 +33,10 @@ export const ThemeDropdown: React.FC = () => {
   useEffect(() => {
     // Close dropdown when clicking outside
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     };
@@ -55,7 +58,8 @@ export const ThemeDropdown: React.FC = () => {
 
   const backgroundColor =
     colorMode === 'dark'
-      ? theme.colors.modes?.dark?.backgroundSecondary || theme.colors.backgroundSecondary
+      ? theme.colors.modes?.dark?.backgroundSecondary ||
+        theme.colors.backgroundSecondary
       : theme.colors.backgroundSecondary;
 
   const accentColor =
@@ -70,7 +74,7 @@ export const ThemeDropdown: React.FC = () => {
       style={{
         position: 'relative',
         WebkitAppRegion: 'no-drag' as any,
-        zIndex: 100
+        zIndex: 100,
       }}
     >
       <button
@@ -95,10 +99,11 @@ export const ThemeDropdown: React.FC = () => {
           transition: 'all 0.2s ease',
           WebkitAppRegion: 'no-drag' as any,
           position: 'relative',
-          zIndex: 101
+          zIndex: 101,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = theme.colors.hover || 'rgba(255, 255, 255, 0.1)';
+          e.currentTarget.style.backgroundColor =
+            theme.colors.hover || 'rgba(255, 255, 255, 0.1)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
@@ -166,10 +171,12 @@ export const ThemeDropdown: React.FC = () => {
                 <div style={{ fontWeight: isSelected ? 600 : 400 }}>
                   {themeInfo.name}
                 </div>
-                <div style={{
-                  fontSize: '11px',
-                  opacity: 0.7,
-                }}>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    opacity: 0.7,
+                  }}
+                >
                   {themeInfo.description}
                 </div>
               </button>

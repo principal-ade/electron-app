@@ -30,7 +30,6 @@ export type { CallimachusTitlebarProps } from './CallimachusTitlebar';
 export { TerminalTitlebar } from './TerminalTitlebar';
 export type { TerminalTitlebarProps } from './TerminalTitlebar';
 
-
 // For backward compatibility with old imports
 export { MainWindowTitlebar as CustomTitlebar } from './MainWindowTitlebar';
 export { RepositoryTitlebar as RepoManagerTitlebar } from './RepositoryTitlebar';

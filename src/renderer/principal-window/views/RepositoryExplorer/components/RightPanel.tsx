@@ -22,10 +22,13 @@ export const RightPanel: React.FC<RightPanelProps> = ({
   onClose,
 }) => {
   const { theme } = useTheme();
-  const [internalActiveTab, setInternalActiveTab] = useState<'preview' | 'terminal' | 'markdown'>('preview');
+  const [internalActiveTab, setInternalActiveTab] = useState<
+    'preview' | 'terminal' | 'markdown'
+  >('preview');
 
   // Use external tab if provided, otherwise use internal state
-  const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
+  const activeTab =
+    externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
 
   // Create a FileTreeSource for the local repository
   const source = useMemo(() => {
@@ -86,10 +89,17 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             justifyContent: 'center',
             gap: '8px',
             padding: '12px 16px',
-            backgroundColor: activeTab === 'preview' ? theme.colors.background : 'transparent',
-            color: activeTab === 'preview' ? theme.colors.text : theme.colors.textSecondary,
+            backgroundColor:
+              activeTab === 'preview' ? theme.colors.background : 'transparent',
+            color:
+              activeTab === 'preview'
+                ? theme.colors.text
+                : theme.colors.textSecondary,
             border: 'none',
-            borderBottom: activeTab === 'preview' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            borderBottom:
+              activeTab === 'preview'
+                ? `2px solid ${theme.colors.primary}`
+                : '2px solid transparent',
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: activeTab === 'preview' ? 600 : 500,
@@ -97,7 +107,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
           }}
           onMouseEnter={(e) => {
             if (activeTab !== 'preview') {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
             }
           }}
           onMouseLeave={(e) => {
@@ -118,10 +129,19 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             justifyContent: 'center',
             gap: '8px',
             padding: '12px 16px',
-            backgroundColor: activeTab === 'markdown' ? theme.colors.background : 'transparent',
-            color: activeTab === 'markdown' ? theme.colors.text : theme.colors.textSecondary,
+            backgroundColor:
+              activeTab === 'markdown'
+                ? theme.colors.background
+                : 'transparent',
+            color:
+              activeTab === 'markdown'
+                ? theme.colors.text
+                : theme.colors.textSecondary,
             border: 'none',
-            borderBottom: activeTab === 'markdown' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            borderBottom:
+              activeTab === 'markdown'
+                ? `2px solid ${theme.colors.primary}`
+                : '2px solid transparent',
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: activeTab === 'markdown' ? 600 : 500,
@@ -129,7 +149,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
           }}
           onMouseEnter={(e) => {
             if (activeTab !== 'markdown') {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
             }
           }}
           onMouseLeave={(e) => {
@@ -150,10 +171,19 @@ export const RightPanel: React.FC<RightPanelProps> = ({
             justifyContent: 'center',
             gap: '8px',
             padding: '12px 16px',
-            backgroundColor: activeTab === 'terminal' ? theme.colors.background : 'transparent',
-            color: activeTab === 'terminal' ? theme.colors.text : theme.colors.textSecondary,
+            backgroundColor:
+              activeTab === 'terminal'
+                ? theme.colors.background
+                : 'transparent',
+            color:
+              activeTab === 'terminal'
+                ? theme.colors.text
+                : theme.colors.textSecondary,
             border: 'none',
-            borderBottom: activeTab === 'terminal' ? `2px solid ${theme.colors.primary}` : '2px solid transparent',
+            borderBottom:
+              activeTab === 'terminal'
+                ? `2px solid ${theme.colors.primary}`
+                : '2px solid transparent',
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: activeTab === 'terminal' ? 600 : 500,
@@ -161,7 +191,8 @@ export const RightPanel: React.FC<RightPanelProps> = ({
           }}
           onMouseEnter={(e) => {
             if (activeTab !== 'terminal') {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
             }
           }}
           onMouseLeave={(e) => {

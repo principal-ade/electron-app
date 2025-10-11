@@ -30,7 +30,9 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const [docContent, setDocContent] = useState<ExcalidrawDiagramData | null>(null);
+  const [docContent, setDocContent] = useState<ExcalidrawDiagramData | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const latestFilePathRef = useRef<string | null>(null);
@@ -50,12 +52,16 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
 
       // Determine if this is a Memory Palace drawing ID (doesn't start with /)
       // Memory Palace drawings are passed as drawing IDs like "drawing-123.excalidraw"
-      const isMemoryPalaceDrawing = !filePath.startsWith('/') && !filePath.startsWith('.');
+      const isMemoryPalaceDrawing =
+        !filePath.startsWith('/') && !filePath.startsWith('.');
 
       // Construct absolute path inline for regular files
-      const absolutePath = isLocalFile && sourceLocation && !isMemoryPalaceDrawing
-        ? (filePath.startsWith('/') ? filePath : `${sourceLocation}/${filePath}`)
-        : filePath;
+      const absolutePath =
+        isLocalFile && sourceLocation && !isMemoryPalaceDrawing
+          ? filePath.startsWith('/')
+            ? filePath
+            : `${sourceLocation}/${filePath}`
+          : filePath;
 
       latestFilePathRef.current = absolutePath;
 
@@ -67,7 +73,10 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
 
         // For Memory Palace drawings, use AlexandriaDrawingService
         if (isMemoryPalaceDrawing && isLocalFile && sourceLocation) {
-          data = await AlexandriaDrawingService.loadDiagram(filePath, sourceLocation);
+          data = await AlexandriaDrawingService.loadDiagram(
+            filePath,
+            sourceLocation,
+          );
           if (!data) {
             throw new Error('Failed to load drawing from Memory Palace');
           }
@@ -88,7 +97,9 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
         }
         // For remote sources, use content provider if available
         else if (contentProvider) {
-          const relativePath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+          const relativePath = filePath.startsWith('/')
+            ? filePath.substring(1)
+            : filePath;
           const content = await contentProvider.readFileContent(relativePath);
           if (content !== null) {
             try {
@@ -164,7 +175,8 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
           >
             <Info size={14} color={theme.colors.primary} />
             <span>
-              Drawings are auto-saved to <strong>Memory Palace</strong> in your repository
+              Drawings are auto-saved to <strong>Memory Palace</strong> in your
+              repository
             </span>
           </div>
         )}
@@ -186,7 +198,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
   if (!filePath || !docContent) {
     const description = sourceLocation
       ? "Select an Excalidraw diagram file from the docs tab to view it here, or create a new one. New drawings will be saved to your repository's Memory Palace."
-      : "Select an Excalidraw diagram file from the docs tab to view it here, or create a new one. New drawings will be saved to your app data.";
+      : 'Select an Excalidraw diagram file from the docs tab to view it here, or create a new one. New drawings will be saved to your app data.';
 
     return (
       <PanelEmptyState
@@ -311,7 +323,11 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
           <ExcalidrawWrapper
             key={filePath} // Force remount when switching drawings
             diagramId={filePath ?? undefined} // Pass the drawing ID/path
-            diagramName={filePath ? filePath.split('/').pop()?.replace('.excalidraw', '') : undefined}
+            diagramName={
+              filePath
+                ? filePath.split('/').pop()?.replace('.excalidraw', '')
+                : undefined
+            }
             initialData={docContent}
             onChange={() => {}}
             projectPath={sourceLocation ?? undefined}

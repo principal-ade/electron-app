@@ -1,5 +1,10 @@
 import React from 'react';
-import { PanelLeft, PanelLeftClose, PanelRight, PanelRightClose } from 'lucide-react';
+import {
+  PanelLeft,
+  PanelLeftClose,
+  PanelRight,
+  PanelRightClose,
+} from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 
 interface ViewSidebarControlsProps {
@@ -23,7 +28,11 @@ export const ViewSidebarControls: React.FC<ViewSidebarControlsProps> = ({
 
   const getIcon = () => {
     if (side === 'right') {
-      return isCollapsed ? <PanelRight size={18} /> : <PanelRightClose size={18} />;
+      return isCollapsed ? (
+        <PanelRight size={18} />
+      ) : (
+        <PanelRightClose size={18} />
+      );
     }
     return isCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />;
   };
@@ -60,7 +69,9 @@ export const ViewSidebarControls: React.FC<ViewSidebarControlsProps> = ({
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.backgroundColor = 'transparent';
-        e.currentTarget.style.color = isCollapsed ? theme.colors.textSecondary : theme.colors.primary;
+        e.currentTarget.style.color = isCollapsed
+          ? theme.colors.textSecondary
+          : theme.colors.primary;
       }}
     >
       {getIcon()}

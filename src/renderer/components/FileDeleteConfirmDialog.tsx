@@ -8,12 +8,9 @@ interface FileDeleteConfirmDialogProps {
   onCancel: () => void;
 }
 
-export const FileDeleteConfirmDialog: React.FC<FileDeleteConfirmDialogProps> = ({
-  filePath,
-  fileName,
-  onConfirm,
-  onCancel,
-}) => {
+export const FileDeleteConfirmDialog: React.FC<
+  FileDeleteConfirmDialogProps
+> = ({ filePath, fileName, onConfirm, onCancel }) => {
   const { theme } = useTheme();
   const displayName = fileName || filePath.split('/').pop() || 'this file';
 

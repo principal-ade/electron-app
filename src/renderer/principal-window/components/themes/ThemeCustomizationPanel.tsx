@@ -61,7 +61,11 @@ interface FontOption {
 
 const FONT_OPTIONS: FontOption[] = [
   { label: 'Inter', value: '"Inter", sans-serif', categories: ['sans', 'ui'] },
-  { label: 'Roboto', value: '"Roboto", sans-serif', categories: ['sans', 'ui'] },
+  {
+    label: 'Roboto',
+    value: '"Roboto", sans-serif',
+    categories: ['sans', 'ui'],
+  },
   {
     label: 'Open Sans',
     value: '"Open Sans", sans-serif',
@@ -201,10 +205,9 @@ const FONT_CONTROLS: FontControlConfig[] = [
   },
 ];
 
-export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = ({
-  themeName,
-  onClose,
-}) => {
+export const ThemeCustomizationPanel: React.FC<
+  ThemeCustomizationPanelProps
+> = ({ themeName, onClose }) => {
   console.log('ThemeCustomizationPanel component initialized!', { themeName });
   const { theme } = useTheme();
   const [currentTheme, setCurrentTheme] = useState<Theme | null>(null);
@@ -338,7 +341,10 @@ export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = (
   };
 
   if (!currentTheme || !baseTheme) {
-    console.log('ThemeCustomizationPanel: waiting for themes to load...', { currentTheme, baseTheme });
+    console.log('ThemeCustomizationPanel: waiting for themes to load...', {
+      currentTheme,
+      baseTheme,
+    });
     return null;
   }
 
@@ -502,7 +508,9 @@ export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = (
           )}
 
           {activeTab === 'typography' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}
+            >
               {FONT_CONTROLS.map((control) => {
                 const value = fontInputs[control.path] ?? '';
                 const options = FONT_OPTIONS.filter((option) =>
@@ -666,7 +674,8 @@ export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = (
                         backgroundColor: theme.colors.background,
                         border: `1px dashed ${theme.colors.border}`,
                         color: theme.colors.text,
-                        fontFamily: value || getThemeValue(baseTheme, control.path),
+                        fontFamily:
+                          value || getThemeValue(baseTheme, control.path),
                         fontSize: '14px',
                         lineHeight: 1.6,
                       }}
@@ -707,7 +716,8 @@ export const ThemeCustomizationPanel: React.FC<ThemeCustomizationPanelProps> = (
               transition: 'all 0.15s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = theme.colors.background;

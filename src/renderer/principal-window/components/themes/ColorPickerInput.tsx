@@ -31,14 +31,18 @@ export const ColorPickerInput: React.FC<ColorPickerInputProps> = ({
   // Close picker when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+      if (
+        pickerRef.current &&
+        !pickerRef.current.contains(event.target as Node)
+      ) {
         setShowPicker(false);
       }
     };
 
     if (showPicker) {
       document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      return () =>
+        document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showPicker]);
 
@@ -137,7 +141,8 @@ export const ColorPickerInput: React.FC<ColorPickerInputProps> = ({
             transition: 'all 0.15s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
             e.currentTarget.style.color = theme.colors.text;
           }}
           onMouseLeave={(e) => {

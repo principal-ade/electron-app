@@ -15,7 +15,9 @@ export class FileSystemService {
     return window.mainProcess.fileSystem.writeFile(filePath, content);
   }
 
-  static async deleteFile(filePath: string): Promise<{ success: boolean; error?: string }> {
+  static async deleteFile(
+    filePath: string,
+  ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.fileSystem.deleteFile(filePath);
   }
 

@@ -26,7 +26,9 @@ export const StandaloneTerminal: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { gitStatusWithFiles } = useRepositoryGitStatus(terminalInfo?.directory || null);
+  const { gitStatusWithFiles } = useRepositoryGitStatus(
+    terminalInfo?.directory || null,
+  );
 
   useEffect(() => {
     if (!sessionId) {
@@ -87,11 +89,9 @@ export const StandaloneTerminal: React.FC = () => {
       const fullPath = path.join(terminalInfo.directory, filePath);
 
       try {
-        await WindowService.openMarkdownView(
-          fullPath,
-          terminalInfo.directory,
-          { viewMode: 'single' }
-        );
+        await WindowService.openMarkdownView(fullPath, terminalInfo.directory, {
+          viewMode: 'single',
+        });
       } catch (error) {
         console.error('Failed to open markdown view:', error);
       }
@@ -190,13 +190,15 @@ export const StandaloneTerminal: React.FC = () => {
       />
 
       {/* Terminal Panel - uses flex to fill remaining space */}
-      <div style={{
-        flex: '1 1 0',
-        minHeight: 0,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
+      <div
+        style={{
+          flex: '1 1 0',
+          minHeight: 0,
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <TerminalPanel
           directory={terminalInfo.directory}
           terminalId={sessionId}

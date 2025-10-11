@@ -1,4 +1,10 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+} from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import {
   ConfigurablePanelLayout,
@@ -9,15 +15,24 @@ import '@a24z/panels/panels.css';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import { createFileColorHighlightLayers } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
-import type { EnhancedAlexandriaEntry, GitStatus } from '../../../../../shared/types/repository.types';
-import type { RepositoryPanelVisibility, RepositoryPanelId } from '../../../../../shared/types/repositoryPanel.types';
+import type {
+  EnhancedAlexandriaEntry,
+  GitStatus,
+} from '../../../../../shared/types/repository.types';
+import type {
+  RepositoryPanelVisibility,
+  RepositoryPanelId,
+} from '../../../../../shared/types/repositoryPanel.types';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
 import { RepositoryMonitoringService } from '../../../../main-process-api/RepositoryMonitoringService';
 import { WindowService } from '../../../../main-process-api/WindowService';
 import { RemoveRepositoryDialog } from './RemoveRepositoryDialog';
 import { TerminalService } from '../../../../main-process-api/TerminalService';
 import { RepositoryTasksAndNotesPanel } from './RepositoryTasksAndNotesPanel';
-import { GitService, GitBranchStatus } from '../../../../main-process-api/GitService';
+import {
+  GitService,
+  GitBranchStatus,
+} from '../../../../main-process-api/GitService';
 import { RepositoryHeader } from './RepositoryHeader';
 import { GitStatusPanel } from './GitStatusPanel';
 import { MarkdownDocumentsPanel } from './MarkdownDocumentsPanel';
@@ -28,7 +43,10 @@ import { RepositoryActionsPanel } from './RepositoryActionsPanel';
 import { SecretsModal } from './SecretsModal';
 import { ActRunnerService } from '../../../../main-process-api/ActRunnerService';
 import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
-import { ActRunnerWorkflowChannels, type ActRunnerWorkflowEvent } from '../../../../../shared/types/act.types';
+import {
+  ActRunnerWorkflowChannels,
+  type ActRunnerWorkflowEvent,
+} from '../../../../../shared/types/act.types';
 import { PanelConfiguration } from './PanelConfiguration';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { RepositoryPanelProvider } from '../../../../panels/RepositoryPanelProvider';
@@ -60,7 +78,6 @@ interface RepositoryDetailsPanelProps {
   onRightPanelClose?: () => void;
 }
 
-
 export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   selectedRepository,
   repositories,
@@ -84,20 +101,27 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
 
   // Track terminal windows by repository path
-  const [terminalWindows, setTerminalWindows] = useState<Map<string, number>>(new Map());
+  const [terminalWindows, setTerminalWindows] = useState<Map<string, number>>(
+    new Map(),
+  );
 
   // Panel configuration state
   const [showConfiguration, setShowConfiguration] = useState(false);
-  const [panelVisibility, setPanelVisibility] = useState<RepositoryPanelVisibility>(
-    createDefaultPanelVisibility(),
-  );
+  const [panelVisibility, setPanelVisibility] =
+    useState<RepositoryPanelVisibility>(createDefaultPanelVisibility());
 
   // Branch sync status states
-  const [branchStatus, setBranchStatus] = useState<GitBranchStatus | null>(null);
+  const [branchStatus, setBranchStatus] = useState<GitBranchStatus | null>(
+    null,
+  );
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
   const [isFastForwarding, setIsFastForwarding] = useState(false);
   const [isPushing, setIsPushing] = useState(false);
-  const [pushStatus, setPushStatus] = useState<{ safe: boolean; reason?: string; needsUpstream: boolean } | null>(null);
+  const [pushStatus, setPushStatus] = useState<{
+    safe: boolean;
+    reason?: string;
+    needsUpstream: boolean;
+  } | null>(null);
   const isCheckingRef = useRef(false);
 
   // City visualization state
@@ -105,12 +129,17 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const [fileTree, setFileTree] = useState<FileTree | null>(null);
   const [isBuildingCity, setIsBuildingCity] = useState(false);
   const [cityError, setCityError] = useState<string | null>(null);
-  const [treeStats, setTreeStats] = useState<{ fileCount: number; directoryCount: number } | null>(null);
+  const [treeStats, setTreeStats] = useState<{
+    fileCount: number;
+    directoryCount: number;
+  } | null>(null);
   const [runningActionId, setRunningActionId] = useState<string | null>(null);
   const [showSecretsModal, setShowSecretsModal] = useState(false);
   const [requiredSecrets, setRequiredSecrets] = useState<string[]>([]);
   const [workflowOutput, setWorkflowOutput] = useState<string[]>([]);
-  const [workflowStatus, setWorkflowStatus] = useState<'idle' | 'running' | 'success' | 'failed'>('idle');
+  const [workflowStatus, setWorkflowStatus] = useState<
+    'idle' | 'running' | 'success' | 'failed'
+  >('idle');
 
   // File color state - default to showing file colors
   const [showFileColors, setShowFileColors] = useState(true);
@@ -118,7 +147,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const cityService = useMemo(() => RepositoryCityService.getInstance(), []);
 
   // State for nested panel collapse
-  const [nestedRightPanelCollapsed, setNestedRightPanelCollapsed] = useState(true);
+  const [nestedRightPanelCollapsed, setNestedRightPanelCollapsed] =
+    useState(true);
 
   // Panel state for nested panel layout (details content in middle, preview/terminal in right)
   const nestedPanelState = usePanelPersistence({
@@ -130,7 +160,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
   // Toggle nested right panel function
   const handleToggleNestedRightPanel = useCallback(() => {
-    setNestedRightPanelCollapsed(prev => !prev);
+    setNestedRightPanelCollapsed((prev) => !prev);
   }, []);
 
   const repositoryId = useMemo(() => {
@@ -147,7 +177,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     ];
 
     const owner = (selectedRepository as any).github?.owner;
-    const repoName = (selectedRepository as any).github?.name ?? selectedRepository.name;
+    const repoName =
+      (selectedRepository as any).github?.name ?? selectedRepository.name;
 
     if (owner && repoName) {
       candidates.push(`${owner}/${repoName}`);
@@ -175,21 +206,21 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
   // Create git highlight layers from git status
   // Use stable keys based on actual file paths to avoid unnecessary re-renders
-  const untrackedKey = useMemo(() =>
-    (gitStatus.untracked?.map(item => item.path) ?? []).join('|'),
-    [gitStatus.untracked]
+  const untrackedKey = useMemo(
+    () => (gitStatus.untracked?.map((item) => item.path) ?? []).join('|'),
+    [gitStatus.untracked],
   );
-  const stagedKey = useMemo(() =>
-    (gitStatus.staged?.map(item => item.path) ?? []).join('|'),
-    [gitStatus.staged]
+  const stagedKey = useMemo(
+    () => (gitStatus.staged?.map((item) => item.path) ?? []).join('|'),
+    [gitStatus.staged],
   );
-  const unstagedKey = useMemo(() =>
-    (gitStatus.unstaged?.map(item => item.path) ?? []).join('|'),
-    [gitStatus.unstaged]
+  const unstagedKey = useMemo(
+    () => (gitStatus.unstaged?.map((item) => item.path) ?? []).join('|'),
+    [gitStatus.unstaged],
   );
-  const deletedKey = useMemo(() =>
-    (gitStatus.deleted?.map(item => item.path) ?? []).join('|'),
-    [gitStatus.deleted]
+  const deletedKey = useMemo(
+    () => (gitStatus.deleted?.map((item) => item.path) ?? []).join('|'),
+    [gitStatus.deleted],
   );
 
   const gitHighlightLayers = useMemo(() => {
@@ -286,7 +317,12 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       return gitHighlightLayers;
     }
     return showFileColors ? fileColorHighlightLayers : [];
-  }, [hasGitChanges, gitHighlightLayers, showFileColors, fileColorHighlightLayers]);
+  }, [
+    hasGitChanges,
+    gitHighlightLayers,
+    showFileColors,
+    fileColorHighlightLayers,
+  ]);
 
   // Register active highlight layers with context
   // Use ref to track registered layer count to avoid cleanup issues
@@ -320,12 +356,14 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   // Check if there are workflow files in the repository
   const hasWorkflowActions = useMemo(() => {
     if (!fileTree?.allFiles) return false;
-    return fileTree.allFiles.some(file => {
+    return fileTree.allFiles.some((file) => {
       const path = file.path.toLowerCase();
-      return path.includes('.github/workflows/') && (path.endsWith('.yml') || path.endsWith('.yaml'));
+      return (
+        path.includes('.github/workflows/') &&
+        (path.endsWith('.yml') || path.endsWith('.yaml'))
+      );
     });
   }, [fileTree]);
-
 
   const sortedMarkdownFiles = useMemo(() => {
     return [...markdownFiles].sort((a, b) => {
@@ -350,7 +388,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             ...defaultVisibility,
           };
 
-          for (const [key, value] of Object.entries(repoState.panelVisibility)) {
+          for (const [key, value] of Object.entries(
+            repoState.panelVisibility,
+          )) {
             if (typeof value === 'boolean' && key in nextVisibility) {
               nextVisibility[key as RepositoryPanelId] = value;
             }
@@ -369,28 +409,31 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   }, [repositoryId]);
 
   // Save panel visibility preferences
-  const handlePanelVisibilityChange = useCallback(async (newVisibility: RepositoryPanelVisibility) => {
-    setPanelVisibility(newVisibility);
+  const handlePanelVisibilityChange = useCallback(
+    async (newVisibility: RepositoryPanelVisibility) => {
+      setPanelVisibility(newVisibility);
 
-    if (!repositoryId) return;
+      if (!repositoryId) return;
 
-    try {
-      const preferences = await UserPreferencesService.getPreferences();
-      const currentRepoStates = preferences.repositoryUIStates || {};
+      try {
+        const preferences = await UserPreferencesService.getPreferences();
+        const currentRepoStates = preferences.repositoryUIStates || {};
 
-      await UserPreferencesService.updatePreferences({
-        repositoryUIStates: {
-          ...currentRepoStates,
-          [repositoryId]: {
-            ...currentRepoStates[repositoryId],
-            panelVisibility: newVisibility,
+        await UserPreferencesService.updatePreferences({
+          repositoryUIStates: {
+            ...currentRepoStates,
+            [repositoryId]: {
+              ...currentRepoStates[repositoryId],
+              panelVisibility: newVisibility,
+            },
           },
-        },
-      });
-    } catch (error) {
-      console.error('Error saving panel preferences:', error);
-    }
-  }, [repositoryId]);
+        });
+      } catch (error) {
+        console.error('Error saving panel preferences:', error);
+      }
+    },
+    [repositoryId],
+  );
 
   const handleRemoveClick = () => {
     setShowRemoveDialog(true);
@@ -402,7 +445,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     try {
       const success = await AlexandriaService.removeRepository(
         selectedRepository.name,
-        deleteLocal
+        deleteLocal,
       );
 
       if (success) {
@@ -474,21 +517,26 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           break;
 
         case 'progress':
-          setWorkflowOutput(prev => [...prev, data.message]);
+          setWorkflowOutput((prev) => [...prev, data.message]);
           break;
 
         case 'step':
-          const stepIcon = data.status === 'success' ? '✓' : data.status === 'failure' ? '✖' : '▶';
-          setWorkflowOutput(prev => [...prev, `${stepIcon} ${data.label}`]);
+          const stepIcon =
+            data.status === 'success'
+              ? '✓'
+              : data.status === 'failure'
+                ? '✖'
+                : '▶';
+          setWorkflowOutput((prev) => [...prev, `${stepIcon} ${data.label}`]);
           break;
 
         case 'error':
-          setWorkflowOutput(prev => [...prev, `ERROR: ${data.message}`]);
+          setWorkflowOutput((prev) => [...prev, `ERROR: ${data.message}`]);
           break;
 
         case 'complete':
           setWorkflowStatus(data.success ? 'success' : 'failed');
-          setWorkflowOutput(prev => [
+          setWorkflowOutput((prev) => [
             ...prev,
             '',
             `Workflow ${data.success ? 'completed successfully' : 'failed'} (${(data.durationMs / 1000).toFixed(1)}s)`,
@@ -500,22 +548,36 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
     // Subscribe to all workflow event channels
     const unsubscribers = [
-      window.mainProcess.actRunner.onWorkflowEvent(ActRunnerWorkflowChannels.START, handleWorkflowEvent),
-      window.mainProcess.actRunner.onWorkflowEvent(ActRunnerWorkflowChannels.PROGRESS, handleWorkflowEvent),
-      window.mainProcess.actRunner.onWorkflowEvent(ActRunnerWorkflowChannels.STEP, handleWorkflowEvent),
-      window.mainProcess.actRunner.onWorkflowEvent(ActRunnerWorkflowChannels.ERROR, handleWorkflowEvent),
-      window.mainProcess.actRunner.onWorkflowEvent(ActRunnerWorkflowChannels.COMPLETE, handleWorkflowEvent),
+      window.mainProcess.actRunner.onWorkflowEvent(
+        ActRunnerWorkflowChannels.START,
+        handleWorkflowEvent,
+      ),
+      window.mainProcess.actRunner.onWorkflowEvent(
+        ActRunnerWorkflowChannels.PROGRESS,
+        handleWorkflowEvent,
+      ),
+      window.mainProcess.actRunner.onWorkflowEvent(
+        ActRunnerWorkflowChannels.STEP,
+        handleWorkflowEvent,
+      ),
+      window.mainProcess.actRunner.onWorkflowEvent(
+        ActRunnerWorkflowChannels.ERROR,
+        handleWorkflowEvent,
+      ),
+      window.mainProcess.actRunner.onWorkflowEvent(
+        ActRunnerWorkflowChannels.COMPLETE,
+        handleWorkflowEvent,
+      ),
     ];
 
     return () => {
-      unsubscribers.forEach(unsub => unsub());
+      unsubscribers.forEach((unsub) => unsub());
     };
   }, []);
 
   useEffect(() => {
     setRunningActionId(null);
   }, [repositoryId]);
-
 
   const checkForUpdates = useCallback(async () => {
     if (!selectedRepository?.path || isCheckingRef.current) return;
@@ -534,7 +596,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
       // Status is now shown in the UI components, no banner messages needed
     } catch (error) {
-      console.error('[RepositoryDetailsPanel] Error checking for updates:', error);
+      console.error(
+        '[RepositoryDetailsPanel] Error checking for updates:',
+        error,
+      );
     } finally {
       isCheckingRef.current = false;
       setIsCheckingUpdates(false);
@@ -548,7 +613,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
     try {
       // Get current branch name
-      const branchInfo = await GitService.getCurrentBranch(selectedRepository.path);
+      const branchInfo = await GitService.getCurrentBranch(
+        selectedRepository.path,
+      );
 
       const result = await GitService.push(selectedRepository.path, {
         branch: branchInfo.branch,
@@ -557,7 +624,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
       if (result.success) {
         // Successfully pushed - refresh repository monitoring to update sidebar
-        await RepositoryMonitoringService.refreshRepository(selectedRepository.path);
+        await RepositoryMonitoringService.refreshRepository(
+          selectedRepository.path,
+        );
 
         if (onRefresh) {
           await onRefresh();
@@ -575,10 +644,22 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     } finally {
       setIsPushing(false);
     }
-  }, [selectedRepository, isPushing, pushStatus, checkForUpdates, onRefresh, buildCityData]);
+  }, [
+    selectedRepository,
+    isPushing,
+    pushStatus,
+    checkForUpdates,
+    onRefresh,
+    buildCityData,
+  ]);
 
   const performFastForward = useCallback(async () => {
-    if (!selectedRepository?.path || isFastForwarding || !branchStatus?.canFastForward) return;
+    if (
+      !selectedRepository?.path ||
+      isFastForwarding ||
+      !branchStatus?.canFastForward
+    )
+      return;
 
     setIsFastForwarding(true);
 
@@ -587,7 +668,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
       if (result.success) {
         // Fast-forward successful - refresh repository monitoring to update sidebar
-        await RepositoryMonitoringService.refreshRepository(selectedRepository.path);
+        await RepositoryMonitoringService.refreshRepository(
+          selectedRepository.path,
+        );
 
         if (onRefresh) {
           await onRefresh();
@@ -601,19 +684,31 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         console.error('Fast-forward failed:', result.message);
       }
     } catch (error) {
-      console.error('[RepositoryDetailsPanel] Error performing fast-forward:', error);
+      console.error(
+        '[RepositoryDetailsPanel] Error performing fast-forward:',
+        error,
+      );
     } finally {
       setIsFastForwarding(false);
     }
-  }, [selectedRepository, isFastForwarding, branchStatus, checkForUpdates, onRefresh, buildCityData]);
-
-
+  }, [
+    selectedRepository,
+    isFastForwarding,
+    branchStatus,
+    checkForUpdates,
+    onRefresh,
+    buildCityData,
+  ]);
 
   // Listen for terminal window close events to clean up tracking
   useEffect(() => {
-    const handleTerminalWindowClose = (data: { terminalId?: string; agentSessionId?: string; windowId: number }) => {
+    const handleTerminalWindowClose = (data: {
+      terminalId?: string;
+      agentSessionId?: string;
+      windowId: number;
+    }) => {
       // Find and remove the closed window from our tracking
-      setTerminalWindows(prev => {
+      setTerminalWindows((prev) => {
         const newMap = new Map(prev);
         for (const [path, windowId] of newMap.entries()) {
           if (windowId === data.windowId) {
@@ -626,7 +721,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       });
     };
 
-    const unsubscribe = TerminalService.onWindowClose(handleTerminalWindowClose);
+    const unsubscribe = TerminalService.onWindowClose(
+      handleTerminalWindowClose,
+    );
 
     return () => {
       unsubscribe();
@@ -654,7 +751,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   useEffect(() => {
     // This ensures checkForUpdates is available but doesn't trigger re-runs
   }, [checkForUpdates]);
-
 
   // Handle file click to show in preview panel
   const handleFileClick = useCallback(
@@ -697,10 +793,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             files,
           });
         } catch (error) {
-          console.error(
-            '[RepositoryDetailsPanel] Error opening file:',
-            error,
-          );
+          console.error('[RepositoryDetailsPanel] Error opening file:', error);
         }
       }
     },
@@ -715,9 +808,15 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
       try {
         const absolutePath = `${selectedRepository.path}/${filePath}`;
-        await WindowService.openMarkdownView(absolutePath, selectedRepository.name);
+        await WindowService.openMarkdownView(
+          absolutePath,
+          selectedRepository.name,
+        );
       } catch (error) {
-        console.error('[RepositoryDetailsPanel] Error opening markdown view:', error);
+        console.error(
+          '[RepositoryDetailsPanel] Error opening markdown view:',
+          error,
+        );
       }
     },
     [selectedRepository],
@@ -731,7 +830,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       try {
         // The task content is already markdown, stored in the task's document path
         // Get the full task to ensure we have all details
-        const fullTask = await PalaceTasksService.getTask(selectedRepository.path, task.id);
+        const fullTask = await PalaceTasksService.getTask(
+          selectedRepository.path,
+          task.id,
+        );
 
         if (!fullTask) {
           console.error('[RepositoryDetailsPanel] Could not retrieve task');
@@ -741,8 +843,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         // The task document path should be in the task object
         // If not, construct it based on the repository path and task ID
         // Tasks are stored in .palace-work/tasks/active/ directory
-        const taskDocPath = fullTask.documentPath ||
-                            `${selectedRepository.path}/.palace-work/tasks/active/${task.id}.task.md`;
+        const taskDocPath =
+          fullTask.documentPath ||
+          `${selectedRepository.path}/.palace-work/tasks/active/${task.id}.task.md`;
 
         // If we have an onFileSelect handler and onRightPanelTabChange, use the inline viewer
         if (onFileSelect && onRightPanelTabChange) {
@@ -757,7 +860,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           onRightPanelTabChange('markdown');
         } else {
           // Fallback: open in a dedicated markdown view window
-          await WindowService.openMarkdownView(taskDocPath, selectedRepository.name);
+          await WindowService.openMarkdownView(
+            taskDocPath,
+            selectedRepository.name,
+          );
         }
       } catch (error) {
         console.error('[RepositoryDetailsPanel] Error opening task:', error);
@@ -780,14 +886,18 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       setRunningActionId(action.id);
       try {
         if (!action.workflowPath) {
-          window.alert('This workflow action is missing a workflow path and cannot run yet.');
+          window.alert(
+            'This workflow action is missing a workflow path and cannot run yet.',
+          );
           return;
         }
 
         const repoPath = selectedRepository?.path;
 
         if (!repoPath) {
-          window.alert('Cannot determine repository path for this workflow run.');
+          window.alert(
+            'Cannot determine repository path for this workflow run.',
+          );
           return;
         }
 
@@ -810,10 +920,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         // Check secrets only if the workflow requires them
         if (action.requiresSecrets && !validation.secretsConfigured) {
           const secretsList = action.requiredSecrets?.length
-            ? `\n\nRequired secrets:\n${action.requiredSecrets.map(s => `  • ${s}`).join('\n')}`
+            ? `\n\nRequired secrets:\n${action.requiredSecrets.map((s) => `  • ${s}`).join('\n')}`
             : '';
-          const message =
-            `This workflow requires secrets to run.${secretsList}\n\nConfigure secrets before running this workflow.`;
+          const message = `This workflow requires secrets to run.${secretsList}\n\nConfigure secrets before running this workflow.`;
           window.alert(message);
           return;
         }
@@ -831,13 +940,20 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         }
 
         if (result.executionId) {
-          window.alert(`Workflow run started (execution ${result.executionId}).`);
+          window.alert(
+            `Workflow run started (execution ${result.executionId}).`,
+          );
         } else {
           window.alert('Workflow run started.');
         }
       } catch (error) {
-        console.error('[RepositoryDetailsPanel] Failed to trigger workflow action:', error);
-        window.alert('Failed to start the workflow action. Check the console for details.');
+        console.error(
+          '[RepositoryDetailsPanel] Failed to trigger workflow action:',
+          error,
+        );
+        window.alert(
+          'Failed to start the workflow action. Check the console for details.',
+        );
       } finally {
         setRunningActionId(null);
       }
@@ -920,7 +1036,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           }}
         >
           {/* Left column skeleton */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+          >
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
@@ -968,7 +1086,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           </div>
 
           {/* Right column skeleton */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+          >
             {[1, 2].map((i) => (
               <div
                 key={i}
@@ -1105,199 +1225,203 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                           gap: '16px',
                         }}
                       >
-              {/* Left Column - Git Changes, Documents, Status and Notes */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                  height: 'fit-content',
-                  minWidth: 0,
-                }}
-              >
-                {/* Git Changes */}
-                {panelVisibility.gitChanges && hasGitChanges && (
-                  <RepositoryPanelProvider
-                    repositoryPath={selectedRepository?.path ?? null}
-                    actions={{ openFile: handleFileClick }}
-                  >
-                    <GitChangesPanel />
-                  </RepositoryPanelProvider>
-                )}
+                        {/* Left Column - Git Changes, Documents, Status and Notes */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '16px',
+                            height: 'fit-content',
+                            minWidth: 0,
+                          }}
+                        >
+                          {/* Git Changes */}
+                          {panelVisibility.gitChanges && hasGitChanges && (
+                            <RepositoryPanelProvider
+                              repositoryPath={selectedRepository?.path ?? null}
+                              actions={{ openFile: handleFileClick }}
+                            >
+                              <GitChangesPanel />
+                            </RepositoryPanelProvider>
+                          )}
 
-                {/* Markdown Documents */}
-                {panelVisibility.files && (
-                  <MarkdownDocumentsPanel
-                    markdownFiles={sortedMarkdownFiles}
-                    isLoading={isLoadingDocs}
-                    onMarkdownClick={handleFileClick}
-                  />
-                )}
+                          {/* Markdown Documents */}
+                          {panelVisibility.files && (
+                            <MarkdownDocumentsPanel
+                              markdownFiles={sortedMarkdownFiles}
+                              isLoading={isLoadingDocs}
+                              onMarkdownClick={handleFileClick}
+                            />
+                          )}
 
-                {/* Git Status / Last Commit Info */}
-                {panelVisibility.gitStatus && (
-                  <GitStatusPanel
-                    repository={selectedRepository}
-                  />
-                )}
+                          {/* Git Status / Last Commit Info */}
+                          {panelVisibility.gitStatus && (
+                            <GitStatusPanel repository={selectedRepository} />
+                          )}
 
-                {/* Repository Tasks and Notes Panel */}
-                {panelVisibility.tasksAndNotes && (
-                  <RepositoryTasksAndNotesPanel
-                    repositoryPath={selectedRepository.path}
-                    isLoading={false}
-                    onTaskClick={handleTaskClick}
-                  />
-                )}
-              </div>
-
-              {/* Right Column - City Visualization and Package Information */}
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
-                  minWidth: 0,
-                }}
-              >
-                {/* City Visualization */}
-                {panelVisibility.cityVisualization && selectedRepository && (
-                  <div>
-                    <div style={{ height: '400px' }}>
-                      <CityVisualizationPanel
-                        cityData={cityData}
-                        loading={isBuildingCity}
-                        treeStats={treeStats}
-                        onFileClick={handleFileClick}
-                        onRequestCityData={buildCityData}
-                        loadingMessage="Building repository structure visualization..."
-                        emptyMessage={cityError || 'Repository structure not available'}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {panelVisibility.actions && hasWorkflowActions && (
-                  <RepositoryActionsPanel
-                    repoId={repositoryId}
-                    repositoryPath={selectedRepository.path}
-                    fileTree={fileTree}
-                    onConfigure={handleConfigureSecrets}
-                    onRun={handleRunRepositoryAction}
-                    runningActionId={runningActionId}
-                  />
-                )}
-
-                {/* Workflow Output Console */}
-                {workflowOutput.length > 0 && (
-                  <div
-                    style={{
-                      marginTop: '16px',
-                      padding: '16px',
-                      backgroundColor: theme.colors.backgroundSecondary,
-                      borderRadius: '8px',
-                      border: `1px solid ${theme.colors.border}`,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '12px',
-                      }}
-                    >
-                      <h3
-                        style={{
-                          margin: 0,
-                          fontSize: '14px',
-                          fontWeight: 600,
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Workflow Output
-                        {workflowStatus === 'running' && (
-                          <span
-                            style={{
-                              marginLeft: '8px',
-                              fontSize: '12px',
-                              color: theme.colors.info || '#3b82f6',
-                            }}
-                          >
-                            (Running...)
-                          </span>
-                        )}
-                        {workflowStatus === 'success' && (
-                          <span
-                            style={{
-                              marginLeft: '8px',
-                              fontSize: '12px',
-                              color: theme.colors.success || '#10b981',
-                            }}
-                          >
-                            ✓ Success
-                          </span>
-                        )}
-                        {workflowStatus === 'failed' && (
-                          <span
-                            style={{
-                              marginLeft: '8px',
-                              fontSize: '12px',
-                              color: theme.colors.error || '#ef4444',
-                            }}
-                          >
-                            ✖ Failed
-                          </span>
-                        )}
-                      </h3>
-                      <button
-                        onClick={() => {
-                          setWorkflowOutput([]);
-                          setWorkflowStatus('idle');
-                        }}
-                        style={{
-                          padding: '4px 8px',
-                          fontSize: '12px',
-                          backgroundColor: 'transparent',
-                          border: `1px solid ${theme.colors.border}`,
-                          borderRadius: '4px',
-                          color: theme.colors.textSecondary,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: 'monospace',
-                        fontSize: '12px',
-                        backgroundColor: theme.colors.background,
-                        padding: '12px',
-                        borderRadius: '4px',
-                        maxHeight: '300px',
-                        overflowY: 'auto',
-                        whiteSpace: 'pre-wrap',
-                        color: theme.colors.text,
-                      }}
-                    >
-                      {workflowOutput.map((line, i) => (
-                        <div key={i} style={{ marginBottom: '2px' }}>
-                          {line}
+                          {/* Repository Tasks and Notes Panel */}
+                          {panelVisibility.tasksAndNotes && (
+                            <RepositoryTasksAndNotesPanel
+                              repositoryPath={selectedRepository.path}
+                              isLoading={false}
+                              onTaskClick={handleTaskClick}
+                            />
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {/* Package Information Panel */}
-                {panelVisibility.packageInfo && (
-                  <QualityHexagonPanel
-                    directory={selectedRepository.path}
-                    compact={false}
-                  />
-                )}
-              </div>
-            </div>
+
+                        {/* Right Column - City Visualization and Package Information */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '16px',
+                            minWidth: 0,
+                          }}
+                        >
+                          {/* City Visualization */}
+                          {panelVisibility.cityVisualization &&
+                            selectedRepository && (
+                              <div>
+                                <div style={{ height: '400px' }}>
+                                  <CityVisualizationPanel
+                                    cityData={cityData}
+                                    loading={isBuildingCity}
+                                    treeStats={treeStats}
+                                    onFileClick={handleFileClick}
+                                    onRequestCityData={buildCityData}
+                                    loadingMessage="Building repository structure visualization..."
+                                    emptyMessage={
+                                      cityError ||
+                                      'Repository structure not available'
+                                    }
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                          {panelVisibility.actions && hasWorkflowActions && (
+                            <RepositoryActionsPanel
+                              repoId={repositoryId}
+                              repositoryPath={selectedRepository.path}
+                              fileTree={fileTree}
+                              onConfigure={handleConfigureSecrets}
+                              onRun={handleRunRepositoryAction}
+                              runningActionId={runningActionId}
+                            />
+                          )}
+
+                          {/* Workflow Output Console */}
+                          {workflowOutput.length > 0 && (
+                            <div
+                              style={{
+                                marginTop: '16px',
+                                padding: '16px',
+                                backgroundColor:
+                                  theme.colors.backgroundSecondary,
+                                borderRadius: '8px',
+                                border: `1px solid ${theme.colors.border}`,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  marginBottom: '12px',
+                                }}
+                              >
+                                <h3
+                                  style={{
+                                    margin: 0,
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    color: theme.colors.text,
+                                  }}
+                                >
+                                  Workflow Output
+                                  {workflowStatus === 'running' && (
+                                    <span
+                                      style={{
+                                        marginLeft: '8px',
+                                        fontSize: '12px',
+                                        color: theme.colors.info || '#3b82f6',
+                                      }}
+                                    >
+                                      (Running...)
+                                    </span>
+                                  )}
+                                  {workflowStatus === 'success' && (
+                                    <span
+                                      style={{
+                                        marginLeft: '8px',
+                                        fontSize: '12px',
+                                        color:
+                                          theme.colors.success || '#10b981',
+                                      }}
+                                    >
+                                      ✓ Success
+                                    </span>
+                                  )}
+                                  {workflowStatus === 'failed' && (
+                                    <span
+                                      style={{
+                                        marginLeft: '8px',
+                                        fontSize: '12px',
+                                        color: theme.colors.error || '#ef4444',
+                                      }}
+                                    >
+                                      ✖ Failed
+                                    </span>
+                                  )}
+                                </h3>
+                                <button
+                                  onClick={() => {
+                                    setWorkflowOutput([]);
+                                    setWorkflowStatus('idle');
+                                  }}
+                                  style={{
+                                    padding: '4px 8px',
+                                    fontSize: '12px',
+                                    backgroundColor: 'transparent',
+                                    border: `1px solid ${theme.colors.border}`,
+                                    borderRadius: '4px',
+                                    color: theme.colors.textSecondary,
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  Clear
+                                </button>
+                              </div>
+                              <div
+                                style={{
+                                  fontFamily: 'monospace',
+                                  fontSize: '12px',
+                                  backgroundColor: theme.colors.background,
+                                  padding: '12px',
+                                  borderRadius: '4px',
+                                  maxHeight: '300px',
+                                  overflowY: 'auto',
+                                  whiteSpace: 'pre-wrap',
+                                  color: theme.colors.text,
+                                }}
+                              >
+                                {workflowOutput.map((line, i) => (
+                                  <div key={i} style={{ marginBottom: '2px' }}>
+                                    {line}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {/* Package Information Panel */}
+                          {panelVisibility.packageInfo && (
+                            <QualityHexagonPanel
+                              directory={selectedRepository.path}
+                              compact={false}
+                            />
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ),
                 },
@@ -1321,17 +1445,35 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 right: 'file-preview-terminal',
               }}
               collapsiblePanels={{ left: false, right: true }}
-              defaultSizes={nestedPanelState.type === 'three-panel' ? nestedPanelState.sizes : { left: 0, middle: 50, right: 50 }}
+              defaultSizes={
+                nestedPanelState.type === 'three-panel'
+                  ? nestedPanelState.sizes
+                  : { left: 0, middle: 50, right: 50 }
+              }
               minSizes={{ left: 0, middle: 30, right: 0 }}
               collapsed={nestedPanelState.collapsed}
               style={{ height: '100%', width: '100%' }}
               theme={theme}
               showCollapseButtons={false}
-              onPanelResize={nestedPanelState.type === 'three-panel' ? nestedPanelState.handlePanelResize : undefined}
-              onLeftCollapseComplete={nestedPanelState.handleLeftCollapseComplete}
+              onPanelResize={
+                nestedPanelState.type === 'three-panel'
+                  ? nestedPanelState.handlePanelResize
+                  : undefined
+              }
+              onLeftCollapseComplete={
+                nestedPanelState.handleLeftCollapseComplete
+              }
               onLeftExpandComplete={nestedPanelState.handleLeftExpandComplete}
-              onRightCollapseComplete={nestedPanelState.type === 'three-panel' ? nestedPanelState.handleRightCollapseComplete : undefined}
-              onRightExpandComplete={nestedPanelState.type === 'three-panel' ? nestedPanelState.handleRightExpandComplete : undefined}
+              onRightCollapseComplete={
+                nestedPanelState.type === 'three-panel'
+                  ? nestedPanelState.handleRightCollapseComplete
+                  : undefined
+              }
+              onRightExpandComplete={
+                nestedPanelState.type === 'three-panel'
+                  ? nestedPanelState.handleRightExpandComplete
+                  : undefined
+              }
             />
           </div>
         </>
@@ -1351,7 +1493,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             : 'Select a repository to view details'}
         </div>
       )}
-
 
       {/* Remove Repository Dialog */}
       {showRemoveDialog && selectedRepository && (

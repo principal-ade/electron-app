@@ -11,11 +11,13 @@ This guide explains how to integrate the new encapsulated city visualization fun
 ### 1. Core Components
 
 **SimpleCityVisualization** (`components/SimpleCityVisualization.tsx`)
+
 - Lightweight component that accepts pre-built city data
 - Minimal dependencies for easy integration
 - Clean props interface for city data, loading states, and file interaction
 
-**RepositoryCityVisualization** (`components/RepositoryCityVisualization.tsx`) 
+**RepositoryCityVisualization** (`components/RepositoryCityVisualization.tsx`)
+
 - Self-contained component that handles city building internally
 - More dependencies but provides complete functionality out-of-the-box
 - Suitable for scenarios where you want minimal integration effort
@@ -23,6 +25,7 @@ This guide explains how to integrate the new encapsulated city visualization fun
 ### 2. Service Layer
 
 **RepositoryCityService** (`services/RepositoryCityService.ts`)
+
 - Handles city data building from repository information using RepositoryMonitoringService
 - Singleton pattern for shared state management
 - Provides methods for building city data, checking visualization capability, and getting repository stats
@@ -31,6 +34,7 @@ This guide explains how to integrate the new encapsulated city visualization fun
 ### 3. Integration Example
 
 **RepositoryDetailsPanelWithCity** (`components/RepositoryDetailsPanelWithCity.tsx`)
+
 - Complete example showing how to integrate city visualization into the existing RepositoryDetailsPanel
 - Demonstrates state management, service integration, and user interaction handling
 
@@ -39,6 +43,7 @@ This guide explains how to integrate the new encapsulated city visualization fun
 ### Step 1: Choose Your Integration Approach
 
 **Option A: SimpleCityVisualization (Recommended)**
+
 ```typescript
 import { SimpleCityVisualization, RepositoryCityService } from './components/city';
 
@@ -66,6 +71,7 @@ const buildCity = async () => {
 ```
 
 **Option B: RepositoryCityVisualization (Self-contained)**
+
 ```typescript
 import { RepositoryCityVisualization } from './components/city';
 
@@ -113,26 +119,31 @@ const [isBuilding, setIsBuilding] = useState(false);
 Implement file click handling to integrate with your existing file opening logic:
 
 ```typescript
-const handleFileClick = useCallback(async (filePath: string) => {
-  if (!selectedRepository) return;
+const handleFileClick = useCallback(
+  async (filePath: string) => {
+    if (!selectedRepository) return;
 
-  try {
-    const absolutePath = `${selectedRepository.path}/${filePath}`;
-    const files = [{
-      path: absolutePath,
-      relativePath: filePath,
-      lastModified: Date.now(),
-    }];
+    try {
+      const absolutePath = `${selectedRepository.path}/${filePath}`;
+      const files = [
+        {
+          path: absolutePath,
+          relativePath: filePath,
+          lastModified: Date.now(),
+        },
+      ];
 
-    await WindowService.openLocalFiles({
-      windowId: `view-${repository.name}-${Date.now()}`,
-      windowTitle: `View ${filePath}`,
-      files,
-    });
-  } catch (error) {
-    console.error('Error opening file:', error);
-  }
-}, [selectedRepository]);
+      await WindowService.openLocalFiles({
+        windowId: `view-${repository.name}-${Date.now()}`,
+        windowTitle: `View ${filePath}`,
+        files,
+      });
+    } catch (error) {
+      console.error('Error opening file:', error);
+    }
+  },
+  [selectedRepository],
+);
 ```
 
 ## File Structure

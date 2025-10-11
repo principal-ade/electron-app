@@ -3,7 +3,10 @@
  */
 
 import type { FileTree } from '@principal-ai/repository-abstraction';
-import type { QualityMetrics, PackageLayer } from '@principal-ai/codebase-composition';
+import type {
+  QualityMetrics,
+  PackageLayer,
+} from '@principal-ai/codebase-composition';
 import type { LensResult } from '@principal-ai/codebase-quality-lenses';
 import type { GitState } from '@principal-ai/repository-monitoring';
 import type {
@@ -52,7 +55,6 @@ export interface RepositoryState {
   watchingMode?: 'minimal' | 'fallback' | 'none';
   lastLocalChange?: string;
 }
-
 
 /**
  * Tool results - stores LensResult for each tool
@@ -186,7 +188,11 @@ export type {
 /**
  * Git state event types from the library
  */
-export type GitStateEventType = 'commit' | 'branch-switch' | 'merge' | 'dirty-state-change';
+export type GitStateEventType =
+  | 'commit'
+  | 'branch-switch'
+  | 'merge'
+  | 'dirty-state-change';
 
 /**
  * Git state event - represents a git state transition
@@ -248,11 +254,7 @@ export type MainToServerMessageType =
 /**
  * Message types that can be sent from server to main
  */
-export type ServerToMainMessageType =
-  | 'ready'
-  | 'response'
-  | 'error'
-  | 'event';
+export type ServerToMainMessageType = 'ready' | 'response' | 'error' | 'event';
 
 /**
  * Dependency resolution request

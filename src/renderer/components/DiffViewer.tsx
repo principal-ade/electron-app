@@ -95,12 +95,16 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
       if (!color) return color;
 
       // Check if it's an rgba color
-      const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+      const rgbaMatch = color.match(
+        /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/,
+      );
       if (rgbaMatch) {
         const r = parseInt(rgbaMatch[1], 10);
         const g = parseInt(rgbaMatch[2], 10);
         const b = parseInt(rgbaMatch[3], 10);
-        return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        return (
+          '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)
+        );
       }
 
       return color;
@@ -149,7 +153,9 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
       colors: {
         'editor.background': rgbaToHex(theme.colors.background),
         'editor.foreground': rgbaToHex(theme.colors.text),
-        'editor.lineHighlightBackground': rgbaToHex(theme.colors.backgroundSecondary),
+        'editor.lineHighlightBackground': rgbaToHex(
+          theme.colors.backgroundSecondary,
+        ),
         'editorLineNumber.foreground': rgbaToHex(theme.colors.textSecondary),
         'editorGutter.background': rgbaToHex(theme.colors.backgroundSecondary),
         'diffEditor.insertedTextBackground': '#10b98133',

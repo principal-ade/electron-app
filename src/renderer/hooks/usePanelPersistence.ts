@@ -40,7 +40,11 @@ interface TwoPanelPersistence {
 type PanelPersistence = ThreePanelPersistence | TwoPanelPersistence;
 
 interface UsePanelPersistenceOptions {
-  viewKey: 'repositoryExplorer' | 'roomsManager' | 'terminalManager' | 'authView';
+  viewKey:
+    | 'repositoryExplorer'
+    | 'roomsManager'
+    | 'terminalManager'
+    | 'authView';
   defaultSizes: PanelSizes | TwoPanelSizes;
   collapsed: PanelCollapsed | { left?: boolean }; // Initial collapsed state
   panelType: 'three-panel' | 'two-panel';
@@ -50,7 +54,9 @@ interface UsePanelPersistenceOptions {
  * Hook for persisting panel layouts across sessions
  * Loads panel state from UserPreferences and saves changes automatically
  */
-export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelPersistence {
+export function usePanelPersistence(
+  options: UsePanelPersistenceOptions,
+): PanelPersistence {
   const { viewKey, defaultSizes, panelType } = options;
 
   const [sizes, setSizes] = useState(defaultSizes);
@@ -60,36 +66,46 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingPersistSizesRef = useRef<typeof sizes | null>(null);
 
-  const updateLastNonZeroSizes = useCallback((incomingSizes: PanelSizes | TwoPanelSizes) => {
-    if ('left' in incomingSizes && incomingSizes.left > 0) {
-      lastNonZeroSizesRef.current.left = incomingSizes.left;
-    }
+  const updateLastNonZeroSizes = useCallback(
+    (incomingSizes: PanelSizes | TwoPanelSizes) => {
+      if ('left' in incomingSizes && incomingSizes.left > 0) {
+        lastNonZeroSizesRef.current.left = incomingSizes.left;
+      }
 
-    if ('middle' in incomingSizes && incomingSizes.middle > 0) {
-      lastNonZeroSizesRef.current.middle = incomingSizes.middle;
-    }
+      if ('middle' in incomingSizes && incomingSizes.middle > 0) {
+        lastNonZeroSizesRef.current.middle = incomingSizes.middle;
+      }
 
-    if ('right' in incomingSizes && incomingSizes.right > 0) {
-      lastNonZeroSizesRef.current.right = incomingSizes.right;
-    }
-  }, []); // No dependencies - uses ref
+      if ('right' in incomingSizes && incomingSizes.right > 0) {
+        lastNonZeroSizesRef.current.right = incomingSizes.right;
+      }
+    },
+    [],
+  ); // No dependencies - uses ref
 
-  const getFallbackSize = useCallback((panel: 'left' | 'right') => {
-    const storedSize = lastNonZeroSizesRef.current[panel];
-    if (storedSize && storedSize > 0) {
-      return storedSize;
-    }
+  const getFallbackSize = useCallback(
+    (panel: 'left' | 'right') => {
+      const storedSize = lastNonZeroSizesRef.current[panel];
+      if (storedSize && storedSize > 0) {
+        return storedSize;
+      }
 
-    if (panel === 'left' && 'left' in defaultSizes && defaultSizes.left > 0) {
-      return defaultSizes.left;
-    }
+      if (panel === 'left' && 'left' in defaultSizes && defaultSizes.left > 0) {
+        return defaultSizes.left;
+      }
 
-    if (panel === 'right' && 'right' in defaultSizes && defaultSizes.right > 0) {
-      return defaultSizes.right;
-    }
+      if (
+        panel === 'right' &&
+        'right' in defaultSizes &&
+        defaultSizes.right > 0
+      ) {
+        return defaultSizes.right;
+      }
 
-    return undefined;
-  }, [defaultSizes]);
+      return undefined;
+    },
+    [defaultSizes],
+  );
 
   // Update sizes when defaultSizes changes (parent has loaded preferences)
   // Use a ref to track if we've seen this defaultSizes object before
@@ -97,10 +113,14 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
   useEffect(() => {
     // Only update if the actual values changed, not just the reference
     const hasChanged =
-      ('left' in defaultSizes && defaultSizes.left !== prevDefaultSizesRef.current.left) ||
-      ('middle' in defaultSizes && 'middle' in prevDefaultSizesRef.current &&
-        defaultSizes.middle !== (prevDefaultSizesRef.current as PanelSizes).middle) ||
-      ('right' in defaultSizes && defaultSizes.right !== prevDefaultSizesRef.current.right);
+      ('left' in defaultSizes &&
+        defaultSizes.left !== prevDefaultSizesRef.current.left) ||
+      ('middle' in defaultSizes &&
+        'middle' in prevDefaultSizesRef.current &&
+        defaultSizes.middle !==
+          (prevDefaultSizesRef.current as PanelSizes).middle) ||
+      ('right' in defaultSizes &&
+        defaultSizes.right !== prevDefaultSizesRef.current.right);
 
     if (hasChanged) {
       setSizes(defaultSizes);
@@ -112,11 +132,13 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
   // Sync with parent's collapsed state (e.g., from titlebar buttons)
   // This will now properly detect changes since we're using options.collapsed
   useEffect(() => {
-    const leftChanged = options.collapsed.left !== prevCollapsedRef.current.left;
+    const leftChanged =
+      options.collapsed.left !== prevCollapsedRef.current.left;
     const rightChanged =
       'right' in options.collapsed &&
       'right' in prevCollapsedRef.current &&
-      (options.collapsed as PanelCollapsed).right !== (prevCollapsedRef.current as PanelCollapsed).right;
+      (options.collapsed as PanelCollapsed).right !==
+        (prevCollapsedRef.current as PanelCollapsed).right;
 
     if (leftChanged || rightChanged) {
       setCollapsed(options.collapsed);
@@ -125,80 +147,95 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
   }, [options.collapsed.left, (options.collapsed as PanelCollapsed).right]);
 
   // Save preferences helper (only saves sizes, not collapsed state)
-  const savePreferences = useCallback(async (newSizes: typeof sizes) => {
-    try {
-      await UserPreferencesService.updatePreferences({
-        panelLayouts: {
-          [viewKey]: {
-            sizes: newSizes,
+  const savePreferences = useCallback(
+    async (newSizes: typeof sizes) => {
+      try {
+        await UserPreferencesService.updatePreferences({
+          panelLayouts: {
+            [viewKey]: {
+              sizes: newSizes,
+            },
           },
-        },
-      });
-    } catch (error) {
-      console.error(`Failed to save panel preferences for ${viewKey}:`, error);
-    }
-  }, [viewKey]);
+        });
+      } catch (error) {
+        console.error(
+          `Failed to save panel preferences for ${viewKey}:`,
+          error,
+        );
+      }
+    },
+    [viewKey],
+  );
 
   // Handle panel resize (debounced)
-  const handlePanelResize = useCallback((newSizes: typeof sizes) => {
-    const sanitizedSizes = { ...newSizes } as typeof newSizes;
-    let shouldPersist = true;
+  const handlePanelResize = useCallback(
+    (newSizes: typeof sizes) => {
+      const sanitizedSizes = { ...newSizes } as typeof newSizes;
+      let shouldPersist = true;
 
-    if ('left' in newSizes) {
-      const leftCollapsed = Boolean((collapsed as PanelCollapsed)?.left);
-      const leftSize = newSizes.left;
+      if ('left' in newSizes) {
+        const leftCollapsed = Boolean((collapsed as PanelCollapsed)?.left);
+        const leftSize = newSizes.left;
 
-      if (leftCollapsed) {
-        const fallback = getFallbackSize('left');
-        if (fallback !== undefined && fallback > 0) {
-          sanitizedSizes.left = fallback;
-        } else {
+        if (leftCollapsed) {
+          const fallback = getFallbackSize('left');
+          if (fallback !== undefined && fallback > 0) {
+            sanitizedSizes.left = fallback;
+          } else {
+            shouldPersist = false;
+          }
+        } else if (leftSize === 0) {
           shouldPersist = false;
         }
-      } else if (leftSize === 0) {
-        shouldPersist = false;
       }
-    }
 
-    if (panelType === 'three-panel' && 'right' in newSizes) {
-      const rightCollapsed = Boolean((collapsed as PanelCollapsed)?.right);
-      const rightSize = newSizes.right;
+      if (panelType === 'three-panel' && 'right' in newSizes) {
+        const rightCollapsed = Boolean((collapsed as PanelCollapsed)?.right);
+        const rightSize = newSizes.right;
 
-      if (rightCollapsed) {
-        const fallback = getFallbackSize('right');
-        if (fallback !== undefined && fallback > 0) {
-          sanitizedSizes.right = fallback;
-        } else {
+        if (rightCollapsed) {
+          const fallback = getFallbackSize('right');
+          if (fallback !== undefined && fallback > 0) {
+            sanitizedSizes.right = fallback;
+          } else {
+            shouldPersist = false;
+          }
+        } else if (rightSize === 0) {
           shouldPersist = false;
         }
-      } else if (rightSize === 0) {
-        shouldPersist = false;
       }
-    }
 
-    setSizes(sanitizedSizes);
-    updateLastNonZeroSizes(sanitizedSizes);
+      setSizes(sanitizedSizes);
+      updateLastNonZeroSizes(sanitizedSizes);
 
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-      saveTimeoutRef.current = null;
-    }
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
 
-    if (!shouldPersist) {
-      pendingPersistSizesRef.current = null;
-      return;
-    }
-
-    pendingPersistSizesRef.current = sanitizedSizes;
-    saveTimeoutRef.current = setTimeout(() => {
-      const pendingSizes = pendingPersistSizesRef.current;
-      if (pendingSizes) {
-        savePreferences(pendingSizes);
+      if (!shouldPersist) {
         pendingPersistSizesRef.current = null;
+        return;
       }
-      saveTimeoutRef.current = null;
-    }, 500);
-  }, [collapsed, getFallbackSize, panelType, savePreferences, updateLastNonZeroSizes]);
+
+      pendingPersistSizesRef.current = sanitizedSizes;
+      saveTimeoutRef.current = setTimeout(() => {
+        const pendingSizes = pendingPersistSizesRef.current;
+        if (pendingSizes) {
+          savePreferences(pendingSizes);
+          pendingPersistSizesRef.current = null;
+        }
+        saveTimeoutRef.current = null;
+      }, 500);
+    },
+    [
+      collapsed,
+      getFallbackSize,
+      panelType,
+      savePreferences,
+      updateLastNonZeroSizes,
+    ],
+  );
 
   useEffect(() => {
     return () => {
@@ -234,7 +271,6 @@ export function usePanelPersistence(options: UsePanelPersistenceOptions): PanelP
   }, []);
 
   if (panelType === 'three-panel') {
-
     return {
       type: 'three-panel',
       sizes: sizes as PanelSizes,

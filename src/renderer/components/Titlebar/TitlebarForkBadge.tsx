@@ -48,7 +48,8 @@ export const TitlebarForkBadge: React.FC<TitlebarForkBadgeProps> = ({
     >
       <GitFork size={10} />
       <span>
-        Fork of {repository.metadata.parentRepo.owner}/{repository.metadata.parentRepo.name}
+        Fork of {repository.metadata.parentRepo.owner}/
+        {repository.metadata.parentRepo.name}
       </span>
     </button>
   );

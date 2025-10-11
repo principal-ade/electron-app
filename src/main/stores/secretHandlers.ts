@@ -148,8 +148,7 @@ export function registerSecretHandlers(): void {
         }
 
         // Get existing secrets
-        const existing =
-          (await getStorage().getSecrets(request.repoId)) || {};
+        const existing = (await getStorage().getSecrets(request.repoId)) || {};
 
         // Merge with new secrets
         const merged = { ...existing, ...request.secrets };
@@ -222,7 +221,9 @@ export function registerSecretHandlers(): void {
         }
 
         // UnifiedSecureStorage doesn't have a clearCache method, but we can log that we attempted it
-        console.log('[SecretHandlers] Cache clear requested (no-op in unified storage)');
+        console.log(
+          '[SecretHandlers] Cache clear requested (no-op in unified storage)',
+        );
       } catch (error: any) {
         console.error('[SecretHandlers] Error clearing cache:', error);
       }
@@ -237,7 +238,10 @@ export function registerSecretHandlers(): void {
       repoId: string,
     ): Promise<SecretMetadataOnly | null> => {
       try {
-        console.log('[SecretHandlers] Getting metadata for repository:', repoId);
+        console.log(
+          '[SecretHandlers] Getting metadata for repository:',
+          repoId,
+        );
 
         if (!validateSource(event)) {
           throw new Error('Unauthorized source');
@@ -255,14 +259,14 @@ export function registerSecretHandlers(): void {
 
         // Get metadata from storage
         const allMetadata = await getStorage().getAllSecretsMetadata();
-        const repoMetadata = allMetadata.find(m => m.repoId === repoId);
+        const repoMetadata = allMetadata.find((m) => m.repoId === repoId);
 
         // Return only metadata, not values
         return {
           keys: Object.keys(secrets),
           count: Object.keys(secrets).length,
           updatedAt: repoMetadata?.updatedAt || Date.now(),
-          repoId
+          repoId,
         };
       } catch (error: any) {
         console.error('[SecretHandlers] Error getting metadata:', error);
@@ -337,11 +341,16 @@ export function registerSecretHandlers(): void {
         }
 
         // Log access for audit
-        console.log(`[SecretHandlers] Multiple secrets accessed: ${repoId}/${keys.join(', ')}`);
+        console.log(
+          `[SecretHandlers] Multiple secrets accessed: ${repoId}/${keys.join(', ')}`,
+        );
 
         return result;
       } catch (error: any) {
-        console.error('[SecretHandlers] Error getting multiple secrets:', error);
+        console.error(
+          '[SecretHandlers] Error getting multiple secrets:',
+          error,
+        );
         return {};
       }
     },
@@ -361,7 +370,10 @@ export function registerSecretHandlers(): void {
         }
 
         if (!repoId || !key) {
-          return { success: false, error: 'Repository ID and key are required' };
+          return {
+            success: false,
+            error: 'Repository ID and key are required',
+          };
         }
 
         const secrets = await getStorage().getSecrets(repoId);
@@ -374,7 +386,9 @@ export function registerSecretHandlers(): void {
         clipboard.writeText(secrets[key]);
 
         // Log access for audit
-        console.log(`[SecretHandlers] Secret copied to clipboard: ${repoId}/${key}`);
+        console.log(
+          `[SecretHandlers] Secret copied to clipboard: ${repoId}/${key}`,
+        );
 
         return { success: true };
       } catch (error: any) {
@@ -394,9 +408,10 @@ function validateSource(event: IpcMainInvokeEvent): boolean {
   try {
     const url = event.sender.getURL();
     // Accept from file:// protocol (production) or localhost (development)
-    const isValid = url.startsWith('file://') ||
-                    url.startsWith('http://localhost') ||
-                    url.includes('localhost:1212'); // Common Electron dev port
+    const isValid =
+      url.startsWith('file://') ||
+      url.startsWith('http://localhost') ||
+      url.includes('localhost:1212'); // Common Electron dev port
 
     if (!isValid) {
       console.warn('[SecretHandlers] Rejected request from URL:', url);

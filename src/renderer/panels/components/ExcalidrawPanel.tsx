@@ -18,9 +18,15 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const { repositoryPath } = useRepositoryPanelContext();
-  const [currentDrawingId, setCurrentDrawingId] = useState<string | undefined>(initialDrawingId);
-  const [currentDrawingName, setCurrentDrawingName] = useState<string>(initialDrawingName || 'Untitled Drawing');
-  const [drawingData, setDrawingData] = useState<ExcalidrawDiagramData | null>(null);
+  const [currentDrawingId, setCurrentDrawingId] = useState<string | undefined>(
+    initialDrawingId,
+  );
+  const [currentDrawingName, setCurrentDrawingName] = useState<string>(
+    initialDrawingName || 'Untitled Drawing',
+  );
+  const [drawingData, setDrawingData] = useState<ExcalidrawDiagramData | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [hasDrawing, setHasDrawing] = useState(!!initialDrawingId);
 

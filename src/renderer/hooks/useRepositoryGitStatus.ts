@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import type {
   GitStatus,
-  GitStatusWithFiles
+  GitStatusWithFiles,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 /**
@@ -12,7 +12,8 @@ import type {
  */
 export function useRepositoryGitStatus(repoPath: string | null) {
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
-  const [gitStatusWithFiles, setGitStatusWithFiles] = useState<GitStatusWithFiles | null>(null);
+  const [gitStatusWithFiles, setGitStatusWithFiles] =
+    useState<GitStatusWithFiles | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +50,9 @@ export function useRepositoryGitStatus(repoPath: string | null) {
       setGitStatusWithFiles(statusWithFiles);
     } catch (err) {
       console.error('[useRepositoryGitStatus] Error loading git status:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load git status');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load git status',
+      );
     } finally {
       setLoading(false);
     }
@@ -65,22 +68,29 @@ export function useRepositoryGitStatus(repoPath: string | null) {
     if (!repoPath) return;
 
     // Subscribe to git status changes from monitoring service
-    const unsubscribe = window.mainProcess.repositoryMonitoring.onGitStatusChanged(
-      async (status: GitStatus) => {
-        // Only update if the status is for our repository
-        if (status.repoPath === repoPath) {
-          setGitStatus(status);
+    const unsubscribe =
+      window.mainProcess.repositoryMonitoring.onGitStatusChanged(
+        async (status: GitStatus) => {
+          // Only update if the status is for our repository
+          if (status.repoPath === repoPath) {
+            setGitStatus(status);
 
-          // Fetch the detailed status with files
-          try {
-            const statusWithFiles = await RepositoryMonitoringService.getGitStatusWithFiles(repoPath);
-            setGitStatusWithFiles(statusWithFiles);
-          } catch (err) {
-            console.error('[useRepositoryGitStatus] Error fetching updated status with files:', err);
+            // Fetch the detailed status with files
+            try {
+              const statusWithFiles =
+                await RepositoryMonitoringService.getGitStatusWithFiles(
+                  repoPath,
+                );
+              setGitStatusWithFiles(statusWithFiles);
+            } catch (err) {
+              console.error(
+                '[useRepositoryGitStatus] Error fetching updated status with files:',
+                err,
+              );
+            }
           }
-        }
-      }
-    );
+        },
+      );
 
     return () => {
       unsubscribe();
@@ -93,11 +103,26 @@ export function useRepositoryGitStatus(repoPath: string | null) {
   }, [loadGitStatus]);
 
   // Memoize individual file arrays to prevent unnecessary re-renders
-  const modifiedFiles = useMemo(() => gitStatusWithFiles?.modifiedFiles || [], [gitStatusWithFiles]);
-  const untrackedFiles = useMemo(() => gitStatusWithFiles?.untrackedFiles || [], [gitStatusWithFiles]);
-  const stagedFiles = useMemo(() => gitStatusWithFiles?.stagedFiles || [], [gitStatusWithFiles]);
-  const createdFiles = useMemo(() => gitStatusWithFiles?.createdFiles || [], [gitStatusWithFiles]);
-  const deletedFiles = useMemo(() => gitStatusWithFiles?.deletedFiles || [], [gitStatusWithFiles]);
+  const modifiedFiles = useMemo(
+    () => gitStatusWithFiles?.modifiedFiles || [],
+    [gitStatusWithFiles],
+  );
+  const untrackedFiles = useMemo(
+    () => gitStatusWithFiles?.untrackedFiles || [],
+    [gitStatusWithFiles],
+  );
+  const stagedFiles = useMemo(
+    () => gitStatusWithFiles?.stagedFiles || [],
+    [gitStatusWithFiles],
+  );
+  const createdFiles = useMemo(
+    () => gitStatusWithFiles?.createdFiles || [],
+    [gitStatusWithFiles],
+  );
+  const deletedFiles = useMemo(
+    () => gitStatusWithFiles?.deletedFiles || [],
+    [gitStatusWithFiles],
+  );
 
   return {
     gitStatus,

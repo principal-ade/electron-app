@@ -192,7 +192,9 @@ export class FileTreeSourceService {
    * @deprecated Use RepositoryDataCache with useRepositoryData hook instead
    */
   async loadSourceTree(sourceId: string): Promise<LoadedFileTreeSource | null> {
-    throw new Error('FileTreeSourceService.loadSourceTree is deprecated - use RepositoryDataCache instead');
+    throw new Error(
+      'FileTreeSourceService.loadSourceTree is deprecated - use RepositoryDataCache instead',
+    );
   }
 
   /**
@@ -200,7 +202,9 @@ export class FileTreeSourceService {
    * @deprecated Use RepositoryDataCache with useRepositoryData hook instead
    */
   async loadFileTree(sourceId: string): Promise<LoadedFileTreeSource | null> {
-    throw new Error('FileTreeSourceService.loadFileTree is deprecated - use RepositoryDataCache instead');
+    throw new Error(
+      'FileTreeSourceService.loadFileTree is deprecated - use RepositoryDataCache instead',
+    );
   }
 
   /**
@@ -208,7 +212,9 @@ export class FileTreeSourceService {
    * @deprecated Use RepositoryDataCache with useRepositoryData hook instead
    */
   async loadActiveSourceTree(): Promise<LoadedFileTreeSource | null> {
-    throw new Error('FileTreeSourceService.loadActiveSourceTree is deprecated - use RepositoryDataCache instead');
+    throw new Error(
+      'FileTreeSourceService.loadActiveSourceTree is deprecated - use RepositoryDataCache instead',
+    );
   }
 
   /**
@@ -219,7 +225,9 @@ export class FileTreeSourceService {
   async detectPackagesForSource(
     sourceId: string,
   ): Promise<PackageLayer[] | null> {
-    throw new Error('FileTreeSourceService.detectPackagesForSource is deprecated - use RepositoryMonitoringService.getPackages instead');
+    throw new Error(
+      'FileTreeSourceService.detectPackagesForSource is deprecated - use RepositoryMonitoringService.getPackages instead',
+    );
   }
 
   /**
@@ -272,7 +280,9 @@ export class FileTreeSourceService {
    * @deprecated Use RepositoryDataCache instead
    */
   async loadSourceTrees(sourceIds: string[]): Promise<LoadedFileTreeSource[]> {
-    throw new Error('FileTreeSourceService.loadSourceTrees is deprecated - use RepositoryDataCache instead');
+    throw new Error(
+      'FileTreeSourceService.loadSourceTrees is deprecated - use RepositoryDataCache instead',
+    );
   }
 
   /**

@@ -30,7 +30,9 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
   const [isDirty, setIsDirty] = useState(false);
   const [fontSizeScale, setFontSizeScale] = useState<number>(1.0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [viewMode, setViewMode] = useState<'single' | 'book'>(initialViewMode || 'book');
+  const [viewMode, setViewMode] = useState<'single' | 'book'>(
+    initialViewMode || 'book',
+  );
 
   // Load font size and view mode preferences on mount
   useEffect(() => {
@@ -151,7 +153,9 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
             // Avoid reloading while user has unsaved changes
             if (isDirty) {
               // We still mark that the file changed externally; caller can decide
-              console.info('[MarkdownView] External change detected but view is dirty; not reloading automatically.');
+              console.info(
+                '[MarkdownView] External change detected but view is dirty; not reloading automatically.',
+              );
               return;
             }
 
@@ -161,16 +165,25 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
                 const result = await FileSystemService.readFile(filePath);
                 const fileContent = result?.content;
                 if (typeof fileContent === 'string') {
-                  setContent(fileContent || '# Empty File\n\nThis file appears to be empty.');
+                  setContent(
+                    fileContent ||
+                      '# Empty File\n\nThis file appears to be empty.',
+                  );
                   setError(null);
                   setIsDirty(false);
                 }
               } catch (err) {
-                console.warn('[MarkdownView] Failed to reload file after change:', err);
+                console.warn(
+                  '[MarkdownView] Failed to reload file after change:',
+                  err,
+                );
               }
             })();
           } catch (e) {
-            console.error('[MarkdownView] Error handling file change event:', e);
+            console.error(
+              '[MarkdownView] Error handling file change event:',
+              e,
+            );
           }
         });
       } catch (err) {
@@ -192,12 +205,14 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
         try {
           unsubscribe();
         } catch (e) {
-          console.warn('[MarkdownView] Failed to unsubscribe file change listener:', e);
+          console.warn(
+            '[MarkdownView] Failed to unsubscribe file change listener:',
+            e,
+          );
         }
       }
     };
   }, [filePath, isDirty]);
-
 
   // Handle content changes
   const handleContentChange = useCallback((newContent: string) => {
@@ -241,14 +256,18 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
       }
     } catch (err) {
       console.error('Error deleting file:', err);
-      setError(`Failed to delete file: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setError(
+        `Failed to delete file: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      );
       setShowDeleteConfirm(false);
     }
   }, [filePath]);
 
   if (loading) {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div
+        style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}
+      >
         <MarkdownViewerTitlebar
           filePath={filePath}
           fileName={filePath.split('/').pop()}
@@ -280,7 +299,9 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
 
   if (error) {
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div
+        style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}
+      >
         <MarkdownViewerTitlebar
           filePath={filePath}
           fileName={filePath.split('/').pop()}
@@ -356,47 +377,47 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
 
         {/* Slide-based viewer with book view support */}
         <MarkdownDocumentViewer
-        viewMode={'book'} // Always use book mode wrapper which handles single/book internally
-        showEditor={false}
-        showSegmented={true}
-        content={safeContent}
-        slides={
-          (() => {
+          viewMode={'book'} // Always use book mode wrapper which handles single/book internally
+          showEditor={false}
+          showSegmented={true}
+          content={safeContent}
+          slides={(() => {
             try {
               const presentation = parseMarkdownIntoPresentation(safeContent);
-              return (presentation?.slides || []).map((s) => s.location.content);
+              return (presentation?.slides || []).map(
+                (s) => s.location.content,
+              );
             } catch (e) {
               console.warn('[MarkdownView] Failed to parse presentation:', e);
               return [safeContent];
             }
-          })()
-        }
-        currentSlide={0}
-        theme={theme}
-        fontSizeScale={fontSizeScale}
-        bookViewMode={viewMode} // Pass the actual view mode for the book component
-        onContentChange={(newContent) => {
-          setContent(newContent);
-          setIsDirty(true);
-        }}
-        onSlideNavigate={() => {
-          /* No-op or could focus navigation controls if added */
-        }}
-        onCheckboxChange={(_slideIndex, _lineNumber, _checked) => {
-          // Optionally treat checkbox toggles as edits
-          setIsDirty(true);
-        }}
+          })()}
+          currentSlide={0}
+          theme={theme}
+          fontSizeScale={fontSizeScale}
+          bookViewMode={viewMode} // Pass the actual view mode for the book component
+          onContentChange={(newContent) => {
+            setContent(newContent);
+            setIsDirty(true);
+          }}
+          onSlideNavigate={() => {
+            /* No-op or could focus navigation controls if added */
+          }}
+          onCheckboxChange={(_slideIndex, _lineNumber, _checked) => {
+            // Optionally treat checkbox toggles as edits
+            setIsDirty(true);
+          }}
         />
 
-      {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && (
-        <FileDeleteConfirmDialog
-          filePath={filePath}
-          fileName={filePath.split('/').pop()}
-          onConfirm={handleDelete}
-          onCancel={() => setShowDeleteConfirm(false)}
-        />
-      )}
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && (
+          <FileDeleteConfirmDialog
+            filePath={filePath}
+            fileName={filePath.split('/').pop()}
+            onConfirm={handleDelete}
+            onCancel={() => setShowDeleteConfirm(false)}
+          />
+        )}
       </div>
     </div>
   );

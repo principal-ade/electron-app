@@ -1,5 +1,12 @@
 import { useTheme } from '@a24z/industry-theme';
-import { Cloud, GitBranch, Download, ExternalLink, Lock, Unlock } from 'lucide-react';
+import {
+  Cloud,
+  GitBranch,
+  Download,
+  ExternalLink,
+  Lock,
+  Unlock,
+} from 'lucide-react';
 import type { GitHubRepository } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
 import { getRelativeTime } from '../utils/repositoryOrganizer';
 
@@ -141,9 +148,7 @@ export const RemoteRepositoryCard: React.FC<RemoteRepositoryCardProps> = ({
           <GitBranch size={12} />
           {repository.default_branch}
         </div>
-        <div>
-          Updated {getRelativeTime(repository.pushed_at)}
-        </div>
+        <div>Updated {getRelativeTime(repository.pushed_at)}</div>
       </div>
 
       {/* Actions */}
@@ -200,10 +205,12 @@ export const RemoteRepositoryCard: React.FC<RemoteRepositoryCardProps> = ({
             transition: 'all 0.2s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundTertiary;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundSecondary;
           }}
         >
           <ExternalLink size={14} />

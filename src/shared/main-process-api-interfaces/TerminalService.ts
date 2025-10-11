@@ -40,14 +40,20 @@ export interface TerminalExit {
 export interface TerminalAPI {
   create: (directory: string, context?: string) => Promise<string>;
   getOrCreate: (directory: string, context?: string) => Promise<string>;
-  createWithCommand: (directory: string, command: string, context?: string) => Promise<string>;
+  createWithCommand: (
+    directory: string,
+    command: string,
+    context?: string,
+  ) => Promise<string>;
   write: (sessionId: string, data: string) => Promise<void>;
   resize: (sessionId: string, cols: number, rows: number) => Promise<void>;
   destroy: (sessionId: string) => Promise<void>;
   list: () => Promise<Array<TerminalInfo>>;
   popOut: (sessionId: string) => Promise<{ windowId: number }>;
   focusWindow: (windowId: number) => Promise<void>;
-  getOpenWindows: () => Promise<Array<{ terminalId: string; windowId: number }>>;
+  getOpenWindows: () => Promise<
+    Array<{ terminalId: string; windowId: number }>
+  >;
   onData: (callback: (data: TerminalData) => void) => () => void;
   onExit: (callback: (exit: TerminalExit) => void) => () => void;
   onWindowReady: (

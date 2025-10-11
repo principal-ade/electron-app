@@ -14,11 +14,18 @@ import {
   Info,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
-import type { PackageLayer, ConfigFile, PackageCommand } from '@principal-ai/codebase-composition';
+import type {
+  PackageLayer,
+  ConfigFile,
+  PackageCommand,
+} from '@principal-ai/codebase-composition';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
 import type { LensResult, Issue } from '@principal-ai/codebase-quality-lenses';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
-import type { ToolExecutionRequest, ToolExecutionResponse } from '../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type {
+  ToolExecutionRequest,
+  ToolExecutionResponse,
+} from '../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 interface ToolsPanelProps {
   packageLayers?: PackageLayer[] | null;
@@ -28,7 +35,15 @@ interface ToolsPanelProps {
 
 interface ToolInfo {
   name: string;
-  category: 'linting' | 'testing' | 'types' | 'formatting' | 'documentation' | 'deadCode' | 'build' | 'other';
+  category:
+    | 'linting'
+    | 'testing'
+    | 'types'
+    | 'formatting'
+    | 'documentation'
+    | 'deadCode'
+    | 'build'
+    | 'other';
   hasConfig: boolean;
   configFile?: ConfigFile;
   isInstalled: boolean;
@@ -49,7 +64,10 @@ interface PackageToolsInfo {
 }
 
 // Map config keys to tool names and categories
-const TOOL_MAPPING: Record<string, { displayName: string; category: ToolInfo['category'] }> = {
+const TOOL_MAPPING: Record<
+  string,
+  { displayName: string; category: ToolInfo['category'] }
+> = {
   eslint: { displayName: 'ESLint', category: 'linting' },
   prettier: { displayName: 'Prettier', category: 'formatting' },
   typescript: { displayName: 'TypeScript', category: 'types' },
@@ -75,21 +93,31 @@ const TOOL_MAPPING: Record<string, { displayName: string; category: ToolInfo['ca
 };
 
 const CATEGORY_COLORS: Record<ToolInfo['category'], string> = {
-  linting: '#f59e0b',    // amber
-  testing: '#10b981',    // emerald
-  types: '#3b82f6',      // blue
+  linting: '#f59e0b', // amber
+  testing: '#10b981', // emerald
+  types: '#3b82f6', // blue
   formatting: '#a855f7', // purple
   documentation: '#06b6d4', // cyan
-  deadCode: '#ef4444',   // red
-  build: '#6b7280',      // gray
-  other: '#9ca3af',      // gray-400
+  deadCode: '#ef4444', // red
+  build: '#6b7280', // gray
+  other: '#9ca3af', // gray-400
 };
 
-export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositoryPath, onHighlightLayersChange }) => {
+export const ToolsPanel: React.FC<ToolsPanelProps> = ({
+  packageLayers,
+  repositoryPath,
+  onHighlightLayersChange,
+}) => {
   const { theme } = useTheme();
-  const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
-  const [runningTools, setRunningTools] = useState<Map<string, boolean>>(new Map());
-  const [toolResults, setToolResults] = useState<Map<string, ToolExecutionResponse>>(new Map());
+  const [expandedPackages, setExpandedPackages] = useState<Set<string>>(
+    new Set(),
+  );
+  const [runningTools, setRunningTools] = useState<Map<string, boolean>>(
+    new Map(),
+  );
+  const [toolResults, setToolResults] = useState<
+    Map<string, ToolExecutionResponse>
+  >(new Map());
   const [showingResult, setShowingResult] = useState<string | null>(null);
 
   // Process package layers to extract tool information
@@ -109,18 +137,19 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
         const isInstalled = !!(
           deps[toolKey] ||
           // Check for scoped packages
-          Object.keys(deps).some(dep => dep.includes(toolKey))
+          Object.keys(deps).some((dep) => dep.includes(toolKey))
         );
 
         // Find related commands
-        const packageCommands = layer.packageData.availableCommands
-          ?.filter(cmd =>
-            cmd.lensId === toolKey ||
-            cmd.name.includes(toolKey) ||
-            cmd.command.includes(toolKey)
+        const packageCommands =
+          layer.packageData.availableCommands?.filter(
+            (cmd) =>
+              cmd.lensId === toolKey ||
+              cmd.name.includes(toolKey) ||
+              cmd.command.includes(toolKey),
           ) || [];
 
-        const commands = packageCommands.map(cmd => cmd.name);
+        const commands = packageCommands.map((cmd) => cmd.name);
 
         // Only include if tool is configured or installed
         if (configFile || isInstalled || commands.length > 0) {
@@ -138,10 +167,10 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
       });
 
       // Check for additional tools in scripts that might not be in our mapping
-      layer.packageData.availableCommands?.forEach(cmd => {
+      layer.packageData.availableCommands?.forEach((cmd) => {
         if (cmd.isLensCommand && cmd.lensId) {
           // Check if we already have this tool
-          if (!tools.some(t => t.name.toLowerCase() === cmd.lensId)) {
+          if (!tools.some((t) => t.name.toLowerCase() === cmd.lensId)) {
             tools.push({
               name: cmd.lensId,
               category: 'other',
@@ -160,8 +189,8 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
         tools,
         summary: {
           totalTools: tools.length,
-          configuredTools: tools.filter(t => t.hasConfig).length,
-          installedTools: tools.filter(t => t.isInstalled).length,
+          configuredTools: tools.filter((t) => t.hasConfig).length,
+          installedTools: tools.filter((t) => t.isInstalled).length,
         },
       };
     });
@@ -184,25 +213,38 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
       toolResults.forEach((result, key) => {
         // For root packages, packagePath might be empty string
         const keyPrefix = pkg.packagePath ? `${pkg.packagePath}:` : ':';
-        if (key.startsWith(keyPrefix) || (pkg.packagePath === '' && key.startsWith(':'))) {
-          console.log(`[ToolsTab] Found result for package "${pkg.packagePath}":`, key);
+        if (
+          key.startsWith(keyPrefix) ||
+          (pkg.packagePath === '' && key.startsWith(':'))
+        ) {
+          console.log(
+            `[ToolsTab] Found result for package "${pkg.packagePath}":`,
+            key,
+          );
           packageResults.set(key, result);
         }
       });
 
       if (packageResults.size > 0) {
-        const layers = createHighlightLayersFromLensResults(packageResults, pkg.packagePath);
-        console.log(`[ToolsTab] Created ${layers.length} layers for package ${pkg.packagePath}`);
+        const layers = createHighlightLayersFromLensResults(
+          packageResults,
+          pkg.packagePath,
+        );
+        console.log(
+          `[ToolsTab] Created ${layers.length} layers for package ${pkg.packagePath}`,
+        );
         allLayers.push(...layers);
       }
     });
 
-    console.log(`[ToolsTab] Calling onHighlightLayersChange with ${allLayers.length} total layers`);
+    console.log(
+      `[ToolsTab] Calling onHighlightLayersChange with ${allLayers.length} total layers`,
+    );
     onHighlightLayersChange(allLayers);
   }, [toolResults, packageTools, onHighlightLayersChange]);
 
   const togglePackage = (packagePath: string) => {
-    setExpandedPackages(prev => {
+    setExpandedPackages((prev) => {
       const next = new Set(prev);
       if (next.has(packagePath)) {
         next.delete(packagePath);
@@ -213,66 +255,82 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
     });
   };
 
-  const runTool = useCallback(async (packagePath: string, command: string, toolName: string, scriptName?: string) => {
-    // Use script name for key if provided, otherwise use command
-    const key = scriptName ? `${packagePath}:${scriptName}` : `${packagePath}:${command}`;
-     
-    console.info(`[ToolsTab] Running tool: ${toolName} with command: ${command} in package: ${packagePath}`);
+  const runTool = useCallback(
+    async (
+      packagePath: string,
+      command: string,
+      toolName: string,
+      scriptName?: string,
+    ) => {
+      // Use script name for key if provided, otherwise use command
+      const key = scriptName
+        ? `${packagePath}:${scriptName}`
+        : `${packagePath}:${command}`;
 
-    // Mark tool as running
-    setRunningTools(prev => new Map(prev).set(key, true));
-    setShowingResult(null);
+      console.info(
+        `[ToolsTab] Running tool: ${toolName} with command: ${command} in package: ${packagePath}`,
+      );
 
-    try {
-      // Create tool execution request
-      const request: ToolExecutionRequest = {
-        repoPath: repositoryPath,
-        packagePath: packagePath || undefined,
-        toolName,
-        command,
-      };
+      // Mark tool as running
+      setRunningTools((prev) => new Map(prev).set(key, true));
+      setShowingResult(null);
 
-      // Execute tool via quality lens service
-      const result = await RepositoryMonitoringService.executeTool(request);
+      try {
+        // Create tool execution request
+        const request: ToolExecutionRequest = {
+          repoPath: repositoryPath,
+          packagePath: packagePath || undefined,
+          toolName,
+          command,
+        };
 
-      if (result) {
-         
-        console.info(`[ToolsTab] Tool execution result for key "${key}":`, result);
-        setToolResults(prev => {
-          const newMap = new Map(prev);
-          newMap.set(key, result);
-          console.log(`[ToolsTab] Stored result with key "${key}", total results: ${newMap.size}`);
-          return newMap;
+        // Execute tool via quality lens service
+        const result = await RepositoryMonitoringService.executeTool(request);
+
+        if (result) {
+          console.info(
+            `[ToolsTab] Tool execution result for key "${key}":`,
+            result,
+          );
+          setToolResults((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(key, result);
+            console.log(
+              `[ToolsTab] Stored result with key "${key}", total results: ${newMap.size}`,
+            );
+            return newMap;
+          });
+
+          // Show result modal for any execution (success or failure) to display output
+          setShowingResult(key);
+        } else {
+          console.info(`[ToolsTab] No result returned from tool execution`);
+        }
+      } catch (error) {
+        console.error('Error running tool:', error);
+      } finally {
+        setRunningTools((prev) => {
+          const next = new Map(prev);
+          next.delete(key);
+          return next;
         });
-
-        // Show result modal for any execution (success or failure) to display output
-        setShowingResult(key);
-      } else {
-         
-        console.info(`[ToolsTab] No result returned from tool execution`);
       }
-    } catch (error) {
-       
-      console.error('Error running tool:', error);
-    } finally {
-      setRunningTools(prev => {
-        const next = new Map(prev);
-        next.delete(key);
-        return next;
-      });
-    }
-  }, [repositoryPath]);
+    },
+    [repositoryPath],
+  );
 
   if (!packageLayers || packageLayers.length === 0) {
     return (
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        color: theme.colors.textSecondary,
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          color: theme.colors.textSecondary,
+        }}
+      >
         <Package size={48} style={{ marginBottom: 16, opacity: 0.5 }} />
         <div style={{ fontSize: 16, marginBottom: 8 }}>No packages found</div>
         <div style={{ fontSize: 14, opacity: 0.7 }}>
@@ -283,12 +341,14 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      backgroundColor: theme.colors.background,
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        backgroundColor: theme.colors.background,
+      }}
+    >
       {/* Add CSS for spinner animation */}
       <style>{`
         @keyframes spin {
@@ -297,41 +357,51 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
         }
       `}</style>
       {/* Header */}
-      <div style={{
-        padding: '12px 16px',
-        borderBottom: `1px solid ${theme.colors.border}`,
-        backgroundColor: theme.colors.backgroundSecondary,
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <div style={{
+      <div
+        style={{
+          padding: '12px 16px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.backgroundSecondary,
+        }}
+      >
+        <div
+          style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
-          }}>
+            justifyContent: 'space-between',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
             <Wrench size={16} color={theme.colors.primary} />
             <span style={{ fontWeight: 600, fontSize: 14 }}>
               Development Tools
             </span>
           </div>
-          <div style={{
-            fontSize: 12,
-            color: theme.colors.textSecondary,
-          }}>
+          <div
+            style={{
+              fontSize: 12,
+              color: theme.colors.textSecondary,
+            }}
+          >
             {packageTools.length} package{packageTools.length !== 1 ? 's' : ''}
           </div>
         </div>
       </div>
 
       {/* Package list */}
-      <div style={{
-        flex: 1,
-        overflow: 'auto',
-        padding: 16,
-      }}>
+      <div
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          padding: 16,
+        }}
+      >
         {packageTools.map((pkg, index) => {
           const isExpanded = expandedPackages.has(pkg.packagePath);
           const isRoot = pkg.packagePath === '';
@@ -355,54 +425,75 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  backgroundColor: isExpanded ? theme.colors.background : 'transparent',
+                  backgroundColor: isExpanded
+                    ? theme.colors.background
+                    : 'transparent',
                   transition: 'background-color 0.2s',
                 }}
                 onClick={() => togglePackage(pkg.packagePath)}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  {isExpanded ? (
+                    <ChevronDown size={16} />
+                  ) : (
+                    <ChevronRight size={16} />
+                  )}
                   <Package size={16} color={theme.colors.primary} />
                   <span style={{ fontWeight: 600, fontSize: 14 }}>
                     {pkg.packageName}
                   </span>
                   {isRoot && (
-                    <span style={{
-                      fontSize: 11,
-                      padding: '2px 6px',
-                      borderRadius: 4,
-                      backgroundColor: `${theme.colors.primary}20`,
-                      color: theme.colors.primary,
-                    }}>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        backgroundColor: `${theme.colors.primary}20`,
+                        color: theme.colors.primary,
+                      }}
+                    >
                       ROOT
                     </span>
                   )}
                 </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  fontSize: 12,
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    fontSize: 12,
+                  }}
+                >
                   <span style={{ color: theme.colors.textSecondary }}>
-                    {pkg.summary.totalTools} tool{pkg.summary.totalTools !== 1 ? 's' : ''}
+                    {pkg.summary.totalTools} tool
+                    {pkg.summary.totalTools !== 1 ? 's' : ''}
                   </span>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <span style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      color: pkg.summary.configuredTools > 0 ? theme.colors.success : theme.colors.textSecondary,
-                    }}>
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        color:
+                          pkg.summary.configuredTools > 0
+                            ? theme.colors.success
+                            : theme.colors.textSecondary,
+                      }}
+                    >
                       <FileCode size={12} />
                       {pkg.summary.configuredTools}
                     </span>
-                    <span style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      color: pkg.summary.installedTools > 0 ? theme.colors.primary : theme.colors.textSecondary,
-                    }}>
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        color:
+                          pkg.summary.installedTools > 0
+                            ? theme.colors.primary
+                            : theme.colors.textSecondary,
+                      }}
+                    >
                       <CheckCircle size={12} />
                       {pkg.summary.installedTools}
                     </span>
@@ -412,26 +503,33 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
 
               {/* Tool details */}
               {isExpanded && (
-                <div style={{
-                  padding: '0 16px 16px',
-                  borderTop: `1px solid ${theme.colors.border}`,
-                }}>
+                <div
+                  style={{
+                    padding: '0 16px 16px',
+                    borderTop: `1px solid ${theme.colors.border}`,
+                  }}
+                >
                   {pkg.tools.length === 0 ? (
-                    <div style={{
-                      padding: '16px',
-                      textAlign: 'center',
-                      color: theme.colors.textSecondary,
-                      fontSize: 13,
-                    }}>
+                    <div
+                      style={{
+                        padding: '16px',
+                        textAlign: 'center',
+                        color: theme.colors.textSecondary,
+                        fontSize: 13,
+                      }}
+                    >
                       No tools detected in this package
                     </div>
                   ) : (
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                      gap: 12,
-                      marginTop: 12,
-                    }}>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns:
+                          'repeat(auto-fill, minmax(280px, 1fr))',
+                        gap: 12,
+                        marginTop: 12,
+                      }}
+                    >
                       {pkg.tools.map((tool, toolIndex) => (
                         <div
                           key={`${tool.name}-${toolIndex}`}
@@ -443,27 +541,36 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
                           }}
                         >
                           {/* Tool header */}
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginBottom: 8,
-                          }}>
-                            <div style={{
+                          <div
+                            style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: 8,
-                            }}>
-                              <div style={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: '50%',
-                                backgroundColor: CATEGORY_COLORS[tool.category],
-                              }} />
-                              <span style={{
-                                fontWeight: 600,
-                                fontSize: 13,
-                              }}>
+                              justifyContent: 'space-between',
+                              marginBottom: 8,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  backgroundColor:
+                                    CATEGORY_COLORS[tool.category],
+                                }}
+                              />
+                              <span
+                                style={{
+                                  fontWeight: 600,
+                                  fontSize: 13,
+                                }}
+                              >
                                 {tool.name}
                               </span>
                             </div>
@@ -492,13 +599,20 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
                           </div>
 
                           {/* Tool details */}
-                          <div style={{
-                            fontSize: 11,
-                            color: theme.colors.textSecondary,
-                          }}>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: theme.colors.textSecondary,
+                            }}
+                          >
                             {/* Category */}
                             <div style={{ marginBottom: 4 }}>
-                              Category: <span style={{ color: CATEGORY_COLORS[tool.category] }}>
+                              Category:{' '}
+                              <span
+                                style={{
+                                  color: CATEGORY_COLORS[tool.category],
+                                }}
+                              >
                                 {tool.category}
                               </span>
                             </div>
@@ -519,22 +633,27 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
 
                             {/* Commands */}
                             {tool.packageCommands.length > 0 && (
-                              <div style={{
-                                marginTop: 6,
-                                paddingTop: 6,
-                                borderTop: `1px solid ${theme.colors.border}`,
-                              }}>
+                              <div
+                                style={{
+                                  marginTop: 6,
+                                  paddingTop: 6,
+                                  borderTop: `1px solid ${theme.colors.border}`,
+                                }}
+                              >
                                 <div style={{ marginBottom: 4 }}>Scripts:</div>
-                                <div style={{
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: 4,
-                                }}>
-                                  {tool.packageCommands.map(cmd => {
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 4,
+                                  }}
+                                >
+                                  {tool.packageCommands.map((cmd) => {
                                     const key = `${pkg.packagePath}:${cmd.name}`;
                                     const isRunning = runningTools.get(key);
                                     const result = toolResults.get(key);
-                                    const isShowingResult = showingResult === key;
+                                    const isShowingResult =
+                                      showingResult === key;
 
                                     return (
                                       <div key={cmd.name}>
@@ -547,40 +666,66 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
                                             backgroundColor: isRunning
                                               ? `${theme.colors.primary}30`
                                               : result?.success === false
-                                              ? `${theme.colors.error}15`
-                                              : result?.success === true
-                                              ? `${theme.colors.success}15`
-                                              : `${theme.colors.primary}10`,
+                                                ? `${theme.colors.error}15`
+                                                : result?.success === true
+                                                  ? `${theme.colors.success}15`
+                                                  : `${theme.colors.primary}10`,
                                             border: `1px solid ${
                                               isRunning
                                                 ? theme.colors.primary
                                                 : result?.success === false
-                                                ? theme.colors.error
-                                                : result?.success === true
-                                                ? theme.colors.success
-                                                : theme.colors.border
+                                                  ? theme.colors.error
+                                                  : result?.success === true
+                                                    ? theme.colors.success
+                                                    : theme.colors.border
                                             }`,
                                             fontFamily: theme.fonts.monospace,
                                             fontSize: 11,
-                                            cursor: isRunning ? 'wait' : 'pointer',
+                                            cursor: isRunning
+                                              ? 'wait'
+                                              : 'pointer',
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'space-between',
                                             transition: 'all 0.2s ease',
                                           }}
-                                          onClick={() => !isRunning && runTool(pkg.packagePath, cmd.command, tool.name, cmd.name)}
+                                          onClick={() =>
+                                            !isRunning &&
+                                            runTool(
+                                              pkg.packagePath,
+                                              cmd.command,
+                                              tool.name,
+                                              cmd.name,
+                                            )
+                                          }
                                           disabled={isRunning}
                                         >
-                                          <span style={{ opacity: isRunning ? 0.6 : 1 }}>{cmd.name}</span>
+                                          <span
+                                            style={{
+                                              opacity: isRunning ? 0.6 : 1,
+                                            }}
+                                          >
+                                            {cmd.name}
+                                          </span>
                                           {isRunning ? (
-                                            <Loader size={12} style={{
-                                              animation: 'spin 1s linear infinite',
-                                            }} />
+                                            <Loader
+                                              size={12}
+                                              style={{
+                                                animation:
+                                                  'spin 1s linear infinite',
+                                              }}
+                                            />
                                           ) : result ? (
                                             result.success ? (
-                                              <CheckCircle size={12} color={theme.colors.success} />
+                                              <CheckCircle
+                                                size={12}
+                                                color={theme.colors.success}
+                                              />
                                             ) : (
-                                              <AlertCircle size={12} color={theme.colors.error} />
+                                              <AlertCircle
+                                                size={12}
+                                                color={theme.colors.error}
+                                              />
                                             )
                                           ) : (
                                             <Play size={12} />
@@ -589,28 +734,40 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
 
                                         {/* Show result output on failure */}
                                         {result && isShowingResult && (
-                                          <div style={{
-                                            marginTop: 4,
-                                            padding: 8,
-                                            borderRadius: 4,
-                                            backgroundColor: theme.colors.backgroundSecondary,
-                                            border: `1px solid ${theme.colors.border}`,
-                                            fontSize: 10,
-                                            fontFamily: theme.fonts.monospace,
-                                            maxHeight: 200,
-                                            overflow: 'auto',
-                                          }}>
-                                            <div style={{
-                                              display: 'flex',
-                                              justifyContent: 'space-between',
-                                              alignItems: 'center',
-                                              marginBottom: 4,
-                                            }}>
-                                              <span style={{ color: theme.colors.error }}>
+                                          <div
+                                            style={{
+                                              marginTop: 4,
+                                              padding: 8,
+                                              borderRadius: 4,
+                                              backgroundColor:
+                                                theme.colors
+                                                  .backgroundSecondary,
+                                              border: `1px solid ${theme.colors.border}`,
+                                              fontSize: 10,
+                                              fontFamily: theme.fonts.monospace,
+                                              maxHeight: 200,
+                                              overflow: 'auto',
+                                            }}
+                                          >
+                                            <div
+                                              style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginBottom: 4,
+                                              }}
+                                            >
+                                              <span
+                                                style={{
+                                                  color: theme.colors.error,
+                                                }}
+                                              >
                                                 Exit code: {result.exitCode}
                                               </span>
                                               <button
-                                                onClick={() => setShowingResult(null)}
+                                                onClick={() =>
+                                                  setShowingResult(null)
+                                                }
                                                 style={{
                                                   background: 'none',
                                                   border: 'none',
@@ -622,22 +779,36 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
                                               </button>
                                             </div>
                                             {result.stderr && (
-                                              <div style={{ color: theme.colors.error, whiteSpace: 'pre-wrap' }}>
+                                              <div
+                                                style={{
+                                                  color: theme.colors.error,
+                                                  whiteSpace: 'pre-wrap',
+                                                }}
+                                              >
                                                 {result.stderr}
                                               </div>
                                             )}
                                             {/* Display lens result stats if available */}
                                             {result.lensResult && (
                                               <div style={{ marginTop: 8 }}>
-                                                {renderLensResultStats(result.lensResult, theme)}
+                                                {renderLensResultStats(
+                                                  result.lensResult,
+                                                  theme,
+                                                )}
                                               </div>
                                             )}
                                             {/* Display raw output if no lens result */}
-                                            {!result.lensResult && result.stdout && (
-                                              <div style={{ whiteSpace: 'pre-wrap', marginTop: 4 }}>
-                                                {result.stdout}
-                                              </div>
-                                            )}
+                                            {!result.lensResult &&
+                                              result.stdout && (
+                                                <div
+                                                  style={{
+                                                    whiteSpace: 'pre-wrap',
+                                                    marginTop: 4,
+                                                  }}
+                                                >
+                                                  {result.stdout}
+                                                </div>
+                                              )}
                                           </div>
                                         )}
                                       </div>
@@ -659,25 +830,35 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
       </div>
 
       {/* Summary footer */}
-      <div style={{
-        padding: '12px 16px',
-        borderTop: `1px solid ${theme.colors.border}`,
-        backgroundColor: theme.colors.backgroundSecondary,
-        fontSize: 12,
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-around',
-          color: theme.colors.textSecondary,
-        }}>
+      <div
+        style={{
+          padding: '12px 16px',
+          borderTop: `1px solid ${theme.colors.border}`,
+          backgroundColor: theme.colors.backgroundSecondary,
+          fontSize: 12,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-around',
+            color: theme.colors.textSecondary,
+          }}
+        >
           <span>
-            Total Tools: {packageTools.reduce((sum, p) => sum + p.summary.totalTools, 0)}
+            Total Tools:{' '}
+            {packageTools.reduce((sum, p) => sum + p.summary.totalTools, 0)}
           </span>
           <span>
-            Configured: {packageTools.reduce((sum, p) => sum + p.summary.configuredTools, 0)}
+            Configured:{' '}
+            {packageTools.reduce(
+              (sum, p) => sum + p.summary.configuredTools,
+              0,
+            )}
           </span>
           <span>
-            Installed: {packageTools.reduce((sum, p) => sum + p.summary.installedTools, 0)}
+            Installed:{' '}
+            {packageTools.reduce((sum, p) => sum + p.summary.installedTools, 0)}
           </span>
         </div>
       </div>
@@ -688,21 +869,26 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({ packageLayers, repositor
 /**
  * Render lens result statistics
  */
-function renderLensResultStats(lensResult: LensResult, theme: any): React.ReactNode {
+function renderLensResultStats(
+  lensResult: LensResult,
+  theme: any,
+): React.ReactNode {
   const { issues = [], metrics = {} } = lensResult;
 
   // Count issues by severity
-  const errorCount = issues.filter(i => i.severity === 'error').length;
-  const warningCount = issues.filter(i => i.severity === 'warning').length;
-  const infoCount = issues.filter(i => i.severity === 'info').length;
+  const errorCount = issues.filter((i) => i.severity === 'error').length;
+  const warningCount = issues.filter((i) => i.severity === 'warning').length;
+  const infoCount = issues.filter((i) => i.severity === 'info').length;
 
   return (
-    <div style={{
-      padding: 8,
-      backgroundColor: theme.colors.backgroundSecondary,
-      borderRadius: 4,
-      border: `1px solid ${theme.colors.border}`
-    }}>
+    <div
+      style={{
+        padding: 8,
+        backgroundColor: theme.colors.backgroundSecondary,
+        borderRadius: 4,
+        border: `1px solid ${theme.colors.border}`,
+      }}
+    >
       {/* Issue summary */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
         {errorCount > 0 && (
@@ -741,40 +927,57 @@ function renderLensResultStats(lensResult: LensResult, theme: any): React.ReactN
 
       {/* Key metrics */}
       {Object.keys(metrics).length > 0 && (
-        <div style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 8,
-          paddingTop: 8,
-          borderTop: `1px solid ${theme.colors.border}`
-        }}>
-          {Object.entries(metrics).slice(0, 6).map(([key, value]) => (
-            <div key={key} style={{
-              padding: '2px 6px',
-              backgroundColor: theme.colors.background,
-              borderRadius: 3,
-              fontSize: 11,
-            }}>
-              <span style={{ color: theme.colors.textSecondary }}>
-                {key.replace(/_/g, ' ')}:
-              </span>
-              <span style={{ marginLeft: 4, fontWeight: 500 }}>
-                {typeof value === 'number' ? value.toLocaleString() : String(value)}
-              </span>
-            </div>
-          ))}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 8,
+            paddingTop: 8,
+            borderTop: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          {Object.entries(metrics)
+            .slice(0, 6)
+            .map(([key, value]) => (
+              <div
+                key={key}
+                style={{
+                  padding: '2px 6px',
+                  backgroundColor: theme.colors.background,
+                  borderRadius: 3,
+                  fontSize: 11,
+                }}
+              >
+                <span style={{ color: theme.colors.textSecondary }}>
+                  {key.replace(/_/g, ' ')}:
+                </span>
+                <span style={{ marginLeft: 4, fontWeight: 500 }}>
+                  {typeof value === 'number'
+                    ? value.toLocaleString()
+                    : String(value)}
+                </span>
+              </div>
+            ))}
         </div>
       )}
 
       {/* Files with issues */}
       {issues.length > 0 && (
-        <div style={{
-          marginTop: 8,
-          paddingTop: 8,
-          borderTop: `1px solid ${theme.colors.border}`
-        }}>
-          <div style={{ fontSize: 11, color: theme.colors.textSecondary, marginBottom: 4 }}>
-            Files with issues: {new Set(issues.map(i => i.file)).size}
+        <div
+          style={{
+            marginTop: 8,
+            paddingTop: 8,
+            borderTop: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              color: theme.colors.textSecondary,
+              marginBottom: 4,
+            }}
+          >
+            Files with issues: {new Set(issues.map((i) => i.file)).size}
           </div>
         </div>
       )}
@@ -787,11 +990,13 @@ function renderLensResultStats(lensResult: LensResult, theme: any): React.ReactN
  */
 export function createHighlightLayersFromLensResults(
   results: Map<string, ToolExecutionResponse>,
-  packagePath: string
+  packagePath: string,
 ): HighlightLayer[] {
   const layers: HighlightLayer[] = [];
 
-  console.log(`[createHighlightLayers] Processing results for packagePath: "${packagePath}"`);
+  console.log(
+    `[createHighlightLayers] Processing results for packagePath: "${packagePath}"`,
+  );
 
   results.forEach((result, key) => {
     console.log(`[createHighlightLayers] Processing result for key: ${key}`, {
@@ -799,7 +1004,7 @@ export function createHighlightLayersFromLensResults(
       hasLensResult: !!result.lensResult,
       issuesCount: result.lensResult?.issues?.length || 0,
       success: result.lensResult?.success,
-      filesAnalyzed: result.lensResult?.metrics?.filesAnalyzed
+      filesAnalyzed: result.lensResult?.metrics?.filesAnalyzed,
     });
 
     if (result.lensResult) {
@@ -809,7 +1014,7 @@ export function createHighlightLayersFromLensResults(
         const filesWithErrors = new Set<string>();
         const filesWithWarnings = new Set<string>();
 
-        result.lensResult.issues.forEach(issue => {
+        result.lensResult.issues.forEach((issue) => {
           if (issue.file) {
             // Build the full path, handling empty packagePath
             let fullPath: string;
@@ -828,7 +1033,7 @@ export function createHighlightLayersFromLensResults(
               originalPath: issue.file,
               packagePath,
               fullPath,
-              severity: issue.severity
+              severity: issue.severity,
             });
             if (issue.severity === 'error') {
               filesWithErrors.add(fullPath);
@@ -845,10 +1050,10 @@ export function createHighlightLayersFromLensResults(
             name: `${result.toolName} Errors`,
             color: '#ff4d4f',
             opacity: 0.8,
-            items: Array.from(filesWithErrors).map(path => ({
+            items: Array.from(filesWithErrors).map((path) => ({
               path,
               type: 'file' as const,
-              renderStrategy: 'fill' as const
+              renderStrategy: 'fill' as const,
             })),
             enabled: true,
             priority: 10,
@@ -862,16 +1067,19 @@ export function createHighlightLayersFromLensResults(
             name: `${result.toolName} Warnings`,
             color: '#faad14',
             opacity: 0.6,
-            items: Array.from(filesWithWarnings).map(path => ({
+            items: Array.from(filesWithWarnings).map((path) => ({
               path,
               type: 'file' as const,
-              renderStrategy: 'fill' as const
+              renderStrategy: 'fill' as const,
             })),
             enabled: true,
             priority: 5,
           });
         }
-      } else if (result.lensResult.success && result.lensResult.metrics?.filesAnalyzed > 0) {
+      } else if (
+        result.lensResult.success &&
+        result.lensResult.metrics?.filesAnalyzed > 0
+      ) {
         // Create success layer for clean code
         const filesAnalyzed = result.lensResult.metrics.filesAnalyzed;
 
@@ -882,32 +1090,41 @@ export function createHighlightLayersFromLensResults(
           hasAnalyzedFiles: !!analyzedFiles,
           analyzedFilesLength: analyzedFiles?.length,
           lensResultKeys: Object.keys(result.lensResult || {}),
-          sampleAnalyzedFile: analyzedFiles?.[0]
+          sampleAnalyzedFile: analyzedFiles?.[0],
         });
 
         let items: Array<{ path: string; type: 'file' | 'directory' }> = [];
 
         if (analyzedFiles && analyzedFiles.length > 0) {
           // We have the actual file list - use it!
-          console.log(`[createHighlightLayers] Using ${analyzedFiles.length} analyzed files for success layer`);
+          console.log(
+            `[createHighlightLayers] Using ${analyzedFiles.length} analyzed files for success layer`,
+          );
 
           items = analyzedFiles.map((file: any) => ({
             path: typeof file === 'string' ? file : file.path || file.relative,
             type: 'file' as const,
-            renderStrategy: 'fill' as const
+            renderStrategy: 'fill' as const,
           }));
 
-          console.log(`[createHighlightLayers] Created ${items.length} file items, first few:`, items.slice(0, 3));
+          console.log(
+            `[createHighlightLayers] Created ${items.length} file items, first few:`,
+            items.slice(0, 3),
+          );
         } else {
           // Fallback to highlighting the whole package
           const highlightPath = packagePath || '';
-          console.log(`[createHighlightLayers] No file list, highlighting package: "${highlightPath}"`);
+          console.log(
+            `[createHighlightLayers] No file list, highlighting package: "${highlightPath}"`,
+          );
 
-          items = [{
-            path: highlightPath,
-            type: 'directory' as const,
-            renderStrategy: 'fill' as const
-          }];
+          items = [
+            {
+              path: highlightPath,
+              type: 'directory' as const,
+              renderStrategy: 'fill' as const,
+            },
+          ];
         }
 
         console.log(`[createHighlightLayers] Creating success layer:`, {
@@ -915,7 +1132,7 @@ export function createHighlightLayersFromLensResults(
           filesAnalyzed,
           packagePath,
           itemsCount: items.length,
-          layerId: `lens-success-${key}`
+          layerId: `lens-success-${key}`,
         });
 
         const layer = {
@@ -932,7 +1149,7 @@ export function createHighlightLayersFromLensResults(
           id: layer.id,
           name: layer.name,
           itemsCount: layer.items.length,
-          firstFewItems: layer.items.slice(0, 3)
+          firstFewItems: layer.items.slice(0, 3),
         });
 
         layers.push(layer);

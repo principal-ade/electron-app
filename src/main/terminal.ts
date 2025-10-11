@@ -273,89 +273,103 @@ class TerminalManager {
 
   private setupIPCHandlers() {
     // Get or create a terminal session for a repository
-    ipcMain.handle('terminal:getOrCreate', async (event, directory: string, context?: string) => {
-      try {
-        // Check if node-pty is available
-        if (!pty) {
-          throw new Error(
-            'Terminal functionality is not available in this build',
+    ipcMain.handle(
+      'terminal:getOrCreate',
+      async (event, directory: string, context?: string) => {
+        try {
+          // Check if node-pty is available
+          if (!pty) {
+            throw new Error(
+              'Terminal functionality is not available in this build',
+            );
+          }
+
+          // Check if we already have a session for this directory+context
+          const sessionKey = this.getSessionKey(directory, context);
+          const existingSessionId = this.sessionsByRepo.get(sessionKey);
+          if (existingSessionId && this.sessions.has(existingSessionId)) {
+            console.log(
+              `[Terminal] Reusing existing session ${existingSessionId} for ${sessionKey}`,
+            );
+            return existingSessionId;
+          }
+
+          // Check if we've reached the session limit
+          if (this.sessions.size >= this.maxSessions) {
+            throw new Error(
+              `Maximum number of terminal sessions (${this.maxSessions}) reached. Please close some terminals before opening new ones.`,
+            );
+          }
+
+          // Create new session with context
+          const sessionId = await this.handleTerminalCreate(
+            event,
+            directory,
+            context,
           );
+
+          // Track by repository+context
+          this.sessionsByRepo.set(sessionKey, sessionId);
+
+          return sessionId;
+        } catch (error) {
+          console.error('Failed to get or create terminal session:', error);
+          throw error;
         }
-
-        // Check if we already have a session for this directory+context
-        const sessionKey = this.getSessionKey(directory, context);
-        const existingSessionId = this.sessionsByRepo.get(sessionKey);
-        if (existingSessionId && this.sessions.has(existingSessionId)) {
-          console.log(
-            `[Terminal] Reusing existing session ${existingSessionId} for ${sessionKey}`,
-          );
-          return existingSessionId;
-        }
-
-        // Check if we've reached the session limit
-        if (this.sessions.size >= this.maxSessions) {
-          throw new Error(
-            `Maximum number of terminal sessions (${this.maxSessions}) reached. Please close some terminals before opening new ones.`,
-          );
-        }
-
-        // Create new session with context
-        const sessionId = await this.handleTerminalCreate(event, directory, context);
-
-        // Track by repository+context
-        this.sessionsByRepo.set(sessionKey, sessionId);
-
-        return sessionId;
-      } catch (error) {
-        console.error('Failed to get or create terminal session:', error);
-        throw error;
-      }
-    });
+      },
+    );
 
     // Create a new terminal session (keep for backward compatibility)
-    ipcMain.handle('terminal:create', async (event, directory: string, context?: string) => {
-      try {
-        // Check if node-pty is available
-        if (!pty) {
-          throw new Error(
-            'Terminal functionality is not available in this build',
-          );
+    ipcMain.handle(
+      'terminal:create',
+      async (event, directory: string, context?: string) => {
+        try {
+          // Check if node-pty is available
+          if (!pty) {
+            throw new Error(
+              'Terminal functionality is not available in this build',
+            );
+          }
+
+          // Check if we've reached the session limit
+          if (this.sessions.size >= this.maxSessions) {
+            throw new Error(
+              `Maximum number of terminal sessions (${this.maxSessions}) reached. Please close some terminals before opening new ones.`,
+            );
+          }
+
+          // Use the shared terminal creation logic with context
+          return await this.handleTerminalCreate(event, directory, context);
+        } catch (error) {
+          console.error('Failed to create terminal session:', error);
+
+          // More detailed error message
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+
+          if (errorMessage.includes('posix_spawnp')) {
+            throw new Error(
+              `Failed to spawn terminal: ${errorMessage}. ` +
+                `Please ensure node-pty is properly built for Electron. ` +
+                `Try running: cd electron-react && npm rebuild node-pty`,
+            );
+          }
+
+          throw error;
         }
-
-        // Check if we've reached the session limit
-        if (this.sessions.size >= this.maxSessions) {
-          throw new Error(
-            `Maximum number of terminal sessions (${this.maxSessions}) reached. Please close some terminals before opening new ones.`,
-          );
-        }
-
-        // Use the shared terminal creation logic with context
-        return await this.handleTerminalCreate(event, directory, context);
-      } catch (error) {
-        console.error('Failed to create terminal session:', error);
-
-        // More detailed error message
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-
-        if (errorMessage.includes('posix_spawnp')) {
-          throw new Error(
-            `Failed to spawn terminal: ${errorMessage}. ` +
-              `Please ensure node-pty is properly built for Electron. ` +
-              `Try running: cd electron-react && npm rebuild node-pty`,
-          );
-        }
-
-        throw error;
-      }
-    });
+      },
+    );
 
     // Create a new terminal session with a specific command
     ipcMain.handle(
       'terminal:create-with-command',
       async (
         event,
-        { directory, command, context }: { directory: string; command: string; context?: string },
+        {
+          directory,
+          command,
+          context,
+        }: { directory: string; command: string; context?: string },
       ) => {
         console.log(
           `[Terminal] create-with-command called with command: "${command}" in directory: "${directory}" context: "${context || 'default'}"`,
@@ -691,7 +705,7 @@ class TerminalManager {
         if (!window.isDestroyed()) {
           openWindows.push({
             terminalId,
-            windowId: window.id
+            windowId: window.id,
           });
         }
       });

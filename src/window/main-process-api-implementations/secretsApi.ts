@@ -49,7 +49,10 @@ export const secretsAPI: SecretsAPI = {
     return ipcRenderer.invoke(SecretsEvents.GET_SINGLE, repoId, key);
   },
 
-  getMultiple: (repoId: string, keys: string[]): Promise<Record<string, string>> => {
+  getMultiple: (
+    repoId: string,
+    keys: string[],
+  ): Promise<Record<string, string>> => {
     return ipcRenderer.invoke(SecretsEvents.GET_MULTIPLE, repoId, keys);
   },
 

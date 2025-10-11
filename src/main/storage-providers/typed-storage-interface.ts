@@ -235,7 +235,6 @@ export class NamespaceDataValidator {
     );
   }
 
-
   static isLLMModels(
     data: any,
   ): data is NamespaceDataTypes[StaticNamespaces.LLM_MODELS] {

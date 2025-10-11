@@ -35,10 +35,16 @@ export const AuthView: React.FC = () => {
     clearLoginError,
   } = useAuthState();
 
-  const [repositories, setRepositories] = useState<EnhancedAlexandriaEntry[]>([]);
-  const [remoteRepositories, setRemoteRepositories] = useState<GitHubRepository[]>([]);
+  const [repositories, setRepositories] = useState<EnhancedAlexandriaEntry[]>(
+    [],
+  );
+  const [remoteRepositories, setRemoteRepositories] = useState<
+    GitHubRepository[]
+  >([]);
   const [organizations, setOrganizations] = useState<OrganizationInfo[]>([]);
-  const [repositoriesByOrg, setRepositoriesByOrg] = useState<Map<string, EnhancedAlexandriaEntry[]>>(new Map());
+  const [repositoriesByOrg, setRepositoriesByOrg] = useState<
+    Map<string, EnhancedAlexandriaEntry[]>
+  >(new Map());
   const [selectedOrg, setSelectedOrg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAuthView, setShowAuthView] = useState(false);
@@ -55,81 +61,99 @@ export const AuthView: React.FC = () => {
   const backgroundColor = theme.colors.background;
 
   // Helper function to enhance a repository with git info
-  const enhanceRepositoryWithGitInfo = useCallback(async (repo: AlexandriaEntry): Promise<EnhancedAlexandriaEntry> => {
-    try {
-      // Get git branch
-      const branchResult = await GitService.execCommand(repo.path, [
-        'rev-parse',
-        '--abbrev-ref',
-        'HEAD',
-      ]).catch(() => ({ stdout: 'main', stderr: '' }));
-      const gitBranch = branchResult.stdout.trim() || 'main';
+  const enhanceRepositoryWithGitInfo = useCallback(
+    async (repo: AlexandriaEntry): Promise<EnhancedAlexandriaEntry> => {
+      try {
+        // Get git branch
+        const branchResult = await GitService.execCommand(repo.path, [
+          'rev-parse',
+          '--abbrev-ref',
+          'HEAD',
+        ]).catch(() => ({ stdout: 'main', stderr: '' }));
+        const gitBranch = branchResult.stdout.trim() || 'main';
 
-      // Get git status to check if dirty
-      const status = await GitService.getStatus(repo.path).catch(() => ({
-        staged: [],
-        unstaged: [],
-        untracked: [],
-        deleted: [],
-      }));
+        // Get git status to check if dirty
+        const status = await GitService.getStatus(repo.path).catch(() => ({
+          staged: [],
+          unstaged: [],
+          untracked: [],
+          deleted: [],
+        }));
 
-      const isDirty = status.staged.length > 0 ||
-                     status.unstaged.length > 0 ||
-                     status.untracked.length > 0;
-      const dirtyFileCount = status.staged.length + status.unstaged.length + status.untracked.length;
+        const isDirty =
+          status.staged.length > 0 ||
+          status.unstaged.length > 0 ||
+          status.untracked.length > 0;
+        const dirtyFileCount =
+          status.staged.length +
+          status.unstaged.length +
+          status.untracked.length;
 
-      let mostRecentChange = repo.github?.lastCommit;
+        let mostRecentChange = repo.github?.lastCommit;
 
-      // If there are uncommitted changes, get the most recent file modification time
-      if (isDirty) {
-        try {
-          const allChangedFiles = [...status.staged, ...status.unstaged, ...status.untracked];
-          const fileStats = await Promise.all(
-            allChangedFiles.map(async (filePath) => {
-              try {
-                const fullPath = `${repo.path}/${filePath}`;
-                const stats = await FileSystemService.getFileStats(fullPath);
-                return stats?.lastModified || null;
-              } catch (_error) {
-                return null;
-              }
-            })
-          );
+        // If there are uncommitted changes, get the most recent file modification time
+        if (isDirty) {
+          try {
+            const allChangedFiles = [
+              ...status.staged,
+              ...status.unstaged,
+              ...status.untracked,
+            ];
+            const fileStats = await Promise.all(
+              allChangedFiles.map(async (filePath) => {
+                try {
+                  const fullPath = `${repo.path}/${filePath}`;
+                  const stats = await FileSystemService.getFileStats(fullPath);
+                  return stats?.lastModified || null;
+                } catch (_error) {
+                  return null;
+                }
+              }),
+            );
 
-          const validTimes = fileStats.filter(time => time);
-          if (validTimes.length > 0) {
-            const recentTime = validTimes.reduce((latest, current) => {
-              if (!latest) return current;
-              if (!current) return latest;
-              const latestDate = new Date(latest);
-              const currentDate = new Date(current);
-              return currentDate > latestDate ? current : latest;
-            });
-            mostRecentChange = recentTime ? (typeof recentTime === 'string' ? recentTime : recentTime.toISOString()) : mostRecentChange;
+            const validTimes = fileStats.filter((time) => time);
+            if (validTimes.length > 0) {
+              const recentTime = validTimes.reduce((latest, current) => {
+                if (!latest) return current;
+                if (!current) return latest;
+                const latestDate = new Date(latest);
+                const currentDate = new Date(current);
+                return currentDate > latestDate ? current : latest;
+              });
+              mostRecentChange = recentTime
+                ? typeof recentTime === 'string'
+                  ? recentTime
+                  : recentTime.toISOString()
+                : mostRecentChange;
+            }
+          } catch (error) {
+            console.warn(
+              `Failed to get modification times for ${repo.name}:`,
+              error,
+            );
           }
-        } catch (error) {
-          console.warn(`Failed to get modification times for ${repo.name}:`, error);
         }
-      }
 
-      return {
-        ...repo,
-        gitBranch,
-        isDirty,
-        dirtyFileCount,
-        mostRecentChange,
-      };
-    } catch (error) {
-      console.warn(`Failed to get git info for ${repo.name}:`, error);
-      return {
-        ...repo,
-        gitBranch: 'main',
-        isDirty: false,
-        dirtyFileCount: 0,
-        mostRecentChange: repo.github?.lastCommit,
-      };
-    }
-  }, []);
+        return {
+          ...repo,
+          gitBranch,
+          isDirty,
+          dirtyFileCount,
+          mostRecentChange,
+        };
+      } catch (error) {
+        console.warn(`Failed to get git info for ${repo.name}:`, error);
+        return {
+          ...repo,
+          gitBranch: 'main',
+          isDirty: false,
+          dirtyFileCount: 0,
+          mostRecentChange: repo.github?.lastCommit,
+        };
+      }
+    },
+    [],
+  );
 
   // Load repositories and GitHub data
   const loadRepositories = useCallback(async () => {
@@ -141,7 +165,7 @@ export const AuthView: React.FC = () => {
 
       // Enhance repositories with git information
       const enhancedRepos: EnhancedAlexandriaEntry[] = await Promise.all(
-        repos.map(repo => enhanceRepositoryWithGitInfo(repo))
+        repos.map((repo) => enhanceRepositoryWithGitInfo(repo)),
       );
 
       setRepositories(enhancedRepos);
@@ -152,7 +176,10 @@ export const AuthView: React.FC = () => {
           // Fetch GitHub organizations and user repositories in parallel
           const [githubOrgs, userRepos] = await Promise.all([
             GithubService.getUserOrganizations(),
-            GithubService.getUserRepositories({ sort: 'pushed', direction: 'desc' })
+            GithubService.getUserRepositories({
+              sort: 'pushed',
+              direction: 'desc',
+            }),
           ]);
 
           setRemoteRepositories(userRepos);
@@ -168,16 +195,20 @@ export const AuthView: React.FC = () => {
 
           // Create a set of local repository identifiers for deduplication
           const localRepoIdentifiers = new Set<string>();
-          enhancedRepos.forEach(repo => {
+          enhancedRepos.forEach((repo) => {
             // Add both owner/name and just name for matching
             if (repo.github?.owner) {
-              localRepoIdentifiers.add(`${repo.github.owner}/${repo.name}`.toLowerCase());
+              localRepoIdentifiers.add(
+                `${repo.github.owner}/${repo.name}`.toLowerCase(),
+              );
             }
             // Also check remoteUrl for owner
             if (repo.remoteUrl) {
               const match = repo.remoteUrl.match(/github\.com[:/]([^/]+)\//);
               if (match) {
-                localRepoIdentifiers.add(`${match[1]}/${repo.name}`.toLowerCase());
+                localRepoIdentifiers.add(
+                  `${match[1]}/${repo.name}`.toLowerCase(),
+                );
               }
             }
             localRepoIdentifiers.add(repo.name.toLowerCase());
@@ -185,22 +216,27 @@ export const AuthView: React.FC = () => {
 
           // Count unique remote repositories by organization (excluding already cloned ones)
           const uniqueRemoteRepoCountByOrg = new Map<string, number>();
-          userRepos.forEach(repo => {
+          userRepos.forEach((repo) => {
             const orgName = repo.owner.login;
             const repoKey = `${orgName}/${repo.name}`.toLowerCase();
 
             // Only count if not already cloned locally
-            const isAlreadyLocal = localRepoIdentifiers.has(repoKey) ||
-                                  localRepoIdentifiers.has(repo.name.toLowerCase());
+            const isAlreadyLocal =
+              localRepoIdentifiers.has(repoKey) ||
+              localRepoIdentifiers.has(repo.name.toLowerCase());
 
             if (!isAlreadyLocal) {
-              uniqueRemoteRepoCountByOrg.set(orgName, (uniqueRemoteRepoCountByOrg.get(orgName) || 0) + 1);
+              uniqueRemoteRepoCountByOrg.set(
+                orgName,
+                (uniqueRemoteRepoCountByOrg.get(orgName) || 0) + 1,
+              );
             }
           });
 
           // Add GitHub organizations (even if they don't have local repos)
-          githubOrgs.forEach(ghOrg => {
-            const uniqueRemoteCount = uniqueRemoteRepoCountByOrg.get(ghOrg.login) || 0;
+          githubOrgs.forEach((ghOrg) => {
+            const uniqueRemoteCount =
+              uniqueRemoteRepoCountByOrg.get(ghOrg.login) || 0;
 
             if (!allOrgs.has(ghOrg.login)) {
               // Org doesn't have local repos, show remote count only
@@ -209,13 +245,14 @@ export const AuthView: React.FC = () => {
                 type: 'github',
                 avatarUrl: ghOrg.avatar_url,
                 repositoryCount: uniqueRemoteCount,
-                lastActivity: null
+                lastActivity: null,
               });
             } else {
               // Org has local repos, add unique remote count
               const org = allOrgs.get(ghOrg.login);
               if (org) {
-                org.repositoryCount = (org.repositoryCount || 0) + uniqueRemoteCount;
+                org.repositoryCount =
+                  (org.repositoryCount || 0) + uniqueRemoteCount;
               }
             }
           });
@@ -223,7 +260,8 @@ export const AuthView: React.FC = () => {
           // Add user's own repos section
           if (authUser) {
             const userOrgKey = authUser.login;
-            const userUniqueRemoteCount = uniqueRemoteRepoCountByOrg.get(userOrgKey) || 0;
+            const userUniqueRemoteCount =
+              uniqueRemoteRepoCountByOrg.get(userOrgKey) || 0;
 
             if (!allOrgs.has(userOrgKey)) {
               // User doesn't have local repos, show remote count only
@@ -233,29 +271,39 @@ export const AuthView: React.FC = () => {
                 avatarUrl: authUser.avatarUrl || '',
                 repositoryCount: userUniqueRemoteCount,
                 lastActivity: null,
-                isUser: true
+                isUser: true,
               });
             } else {
               // User has local repos, add unique remote count
               const org = allOrgs.get(userOrgKey);
               if (org) {
-                org.repositoryCount = (org.repositoryCount || 0) + userUniqueRemoteCount;
+                org.repositoryCount =
+                  (org.repositoryCount || 0) + userUniqueRemoteCount;
               }
             }
           }
 
           const sortedOrgs = sortOrganizations(Array.from(allOrgs.values()));
           setOrganizations(sortedOrgs);
-          setRepositoriesByOrg(localGrouped.repositoriesByOrg as Map<string, EnhancedAlexandriaEntry[]>);
+          setRepositoriesByOrg(
+            localGrouped.repositoriesByOrg as Map<
+              string,
+              EnhancedAlexandriaEntry[]
+            >,
+          );
         } catch (error) {
           console.error('Failed to load GitHub data:', error);
         }
       } else {
         // Not authenticated, just use local repos
         const grouped = groupRepositoriesByOrganization(enhancedRepos);
-        const sortedOrgs = sortOrganizations(Array.from(grouped.organizations.values()));
+        const sortedOrgs = sortOrganizations(
+          Array.from(grouped.organizations.values()),
+        );
         setOrganizations(sortedOrgs);
-        setRepositoriesByOrg(grouped.repositoriesByOrg as Map<string, EnhancedAlexandriaEntry[]>);
+        setRepositoriesByOrg(
+          grouped.repositoriesByOrg as Map<string, EnhancedAlexandriaEntry[]>,
+        );
       }
     } catch (err) {
       console.error('Failed to load repositories:', err);
@@ -291,16 +339,19 @@ export const AuthView: React.FC = () => {
   }, [loadRepositories]);
 
   // Handle opening repository
-  const handleOpenRepository = useCallback(async (repo: AlexandriaEntry | EnhancedAlexandriaEntry) => {
-    await WindowService.openRepositoryDashboard(repo);
-  }, []);
+  const handleOpenRepository = useCallback(
+    async (repo: AlexandriaEntry | EnhancedAlexandriaEntry) => {
+      await WindowService.openRepositoryDashboard(repo);
+    },
+    [],
+  );
 
   // Get filtered repositories (local repos only, remote repos are passed separately)
   const getFilteredRepositories = useCallback(() => {
     if (selectedOrg === null) {
       // For "All Repositories", return all local repos
       return [...repositories].sort((a, b) =>
-        a.name.toLowerCase().localeCompare(b.name.toLowerCase())
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
       );
     }
     // For specific org, use the pre-sorted list of local repos
@@ -322,7 +373,7 @@ export const AuthView: React.FC = () => {
         totalRepositories={(() => {
           // Calculate unique total count
           const localSet = new Set<string>();
-          repositories.forEach(repo => {
+          repositories.forEach((repo) => {
             if (repo.github?.owner) {
               localSet.add(`${repo.github.owner}/${repo.name}`.toLowerCase());
             } else if (repo.remoteUrl) {
@@ -335,7 +386,7 @@ export const AuthView: React.FC = () => {
           });
 
           let uniqueRemoteCount = 0;
-          remoteRepositories.forEach(repo => {
+          remoteRepositories.forEach((repo) => {
             const key = `${repo.owner.login}/${repo.name}`.toLowerCase();
             if (!localSet.has(key) && !localSet.has(repo.name.toLowerCase())) {
               uniqueRemoteCount++;
@@ -393,7 +444,9 @@ export const AuthView: React.FC = () => {
         leftPanel={renderLeftPanel()}
         rightPanel={renderRightPanel()}
         minSize={20}
-        defaultSize={panelState.type === 'two-panel' ? panelState.sizes.left : 25}
+        defaultSize={
+          panelState.type === 'two-panel' ? panelState.sizes.left : 25
+        }
         collapsibleSide="left"
         collapsed={panelState.collapsed.left}
         style={{ height: '100%', width: '100%' }}

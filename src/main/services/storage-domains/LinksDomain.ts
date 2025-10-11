@@ -26,7 +26,12 @@ export interface StoredLinks {
 }
 
 export class LinksDomain {
-  private auditLog: Array<{ level: string; message: string; timestamp: number; data?: any }> = [];
+  private auditLog: Array<{
+    level: string;
+    message: string;
+    timestamp: number;
+    data?: any;
+  }> = [];
 
   constructor(private storage: TypedMultiStoreWrapper) {}
 
@@ -38,7 +43,10 @@ export class LinksDomain {
       data,
     };
     this.auditLog.push(entry);
-    console.log(`[LinksDomain Audit] ${level.toUpperCase()}: ${message}`, data || '');
+    console.log(
+      `[LinksDomain Audit] ${level.toUpperCase()}: ${message}`,
+      data || '',
+    );
 
     if (this.auditLog.length > 100) {
       this.auditLog = this.auditLog.slice(-50);
@@ -46,10 +54,18 @@ export class LinksDomain {
   }
 
   private validateLink(link: Partial<RepositoryLink>): boolean {
-    if (!link.label || typeof link.label !== 'string' || link.label.trim().length === 0) {
+    if (
+      !link.label ||
+      typeof link.label !== 'string' ||
+      link.label.trim().length === 0
+    ) {
       return false;
     }
-    if (!link.url || typeof link.url !== 'string' || link.url.trim().length === 0) {
+    if (
+      !link.url ||
+      typeof link.url !== 'string' ||
+      link.url.trim().length === 0
+    ) {
       return false;
     }
     // Basic URL validation
@@ -64,21 +80,29 @@ export class LinksDomain {
   async storeLinks(
     repoId: string,
     repoPath: string,
-    links: RepositoryLink[]
+    links: RepositoryLink[],
   ): Promise<{ success: boolean; error?: string; metadata?: LinkMetadata }> {
     try {
       // Validate all links
       for (const link of links) {
         if (!this.validateLink(link)) {
-          return { success: false, error: `Invalid link: ${link.label || 'unknown'}` };
+          return {
+            success: false,
+            error: `Invalid link: ${link.label || 'unknown'}`,
+          };
         }
       }
 
       const now = Date.now();
 
       // Get existing data to preserve createdAt
-      const existingResult = await this.storage.get(repoId, StaticNamespaces.REPOSITORY_LINKS);
-      const existingData = existingResult.success ? existingResult.data : undefined;
+      const existingResult = await this.storage.get(
+        repoId,
+        StaticNamespaces.REPOSITORY_LINKS,
+      );
+      const existingData = existingResult.success
+        ? existingResult.data
+        : undefined;
       const existingCreatedAt = existingData?.metadata?.createdAt || now;
 
       const metadata: LinkMetadata = {
@@ -94,9 +118,15 @@ export class LinksDomain {
         metadata,
       };
 
-      await this.storage.set(repoId, storedData, StaticNamespaces.REPOSITORY_LINKS);
+      await this.storage.set(
+        repoId,
+        storedData,
+        StaticNamespaces.REPOSITORY_LINKS,
+      );
 
-      this.logAudit('info', `Stored ${links.length} links for repository`, { repoId });
+      this.logAudit('info', `Stored ${links.length} links for repository`, {
+        repoId,
+      });
 
       return { success: true, metadata };
     } catch (error: any) {
@@ -110,7 +140,10 @@ export class LinksDomain {
 
   async getLinks(repoId: string): Promise<RepositoryLink[]> {
     try {
-      const result = await this.storage.get(repoId, StaticNamespaces.REPOSITORY_LINKS);
+      const result = await this.storage.get(
+        repoId,
+        StaticNamespaces.REPOSITORY_LINKS,
+      );
       const data = result.success ? result.data : undefined;
 
       if (!data) {
@@ -130,7 +163,10 @@ export class LinksDomain {
 
   async getLinksWithMetadata(repoId: string): Promise<StoredLinks | null> {
     try {
-      const result = await this.storage.get(repoId, StaticNamespaces.REPOSITORY_LINKS);
+      const result = await this.storage.get(
+        repoId,
+        StaticNamespaces.REPOSITORY_LINKS,
+      );
       const data = result.success ? result.data : undefined;
       return data || null;
     } catch (error: any) {
@@ -161,7 +197,9 @@ export class LinksDomain {
 
   async getAllMetadata(): Promise<LinkMetadata[]> {
     try {
-      const linksNamespace = this.storage.namespace(StaticNamespaces.REPOSITORY_LINKS);
+      const linksNamespace = this.storage.namespace(
+        StaticNamespaces.REPOSITORY_LINKS,
+      );
       const allData = await linksNamespace.getAll();
 
       const metadata: LinkMetadata[] = [];
@@ -173,14 +211,16 @@ export class LinksDomain {
 
       return metadata;
     } catch (error: any) {
-      this.logAudit('error', 'Failed to get all metadata', { error: error.message });
+      this.logAudit('error', 'Failed to get all metadata', {
+        error: error.message,
+      });
       return [];
     }
   }
 
   async addLink(
     repoId: string,
-    link: Omit<RepositoryLink, 'id' | 'createdAt' | 'updatedAt'>
+    link: Omit<RepositoryLink, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<{ success: boolean; error?: string; metadata?: LinkMetadata }> {
     try {
       if (!this.validateLink(link)) {
@@ -203,7 +243,10 @@ export class LinksDomain {
 
       return await this.storeLinks(repoId, repoPath, updatedLinks);
     } catch (error: any) {
-      this.logAudit('error', 'Failed to add link', { repoId, error: error.message });
+      this.logAudit('error', 'Failed to add link', {
+        repoId,
+        error: error.message,
+      });
       return { success: false, error: error.message };
     }
   }
@@ -211,11 +254,11 @@ export class LinksDomain {
   async updateLink(
     repoId: string,
     linkId: string,
-    updates: Partial<RepositoryLink>
+    updates: Partial<RepositoryLink>,
   ): Promise<{ success: boolean; error?: string; metadata?: LinkMetadata }> {
     try {
       const existingLinks = await this.getLinks(repoId);
-      const linkIndex = existingLinks.findIndex(l => l.id === linkId);
+      const linkIndex = existingLinks.findIndex((l) => l.id === linkId);
 
       if (linkIndex === -1) {
         return { success: false, error: 'Link not found' };
@@ -240,15 +283,22 @@ export class LinksDomain {
 
       return await this.storeLinks(repoId, repoPath, updatedLinks);
     } catch (error: any) {
-      this.logAudit('error', 'Failed to update link', { repoId, linkId, error: error.message });
+      this.logAudit('error', 'Failed to update link', {
+        repoId,
+        linkId,
+        error: error.message,
+      });
       return { success: false, error: error.message };
     }
   }
 
-  async removeLink(repoId: string, linkId: string): Promise<{ success: boolean; error?: string; metadata?: LinkMetadata }> {
+  async removeLink(
+    repoId: string,
+    linkId: string,
+  ): Promise<{ success: boolean; error?: string; metadata?: LinkMetadata }> {
     try {
       const existingLinks = await this.getLinks(repoId);
-      const updatedLinks = existingLinks.filter(l => l.id !== linkId);
+      const updatedLinks = existingLinks.filter((l) => l.id !== linkId);
 
       if (updatedLinks.length === existingLinks.length) {
         return { success: false, error: 'Link not found' };
@@ -259,12 +309,21 @@ export class LinksDomain {
 
       return await this.storeLinks(repoId, repoPath, updatedLinks);
     } catch (error: any) {
-      this.logAudit('error', 'Failed to remove link', { repoId, linkId, error: error.message });
+      this.logAudit('error', 'Failed to remove link', {
+        repoId,
+        linkId,
+        error: error.message,
+      });
       return { success: false, error: error.message };
     }
   }
 
-  getAuditLog(): Array<{ level: string; message: string; timestamp: number; data?: any }> {
+  getAuditLog(): Array<{
+    level: string;
+    message: string;
+    timestamp: number;
+    data?: any;
+  }> {
     return [...this.auditLog];
   }
 }

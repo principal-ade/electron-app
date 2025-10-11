@@ -82,7 +82,8 @@ export const RemoveRepositoryDialog: React.FC<RemoveRepositoryDialogProps> = ({
               lineHeight: '1.5',
             }}
           >
-            Remove <strong>{repository.name}</strong> from the Alexandria registry?
+            Remove <strong>{repository.name}</strong> from the Alexandria
+            registry?
           </p>
 
           {repository.path && (
@@ -150,7 +151,8 @@ export const RemoveRepositoryDialog: React.FC<RemoveRepositoryDialogProps> = ({
                   lineHeight: '1.4',
                 }}
               >
-                The repository will be removed from your list, but all local files will be kept.
+                The repository will be removed from your list, but all local
+                files will be kept.
               </div>
             </div>
           </label>
@@ -198,7 +200,8 @@ export const RemoveRepositoryDialog: React.FC<RemoveRepositoryDialogProps> = ({
                 <strong style={{ color: theme.colors.error || '#ef4444' }}>
                   This cannot be undone!
                 </strong>{' '}
-                All files in the repository directory will be permanently deleted.
+                All files in the repository directory will be permanently
+                deleted.
               </div>
             </div>
           </label>
@@ -233,7 +236,8 @@ export const RemoveRepositoryDialog: React.FC<RemoveRepositoryDialogProps> = ({
                 lineHeight: '1.4',
               }}
             >
-              <strong>Warning:</strong> You are about to permanently delete all files at:
+              <strong>Warning:</strong> You are about to permanently delete all
+              files at:
               <div
                 style={{
                   marginTop: '4px',

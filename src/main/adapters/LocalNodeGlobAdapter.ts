@@ -7,8 +7,8 @@
  * TODO: Remove this when @a24z/core-library fixes the NodeGlobAdapter to handle
  * repositories without .gitignore files properly.
  */
-import { globby, globbySync, type Options } from "globby";
-import { GlobAdapter, GlobOptions } from "@a24z/core-library";
+import { globby, globbySync, type Options } from 'globby';
+import { GlobAdapter, GlobOptions } from '@a24z/core-library';
 
 /**
  * Node.js implementation using globby library with enhanced gitignore support
@@ -34,12 +34,17 @@ export class LocalNodeGlobAdapter implements GlobAdapter {
         '**/dist/**',
         '**/build/**',
         '**/.git/**',
-        '**/coverage/**'
+        '**/coverage/**',
       ];
 
       // Combine with existing ignore patterns
       globbyOptions.ignore = globbyOptions.ignore
-        ? [...(Array.isArray(globbyOptions.ignore) ? globbyOptions.ignore : [globbyOptions.ignore]), ...defaultIgnore]
+        ? [
+            ...(Array.isArray(globbyOptions.ignore)
+              ? globbyOptions.ignore
+              : [globbyOptions.ignore]),
+            ...defaultIgnore,
+          ]
         : defaultIgnore;
     }
 
@@ -64,12 +69,17 @@ export class LocalNodeGlobAdapter implements GlobAdapter {
         '**/dist/**',
         '**/build/**',
         '**/.git/**',
-        '**/coverage/**'
+        '**/coverage/**',
       ];
 
       // Combine with existing ignore patterns
       globbyOptions.ignore = globbyOptions.ignore
-        ? [...(Array.isArray(globbyOptions.ignore) ? globbyOptions.ignore : [globbyOptions.ignore]), ...defaultIgnore]
+        ? [
+            ...(Array.isArray(globbyOptions.ignore)
+              ? globbyOptions.ignore
+              : [globbyOptions.ignore]),
+            ...defaultIgnore,
+          ]
         : defaultIgnore;
     }
 
@@ -88,18 +98,18 @@ export class LocalNodeGlobAdapter implements GlobAdapter {
 
 function globToRegex(pattern: string): RegExp {
   let regex = pattern
-    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
-    .replace(/\*\*/g, "___DOUBLE_STAR___")
-    .replace(/\*/g, "[^/]*")
-    .replace(/\?/g, "[^/]")
-    .replace(/___DOUBLE_STAR___\//g, "(.*\\/)?")
-    .replace(/\/___DOUBLE_STAR___/g, "(\\/.*)?")
-    .replace(/___DOUBLE_STAR___/g, ".*");
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*\*/g, '___DOUBLE_STAR___')
+    .replace(/\*/g, '[^/]*')
+    .replace(/\?/g, '[^/]')
+    .replace(/___DOUBLE_STAR___\//g, '(.*\\/)?')
+    .replace(/\/___DOUBLE_STAR___/g, '(\\/.*)?')
+    .replace(/___DOUBLE_STAR___/g, '.*');
 
   regex = regex.replace(/\{([^}]+)\}/g, (_match, group) => {
-    const options = group.split(",");
-    return "(" + options.join("|") + ")";
+    const options = group.split(',');
+    return '(' + options.join('|') + ')';
   });
 
-  return new RegExp("^" + regex + "$");
+  return new RegExp('^' + regex + '$');
 }

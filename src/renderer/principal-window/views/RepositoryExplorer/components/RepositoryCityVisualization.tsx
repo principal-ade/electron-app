@@ -2,7 +2,10 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Map as MapIcon, Layers, HelpCircle } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
-import { ArchitectureMapHighlightLayers, MultiVersionCityBuilder } from '@principal-ai/code-city-react';
+import {
+  ArchitectureMapHighlightLayers,
+  MultiVersionCityBuilder,
+} from '@principal-ai/code-city-react';
 import { FileTree } from '@principal-ai/repository-abstraction';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import { FileTreeSourceService } from '../../../../services/FileTreeSourceService';
@@ -12,25 +15,25 @@ import { WindowService } from '../../../../main-process-api/WindowService';
 export interface RepositoryCityVisualizationProps {
   /** The repository to visualize */
   repository: EnhancedAlexandriaEntry;
-  
+
   /** Optional highlight layers for visualization */
   highlightLayers?: HighlightLayer[];
-  
+
   /** Whether to show git changes (HEAD vs working tree) */
   showGitChanges?: boolean;
-  
+
   /** Height of the visualization container */
   height?: string | number;
-  
+
   /** Whether to show the toolbar with controls */
   showToolbar?: boolean;
-  
+
   /** Custom loading message */
   loadingMessage?: string;
-  
+
   /** Custom empty state message */
   emptyMessage?: string;
-  
+
   /** Callback when a file is clicked */
   onFileClick?: (filePath: string) => void;
 }
@@ -48,7 +51,9 @@ interface HoverInfo {
  * Encapsulates all the functionality from CityMapManager and RightPaneContainer
  * to provide a simple, reusable component for repository visualization.
  */
-export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationProps> = ({
+export const RepositoryCityVisualization: React.FC<
+  RepositoryCityVisualizationProps
+> = ({
   repository,
   highlightLayers = [],
   showGitChanges = false,
@@ -59,14 +64,17 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
   onFileClick,
 }) => {
   const { theme } = useTheme();
-  
+
   // State management
   const [cityData, setCityData] = useState<CityData | null>(null);
   const [isBuilding, setIsBuilding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
-  const [treeStats, setTreeStats] = useState<{ fileCount: number; directoryCount: number } | null>(null);
-  
+  const [treeStats, setTreeStats] = useState<{
+    fileCount: number;
+    directoryCount: number;
+  } | null>(null);
+
   // Services - initialize once
   const [services] = useState(() => ({
     fileTreeService: new FileTreeSourceService(),
@@ -113,7 +121,10 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
           files,
         });
       } catch (error) {
-        console.error('[RepositoryCityVisualization] Error opening file:', error);
+        console.error(
+          '[RepositoryCityVisualization] Error opening file:',
+          error,
+        );
       }
     },
     [repository, onFileClick],
@@ -143,9 +154,11 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
         }
 
         const primarySource = sources[0];
-        
+
         // Load the file tree
-        const loadedSource = await services.fileTreeService.loadFileTree(primarySource.id);
+        const loadedSource = await services.fileTreeService.loadFileTree(
+          primarySource.id,
+        );
         if (!loadedSource) {
           throw new Error('Failed to load file tree');
         }
@@ -165,9 +178,14 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
           try {
             // Try to get HEAD tree (this would need to be implemented)
             // For now, we'll just use the working tree
-            console.log('[RepositoryCityVisualization] Git changes requested but HEAD tree loading not implemented yet');
+            console.log(
+              '[RepositoryCityVisualization] Git changes requested but HEAD tree loading not implemented yet',
+            );
           } catch (gitError) {
-            console.warn('[RepositoryCityVisualization] Could not load HEAD tree:', gitError);
+            console.warn(
+              '[RepositoryCityVisualization] Could not load HEAD tree:',
+              gitError,
+            );
           }
         }
 
@@ -184,11 +202,16 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
         }
 
         // Get version view
-        const city = MultiVersionCityBuilder.getVersionView(unionCity, presence);
+        const city = MultiVersionCityBuilder.getVersionView(
+          unionCity,
+          presence,
+        );
         setCityData(city);
-
       } catch (err) {
-        console.error('[RepositoryCityVisualization] Error building city:', err);
+        console.error(
+          '[RepositoryCityVisualization] Error building city:',
+          err,
+        );
         setError(err instanceof Error ? err.message : 'Unknown error occurred');
         setCityData(null);
         setTreeStats(null);
@@ -236,7 +259,8 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
           {loadingMessage}
           {treeStats && (
             <div style={{ marginTop: '8px', fontSize: '12px' }}>
-              {treeStats.fileCount.toLocaleString()} files • {treeStats.directoryCount.toLocaleString()} directories
+              {treeStats.fileCount.toLocaleString()} files •{' '}
+              {treeStats.directoryCount.toLocaleString()} directories
             </div>
           )}
         </div>
@@ -336,7 +360,7 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
               </span>
             )}
           </div>
-          
+
           {highlightLayers.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div
@@ -353,7 +377,10 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
                 }}
               >
                 <Layers size={12} />
-                <span>{highlightLayers.length} layer{highlightLayers.length !== 1 ? 's' : ''}</span>
+                <span>
+                  {highlightLayers.length} layer
+                  {highlightLayers.length !== 1 ? 's' : ''}
+                </span>
               </div>
             </div>
           )}
@@ -392,7 +419,8 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
           flexShrink: 0,
         }}
       >
-        {hoverInfo && (hoverInfo.hoveredBuilding || hoverInfo.hoveredDistrict) ? (
+        {hoverInfo &&
+        (hoverInfo.hoveredBuilding || hoverInfo.hoveredDistrict) ? (
           <>
             {/* File/Directory name and path */}
             <div
@@ -416,8 +444,8 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
                 }}
               >
                 {hoverInfo.fileTooltip?.text ||
-                  (hoverInfo.hoveredDistrict?.path?.split('/').pop() ||
-                   hoverInfo.hoveredDistrict?.path) ||
+                  hoverInfo.hoveredDistrict?.path?.split('/').pop() ||
+                  hoverInfo.hoveredDistrict?.path ||
                   'Unknown'}
               </div>
               {/* Full path */}
@@ -458,7 +486,8 @@ export const RepositoryCityVisualization: React.FC<RepositoryCityVisualizationPr
               fontStyle: 'italic',
             }}
           >
-            Hover over files and directories to see details • Click files to open
+            Hover over files and directories to see details • Click files to
+            open
           </div>
         )}
       </div>

@@ -11,7 +11,7 @@ interface TitlebarOpenInIDEProps {
 }
 
 export const TitlebarOpenInIDE: React.FC<TitlebarOpenInIDEProps> = ({
-  repository
+  repository,
 }) => {
   const { theme } = useTheme();
   const [defaultEditor, setDefaultEditor] = useState<EditorId>('vscode');
@@ -90,7 +90,8 @@ export const TitlebarOpenInIDE: React.FC<TitlebarOpenInIDEProps> = ({
         height: '32px',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+        e.currentTarget.style.backgroundColor =
+          theme.colors.backgroundSecondary;
         e.currentTarget.style.borderColor = theme.colors.primary;
       }}
       onMouseLeave={(e) => {

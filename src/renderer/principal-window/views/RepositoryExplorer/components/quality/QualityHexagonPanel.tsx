@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   QualityHexagonCompact,
-  QualityHexagonDetailed
+  QualityHexagonDetailed,
 } from '@a24z/alexandria-ui';
 import { useTheme } from '@a24z/industry-theme';
 import { Grid2x2, ChevronDown, ChevronRight } from 'lucide-react';
@@ -32,7 +32,9 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   const [summary, setSummary] = useState<PackageSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedPackages, setExpandedPackages] = useState<Set<string>>(new Set());
+  const [expandedPackages, setExpandedPackages] = useState<Set<string>>(
+    new Set(),
+  );
 
   const fetchPackages = useCallback(async () => {
     setLoading(true);
@@ -67,7 +69,7 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   }, [directory, fetchPackages]);
 
   const togglePackage = (pkgPath: string) => {
-    setExpandedPackages(prev => {
+    setExpandedPackages((prev) => {
       const next = new Set(prev);
       if (next.has(pkgPath)) {
         next.delete(pkgPath);
@@ -79,9 +81,14 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   };
 
   const renderPackageInfo = (pkg: PackageLayer) => {
-    const depCount = pkg.packageData.dependencies ? Object.keys(pkg.packageData.dependencies).length : 0;
-    const devDepCount = pkg.packageData.devDependencies ? Object.keys(pkg.packageData.devDependencies).length : 0;
-    const scripts = pkg.packageData.availableCommands?.map(cmd => cmd.name) || [];
+    const depCount = pkg.packageData.dependencies
+      ? Object.keys(pkg.packageData.dependencies).length
+      : 0;
+    const devDepCount = pkg.packageData.devDependencies
+      ? Object.keys(pkg.packageData.devDependencies).length
+      : 0;
+    const scripts =
+      pkg.packageData.availableCommands?.map((cmd) => cmd.name) || [];
     const pkgPath = pkg.packageData.path || 'root';
     const isExpanded = expandedPackages.has(pkgPath);
 
@@ -108,30 +115,36 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
         >
           {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           <div style={{ flex: 1 }}>
-            <div style={{
-              fontSize: theme.fontSizes[2],
-              fontWeight: 600,
-              color: theme.colors.text,
-              marginBottom: '4px',
-            }}>
+            <div
+              style={{
+                fontSize: theme.fontSizes[2],
+                fontWeight: 600,
+                color: theme.colors.text,
+                marginBottom: '4px',
+              }}
+            >
               {pkg.packageData.name || 'Unnamed Package'}
             </div>
             {pkg.packageData.version && (
-              <div style={{
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.textSecondary,
-                fontFamily: theme.fonts.monospace,
-              }}>
+              <div
+                style={{
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.fonts.monospace,
+                }}
+              >
                 v{pkg.packageData.version}
               </div>
             )}
             {pkg.packageData.path && (
-              <div style={{
-                fontSize: theme.fontSizes[0],
-                color: theme.colors.textSecondary,
-                fontFamily: theme.fonts.monospace,
-                marginTop: '2px',
-              }}>
+              <div
+                style={{
+                  fontSize: theme.fontSizes[0],
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.fonts.monospace,
+                  marginTop: '2px',
+                }}
+              >
                 {pkg.packageData.path || 'root'}
               </div>
             )}
@@ -140,32 +153,59 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
 
         {isExpanded && (
           <>
-            <div style={{ display: 'flex', gap: '16px', marginTop: '8px', flexWrap: 'wrap' }}>
-              <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-                <span style={{ fontWeight: 500 }}>Dependencies:</span> {depCount}
+            <div
+              style={{
+                display: 'flex',
+                gap: '16px',
+                marginTop: '8px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                <span style={{ fontWeight: 500 }}>Dependencies:</span>{' '}
+                {depCount}
               </div>
-              <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-                <span style={{ fontWeight: 500 }}>Dev Dependencies:</span> {devDepCount}
+              <div
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                <span style={{ fontWeight: 500 }}>Dev Dependencies:</span>{' '}
+                {devDepCount}
               </div>
               {scripts.length > 0 && (
-                <div style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}>
-                  <span style={{ fontWeight: 500 }}>Scripts:</span> {scripts.length}
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[1],
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  <span style={{ fontWeight: 500 }}>Scripts:</span>{' '}
+                  {scripts.length}
                 </div>
               )}
             </div>
 
             {scripts.length > 0 && (
               <div style={{ marginTop: '8px' }}>
-                <div style={{
-                  fontSize: theme.fontSizes[0],
-                  color: theme.colors.textSecondary,
-                  marginBottom: '4px',
-                  fontWeight: 600,
-                }}>
+                <div
+                  style={{
+                    fontSize: theme.fontSizes[0],
+                    color: theme.colors.textSecondary,
+                    marginBottom: '4px',
+                    fontWeight: 600,
+                  }}
+                >
                   Available Scripts:
                 </div>
                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {scripts.slice(0, 10).map(script => (
+                  {scripts.slice(0, 10).map((script) => (
                     <span
                       key={script}
                       style={{
@@ -181,11 +221,13 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
                     </span>
                   ))}
                   {scripts.length > 10 && (
-                    <span style={{
-                      fontSize: theme.fontSizes[0],
-                      color: theme.colors.textSecondary,
-                      padding: '2px 8px',
-                    }}>
+                    <span
+                      style={{
+                        fontSize: theme.fontSizes[0],
+                        color: theme.colors.textSecondary,
+                        padding: '2px 8px',
+                      }}
+                    >
                       +{scripts.length - 10} more
                     </span>
                   )}
@@ -201,23 +243,27 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   const renderContent = () => {
     if (loading) {
       return (
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '32px',
-          color: theme.colors.textSecondary,
-        }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            border: `3px solid ${theme.colors.border}`,
-            borderTopColor: theme.colors.primary,
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-          }} />
+        <div
+          style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '32px',
+            color: theme.colors.textSecondary,
+          }}
+        >
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              border: `3px solid ${theme.colors.border}`,
+              borderTopColor: theme.colors.primary,
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }}
+          />
           <p style={{ marginTop: '16px' }}>Loading package information...</p>
         </div>
       );
@@ -225,16 +271,18 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
 
     if (error) {
       return (
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          padding: '32px',
-          color: theme.colors.error,
-        }}>
+        <div
+          style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            padding: '32px',
+            color: theme.colors.error,
+          }}
+        >
           <p>❌ {error}</p>
           <button
             onClick={fetchPackages}
@@ -256,16 +304,18 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
 
     if (!summary || packages.length === 0) {
       return (
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          padding: '32px',
-          color: theme.colors.textSecondary,
-        }}>
+        <div
+          style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            padding: '32px',
+            color: theme.colors.textSecondary,
+          }}
+        >
           <p>No package information available</p>
           <button
             onClick={fetchPackages}
@@ -298,7 +348,7 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
       <div style={{ color: theme.colors.text }}>
         {/* Package List */}
         <div style={{ maxHeight: '400px', overflow: 'auto' }}>
-          {sortedPackages.map(pkg => renderPackageInfo(pkg))}
+          {sortedPackages.map((pkg) => renderPackageInfo(pkg))}
         </div>
       </div>
     );
@@ -329,15 +379,17 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
       >
         <span>Package Information</span>
         {summary?.isMonorepo && (
-          <span style={{
-            fontWeight: 600,
-            color: theme.colors.primary,
-            textTransform: 'none',
-            fontSize: theme.fontSizes[1],
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}>
+          <span
+            style={{
+              fontWeight: 600,
+              color: theme.colors.primary,
+              textTransform: 'none',
+              fontSize: theme.fontSizes[1],
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
             <Grid2x2 size={14} />
             Monorepo
           </span>

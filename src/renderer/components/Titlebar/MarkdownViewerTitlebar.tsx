@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { Edit3, ExternalLink, Plus, Minus, Copy, Check, Trash2, BookOpen, FileText } from 'lucide-react';
+import {
+  Edit3,
+  ExternalLink,
+  Plus,
+  Minus,
+  Copy,
+  Check,
+  Trash2,
+  BookOpen,
+  FileText,
+} from 'lucide-react';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarButton } from './TitlebarButton';
 
@@ -37,12 +47,15 @@ export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
 
   const handleCopyPath = () => {
     if (filePath) {
-      navigator.clipboard.writeText(filePath).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }).catch((err) => {
-        console.error('Failed to copy path:', err);
-      });
+      navigator.clipboard
+        .writeText(filePath)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch((err) => {
+          console.error('Failed to copy path:', err);
+        });
     }
   };
 
@@ -127,7 +140,10 @@ export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
             style={{
               right: '220px',
               opacity: viewMode === 'single' ? 1 : 0.6,
-              backgroundColor: viewMode === 'single' ? 'var(--color-primary-light, rgba(59, 130, 246, 0.1))' : 'transparent',
+              backgroundColor:
+                viewMode === 'single'
+                  ? 'var(--color-primary-light, rgba(59, 130, 246, 0.1))'
+                  : 'transparent',
             }}
           />
           <TitlebarButton
@@ -139,7 +155,10 @@ export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
             style={{
               right: '190px',
               opacity: viewMode === 'book' ? 1 : 0.6,
-              backgroundColor: viewMode === 'book' ? 'var(--color-primary-light, rgba(59, 130, 246, 0.1))' : 'transparent',
+              backgroundColor:
+                viewMode === 'book'
+                  ? 'var(--color-primary-light, rgba(59, 130, 246, 0.1))'
+                  : 'transparent',
             }}
           />
         </>
@@ -155,17 +174,19 @@ export const MarkdownViewerTitlebar: React.FC<MarkdownViewerTitlebarProps> = ({
         />
       )}
       {(onFontSizeIncrease || onFontSizeDecrease) && (
-        <span style={{
-          position: 'absolute',
-          right: '75px',
-          top: '50%',
-          transform: 'translateY(-50%)',
-          fontSize: '12px',
-          color: 'var(--color-text-secondary)',
-          userSelect: 'none',
-          minWidth: '45px',
-          textAlign: 'center',
-        }}>
+        <span
+          style={{
+            position: 'absolute',
+            right: '75px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: '12px',
+            color: 'var(--color-text-secondary)',
+            userSelect: 'none',
+            minWidth: '45px',
+            textAlign: 'center',
+          }}
+        >
           {fontSizePercent}%
         </span>
       )}

@@ -40,10 +40,11 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [openAgentIds, setOpenAgentIds] = useState<Set<string>>(new Set());
-  const [remoteAgentButtonVisibility, setRemoteAgentButtonVisibility] = useState({
-    jules: false,
-    codex: false,
-  });
+  const [remoteAgentButtonVisibility, setRemoteAgentButtonVisibility] =
+    useState({
+      jules: false,
+      codex: false,
+    });
   const [showThemeButton, setShowThemeButton] = useState(true);
   const [showCustomizeButton, setShowCustomizeButton] = useState(true);
   const { theme, mode } = useTheme();
@@ -58,12 +59,14 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
 
   useEffect(() => {
     const updateAgentIds = (agents: RemoteAgentConfig[]) => {
-      setOpenAgentIds(new Set(agents.map(agent => agent.id)));
+      setOpenAgentIds(new Set(agents.map((agent) => agent.id)));
     };
 
-    const unsubscribe = remoteAgentService.onAgentListChange((agents, _activeAgentId) => {
-      updateAgentIds(agents);
-    });
+    const unsubscribe = remoteAgentService.onAgentListChange(
+      (agents, _activeAgentId) => {
+        updateAgentIds(agents);
+      },
+    );
 
     remoteAgentService
       .listRemoteAgents()
@@ -116,9 +119,10 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
     };
   }, []);
 
-  const accentColor = mode === 'dark' && theme.modes?.dark?.accent
-    ? theme.modes.dark.accent
-    : theme.colors.accent;
+  const accentColor =
+    mode === 'dark' && theme.modes?.dark?.accent
+      ? theme.modes.dark.accent
+      : theme.colors.accent;
 
   const agentDefinitions = useMemo(
     () => ({
@@ -150,10 +154,13 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
       try {
         await remoteAgentService.openRemoteAgent(config);
       } catch (error) {
-        console.error(`Error opening ${type === 'jules' ? 'Jules' : 'Codex'}:`, error);
+        console.error(
+          `Error opening ${type === 'jules' ? 'Jules' : 'Codex'}:`,
+          error,
+        );
       }
     },
-    [agentDefinitions]
+    [agentDefinitions],
   );
 
   // Static title - Principal View
@@ -208,7 +215,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            WebkitAppRegion:
+              'no-drag' as React.CSSProperties['WebkitAppRegion'],
           }}
         >
           {remoteAgentButtonVisibility.jules && (
@@ -233,7 +241,11 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
                 e.currentTarget.style.opacity = '0.9';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = isAgentOpen(agentDefinitions.jules.id) ? '0.85' : '1';
+                e.currentTarget.style.opacity = isAgentOpen(
+                  agentDefinitions.jules.id,
+                )
+                  ? '0.85'
+                  : '1';
               }}
               title={
                 isAgentOpen(agentDefinitions.jules.id)
@@ -270,7 +282,9 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
                 e.currentTarget.style.opacity = '0.9';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = isAgentOpen(agentDefinitions.chatgpt.id)
+                e.currentTarget.style.opacity = isAgentOpen(
+                  agentDefinitions.chatgpt.id,
+                )
                   ? '0.85'
                   : '1';
               }}
@@ -315,7 +329,8 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
             height: '56px',
             display: 'flex',
             alignItems: 'center',
-            WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
+            WebkitAppRegion:
+              'no-drag' as React.CSSProperties['WebkitAppRegion'],
           }}
         >
           <button

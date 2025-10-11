@@ -3,7 +3,11 @@
  */
 
 import { PackageProcessor } from './PackageProcessor';
-import type { FileTree, FileInfo, DirectoryInfo } from '@principal-ai/repository-abstraction';
+import type {
+  FileTree,
+  FileInfo,
+  DirectoryInfo,
+} from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import * as fs from 'fs/promises';
 
@@ -83,27 +87,32 @@ describe('PackageProcessor', () => {
         name: 'test-package',
         version: '1.0.0',
         dependencies: {
-          'express': '^4.18.0',
+          express: '^4.18.0',
         },
         devDependencies: {
-          'jest': '^29.0.0',
+          jest: '^29.0.0',
         },
         scripts: {
-          'test': 'jest',
-          'build': 'tsc',
+          test: 'jest',
+          build: 'tsc',
         },
       };
 
       // Mock fs.readFile
-      (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockPackageJson));
+      (fs.readFile as jest.Mock).mockResolvedValue(
+        JSON.stringify(mockPackageJson),
+      );
 
-      const packages = await processor.extractPackages(mockFileTree, '/test/repo');
+      const packages = await processor.extractPackages(
+        mockFileTree,
+        '/test/repo',
+      );
 
       // Should find at least one package
       expect(packages.length).toBeGreaterThan(0);
 
       // Check the root package was found
-      const rootPackage = packages.find(p => p.packageData.path === '');
+      const rootPackage = packages.find((p) => p.packageData.path === '');
       expect(rootPackage).toBeDefined();
 
       if (rootPackage) {
@@ -231,28 +240,37 @@ describe('PackageProcessor', () => {
       // Mock different package.json contents
       (fs.readFile as jest.Mock).mockImplementation((path: string) => {
         if (path.includes('packages/ui')) {
-          return Promise.resolve(JSON.stringify({
-            name: '@monorepo/ui',
-            version: '1.0.0',
-            dependencies: { 'react': '^18.0.0' },
-          }));
+          return Promise.resolve(
+            JSON.stringify({
+              name: '@monorepo/ui',
+              version: '1.0.0',
+              dependencies: { react: '^18.0.0' },
+            }),
+          );
         }
         if (path.includes('packages/api')) {
-          return Promise.resolve(JSON.stringify({
-            name: '@monorepo/api',
-            version: '1.0.0',
-            dependencies: { 'express': '^4.18.0' },
-          }));
+          return Promise.resolve(
+            JSON.stringify({
+              name: '@monorepo/api',
+              version: '1.0.0',
+              dependencies: { express: '^4.18.0' },
+            }),
+          );
         }
         // Root package.json
-        return Promise.resolve(JSON.stringify({
-          name: 'monorepo-root',
-          version: '1.0.0',
-          workspaces: ['packages/*'],
-        }));
+        return Promise.resolve(
+          JSON.stringify({
+            name: 'monorepo-root',
+            version: '1.0.0',
+            workspaces: ['packages/*'],
+          }),
+        );
       });
 
-      const packages = await processor.extractPackages(mockFileTree, '/test/monorepo');
+      const packages = await processor.extractPackages(
+        mockFileTree,
+        '/test/monorepo',
+      );
 
       // Should find multiple packages
       expect(packages.length).toBeGreaterThan(1);
@@ -274,11 +292,11 @@ describe('PackageProcessor', () => {
             manifestPath: '/test/repo/package.json',
             packageManager: 'npm',
             dependencies: {
-              'express': '^4.18.0',
-              'lodash': '^4.17.21',
+              express: '^4.18.0',
+              lodash: '^4.17.21',
             },
             devDependencies: {
-              'jest': '^29.0.0',
+              jest: '^29.0.0',
             },
             peerDependencies: {},
             isMonorepoRoot: false,
@@ -343,7 +361,7 @@ describe('PackageProcessor', () => {
             manifestPath: '/test/monorepo/packages/ui/package.json',
             packageManager: 'npm',
             dependencies: {
-              'react': '^18.0.0',
+              react: '^18.0.0',
             },
             devDependencies: {},
             peerDependencies: {},

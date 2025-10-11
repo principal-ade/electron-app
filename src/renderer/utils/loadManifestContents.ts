@@ -135,7 +135,6 @@ export async function loadManifestContents(
   return manifestContents;
 }
 
-
 /**
  * Parse manifest content based on file type
  */

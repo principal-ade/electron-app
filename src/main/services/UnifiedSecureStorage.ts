@@ -38,7 +38,10 @@ export class UnifiedSecureStorage {
 
   private constructor() {
     const userDataPath = app.getPath('userData');
-    this.storageFilePath = path.join(userDataPath, 'unified-secure-storage.json');
+    this.storageFilePath = path.join(
+      userDataPath,
+      'unified-secure-storage.json',
+    );
 
     this.tokenDomain = new TokenDomain(this);
     this.secretsDomain = new SecretsDomain(this);
@@ -69,11 +72,16 @@ export class UnifiedSecureStorage {
 
     try {
       await fsPromises.access(this.storageFilePath, fs.constants.F_OK);
-      const fileContent = await fsPromises.readFile(this.storageFilePath, 'utf-8');
+      const fileContent = await fsPromises.readFile(
+        this.storageFilePath,
+        'utf-8',
+      );
       const stored: UnifiedStorageData = JSON.parse(fileContent);
 
       if (stored.version !== this.STORAGE_VERSION) {
-        console.warn(`[UnifiedSecureStorage] Version mismatch: ${stored.version} vs ${this.STORAGE_VERSION}`);
+        console.warn(
+          `[UnifiedSecureStorage] Version mismatch: ${stored.version} vs ${this.STORAGE_VERSION}`,
+        );
       }
 
       await this.ensureEncryptionAvailable();
@@ -86,7 +94,9 @@ export class UnifiedSecureStorage {
       return data;
     } catch (error: any) {
       if (error.code === 'ENOENT') {
-        console.log('[UnifiedSecureStorage] No existing storage file, creating new');
+        console.log(
+          '[UnifiedSecureStorage] No existing storage file, creating new',
+        );
         const emptyData: DecryptedData = { tokens: {}, secrets: {} };
         this.memoryCache = emptyData;
         return emptyData;
@@ -108,17 +118,20 @@ export class UnifiedSecureStorage {
       metadata: {
         lastModified: Date.now(),
         tokenCount: Object.keys(data.tokens).length,
-        secretsCount: Object.entries(data.secrets).reduce((acc, [repoId, secrets]) => {
-          acc[repoId] = Object.keys(secrets as any).length;
-          return acc;
-        }, {} as Record<string, number>),
+        secretsCount: Object.entries(data.secrets).reduce(
+          (acc, [repoId, secrets]) => {
+            acc[repoId] = Object.keys(secrets as any).length;
+            return acc;
+          },
+          {} as Record<string, number>,
+        ),
       },
     };
 
     await fsPromises.writeFile(
       this.storageFilePath,
       JSON.stringify(storageData, null, 2),
-      { mode: 0o600 }
+      { mode: 0o600 },
     );
 
     this.memoryCache = data;
@@ -129,7 +142,9 @@ export class UnifiedSecureStorage {
     return this.loadFromDisk();
   }
 
-  async updateData(updater: (data: DecryptedData) => DecryptedData): Promise<void> {
+  async updateData(
+    updater: (data: DecryptedData) => DecryptedData,
+  ): Promise<void> {
     const data = await this.loadFromDisk();
     const updated = updater(data);
     await this.saveToDisk(updated);
@@ -143,7 +158,9 @@ export class UnifiedSecureStorage {
     return this.tokenDomain.getToken(key);
   }
 
-  async getTokenWithMetadata(key: string): Promise<{ token: string; metadata: any } | null> {
+  async getTokenWithMetadata(
+    key: string,
+  ): Promise<{ token: string; metadata: any } | null> {
     return this.tokenDomain.getTokenWithMetadata(key);
   }
 
@@ -158,7 +175,7 @@ export class UnifiedSecureStorage {
   async storeSecrets(
     repoId: string,
     repoPath: string,
-    secrets: Record<string, any>
+    secrets: Record<string, any>,
   ): Promise<{ success: boolean; error?: string; metadata?: any }> {
     return this.secretsDomain.storeSecrets(repoId, repoPath, secrets);
   }
@@ -175,7 +192,9 @@ export class UnifiedSecureStorage {
     return this.secretsDomain.getAllRepoIds();
   }
 
-  async getSecretsWithMetadata(repoId: string): Promise<{ data: Record<string, any>; metadata: any } | null> {
+  async getSecretsWithMetadata(
+    repoId: string,
+  ): Promise<{ data: Record<string, any>; metadata: any } | null> {
     return this.secretsDomain.getSecretsWithMetadata(repoId);
   }
 
@@ -190,7 +209,10 @@ export class UnifiedSecureStorage {
   }
 
   async exportData(): Promise<UnifiedStorageData> {
-    const fileContent = await fsPromises.readFile(this.storageFilePath, 'utf-8');
+    const fileContent = await fsPromises.readFile(
+      this.storageFilePath,
+      'utf-8',
+    );
     return JSON.parse(fileContent);
   }
 

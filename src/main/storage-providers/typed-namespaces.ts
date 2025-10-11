@@ -1,4 +1,3 @@
-
 import { Repository } from '../../shared/types/repository.types';
 import { LLMConfiguration } from '../../shared/main-process-api-interfaces/LLMModelsAPI';
 import {
@@ -32,8 +31,6 @@ export interface SessionSummary {
   repositoriesAccessed: string[];
   isActive: boolean;
 }
-
-
 
 /**
  * Links Management Data Types
@@ -181,7 +178,6 @@ export interface DockerAnalysisSession {
   };
 }
 
-
 /**
  * Type-safe namespace data type definitions
  * Each namespace has its own strongly-typed data structure
@@ -261,7 +257,6 @@ export class TypedNamespaceRegistry {
       storageProvider: 'electron-store',
       category: NamespaceCategory.CORE,
     });
-
 
     // Cache and temporary data
 

@@ -3,11 +3,14 @@ import {
   QualityHexagon,
   QualityHexagonCompact,
   QualityHexagonDetailed,
-  type QualityMetrics
+  type QualityMetrics,
 } from '@a24z/alexandria-ui';
 import { useTheme } from '@a24z/industry-theme';
 import { MockQualityMetricsService } from '../../services/MockQualityMetricsService';
-import type { ExtendedQualityMetrics, QualityTier } from '../../services/MockQualityMetricsService';
+import type {
+  ExtendedQualityMetrics,
+  QualityTier,
+} from '../../services/MockQualityMetricsService';
 
 interface QualityHexagonPanelProps {
   directory: string;
@@ -31,7 +34,8 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
 
     try {
       console.log(`[QualityHexagon] Starting analysis for ${directory}`);
-      const result = await MockQualityMetricsService.analyzeDirectory(directory);
+      const result =
+        await MockQualityMetricsService.analyzeDirectory(directory);
       console.log('[QualityHexagon] Analysis complete:', result);
       setMetrics(result);
     } catch (err) {
@@ -53,23 +57,27 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   const renderContent = () => {
     if (loading) {
       return (
-        <div style={{
-          width: '100%',
-          aspectRatio: '1 / 1',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: theme.colors.textSecondary,
-        }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            border: `3px solid ${theme.colors.border}`,
-            borderTopColor: theme.colors.primary,
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-          }} />
+        <div
+          style={{
+            width: '100%',
+            aspectRatio: '1 / 1',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: theme.colors.textSecondary,
+          }}
+        >
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              border: `3px solid ${theme.colors.border}`,
+              borderTopColor: theme.colors.primary,
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }}
+          />
           <p style={{ marginTop: '16px' }}>Analyzing code quality...</p>
           <div style={{ marginTop: '16px', fontSize: '12px' }}>
             <div style={{ opacity: 1 }}>🔍 Discovering tools...</div>
@@ -82,16 +90,18 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
 
     if (error) {
       return (
-        <div style={{
-          width: '100%',
-          aspectRatio: '1 / 1',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          color: theme.colors.error,
-        }}>
+        <div
+          style={{
+            width: '100%',
+            aspectRatio: '1 / 1',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            color: theme.colors.error,
+          }}
+        >
           <p>❌ {error}</p>
           <button
             onClick={analyzeQuality}
@@ -113,16 +123,18 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
 
     if (!metrics) {
       return (
-        <div style={{
-          width: '100%',
-          aspectRatio: '1 / 1',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          color: theme.colors.textSecondary,
-        }}>
+        <div
+          style={{
+            width: '100%',
+            aspectRatio: '1 / 1',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            color: theme.colors.textSecondary,
+          }}
+        >
           <p>No quality metrics available</p>
           <button
             onClick={analyzeQuality}
@@ -146,14 +158,16 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
     // For compact mode, just show the hexagon with proper SVG styling
     if (compact) {
       return (
-        <div style={{
-          width: '100%',
-          aspectRatio: '1 / 1',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: theme.colors.text, // Set text color for SVG
-        }}>
+        <div
+          style={{
+            width: '100%',
+            aspectRatio: '1 / 1',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: theme.colors.text, // Set text color for SVG
+          }}
+        >
           <QualityHexagonCompact
             metrics={metrics.hexagon}
             tier={metrics.tier}
@@ -172,14 +186,18 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
           className="w-full"
         />
 
-        <div style={{
-          marginTop: '24px',
-          paddingTop: '16px',
-          borderTop: `1px solid ${theme.colors.border}`,
-        }}>
-          <h4 style={{ color: theme.colors.text, marginBottom: '8px' }}>Available Tools:</h4>
+        <div
+          style={{
+            marginTop: '24px',
+            paddingTop: '16px',
+            borderTop: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <h4 style={{ color: theme.colors.text, marginBottom: '8px' }}>
+            Available Tools:
+          </h4>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            {metrics.availableTools.map(tool => (
+            {metrics.availableTools.map((tool) => (
               <span
                 key={tool}
                 style={{
@@ -199,7 +217,9 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
 
         {metrics.suggestions.length > 0 && (
           <div style={{ marginTop: '16px' }}>
-            <h4 style={{ color: theme.colors.text, marginBottom: '8px' }}>Suggestions:</h4>
+            <h4 style={{ color: theme.colors.text, marginBottom: '8px' }}>
+              Suggestions:
+            </h4>
             <ul style={{ margin: 0, paddingLeft: '20px' }}>
               {metrics.suggestions.map((suggestion, i) => (
                 <li
@@ -208,9 +228,11 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
                     padding: '8px 0',
                     color: theme.colors.textSecondary,
                     borderLeft: `3px solid ${
-                      suggestion.priority === 'high' ? theme.colors.error :
-                      suggestion.priority === 'medium' ? theme.colors.warning :
-                      theme.colors.border
+                      suggestion.priority === 'high'
+                        ? theme.colors.error
+                        : suggestion.priority === 'medium'
+                          ? theme.colors.warning
+                          : theme.colors.border
                     }`,
                     paddingLeft: '12px',
                     marginLeft: '-20px',
@@ -270,7 +292,9 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
       {renderContent()}
       <style jsx>{`
         @keyframes spin {
-          to { transform: rotate(360deg); }
+          to {
+            transform: rotate(360deg);
+          }
         }
       `}</style>
     </div>

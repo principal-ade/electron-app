@@ -22,12 +22,12 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
    */
   openRemoteAgent: async (
     config: RemoteAgentConfig,
-    options?: RemoteAgentWindowOptions
+    options?: RemoteAgentWindowOptions,
   ): Promise<string> => {
     const result = await ipcRenderer.invoke(
       RemoteAgentWindowEvent.OPEN_REMOTE_AGENT,
       config,
-      options
+      options,
     );
 
     if (!result.success) {
@@ -43,7 +43,7 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
   closeRemoteAgent: async (agentId: string): Promise<void> => {
     const result = await ipcRenderer.invoke(
       RemoteAgentWindowEvent.CLOSE_REMOTE_AGENT,
-      agentId
+      agentId,
     );
 
     if (!result.success) {
@@ -57,7 +57,7 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
   focusRemoteAgent: async (agentId: string): Promise<void> => {
     const result = await ipcRenderer.invoke(
       RemoteAgentWindowEvent.FOCUS_REMOTE_AGENT,
-      agentId
+      agentId,
     );
 
     if (!result.success) {
@@ -69,7 +69,9 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
    * List all remote agents
    */
   listRemoteAgents: async (): Promise<RemoteAgentConfig[]> => {
-    const result = await ipcRenderer.invoke(RemoteAgentWindowEvent.LIST_REMOTE_AGENTS);
+    const result = await ipcRenderer.invoke(
+      RemoteAgentWindowEvent.LIST_REMOTE_AGENTS,
+    );
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to list remote agents');
@@ -81,10 +83,12 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
   /**
    * Get the state of a remote agent
    */
-  getRemoteAgentState: async (agentId: string): Promise<RemoteAgentWindowState> => {
+  getRemoteAgentState: async (
+    agentId: string,
+  ): Promise<RemoteAgentWindowState> => {
     const result = await ipcRenderer.invoke(
       RemoteAgentWindowEvent.GET_REMOTE_AGENT_STATE,
-      agentId
+      agentId,
     );
 
     if (!result.success) {
@@ -97,11 +101,14 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
   /**
    * Send a message to a remote agent
    */
-  sendMessageToRemoteAgent: async (agentId: string, message: RemoteAgentMessage): Promise<void> => {
+  sendMessageToRemoteAgent: async (
+    agentId: string,
+    message: RemoteAgentMessage,
+  ): Promise<void> => {
     const result = await ipcRenderer.invoke(
       RemoteAgentWindowEvent.SEND_MESSAGE_TO_REMOTE_AGENT,
       agentId,
-      message
+      message,
     );
 
     if (!result.success) {
@@ -113,11 +120,11 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
    * Subscribe to remote agent state changes
    */
   onRemoteAgentStateChanged: (
-    callback: (agentId: string, state: RemoteAgentWindowState) => void
+    callback: (agentId: string, state: RemoteAgentWindowState) => void,
   ): (() => void) => {
     const listener = (
       _event: Electron.IpcRendererEvent,
-      data: { agentId: string; state: RemoteAgentWindowState }
+      data: { agentId: string; state: RemoteAgentWindowState },
     ) => {
       callback(data.agentId, data.state);
     };
@@ -128,7 +135,7 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
     return () => {
       ipcRenderer.removeListener(
         RemoteAgentWindowEvent.REMOTE_AGENT_STATE_CHANGED,
-        listener
+        listener,
       );
     };
   },
@@ -137,9 +144,12 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
    * Subscribe to messages from remote agents
    */
   onRemoteAgentMessage: (
-    callback: (agentId: string, message: RemoteAgentMessage) => void
+    callback: (agentId: string, message: RemoteAgentMessage) => void,
   ): (() => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, data: { agentId: string; message: RemoteAgentMessage }) => {
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      data: { agentId: string; message: RemoteAgentMessage },
+    ) => {
       callback(data.agentId, data.message);
     };
 
@@ -147,7 +157,10 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
 
     // Return unsubscribe function
     return () => {
-      ipcRenderer.removeListener(RemoteAgentWindowEvent.REMOTE_AGENT_MESSAGE, listener);
+      ipcRenderer.removeListener(
+        RemoteAgentWindowEvent.REMOTE_AGENT_MESSAGE,
+        listener,
+      );
     };
   },
 
@@ -157,7 +170,7 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
   switchToAgent: async (agentId: string): Promise<void> => {
     const result = await ipcRenderer.invoke(
       RemoteAgentWindowEvent.SWITCH_TO_AGENT,
-      agentId
+      agentId,
     );
 
     if (!result.success) {
@@ -169,7 +182,9 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
    * Get the active agent ID
    */
   getActiveAgentId: async (): Promise<string | null> => {
-    const result = await ipcRenderer.invoke(RemoteAgentWindowEvent.GET_ACTIVE_AGENT_ID);
+    const result = await ipcRenderer.invoke(
+      RemoteAgentWindowEvent.GET_ACTIVE_AGENT_ID,
+    );
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to get active agent ID');
@@ -182,11 +197,14 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
    * Subscribe to agent list changes
    */
   onRemoteAgentListChanged: (
-    callback: (agents: RemoteAgentConfig[], activeAgentId: string | null) => void
+    callback: (
+      agents: RemoteAgentConfig[],
+      activeAgentId: string | null,
+    ) => void,
   ): (() => void) => {
     const listener = (
       _event: Electron.IpcRendererEvent,
-      data: { agents: RemoteAgentConfig[]; activeAgentId: string | null }
+      data: { agents: RemoteAgentConfig[]; activeAgentId: string | null },
     ) => {
       callback(data.agents, data.activeAgentId);
     };
@@ -195,7 +213,10 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
 
     // Return unsubscribe function
     return () => {
-      ipcRenderer.removeListener(RemoteAgentWindowEvent.REMOTE_AGENT_LIST_CHANGED, listener);
+      ipcRenderer.removeListener(
+        RemoteAgentWindowEvent.REMOTE_AGENT_LIST_CHANGED,
+        listener,
+      );
     };
   },
 
@@ -203,17 +224,26 @@ export const remoteAgentWindowAPI: RemoteAgentWindowAPI = {
    * Subscribe to active agent changes
    */
   onRemoteAgentActiveChanged: (
-    callback: (agentId: string) => void
+    callback: (agentId: string) => void,
   ): (() => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, data: { agentId: string }) => {
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      data: { agentId: string },
+    ) => {
       callback(data.agentId);
     };
 
-    ipcRenderer.on(RemoteAgentWindowEvent.REMOTE_AGENT_ACTIVE_CHANGED, listener);
+    ipcRenderer.on(
+      RemoteAgentWindowEvent.REMOTE_AGENT_ACTIVE_CHANGED,
+      listener,
+    );
 
     // Return unsubscribe function
     return () => {
-      ipcRenderer.removeListener(RemoteAgentWindowEvent.REMOTE_AGENT_ACTIVE_CHANGED, listener);
+      ipcRenderer.removeListener(
+        RemoteAgentWindowEvent.REMOTE_AGENT_ACTIVE_CHANGED,
+        listener,
+      );
     };
   },
 };

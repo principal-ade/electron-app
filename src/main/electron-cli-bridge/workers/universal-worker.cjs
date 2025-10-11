@@ -39,6 +39,8 @@ class CommandExecutor {
     // Build the full command string
     const fullCommand = this.buildCommand(command, args);
 
+    console.log(`[Worker] Executing command: ${fullCommand}`);
+    console.log(`[Worker] Working directory: ${options.cwd || process.cwd()}`);
 
     // Prepare execSync options
     // For SSH to work, we need to preserve SSH_AUTH_SOCK and other SSH-related env vars
@@ -49,6 +51,22 @@ class CommandExecutor {
     delete cleanEnv.TS_NODE_TRANSPILE_ONLY;
 
     const execEnv = options.env ? { ...cleanEnv, ...options.env } : cleanEnv;
+
+    // Log PATH information for debugging
+    const pathFromWorker = execEnv.PATH;
+    if (pathFromWorker) {
+      const pathDirs = pathFromWorker.split(':');
+      console.log(`[Worker] PATH contains ${pathDirs.length} directories`);
+      const bunPath = pathDirs.find(p => p.includes('.bun/bin'));
+      if (bunPath) {
+        console.log(`[Worker] ✓ Bun found in PATH: ${bunPath}`);
+      } else {
+        console.warn(`[Worker] ⚠ Bun NOT found in PATH`);
+        console.log(`[Worker] First 5 PATH entries:`, pathDirs.slice(0, 5));
+      }
+    } else {
+      console.error(`[Worker] ⚠ No PATH in environment!`);
+    }
 
 
     const execOptions = {

@@ -146,7 +146,10 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
    * Check git status for a source (with caching)
    */
   const checkGitStatus = useCallback(
-    async (source: FileTreeSource, bypassCache = false): Promise<GitDetailedChanges | null> => {
+    async (
+      source: FileTreeSource,
+      bypassCache = false,
+    ): Promise<GitDetailedChanges | null> => {
       // Only works for local sources
       if (source.type !== 'local') {
         return null;
@@ -155,7 +158,11 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
       const existingState = gitStatesRef.current.get(source.id);
 
       // Check cache (unless bypassed)
-      if (!bypassCache && existingState?.gitStatus && existingState.lastStatusCheck) {
+      if (
+        !bypassCache &&
+        existingState?.gitStatus &&
+        existingState.lastStatusCheck
+      ) {
         const age = Date.now() - existingState.lastStatusCheck;
         if (age < STATUS_CACHE_DURATION) {
           console.info(
@@ -250,7 +257,9 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
 
         // TODO: Implement git commit tree loading in MonitoredFileTreeService
         // For now, return null - this disables git diff highlighting
-        console.warn('[GitChangesProvider] Git commit tree loading not yet implemented with MonitoredFileTreeService');
+        console.warn(
+          '[GitChangesProvider] Git commit tree loading not yet implemented with MonitoredFileTreeService',
+        );
         return null;
 
         // Original code to restore when implemented:
@@ -417,13 +426,14 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
             });
           }
           if ('children' in tree && tree.children) {
-            Object.entries(tree.children).forEach(
-              ([name, child]) => {
-                if (child && typeof child === 'object') {
-                  collectFiles(child as FileTree, path ? `${path}/${name}` : name);
-                }
-              },
-            );
+            Object.entries(tree.children).forEach(([name, child]) => {
+              if (child && typeof child === 'object') {
+                collectFiles(
+                  child as FileTree,
+                  path ? `${path}/${name}` : name,
+                );
+              }
+            });
           }
         };
 
@@ -591,7 +601,9 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
         return;
       }
 
-      console.info(`[GitChangesProvider] Initializing local source ${sourceId}`);
+      console.info(
+        `[GitChangesProvider] Initializing local source ${sourceId}`,
+      );
 
       // Enable git changes which will load HEAD tree
       await toggleGitChanges(source, true);
@@ -633,7 +645,9 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
       });
     };
 
-    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(handleGitStatusUpdate);
+    const unsubscribe = RepositoryMonitoringService.onGitStatusChanged(
+      handleGitStatusUpdate,
+    );
     return () => {
       unsubscribe();
     };

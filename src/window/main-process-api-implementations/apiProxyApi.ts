@@ -14,7 +14,7 @@ export const apiProxyApi: ApiProxyAPI = {
   /**
    * Check authentication status with token
    */
-  checkStatus: async token => {
+  checkStatus: async (token) => {
     return ipcRenderer.invoke('api:checkStatus', token);
   },
 

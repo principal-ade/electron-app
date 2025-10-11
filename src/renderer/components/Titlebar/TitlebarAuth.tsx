@@ -158,7 +158,8 @@ export const TitlebarAuth: React.FC = () => {
       <button
         onClick={async () => {
           try {
-            const forceRetry = loginError === 'Authentication already in progress';
+            const forceRetry =
+              loginError === 'Authentication already in progress';
             await login(forceRetry);
             console.info('Login initiated');
           } catch (error: unknown) {

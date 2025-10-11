@@ -3,10 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 // import os from 'os'; - removed unused import
 
-import {
-  SupportedAgent,
-  AGENT_INFO,
-} from '@principal-ai/agent-monitoring';
+import { SupportedAgent, AGENT_INFO } from '@principal-ai/agent-monitoring';
 import {
   DEFAULT_MCP_SERVER_NAME,
   disableAgentMCP,
@@ -235,7 +232,8 @@ export function setupAgentConfigHandlers() {
         if (agentType === 'opencode') {
           return {
             success: false,
-            error: 'OpenCode uses a plugin system. Hook configuration is not supported via settings.',
+            error:
+              'OpenCode uses a plugin system. Hook configuration is not supported via settings.',
           };
         }
 

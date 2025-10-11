@@ -2,7 +2,11 @@
  * Message types for communication between main process and event processing server
  */
 
-import type { RepositoryInfo, RepoNormalizedUniversalAgentSessionEvent, SupportedAgent } from '@principal-ai/agent-monitoring';
+import type {
+  RepositoryInfo,
+  RepoNormalizedUniversalAgentSessionEvent,
+  SupportedAgent,
+} from '@principal-ai/agent-monitoring';
 
 // Base message interface
 export interface BaseMessage {
@@ -99,14 +103,14 @@ export type EventProcessingMessage = MainToServerMessage | ServerToMainMessage;
 // Helper functions for creating messages
 export function createProcessEventMessage(
   provider: SupportedAgent,
-  rawData: unknown
+  rawData: unknown,
 ): ProcessEventMessage {
   return {
     type: 'PROCESS_EVENT',
     id: generateMessageId(),
     timestamp: Date.now(),
     provider,
-    rawData
+    rawData,
   };
 }
 
@@ -114,7 +118,7 @@ export function createStorageRequestMessage(
   operation: 'GET' | 'SET',
   key: string,
   namespace: string,
-  data?: unknown
+  data?: unknown,
 ): StorageRequestMessage {
   return {
     type: 'STORAGE_REQUEST',
@@ -123,20 +127,20 @@ export function createStorageRequestMessage(
     operation,
     key,
     namespace,
-    data
+    data,
   };
 }
 
 export function createWindowBroadcastMessage(
   event: string,
-  data: unknown
+  data: unknown,
 ): WindowBroadcastMessage {
   return {
     type: 'WINDOW_BROADCAST',
     id: generateMessageId(),
     timestamp: Date.now(),
     event,
-    data
+    data,
   };
 }
 
@@ -144,7 +148,7 @@ export function createProcessingCompleteMessage(
   requestId: string,
   success: boolean,
   eventData?: RepoNormalizedUniversalAgentSessionEvent,
-  error?: string
+  error?: string,
 ): ProcessingCompleteMessage {
   return {
     type: 'PROCESSING_COMPLETE',
@@ -152,7 +156,7 @@ export function createProcessingCompleteMessage(
     timestamp: Date.now(),
     success,
     eventData,
-    error
+    error,
   };
 }
 
@@ -162,15 +166,23 @@ function generateMessageId(): string {
 }
 
 // Type guards for message validation
-export function isProcessEventMessage(msg: unknown): msg is ProcessEventMessage {
+export function isProcessEventMessage(
+  msg: unknown,
+): msg is ProcessEventMessage {
   if (!msg || typeof msg !== 'object') {
     return false;
   }
   const candidate = msg as Partial<ProcessEventMessage>;
-  return candidate.type === 'PROCESS_EVENT' && candidate.provider !== undefined && candidate.rawData !== undefined;
+  return (
+    candidate.type === 'PROCESS_EVENT' &&
+    candidate.provider !== undefined &&
+    candidate.rawData !== undefined
+  );
 }
 
-export function isStorageRequestMessage(msg: unknown): msg is StorageRequestMessage {
+export function isStorageRequestMessage(
+  msg: unknown,
+): msg is StorageRequestMessage {
   if (!msg || typeof msg !== 'object') {
     return false;
   }
@@ -183,18 +195,29 @@ export function isStorageRequestMessage(msg: unknown): msg is StorageRequestMess
   );
 }
 
-export function isWindowBroadcastMessage(msg: unknown): msg is WindowBroadcastMessage {
+export function isWindowBroadcastMessage(
+  msg: unknown,
+): msg is WindowBroadcastMessage {
   if (!msg || typeof msg !== 'object') {
     return false;
   }
   const candidate = msg as Partial<WindowBroadcastMessage>;
-  return candidate.type === 'WINDOW_BROADCAST' && candidate.event !== undefined && candidate.data !== undefined;
+  return (
+    candidate.type === 'WINDOW_BROADCAST' &&
+    candidate.event !== undefined &&
+    candidate.data !== undefined
+  );
 }
 
-export function isProcessingCompleteMessage(msg: unknown): msg is ProcessingCompleteMessage {
+export function isProcessingCompleteMessage(
+  msg: unknown,
+): msg is ProcessingCompleteMessage {
   if (!msg || typeof msg !== 'object') {
     return false;
   }
   const candidate = msg as Partial<ProcessingCompleteMessage>;
-  return candidate.type === 'PROCESSING_COMPLETE' && typeof candidate.success === 'boolean';
+  return (
+    candidate.type === 'PROCESSING_COMPLETE' &&
+    typeof candidate.success === 'boolean'
+  );
 }

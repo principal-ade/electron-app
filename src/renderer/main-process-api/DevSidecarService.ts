@@ -120,10 +120,7 @@ export class DevSidecarService {
    * @param sessionId - Session ID of the window to reload
    * @param clearCache - Whether to clear the cache before reloading
    */
-  static async reload(
-    sessionId: string,
-    clearCache?: boolean,
-  ): Promise<void> {
+  static async reload(sessionId: string, clearCache?: boolean): Promise<void> {
     try {
       await window.mainProcess.devSidecar.reload(sessionId, clearCache);
     } catch (error) {
@@ -160,9 +157,7 @@ export class DevSidecarService {
    * Toggle logs view in the dev sidecar window
    * @param sessionId - Session ID of the window
    */
-  static async toggleLogs(
-    sessionId: string,
-  ): Promise<{ visible: boolean }> {
+  static async toggleLogs(sessionId: string): Promise<{ visible: boolean }> {
     try {
       return await window.mainProcess.devSidecar.toggleLogs(sessionId);
     } catch (error) {

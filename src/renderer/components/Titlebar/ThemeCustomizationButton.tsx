@@ -54,7 +54,7 @@ export const ThemeCustomizationButton: React.FC = () => {
         className="titlebar-customize-button"
         style={{
           WebkitAppRegion: 'no-drag' as any,
-          zIndex: 100
+          zIndex: 100,
         }}
       >
         <button
@@ -80,7 +80,8 @@ export const ThemeCustomizationButton: React.FC = () => {
             WebkitAppRegion: 'no-drag' as any,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.hover || 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.backgroundColor =
+              theme.colors.hover || 'rgba(255, 255, 255, 0.1)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';

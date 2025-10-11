@@ -35,11 +35,27 @@ export const excalidrawAPI: ExcalidrawAPI = {
     data: ExcalidrawDiagramData,
     repositoryPath: string,
   ) =>
-    ipcRenderer.invoke(ExcalidrawAPIEvents.SAVE_ALEXANDRIA_DIAGRAM, name, data, repositoryPath),
+    ipcRenderer.invoke(
+      ExcalidrawAPIEvents.SAVE_ALEXANDRIA_DIAGRAM,
+      name,
+      data,
+      repositoryPath,
+    ),
   loadAlexandriaDiagram: (fileName: string, repositoryPath: string) =>
-    ipcRenderer.invoke(ExcalidrawAPIEvents.LOAD_ALEXANDRIA_DIAGRAM, fileName, repositoryPath),
+    ipcRenderer.invoke(
+      ExcalidrawAPIEvents.LOAD_ALEXANDRIA_DIAGRAM,
+      fileName,
+      repositoryPath,
+    ),
   listAlexandriaDiagrams: (repositoryPath: string) =>
-    ipcRenderer.invoke(ExcalidrawAPIEvents.LIST_ALEXANDRIA_DIAGRAMS, repositoryPath),
+    ipcRenderer.invoke(
+      ExcalidrawAPIEvents.LIST_ALEXANDRIA_DIAGRAMS,
+      repositoryPath,
+    ),
   deleteAlexandriaDiagram: (fileName: string, repositoryPath: string) =>
-    ipcRenderer.invoke(ExcalidrawAPIEvents.DELETE_ALEXANDRIA_DIAGRAM, fileName, repositoryPath),
+    ipcRenderer.invoke(
+      ExcalidrawAPIEvents.DELETE_ALEXANDRIA_DIAGRAM,
+      fileName,
+      repositoryPath,
+    ),
 };

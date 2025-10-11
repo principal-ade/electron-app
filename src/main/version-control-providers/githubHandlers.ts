@@ -3,7 +3,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import fetch from 'node-fetch';
 import { electronCLI } from '../electron-cli-bridge';
-import { UnifiedSecureStorage, TOKEN_KEYS } from '../services/UnifiedSecureStorage';
+import {
+  UnifiedSecureStorage,
+  TOKEN_KEYS,
+} from '../services/UnifiedSecureStorage';
 import {
   GitHubAPIEvent,
   ConfigFetchRequest,
@@ -67,7 +70,9 @@ export class GitHubAdapter {
    */
   private async getGitHubToken(): Promise<string | null> {
     try {
-      const tokenData = await this.storage.getTokenWithMetadata(TOKEN_KEYS.GITHUB_TOKEN);
+      const tokenData = await this.storage.getTokenWithMetadata(
+        TOKEN_KEYS.GITHUB_TOKEN,
+      );
       return tokenData?.token || null;
     } catch (error) {
       console.error('[GitHub] Failed to get GitHub token:', error);
@@ -84,7 +89,7 @@ export class GitHubAdapter {
       method?: string;
       headers?: Record<string, string>;
       body?: any;
-    } = {}
+    } = {},
   ): Promise<{ success: boolean; data?: any; headers?: any; error?: string }> {
     const token = await this.getGitHubToken();
     if (!token) {
@@ -95,17 +100,17 @@ export class GitHubAdapter {
       const response = await fetch(`https://api.github.com${endpoint}`, {
         method: options.method || 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github.v3+json',
-          ...options.headers
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+          ...options.headers,
         },
-        body: options.body ? JSON.stringify(options.body) : undefined
+        body: options.body ? JSON.stringify(options.body) : undefined,
       });
 
       if (!response.ok) {
         return {
           success: false,
-          error: `GitHub API error: ${response.status} ${response.statusText}`
+          error: `GitHub API error: ${response.status} ${response.statusText}`,
         };
       }
 
@@ -113,11 +118,14 @@ export class GitHubAdapter {
       return {
         success: true,
         data,
-        headers: Object.fromEntries(response.headers.entries())
+        headers: Object.fromEntries(response.headers.entries()),
       };
     } catch (error) {
       console.error('[GitHub] API call failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -1130,7 +1138,9 @@ export class GitHubAdapter {
 
   // Fetch GitHub issues
   // Get user's repositories from GitHub
-  async getUserRepositories(options?: RepositoryFetchOptions): Promise<GitHubRepository[]> {
+  async getUserRepositories(
+    options?: RepositoryFetchOptions,
+  ): Promise<GitHubRepository[]> {
     // Build query parameters
     const params: string[] = [];
     if (options?.type) params.push(`type=${options.type}`);
@@ -1139,9 +1149,8 @@ export class GitHubAdapter {
     params.push(`per_page=${options?.perPage || 100}`);
     if (options?.page) params.push(`page=${options.page}`);
 
-    const endpoint = params.length > 0
-      ? `/user/repos?${params.join('&')}`
-      : '/user/repos';
+    const endpoint =
+      params.length > 0 ? `/user/repos?${params.join('&')}` : '/user/repos';
 
     // Try token-based API first
     const apiResult = await this.makeGitHubAPICall(endpoint);
@@ -1151,7 +1160,7 @@ export class GitHubAdapter {
         name: repo.name,
         full_name: repo.full_name,
         owner: {
-          login: repo.owner.login
+          login: repo.owner.login,
         },
         private: repo.private,
         html_url: repo.html_url,
@@ -1161,7 +1170,7 @@ export class GitHubAdapter {
         updated_at: repo.updated_at,
         pushed_at: repo.pushed_at,
         language: repo.language,
-        default_branch: repo.default_branch
+        default_branch: repo.default_branch,
       }));
     }
 
@@ -1186,7 +1195,7 @@ export class GitHubAdapter {
           updated_at: repo.updated_at,
           pushed_at: repo.pushed_at,
           language: repo.language,
-          default_branch: repo.default_branch
+          default_branch: repo.default_branch,
         }));
       }
 
@@ -1198,7 +1207,10 @@ export class GitHubAdapter {
   }
 
   // Get organization repositories
-  async getOrgRepositories(org: string, options?: RepositoryFetchOptions): Promise<GitHubRepository[]> {
+  async getOrgRepositories(
+    org: string,
+    options?: RepositoryFetchOptions,
+  ): Promise<GitHubRepository[]> {
     // Build query parameters
     const params: string[] = [];
     if (options?.type) params.push(`type=${options.type}`);
@@ -1207,9 +1219,10 @@ export class GitHubAdapter {
     params.push(`per_page=${options?.perPage || 100}`);
     if (options?.page) params.push(`page=${options.page}`);
 
-    const endpoint = params.length > 0
-      ? `/orgs/${org}/repos?${params.join('&')}`
-      : `/orgs/${org}/repos`;
+    const endpoint =
+      params.length > 0
+        ? `/orgs/${org}/repos?${params.join('&')}`
+        : `/orgs/${org}/repos`;
 
     // Try token-based API first
     const apiResult = await this.makeGitHubAPICall(endpoint);
@@ -1219,7 +1232,7 @@ export class GitHubAdapter {
         name: repo.name,
         full_name: repo.full_name,
         owner: {
-          login: repo.owner.login
+          login: repo.owner.login,
         },
         private: repo.private,
         html_url: repo.html_url,
@@ -1229,7 +1242,7 @@ export class GitHubAdapter {
         updated_at: repo.updated_at,
         pushed_at: repo.pushed_at,
         language: repo.language,
-        default_branch: repo.default_branch
+        default_branch: repo.default_branch,
       }));
     }
 
@@ -1254,13 +1267,16 @@ export class GitHubAdapter {
           updated_at: repo.updated_at,
           pushed_at: repo.pushed_at,
           language: repo.language,
-          default_branch: repo.default_branch
+          default_branch: repo.default_branch,
         }));
       }
 
       return [];
     } catch (error) {
-      console.error(`[GitHub] Error getting org repositories for ${org}:`, error);
+      console.error(
+        `[GitHub] Error getting org repositories for ${org}:`,
+        error,
+      );
       return [];
     }
   }
@@ -1274,7 +1290,7 @@ export class GitHubAdapter {
         login: org.login,
         id: org.id,
         avatar_url: org.avatar_url,
-        description: org.description
+        description: org.description,
       }));
     }
 
@@ -1289,7 +1305,7 @@ export class GitHubAdapter {
           login: org.login,
           id: org.id,
           avatar_url: org.avatar_url,
-          description: org.description
+          description: org.description,
         }));
       }
 
@@ -1315,7 +1331,12 @@ export class GitHubAdapter {
 
     // Fallback to CLI
     try {
-      const result = await this.executeCommand(['gh', 'api', '/user', '--include']);
+      const result = await this.executeCommand([
+        'gh',
+        'api',
+        '/user',
+        '--include',
+      ]);
       if (result.success && result.stdout) {
         // Parse the headers from gh CLI output (includes headers when --include flag is used)
         const lines = result.stdout.split('\n');
@@ -1374,7 +1395,7 @@ export class GitHubAdapter {
       const [user, scopes, organizations] = await Promise.all([
         this.getCurrentUser(),
         this.getTokenScopes(),
-        this.getUserOrganizations()
+        this.getUserOrganizations(),
       ]);
 
       if (!user) {
@@ -1385,14 +1406,14 @@ export class GitHubAdapter {
       const rateLimit = {
         limit: 5000,
         remaining: 5000,
-        reset: new Date()
+        reset: new Date(),
       };
 
       return {
         scopes,
         organizations,
         user,
-        rateLimit
+        rateLimit,
       };
     } catch (error) {
       console.error('[GitHub] Failed to get token info:', error);
@@ -2011,53 +2032,41 @@ export function registerGitHubIpcHandlers(
     },
   );
 
-  ipcMain.handle(
-    GitHubAPIEvent.GET_USER_ORGANIZATIONS,
-    async (event) => {
-      const adapter = getAdapterFromSender(event.sender);
-      if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_USER_ORGANIZATIONS');
-        return [];
-      }
-      return adapter.getUserOrganizations();
-    },
-  );
+  ipcMain.handle(GitHubAPIEvent.GET_USER_ORGANIZATIONS, async (event) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for GET_USER_ORGANIZATIONS');
+      return [];
+    }
+    return adapter.getUserOrganizations();
+  });
 
-  ipcMain.handle(
-    GitHubAPIEvent.GET_TOKEN_SCOPES,
-    async (event) => {
-      const adapter = getAdapterFromSender(event.sender);
-      if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_TOKEN_SCOPES');
-        return [];
-      }
-      return adapter.getTokenScopes();
-    },
-  );
+  ipcMain.handle(GitHubAPIEvent.GET_TOKEN_SCOPES, async (event) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for GET_TOKEN_SCOPES');
+      return [];
+    }
+    return adapter.getTokenScopes();
+  });
 
-  ipcMain.handle(
-    GitHubAPIEvent.GET_CURRENT_USER,
-    async (event) => {
-      const adapter = getAdapterFromSender(event.sender);
-      if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_CURRENT_USER');
-        return null;
-      }
-      return adapter.getCurrentUser();
-    },
-  );
+  ipcMain.handle(GitHubAPIEvent.GET_CURRENT_USER, async (event) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for GET_CURRENT_USER');
+      return null;
+    }
+    return adapter.getCurrentUser();
+  });
 
-  ipcMain.handle(
-    GitHubAPIEvent.GET_TOKEN_INFO,
-    async (event) => {
-      const adapter = getAdapterFromSender(event.sender);
-      if (!adapter) {
-        console.error('[GitHub] No adapter found for GET_TOKEN_INFO');
-        return null;
-      }
-      return adapter.getTokenInfo();
-    },
-  );
+  ipcMain.handle(GitHubAPIEvent.GET_TOKEN_INFO, async (event) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for GET_TOKEN_INFO');
+      return null;
+    }
+    return adapter.getTokenInfo();
+  });
 
   console.log('[GitHub] IPC handlers registered');
   console.log('[Config] Configuration handlers registered');

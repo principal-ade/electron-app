@@ -66,7 +66,8 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
             e.currentTarget.style.backgroundColor = theme.colors.background;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = theme.colors.backgroundLight;
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundLight;
           }}
         >
           Hide
@@ -97,7 +98,8 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
               e.currentTarget.style.backgroundColor = theme.colors.background;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundLight;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundLight;
             }}
           >
             <input

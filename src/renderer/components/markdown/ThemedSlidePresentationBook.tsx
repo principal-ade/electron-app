@@ -1,5 +1,8 @@
 import React from 'react';
-import { SlidePresentationBook, SlidePresentationBookProps } from 'themed-markdown';
+import {
+  SlidePresentationBook,
+  SlidePresentationBookProps,
+} from 'themed-markdown';
 import { useTheme } from '@a24z/industry-theme';
 import type { Theme } from '@a24z/industry-theme';
 
@@ -10,14 +13,16 @@ import type { Theme } from '@a24z/industry-theme';
  * - 'single' mode shows one slide at a time (traditional presentation)
  * - 'book' mode shows two slides side-by-side like pages in a book
  */
-export type ThemedSlidePresentationBookProps = Omit<SlidePresentationBookProps, 'theme'> & {
+export type ThemedSlidePresentationBookProps = Omit<
+  SlidePresentationBookProps,
+  'theme'
+> & {
   theme?: Theme; // Optional explicit theme override
 };
 
-export const ThemedSlidePresentationBook: React.FC<ThemedSlidePresentationBookProps> = ({
-  theme,
-  ...props
-}) => {
+export const ThemedSlidePresentationBook: React.FC<
+  ThemedSlidePresentationBookProps
+> = ({ theme, ...props }) => {
   const { theme: appTheme } = useTheme();
 
   // Use explicit theme if provided, otherwise use app theme

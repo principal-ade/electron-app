@@ -8,9 +8,7 @@ import {
   type StopDevSidecarServerPayload,
 } from '../../shared/main-process-api-interfaces/DevSidecarAPI';
 
-export function registerDevSidecarHandlers(
-  manager: DevSidecarManager,
-): void {
+export function registerDevSidecarHandlers(manager: DevSidecarManager): void {
   ipcMain.handle(
     DevSidecarEvent.CREATE_WINDOW,
     async (_event, payload: CreateDevSidecarWindowPayload) => {
@@ -112,7 +110,10 @@ export function registerDevSidecarHandlers(
 
   ipcMain.handle(
     DevSidecarEvent.NAVIGATE,
-    async (_event, { sessionId, path }: { sessionId: string; path: string }) => {
+    async (
+      _event,
+      { sessionId, path }: { sessionId: string; path: string },
+    ) => {
       try {
         await manager.navigate(sessionId, path);
       } catch (error) {

@@ -1,6 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { AlertCircle, CheckCircle2, Loader2, Play, RefreshCcw, Settings } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Play,
+  RefreshCcw,
+  Settings,
+} from 'lucide-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 
 import { useRepositorySecretsStatus } from '../hooks/useRepositorySecretsStatus';
@@ -40,15 +47,18 @@ const formatDuration = (seconds?: number) => {
  */
 const extractWorkflowActionsFromTree = async (
   fileTree: FileTree | null,
-  repositoryPath: string | null
+  repositoryPath: string | null,
 ): Promise<ActWorkflowAction[]> => {
   if (!fileTree?.allFiles || !repositoryPath) {
     return [];
   }
 
-  const workflowFiles = fileTree.allFiles.filter(file => {
+  const workflowFiles = fileTree.allFiles.filter((file) => {
     const path = file.path.toLowerCase();
-    return path.includes('.github/workflows/') && (path.endsWith('.yml') || path.endsWith('.yaml'));
+    return (
+      path.includes('.github/workflows/') &&
+      (path.endsWith('.yml') || path.endsWith('.yaml'))
+    );
   });
 
   const actions: ActWorkflowAction[] = [];
@@ -61,7 +71,8 @@ const extractWorkflowActionsFromTree = async (
       const fullPath = `${repositoryPath}/${file.path}`;
       const result = await FileSystemService.readFile(fullPath);
 
-      const content = typeof result === 'string' ? result : (result as any)?.content;
+      const content =
+        typeof result === 'string' ? result : (result as any)?.content;
 
       if (!content) {
         console.warn('[RepositoryActionsPanel] No content for:', file.path);
@@ -71,15 +82,20 @@ const extractWorkflowActionsFromTree = async (
       const requiredSecrets = getRequiredSecrets(content);
 
       // Parse workflow to extract jobs
-      const { parseWorkflowFile } = await import('../../../../utils/workflowParser');
+      const { parseWorkflowFile } = await import(
+        '../../../../utils/workflowParser'
+      );
       const parsed = parseWorkflowFile(content);
 
       if (!parsed || !parsed.jobs) {
-        console.warn(`[RepositoryActionsPanel] No jobs found in workflow ${file.path}`);
+        console.warn(
+          `[RepositoryActionsPanel] No jobs found in workflow ${file.path}`,
+        );
         continue;
       }
 
-      const workflowName = parsed.name || fileName.replace(/\.(yml|yaml)$/i, '');
+      const workflowName =
+        parsed.name || fileName.replace(/\.(yml|yaml)$/i, '');
 
       // Create one action per job
       for (const [jobId, job] of Object.entries(parsed.jobs)) {
@@ -89,16 +105,20 @@ const extractWorkflowActionsFromTree = async (
         actions.push({
           id: jobId, // Use actual job ID for act
           label,
-          description: requiredSecrets.length > 0
-            ? `Requires: ${requiredSecrets.join(', ')}`
-            : `Job in ${fileName}`,
+          description:
+            requiredSecrets.length > 0
+              ? `Requires: ${requiredSecrets.join(', ')}`
+              : `Job in ${fileName}`,
           workflowPath: file.path,
           requiresSecrets: requiredSecrets.length > 0,
           requiredSecrets,
         });
       }
     } catch (error) {
-      console.error(`[RepositoryActionsPanel] Failed to parse workflow ${file.path}:`, error);
+      console.error(
+        `[RepositoryActionsPanel] Failed to parse workflow ${file.path}:`,
+        error,
+      );
     }
   }
 
@@ -115,9 +135,10 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
   runningActionId,
 }) => {
   const { theme } = useTheme();
-  const { isConfigured, isLoading, error, refresh } = useRepositorySecretsStatus(repoId, {
-    skip: !isVisible,
-  });
+  const { isConfigured, isLoading, error, refresh } =
+    useRepositorySecretsStatus(repoId, {
+      skip: !isVisible,
+    });
 
   // Extract actions from the FileTree with async parsing
   const [actions, setActions] = useState<ActWorkflowAction[]>([]);
@@ -129,12 +150,18 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
     async function loadActions() {
       setIsLoadingActions(true);
       try {
-        const extractedActions = await extractWorkflowActionsFromTree(fileTree, repositoryPath || null);
+        const extractedActions = await extractWorkflowActionsFromTree(
+          fileTree,
+          repositoryPath || null,
+        );
         if (!cancelled) {
           setActions(extractedActions);
         }
       } catch (error) {
-        console.error('[RepositoryActionsPanel] Failed to extract actions:', error);
+        console.error(
+          '[RepositoryActionsPanel] Failed to extract actions:',
+          error,
+        );
         if (!cancelled) {
           setActions([]);
         }
@@ -174,7 +201,13 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
 
     if (isLoading) {
       return {
-        icon: <Loader2 size={16} className="spin" color={theme.colors.textSecondary} />,
+        icon: (
+          <Loader2
+            size={16}
+            className="spin"
+            color={theme.colors.textSecondary}
+          />
+        ),
         text: 'Checking repository secrets…',
         tone: theme.colors.textSecondary,
       };
@@ -193,7 +226,7 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
       text: 'Secrets are not configured yet.',
       tone: theme.colors.warning,
     };
-    }, [repoId, error, isLoading, isConfigured, theme]);
+  }, [repoId, error, isLoading, isConfigured, theme]);
 
   const handleConfigureClick = () => {
     onConfigure?.();
@@ -258,7 +291,11 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
               opacity: isBusy ? 0.6 : 1,
             }}
           >
-            {isBusy ? <Loader2 size={16} className="spin" /> : <RefreshCcw size={16} />}
+            {isBusy ? (
+              <Loader2 size={16} className="spin" />
+            ) : (
+              <RefreshCcw size={16} />
+            )}
             {isBusy ? 'Checking…' : 'Re-check'}
           </button>
         ) : null}
@@ -305,12 +342,17 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
             overflowY: 'auto',
           }}
         >
-          {actions.map(action => {
+          {actions.map((action) => {
             const requiresSecrets = action.requiresSecrets !== false;
             const isActionRunning = runningActionId === action.id;
-            const canRun = (!requiresSecrets || isConfigured) && Boolean(onRun) && !isActionRunning;
+            const canRun =
+              (!requiresSecrets || isConfigured) &&
+              Boolean(onRun) &&
+              !isActionRunning;
             const showConfigure = requiresSecrets && !isConfigured;
-            const durationLabel = formatDuration(action.estimatedDurationSeconds);
+            const durationLabel = formatDuration(
+              action.estimatedDurationSeconds,
+            );
 
             return (
               <div
@@ -406,7 +448,9 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
                           backgroundColor: canRun
                             ? theme.colors.accent
                             : theme.colors.backgroundSecondary,
-                          color: canRun ? theme.colors.background : theme.colors.textSecondary,
+                          color: canRun
+                            ? theme.colors.background
+                            : theme.colors.textSecondary,
                           cursor: canRun ? 'pointer' : 'not-allowed',
                           opacity: canRun ? 1 : 0.6,
                         }}

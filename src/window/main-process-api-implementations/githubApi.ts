@@ -80,7 +80,11 @@ export const githubAPI: GitHubAPI = {
   },
 
   getOrgRepositories: async (org, options) => {
-    return ipcRenderer.invoke(GitHubAPIEvent.GET_ORG_REPOSITORIES, org, options);
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_ORG_REPOSITORIES,
+      org,
+      options,
+    );
   },
 
   getUserOrganizations: async () => {

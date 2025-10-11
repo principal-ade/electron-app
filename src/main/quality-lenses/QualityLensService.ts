@@ -15,7 +15,10 @@ import {
   type Issue,
 } from '@principal-ai/codebase-quality-lenses';
 import { ElectronCLIBridgeExecutor } from './ElectronCLIBridgeExecutor';
-import type { ToolExecutionRequest, ToolExecutionResponse } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type {
+  ToolExecutionRequest,
+  ToolExecutionResponse,
+} from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 /**
  * Singleton service for executing quality tools through lenses
@@ -76,7 +79,9 @@ export class QualityLensService {
   /**
    * Execute a tool using the appropriate lens
    */
-  public async executeTool(request: ToolExecutionRequest): Promise<ToolExecutionResponse> {
+  public async executeTool(
+    request: ToolExecutionRequest,
+  ): Promise<ToolExecutionResponse> {
     const { repoPath, packagePath, toolName, command, args = [] } = request;
     const startTime = Date.now();
 
@@ -88,17 +93,21 @@ export class QualityLensService {
 
     if (!lens) {
       // No lens available, execute directly without parsing
-      console.log(`[QualityLensService] No lens found for tool: ${toolName}, executing directly`);
+      console.log(
+        `[QualityLensService] No lens found for tool: ${toolName}, executing directly`,
+      );
       return this.executeDirectly(request, cwd, startTime);
     }
 
-    console.log(`[QualityLensService] Using ${lens.name} lens for tool: ${toolName}`);
+    console.log(
+      `[QualityLensService] Using ${lens.name} lens for tool: ${toolName}`,
+    );
     console.log(`[QualityLensService] Working directory (cwd): ${cwd}`);
     console.log(`[QualityLensService] Request details:`, {
       repoPath,
       packagePath,
       command: this.parseCommand(command),
-      args: this.parseArgs(command, args)
+      args: this.parseArgs(command, args),
     });
 
     try {
@@ -134,7 +143,10 @@ export class QualityLensService {
         actualSuccess = false;
       }
       // For linting tools, check if there are error-level issues
-      else if (lensResult.metrics?.issuesBySeverity?.error && lensResult.metrics.issuesBySeverity.error > 0) {
+      else if (
+        lensResult.metrics?.issuesBySeverity?.error &&
+        lensResult.metrics.issuesBySeverity.error > 0
+      ) {
         // Tool ran successfully but found errors - this is typically exit code 1 for linters
         actualExitCode = 1;
         actualSuccess = false;
@@ -153,10 +165,18 @@ export class QualityLensService {
         errorCount: lensResult.metrics?.issuesBySeverity?.error || 0,
         warningCount: lensResult.metrics?.issuesBySeverity?.warning || 0,
         totalIssuesInArray: lensResult.issues?.length || 0,
-        issuesWithErrors: lensResult.issues?.filter(i => i.severity === 'error').length || 0,
+        issuesWithErrors:
+          lensResult.issues?.filter((i) => i.severity === 'error').length || 0,
         hasError: !!lensResult.error,
         errorMessage: lensResult.error?.message,
-        sampleIssues: lensResult.issues?.slice(0, 3).map(i => ({ file: i.file, severity: i.severity, message: i.message })) || [],
+        sampleIssues:
+          lensResult.issues
+            ?.slice(0, 3)
+            .map((i) => ({
+              file: i.file,
+              severity: i.severity,
+              message: i.message,
+            })) || [],
       });
 
       return {
@@ -171,7 +191,10 @@ export class QualityLensService {
         lensResult,
       };
     } catch (error: any) {
-      console.error(`[QualityLensService] Error executing tool with lens:`, error);
+      console.error(
+        `[QualityLensService] Error executing tool with lens:`,
+        error,
+      );
 
       return {
         success: false,
@@ -192,7 +215,7 @@ export class QualityLensService {
   private async executeDirectly(
     request: ToolExecutionRequest,
     cwd: string,
-    startTime: number
+    startTime: number,
   ): Promise<ToolExecutionResponse> {
     const { toolName, command, packagePath, args = [] } = request;
 
@@ -200,11 +223,21 @@ export class QualityLensService {
       const parsedCommand = this.parseCommand(command);
       const parsedArgs = this.parseArgs(command, args);
 
-      const result = await this.executor.execute(parsedCommand, parsedArgs, { cwd });
+      const result = await this.executor.execute(parsedCommand, parsedArgs, {
+        cwd,
+      });
 
       // Check if this is a Prettier command and parse its output
-      if (command.includes('prettier') || toolName.toLowerCase().includes('prettier')) {
-        const lensResult = this.parsePrettierOutput(result.stdout, result.stderr, cwd, result.exitCode);
+      if (
+        command.includes('prettier') ||
+        toolName.toLowerCase().includes('prettier')
+      ) {
+        const lensResult = this.parsePrettierOutput(
+          result.stdout,
+          result.stderr,
+          cwd,
+          result.exitCode,
+        );
         return {
           success: result.exitCode === 0,
           toolName,
@@ -245,7 +278,12 @@ export class QualityLensService {
   /**
    * Parse Prettier output into a LensResult
    */
-  private parsePrettierOutput(stdout: string, stderr: string, cwd: string, exitCode: number): LensResult {
+  private parsePrettierOutput(
+    stdout: string,
+    stderr: string,
+    cwd: string,
+    exitCode: number,
+  ): LensResult {
     const issues: Issue[] = [];
     const analyzedFiles: Array<{ path: string; hasIssues: boolean }> = [];
 
@@ -328,7 +366,7 @@ export class QualityLensService {
         },
         executionTime: 0,
         custom: {
-          filesWithIssues: analyzedFiles.filter(f => f.hasIssues).length,
+          filesWithIssues: analyzedFiles.filter((f) => f.hasIssues).length,
           filesFormatted: issues.length,
         },
       },
@@ -348,8 +386,10 @@ export class QualityLensService {
 
     // Check for npm/yarn/pnpm scripts
     if (commandLower.includes('eslint')) return this.lenses.get('eslint');
-    if (commandLower.includes('jest') || commandLower.includes('test')) return this.lenses.get('jest');
-    if (commandLower.includes('tsc') || commandLower.includes('typecheck')) return this.lenses.get('typescript');
+    if (commandLower.includes('jest') || commandLower.includes('test'))
+      return this.lenses.get('jest');
+    if (commandLower.includes('tsc') || commandLower.includes('typecheck'))
+      return this.lenses.get('typescript');
     if (commandLower.includes('knip')) return this.lenses.get('knip');
     if (commandLower.startsWith('git ')) return this.lenses.get('git');
 

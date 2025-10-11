@@ -60,8 +60,12 @@ export class MonacoEditorErrorBoundary extends React.Component<
         this.props.fallback || (
           <div style={{ padding: '20px', color: 'red' }}>
             <h3>Editor Error</h3>
-            <p>{this.state.error?.message || 'An error occurred in the editor'}</p>
-            <button onClick={() => this.setState({ hasError: false, error: null })}>
+            <p>
+              {this.state.error?.message || 'An error occurred in the editor'}
+            </p>
+            <button
+              onClick={() => this.setState({ hasError: false, error: null })}
+            >
               Retry
             </button>
           </div>

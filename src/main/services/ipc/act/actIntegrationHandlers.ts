@@ -1,13 +1,7 @@
 import { BrowserWindow, ipcMain } from 'electron';
-import {
-  ActRunnerEvents,
-} from '../../../../shared/main-process-api-interfaces/ActRunnerAPI';
-import {
-  ActWorkflowEvents,
-} from '../../../../shared/main-process-api-interfaces/ActWorkflowAPI';
-import type {
-  ActWorkflowAction,
-} from '../../../../shared/types/act.types';
+import { ActRunnerEvents } from '../../../../shared/main-process-api-interfaces/ActRunnerAPI';
+import { ActWorkflowEvents } from '../../../../shared/main-process-api-interfaces/ActWorkflowAPI';
+import type { ActWorkflowAction } from '../../../../shared/types/act.types';
 import type {
   RunRepositoryActionRequest,
   RunRepositoryActionResult,
@@ -33,9 +27,10 @@ const warn = (...args: unknown[]) => {
 const actRunnerService = new ActRunnerService();
 let workflowListenersRegistered = false;
 
-const forwardWorkflowEvent = (
-  channel: (typeof ActRunnerWorkflowChannels)[keyof typeof ActRunnerWorkflowChannels],
-) =>
+const forwardWorkflowEvent =
+  (
+    channel: (typeof ActRunnerWorkflowChannels)[keyof typeof ActRunnerWorkflowChannels],
+  ) =>
   (event: ActRunnerWorkflowEvent) => {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((window) => {
@@ -123,11 +118,17 @@ export function registerActIntegrationHandlers() {
       try {
         const result = await actRunnerService.runWorkflow(request);
         if (!result.success) {
-          console.error('[ActIntegration] Workflow run failed to start:', result.error);
+          console.error(
+            '[ActIntegration] Workflow run failed to start:',
+            result.error,
+          );
         }
         return result;
       } catch (error) {
-        console.error('[ActIntegration] Failed to start workflow execution:', error);
+        console.error(
+          '[ActIntegration] Failed to start workflow execution:',
+          error,
+        );
         return {
           success: false,
           error:

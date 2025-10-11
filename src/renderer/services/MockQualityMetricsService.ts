@@ -45,9 +45,11 @@ class MockQualityMetricsServiceImpl {
 
   async analyzeDirectory(
     directory: string,
-    options?: AnalysisOptions
+    options?: AnalysisOptions,
   ): Promise<ExtendedQualityMetrics> {
-    console.log(`[MockQualityMetricsService] Starting analysis for ${directory}`);
+    console.log(
+      `[MockQualityMetricsService] Starting analysis for ${directory}`,
+    );
     console.log('[MockQualityMetricsService] Options:', options);
 
     // Simulate analysis delay
@@ -72,7 +74,7 @@ class MockQualityMetricsServiceImpl {
 
     const hexagon: QualityMetrics = {
       tests: randomValue(45, 95),
-      deadCode: randomValue(5, 35),  // Lower is better
+      deadCode: randomValue(5, 35), // Lower is better
       formatting: randomValue(75, 100),
       linting: randomValue(60, 95),
       types: randomValue(70, 100),
@@ -82,8 +84,13 @@ class MockQualityMetricsServiceImpl {
     // Calculate average (accounting for deadCode being inverted)
     const adjustedDeadCode = 100 - hexagon.deadCode;
     const average =
-      (hexagon.tests + adjustedDeadCode + hexagon.formatting +
-       hexagon.linting + hexagon.types + hexagon.documentation) / 6;
+      (hexagon.tests +
+        adjustedDeadCode +
+        hexagon.formatting +
+        hexagon.linting +
+        hexagon.types +
+        hexagon.documentation) /
+      6;
 
     let tier: QualityTier = 'bronze';
     if (average >= 95) tier = 'platinum';
@@ -102,31 +109,39 @@ class MockQualityMetricsServiceImpl {
           success: true,
           duration: randomValue(500, 2000),
           output: `✓ No linting errors found in ${randomValue(20, 50)} files`,
-          metrics: { filesChecked: randomValue(20, 50), errors: 0, warnings: randomValue(0, 5) }
+          metrics: {
+            filesChecked: randomValue(20, 50),
+            errors: 0,
+            warnings: randomValue(0, 5),
+          },
         },
         typescript: {
           tool: 'typescript',
           success: true,
           duration: randomValue(1000, 3000),
           output: `✓ No type errors in ${randomValue(30, 60)} TypeScript files`,
-          metrics: { filesChecked: randomValue(30, 60), errors: 0 }
+          metrics: { filesChecked: randomValue(30, 60), errors: 0 },
         },
         jest: {
           tool: 'jest',
           success: true,
           duration: randomValue(3000, 8000),
           output: `Test Suites: ${randomValue(8, 15)} passed\nTests: ${randomValue(100, 200)} passed`,
-          metrics: { suites: randomValue(8, 15), tests: randomValue(100, 200), coverage: hexagon.tests }
+          metrics: {
+            suites: randomValue(8, 15),
+            tests: randomValue(100, 200),
+            coverage: hexagon.tests,
+          },
         },
         prettier: {
           tool: 'prettier',
           success: true,
           duration: randomValue(200, 800),
           output: `✓ All ${randomValue(40, 80)} files formatted correctly`,
-          metrics: { filesChecked: randomValue(40, 80), filesFormatted: 0 }
-        }
+          metrics: { filesChecked: randomValue(40, 80), filesFormatted: 0 },
+        },
       },
-      suggestions: this.generateSuggestions(hexagon)
+      suggestions: this.generateSuggestions(hexagon),
     };
   }
 
@@ -138,7 +153,7 @@ class MockQualityMetricsServiceImpl {
         type: 'improvement',
         metric: 'tests',
         message: `Test coverage is at ${metrics.tests}%. Consider adding more tests to reach 80% coverage.`,
-        priority: 'high'
+        priority: 'high',
       });
     }
 
@@ -146,8 +161,9 @@ class MockQualityMetricsServiceImpl {
       suggestions.push({
         type: 'improvement',
         metric: 'documentation',
-        message: 'Documentation coverage is low. Add JSDoc comments to exported functions.',
-        priority: 'medium'
+        message:
+          'Documentation coverage is low. Add JSDoc comments to exported functions.',
+        priority: 'medium',
       });
     }
 
@@ -156,7 +172,7 @@ class MockQualityMetricsServiceImpl {
         type: 'warning',
         metric: 'deadCode',
         message: `Found ${metrics.deadCode}% unused code. Run dead code elimination tool.`,
-        priority: 'medium'
+        priority: 'medium',
       });
     }
 
@@ -164,8 +180,9 @@ class MockQualityMetricsServiceImpl {
       suggestions.push({
         type: 'improvement',
         metric: 'types',
-        message: 'Some TypeScript types are missing. Add explicit types to function parameters.',
-        priority: 'low'
+        message:
+          'Some TypeScript types are missing. Add explicit types to function parameters.',
+        priority: 'low',
       });
     }
 
@@ -173,15 +190,17 @@ class MockQualityMetricsServiceImpl {
   }
 
   private async simulateDelay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   // Simulate real-time updates
   subscribeToUpdates(
     directory: string,
-    callback: (metrics: ExtendedQualityMetrics) => void
+    callback: (metrics: ExtendedQualityMetrics) => void,
   ): () => void {
-    console.log(`[MockQualityMetricsService] Subscribing to updates for ${directory}`);
+    console.log(
+      `[MockQualityMetricsService] Subscribing to updates for ${directory}`,
+    );
 
     // Simulate progress updates every second while analyzing
     const interval = setInterval(() => {
@@ -192,7 +211,9 @@ class MockQualityMetricsServiceImpl {
     }, 1000);
 
     return () => {
-      console.log(`[MockQualityMetricsService] Unsubscribing from ${directory}`);
+      console.log(
+        `[MockQualityMetricsService] Unsubscribing from ${directory}`,
+      );
       clearInterval(interval);
     };
   }
@@ -202,8 +223,12 @@ class MockQualityMetricsServiceImpl {
   }
 
   // Get cached metrics (mock always returns null to simulate no cache)
-  async getCachedMetrics(directory: string): Promise<ExtendedQualityMetrics | null> {
-    console.log(`[MockQualityMetricsService] No cache for ${directory} - MVP mode`);
+  async getCachedMetrics(
+    directory: string,
+  ): Promise<ExtendedQualityMetrics | null> {
+    console.log(
+      `[MockQualityMetricsService] No cache for ${directory} - MVP mode`,
+    );
     return null;
   }
 }

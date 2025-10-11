@@ -88,7 +88,7 @@ export interface LinksAPI {
    */
   addLink: (
     repoId: string,
-    link: Omit<RepositoryLink, 'id' | 'createdAt' | 'updatedAt'>
+    link: Omit<RepositoryLink, 'id' | 'createdAt' | 'updatedAt'>,
   ) => Promise<LinkOperationResult>;
 
   /**
@@ -97,7 +97,7 @@ export interface LinksAPI {
   updateLink: (
     repoId: string,
     linkId: string,
-    updates: Partial<RepositoryLink>
+    updates: Partial<RepositoryLink>,
   ) => Promise<LinkOperationResult>;
 
   /**

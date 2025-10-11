@@ -164,7 +164,9 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
   const handleUninstallAgent = useCallback(async () => {
     setError(null);
     // For all agents, direct user to uninstall manually
-    alert(`Please uninstall ${agentConfig.displayName} manually through your system settings`);
+    alert(
+      `Please uninstall ${agentConfig.displayName} manually through your system settings`,
+    );
   }, [agentConfig.displayName]);
 
   const handleMCPToggle = useCallback(async () => {
@@ -217,7 +219,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
     const isInstalled =
       localInstallStatus !== null
         ? localInstallStatus
-        : agentStatus?.isInstalled ?? true;
+        : (agentStatus?.isInstalled ?? true);
 
     if (!isInstalled) return 'install';
     if (!agentStatus?.hasHooks) return 'configure';
@@ -564,7 +566,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
               isInstalled={
                 localInstallStatus !== null
                   ? localInstallStatus
-                  : agentStatus?.isInstalled ?? true
+                  : (agentStatus?.isInstalled ?? true)
               }
               hasHooks={agentStatus?.hasHooks || false}
               hasMCP={mcpStatus.enabled}

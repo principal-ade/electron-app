@@ -51,7 +51,7 @@ export class LinksService {
    */
   static async addLink(
     repoId: string,
-    link: Omit<RepositoryLink, 'id' | 'createdAt' | 'updatedAt'>
+    link: Omit<RepositoryLink, 'id' | 'createdAt' | 'updatedAt'>,
   ): Promise<LinkOperationResult> {
     return window.mainProcess.links.addLink(repoId, link);
   }
@@ -62,7 +62,7 @@ export class LinksService {
   static async updateLink(
     repoId: string,
     linkId: string,
-    updates: Partial<RepositoryLink>
+    updates: Partial<RepositoryLink>,
   ): Promise<LinkOperationResult> {
     return window.mainProcess.links.updateLink(repoId, linkId, updates);
   }
@@ -70,21 +70,28 @@ export class LinksService {
   /**
    * Remove a single link
    */
-  static async removeLink(repoId: string, linkId: string): Promise<LinkOperationResult> {
+  static async removeLink(
+    repoId: string,
+    linkId: string,
+  ): Promise<LinkOperationResult> {
     return window.mainProcess.links.removeLink(repoId, linkId);
   }
 
   /**
    * Open a link in the default browser
    */
-  static async openLink(url: string): Promise<{ success: boolean; error?: string }> {
+  static async openLink(
+    url: string,
+  ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.links.openLink(url);
   }
 
   /**
    * Copy a link to clipboard
    */
-  static async copyLink(url: string): Promise<{ success: boolean; error?: string }> {
+  static async copyLink(
+    url: string,
+  ): Promise<{ success: boolean; error?: string }> {
     return window.mainProcess.links.copyLink(url);
   }
 }

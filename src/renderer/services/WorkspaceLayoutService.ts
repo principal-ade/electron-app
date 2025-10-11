@@ -42,7 +42,7 @@ export class WorkspaceLayoutService {
       description?: string;
       defaultSizes?: { left: number; middle: number; right: number };
       defaultCollapsed?: { left?: boolean; right?: boolean };
-    }
+    },
   ): Promise<WorkspaceLayout> {
     const prefs = await UserPreferencesService.getPreferences();
     const id = this.generateWorkspaceId(name);
@@ -79,7 +79,7 @@ export class WorkspaceLayoutService {
    */
   static async updateWorkspaceLayout(
     id: string,
-    updates: Partial<Omit<WorkspaceLayout, 'id' | 'createdAt' | 'isBuiltIn'>>
+    updates: Partial<Omit<WorkspaceLayout, 'id' | 'createdAt' | 'isBuiltIn'>>,
   ): Promise<WorkspaceLayout | null> {
     const prefs = await UserPreferencesService.getPreferences();
     const existingWorkspace = prefs.workspaceLayouts?.presets?.[id];
@@ -172,7 +172,7 @@ export class WorkspaceLayoutService {
       layout?: PanelLayout;
       sizes: { left: number; middle: number; right: number };
       collapsed: { left?: boolean; right?: boolean };
-    }
+    },
   ): Promise<void> {
     const prefs = await UserPreferencesService.getPreferences();
 
@@ -193,7 +193,7 @@ export class WorkspaceLayoutService {
    */
   static async updateRepositorySizes(
     repositoryKey: string,
-    sizes: { left: number; middle: number; right: number }
+    sizes: { left: number; middle: number; right: number },
   ): Promise<void> {
     const currentState = await this.getRepositoryState(repositoryKey);
     if (!currentState) return;
@@ -209,7 +209,7 @@ export class WorkspaceLayoutService {
    */
   static async updateRepositoryCollapsed(
     repositoryKey: string,
-    collapsed: { left?: boolean; right?: boolean }
+    collapsed: { left?: boolean; right?: boolean },
   ): Promise<void> {
     const currentState = await this.getRepositoryState(repositoryKey);
     if (!currentState) return;
@@ -229,17 +229,19 @@ export class WorkspaceLayoutService {
       sizes: { left: number; middle: number; right: number };
       collapsed: { left?: boolean; right?: boolean };
     },
-    workspace: WorkspaceLayout
+    workspace: WorkspaceLayout,
   ): {
     hasSizeDeviation: boolean;
     hasCollapsedDeviation: boolean;
   } {
     const hasSizeDeviation = workspace.defaultSizes
-      ? JSON.stringify(repoState.sizes) !== JSON.stringify(workspace.defaultSizes)
+      ? JSON.stringify(repoState.sizes) !==
+        JSON.stringify(workspace.defaultSizes)
       : false;
 
     const hasCollapsedDeviation = workspace.defaultCollapsed
-      ? JSON.stringify(repoState.collapsed) !== JSON.stringify(workspace.defaultCollapsed)
+      ? JSON.stringify(repoState.collapsed) !==
+        JSON.stringify(workspace.defaultCollapsed)
       : false;
 
     return { hasSizeDeviation, hasCollapsedDeviation };
@@ -250,13 +252,15 @@ export class WorkspaceLayoutService {
    */
   static async updateWorkspaceFromRepositoryState(
     workspaceId: string,
-    repositoryKey: string
+    repositoryKey: string,
   ): Promise<void> {
     const workspace = await this.getWorkspaceLayout(workspaceId);
     const repoState = await this.getRepositoryState(repositoryKey);
 
     if (!workspace || !repoState || workspace.isBuiltIn) {
-      console.error('Cannot update built-in workspace or workspace/state not found');
+      console.error(
+        'Cannot update built-in workspace or workspace/state not found',
+      );
       return;
     }
 
@@ -271,7 +275,7 @@ export class WorkspaceLayoutService {
    */
   static async resetRepositoryToWorkspaceDefaults(
     repositoryKey: string,
-    workspaceId: string
+    workspaceId: string,
   ): Promise<void> {
     const workspace = await this.getWorkspaceLayout(workspaceId);
     if (!workspace) {
@@ -294,7 +298,7 @@ export class WorkspaceLayoutService {
    */
   static isLayoutMatchingWorkspace(
     layout: PanelLayout,
-    workspace: WorkspaceLayout
+    workspace: WorkspaceLayout,
   ): boolean {
     return this.areLayoutsEqual(layout, workspace.layout);
   }
@@ -303,7 +307,7 @@ export class WorkspaceLayoutService {
    * Find workspace ID that matches the given layout
    */
   static async findMatchingWorkspace(
-    layout: PanelLayout
+    layout: PanelLayout,
   ): Promise<string | null> {
     const workspaces = await this.getWorkspaceLayouts();
 
@@ -321,7 +325,7 @@ export class WorkspaceLayoutService {
    */
   private static areLayoutsEqual(
     layout1: PanelLayout,
-    layout2: PanelLayout
+    layout2: PanelLayout,
   ): boolean {
     return JSON.stringify(layout1) === JSON.stringify(layout2);
   }
@@ -344,17 +348,30 @@ export class WorkspaceLayoutService {
       'project-management': {
         id: 'project-management',
         name: 'Project Management',
-        description: 'Tasks, dependencies, file tree, docs, drawings, tools, tabbed terminal, city visualization, code viewer, markdown slides, and excalidraw',
+        description:
+          'Tasks, dependencies, file tree, docs, drawings, tools, tabbed terminal, city visualization, code viewer, markdown slides, and excalidraw',
         layout: {
           left: {
             type: 'tabs',
-            panels: ['tasks', 'dependencies', 'fileTree', 'docs', 'drawings', 'tools'],
+            panels: [
+              'tasks',
+              'dependencies',
+              'fileTree',
+              'docs',
+              'drawings',
+              'tools',
+            ],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
           middle: 'tabbedTerminal',
           right: {
             type: 'tabs',
-            panels: ['cityVisualization', 'codeViewer', 'markdownViewer', 'excalidrawDiagram'],
+            panels: [
+              'cityVisualization',
+              'codeViewer',
+              'markdownViewer',
+              'excalidrawDiagram',
+            ],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
         },
@@ -379,7 +396,7 @@ export class WorkspaceLayoutService {
         updatedAt: now,
         isBuiltIn: true,
       },
-      'documentation': {
+      documentation: {
         id: 'documentation',
         name: 'Documentation',
         description: 'Docs, markdown viewer, and dependencies',
@@ -397,7 +414,8 @@ export class WorkspaceLayoutService {
       'agent-work': {
         id: 'agent-work',
         name: 'Agent Work',
-        description: 'File tree, agent context, git changes, tabbed terminal, city map, agent events, code viewer, and markdown slides',
+        description:
+          'File tree, agent context, git changes, tabbed terminal, city map, agent events, code viewer, and markdown slides',
         layout: {
           left: {
             type: 'tabs',
@@ -407,7 +425,12 @@ export class WorkspaceLayoutService {
           middle: 'tabbedTerminal',
           right: {
             type: 'tabs',
-            panels: ['cityVisualization', 'agentEvents', 'codeViewer', 'markdownViewer'],
+            panels: [
+              'cityVisualization',
+              'agentEvents',
+              'codeViewer',
+              'markdownViewer',
+            ],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
         },
@@ -432,7 +455,12 @@ export class WorkspaceLayoutService {
         workspaceLayouts: {
           presets: {},
           lastUsedWorkspace: {},
-          builtInWorkspaceIds: ['project-management', 'code-review', 'documentation', 'agent-work'],
+          builtInWorkspaceIds: [
+            'project-management',
+            'code-review',
+            'documentation',
+            'agent-work',
+          ],
         },
       });
     }

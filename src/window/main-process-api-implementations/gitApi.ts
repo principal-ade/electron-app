@@ -1,6 +1,9 @@
 import { ipcRenderer, type IpcRendererEvent } from 'electron';
 import { GitEvents } from '../../shared/main-process-api-interfaces/GitAPI';
-import type { Repository, GitStatus } from '../../shared/types/repository.types';
+import type {
+  Repository,
+  GitStatus,
+} from '../../shared/types/repository.types';
 
 export interface GitRepositoryInfo {
   root: string;
@@ -158,10 +161,8 @@ export const gitAPI = {
   },
 
   onLocalCloneMissing: (callback: (data: { repoPath: string }) => void) => {
-    const handler = (
-      _event: IpcRendererEvent,
-      data: { repoPath: string },
-    ) => callback(data);
+    const handler = (_event: IpcRendererEvent, data: { repoPath: string }) =>
+      callback(data);
     ipcRenderer.on('git:local-clone-missing', handler);
 
     return () => {

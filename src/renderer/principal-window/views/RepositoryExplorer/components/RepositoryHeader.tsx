@@ -1,5 +1,14 @@
 import React, { useCallback, useState, useRef, useEffect } from 'react';
-import { GitBranch, Trash2, ExternalLink, Terminal, RefreshCw, GitPullRequest, Upload, Settings } from 'lucide-react';
+import {
+  GitBranch,
+  Trash2,
+  ExternalLink,
+  Terminal,
+  RefreshCw,
+  GitPullRequest,
+  Upload,
+  Settings,
+} from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import { GitBranchStatus } from '../../../../main-process-api/GitService';
@@ -7,7 +16,12 @@ import { TerminalService } from '../../../../main-process-api/TerminalService';
 
 interface RepositoryHeaderProps {
   repository: EnhancedAlexandriaEntry;
-  gitStatus: { staged: unknown[]; unstaged: unknown[]; untracked: unknown[]; deleted: unknown[] }; // Add git status prop for dirty state
+  gitStatus: {
+    staged: unknown[];
+    unstaged: unknown[];
+    untracked: unknown[];
+    deleted: unknown[];
+  }; // Add git status prop for dirty state
   branchStatus: GitBranchStatus | null;
   pushStatus: { safe: boolean; reason?: string; needsUpstream: boolean } | null;
   isCheckingUpdates: boolean;
@@ -60,7 +74,10 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     };
@@ -93,7 +110,10 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
           // Focused existing terminal window
           return;
         } catch (focusError) {
-          console.warn('Failed to focus existing terminal window, will create new one:', focusError);
+          console.warn(
+            'Failed to focus existing terminal window, will create new one:',
+            focusError,
+          );
           const newMap = new Map(terminalWindows);
           newMap.delete(repository.path);
           onTerminalWindowsUpdate(newMap);
@@ -112,7 +132,6 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
       console.error('Error opening terminal:', error);
     }
   }, [repository, terminalWindows, onTerminalWindowsUpdate, onOpenTerminal]);
-
 
   return (
     <div
@@ -167,7 +186,10 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
                   fontWeight: 600,
                 }}
               >
-                ● {(gitStatus.staged || 0) + (gitStatus.unstaged || 0) + (gitStatus.untracked || 0)}
+                ●{' '}
+                {(gitStatus.staged || 0) +
+                  (gitStatus.unstaged || 0) +
+                  (gitStatus.untracked || 0)}
               </span>
             )}
 
@@ -186,40 +208,49 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
                     branchStatus.behind > 0 && branchStatus.ahead === 0
                       ? `${theme.colors.warning}15`
                       : branchStatus.ahead > 0 && branchStatus.behind === 0
-                      ? `${theme.colors.info}15`
-                      : branchStatus.ahead > 0 && branchStatus.behind > 0
-                      ? `${theme.colors.error}15`
-                      : `${theme.colors.success}15`,
+                        ? `${theme.colors.info}15`
+                        : branchStatus.ahead > 0 && branchStatus.behind > 0
+                          ? `${theme.colors.error}15`
+                          : `${theme.colors.success}15`,
                   color:
                     branchStatus.behind > 0 && branchStatus.ahead === 0
                       ? theme.colors.warning
                       : branchStatus.ahead > 0 && branchStatus.behind === 0
-                      ? theme.colors.info
-                      : branchStatus.ahead > 0 && branchStatus.behind > 0
-                      ? theme.colors.error
-                      : theme.colors.success,
+                        ? theme.colors.info
+                        : branchStatus.ahead > 0 && branchStatus.behind > 0
+                          ? theme.colors.error
+                          : theme.colors.success,
                   border: `1px solid ${
                     branchStatus.behind > 0 && branchStatus.ahead === 0
                       ? theme.colors.warning
                       : branchStatus.ahead > 0 && branchStatus.behind === 0
-                      ? theme.colors.info
-                      : branchStatus.ahead > 0 && branchStatus.behind > 0
-                      ? theme.colors.error
-                      : theme.colors.success
+                        ? theme.colors.info
+                        : branchStatus.ahead > 0 && branchStatus.behind > 0
+                          ? theme.colors.error
+                          : theme.colors.success
                   }30`,
                 }}
               >
                 <GitBranch size={12} />
                 {branchStatus.behind > 0 && branchStatus.ahead === 0 && (
-                  <>↓ {branchStatus.behind} {branchStatus.branch}</>
+                  <>
+                    ↓ {branchStatus.behind} {branchStatus.branch}
+                  </>
                 )}
                 {branchStatus.ahead > 0 && branchStatus.behind === 0 && (
-                  <>↑ {branchStatus.ahead} {branchStatus.branch}</>
+                  <>
+                    ↑ {branchStatus.ahead} {branchStatus.branch}
+                  </>
                 )}
                 {branchStatus.ahead > 0 && branchStatus.behind > 0 && (
-                  <>↑{branchStatus.ahead} ↓{branchStatus.behind} {branchStatus.branch}</>
+                  <>
+                    ↑{branchStatus.ahead} ↓{branchStatus.behind}{' '}
+                    {branchStatus.branch}
+                  </>
                 )}
-                {branchStatus.ahead === 0 && branchStatus.behind === 0 && <>{branchStatus.branch}</>}
+                {branchStatus.ahead === 0 && branchStatus.behind === 0 && (
+                  <>{branchStatus.branch}</>
+                )}
               </div>
             )}
 
@@ -259,7 +290,7 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
             alignItems: 'center',
           }}
         >
-{/* Fast Forward Button - Only show when applicable */}
+          {/* Fast Forward Button - Only show when applicable */}
           {branchStatus?.canFastForward && (
             <button
               onClick={onPerformFastForward}
@@ -295,7 +326,9 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               <GitPullRequest
                 size={14}
                 style={{
-                  animation: isFastForwarding ? 'spin 1s linear infinite' : 'none',
+                  animation: isFastForwarding
+                    ? 'spin 1s linear infinite'
+                    : 'none',
                 }}
               />
               {isFastForwarding ? 'Merging...' : 'Fast Forward'}
@@ -303,46 +336,55 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
           )}
 
           {/* Push Button - Only show when there are commits to push */}
-          {pushStatus?.safe && branchStatus?.ahead && branchStatus.ahead > 0 && (
-            <button
-              onClick={onPerformPush}
-              disabled={isPushing}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 12px',
-                backgroundColor: theme.colors.info || theme.colors.primary,
-                color: theme.colors.background,
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: isPushing ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s',
-                opacity: isPushing ? 0.6 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!isPushing) {
-                  e.currentTarget.style.opacity = '0.9';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isPushing) {
-                  e.currentTarget.style.opacity = '1';
-                }
-              }}
-              title={pushStatus.reason || `Push ${branchStatus.ahead} commit${branchStatus.ahead > 1 ? 's' : ''} to remote`}
-            >
-              <Upload
-                size={14}
+          {pushStatus?.safe &&
+            branchStatus?.ahead &&
+            branchStatus.ahead > 0 && (
+              <button
+                onClick={onPerformPush}
+                disabled={isPushing}
                 style={{
-                  animation: isPushing ? 'spin 1s linear infinite' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 12px',
+                  backgroundColor: theme.colors.info || theme.colors.primary,
+                  color: theme.colors.background,
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: isPushing ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s',
+                  opacity: isPushing ? 0.6 : 1,
                 }}
-              />
-              {isPushing ? 'Pushing...' : pushStatus.needsUpstream ? 'Push & Set Upstream' : 'Push'}
-            </button>
-          )}
+                onMouseEnter={(e) => {
+                  if (!isPushing) {
+                    e.currentTarget.style.opacity = '0.9';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isPushing) {
+                    e.currentTarget.style.opacity = '1';
+                  }
+                }}
+                title={
+                  pushStatus.reason ||
+                  `Push ${branchStatus.ahead} commit${branchStatus.ahead > 1 ? 's' : ''} to remote`
+                }
+              >
+                <Upload
+                  size={14}
+                  style={{
+                    animation: isPushing ? 'spin 1s linear infinite' : 'none',
+                  }}
+                />
+                {isPushing
+                  ? 'Pushing...'
+                  : pushStatus.needsUpstream
+                    ? 'Push & Set Upstream'
+                    : 'Push'}
+              </button>
+            )}
 
           <button
             onClick={handleOpenTerminal}
@@ -361,7 +403,8 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
               e.currentTarget.style.borderColor = theme.colors.primary;
             }}
             onMouseLeave={(e) => {
@@ -370,19 +413,22 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
             }}
             title={
               onOpenTerminal
-                ? (isNestedRightPanelCollapsed ? "Show preview/terminal panel" : "Hide preview/terminal panel")
-                : (repository?.path && terminalWindows.has(repository.path)
-                    ? "Focus existing terminal window"
-                    : "Open terminal in repository directory")
+                ? isNestedRightPanelCollapsed
+                  ? 'Show preview/terminal panel'
+                  : 'Hide preview/terminal panel'
+                : repository?.path && terminalWindows.has(repository.path)
+                  ? 'Focus existing terminal window'
+                  : 'Open terminal in repository directory'
             }
           >
             <Terminal size={14} />
             {onOpenTerminal
-              ? (isNestedRightPanelCollapsed ? "Show Panel" : "Hide Panel")
-              : (repository?.path && terminalWindows.has(repository.path)
-                  ? "Focus Terminal"
-                  : "Terminal")
-            }
+              ? isNestedRightPanelCollapsed
+                ? 'Show Panel'
+                : 'Hide Panel'
+              : repository?.path && terminalWindows.has(repository.path)
+                ? 'Focus Terminal'
+                : 'Terminal'}
           </button>
 
           <button
@@ -402,7 +448,8 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
               e.currentTarget.style.borderColor = theme.colors.primary;
             }}
             onMouseLeave={(e) => {
@@ -433,7 +480,8 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
                 transition: 'all 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundSecondary;
                 e.currentTarget.style.borderColor = theme.colors.primary;
               }}
               onMouseLeave={(e) => {
@@ -483,7 +531,8 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
                       textAlign: 'left',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundSecondary;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';

@@ -69,7 +69,10 @@ export class SecretsService {
   /**
    * Get multiple specific secret values
    */
-  static async getMultiple(repoId: string, keys: string[]): Promise<Record<string, string>> {
+  static async getMultiple(
+    repoId: string,
+    keys: string[],
+  ): Promise<Record<string, string>> {
     return window.mainProcess.secrets.getMultiple(repoId, keys);
   }
 
@@ -77,7 +80,10 @@ export class SecretsService {
    * Copy a secret directly to clipboard without exposing it to renderer
    * The value never enters the renderer process memory
    */
-  static async copyToClipboard(repoId: string, key: string): Promise<CopyResult> {
+  static async copyToClipboard(
+    repoId: string,
+    key: string,
+  ): Promise<CopyResult> {
     return window.mainProcess.secrets.copyToClipboard(repoId, key);
   }
 }

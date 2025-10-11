@@ -27,12 +27,18 @@ export interface ObservabilityAPI {
   /**
    * Get current observability configuration
    */
-  getConfig(): Promise<{ success: boolean; config?: ObservabilityConfig; error?: string }>;
+  getConfig(): Promise<{
+    success: boolean;
+    config?: ObservabilityConfig;
+    error?: string;
+  }>;
 
   /**
    * Save observability configuration
    */
-  saveConfig(config: ObservabilityConfig): Promise<{ success: boolean; error?: string }>;
+  saveConfig(
+    config: ObservabilityConfig,
+  ): Promise<{ success: boolean; error?: string }>;
 
   /**
    * Test connection with provided configuration
@@ -42,5 +48,9 @@ export interface ObservabilityAPI {
   /**
    * Get observability status and statistics
    */
-  getStatus(): Promise<{ success: boolean; status?: ObservabilityStatus; error?: string }>;
+  getStatus(): Promise<{
+    success: boolean;
+    status?: ObservabilityStatus;
+    error?: string;
+  }>;
 }

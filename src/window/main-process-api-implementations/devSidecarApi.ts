@@ -48,10 +48,9 @@ export const devSidecarAPI: DevSidecarAPI = {
     ) as Promise<DevSidecarServerStatusResponse>;
   },
   stopServer(payload: StopDevSidecarServerPayload) {
-    return ipcRenderer.invoke(
-      DevSidecarEvent.SERVER_STOP,
-      payload,
-    ) as Promise<{ success: boolean }>;
+    return ipcRenderer.invoke(DevSidecarEvent.SERVER_STOP, payload) as Promise<{
+      success: boolean;
+    }>;
   },
   restartServer(payload: RestartDevSidecarServerPayload) {
     return ipcRenderer.invoke(

@@ -40,7 +40,7 @@ export class RemoteAgentWindowManager {
    */
   async openRemoteAgent(
     config: RemoteAgentConfig,
-    options?: RemoteAgentWindowOptions
+    options?: RemoteAgentWindowOptions,
   ): Promise<string> {
     // Check if agent already exists
     const existingAgent = this.remoteAgents.get(config.id);
@@ -54,9 +54,11 @@ export class RemoteAgentWindowManager {
     }
 
     // Check concurrent agent limit
-    if (this.remoteAgents.size >= REMOTE_AGENT_WINDOW_CONFIG.maxConcurrentAgents) {
+    if (
+      this.remoteAgents.size >= REMOTE_AGENT_WINDOW_CONFIG.maxConcurrentAgents
+    ) {
       throw new Error(
-        `Maximum number of remote agents (${REMOTE_AGENT_WINDOW_CONFIG.maxConcurrentAgents}) reached`
+        `Maximum number of remote agents (${REMOTE_AGENT_WINDOW_CONFIG.maxConcurrentAgents}) reached`,
       );
     }
 
@@ -87,7 +89,10 @@ export class RemoteAgentWindowManager {
     const webContents = view.webContents;
 
     // Set a standard browser user agent
-    const userAgent = webContents.getUserAgent().replace(/Electron\/[^\s]+/, '').trim();
+    const userAgent = webContents
+      .getUserAgent()
+      .replace(/Electron\/[^\s]+/, '')
+      .trim();
     webContents.setUserAgent(userAgent);
 
     // Disable CSP/XFO to allow target sites to function
@@ -340,7 +345,8 @@ export class RemoteAgentWindowManager {
    */
   private createHostWindow(options?: RemoteAgentWindowOptions): BrowserWindow {
     const primaryDisplay = screen.getPrimaryDisplay();
-    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    const { width: screenWidth, height: screenHeight } =
+      primaryDisplay.workAreaSize;
 
     // Calculate left half dimensions
     const windowWidth = options?.width ?? Math.floor(screenWidth / 2);
@@ -387,13 +393,16 @@ export class RemoteAgentWindowManager {
 
     // Load the titlebar HTML
     const titlebarPath = app.isPackaged
-      ? pathToFileURL(path.join(app.getAppPath(), 'dist', 'renderer', 'titlebar.html')).toString()
+      ? pathToFileURL(
+          path.join(app.getAppPath(), 'dist', 'renderer', 'titlebar.html'),
+        ).toString()
       : `http://localhost:${process.env.PORT || 1212}/titlebar.html`;
 
     window.loadURL(titlebarPath).catch((error) => {
       console.error('[RemoteAgent] Failed to load titlebar:', error);
       // Fallback to minimal HTML if titlebar fails to load
-      window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(`
+      window.loadURL(
+        `data:text/html;charset=utf-8,${encodeURIComponent(`
         <!DOCTYPE html>
         <html>
           <head>
@@ -414,7 +423,8 @@ export class RemoteAgentWindowManager {
             <div id="titlebar">Remote Agents</div>
           </body>
         </html>
-      `)}`);
+      `)}`,
+      );
     });
 
     return window;
@@ -463,7 +473,9 @@ export class RemoteAgentWindowManager {
 
     // Page failed to load
     webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-      console.error(`Remote agent failed to load: ${errorDescription} (${errorCode})`);
+      console.error(
+        `Remote agent failed to load: ${errorDescription} (${errorCode})`,
+      );
       this.updateRemoteAgentState(id, RemoteAgentWindowState.ERROR);
     });
 
@@ -478,7 +490,10 @@ export class RemoteAgentWindowManager {
   /**
    * Apply security policy to window
    */
-  private applySecurityPolicy(webContents: Electron.WebContents, config: RemoteAgentConfig): void {
+  private applySecurityPolicy(
+    webContents: Electron.WebContents,
+    config: RemoteAgentConfig,
+  ): void {
     // For remote agent windows, we allow more flexibility to support OAuth flows
     // and other authentication mechanisms
 
@@ -492,8 +507,13 @@ export class RemoteAgentWindowManager {
       ];
 
       // Allow navigation to the main domain or auth domains
-      const isAllowed = this.isUrlAllowed(url) ||
-        allowedAuthDomains.some(domain => parsedUrl.hostname === domain || parsedUrl.hostname.endsWith(`.${domain}`));
+      const isAllowed =
+        this.isUrlAllowed(url) ||
+        allowedAuthDomains.some(
+          (domain) =>
+            parsedUrl.hostname === domain ||
+            parsedUrl.hostname.endsWith(`.${domain}`),
+        );
 
       if (!isAllowed) {
         event.preventDefault();
@@ -512,7 +532,9 @@ export class RemoteAgentWindowManager {
 
       // Allow auth domains to open in the same window
       const isAuthDomain = allowedAuthDomains.some(
-        domain => parsedUrl.hostname === domain || parsedUrl.hostname.endsWith(`.${domain}`)
+        (domain) =>
+          parsedUrl.hostname === domain ||
+          parsedUrl.hostname.endsWith(`.${domain}`),
       );
 
       if (isAuthDomain) {
@@ -542,14 +564,16 @@ export class RemoteAgentWindowManager {
         } else {
           callback(false);
         }
-      }
+      },
     );
   }
 
   /**
    * Configure response header relaxation (CSP/XFO removal)
    */
-  private configureResponseHeaderRelaxation(webContents: Electron.WebContents): void {
+  private configureResponseHeaderRelaxation(
+    webContents: Electron.WebContents,
+  ): void {
     webContents.session.webRequest.onHeadersReceived((details, callback) => {
       if (details.responseHeaders) {
         delete details.responseHeaders['content-security-policy'];

@@ -135,11 +135,16 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
 
       // Clean up file system watchers before removing from map
       if (this.fileSystemAdapter) {
-        console.log(`[ModernWindow] Cleaning up file system watchers for window ${this.window.id}`);
+        console.log(
+          `[ModernWindow] Cleaning up file system watchers for window ${this.window.id}`,
+        );
         try {
           await this.fileSystemAdapter.stopWatching();
         } catch (error) {
-          console.error(`[ModernWindow] Error stopping file system watchers:`, error);
+          console.error(
+            `[ModernWindow] Error stopping file system watchers:`,
+            error,
+          );
         }
       }
 
@@ -315,15 +320,24 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
 
     // Terminal Manager
     if (this.features.terminalManager) {
-      console.log(`[ModernWindow] Attempting to initialize terminal manager for window ${this.window.id}`);
+      console.log(
+        `[ModernWindow] Attempting to initialize terminal manager for window ${this.window.id}`,
+      );
       import('../terminalWrapper')
         .then(({ getTerminalManager }) => {
-          console.log(`[ModernWindow] Terminal wrapper imported, getting manager...`);
+          console.log(
+            `[ModernWindow] Terminal wrapper imported, getting manager...`,
+          );
           const terminalManager = getTerminalManager();
-          console.log(`[ModernWindow] Terminal manager retrieved:`, !!terminalManager);
+          console.log(
+            `[ModernWindow] Terminal manager retrieved:`,
+            !!terminalManager,
+          );
           if (terminalManager) {
             terminalManager.setMainWindow(this.window);
-            console.log(`[ModernWindow] Terminal manager initialized for window ${this.window.id}`);
+            console.log(
+              `[ModernWindow] Terminal manager initialized for window ${this.window.id}`,
+            );
           } else {
             console.warn(`[ModernWindow] Terminal manager is null/undefined`);
           }

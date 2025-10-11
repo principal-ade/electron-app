@@ -174,12 +174,15 @@ export interface UserPreferences {
     // Global workspace layouts (directory-agnostic)
     presets: Record<string, WorkspaceLayout>;
     // Per-repository state: which workspace + current sizes/collapsed
-    repositoryState?: Record<string, {
-      workspaceId: string | null; // null = custom layout
-      layout?: PanelLayout; // Only saved for custom layouts (no workspace)
-      sizes: { left: number; middle: number; right: number };
-      collapsed: { left?: boolean; right?: boolean };
-    }>;
+    repositoryState?: Record<
+      string,
+      {
+        workspaceId: string | null; // null = custom layout
+        layout?: PanelLayout; // Only saved for custom layouts (no workspace)
+        sizes: { left: number; middle: number; right: number };
+        collapsed: { left?: boolean; right?: boolean };
+      }
+    >;
     // Built-in workspace layout IDs that can't be deleted
     builtInWorkspaceIds?: string[];
   };

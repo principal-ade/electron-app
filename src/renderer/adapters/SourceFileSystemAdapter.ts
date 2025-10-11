@@ -150,5 +150,4 @@ export class SourceFileSystemAdapter implements FileSystemAdapter {
       return result?.content || '';
     };
   }
-
 }

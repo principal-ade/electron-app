@@ -8,7 +8,7 @@ import type { EnhancedAlexandriaEntry } from '../../shared/types/repository.type
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type {
   PackageLayer,
-  QualityMetrics as LibraryQualityMetrics
+  QualityMetrics as LibraryQualityMetrics,
 } from '@principal-ai/codebase-composition';
 import type {
   GitStatusMetadata,
@@ -21,7 +21,10 @@ import type {
   PackageSummary,
   PackagesData,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
-import type { AlexandriaChangeEvent, AlexandriaEventType } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
+import type {
+  AlexandriaChangeEvent,
+  AlexandriaEventType,
+} from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { GitService } from '../main-process-api/GitService';
@@ -162,14 +165,18 @@ export class RepositoryDataCache extends EventEmitter {
    */
   private initializeEventSubscriptions(): void {
     // Subscribe to git status changes
-    const unsubscribeGit = RepositoryMonitoringService.onGitStatusChanged((status) => {
-      this.handleGitStatusChange(status);
-    });
+    const unsubscribeGit = RepositoryMonitoringService.onGitStatusChanged(
+      (status) => {
+        this.handleGitStatusChange(status);
+      },
+    );
     this.eventSubscriptions.push(unsubscribeGit);
 
-    const unsubscribeCacheSync = RepositoryMonitoringService.onCacheSync((event) => {
-      this.handleCacheSyncEvent(event);
-    });
+    const unsubscribeCacheSync = RepositoryMonitoringService.onCacheSync(
+      (event) => {
+        this.handleCacheSyncEvent(event);
+      },
+    );
     this.eventSubscriptions.push(unsubscribeCacheSync);
 
     // Subscribe to repository changes from Alexandria
@@ -198,7 +205,7 @@ export class RepositoryDataCache extends EventEmitter {
   subscribe(
     repoPath: string,
     componentId: string,
-    callback: (data: RepositoryCacheData) => void
+    callback: (data: RepositoryCacheData) => void,
   ): () => void {
     // Create event listener for this repository
     const eventName = `update:${repoPath}`;
@@ -259,10 +266,18 @@ export class RepositoryDataCache extends EventEmitter {
       this.getRepositoryByPath(repoPath),
     ]);
 
-    const gitEntry = snapshot.slices.gitStatus as RegistryCacheEntry<CacheSliceDataMap['gitStatus']> | undefined;
-    const fileTreeEntry = snapshot.slices.fileTree as RegistryCacheEntry<CacheSliceDataMap['fileTree']> | undefined;
-    const packagesEntry = snapshot.slices.packages as RegistryCacheEntry<CacheSliceDataMap['packages']> | undefined;
-    const gitRemoteEntry = snapshot.slices.gitRemote as RegistryCacheEntry<CacheSliceDataMap['gitRemote']> | undefined;
+    const gitEntry = snapshot.slices.gitStatus as
+      | RegistryCacheEntry<CacheSliceDataMap['gitStatus']>
+      | undefined;
+    const fileTreeEntry = snapshot.slices.fileTree as
+      | RegistryCacheEntry<CacheSliceDataMap['fileTree']>
+      | undefined;
+    const packagesEntry = snapshot.slices.packages as
+      | RegistryCacheEntry<CacheSliceDataMap['packages']>
+      | undefined;
+    const gitRemoteEntry = snapshot.slices.gitRemote as
+      | RegistryCacheEntry<CacheSliceDataMap['gitRemote']>
+      | undefined;
 
     const gitStatus = gitEntry?.data ?? null;
     const fileTree = fileTreeEntry?.data ?? null;
@@ -344,13 +359,19 @@ export class RepositoryDataCache extends EventEmitter {
       ...update,
       cacheSlices: entry.data.cacheSlices,
       packageSummary:
-        update.packageSummary !== undefined ? update.packageSummary : entry.data.packageSummary,
+        update.packageSummary !== undefined
+          ? update.packageSummary
+          : entry.data.packageSummary,
       partialUpdates: {
         ...entry.data.partialUpdates,
         git: update.gitStatus ? Date.now() : entry.data.partialUpdates.git,
         files: update.fileTree ? Date.now() : entry.data.partialUpdates.files,
-        packages: update.packages ? Date.now() : entry.data.partialUpdates.packages,
-        quality: update.qualityMetrics ? Date.now() : entry.data.partialUpdates.quality,
+        packages: update.packages
+          ? Date.now()
+          : entry.data.partialUpdates.packages,
+        quality: update.qualityMetrics
+          ? Date.now()
+          : entry.data.partialUpdates.quality,
       },
     };
 
@@ -378,7 +399,7 @@ export class RepositoryDataCache extends EventEmitter {
     const existing = this.updateQueue.get(repoPath);
 
     if (existing) {
-      fields.forEach(f => existing.fields.add(f));
+      fields.forEach((f) => existing.fields.add(f));
     } else {
       this.updateQueue.set(repoPath, {
         fields: new Set(fields),
@@ -416,12 +437,18 @@ export class RepositoryDataCache extends EventEmitter {
   /**
    * Process a batched update
    */
-  private async processBatchedUpdate(repoPath: string, fields: string[]): Promise<void> {
+  private async processBatchedUpdate(
+    repoPath: string,
+    fields: string[],
+  ): Promise<void> {
     const updates: PartialCacheUpdate = {};
 
     // Fetch only the required data
     if (fields.includes('gitStatus')) {
-      updates.gitStatus = await RepositoryMonitoringService.getGitStatusWithFiles(repoPath).catch(() => null);
+      updates.gitStatus =
+        await RepositoryMonitoringService.getGitStatusWithFiles(repoPath).catch(
+          () => null,
+        );
       if (updates.gitStatus) {
         updates.gitBranch = updates.gitStatus.branch;
         updates.branchStatus = this.extractBranchStatus(updates.gitStatus);
@@ -429,13 +456,17 @@ export class RepositoryDataCache extends EventEmitter {
     }
 
     if (fields.includes('fileTree') || fields.includes('markdownFiles')) {
-      const fileTree = await RepositoryMonitoringService.getFileTree(repoPath).catch(() => null);
+      const fileTree = await RepositoryMonitoringService.getFileTree(
+        repoPath,
+      ).catch(() => null);
       updates.fileTree = fileTree;
       updates.markdownFiles = this.extractMarkdownFiles(fileTree);
     }
 
     if (fields.includes('packages') || fields.includes('qualityMetrics')) {
-      const packagesData = await RepositoryMonitoringService.getPackages(repoPath).catch(() => null);
+      const packagesData = await RepositoryMonitoringService.getPackages(
+        repoPath,
+      ).catch(() => null);
       updates.packages = packagesData?.packages || [];
       updates.qualityMetrics = this.extractQualityMetrics(packagesData);
       updates.packageSummary = packagesData?.summary ?? null;
@@ -468,7 +499,9 @@ export class RepositoryDataCache extends EventEmitter {
           : 0;
         const incoming = new Date(status.lastChangedAt).getTime();
         if (incoming > current) {
-          updatedRepository.mostRecentChange = new Date(status.lastChangedAt).toISOString();
+          updatedRepository.mostRecentChange = new Date(
+            status.lastChangedAt,
+          ).toISOString();
         }
       }
 
@@ -483,17 +516,26 @@ export class RepositoryDataCache extends EventEmitter {
     void this.applyCacheSyncEvent(event);
   }
 
-  private async applyCacheSyncEvent(event: RepositoryCacheSyncEvent): Promise<void> {
+  private async applyCacheSyncEvent(
+    event: RepositoryCacheSyncEvent,
+  ): Promise<void> {
     const entry = this.cache.get(event.repoPath);
     if (!entry) {
-      console.log(`[RepositoryDataCache] Cache sync for ${event.repoPath} ignored - repository not loaded in cache yet`);
+      console.log(
+        `[RepositoryDataCache] Cache sync for ${event.repoPath} ignored - repository not loaded in cache yet`,
+      );
       console.log(`[RepositoryDataCache] Loading repository into cache...`);
       // Load the repository into cache so future events work
       try {
         await this.load(event.repoPath);
-        console.log(`[RepositoryDataCache] Repository loaded, future cache sync events will work`);
+        console.log(
+          `[RepositoryDataCache] Repository loaded, future cache sync events will work`,
+        );
       } catch (error) {
-        console.error(`[RepositoryDataCache] Failed to load repository:`, error);
+        console.error(
+          `[RepositoryDataCache] Failed to load repository:`,
+          error,
+        );
       }
       return;
     }
@@ -521,7 +563,10 @@ export class RepositoryDataCache extends EventEmitter {
 
     switch (slice) {
       case 'gitStatus': {
-        const gitStatusData = event.entry.data as GitStatusWithFiles | null | undefined;
+        const gitStatusData = event.entry.data as
+          | GitStatusWithFiles
+          | null
+          | undefined;
         updatedData.gitStatus = gitStatusData ?? null;
         partial.gitStatus = updatedData.gitStatus;
         changedFields.push('gitStatus');
@@ -531,7 +576,10 @@ export class RepositoryDataCache extends EventEmitter {
           partial.gitBranch = updatedData.gitBranch;
           changedFields.push('gitBranch');
 
-          updatedData.repository = this.enhanceRepository(updatedData.repository, gitStatusData);
+          updatedData.repository = this.enhanceRepository(
+            updatedData.repository,
+            gitStatusData,
+          );
           partial.repository = updatedData.repository;
           changedFields.push('repository');
 
@@ -553,7 +601,9 @@ export class RepositoryDataCache extends EventEmitter {
         partial.fileTree = updatedData.fileTree;
         changedFields.push('fileTree');
 
-        updatedData.markdownFiles = this.extractMarkdownFiles(updatedData.fileTree);
+        updatedData.markdownFiles = this.extractMarkdownFiles(
+          updatedData.fileTree,
+        );
         partial.markdownFiles = updatedData.markdownFiles;
         changedFields.push('markdownFiles');
 
@@ -561,7 +611,10 @@ export class RepositoryDataCache extends EventEmitter {
         break;
       }
       case 'packages': {
-        const packagesData = event.entry.data as PackagesData | null | undefined;
+        const packagesData = event.entry.data as
+          | PackagesData
+          | null
+          | undefined;
         updatedData.packages = packagesData?.packages ?? [];
         partial.packages = updatedData.packages;
         changedFields.push('packages');
@@ -579,7 +632,10 @@ export class RepositoryDataCache extends EventEmitter {
         break;
       }
       case 'gitRemote': {
-        const gitRemoteData = event.entry.data as GitRemoteInfo | null | undefined;
+        const gitRemoteData = event.entry.data as
+          | GitRemoteInfo
+          | null
+          | undefined;
         updatedData.gitRemote = gitRemoteData ?? null;
         partial.gitRemote = updatedData.gitRemote;
         changedFields.push('gitRemote');
@@ -591,7 +647,7 @@ export class RepositoryDataCache extends EventEmitter {
             metadata: {
               ...updatedData.repository.metadata,
               defaultBranch: gitRemoteData.defaultBranch,
-            }
+            },
           };
           partial.repository = updatedData.repository;
           changedFields.push('repository');
@@ -642,18 +698,22 @@ export class RepositoryDataCache extends EventEmitter {
         // Delete all found entries
         for (const path of entriesToDelete) {
           this.cache.delete(path);
-          console.log(`[RepositoryDataCache] Removed cache entry for ${event.name} at ${path}`);
+          console.log(
+            `[RepositoryDataCache] Removed cache entry for ${event.name} at ${path}`,
+          );
         }
 
         if (entriesToDelete.length === 0) {
-          console.log(`[RepositoryDataCache] Repository ${event.name} not found in cache (already removed)`);
+          console.log(
+            `[RepositoryDataCache] Repository ${event.name} not found in cache (already removed)`,
+          );
         }
       }
     } else if (event.type === 'added' && event.repository) {
       // Load new repository into cache
       if (event.repository.path) {
-        this.load(event.repository.path as string).catch(err =>
-          console.error(`Failed to load added repository:`, err)
+        this.load(event.repository.path as string).catch((err) =>
+          console.error(`Failed to load added repository:`, err),
         );
       }
     } else if (event.type === 'updated' && event.repository) {
@@ -676,7 +736,9 @@ export class RepositoryDataCache extends EventEmitter {
   /**
    * Get repository by path from Alexandria
    */
-  private async getRepositoryByPath(repoPath: string): Promise<EnhancedAlexandriaEntry> {
+  private async getRepositoryByPath(
+    repoPath: string,
+  ): Promise<EnhancedAlexandriaEntry> {
     // Use direct path lookup instead of fetching all repositories
     const repo = await AlexandriaService.getRepositoryByPath(repoPath);
 
@@ -697,7 +759,10 @@ export class RepositoryDataCache extends EventEmitter {
   /**
    * Enhance repository with git information
    */
-  private enhanceRepository(repo: any, gitStatus: GitStatusWithFiles | null): EnhancedAlexandriaEntry {
+  private enhanceRepository(
+    repo: any,
+    gitStatus: GitStatusWithFiles | null,
+  ): EnhancedAlexandriaEntry {
     return {
       ...repo,
       gitBranch: gitStatus?.branch || repo.gitBranch || 'main',
@@ -706,7 +771,8 @@ export class RepositoryDataCache extends EventEmitter {
         (gitStatus?.modifiedFiles?.length || 0) +
         (gitStatus?.untrackedFiles?.length || 0) +
         (gitStatus?.stagedFiles?.length || 0),
-      mostRecentChange: repo.github?.lastCommit || repo.mostRecentChange || repo.registeredAt,
+      mostRecentChange:
+        repo.github?.lastCommit || repo.mostRecentChange || repo.registeredAt,
     };
   }
 
@@ -731,7 +797,11 @@ export class RepositoryDataCache extends EventEmitter {
 
     // If behind is 0 and ahead is 0, we likely don't have an upstream configured
     // This is a heuristic - the monitoring service should ideally provide this info
-    const needsUpstream = ahead === 0 && behind === 0 && gitStatus.branch !== 'main' && gitStatus.branch !== 'master';
+    const needsUpstream =
+      ahead === 0 &&
+      behind === 0 &&
+      gitStatus.branch !== 'main' &&
+      gitStatus.branch !== 'master';
 
     return {
       ahead,
@@ -753,7 +823,8 @@ export class RepositoryDataCache extends EventEmitter {
       return null;
     }
 
-    const metrics = packagesData.packages[0].qualityMetrics as LibraryQualityMetrics;
+    const metrics = packagesData.packages[0]
+      .qualityMetrics as LibraryQualityMetrics;
     // Library metrics are flat, we wrap them in hexagon property
     return {
       hexagon: {
@@ -779,10 +850,12 @@ export class RepositoryDataCache extends EventEmitter {
     }
 
     return fileTree.allFiles
-      .filter(file => file.path.endsWith('.md') || file.path.endsWith('.mdx'))
-      .map(file => ({
+      .filter((file) => file.path.endsWith('.md') || file.path.endsWith('.mdx'))
+      .map((file) => ({
         path: file.path,
-        lastModified: file.lastModified ? file.lastModified.toISOString() : undefined,
+        lastModified: file.lastModified
+          ? file.lastModified.toISOString()
+          : undefined,
         size: file.size,
       }))
       .sort((a, b) => a.path.localeCompare(b.path));
@@ -804,7 +877,7 @@ export class RepositoryDataCache extends EventEmitter {
    * Cleanup event subscriptions
    */
   cleanup(): void {
-    this.eventSubscriptions.forEach(unsubscribe => unsubscribe());
+    this.eventSubscriptions.forEach((unsubscribe) => unsubscribe());
     this.eventSubscriptions = [];
     this.clear();
   }

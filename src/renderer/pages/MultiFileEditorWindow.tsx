@@ -32,8 +32,9 @@ export const MultiFileEditorWindow: React.FC<Record<string, unknown>> = () => {
           Multi-file editor unavailable
         </h1>
         <p style={{ lineHeight: 1.5 }}>
-          We&apos;re migrating our editing surfaces to the industry-themed Monaco editor.
-          The multi-file editor window has been disabled during this transition.
+          We&apos;re migrating our editing surfaces to the industry-themed
+          Monaco editor. The multi-file editor window has been disabled during
+          this transition.
         </p>
       </div>
     </div>

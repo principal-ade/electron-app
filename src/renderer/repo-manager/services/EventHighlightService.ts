@@ -39,7 +39,10 @@ export class EventHighlightService extends EventEmitter {
       ...config,
     };
 
-    console.log('[EventHighlightService] Initialized with config:', this.config);
+    console.log(
+      '[EventHighlightService] Initialized with config:',
+      this.config,
+    );
   }
 
   /**
@@ -48,7 +51,10 @@ export class EventHighlightService extends EventEmitter {
    */
   setRepository(repositoryRoot: string): void {
     if (this.currentRepositoryRoot !== repositoryRoot) {
-      console.log('[EventHighlightService] Repository changed:', repositoryRoot);
+      console.log(
+        '[EventHighlightService] Repository changed:',
+        repositoryRoot,
+      );
       this.currentRepositoryRoot = repositoryRoot;
       this.clear();
       this.emit('repository-changed', repositoryRoot);
@@ -62,11 +68,17 @@ export class EventHighlightService extends EventEmitter {
   processEvent(event: RepoNormalizedUniversalAgentSessionEvent): void {
     // Filter by current repository
     const eventRepoRoot = event.repository?.root;
-    if (!this.currentRepositoryRoot || eventRepoRoot !== this.currentRepositoryRoot) {
-      console.log('[EventHighlightService] Event filtered out - different repository', {
-        eventRepo: eventRepoRoot,
-        currentRepo: this.currentRepositoryRoot,
-      });
+    if (
+      !this.currentRepositoryRoot ||
+      eventRepoRoot !== this.currentRepositoryRoot
+    ) {
+      console.log(
+        '[EventHighlightService] Event filtered out - different repository',
+        {
+          eventRepo: eventRepoRoot,
+          currentRepo: this.currentRepositoryRoot,
+        },
+      );
       return;
     }
 
@@ -112,13 +124,16 @@ export class EventHighlightService extends EventEmitter {
    * Returns null if no files to highlight
    */
   private createHighlightLayer(
-    event: RepoNormalizedUniversalAgentSessionEvent
+    event: RepoNormalizedUniversalAgentSessionEvent,
   ): HighlightLayer | null {
     // Extract file paths from event
     const paths = this.extractFilePaths(event);
 
     if (paths.length === 0) {
-      console.log('[EventHighlightService] No files to highlight for event:', event.eventType);
+      console.log(
+        '[EventHighlightService] No files to highlight for event:',
+        event.eventType,
+      );
       return null;
     }
 
@@ -131,7 +146,7 @@ export class EventHighlightService extends EventEmitter {
       color: this.getEventColor(event),
       opacity: this.config.defaultOpacity,
       priority: this.config.defaultPriority,
-      items: paths.map(path => ({
+      items: paths.map((path) => ({
         path,
         type: 'file' as const,
         renderStrategy: 'fill' as const,
@@ -144,14 +159,16 @@ export class EventHighlightService extends EventEmitter {
    * Includes any file with repository info and relative path
    * Excludes system/temp files unless they're in the repo
    */
-  private extractFilePaths(event: RepoNormalizedUniversalAgentSessionEvent): string[] {
+  private extractFilePaths(
+    event: RepoNormalizedUniversalAgentSessionEvent,
+  ): string[] {
     if (!event.files || event.files.length === 0) {
       return [];
     }
 
     // Filter to files with repository info and extract relative paths
     const paths = event.files
-      .filter(file => {
+      .filter((file) => {
         // Must have repository info with relative path
         if (!file.repository?.relativePath) {
           return false;
@@ -165,7 +182,7 @@ export class EventHighlightService extends EventEmitter {
         // Include repo_file, user_file, config_file - anything with a relative path
         return true;
       })
-      .map(file => file.repository!.relativePath);
+      .map((file) => file.repository!.relativePath);
 
     console.log('[EventHighlightService] Extracted paths:', {
       totalFiles: event.files.length,
@@ -179,7 +196,9 @@ export class EventHighlightService extends EventEmitter {
   /**
    * Get display name for event
    */
-  private getEventDisplayName(event: RepoNormalizedUniversalAgentSessionEvent): string {
+  private getEventDisplayName(
+    event: RepoNormalizedUniversalAgentSessionEvent,
+  ): string {
     const timestamp = new Date(event.timestamp).toLocaleTimeString();
     const toolOrType = event.toolName || event.eventType;
     return `${event.provider} - ${toolOrType} (${timestamp})`;
@@ -188,17 +207,19 @@ export class EventHighlightService extends EventEmitter {
   /**
    * Get color based on event operation or tool name
    */
-  private getEventColor(event: RepoNormalizedUniversalAgentSessionEvent): string {
+  private getEventColor(
+    event: RepoNormalizedUniversalAgentSessionEvent,
+  ): string {
     // Use operation if available (most accurate)
     if (event.operation) {
       const operationColors: Record<string, string> = {
-        [FileOperation.READ]: '#3b82f6',      // Blue
-        [FileOperation.WRITE]: '#22c55e',     // Green
-        [FileOperation.CREATE]: '#10b981',    // Emerald
-        [FileOperation.EDIT]: '#f59e0b',      // Amber
-        [FileOperation.DELETE]: '#ef4444',    // Red
-        [FileOperation.SEARCH]: '#8b5cf6',    // Purple
-        [FileOperation.LIST]: '#6366f1',      // Indigo
+        [FileOperation.READ]: '#3b82f6', // Blue
+        [FileOperation.WRITE]: '#22c55e', // Green
+        [FileOperation.CREATE]: '#10b981', // Emerald
+        [FileOperation.EDIT]: '#f59e0b', // Amber
+        [FileOperation.DELETE]: '#ef4444', // Red
+        [FileOperation.SEARCH]: '#8b5cf6', // Purple
+        [FileOperation.LIST]: '#6366f1', // Indigo
       };
 
       const color = operationColors[event.operation];
@@ -210,7 +231,8 @@ export class EventHighlightService extends EventEmitter {
     if (toolName.includes('read')) return '#3b82f6';
     if (toolName.includes('write')) return '#22c55e';
     if (toolName.includes('edit')) return '#f59e0b';
-    if (toolName.includes('grep') || toolName.includes('search')) return '#8b5cf6';
+    if (toolName.includes('grep') || toolName.includes('search'))
+      return '#8b5cf6';
     if (toolName.includes('glob') || toolName.includes('ls')) return '#6366f1';
 
     // Fallback to event type
@@ -233,7 +255,10 @@ export class EventHighlightService extends EventEmitter {
       this.currentIndex--;
     }
 
-    console.log('[EventHighlightService] Navigate previous:', this.currentIndex);
+    console.log(
+      '[EventHighlightService] Navigate previous:',
+      this.currentIndex,
+    );
     this.emitCurrentLayers();
   }
 
@@ -286,13 +311,13 @@ export class EventHighlightService extends EventEmitter {
     const recentEntries = this.eventHistory.slice(startIndex);
 
     const layers = recentEntries
-      .map(entry => entry.layer)
+      .map((entry) => entry.layer)
       .filter((layer): layer is HighlightLayer => layer !== null);
 
     // Add border to most recent layer
     if (layers.length > 0) {
       const mostRecentLayer = layers[layers.length - 1];
-      mostRecentLayer.items = mostRecentLayer.items.map(item => ({
+      mostRecentLayer.items = mostRecentLayer.items.map((item) => ({
         ...item,
         renderStrategy: 'border' as const,
       }));

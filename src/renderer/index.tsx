@@ -23,18 +23,18 @@ window.mermaid = mermaid;
 window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason;
   // Suppress Monaco cancellation errors
-  if (reason && (
-    reason.message === 'Canceled' ||
-    reason.toString() === 'Canceled' ||
-    reason.toString() === 'Canceled: Canceled' ||
-    (reason.stack && (
-      reason.stack.includes('Delayer.cancel') ||
-      reason.stack.includes('Delayer.dispose') ||
-      reason.stack.includes('DisposableStore') ||
-      reason.stack.includes('WordHighlighter') ||
-      reason.stack.includes('monaco-editor')
-    ))
-  )) {
+  if (
+    reason &&
+    (reason.message === 'Canceled' ||
+      reason.toString() === 'Canceled' ||
+      reason.toString() === 'Canceled: Canceled' ||
+      (reason.stack &&
+        (reason.stack.includes('Delayer.cancel') ||
+          reason.stack.includes('Delayer.dispose') ||
+          reason.stack.includes('DisposableStore') ||
+          reason.stack.includes('WordHighlighter') ||
+          reason.stack.includes('monaco-editor'))))
+  ) {
     event.preventDefault();
     event.stopImmediatePropagation();
     return;
@@ -47,11 +47,12 @@ window.addEventListener('unhandledrejection', (event) => {
 window.addEventListener('error', (event) => {
   const error = event.error;
   // Suppress Monaco cancellation errors
-  if (error && (
-    error.message === 'Canceled' ||
-    error.toString() === 'Canceled' ||
-    error.toString() === 'Canceled: Canceled'
-  )) {
+  if (
+    error &&
+    (error.message === 'Canceled' ||
+      error.toString() === 'Canceled' ||
+      error.toString() === 'Canceled: Canceled')
+  ) {
     event.preventDefault();
     event.stopImmediatePropagation();
     return;

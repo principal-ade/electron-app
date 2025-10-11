@@ -6,7 +6,11 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 interface FileTreeTabProps {
   fileTree: FileTree | null;
   onFileSelect?: (filePath: string) => void;
-  onContextMenu?: (event: React.MouseEvent, nodePath: string, isFolder: boolean) => void;
+  onContextMenu?: (
+    event: React.MouseEvent,
+    nodePath: string,
+    isFolder: boolean,
+  ) => void;
   loading?: boolean;
 }
 

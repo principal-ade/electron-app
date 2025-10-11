@@ -90,7 +90,7 @@ export const GitChangesDropdown: React.FC<GitChangesDropdownProps> = ({
       icon: <FileText size={14} />,
       color: colorMode === 'dark' ? '#9ca3af' : '#6b7280',
     },
-  ].filter(group => group.files.length > 0);
+  ].filter((group) => group.files.length > 0);
 
   const backgroundColor =
     colorMode === 'dark'
@@ -108,9 +108,7 @@ export const GitChangesDropdown: React.FC<GitChangesDropdownProps> = ({
       : theme.colors.text || '#1f2937';
 
   const hoverColor =
-    colorMode === 'dark'
-      ? 'rgba(255, 255, 255, 0.1)'
-      : 'rgba(0, 0, 0, 0.05)';
+    colorMode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
 
   return (
     <div
@@ -122,9 +120,10 @@ export const GitChangesDropdown: React.FC<GitChangesDropdownProps> = ({
         backgroundColor,
         border: `1px solid ${borderColor}`,
         borderRadius: '8px',
-        boxShadow: colorMode === 'dark'
-          ? '0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)'
-          : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        boxShadow:
+          colorMode === 'dark'
+            ? '0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)'
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
         minWidth: '280px',
         maxWidth: '400px',
         maxHeight: '400px',
@@ -134,16 +133,18 @@ export const GitChangesDropdown: React.FC<GitChangesDropdownProps> = ({
         fontSize: '13px',
       }}
     >
-      <div style={{
-        padding: '8px 12px',
-        borderBottom: `1px solid ${borderColor}`,
-        marginBottom: '8px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        color: textColor,
-        fontWeight: 600,
-      }}>
+      <div
+        style={{
+          padding: '8px 12px',
+          borderBottom: `1px solid ${borderColor}`,
+          marginBottom: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: textColor,
+          fontWeight: 600,
+        }}
+      >
         <GitBranch size={16} />
         <span>Uncommitted Changes</span>
         <span style={{ marginLeft: 'auto', opacity: 0.7, fontWeight: 400 }}>
@@ -152,17 +153,24 @@ export const GitChangesDropdown: React.FC<GitChangesDropdownProps> = ({
       </div>
 
       {fileGroups.map((group, groupIndex) => (
-        <div key={group.title} style={{ marginBottom: groupIndex < fileGroups.length - 1 ? '12px' : '0' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '4px 12px',
-            color: group.color,
-            fontSize: '12px',
-            fontWeight: 600,
-            opacity: 0.9,
-          }}>
+        <div
+          key={group.title}
+          style={{
+            marginBottom: groupIndex < fileGroups.length - 1 ? '12px' : '0',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 12px',
+              color: group.color,
+              fontSize: '12px',
+              fontWeight: 600,
+              opacity: 0.9,
+            }}
+          >
             {group.icon}
             <span>{group.title}</span>
             <span style={{ marginLeft: 'auto', opacity: 0.7 }}>
@@ -173,7 +181,9 @@ export const GitChangesDropdown: React.FC<GitChangesDropdownProps> = ({
           {group.files.map((file) => {
             const isMarkdown = file.endsWith('.md');
             const fileName = file.split('/').pop() || file;
-            const filePath = file.includes('/') ? file.substring(0, file.lastIndexOf('/')) : '';
+            const filePath = file.includes('/')
+              ? file.substring(0, file.lastIndexOf('/'))
+              : '';
 
             return (
               <div
@@ -202,35 +212,41 @@ export const GitChangesDropdown: React.FC<GitChangesDropdownProps> = ({
               >
                 <FileText size={12} style={{ opacity: 0.6 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{
-                    fontWeight: isMarkdown ? 500 : 400,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {fileName}
-                  </div>
-                  {filePath && (
-                    <div style={{
-                      fontSize: '11px',
-                      opacity: 0.5,
+                  <div
+                    style={{
+                      fontWeight: isMarkdown ? 500 : 400,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
-                    }}>
+                    }}
+                  >
+                    {fileName}
+                  </div>
+                  {filePath && (
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        opacity: 0.5,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
                       {filePath}
                     </div>
                   )}
                 </div>
                 {isMarkdown && (
-                  <span style={{
-                    fontSize: '10px',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    backgroundColor: group.color + '20',
-                    color: group.color,
-                    fontWeight: 600,
-                  }}>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      backgroundColor: group.color + '20',
+                      color: group.color,
+                      fontWeight: 600,
+                    }}
+                  >
                     MD
                   </span>
                 )}
@@ -241,12 +257,14 @@ export const GitChangesDropdown: React.FC<GitChangesDropdownProps> = ({
       ))}
 
       {fileGroups.length === 0 && (
-        <div style={{
-          padding: '20px',
-          textAlign: 'center',
-          color: textColor,
-          opacity: 0.6,
-        }}>
+        <div
+          style={{
+            padding: '20px',
+            textAlign: 'center',
+            color: textColor,
+            opacity: 0.6,
+          }}
+        >
           No changes detected
         </div>
       )}

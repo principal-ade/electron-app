@@ -18,5 +18,5 @@ root.render(
     <CustomThemeProvider>
       <RemoteAgentTitlebar />
     </CustomThemeProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

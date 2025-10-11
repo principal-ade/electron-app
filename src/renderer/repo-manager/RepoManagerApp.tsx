@@ -13,7 +13,11 @@ interface RepoManagerWindowData {
   [key: string]: unknown;
 }
 
-const HASH_PREFIXES = ['#repository-maps/', '#repository-manager/', '#repo-manager/'];
+const HASH_PREFIXES = [
+  '#repository-maps/',
+  '#repository-manager/',
+  '#repo-manager/',
+];
 
 function parseWindowDataFromHash(): RepoManagerWindowData | null {
   const { hash } = window.location;
@@ -46,7 +50,10 @@ function parseWindowDataFromHash(): RepoManagerWindowData | null {
       const payload = JSON.parse(decoded) as RepoManagerWindowData;
       return payload;
     } catch (error) {
-      console.error('[RepoManagerApp] Failed to parse unprefixed hash payload:', error);
+      console.error(
+        '[RepoManagerApp] Failed to parse unprefixed hash payload:',
+        error,
+      );
     }
   }
 
@@ -54,9 +61,11 @@ function parseWindowDataFromHash(): RepoManagerWindowData | null {
 }
 
 function useWindowData(): RepoManagerWindowData | null {
-  const [windowData, setWindowData] = useState<RepoManagerWindowData | null>(() => {
-    return parseWindowDataFromHash();
-  });
+  const [windowData, setWindowData] = useState<RepoManagerWindowData | null>(
+    () => {
+      return parseWindowDataFromHash();
+    },
+  );
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -70,8 +79,9 @@ function useWindowData(): RepoManagerWindowData | null {
   }, []);
 
   useEffect(() => {
-    (window as unknown as { windowInitData?: RepoManagerWindowData | null }).windowInitData =
-      windowData;
+    (
+      window as unknown as { windowInitData?: RepoManagerWindowData | null }
+    ).windowInitData = windowData;
   }, [windowData]);
 
   return windowData;
@@ -83,12 +93,15 @@ export const RepoManagerApp: React.FC = () => {
   const [hasUpdateAvailable, setHasUpdateAvailable] = useState(false);
 
   useEffect(() => {
-    const unsubscribeAvailable = AppVersionManagerService.onUpdateAvailable(() => {
-      setHasUpdateAvailable(true);
-    });
-    const unsubscribeNotAvailable = AppVersionManagerService.onUpdateNotAvailable(() => {
-      setHasUpdateAvailable(false);
-    });
+    const unsubscribeAvailable = AppVersionManagerService.onUpdateAvailable(
+      () => {
+        setHasUpdateAvailable(true);
+      },
+    );
+    const unsubscribeNotAvailable =
+      AppVersionManagerService.onUpdateNotAvailable(() => {
+        setHasUpdateAvailable(false);
+      });
 
     AppVersionManagerService.checkForUpdateSilently();
 

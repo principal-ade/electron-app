@@ -1,5 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import { MapIcon, HelpCircle, File, Folder, Layers } from 'lucide-react';
+import {
+  MapIcon,
+  HelpCircle,
+  File,
+  Folder,
+  Layers,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import {
   ArchitectureMapHighlightLayers,
@@ -64,9 +72,10 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
   toolbarExpanded = false,
 }) => {
   const { theme } = useTheme();
-  const { getAllLayers } = useHighlightLayers();
+  const { getAllLayers, setLayerEnabled } = useHighlightLayers();
   const highlightLayers = getAllLayers();
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
+  const [showLayersPanel, setShowLayersPanel] = useState(false);
 
   // Compute tree stats from cityData if not provided
   const computedTreeStats = React.useMemo(() => {
@@ -145,62 +154,78 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <MapIcon size={16} style={{ color: theme.colors.primary }} />
-            <span style={{ fontWeight: 600, fontSize: '14px' }}>Project Structure</span>
+            <span style={{ fontWeight: 600, fontSize: '14px' }}>
+              Project Structure
+            </span>
 
             {/* Stats badges */}
             {computedTreeStats &&
-             typeof computedTreeStats.fileCount === 'number' &&
-             typeof computedTreeStats.directoryCount === 'number' && (
-              <>
-                <span
-                  style={{
-                    fontSize: '12px',
-                    color: theme.colors.textSecondary,
-                    backgroundColor: theme.colors.background,
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <File size={12} />
-                  {computedTreeStats.fileCount.toLocaleString()}
-                </span>
-                <span
-                  style={{
-                    fontSize: '12px',
-                    color: theme.colors.textSecondary,
-                    backgroundColor: theme.colors.background,
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <Folder size={12} />
-                  {computedTreeStats.directoryCount.toLocaleString()}
-                </span>
-              </>
-            )}
+              typeof computedTreeStats.fileCount === 'number' &&
+              typeof computedTreeStats.directoryCount === 'number' && (
+                <>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      color: theme.colors.textSecondary,
+                      backgroundColor: theme.colors.background,
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <File size={12} />
+                    {computedTreeStats.fileCount.toLocaleString()}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      color: theme.colors.textSecondary,
+                      backgroundColor: theme.colors.background,
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <Folder size={12} />
+                    {computedTreeStats.directoryCount.toLocaleString()}
+                  </span>
+                </>
+              )}
 
             {highlightLayers.length > 0 && (
-              <span
+              <button
+                onClick={() => setShowLayersPanel(!showLayersPanel)}
                 style={{
                   fontSize: '12px',
-                  color: theme.colors.textSecondary,
-                  backgroundColor: theme.colors.background,
+                  color: showLayersPanel
+                    ? theme.colors.primary
+                    : theme.colors.textSecondary,
+                  backgroundColor: showLayersPanel
+                    ? theme.colors.primary + '22'
+                    : theme.colors.background,
                   padding: '2px 8px',
                   borderRadius: '4px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
+                  border: showLayersPanel
+                    ? `1px solid ${theme.colors.primary}`
+                    : '1px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
                 }}
+                title={
+                  showLayersPanel ? 'Hide layers panel' : 'Show layers panel'
+                }
               >
                 <Layers size={12} />
-                {highlightLayers.length} layer{highlightLayers.length !== 1 ? 's' : ''}
-              </span>
+                {highlightLayers.length} layer
+                {highlightLayers.length !== 1 ? 's' : ''}
+              </button>
             )}
           </div>
 
@@ -233,12 +258,15 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
           </div>
         </div>
 
-        {/* Second row: Toolbar and badges */}
-        {(toolbarItems.length > 0 || sourceBadges) && (
+        {/* Second row: Toolbar, badges, and layers */}
+        {(toolbarItems.length > 0 || sourceBadges || showLayersPanel) && (
           <div
             style={{
               padding: '8px 16px',
-              borderBottom: sourceBadges ? `1px solid ${theme.colors.border}` : 'none',
+              borderBottom:
+                sourceBadges || showLayersPanel
+                  ? `1px solid ${theme.colors.border}`
+                  : 'none',
               display: 'flex',
               flexDirection: 'column',
               gap: '8px',
@@ -253,10 +281,106 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
               />
             )}
 
-            {/* Source badges */}
-            {sourceBadges && (
-              <div>{sourceBadges}</div>
-            )}
+            {/* Source badges and layers carousel container */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+              }}
+            >
+              {/* Source badges */}
+              {sourceBadges && <div>{sourceBadges}</div>}
+
+              {/* Layers carousel */}
+              {showLayersPanel && highlightLayers.length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '8px',
+                    overflowX: 'auto',
+                    overflowY: 'hidden',
+                    padding: '4px 0',
+                    scrollbarWidth: 'thin',
+                  }}
+                >
+                  {highlightLayers.map((layer) => (
+                    <button
+                      key={layer.id}
+                      onClick={() => setLayerEnabled(layer.id, !layer.enabled)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '6px 12px',
+                        backgroundColor: layer.enabled
+                          ? theme.colors.backgroundLight
+                          : theme.colors.background,
+                        border: `1px solid ${layer.enabled ? layer.color : theme.colors.border}`,
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        flexShrink: 0,
+                        transition: 'all 0.2s ease',
+                        opacity: layer.enabled ? 1 : 0.6,
+                        cursor: 'pointer',
+                      }}
+                      title={
+                        layer.enabled
+                          ? `Hide ${layer.name}`
+                          : `Show ${layer.name}`
+                      }
+                    >
+                      {/* Color indicator */}
+                      <div
+                        style={{
+                          width: '12px',
+                          height: '12px',
+                          borderRadius: '3px',
+                          backgroundColor: layer.color,
+                          flexShrink: 0,
+                        }}
+                      />
+
+                      {/* Layer name and count */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '2px',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontWeight: 600,
+                            color: theme.colors.text,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {layer.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '10px',
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
+                          {layer.items.length} item
+                          {layer.items.length !== 1 ? 's' : ''}
+                        </div>
+                      </div>
+
+                      {/* Status indicator */}
+                      {layer.enabled ? (
+                        <Eye size={14} color={theme.colors.primary} />
+                      ) : (
+                        <EyeOff size={14} color={theme.colors.textSecondary} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -338,7 +462,8 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
           flexShrink: 0,
         }}
       >
-        {hoverInfo && (hoverInfo.hoveredBuilding || hoverInfo.hoveredDistrict) ? (
+        {hoverInfo &&
+        (hoverInfo.hoveredBuilding || hoverInfo.hoveredDistrict) ? (
           <>
             {/* File/Directory name and path */}
             <div
@@ -362,8 +487,8 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
                 }}
               >
                 {hoverInfo.fileTooltip?.text ||
-                  (hoverInfo.hoveredDistrict?.path?.split('/').pop() ||
-                   hoverInfo.hoveredDistrict?.path) ||
+                  hoverInfo.hoveredDistrict?.path?.split('/').pop() ||
+                  hoverInfo.hoveredDistrict?.path ||
                   'Unknown'}
               </div>
               {/* Full path */}
@@ -404,7 +529,8 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
               fontStyle: 'italic',
             }}
           >
-            Hover over files and directories to see details • Click files to open
+            Hover over files and directories to see details • Click files to
+            open
           </div>
         )}
       </div>

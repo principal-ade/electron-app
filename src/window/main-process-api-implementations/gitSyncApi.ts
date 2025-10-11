@@ -39,8 +39,7 @@ export const gitSyncAPI: GitSyncAPI = {
       _event: unknown,
       connectionKey: string,
       message: unknown,
-    ) =>
-      callback(connectionKey, message);
+    ) => callback(connectionKey, message);
     ipcRenderer.on(GitSyncEvent.ON_MESSAGE, subscription);
     return () =>
       ipcRenderer.removeListener(GitSyncEvent.ON_MESSAGE, subscription);

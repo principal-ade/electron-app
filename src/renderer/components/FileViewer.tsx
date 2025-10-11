@@ -4,7 +4,15 @@ import { useTheme } from '@a24z/industry-theme';
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
 import { initVimMode } from 'monaco-vim';
-import { Presentation, X, Copy, Check, GitBranch, Edit, Lock } from 'lucide-react';
+import {
+  Presentation,
+  X,
+  Copy,
+  Check,
+  GitBranch,
+  Edit,
+  Lock,
+} from 'lucide-react';
 import { DocumentView } from 'themed-markdown';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { MonacoEditorErrorBoundary } from './MonacoEditorErrorBoundary';
@@ -279,8 +287,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({
     return languageMap[ext] || 'plaintext';
   };
 
-
-
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
 
@@ -352,7 +358,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({
         // Don't preventDefault here as vim mode needs to handle escape
       }
     });
-
 
     // Focus the editor
     editor.focus();
@@ -490,7 +495,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({
     };
   }, []);
 
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -548,7 +552,6 @@ export const FileViewer: React.FC<FileViewerProps> = ({
     return 'vs-dark';
   };
 
-
   const renderContent = () => {
     console.log(
       'FileViewer renderContent - isLoading:',
@@ -559,11 +562,10 @@ export const FileViewer: React.FC<FileViewerProps> = ({
       fileType,
     );
 
-
     if (showPresentationView && fileType === 'markdown') {
       // Split content into slides if it contains slide separators
       const slides = fileContent.includes('---')
-        ? fileContent.split(/\n---\n/).map(slide => slide.trim())
+        ? fileContent.split(/\n---\n/).map((slide) => slide.trim())
         : [fileContent];
 
       return (
@@ -648,223 +650,232 @@ export const FileViewer: React.FC<FileViewerProps> = ({
           height="100%"
           language={language}
           value={fileContent}
-        theme="custom-theme"
-        onChange={(value) => {
-          if (editable && value !== undefined) {
-            setFileContent(value);
-            setIsModified(value !== originalContent);
-            if (onContentChange) {
-              onContentChange(value);
+          theme="custom-theme"
+          onChange={(value) => {
+            if (editable && value !== undefined) {
+              setFileContent(value);
+              setIsModified(value !== originalContent);
+              if (onContentChange) {
+                onContentChange(value);
+              }
             }
-          }
-        }}
-        loading={
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div
-                className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
-                style={{
-                  borderColor: `${theme.colors?.primary || '#3b82f6'} transparent`,
-                }}
-              />
-              <p style={{ color: theme.colors?.textSecondary || '#999' }}>
-                Loading editor...
-              </p>
+          }}
+          loading={
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div
+                  className="w-6 h-6 border-2 border-t-transparent rounded-full animate-spin mx-auto mb-2"
+                  style={{
+                    borderColor: `${theme.colors?.primary || '#3b82f6'} transparent`,
+                  }}
+                />
+                <p style={{ color: theme.colors?.textSecondary || '#999' }}>
+                  Loading editor...
+                </p>
+              </div>
             </div>
-          </div>
-        }
-        onMount={handleEditorDidMount}
-        beforeMount={(monaco) => {
-          // Configure Monaco for Electron environment
-          try {
-            // Helper to convert RGBA to hex (Monaco doesn't support alpha channel)
-            const rgbaToHex = (color: string): string => {
-              if (!color) return color;
+          }
+          onMount={handleEditorDidMount}
+          beforeMount={(monaco) => {
+            // Configure Monaco for Electron environment
+            try {
+              // Helper to convert RGBA to hex (Monaco doesn't support alpha channel)
+              const rgbaToHex = (color: string): string => {
+                if (!color) return color;
 
-              // Check if it's an rgba color
-              const rgbaMatch = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
-              if (rgbaMatch) {
-                const r = parseInt(rgbaMatch[1], 10);
-                const g = parseInt(rgbaMatch[2], 10);
-                const b = parseInt(rgbaMatch[3], 10);
-                return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
-              }
-
-              return color;
-            };
-
-            // Define and set theme BEFORE editor mounts to ensure proper syntax highlighting
-            const isDarkTheme = getMonacoTheme() === 'vs-dark';
-
-            // Define a more complete theme to ensure syntax highlighting works
-            monaco.editor.defineTheme('custom-theme', {
-              base: isDarkTheme ? 'vs-dark' : 'vs',
-              inherit: true,
-              rules: [
-                // Add some default token colors to ensure they're visible
-                { token: 'comment', foreground: '608B4E' },
-                { token: 'keyword', foreground: 'C586C0' },
-                { token: 'string', foreground: 'CE9178' },
-                { token: 'number', foreground: 'B5CEA8' },
-              ],
-              colors: {
-                'editor.background':
-                  rgbaToHex(theme.colors?.background) ||
-                  (isDarkTheme ? '#1a1a1a' : '#ffffff'),
-                'editor.foreground':
-                  rgbaToHex(theme.colors?.text) || (isDarkTheme ? '#d4d4d4' : '#000000'),
-                'editor.lineHighlightBackground': isDarkTheme
-                  ? '#2a2a2a'
-                  : '#f0f0f0',
-                'editorLineNumber.foreground': isDarkTheme
-                  ? '#858585'
-                  : '#999999',
-              },
-            });
-
-            // Set the theme immediately
-            monaco.editor.setTheme('custom-theme');
-
-            // Configure TypeScript diagnostics - disable all errors
-            monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(
-              {
-                noSemanticValidation: true, // Disable semantic validation
-                noSyntaxValidation: true, // Disable syntax validation
-                noSuggestionDiagnostics: true, // Disable suggestions
-              },
-            );
-
-            monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(
-              {
-                noSemanticValidation: true,
-                noSyntaxValidation: true,
-                noSuggestionDiagnostics: true,
-              },
-            );
-
-            // Set compiler options to be more permissive
-            const compilerOptions = {
-              target: monaco.languages.typescript.ScriptTarget.Latest,
-              allowNonTsExtensions: true,
-              moduleResolution:
-                monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-              module: monaco.languages.typescript.ModuleKind.ESNext,
-              noEmit: true,
-              esModuleInterop: true,
-              jsx: monaco.languages.typescript.JsxEmit.React,
-              allowJs: true,
-              checkJs: false,
-              skipLibCheck: true,
-              skipDefaultLibCheck: true,
-              strict: false,
-              noImplicitAny: false,
-            };
-
-            monaco.languages.typescript.typescriptDefaults.setCompilerOptions(
-              compilerOptions,
-            );
-            monaco.languages.typescript.javascriptDefaults.setCompilerOptions(
-              compilerOptions,
-            );
-
-            // Add common type definitions
-            const addExtraLib = (content: string, filePath: string) => {
-              try {
-                monaco.languages.typescript.typescriptDefaults.addExtraLib(
-                  content,
-                  filePath,
+                // Check if it's an rgba color
+                const rgbaMatch = color.match(
+                  /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/,
                 );
-                monaco.languages.typescript.javascriptDefaults.addExtraLib(
-                  content,
-                  filePath,
-                );
-              } catch (e) {
-                console.warn(`Failed to add extra lib ${filePath}:`, e);
-              }
-            };
+                if (rgbaMatch) {
+                  const r = parseInt(rgbaMatch[1], 10);
+                  const g = parseInt(rgbaMatch[2], 10);
+                  const b = parseInt(rgbaMatch[3], 10);
+                  return (
+                    '#' +
+                    ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)
+                  );
+                }
 
-            // Add basic DOM types
-            addExtraLib(
-              `
+                return color;
+              };
+
+              // Define and set theme BEFORE editor mounts to ensure proper syntax highlighting
+              const isDarkTheme = getMonacoTheme() === 'vs-dark';
+
+              // Define a more complete theme to ensure syntax highlighting works
+              monaco.editor.defineTheme('custom-theme', {
+                base: isDarkTheme ? 'vs-dark' : 'vs',
+                inherit: true,
+                rules: [
+                  // Add some default token colors to ensure they're visible
+                  { token: 'comment', foreground: '608B4E' },
+                  { token: 'keyword', foreground: 'C586C0' },
+                  { token: 'string', foreground: 'CE9178' },
+                  { token: 'number', foreground: 'B5CEA8' },
+                ],
+                colors: {
+                  'editor.background':
+                    rgbaToHex(theme.colors?.background) ||
+                    (isDarkTheme ? '#1a1a1a' : '#ffffff'),
+                  'editor.foreground':
+                    rgbaToHex(theme.colors?.text) ||
+                    (isDarkTheme ? '#d4d4d4' : '#000000'),
+                  'editor.lineHighlightBackground': isDarkTheme
+                    ? '#2a2a2a'
+                    : '#f0f0f0',
+                  'editorLineNumber.foreground': isDarkTheme
+                    ? '#858585'
+                    : '#999999',
+                },
+              });
+
+              // Set the theme immediately
+              monaco.editor.setTheme('custom-theme');
+
+              // Configure TypeScript diagnostics - disable all errors
+              monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions(
+                {
+                  noSemanticValidation: true, // Disable semantic validation
+                  noSyntaxValidation: true, // Disable syntax validation
+                  noSuggestionDiagnostics: true, // Disable suggestions
+                },
+              );
+
+              monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions(
+                {
+                  noSemanticValidation: true,
+                  noSyntaxValidation: true,
+                  noSuggestionDiagnostics: true,
+                },
+              );
+
+              // Set compiler options to be more permissive
+              const compilerOptions = {
+                target: monaco.languages.typescript.ScriptTarget.Latest,
+                allowNonTsExtensions: true,
+                moduleResolution:
+                  monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+                module: monaco.languages.typescript.ModuleKind.ESNext,
+                noEmit: true,
+                esModuleInterop: true,
+                jsx: monaco.languages.typescript.JsxEmit.React,
+                allowJs: true,
+                checkJs: false,
+                skipLibCheck: true,
+                skipDefaultLibCheck: true,
+                strict: false,
+                noImplicitAny: false,
+              };
+
+              monaco.languages.typescript.typescriptDefaults.setCompilerOptions(
+                compilerOptions,
+              );
+              monaco.languages.typescript.javascriptDefaults.setCompilerOptions(
+                compilerOptions,
+              );
+
+              // Add common type definitions
+              const addExtraLib = (content: string, filePath: string) => {
+                try {
+                  monaco.languages.typescript.typescriptDefaults.addExtraLib(
+                    content,
+                    filePath,
+                  );
+                  monaco.languages.typescript.javascriptDefaults.addExtraLib(
+                    content,
+                    filePath,
+                  );
+                } catch (e) {
+                  console.warn(`Failed to add extra lib ${filePath}:`, e);
+                }
+              };
+
+              // Add basic DOM types
+              addExtraLib(
+                `
               interface Window {
                 electron: any;
               }
               declare var window: Window;
             `,
-              'global.d.ts',
-            );
-          } catch (error) {
-            console.warn('Error configuring Monaco TypeScript options:', error);
-          }
-        }}
-        onValidate={(markers) => {
-          // Log validation markers for debugging
-          if (markers.length > 0) {
-            console.log('TypeScript validation markers:', markers);
-          }
-        }}
-        options={{
-          readOnly: !editable,
-          minimap: { enabled: false },
-          scrollBeyondLastLine: false,
-          fontSize: 14,
-          wordWrap: fileType === 'markdown' ? 'on' : 'off',
-          lineNumbers: 'on',
-          renderWhitespace: 'selection',
-          folding: true,
-          automaticLayout: true,
-          contextmenu: true,
-          selectOnLineNumbers: true,
-          scrollbar: {
-            vertical: 'auto',
-            horizontal: 'auto',
-            useShadows: false,
-            verticalScrollbarSize: 10,
-            horizontalScrollbarSize: 10,
-          },
-          // Enable IntelliSense features
-          quickSuggestions: {
-            other: true,
-            comments: false,
-            strings: false,
-          },
-          parameterHints: { enabled: true },
-          suggestOnTriggerCharacters: true,
-          acceptSuggestionOnEnter: 'on',
-          tabCompletion: 'on',
-          wordBasedSuggestions: 'matchingDocuments',
-          // Enable semantic highlighting
-          'semanticHighlighting.enabled': true,
-          // IntelliSense settings
-          suggest: {
-            snippetsPreventQuickSuggestions: false,
-            showMethods: true,
-            showFunctions: true,
-            showConstructors: true,
-            showFields: true,
-            showVariables: true,
-            showClasses: true,
-            showStructs: true,
-            showInterfaces: true,
-            showModules: true,
-            showProperties: true,
-            showEvents: true,
-            showOperators: true,
-            showUnits: true,
-            showValues: true,
-            showConstants: true,
-            showEnums: true,
-            showEnumMembers: true,
-            showKeywords: true,
-            showWords: true,
-            showColors: true,
-            showFiles: true,
-            showReferences: true,
-            showFolders: true,
-            showTypeParameters: true,
-            showSnippets: true,
-          },
-        }}
+                'global.d.ts',
+              );
+            } catch (error) {
+              console.warn(
+                'Error configuring Monaco TypeScript options:',
+                error,
+              );
+            }
+          }}
+          onValidate={(markers) => {
+            // Log validation markers for debugging
+            if (markers.length > 0) {
+              console.log('TypeScript validation markers:', markers);
+            }
+          }}
+          options={{
+            readOnly: !editable,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+            fontSize: 14,
+            wordWrap: fileType === 'markdown' ? 'on' : 'off',
+            lineNumbers: 'on',
+            renderWhitespace: 'selection',
+            folding: true,
+            automaticLayout: true,
+            contextmenu: true,
+            selectOnLineNumbers: true,
+            scrollbar: {
+              vertical: 'auto',
+              horizontal: 'auto',
+              useShadows: false,
+              verticalScrollbarSize: 10,
+              horizontalScrollbarSize: 10,
+            },
+            // Enable IntelliSense features
+            quickSuggestions: {
+              other: true,
+              comments: false,
+              strings: false,
+            },
+            parameterHints: { enabled: true },
+            suggestOnTriggerCharacters: true,
+            acceptSuggestionOnEnter: 'on',
+            tabCompletion: 'on',
+            wordBasedSuggestions: 'matchingDocuments',
+            // Enable semantic highlighting
+            'semanticHighlighting.enabled': true,
+            // IntelliSense settings
+            suggest: {
+              snippetsPreventQuickSuggestions: false,
+              showMethods: true,
+              showFunctions: true,
+              showConstructors: true,
+              showFields: true,
+              showVariables: true,
+              showClasses: true,
+              showStructs: true,
+              showInterfaces: true,
+              showModules: true,
+              showProperties: true,
+              showEvents: true,
+              showOperators: true,
+              showUnits: true,
+              showValues: true,
+              showConstants: true,
+              showEnums: true,
+              showEnumMembers: true,
+              showKeywords: true,
+              showWords: true,
+              showColors: true,
+              showFiles: true,
+              showReferences: true,
+              showFolders: true,
+              showTypeParameters: true,
+              showSnippets: true,
+            },
+          }}
         />
       </MonacoEditorErrorBoundary>
     );
@@ -984,13 +995,10 @@ export const FileViewer: React.FC<FileViewerProps> = ({
               <GitBranch size={12} />
               View Diff
               {gitStatus && (
-                <span className="ml-1 text-xs opacity-80">
-                  ({gitStatus})
-                </span>
+                <span className="ml-1 text-xs opacity-80">({gitStatus})</span>
               )}
             </button>
           )}
-
 
           {/* Vim Mode Toggle */}
           {fileType === 'code' && enableVimMode && (

@@ -12,14 +12,27 @@ function normalizeGitUrl(url: string): string {
   url = url.replace(/\/+$/, '');
 
   // Handle common git platforms - add .git if missing
-  if (url.includes('github.com') || url.includes('gitlab.com') || url.includes('bitbucket.org')) {
+  if (
+    url.includes('github.com') ||
+    url.includes('gitlab.com') ||
+    url.includes('bitbucket.org')
+  ) {
     // Check if it's a browser URL (doesn't have .git extension)
     if (!url.endsWith('.git') && !url.includes('.git/')) {
       // Remove any URL fragments or query parameters
       url = url.split('#')[0].split('?')[0];
 
       // Handle URLs with /tree/, /blob/, /commits/ etc (GitHub browser URLs)
-      const patterns = ['/tree/', '/blob/', '/commits/', '/pulls', '/issues', '/wiki', '/settings', '/actions'];
+      const patterns = [
+        '/tree/',
+        '/blob/',
+        '/commits/',
+        '/pulls',
+        '/issues',
+        '/wiki',
+        '/settings',
+        '/actions',
+      ];
       for (const pattern of patterns) {
         const index = url.indexOf(pattern);
         if (index !== -1) {
@@ -44,8 +57,14 @@ async function testGitAccess(
   // This should be moved to gitRemote cache slice
   // See: docs/design/GIT_REMOTE_INFORMATION_ARCHITECTURE.md
 
-  console.warn('[gitHandlers] testGitAccess is currently disabled to prevent blocking operations');
-  return { accessible: false, message: 'Git access check disabled - will be implemented via gitRemote cache' };
+  console.warn(
+    '[gitHandlers] testGitAccess is currently disabled to prevent blocking operations',
+  );
+  return {
+    accessible: false,
+    message:
+      'Git access check disabled - will be implemented via gitRemote cache',
+  };
 
   // try {
   //   // Don't normalize - use the URL as provided (already SSH or HTTPS)
@@ -259,7 +278,10 @@ export function registerGitHandlers(): void {
         const result = await git.raw(args);
         return { stdout: result, stderr: '' };
       } catch (error) {
-        console.error(`[Git] Failed to execute git command: git ${args.join(' ')} (in ${directory}):`, error);
+        console.error(
+          `[Git] Failed to execute git command: git ${args.join(' ')} (in ${directory}):`,
+          error,
+        );
         throw error;
       }
     },
@@ -279,7 +301,8 @@ export function registerGitHandlers(): void {
 
         // Clone the repository with normalized URL and authentication handling
         // Check if this is an SSH URL
-        const isSSH = normalizedUrl.startsWith('git@') || normalizedUrl.includes('ssh://');
+        const isSSH =
+          normalizedUrl.startsWith('git@') || normalizedUrl.includes('ssh://');
 
         // Only pass serializable environment variables
         const baseEnv = {
@@ -290,23 +313,19 @@ export function registerGitHandlers(): void {
           SSH_AGENT_PID: process.env.SSH_AGENT_PID,
         };
 
-        const cloneEnv = isSSH ?
-          baseEnv :
-          {
-            ...baseEnv,
-            GIT_TERMINAL_PROMPT: '0',
-            GIT_ASKPASS: '/bin/echo',
-            GCM_INTERACTIVE: 'never'
-          };
+        const cloneEnv = isSSH
+          ? baseEnv
+          : {
+              ...baseEnv,
+              GIT_TERMINAL_PROMPT: '0',
+              GIT_ASKPASS: '/bin/echo',
+              GCM_INTERACTIVE: 'never',
+            };
 
-        await git.raw(
-          ['clone', normalizedUrl, targetPath],
-          {
-            env: cloneEnv,
-            timeout: 120000 // 2 minutes for clone operation
-          }
-        );
-
+        await git.raw(['clone', normalizedUrl, targetPath], {
+          env: cloneEnv,
+          timeout: 120000, // 2 minutes for clone operation
+        });
 
         return true;
       } catch (error) {
@@ -334,7 +353,16 @@ export function registerGitHandlers(): void {
 
         // First, normalize if it's a browser URL (remove /tree/, /blob/, etc)
         let cleanUrl = remoteUrl.replace(/\/+$/, '');
-        const patterns = ['/tree/', '/blob/', '/commits/', '/pulls', '/issues', '/wiki', '/settings', '/actions'];
+        const patterns = [
+          '/tree/',
+          '/blob/',
+          '/commits/',
+          '/pulls',
+          '/issues',
+          '/wiki',
+          '/settings',
+          '/actions',
+        ];
         for (const pattern of patterns) {
           const index = cleanUrl.indexOf(pattern);
           if (index !== -1) {
@@ -353,7 +381,9 @@ export function registerGitHandlers(): void {
 
         // Try to extract from HTTPS format (https://service/owner/repo.git)
         if (!owner) {
-          match = cleanUrl.match(/https?:\/\/([^/]+)\/([^/]+)\/([^/.]+)(?:\.git)?/);
+          match = cleanUrl.match(
+            /https?:\/\/([^/]+)\/([^/]+)\/([^/.]+)(?:\.git)?/,
+          );
           if (match) {
             service = match[1];
             owner = match[2];
@@ -363,7 +393,9 @@ export function registerGitHandlers(): void {
 
         // Try SSH with protocol format (ssh://git@service/owner/repo.git)
         if (!owner) {
-          match = cleanUrl.match(/ssh:\/\/git@([^/]+)\/([^/]+)\/(.+?)(?:\.git)?$/);
+          match = cleanUrl.match(
+            /ssh:\/\/git@([^/]+)\/([^/]+)\/(.+?)(?:\.git)?$/,
+          );
           if (match) {
             service = match[1];
             owner = match[2];
@@ -375,8 +407,13 @@ export function registerGitHandlers(): void {
         if (!owner || !repo || !service) {
           return {
             ssh: { available: false, reason: 'Could not parse repository URL' },
-            https: { available: false, reason: 'Could not parse repository URL' },
-            suggestions: ['Invalid repository URL format. Please provide a valid Git URL.'],
+            https: {
+              available: false,
+              reason: 'Could not parse repository URL',
+            },
+            suggestions: [
+              'Invalid repository URL format. Please provide a valid Git URL.',
+            ],
           };
         }
 
@@ -387,7 +424,7 @@ export function registerGitHandlers(): void {
         // Test both URLs in parallel for better performance
         const [httpsTest, sshTest] = await Promise.all([
           testGitAccess(httpsUrl),
-          testGitAccess(sshUrl)
+          testGitAccess(sshUrl),
         ]);
 
         result.https.available = httpsTest.accessible;
@@ -398,9 +435,10 @@ export function registerGitHandlers(): void {
         // Generate helpful suggestions based on results
         if (!result.ssh.available && !result.https.available) {
           // Neither method works - provide detailed guidance
-          const isGitHubPrivate = service.includes('github.com') &&
+          const isGitHubPrivate =
+            service.includes('github.com') &&
             (result.https.reason?.includes('Authentication required') ||
-             result.ssh.reason?.includes('Authentication required'));
+              result.ssh.reason?.includes('Authentication required'));
 
           if (isGitHubPrivate) {
             result.suggestions.push(
@@ -449,7 +487,7 @@ export function registerGitHandlers(): void {
           // Both work
           result.suggestions.push(
             'Both SSH and HTTPS access are available.',
-            'SSH will be used by default as it doesn\'t require entering credentials.',
+            "SSH will be used by default as it doesn't require entering credentials.",
           );
         }
 

@@ -50,7 +50,11 @@ export const authenticationAPI: AuthenticationAPI = {
     user: AuthUser,
   ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:save-github-auth handler
-    return ipcRenderer.invoke(SecureTokenAPIEvent.SAVE_GITHUB_AUTH, token, user);
+    return ipcRenderer.invoke(
+      SecureTokenAPIEvent.SAVE_GITHUB_AUTH,
+      token,
+      user,
+    );
   },
 
   getGitHubAuth: async (): Promise<TokenWithMetadata> => {
@@ -94,7 +98,10 @@ export const authenticationAPI: AuthenticationAPI = {
     tokens: TokenMigrationEntry[],
   ): Promise<{ success: boolean; error?: string }> => {
     // Forward to existing secure-token:migrate-from-localstorage handler
-    return ipcRenderer.invoke(SecureTokenAPIEvent.MIGRATE_FROM_LOCALSTORAGE, tokens);
+    return ipcRenderer.invoke(
+      SecureTokenAPIEvent.MIGRATE_FROM_LOCALSTORAGE,
+      tokens,
+    );
   },
 
   // ===== State Management =====

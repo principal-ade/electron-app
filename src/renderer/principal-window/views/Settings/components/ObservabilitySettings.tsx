@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import {
-  Eye,
-  EyeOff,
-  CheckCircle,
-  AlertCircle,
-  Loader2,
-} from 'lucide-react';
+import { Eye, EyeOff, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import {
   ObservabilityService,
   ObservabilityConfig,
@@ -25,7 +19,9 @@ export const ObservabilitySettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
+  const [testResult, setTestResult] = useState<ConnectionTestResult | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [showUrl, setShowUrl] = useState(false);
   const [showAuthToken, setShowAuthToken] = useState(false);
@@ -42,7 +38,9 @@ export const ObservabilitySettings: React.FC = () => {
       const loadedConfig = await ObservabilityService.getConfiguration();
       setConfig(loadedConfig);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load configuration');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load configuration',
+      );
     } finally {
       setLoading(false);
     }
@@ -58,7 +56,9 @@ export const ObservabilitySettings: React.FC = () => {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save configuration');
+      setError(
+        err instanceof Error ? err.message : 'Failed to save configuration',
+      );
     } finally {
       setSaving(false);
     }
@@ -72,7 +72,9 @@ export const ObservabilitySettings: React.FC = () => {
       const result = await ObservabilityService.testConnection(config);
       setTestResult(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to test connection');
+      setError(
+        err instanceof Error ? err.message : 'Failed to test connection',
+      );
     } finally {
       setTesting(false);
     }
@@ -81,7 +83,11 @@ export const ObservabilitySettings: React.FC = () => {
   const isValidTursoUrl = (url: string): boolean => {
     if (!url) return false;
     // Turso URLs typically look like: libsql://[database]-[org].turso.io or wss://[database]-[org].turso.io
-    return url.startsWith('libsql://') || url.startsWith('wss://') || url.startsWith('https://');
+    return (
+      url.startsWith('libsql://') ||
+      url.startsWith('wss://') ||
+      url.startsWith('https://')
+    );
   };
 
   const canSave = config.tursoUrl && isValidTursoUrl(config.tursoUrl);
@@ -89,8 +95,14 @@ export const ObservabilitySettings: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-        <Loader2 size={32} className="animate-spin" color={theme.colors.primary} />
+      <div
+        style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}
+      >
+        <Loader2
+          size={32}
+          className="animate-spin"
+          color={theme.colors.primary}
+        />
       </div>
     );
   }
@@ -121,7 +133,9 @@ export const ObservabilitySettings: React.FC = () => {
       </style>
       <div style={{ maxWidth: '800px' }}>
         <div style={{ marginBottom: '32px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
+          <h3
+            style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}
+          >
             Turso Database Configuration
           </h3>
           <p
@@ -132,7 +146,8 @@ export const ObservabilitySettings: React.FC = () => {
               fontSize: '14px',
             }}
           >
-            Configure the connection to your Turso database for agent event tracking.
+            Configure the connection to your Turso database for agent event
+            tracking.
           </p>
 
           {/* Enable toggle */}
@@ -148,7 +163,9 @@ export const ObservabilitySettings: React.FC = () => {
               <input
                 type="checkbox"
                 checked={config.enabled}
-                onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
+                onChange={(e) =>
+                  setConfig({ ...config, enabled: e.target.checked })
+                }
                 className="observability-checkbox"
               />
               <span style={{ fontWeight: 500 }}>Enable Observability</span>
@@ -171,7 +188,9 @@ export const ObservabilitySettings: React.FC = () => {
               <input
                 type={showUrl ? 'text' : 'password'}
                 value={config.tursoUrl ?? ''}
-                onChange={(e) => setConfig({ ...config, tursoUrl: e.target.value })}
+                onChange={(e) =>
+                  setConfig({ ...config, tursoUrl: e.target.value })
+                }
                 placeholder="libsql://[database]-[org].turso.io"
                 className="observability-input"
                 style={{
@@ -210,11 +229,23 @@ export const ObservabilitySettings: React.FC = () => {
               </button>
             </div>
             {config.tursoUrl && !isValidTursoUrl(config.tursoUrl) && (
-              <p style={{ color: theme.colors.error, fontSize: '12px', marginTop: '4px' }}>
+              <p
+                style={{
+                  color: theme.colors.error,
+                  fontSize: '12px',
+                  marginTop: '4px',
+                }}
+              >
                 Please enter a valid Turso URL (libsql://, wss://, or https://)
               </p>
             )}
-            <p style={{ color: theme.colors.textSecondary, fontSize: '12px', marginTop: '4px' }}>
+            <p
+              style={{
+                color: theme.colors.textSecondary,
+                fontSize: '12px',
+                marginTop: '4px',
+              }}
+            >
               Your Turso database URL from the Turso dashboard
             </p>
           </div>
@@ -235,7 +266,9 @@ export const ObservabilitySettings: React.FC = () => {
               <input
                 type={showAuthToken ? 'text' : 'password'}
                 value={config.tursoAuthToken ?? ''}
-                onChange={(e) => setConfig({ ...config, tursoAuthToken: e.target.value })}
+                onChange={(e) =>
+                  setConfig({ ...config, tursoAuthToken: e.target.value })
+                }
                 placeholder="Your Turso database auth token"
                 className="observability-input"
                 style={{
@@ -271,7 +304,13 @@ export const ObservabilitySettings: React.FC = () => {
                 </button>
               )}
             </div>
-            <p style={{ color: theme.colors.textSecondary, fontSize: '12px', marginTop: '4px' }}>
+            <p
+              style={{
+                color: theme.colors.textSecondary,
+                fontSize: '12px',
+                marginTop: '4px',
+              }}
+            >
               Get this from your Turso dashboard under "Database Tokens"
             </p>
           </div>
@@ -293,7 +332,10 @@ export const ObservabilitySettings: React.FC = () => {
               onChange={(e) =>
                 setConfig({
                   ...config,
-                  environment: e.target.value as 'development' | 'staging' | 'production',
+                  environment: e.target.value as
+                    | 'development'
+                    | 'staging'
+                    | 'production',
                 })
               }
               className="observability-select"
@@ -329,8 +371,14 @@ export const ObservabilitySettings: React.FC = () => {
                 gap: '8px',
               }}
             >
-              <AlertCircle size={16} color={theme.colors.error} style={{ marginTop: '2px' }} />
-              <span style={{ fontSize: '14px', color: theme.colors.error }}>{error}</span>
+              <AlertCircle
+                size={16}
+                color={theme.colors.error}
+                style={{ marginTop: '2px' }}
+              />
+              <span style={{ fontSize: '14px', color: theme.colors.error }}>
+                {error}
+              </span>
             </div>
           )}
 
@@ -348,7 +396,11 @@ export const ObservabilitySettings: React.FC = () => {
                 gap: '8px',
               }}
             >
-              <CheckCircle size={16} color={theme.colors.success} style={{ marginTop: '2px' }} />
+              <CheckCircle
+                size={16}
+                color={theme.colors.success}
+                style={{ marginTop: '2px' }}
+              />
               <span style={{ fontSize: '14px', color: theme.colors.success }}>
                 Configuration saved successfully!
               </span>
@@ -374,14 +426,24 @@ export const ObservabilitySettings: React.FC = () => {
               }}
             >
               {testResult.success ? (
-                <CheckCircle size={16} color={theme.colors.success} style={{ marginTop: '2px' }} />
+                <CheckCircle
+                  size={16}
+                  color={theme.colors.success}
+                  style={{ marginTop: '2px' }}
+                />
               ) : (
-                <AlertCircle size={16} color={theme.colors.error} style={{ marginTop: '2px' }} />
+                <AlertCircle
+                  size={16}
+                  color={theme.colors.error}
+                  style={{ marginTop: '2px' }}
+                />
               )}
               <span
                 style={{
                   fontSize: '14px',
-                  color: testResult.success ? theme.colors.success : theme.colors.error,
+                  color: testResult.success
+                    ? theme.colors.success
+                    : theme.colors.error,
                 }}
               >
                 {testResult.success
@@ -404,7 +466,8 @@ export const ObservabilitySettings: React.FC = () => {
                 borderRadius: '8px',
                 fontSize: '14px',
                 fontWeight: 500,
-                cursor: canTest && !testing && !saving ? 'pointer' : 'not-allowed',
+                cursor:
+                  canTest && !testing && !saving ? 'pointer' : 'not-allowed',
                 opacity: canTest && !testing && !saving ? 1 : 0.5,
                 transition: 'all 0.2s',
                 display: 'flex',
@@ -421,13 +484,16 @@ export const ObservabilitySettings: React.FC = () => {
               disabled={!canSave || saving || testing}
               style={{
                 padding: '10px 20px',
-                backgroundColor: canSave ? theme.colors.primary : theme.colors.backgroundSecondary,
+                backgroundColor: canSave
+                  ? theme.colors.primary
+                  : theme.colors.backgroundSecondary,
                 color: canSave ? '#fff' : theme.colors.textSecondary,
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '14px',
                 fontWeight: 500,
-                cursor: canSave && !saving && !testing ? 'pointer' : 'not-allowed',
+                cursor:
+                  canSave && !saving && !testing ? 'pointer' : 'not-allowed',
                 opacity: canSave && !saving && !testing ? 1 : 0.5,
                 transition: 'all 0.2s',
                 display: 'flex',

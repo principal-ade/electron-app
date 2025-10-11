@@ -28,7 +28,9 @@ export class AlexandriaDrawingService {
       return result.fileName || name;
     } catch (error) {
       console.error('Failed to save diagram to Alexandria:', error);
-      throw new Error(`Failed to save diagram: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to save diagram: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 
@@ -60,11 +62,14 @@ export class AlexandriaDrawingService {
   /**
    * List all Excalidraw diagrams in Alexandria storage
    */
-  static async listDiagrams(repositoryPath: string): Promise<DiagramListItem[]> {
+  static async listDiagrams(
+    repositoryPath: string,
+  ): Promise<DiagramListItem[]> {
     try {
-      const result = await window.mainProcess.excalidraw.listAlexandriaDiagrams(
-        repositoryPath,
-      );
+      const result =
+        await window.mainProcess.excalidraw.listAlexandriaDiagrams(
+          repositoryPath,
+        );
 
       if (!result.success) {
         console.error('Failed to list diagrams from Alexandria:', result.error);
@@ -86,10 +91,11 @@ export class AlexandriaDrawingService {
     repositoryPath: string,
   ): Promise<boolean> {
     try {
-      const result = await window.mainProcess.excalidraw.deleteAlexandriaDiagram(
-        fileName,
-        repositoryPath,
-      );
+      const result =
+        await window.mainProcess.excalidraw.deleteAlexandriaDiagram(
+          fileName,
+          repositoryPath,
+        );
 
       return result.success;
     } catch (error) {
@@ -135,7 +141,9 @@ export class AlexandriaDrawingService {
     try {
       const diagrams = await this.listDiagrams(repositoryPath);
       const nameWithoutExt = fileName.replace('.excalidraw', '');
-      return diagrams.some(d => d.name === nameWithoutExt || d.name === fileName);
+      return diagrams.some(
+        (d) => d.name === nameWithoutExt || d.name === fileName,
+      );
     } catch (error) {
       console.error('Failed to check diagram existence in Alexandria:', error);
       return false;

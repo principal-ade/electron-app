@@ -28,7 +28,9 @@ export const typeExtractionApi: TypeExtractionAPI = {
     );
   },
 
-  generateDefinitionFile: async (packagePath: string): Promise<{
+  generateDefinitionFile: async (
+    packagePath: string,
+  ): Promise<{
     success: boolean;
     filePath?: string;
     error?: string;

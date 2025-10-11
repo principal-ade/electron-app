@@ -47,7 +47,10 @@ export class CallimachusWindow {
       this.window = null;
     });
 
-    if (process.env.NODE_ENV === 'development' || process.env.DEBUG_PROD === 'true') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.DEBUG_PROD === 'true'
+    ) {
       this.window.webContents.openDevTools();
     }
   }

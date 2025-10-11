@@ -1,4 +1,7 @@
-import { Repository, GitStatus as GitWatcherStatus } from '../../shared/types/repository.types';
+import {
+  Repository,
+  GitStatus as GitWatcherStatus,
+} from '../../shared/types/repository.types';
 
 export interface GitRemote {
   name: string;
@@ -490,7 +493,8 @@ export class GitService {
         if (errorMessage.includes('non-fast-forward')) {
           return {
             success: false,
-            message: 'Push rejected: Remote has changes. Pull first or force push.',
+            message:
+              'Push rejected: Remote has changes. Pull first or force push.',
           };
         }
         return {
@@ -513,9 +517,7 @@ export class GitService {
     }
   }
 
-  static async isPushSafe(
-    directory: string,
-  ): Promise<{
+  static async isPushSafe(directory: string): Promise<{
     safe: boolean;
     reason?: string;
     hasUpstream: boolean;

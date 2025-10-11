@@ -28,7 +28,9 @@ export const SessionEventsView: React.FC<SessionEventsViewProps> = ({
   sessionName,
 }) => {
   const { theme } = useTheme();
-  const [events, setEvents] = useState<RepoNormalizedUniversalAgentSessionEvent[]>([]);
+  const [events, setEvents] = useState<
+    RepoNormalizedUniversalAgentSessionEvent[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] =
     useState<RepoNormalizedUniversalAgentSessionEvent | null>(null);

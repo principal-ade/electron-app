@@ -64,7 +64,7 @@ class AuthStateManager extends EventEmitter {
           isAuthenticated: this.state.isAuthenticated,
           user: this.state.user?.login,
           hasToken: !!this.state.token,
-        }
+        },
       });
       return publicState;
     });
@@ -138,7 +138,7 @@ class AuthStateManager extends EventEmitter {
       {
         isAuthenticated: this.state.isAuthenticated,
         currentUser: this.state.user?.login,
-      }
+      },
     );
 
     this.updateState({
@@ -150,14 +150,11 @@ class AuthStateManager extends EventEmitter {
       token,
     });
 
-    console.log(
-      '[AuthStateManager] State after setAuthenticated:',
-      {
-        isAuthenticated: this.state.isAuthenticated,
-        user: this.state.user?.login,
-        hasToken: !!this.state.token,
-      }
-    );
+    console.log('[AuthStateManager] State after setAuthenticated:', {
+      isAuthenticated: this.state.isAuthenticated,
+      user: this.state.user?.login,
+      hasToken: !!this.state.token,
+    });
   }
 
   /**

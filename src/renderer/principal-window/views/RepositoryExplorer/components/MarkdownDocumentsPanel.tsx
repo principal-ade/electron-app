@@ -124,10 +124,12 @@ export const MarkdownDocumentsPanel: React.FC<MarkdownDocumentsPanelProps> = ({
                     transition: 'background-color 0.2s',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = theme.colors.background;
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.background;
                   }}
                   onClick={() => onMarkdownClick(file.path)}
                   title={file.path}
