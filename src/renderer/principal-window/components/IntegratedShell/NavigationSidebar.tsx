@@ -77,8 +77,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     );
 
   const navItems: NavItem[] = [
-    { id: 'repository', icon: <Github size={20} />, label: 'Repos' },
     { id: 'terminal', icon: <Terminal size={20} />, label: 'Term' },
+    { id: 'repository', icon: <Github size={20} />, label: 'Repos' },
     { id: 'search', icon: <Search size={20} />, label: 'Search' },
     {
       id: 'monitoring',

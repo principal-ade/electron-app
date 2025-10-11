@@ -387,6 +387,36 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
             )}
 
           <button
+            onClick={onOpenDashboard}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 12px',
+              backgroundColor: 'transparent',
+              color: theme.colors.text,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundSecondary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+          >
+            <ExternalLink size={14} />
+            ADE
+          </button>
+
+          <button
             onClick={handleOpenTerminal}
             style={{
               display: 'flex',
@@ -429,36 +459,6 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               : repository?.path && terminalWindows.has(repository.path)
                 ? 'Focus Terminal'
                 : 'Terminal'}
-          </button>
-
-          <button
-            onClick={onOpenDashboard}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 12px',
-              backgroundColor: 'transparent',
-              color: theme.colors.text,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundSecondary;
-              e.currentTarget.style.borderColor = theme.colors.primary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = theme.colors.border;
-            }}
-          >
-            <ExternalLink size={14} />
-            ADE
           </button>
 
           {/* Settings Dropdown */}

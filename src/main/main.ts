@@ -9,7 +9,7 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, protocol, ipcMain } from 'electron';
+import { app, protocol, ipcMain, dialog, BrowserWindow } from 'electron';
 import log from 'electron-log';
 import {
   createWindow,
@@ -181,6 +181,58 @@ app.on('window-all-closed', async () => {
 
   if (process.platform !== 'darwin') {
     app.quit();
+  }
+});
+
+// Flag to track if quit confirmation is in progress
+let isQuitting = false;
+
+// Add a handler for 'before-quit' to show confirmation dialog
+app.on('before-quit', async (event) => {
+  // If already quitting or dialog already shown, don't show again
+  if (isQuitting) {
+    return;
+  }
+
+  // Prevent the default quit behavior
+  event.preventDefault();
+
+  // Set flag to prevent multiple dialogs
+  isQuitting = true;
+
+  try {
+    // Get the focused window or any available window
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    const windows = Array.from(applicationWindows.values());
+    const targetWindow = focusedWindow || (windows.length > 0 ? windows[0].window : null);
+
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      const response = await dialog.showMessageBox(targetWindow, {
+        type: 'question',
+        buttons: ['Cancel', 'Quit'],
+        defaultId: 0,
+        title: 'Confirm Quit',
+        message: 'Are you sure you want to quit?',
+        detail: 'Any unsaved changes will be lost.',
+      });
+
+      if (response.response === 1) {
+        // User confirmed, proceed with quit
+        // Remove this listener to avoid infinite loop
+        app.removeAllListeners('before-quit');
+        app.quit();
+      } else {
+        // User cancelled, reset the flag
+        isQuitting = false;
+      }
+    } else {
+      // No window available, just quit
+      app.removeAllListeners('before-quit');
+      app.quit();
+    }
+  } catch (error) {
+    console.error('[Main Process] Error showing quit confirmation:', error);
+    isQuitting = false;
   }
 });
 

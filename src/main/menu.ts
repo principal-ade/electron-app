@@ -4,6 +4,7 @@ import {
   shell,
   BrowserWindow,
   MenuItemConstructorOptions,
+  dialog,
 } from 'electron';
 
 // Import openMarkdownFile function
@@ -90,6 +91,7 @@ export default class MenuBuilder {
           label: 'Quit',
           accelerator: 'Command+Q',
           click: () => {
+            // The before-quit handler in main.ts will show the confirmation dialog
             app.quit();
           },
         },
