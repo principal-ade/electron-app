@@ -81,7 +81,7 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
     id: 'packageInfo',
     label: 'Package Information',
     description:
-      'Package insights and dependency layers detected in the codebase.',
+      'Package insights, quality metrics, and dependency layers detected in the codebase.',
     defaultLocation: 'right',
     slices: ['packages'],
   },
@@ -131,6 +131,13 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
     id: 'terminal',
     label: 'Terminal',
     description: 'Integrated terminal for repository commands.',
+    defaultLocation: 'right',
+    slices: [],
+  },
+  {
+    id: 'carouselTerminal',
+    label: 'Carousel Terminal',
+    description: 'Horizontally scrolling terminal carousel with snap navigation.',
     defaultLocation: 'right',
     slices: [],
   },

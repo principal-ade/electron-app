@@ -8,6 +8,7 @@ import {
   AlertCircle,
   FileText,
   Trash2,
+  Copy,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { PalaceTasksService } from '../../main-process-api/PalaceTasksService';
@@ -102,8 +103,8 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
     }
   };
 
-  const getRelativeTime = (dateStr: string) => {
-    const date = new Date(dateStr);
+  const getRelativeTime = (timestamp: number) => {
+    const date = new Date(timestamp);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -159,6 +160,22 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
       }
     },
     [repositoryPath],
+  );
+
+  const handleCopyPath = useCallback(
+    async (task: Task, event: React.MouseEvent) => {
+      event.stopPropagation(); // Prevent task click when copying
+
+      try {
+        await navigator.clipboard.writeText(task.directoryPath);
+        // Optional: Show a brief success indicator
+        console.log('Path copied:', task.directoryPath);
+      } catch (err) {
+        console.error('Failed to copy path:', err);
+        setError('Failed to copy path');
+      }
+    },
+    [],
   );
 
   return (
@@ -313,6 +330,32 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                         {task.priority}
                       </span>
                     )}
+                    <button
+                      onClick={(e) => handleCopyPath(task, e)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '4px',
+                        cursor: 'pointer',
+                        color: theme.colors.textSecondary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        borderRadius: '4px',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = `${theme.colors.primary}15`;
+                        e.currentTarget.style.color = theme.colors.primary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color =
+                          theme.colors.textSecondary;
+                      }}
+                      title="Copy relative path"
+                    >
+                      <Copy size={14} />
+                    </button>
                     <button
                       onClick={(e) => handleDeleteTask(task, e)}
                       style={{

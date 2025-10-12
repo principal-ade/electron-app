@@ -16,6 +16,21 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
 }) => {
   const { theme } = useTheme();
 
+  // Filter to only show Repository Explorer panels
+  const explorerPanelIds = [
+    'gitChanges',
+    'files',
+    'gitStatus',
+    'tasksAndNotes',
+    'cityVisualization',
+    'actions',
+    'packageInfo',
+  ];
+
+  const explorerPanels = repositoryPanelDefinitions.filter((panel) =>
+    explorerPanelIds.includes(panel.id),
+  );
+
   const handleToggle = (key: keyof RepositoryPanelVisibility) => {
     onPanelVisibilityChange({
       ...panelVisibility,
@@ -80,7 +95,7 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
           gap: '12px',
         }}
       >
-        {repositoryPanelDefinitions.map(({ id, label }) => (
+        {explorerPanels.map(({ id, label }) => (
           <label
             key={id}
             style={{

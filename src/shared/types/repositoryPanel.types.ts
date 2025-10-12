@@ -14,6 +14,7 @@ export type RepositoryPanelId =
   | 'tools'
   | 'docs'
   | 'terminal'
+  | 'carouselTerminal'
   // Viewer panels (decoupled from RightPaneContainer)
   | 'codeViewer'
   | 'markdownViewer'

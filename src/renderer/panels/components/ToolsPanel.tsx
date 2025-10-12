@@ -258,17 +258,14 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   const runTool = useCallback(
     async (
       packagePath: string,
-      command: string,
+      packageCommand: PackageCommand,
       toolName: string,
-      scriptName?: string,
     ) => {
-      // Use script name for key if provided, otherwise use command
-      const key = scriptName
-        ? `${packagePath}:${scriptName}`
-        : `${packagePath}:${command}`;
+      // Use command name for key
+      const key = `${packagePath}:${packageCommand.name}`;
 
       console.info(
-        `[ToolsTab] Running tool: ${toolName} with command: ${command} in package: ${packagePath}`,
+        `[ToolsTab] Running tool: ${toolName} with command: ${packageCommand.command} in package: ${packagePath}`,
       );
 
       // Mark tool as running
@@ -276,15 +273,28 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
       setShowingResult(null);
 
       try {
-        // Create tool execution request
+        // Find the PackageLayer for this package
+        const packageLayer = packageLayers?.find(
+          (layer) => (layer.packageData.path || '') === packagePath,
+        );
+
+        // Validate that we have the required data
+        if (!packageLayer || !packageCommand) {
+          throw new Error(
+            'PackageLayer and PackageCommand are required to execute tools',
+          );
+        }
+
+        console.info(
+          `[ToolsTab] Executing tool with lensId: ${packageCommand.lensId}`,
+        );
+
         const request: ToolExecutionRequest = {
           repoPath: repositoryPath,
-          packagePath: packagePath || undefined,
-          toolName,
-          command,
+          packageLayer,
+          packageCommand,
         };
 
-        // Execute tool via quality lens service
         const result = await RepositoryMonitoringService.executeTool(request);
 
         if (result) {
@@ -292,6 +302,12 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
             `[ToolsTab] Tool execution result for key "${key}":`,
             result,
           );
+          if (result.qualityContext) {
+            console.info(
+              `[ToolsTab] Quality context:`,
+              result.qualityContext,
+            );
+          }
           setToolResults((prev) => {
             const newMap = new Map(prev);
             newMap.set(key, result);
@@ -316,7 +332,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
         });
       }
     },
-    [repositoryPath],
+    [repositoryPath, packageLayers],
   );
 
   if (!packageLayers || packageLayers.length === 0) {
@@ -693,9 +709,8 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
                                             !isRunning &&
                                             runTool(
                                               pkg.packagePath,
-                                              cmd.command,
+                                              cmd,
                                               tool.name,
-                                              cmd.name,
                                             )
                                           }
                                           disabled={isRunning}

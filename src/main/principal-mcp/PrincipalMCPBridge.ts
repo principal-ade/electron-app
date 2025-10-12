@@ -821,33 +821,20 @@ export class PrincipalMCPBridge extends EventEmitter {
 
   public async start(): Promise<number> {
     return new Promise((resolve, reject) => {
-      const tryListen = (attemptPort: number, attempts: number = 0) => {
-        if (attempts >= 10) {
-          reject(
-            new Error('Failed to find available port for Principal MCP Bridge'),
-          );
-          return;
+      this.server = this.app.listen(this.port, 'localhost', () => {
+        console.log(`✅ Principal MCP Bridge started on port ${this.port}`);
+        resolve(this.port);
+      });
+
+      this.server.on('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          const errorMsg = `❌ Port ${this.port} is already in use. Principal MCP Bridge requires port ${this.port} to be available. Please stop any existing instances or free up the port.`;
+          console.error(errorMsg);
+          reject(new Error(errorMsg));
+        } else {
+          reject(err);
         }
-
-        this.server = this.app.listen(attemptPort, 'localhost', () => {
-          this.port = attemptPort;
-          console.log(`✅ Principal MCP Bridge started on port ${this.port}`);
-          resolve(this.port);
-        });
-
-        this.server.on('error', (err: any) => {
-          if (err.code === 'EADDRINUSE') {
-            console.log(
-              `Port ${attemptPort} in use, trying ${attemptPort + 1}...`,
-            );
-            tryListen(attemptPort + 1, attempts + 1);
-          } else {
-            reject(err);
-          }
-        });
-      };
-
-      tryListen(this.port);
+      });
     });
   }
 

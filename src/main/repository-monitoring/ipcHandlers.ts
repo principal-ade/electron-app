@@ -368,7 +368,7 @@ export function registerRepositoryMonitoringHandlers(): void {
     RepositoryMonitoringAPIEvent.EXECUTE_TOOL,
     async (_event, request: ToolExecutionRequest) => {
       console.log(
-        `[RepositoryMonitoring] EXECUTE_TOOL request for: ${request.toolName} in ${request.repoPath}`,
+        `[RepositoryMonitoring] EXECUTE_TOOL request for: ${request.packageCommand.lensId || request.packageCommand.name} in ${request.repoPath}`,
       );
       try {
         const result = await qualityLensService.executeTool(request);
@@ -380,9 +380,9 @@ export function registerRepositoryMonitoringHandlers(): void {
         console.error('[RepositoryMonitoring] Error executing tool:', error);
         return {
           success: false,
-          toolName: request.toolName,
-          command: request.command,
-          packagePath: request.packagePath,
+          toolName: request.packageCommand.lensId || request.packageCommand.name,
+          command: request.packageCommand.command,
+          packagePath: request.packageLayer.packageData.path,
           exitCode: 1,
           duration: 0,
           stdout: '',

@@ -5,9 +5,9 @@ import {
 } from '@principal-ai/agent-monitoring-ui';
 import { useTheme } from '@a24z/industry-theme';
 import { Grid2x2, ChevronDown, ChevronRight } from 'lucide-react';
-import { RepositoryMonitoringService } from '../../../../../main-process-api/RepositoryMonitoringService';
+import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
-import type { PackageSummary } from '../../../../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import type { PackageSummary } from '../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 interface QualityHexagonPanelProps {
   directory: string;
@@ -46,6 +46,11 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
 
       if (result) {
         console.log('[QualityHexagon] Packages fetched:', result);
+        console.log('[QualityHexagon] Quality metrics check:', result.packages.map(pkg => ({
+          name: pkg.packageData.name,
+          hasQualityMetrics: !!pkg.qualityMetrics,
+          qualityMetrics: pkg.qualityMetrics
+        })));
         setPackages(result.packages);
         setSummary(result.summary);
       } else {
@@ -110,7 +115,7 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            marginBottom: isExpanded ? '8px' : '0',
+            marginBottom: '8px',
           }}
         >
           {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -150,6 +155,112 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
             )}
           </div>
         </div>
+
+        {/* Quality Hexagon Visualization */}
+        {pkg.qualityMetrics?.hexagon && (
+          <>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                padding: '16px',
+                marginBottom: '12px',
+              }}
+            >
+              {(() => {
+                // Log what we're receiving from the composition package
+                console.log('[QualityHexagon] Rendering hexagon for:', pkg.packageData.name);
+                console.log('[QualityHexagon] Raw hexagon data:', pkg.qualityMetrics.hexagon);
+
+                // Convert Partial<QualityMetrics> to full QualityMetrics with defaults
+                const fullMetrics = {
+                  tests: pkg.qualityMetrics.hexagon.tests ?? 0,
+                  deadCode: pkg.qualityMetrics.hexagon.deadCode ?? 0,
+                  linting: pkg.qualityMetrics.hexagon.linting ?? 0,
+                  formatting: pkg.qualityMetrics.hexagon.formatting ?? 0,
+                  types: pkg.qualityMetrics.hexagon.types ?? 0,
+                  documentation: pkg.qualityMetrics.hexagon.documentation ?? 0,
+                };
+
+                console.log('[QualityHexagon] Full metrics with defaults:', fullMetrics);
+
+                return compact ? (
+                  <QualityHexagonCompact
+                    metrics={fullMetrics}
+                    tier="none"
+                    theme={theme}
+                  />
+                ) : (
+                  <QualityHexagonDetailed
+                    metrics={fullMetrics}
+                    tier="none"
+                    theme={theme}
+                  />
+                );
+              })()}
+            </div>
+
+            {/* Lens Information */}
+            {(pkg.qualityMetrics.availableLenses?.length ||
+              pkg.qualityMetrics.missingLenses?.length) && (
+              <div
+                style={{
+                  marginBottom: '12px',
+                  padding: '8px',
+                  background: theme.colors.backgroundSecondary,
+                  borderRadius: '4px',
+                }}
+              >
+                {pkg.qualityMetrics.availableLenses &&
+                  pkg.qualityMetrics.availableLenses.length > 0 && (
+                    <div style={{ marginBottom: '4px' }}>
+                      <span
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          fontWeight: 600,
+                          color: theme.colors.success,
+                        }}
+                      >
+                        Available Lenses ({pkg.qualityMetrics.availableLenses.length}):{' '}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          color: theme.colors.textSecondary,
+                          fontFamily: theme.fonts.monospace,
+                        }}
+                      >
+                        {pkg.qualityMetrics.availableLenses.join(', ')}
+                      </span>
+                    </div>
+                  )}
+                {pkg.qualityMetrics.missingLenses &&
+                  pkg.qualityMetrics.missingLenses.length > 0 && (
+                    <div>
+                      <span
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          fontWeight: 600,
+                          color: theme.colors.warning,
+                        }}
+                      >
+                        Missing Lenses ({pkg.qualityMetrics.missingLenses.length}):{' '}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: theme.fontSizes[0],
+                          color: theme.colors.textSecondary,
+                          fontFamily: theme.fonts.monospace,
+                        }}
+                      >
+                        {pkg.qualityMetrics.missingLenses.join(', ')}
+                      </span>
+                    </div>
+                  )}
+              </div>
+            )}
+          </>
+        )}
 
         {isExpanded && (
           <>
@@ -377,7 +488,7 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
           gap: '8px',
         }}
       >
-        <span>Package Information</span>
+        <span>Quality Hexagon</span>
         {summary?.isMonorepo && (
           <span
             style={{

@@ -47,6 +47,14 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
   >(null);
   const [isCheckingHealth, setIsCheckingHealth] = useState(false);
 
+  // Log when panel mounts/repositoryPath changes
+  useEffect(() => {
+    console.log('[AgentEventsPanel] ========== PANEL MOUNTED/UPDATED ==========');
+    console.log('[AgentEventsPanel] repositoryPath:', repositoryPath);
+    console.log('[AgentEventsPanel] filterByRepo:', filterByRepo);
+    console.log('[AgentEventsPanel] Current events count:', events.length);
+  }, [repositoryPath]);
+
   // Listen for processed events
   useEffect(() => {
     let eventCounter = 0;
@@ -54,27 +62,42 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
     console.log(
       '[AgentEventsPanel] Setting up event listener, repositoryPath:',
       repositoryPath,
+      'filterByRepo:',
+      filterByRepo,
     );
 
     const unsubscribe = AgentSessionSDKService.onProcessedEvent((event) => {
-      console.log('[AgentEventsPanel] Received event:', event.eventType, event);
+      console.log('[AgentEventsPanel] ========== RECEIVED EVENT ==========');
+      console.log('[AgentEventsPanel] Event type:', event.eventType);
+      console.log('[AgentEventsPanel] Session ID:', event.sessionId);
+      console.log('[AgentEventsPanel] Tool name:', event.toolName);
+      console.log('[AgentEventsPanel] Event repositoryInfo:', event.repositoryInfo);
+      console.log('[AgentEventsPanel] Event workingDirectory:', event.workingDirectory);
+      console.log('[AgentEventsPanel] Panel repositoryPath:', repositoryPath);
+      console.log('[AgentEventsPanel] filterByRepo:', filterByRepo);
 
       // Filter by repository if enabled
       if (filterByRepo && repositoryPath) {
         const eventRepoPath =
           event.repositoryInfo?.root || event.workingDirectory;
         console.log(
-          '[AgentEventsPanel] Filtering - eventRepoPath:',
+          '[AgentEventsPanel] Comparing paths - eventRepoPath:',
           eventRepoPath,
-          'current:',
+          'vs repositoryPath:',
           repositoryPath,
+          'match:',
+          eventRepoPath === repositoryPath,
         );
         if (eventRepoPath !== repositoryPath) {
           console.log(
-            '[AgentEventsPanel] Event filtered out - different repository',
+            '[AgentEventsPanel] ❌ Event filtered out - different repository',
           );
+          console.log('[AgentEventsPanel] ===================================');
           return;
         }
+        console.log('[AgentEventsPanel] ✅ Event accepted - repository matches');
+      } else {
+        console.log('[AgentEventsPanel] ✅ Event accepted - no filtering');
       }
 
       // Add event to list

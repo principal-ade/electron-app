@@ -14,6 +14,7 @@ import {
   type ExecuteResult,
   type Issue,
 } from '@principal-ai/codebase-quality-lenses';
+import type { PackageCommand } from '@principal-ai/codebase-composition';
 import { ElectronCLIBridgeExecutor } from './ElectronCLIBridgeExecutor';
 import type {
   ToolExecutionRequest,
@@ -77,361 +78,243 @@ export class QualityLensService {
   }
 
   /**
-   * Execute a tool using the appropriate lens
+   * Execute a tool using PackageLayer and PackageCommand
    */
   public async executeTool(
     request: ToolExecutionRequest,
   ): Promise<ToolExecutionResponse> {
-    const { repoPath, packagePath, toolName, command, args = [] } = request;
     const startTime = Date.now();
 
+    // Validate required fields
+    if (!request.packageLayer || !request.packageCommand) {
+      throw new Error(
+        'packageLayer and packageCommand are required. Legacy execution has been removed.',
+      );
+    }
+
+    return this.executeWithPackageLayer(request, startTime);
+  }
+
+  /**
+   * Execute using PackageLayer and PackageCommand (new preferred way)
+   */
+  private async executeWithPackageLayer(
+    request: ToolExecutionRequest,
+    startTime: number,
+  ): Promise<ToolExecutionResponse> {
+    const { repoPath, packageLayer, packageCommand } = request;
+
+    if (!packageLayer || !packageCommand) {
+      throw new Error(
+        'packageLayer and packageCommand are required for new execution path',
+      );
+    }
+
     // Determine working directory
+    const packagePath = packageLayer.packageData.path || '';
     const cwd = packagePath ? `${repoPath}/${packagePath}` : repoPath;
 
-    // Find appropriate lens for this tool
-    const lens = this.findLensForTool(toolName, command);
+    // Check if this is a lens command
+    if (!packageCommand.isLensCommand || !packageCommand.lensId) {
+      console.log(
+        `[QualityLensService] Not a lens command, executing directly: ${packageCommand.name}`,
+      );
+      return this.executeNonLensCommand(request, packageCommand, cwd, startTime);
+    }
+
+    // Find lens by ID (no parsing needed!)
+    const lens = this.lenses.get(packageCommand.lensId);
 
     if (!lens) {
-      // No lens available, execute directly without parsing
-      console.log(
-        `[QualityLensService] No lens found for tool: ${toolName}, executing directly`,
+      console.warn(
+        `[QualityLensService] No lens registered for: ${packageCommand.lensId}`,
       );
-      return this.executeDirectly(request, cwd, startTime);
+      return this.executeNonLensCommand(request, packageCommand, cwd, startTime);
     }
 
     console.log(
-      `[QualityLensService] Using ${lens.name} lens for tool: ${toolName}`,
+      `[QualityLensService] Using ${lens.name} for command: ${packageCommand.name} (lensId: ${packageCommand.lensId})`,
     );
-    console.log(`[QualityLensService] Working directory (cwd): ${cwd}`);
-    console.log(`[QualityLensService] Request details:`, {
-      repoPath,
-      packagePath,
-      command: this.parseCommand(command),
-      args: this.parseArgs(command, args),
-    });
 
     try {
+      // Parse command string (composition package already validated it)
+      const { command, args } = this.parseCommandString(
+        packageCommand.command,
+      );
+
       // Configure the lens
       lens.configure({
         cwd,
         tool: {
-          name: toolName,
-          command: this.parseCommand(command),
-          args: this.parseArgs(command, args),
+          name: packageCommand.lensId,
+          command,
+          args,
           cwd,
           available: true,
         },
       });
 
-      // Run the complete lens pipeline (execute → parse → format)
+      // Run the lens pipeline
       const lensResult = await lens.run();
 
-      // Determine actual success and exit code
-      // The lens may return success:true even when the tool exits with code 1 (e.g., ESLint with errors)
-      // We need to check the raw exit code and error metrics to determine actual success
-      let actualExitCode = 0;
-      let actualSuccess = true;
-
-      // First, check if there's a raw exit code from the execution
-      if (lensResult.raw?.exitCode !== undefined) {
-        actualExitCode = lensResult.raw.exitCode;
-        actualSuccess = actualExitCode === 0;
-      }
-      // If no raw data, fall back to checking for errors in the result
-      else if (lensResult.error) {
-        actualExitCode = 1;
-        actualSuccess = false;
-      }
-      // For linting tools, check if there are error-level issues
-      else if (
-        lensResult.metrics?.issuesBySeverity?.error &&
-        lensResult.metrics.issuesBySeverity.error > 0
-      ) {
-        // Tool ran successfully but found errors - this is typically exit code 1 for linters
-        actualExitCode = 1;
-        actualSuccess = false;
-      } else {
-        // Use the lens's success field as fallback
-        actualSuccess = lensResult.success !== false;
-        actualExitCode = actualSuccess ? 0 : 1;
-      }
-
-      // Log the lens result for debugging
-      console.log(`[QualityLensService] Lens result:`, {
-        lensSuccess: lensResult.success,
-        actualSuccess,
-        actualExitCode,
-        rawExitCode: lensResult.raw?.exitCode,
-        errorCount: lensResult.metrics?.issuesBySeverity?.error || 0,
-        warningCount: lensResult.metrics?.issuesBySeverity?.warning || 0,
-        totalIssuesInArray: lensResult.issues?.length || 0,
-        issuesWithErrors:
-          lensResult.issues?.filter((i) => i.severity === 'error').length || 0,
-        hasError: !!lensResult.error,
-        errorMessage: lensResult.error?.message,
-        sampleIssues:
-          lensResult.issues
-            ?.slice(0, 3)
-            .map((i) => ({
-              file: i.file,
-              severity: i.severity,
-              message: i.message,
-            })) || [],
-      });
+      // Determine success and exit code
+      const { success, exitCode } = this.determineLensSuccess(lensResult);
 
       return {
-        success: actualSuccess,
-        toolName,
-        command,
+        success,
+        toolName: packageCommand.lensId,
+        command: packageCommand.command,
         packagePath,
-        exitCode: actualExitCode,
+        exitCode,
         duration: Date.now() - startTime,
         stdout: lensResult.raw?.stdout || '',
         stderr: lensResult.raw?.stderr || lensResult.error?.message || '',
         lensResult,
+
+        // NEW: Include quality metrics context
+        qualityContext: {
+          lensId: packageCommand.lensId,
+          operation: packageCommand.lensOperation,
+          availableLenses: packageLayer.qualityMetrics?.availableLenses,
+          missingLenses: packageLayer.qualityMetrics?.missingLenses,
+        },
       };
     } catch (error: any) {
-      console.error(
-        `[QualityLensService] Error executing tool with lens:`,
-        error,
-      );
-
-      return {
-        success: false,
-        toolName,
-        command,
+      console.error(`[QualityLensService] Error:`, error);
+      return this.createErrorResponse(
+        packageCommand.lensId || packageCommand.name,
+        packageCommand.command,
         packagePath,
-        exitCode: 1,
-        duration: Date.now() - startTime,
-        stdout: '',
-        stderr: error.message || 'Tool execution failed',
-      };
+        error,
+        startTime,
+      );
     }
   }
 
   /**
-   * Execute a tool directly without lens parsing
+   * Execute a non-lens command directly
    */
-  private async executeDirectly(
+  private async executeNonLensCommand(
     request: ToolExecutionRequest,
+    packageCommand: PackageCommand,
     cwd: string,
     startTime: number,
   ): Promise<ToolExecutionResponse> {
-    const { toolName, command, packagePath, args = [] } = request;
+    const { command, args } = this.parseCommandString(packageCommand.command);
 
     try {
-      const parsedCommand = this.parseCommand(command);
-      const parsedArgs = this.parseArgs(command, args);
-
-      const result = await this.executor.execute(parsedCommand, parsedArgs, {
-        cwd,
-      });
-
-      // Check if this is a Prettier command and parse its output
-      if (
-        command.includes('prettier') ||
-        toolName.toLowerCase().includes('prettier')
-      ) {
-        const lensResult = this.parsePrettierOutput(
-          result.stdout,
-          result.stderr,
-          cwd,
-          result.exitCode,
-        );
-        return {
-          success: result.exitCode === 0,
-          toolName,
-          command,
-          packagePath,
-          exitCode: result.exitCode,
-          duration: Date.now() - startTime,
-          stdout: result.stdout,
-          stderr: result.stderr,
-          lensResult,
-        };
-      }
+      const result = await this.executor.execute(command, args, { cwd });
 
       return {
         success: result.exitCode === 0,
-        toolName,
-        command,
-        packagePath,
+        toolName: packageCommand.name,
+        command: packageCommand.command,
+        packagePath: request.packageLayer?.packageData.path,
         exitCode: result.exitCode,
         duration: Date.now() - startTime,
         stdout: result.stdout,
         stderr: result.stderr,
       };
     } catch (error: any) {
-      return {
-        success: false,
-        toolName,
-        command,
-        packagePath,
-        exitCode: 1,
-        duration: Date.now() - startTime,
-        stdout: '',
-        stderr: error.message || 'Tool execution failed',
-      };
+      return this.createErrorResponse(
+        packageCommand.name,
+        packageCommand.command,
+        request.packageLayer?.packageData.path,
+        error,
+        startTime,
+      );
     }
   }
 
+
+
+
+
   /**
-   * Parse Prettier output into a LensResult
+   * Parse command string into command + args (used by new execution path)
+   * Simplified since composition package already validated it
    */
-  private parsePrettierOutput(
-    stdout: string,
-    stderr: string,
-    cwd: string,
-    exitCode: number,
-  ): LensResult {
-    const issues: Issue[] = [];
-    const analyzedFiles: Array<{ path: string; hasIssues: boolean }> = [];
-
-    // Parse --check output (stderr contains warnings)
-    const checkOutput = stderr || stdout;
-    const lines = checkOutput.split('\n');
-
-    for (const line of lines) {
-      // Match [warn] filename.ext format
-      const warnMatch = line.match(/^\[warn\]\s+(.+)$/);
-      if (warnMatch) {
-        const filePath = warnMatch[1].trim();
-        const relativePath = filePath.startsWith(cwd)
-          ? filePath.substring(cwd.length + 1)
-          : filePath;
-
-        issues.push({
-          file: relativePath,
-          line: 1,
-          column: 1,
-          severity: 'warning',
-          message: 'Code style issues found. Run Prettier with --write to fix.',
-          rule: 'prettier',
-          source: 'prettier',
-          category: 'formatting',
-        });
-
-        analyzedFiles.push({
-          path: relativePath,
-          hasIssues: true,
-        });
-      }
-
-      // Match "filename.ext 13ms (unchanged)" or "filename.ext 13ms" format from --write
-      const writeMatch = line.match(/^(.+?)\s+\d+ms(?:\s+\(unchanged\))?$/);
-      if (writeMatch) {
-        const filePath = writeMatch[1].trim();
-        const relativePath = filePath.startsWith(cwd)
-          ? filePath.substring(cwd.length + 1)
-          : filePath;
-
-        const wasChanged = !line.includes('(unchanged)');
-
-        analyzedFiles.push({
-          path: relativePath,
-          hasIssues: wasChanged,
-        });
-
-        // If file was changed, it had formatting issues
-        if (wasChanged) {
-          issues.push({
-            file: relativePath,
-            line: 1,
-            column: 1,
-            severity: 'warning',
-            message: 'File was reformatted by Prettier',
-            rule: 'prettier',
-            source: 'prettier',
-            category: 'formatting',
-          });
-        }
-      }
+  private parseCommandString(commandString: string): {
+    command: string;
+    args: string[];
+  } {
+    // Handle npm/yarn/pnpm run scripts
+    if (commandString.startsWith('npm run ')) {
+      const parts = commandString.split(' ');
+      return { command: 'npm', args: ['run', ...parts.slice(2)] };
+    }
+    if (commandString.startsWith('yarn ')) {
+      const parts = commandString.split(' ');
+      return { command: 'yarn', args: parts.slice(1) };
+    }
+    if (commandString.startsWith('pnpm ')) {
+      const parts = commandString.split(' ');
+      return { command: 'pnpm', args: parts.slice(1) };
     }
 
+    // Direct command
+    const parts = commandString.split(' ');
+    return { command: parts[0], args: parts.slice(1) };
+  }
+
+  /**
+   * Determine success and exit code from lens result
+   */
+  private determineLensSuccess(lensResult: LensResult): {
+    success: boolean;
+    exitCode: number;
+  } {
+    let exitCode = 0;
+    let success = true;
+
+    // First, check if there's a raw exit code from the execution
+    if (lensResult.raw?.exitCode !== undefined) {
+      exitCode = lensResult.raw.exitCode;
+      success = exitCode === 0;
+    }
+    // If no raw data, fall back to checking for errors in the result
+    else if (lensResult.error) {
+      exitCode = 1;
+      success = false;
+    }
+    // For linting tools, check if there are error-level issues
+    else if (
+      lensResult.metrics?.issuesBySeverity?.error &&
+      lensResult.metrics.issuesBySeverity.error > 0
+    ) {
+      // Tool ran successfully but found errors - this is typically exit code 1 for linters
+      exitCode = 1;
+      success = false;
+    } else {
+      // Use the lens's success field as fallback
+      success = lensResult.success !== false;
+      exitCode = success ? 0 : 1;
+    }
+
+    return { success, exitCode };
+  }
+
+  /**
+   * Create error response consistently
+   */
+  private createErrorResponse(
+    toolName: string,
+    command: string,
+    packagePath: string | undefined,
+    error: Error,
+    startTime: number,
+  ): ToolExecutionResponse {
     return {
-      lensName: 'prettier',
-      tool: 'prettier',
-      timestamp: Date.now(),
-      success: exitCode === 0,
-      issues,
-      analyzedFiles,
-      metrics: {
-        filesAnalyzed: analyzedFiles.length,
-        totalIssues: issues.length,
-        issuesBySeverity: {
-          error: 0,
-          warning: issues.length,
-          info: 0,
-          hint: 0,
-        },
-        executionTime: 0,
-        custom: {
-          filesWithIssues: analyzedFiles.filter((f) => f.hasIssues).length,
-          filesFormatted: issues.length,
-        },
-      },
+      success: false,
+      toolName,
+      command,
+      packagePath,
+      exitCode: 1,
+      duration: Date.now() - startTime,
+      stdout: '',
+      stderr: error.message || 'Tool execution failed',
+      error: error.message,
     };
-  }
-
-  /**
-   * Find the appropriate lens for a tool
-   */
-  private findLensForTool(toolName: string, command: string): Lens | undefined {
-    // Direct match by tool name
-    const directMatch = this.lenses.get(toolName.toLowerCase());
-    if (directMatch) return directMatch;
-
-    // Try to match by command
-    const commandLower = command.toLowerCase();
-
-    // Check for npm/yarn/pnpm scripts
-    if (commandLower.includes('eslint')) return this.lenses.get('eslint');
-    if (commandLower.includes('jest') || commandLower.includes('test'))
-      return this.lenses.get('jest');
-    if (commandLower.includes('tsc') || commandLower.includes('typecheck'))
-      return this.lenses.get('typescript');
-    if (commandLower.includes('knip')) return this.lenses.get('knip');
-    if (commandLower.startsWith('git ')) return this.lenses.get('git');
-
-    return undefined;
-  }
-
-  /**
-   * Parse the command to extract the actual executable
-   */
-  private parseCommand(command: string): string {
-    // Handle npm/yarn/pnpm run scripts
-    if (command.startsWith('npm run ')) {
-      return 'npm';
-    }
-    if (command.startsWith('yarn ')) {
-      return 'yarn';
-    }
-    if (command.startsWith('pnpm ')) {
-      return 'pnpm';
-    }
-
-    // Extract first word as command
-    const parts = command.split(' ');
-    return parts[0];
-  }
-
-  /**
-   * Parse command string to extract arguments
-   */
-  private parseArgs(command: string, additionalArgs: string[] = []): string[] {
-    const parts = command.split(' ');
-
-    // Handle npm/yarn/pnpm run scripts
-    if (command.startsWith('npm run ')) {
-      return ['run', ...parts.slice(2), ...additionalArgs];
-    }
-    if (command.startsWith('yarn ') || command.startsWith('pnpm ')) {
-      return [...parts.slice(1), ...additionalArgs];
-    }
-
-    // Return everything after the command
-    return [...parts.slice(1), ...additionalArgs];
   }
 
   /**

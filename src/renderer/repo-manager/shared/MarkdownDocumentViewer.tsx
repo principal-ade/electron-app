@@ -81,7 +81,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
   // Document View - Use the new ThemedDocumentView component
   if (viewMode === 'document') {
     return (
-      <div style={{ position: 'relative', height: '100%' }}>
+      <div style={{ position: 'relative', height: '100%', width: '100%' }}>
         <ThemedDocumentView
           content={slides}
           showSegmented={showSegmented}
@@ -100,7 +100,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
   // Book View - Use the new ThemedSlidePresentationBook component with book mode
   if (viewMode === 'book') {
     return (
-      <div style={{ position: 'relative', height: '100%' }}>
+      <div style={{ position: 'relative', height: '100%', width: '100%' }}>
         <ThemedSlidePresentationBook
           slides={slides}
           initialSlide={currentSlide}
@@ -123,7 +123,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
 
   // Slide View (default) - Use the new ThemedSlidePresentation component
   return (
-    <div style={{ position: 'relative', height: '100%' }}>
+    <div style={{ position: 'relative', height: '100%', width: '100%' }}>
       <ThemedSlidePresentation
         slides={slides}
         initialSlide={currentSlide}

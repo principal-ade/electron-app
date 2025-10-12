@@ -58,6 +58,13 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
+  // Log when panel mounts/repositoryPath changes
+  useEffect(() => {
+    console.log('[AgentSessionsPanel] ========== PANEL MOUNTED/UPDATED ==========');
+    console.log('[AgentSessionsPanel] repositoryPath:', repositoryPath);
+    console.log('[AgentSessionsPanel] Current sessions count:', sessions.length);
+  }, [repositoryPath]);
+
   // Color palette for sessions
   const sessionColors = [
     '#3b82f6', // Blue
@@ -75,6 +82,102 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
       return sessionColors[index % sessionColors.length];
     },
     [sessionColors],
+  );
+
+  // Fetch a single session by ID
+  const fetchSingleSession = useCallback(
+    async (sessionId: string, repository: string): Promise<SessionWithEvents | null> => {
+      try {
+        console.log('[AgentSessionsPanel] Fetching single session:', sessionId);
+
+        // Get full session details
+        const fullSession = await AgentSessionSDKService.getSDKSession(
+          sessionId,
+          repository,
+        );
+
+        // Get events for this session
+        const events = await AgentSessionSDKService.getSDKSessionEvents(
+          sessionId,
+        );
+
+        // Extract file operations
+        const fileOperations = events
+          ? AgentSessionService.extractFileOperations(events)
+          : new Map();
+
+        // Extract latest event
+        let latestEvent = undefined;
+        if (events && events.length > 0) {
+          const lastEvent = events[events.length - 1];
+          const filePath = AgentSessionService.extractFilePath(lastEvent);
+          latestEvent = {
+            toolName: lastEvent.toolName || lastEvent.eventType,
+            timestamp: lastEvent.timestamp,
+            fileName: filePath?.displayPath?.split('/').pop(),
+          };
+        }
+
+        // Extract todos
+        const lastTodos = events
+          ? AgentSessionService.extractLastTodos(events)
+          : undefined;
+
+        // Create enhanced session with status
+        const enhancedSession: EnhancedUIAgentSessionData = {
+          ...fullSession,
+          sessionId: sessionId,
+          directory: repository,
+          workingDirectory: repository,
+          lastActivity: fullSession.lastActivity || Date.now(),
+          firstAccess: fullSession.firstAccess || Date.now(),
+          isActive: fullSession.isActive || true,
+          eventCount: events?.length || 0,
+          lastEvent: latestEvent
+            ? {
+                type: 'tool_use' as any,
+                fileName: latestEvent.fileName || '',
+                timestamp: latestEvent.timestamp,
+              }
+            : {
+                type: 'session_start' as any,
+                fileName: '',
+                timestamp: fullSession.firstAccess || Date.now(),
+              },
+          // Compute status based on session state
+          status: fullSession.isActive
+            ? 'active'
+            : (fullSession.lastActivity || 0) > Date.now() - 300000
+              ? 'idle'
+              : 'inactive',
+          statusColor: fullSession.isActive
+            ? '#10b981'
+            : (fullSession.lastActivity || 0) > Date.now() - 300000
+              ? '#f59e0b'
+              : '#6b7280',
+          statusText: fullSession.isActive
+            ? 'Active'
+            : (fullSession.lastActivity || 0) > Date.now() - 300000
+              ? 'Idle'
+              : 'Inactive',
+        };
+
+        return {
+          session: enhancedSession,
+          events: events || [],
+          latestEvent,
+          fileOperations,
+          lastTodos,
+        };
+      } catch (err) {
+        console.error(
+          `[AgentSessionsPanel] Failed to fetch session ${sessionId}:`,
+          err,
+        );
+        return null;
+      }
+    },
+    [],
   );
 
   // Fetch sessions from the SDK
@@ -107,94 +210,8 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
 
       // Fetch full session data and events for each session
       const sessionsWithEvents = await Promise.all(
-        projectSessions.summaries.map(async (summary, index) => {
-          try {
-            // Get full session details
-            const fullSession = await AgentSessionSDKService.getSDKSession(
-              summary.sessionId,
-              summary.repository,
-            );
-
-            // Get events for this session
-            const events = await AgentSessionSDKService.getSDKSessionEvents(
-              summary.sessionId,
-            );
-
-            // Extract file operations
-            const fileOperations = events
-              ? AgentSessionService.extractFileOperations(events)
-              : new Map();
-
-            // Extract latest event
-            let latestEvent = undefined;
-            if (events && events.length > 0) {
-              const lastEvent = events[events.length - 1];
-              const filePath = AgentSessionService.extractFilePath(lastEvent);
-              latestEvent = {
-                toolName: lastEvent.toolName || lastEvent.eventType,
-                timestamp: lastEvent.timestamp,
-                fileName: filePath?.displayPath?.split('/').pop(),
-              };
-            }
-
-            // Extract todos
-            const lastTodos = events
-              ? AgentSessionService.extractLastTodos(events)
-              : undefined;
-
-            // Create enhanced session with status
-            const enhancedSession: EnhancedUIAgentSessionData = {
-              ...fullSession,
-              sessionId: summary.sessionId,
-              directory: summary.repository,
-              workingDirectory: summary.repository,
-              lastActivity: summary.lastActivity,
-              firstAccess: summary.startTime,
-              isActive: summary.active || false,
-              eventCount: events?.length || 0,
-              lastEvent: latestEvent
-                ? {
-                    type: 'tool_use' as any,
-                    fileName: latestEvent.fileName || '',
-                    timestamp: latestEvent.timestamp,
-                  }
-                : {
-                    type: 'session_start' as any,
-                    fileName: '',
-                    timestamp: summary.startTime,
-                  },
-              // Compute status based on session state
-              status: summary.active
-                ? 'active'
-                : summary.lastActivity > Date.now() - 300000
-                  ? 'idle'
-                  : 'inactive',
-              statusColor: summary.active
-                ? '#10b981'
-                : summary.lastActivity > Date.now() - 300000
-                  ? '#f59e0b'
-                  : '#6b7280',
-              statusText: summary.active
-                ? 'Active'
-                : summary.lastActivity > Date.now() - 300000
-                  ? 'Idle'
-                  : 'Inactive',
-            };
-
-            return {
-              session: enhancedSession,
-              events: events || [],
-              latestEvent,
-              fileOperations,
-              lastTodos,
-            };
-          } catch (err) {
-            console.error(
-              `[AgentSessionsPanel] Failed to fetch session ${summary.sessionId}:`,
-              err,
-            );
-            return null;
-          }
+        projectSessions.summaries.map(async (summary) => {
+          return fetchSingleSession(summary.sessionId, summary.repository);
         }),
       );
 
@@ -211,7 +228,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [repositoryPath]);
+  }, [repositoryPath, fetchSingleSession]);
 
   // Initial fetch
   useEffect(() => {
@@ -220,22 +237,73 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
 
   // Listen for real-time event updates
   useEffect(() => {
-    if (!repositoryPath) return;
+    if (!repositoryPath) {
+      console.log('[AgentSessionsPanel] ⚠️ No repositoryPath - skipping event listener setup');
+      return;
+    }
 
-    console.log('[AgentSessionsPanel] Setting up event listener');
+    console.log('[AgentSessionsPanel] Setting up event listener for:', repositoryPath);
 
     const unsubscribe = AgentSessionSDKService.onProcessedEvent((event) => {
+      console.log('[AgentSessionsPanel] ========== RECEIVED EVENT ==========');
+      console.log('[AgentSessionsPanel] Event type:', event.eventType);
+      console.log('[AgentSessionsPanel] Session ID:', event.sessionId);
+      console.log('[AgentSessionsPanel] Tool name:', event.toolName);
+      console.log('[AgentSessionsPanel] Event repositoryInfo:', event.repositoryInfo);
+      console.log('[AgentSessionsPanel] Event workingDirectory:', event.workingDirectory);
+      console.log('[AgentSessionsPanel] Panel repositoryPath:', repositoryPath);
+
       // Check if this event belongs to the current repository
       const eventRepoPath =
         event.repositoryInfo?.root || event.workingDirectory;
+      console.log(
+        '[AgentSessionsPanel] Comparing paths - eventRepoPath:',
+        eventRepoPath,
+        'vs repositoryPath:',
+        repositoryPath,
+        'match:',
+        eventRepoPath === repositoryPath,
+      );
+
       if (eventRepoPath !== repositoryPath) {
+        console.log('[AgentSessionsPanel] ❌ Event filtered out - different repository');
+        console.log('[AgentSessionsPanel] ====================================');
         return;
       }
 
-      console.log('[AgentSessionsPanel] Received event for session:', event.sessionId);
+      console.log('[AgentSessionsPanel] ✅ Event accepted - repository matches');
+      console.log('[AgentSessionsPanel] Updating session:', event.sessionId);
 
       // Update the session that received this event
       setSessions((prevSessions) => {
+        // Check if this is a new session
+        const sessionExists = prevSessions.some(
+          (s) => s.session.sessionId === event.sessionId,
+        );
+
+        if (!sessionExists) {
+          console.log('[AgentSessionsPanel] 🆕 Detected new session:', event.sessionId);
+          // Fetch the new session asynchronously and add it
+          fetchSingleSession(event.sessionId, eventRepoPath).then((newSession) => {
+            if (newSession) {
+              console.log('[AgentSessionsPanel] ✅ Added new session:', event.sessionId);
+              setSessions((current) => {
+                // Check again to prevent duplicates
+                if (current.some((s) => s.session.sessionId === event.sessionId)) {
+                  return current;
+                }
+                // Add new session and sort by last activity
+                return [...current, newSession].sort(
+                  (a, b) => b.session.lastActivity - a.session.lastActivity,
+                );
+              });
+            }
+          });
+          // Return current sessions while we fetch the new one
+          return prevSessions;
+        }
+
+        // Update existing session
         return prevSessions.map((sessionWithEvents) => {
           if (sessionWithEvents.session.sessionId === event.sessionId) {
             // Add event to the session's events array
@@ -284,7 +352,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
     return () => {
       unsubscribe();
     };
-  }, [repositoryPath]);
+  }, [repositoryPath, fetchSingleSession]);
 
   // Filter sessions
   const filteredSessions = useMemo(() => {

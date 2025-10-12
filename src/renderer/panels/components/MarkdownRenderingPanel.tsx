@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FileText, Presentation } from 'lucide-react';
+import { FileText, Presentation, Copy, Check } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { MarkdownDocumentViewer } from '../../repo-manager/shared/MarkdownDocumentViewer';
 import { PanelEmptyState } from '../../repo-manager/panels/PanelEmptyState';
@@ -27,11 +27,12 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
   onClose,
 }) => {
   const { theme } = useTheme();
-  const [viewMode, setViewMode] = useState<'document' | 'slides'>('slides');
+  const [viewMode, setViewMode] = useState<'document' | 'book'>('book');
   const [currentSlide, setCurrentSlide] = useState(0);
   const [docContent, setDocContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [copiedPath, setCopiedPath] = useState(false);
   const latestFilePathRef = useRef<string | null>(null);
 
   const isLocalFile = source?.type === 'local';
@@ -159,6 +160,16 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
   const hasSlides = slides.length > 1;
   const fileName = filePath.split('/').pop() || filePath;
 
+  const handleCopyPath = async () => {
+    try {
+      await navigator.clipboard.writeText(filePath);
+      setCopiedPath(true);
+      setTimeout(() => setCopiedPath(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy path:', err);
+    }
+  };
+
   return (
     <div
       style={{
@@ -170,48 +181,35 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
         flexDirection: 'column',
       }}
     >
-      {/* Header with view mode toggle */}
+      {/* Compact header with doc name, view toggle, and copy button */}
       <div
         style={{
-          padding: '12px 16px',
+          height: '41px',
+          minHeight: '41px',
+          maxHeight: '41px',
           borderBottom: `1px solid ${theme.colors.border}`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '8px',
+          paddingLeft: '16px',
+          paddingRight: '12px',
           backgroundColor: theme.colors.backgroundLight,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {viewMode === 'slides' ? (
-            <Presentation size={16} color={theme.colors.primary} />
-          ) : (
-            <FileText size={16} color={theme.colors.primary} />
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span
-              style={{
-                fontSize: '13px',
-                fontWeight: 600,
-                color: theme.colors.text,
-              }}
-            >
-              {fileName}
-            </span>
-            <span
-              style={{
-                fontSize: '11px',
-                color: theme.colors.textSecondary,
-              }}
-            >
-              {viewMode === 'slides'
-                ? `Slide ${currentSlide + 1} of ${slides.length}`
-                : filePath}
-            </span>
-          </div>
-        </div>
+        <span
+          style={{
+            fontSize: '13px',
+            fontWeight: 600,
+            color: theme.colors.text,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {fileName}
+        </span>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           {/* View mode toggle - only show if document has slides */}
           {hasSlides && (
             <div
@@ -249,16 +247,16 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
               </button>
               <button
                 onClick={() => {
-                  setViewMode('slides');
+                  setViewMode('book');
                   setCurrentSlide(0);
                 }}
                 style={{
                   background:
-                    viewMode === 'slides'
+                    viewMode === 'book'
                       ? theme.colors.primary
                       : 'transparent',
                   color:
-                    viewMode === 'slides'
+                    viewMode === 'book'
                       ? theme.colors.background
                       : theme.colors.textSecondary,
                   border: 'none',
@@ -274,27 +272,48 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
             </div>
           )}
 
-          {onClose && (
-            <button
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '4px 8px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                color: theme.colors.textSecondary,
-                borderRadius: '4px',
-              }}
-            >
-              Close
-            </button>
-          )}
+          <button
+            onClick={handleCopyPath}
+            title={filePath}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '6px 8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              color: copiedPath ? theme.colors.success : theme.colors.textSecondary,
+              borderRadius: '4px',
+              transition: 'all 0.2s',
+              fontSize: '11px',
+            }}
+            onMouseEnter={(e) => {
+              if (!copiedPath) {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            {copiedPath ? (
+              <>
+                <Check size={14} />
+                <span>Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy size={14} />
+                <span>Copy path</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
+      <div style={{ flex: 1, width: '100%', overflow: 'hidden' }}>
         <MarkdownDocumentViewer
           viewMode={viewMode}
           showEditor={false}
@@ -303,6 +322,7 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
           currentSlide={currentSlide}
           theme={theme}
           showSegmented={true}
+          bookViewMode="single"
           onContentChange={() => {}}
           onSlideNavigate={setCurrentSlide}
           onCheckboxChange={() => {}}

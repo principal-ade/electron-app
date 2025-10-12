@@ -1,8 +1,9 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { GitStatusFileTree, type GitFileStatus } from '@a24z/dynamic-file-tree';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';
+import { GitChangesContextMenu } from '../../components/GitChangesContextMenu';
 
 interface GitChangesPanelProps {
   onFileClick?: (filePath: string) => void;
@@ -38,6 +39,66 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     },
     [actions.openFile, onFileClick],
   );
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    filePath: string;
+    isFolder: boolean;
+    fileStatus?: 'staged' | 'unstaged' | 'untracked' | 'deleted';
+  } | null>(null);
+
+  // Determine file status based on git status data
+  const getFileStatus = useCallback(
+    (
+      filePath: string,
+    ): 'staged' | 'unstaged' | 'untracked' | 'deleted' | undefined => {
+      // Check staged files
+      if (gitStatus.staged.some((f) => f.path === filePath)) {
+        return 'staged';
+      }
+      // Check deleted files
+      if (gitStatus.deleted.some((f) => f.path === filePath)) {
+        return 'deleted';
+      }
+      // Check untracked files
+      if (gitStatus.untracked.some((f) => f.path === filePath)) {
+        return 'untracked';
+      }
+      // Check unstaged files
+      if (gitStatus.unstaged.some((f) => f.path === filePath)) {
+        return 'unstaged';
+      }
+      return undefined;
+    },
+    [gitStatus],
+  );
+
+  const handleContextMenu = useCallback(
+    (event: React.MouseEvent, nodePath: string, isFolder: boolean) => {
+      event.preventDefault();
+      setContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        filePath: nodePath,
+        isFolder,
+        fileStatus: getFileStatus(nodePath),
+      });
+    },
+    [getFileStatus],
+  );
+
+  const handleCloseContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const handleRefreshStatus = useCallback(() => {
+    // Trigger a refresh of the git status
+    // The context provider should handle this automatically via subscription
+    // but we can call refresh explicitly if needed
+    setContextMenu(null);
+  }, []);
 
   if (!repositoryPath) {
     const content = (
@@ -169,42 +230,57 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
   // Tab variant - just the tree with no wrapper
   if (variant === 'tab') {
     return (
-      <div style={{ height: '100%', overflow: 'auto' }}>
-        {gitStatusLoading ? (
-          <div
-            style={{
-              padding: '20px',
-              textAlign: 'center',
-              color: theme.colors.textSecondary,
-            }}
-          >
-            {loadingMessage}
-          </div>
-        ) : !hasChanges ? (
-          <div
-            style={{
-              padding: '20px',
-              textAlign: 'center',
-              color: theme.colors.textSecondary,
-            }}
-          >
-            {emptyMessage}
-          </div>
-        ) : (
-          gitChangesData && (
-            <GitStatusFileTree
-              key={gitChangesData.statusData.length}
-              fileTree={gitChangesData.tree}
-              theme={theme}
-              gitStatusData={gitChangesData.statusData}
-              onFileSelect={handleFileSelect}
-              showIcons
-              transparentBackground={true}
-              padding="16px"
-            />
-          )
+      <>
+        <div style={{ height: '100%', overflow: 'auto' }}>
+          {gitStatusLoading ? (
+            <div
+              style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: theme.colors.textSecondary,
+              }}
+            >
+              {loadingMessage}
+            </div>
+          ) : !hasChanges ? (
+            <div
+              style={{
+                padding: '20px',
+                textAlign: 'center',
+                color: theme.colors.textSecondary,
+              }}
+            >
+              {emptyMessage}
+            </div>
+          ) : (
+            gitChangesData && (
+              <GitStatusFileTree
+                key={gitChangesData.statusData.length}
+                fileTree={gitChangesData.tree}
+                theme={theme}
+                gitStatusData={gitChangesData.statusData}
+                onFileSelect={handleFileSelect}
+                onContextMenu={handleContextMenu}
+                transparentBackground={true}
+                padding="16px"
+              />
+            )
+          )}
+        </div>
+        {contextMenu && repositoryPath && (
+          <GitChangesContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            filePath={contextMenu.filePath}
+            isFolder={contextMenu.isFolder}
+            repositoryPath={repositoryPath}
+            fileStatus={contextMenu.fileStatus}
+            onClose={handleCloseContextMenu}
+            onOpenFile={actions.openFile}
+            onRefreshStatus={handleRefreshStatus}
+          />
         )}
-      </div>
+      </>
     );
   }
 
@@ -281,12 +357,25 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               theme={theme}
               gitStatusData={gitChangesData.statusData}
               onFileSelect={handleFileSelect}
-              showIcons
+              onContextMenu={handleContextMenu}
               transparentBackground={true}
             />
           )
         )}
       </div>
+      {contextMenu && repositoryPath && (
+        <GitChangesContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          filePath={contextMenu.filePath}
+          isFolder={contextMenu.isFolder}
+          repositoryPath={repositoryPath}
+          fileStatus={contextMenu.fileStatus}
+          onClose={handleCloseContextMenu}
+          onOpenFile={actions.openFile}
+          onRefreshStatus={handleRefreshStatus}
+        />
+      )}
     </div>
   );
 };

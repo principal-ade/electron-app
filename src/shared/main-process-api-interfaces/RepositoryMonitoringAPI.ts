@@ -3,15 +3,24 @@
  */
 
 import type { FileTree } from '@principal-ai/repository-abstraction';
-import type { PackageLayer } from '@principal-ai/codebase-composition';
+import type {
+  PackageLayer,
+  PackageCommand,
+} from '@principal-ai/codebase-composition';
 import type { GitState } from '@principal-ai/repository-monitoring';
+
 // Tool execution types (moved from main/quality-lenses/QualityLensService.ts)
 export interface ToolExecutionRequest {
   repoPath: string;
-  packagePath?: string;
-  toolName: string;
-  command: string;
-  args?: string[];
+  packageLayer: PackageLayer;
+  packageCommand: PackageCommand;
+}
+
+export interface QualityContext {
+  lensId?: string;
+  operation?: string;
+  availableLenses?: string[];
+  missingLenses?: string[];
 }
 
 export interface ToolExecutionResponse {
@@ -25,6 +34,9 @@ export interface ToolExecutionResponse {
   stderr: string;
   lensResult?: unknown;
   error?: string;
+
+  // NEW: Quality metrics context
+  qualityContext?: QualityContext;
 }
 
 // Package summary interface

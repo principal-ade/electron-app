@@ -356,6 +356,13 @@ export class EventServerManager extends EventEmitter {
     // Step 3: Broadcast to windows for real-time updates
     const windows = BrowserWindow.getAllWindows();
 
+    this.log('info', `=========== BROADCASTING EVENT TO WINDOWS ===========`);
+    this.log('info', `Number of windows: ${windows.length}`);
+    this.log('info', `Event type: ${repoNormalizedEvent.eventType}`);
+    this.log('info', `Session ID: ${normalizedSessionId}`);
+    this.log('info', `Tool name: ${repoNormalizedEvent.toolName}`);
+    this.log('info', `Repository info: ${JSON.stringify(repoNormalizedEvent.repositoryInfo)}`);
+
     // Determine if this is a new session (first event for this session)
     const isNewSession = repoNormalizedEvent.eventType === 'session-start';
 
@@ -363,11 +370,16 @@ export class EventServerManager extends EventEmitter {
       ? AgentSessionSDKAPIEvents.SESSION_CREATED
       : AgentSessionSDKAPIEvents.SESSION_UPDATED;
 
-    windows.forEach((window) => {
+    this.log('info', `Sending event: ${eventName}`);
+    this.log('info', `Also sending: ${AgentSessionSDKAPIEvents.PROCESSED_EVENT}`);
+
+    windows.forEach((window, index) => {
+      this.log('info', `Sending to window ${index + 1}/${windows.length}`);
+
       window.webContents.send(eventName, {
         sessionId: normalizedSessionId,
         repository:
-          repoNormalizedEvent.repository?.root ||
+          repoNormalizedEvent.repositoryInfo?.root ||
           repoNormalizedEvent.workingDirectory,
       });
 
@@ -376,12 +388,15 @@ export class EventServerManager extends EventEmitter {
         AgentSessionSDKAPIEvents.PROCESSED_EVENT,
         repoNormalizedEvent,
       );
+
+      this.log('info', `Successfully sent to window ${index + 1}`);
     });
 
     this.log(
       'info',
       `Processed and broadcast event for session: ${normalizedSessionId}`,
     );
+    this.log('info', `=====================================================`);
   }
 
   /**

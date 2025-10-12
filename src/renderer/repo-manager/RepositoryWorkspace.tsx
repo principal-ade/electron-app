@@ -16,6 +16,7 @@ import {
   Activity,
   ListTodo,
   Palette,
+  Package,
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { PackageLayer } from '@principal-ai/codebase-composition';
@@ -80,9 +81,11 @@ import { useHighlightLayers } from '../contexts/HighlightLayersContext';
 import { CityVisualizationPanel } from '../panels/components/CityVisualizationPanel';
 import { TasksPanel } from '../panels/components/TasksPanel';
 import { DrawingsListPanel } from '../panels/components/DrawingsListPanel';
+import { QualityHexagonPanel } from '../panels/components/QualityHexagonPanel';
 import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { TabbedTerminalPanel } from '../panels/components/TabbedTerminalPanel';
+import { CarouselTerminalPanel } from '../panels/components/CarouselTerminalPanel';
 
 type PanelTabConfig = {
   id: string;
@@ -1774,6 +1777,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             />
           </RepositoryPanelProvider>
         ),
+        packageInfo:
+          selectedSource?.type === 'local' ? (
+            <QualityHexagonPanel directory={selectedSource.location} />
+          ) : null,
       };
       return map;
     }, [
@@ -1881,6 +1888,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         icon: <ListTodo size={14} />,
         visible: true,
         content: panelContentMap.tasks,
+      },
+      {
+        id: 'packageInfo',
+        label: 'Package Information',
+        icon: <Package size={14} />,
+        visible: selectedSource?.type === 'local',
+        content: panelContentMap.packageInfo,
       },
     ];
 
@@ -2268,6 +2282,61 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     </div>
                   );
 
+                // Carousel Terminal panel
+                const isCarouselTerminalVisible =
+                  propsPanelLayout.middle === 'carouselTerminal' ||
+                  propsPanelLayout.left === 'carouselTerminal' ||
+                  propsPanelLayout.right === 'carouselTerminal';
+                const carouselTerminalPanel =
+                  selectedSource?.type === 'local' ? (
+                    <div
+                      style={{
+                        height: '100%',
+                        width: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                    >
+                      <CarouselTerminalPanel
+                        directory={selectedSource.location}
+                        repositoryKey={repositoryKey}
+                        isVisible={isCarouselTerminalVisible}
+                        hideHeader={false}
+                        key={`carousel-terminal-${selectedSource.location}`}
+                        showAllTerminals={showAllTerminals}
+                        onShowAllTerminalsChange={setShowAllTerminals}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        color: theme.colors.textSecondary,
+                        padding: '20px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '16px',
+                          fontWeight: 600,
+                          marginBottom: '8px',
+                          color: theme.colors.text,
+                        }}
+                      >
+                        Terminal Unavailable
+                      </div>
+                      <div style={{ fontSize: '14px' }}>
+                        Terminal is only available for local repository clones
+                      </div>
+                    </div>
+                  );
+
                 // Create all panel definitions
                 const allPanels: PanelDefinitionWithContent[] = [
                   ...leftPanelTabs,
@@ -2275,6 +2344,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     id: 'tabbedTerminal',
                     label: 'Tabbed Terminal',
                     content: tabbedTerminalPanel,
+                  },
+                  {
+                    id: 'carouselTerminal',
+                    label: 'Carousel Terminal',
+                    content: carouselTerminalPanel,
                   },
                   {
                     id: 'cityVisualization',
@@ -3109,6 +3183,65 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
               ),
             },
             {
+              id: 'carouselTerminal',
+              label: 'Carousel Terminal',
+              icon: <TerminalIcon size={16} />,
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '11px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.primary,
+                      }}
+                    />
+                    <div
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.backgroundTertiary,
+                      }}
+                    />
+                    <div
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.backgroundTertiary,
+                      }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: 'monospace',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    $ npm run build
+                  </div>
+                </div>
+              ),
+            },
+            {
               id: 'codeViewer',
               label: 'Code Viewer',
               icon: <FileCode size={16} />,
@@ -3196,6 +3329,35 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   >
                     Diagram Editor
                   </span>
+                </div>
+              ),
+            },
+            {
+              id: 'packageInfo',
+              label: 'Package Information',
+              icon: <Package size={16} />,
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div style={{ fontSize: '14px', fontWeight: 600 }}>
+                    Package Quality
+                  </div>
+                  <div
+                    style={{
+                      fontSize: '11px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    View package metrics, quality hexagon, and available lenses
+                  </div>
                 </div>
               ),
             },
