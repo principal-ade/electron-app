@@ -12,6 +12,9 @@ import { repositoryCache } from '../stores/RepositoryCache';
 import {
   ServerToMainMessage,
   MainToServerMessage,
+  ProcessedEventMessage,
+  RepositoryInfoRequestMessage,
+  WindowBroadcastMessage,
   isRepositoryInfoRequestMessage,
   isWindowBroadcastMessage,
   isProcessedEventMessage,
@@ -21,6 +24,7 @@ import {
   getObservabilityIntegration,
   ObservabilityIntegration,
 } from '../observability/ObservabilityIntegration';
+import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 
 /**
  * Configuration for EventServerManager
@@ -246,13 +250,14 @@ export class EventServerManager extends EventEmitter {
    */
   private setupObservability(): void {
     // Get singleton instance but don't initialize yet
+    const nodeEnv = process.env.NODE_ENV;
+    const environment:  'development' | 'staging' | 'production' =
+      nodeEnv === 'production' ? 'production' :
+      nodeEnv === 'staging' ? 'staging' :
+      'development'; // 'test' and 'development' both map to 'development'
+
     this.observability = getObservabilityIntegration({
-      environment:
-        (process.env.NODE_ENV as
-          | 'development'
-          | 'production'
-          | 'test'
-          | undefined) || 'development',
+      environment,
       debug: process.env.DEBUG_OBSERVABILITY === 'true',
     });
 
@@ -316,7 +321,9 @@ export class EventServerManager extends EventEmitter {
   private async handleProcessedEvent(
     msg: ProcessedEventMessage,
   ): Promise<void> {
-    const repoNormalizedEvent = msg.event;
+    // The event-processing-server sends RepoNormalizedUniversalAgentSessionEvent
+    // but ProcessedEventMessage.event is typed as unknown for flexibility
+    const repoNormalizedEvent = msg.event as RepoNormalizedUniversalAgentSessionEvent;
 
     // Validate session ID
     if (
@@ -350,7 +357,7 @@ export class EventServerManager extends EventEmitter {
     const windows = BrowserWindow.getAllWindows();
 
     // Determine if this is a new session (first event for this session)
-    const isNewSession = repoNormalizedEvent.eventType === 'start';
+    const isNewSession = repoNormalizedEvent.eventType === 'session-start';
 
     const eventName = isNewSession
       ? AgentSessionSDKAPIEvents.SESSION_CREATED

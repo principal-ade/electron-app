@@ -55,7 +55,7 @@ export class ObservabilityIntegration extends EventEmitter {
         return {
           tursoUrl: stored.tursoUrl,
           tursoAuthToken: stored.tursoAuthToken,
-          environment: (stored.environment as any) || 'development',
+          environment: (stored.environment as 'development' | 'staging' | 'production') || 'development',
           enabled: stored.enabled === 'true',
           debug: stored.debug === 'true',
         };

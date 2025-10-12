@@ -87,7 +87,7 @@ export interface CLIBridgeOptions {
 }
 
 export interface PendingCall {
-  resolve: (value: any) => void;
+  resolve: (value: ExecuteResult) => void;
   reject: (error: Error) => void;
   options: ExecuteOptions;
   startTime: number;

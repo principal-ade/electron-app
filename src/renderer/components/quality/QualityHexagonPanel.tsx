@@ -4,7 +4,7 @@ import {
   QualityHexagonCompact,
   QualityHexagonDetailed,
   type QualityMetrics,
-} from '@a24z/alexandria-ui';
+} from '@principal-ai/agent-monitoring-ui';
 import { useTheme } from '@a24z/industry-theme';
 import { MockQualityMetricsService } from '../../services/MockQualityMetricsService';
 import type {

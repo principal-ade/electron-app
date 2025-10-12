@@ -240,7 +240,8 @@ class ServerPathNormalizationAdapter implements PathNormalizationAdapter {
 export class HttpEventServer extends EventEmitter {
   private app: express.Application;
   private server: Server | null = null;
-  private port: number = 3043; // Port that claude-hook expects
+  // Use different ports for dev (3045) and production (3043)
+  private port: number = process.env.NODE_ENV === 'production' ? 3043 : 3045;
   private maxPortRetries: number = 10;
 
   private pipeline!: AgentEventPipeline;

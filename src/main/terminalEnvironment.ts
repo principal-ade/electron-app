@@ -14,6 +14,7 @@ export class TerminalEnvironment {
   private lastPathFetch: number = 0;
   private readonly PATH_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function -- Singleton pattern requires private constructor
   private constructor() {}
 
   static getInstance(): TerminalEnvironment {

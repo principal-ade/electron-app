@@ -11,7 +11,7 @@ The Quality Hexagon integration is **approximately 50% complete**. All foundatio
 - ✅ All packages installed and configured:
   - `@principal-ai/codebase-composition@^0.2.0`
   - `@principal-ai/codebase-quality-lenses@^0.1.5`
-  - `@a24z/alexandria-ui@^0.0.4`
+  - `@principal-ai/agent-monitoring-ui@^0.0.4`
 
 ### 2. Quality Lens Service
 - ✅ Fully functional `QualityLensService` (`src/main/quality-lenses/QualityLensService.ts`)

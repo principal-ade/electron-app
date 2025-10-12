@@ -58,7 +58,7 @@ async function testGitAccess(
   // See: docs/design/GIT_REMOTE_INFORMATION_ARCHITECTURE.md
 
   console.warn(
-    '[gitHandlers] testGitAccess is currently disabled to prevent blocking operations',
+    `[gitHandlers] testGitAccess is currently disabled to prevent blocking operations (url: ${url})`,
   );
   return {
     accessible: false,

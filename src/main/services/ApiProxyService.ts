@@ -5,7 +5,7 @@
  */
 
 import { ipcMain } from 'electron';
-import fetch from 'node-fetch';
+import fetch, { RequestInit } from 'node-fetch';
 
 export function registerApiProxyHandlers() {
   const baseUrl = 'https://principle-md.com';
@@ -61,7 +61,7 @@ export function registerApiProxyHandlers() {
           ? endpoint
           : `${baseUrl}${endpoint}`;
 
-        const options: any = {
+        const options: RequestInit = {
           method,
           headers: {
             'Content-Type': 'application/json',

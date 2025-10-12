@@ -5,10 +5,7 @@
 
 import { ipcMain, dialog, screen } from 'electron';
 import path from 'path';
-import {
-  createSpecialWindow,
-  ModernApplicationWindow,
-} from './modernWindowManager';
+import { createSpecialWindow } from './modernWindowManager';
 import { resolveHtmlPath } from '../util';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@a24z/core-library';

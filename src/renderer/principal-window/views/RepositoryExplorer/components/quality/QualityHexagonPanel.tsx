@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   QualityHexagonCompact,
   QualityHexagonDetailed,
-} from '@a24z/alexandria-ui';
+} from '@principal-ai/agent-monitoring-ui';
 import { useTheme } from '@a24z/industry-theme';
 import { Grid2x2, ChevronDown, ChevronRight } from 'lucide-react';
 import { RepositoryMonitoringService } from '../../../../../main-process-api/RepositoryMonitoringService';

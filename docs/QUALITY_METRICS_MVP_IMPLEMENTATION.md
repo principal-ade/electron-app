@@ -164,7 +164,7 @@ Wrapper component that integrates with the service.
 **Original Design:** `src/renderer/components/quality/QualityHexagonPanel.tsx`
 ```typescript
 import React, { useState, useEffect, useCallback } from 'react';
-import { QualityHexagon } from '@a24z/alexandria-ui';
+import { QualityHexagon } from '@principal-ai/agent-monitoring-ui';
 import { MockQualityMetricsService } from '../../services/MockQualityMetricsService';
 import { QualityMetrics } from '../../types/quality.types';
 import './QualityHexagonPanel.css';

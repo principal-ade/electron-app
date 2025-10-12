@@ -5,8 +5,6 @@ import { resolveHtmlPath } from '../util';
 export class CallimachusWindow {
   private window: BrowserWindow | null = null;
 
-  constructor() {}
-
   create(): void {
     if (this.window && !this.window.isDestroyed()) {
       this.window.focus();

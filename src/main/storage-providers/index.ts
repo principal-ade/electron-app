@@ -81,6 +81,9 @@ import { StorageNamespaces } from './all-namespaces';
 
 import { MultiStoreConfig } from './types';
 
+// Type for accessing internal multiStoreManager property (private to this module)
+type TypedWrapperInternal = { multiStoreManager: MultiStoreManager };
+
 // Single global typed manager - this is the ONLY global we should have
 let globalTypedManager: TypedMultiStoreWrapper | null = null;
 
@@ -115,8 +118,8 @@ export async function createStorageManager(
 export async function resetTypedStorageManager(): Promise<void> {
   if (globalTypedManager) {
     // Get the underlying manager and close it
-    const manager = (globalTypedManager as any)
-      .multiStoreManager as MultiStoreManager;
+    const manager = (globalTypedManager as unknown as TypedWrapperInternal)
+      .multiStoreManager;
     if (manager) {
       await manager.close();
     }

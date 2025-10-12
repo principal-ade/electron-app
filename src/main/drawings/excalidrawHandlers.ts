@@ -9,12 +9,23 @@ import {
 } from '../../shared/main-process-api-interfaces/ExcalidrawAPI';
 import { MemoryPalace, NodeFileSystemAdapter } from '@a24z/core-library';
 
+interface DiagramIndexEntry {
+  id: string;
+  name: string;
+  isRepoAgnostic: boolean;
+  projectPath?: string;
+  projectHash?: string;
+  createdAt: string;
+  updatedAt: string;
+  filePath?: string;
+}
+
 class ExcalidrawHandlers {
   private storageDir: string;
 
   private indexPath: string;
 
-  private index: Map<string, any>;
+  private index: Map<string, DiagramIndexEntry>;
 
   private memoryInstances: Map<string, MemoryPalace> = new Map();
   private fs = new NodeFileSystemAdapter();

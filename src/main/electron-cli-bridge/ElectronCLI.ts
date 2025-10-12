@@ -245,7 +245,7 @@ export class ElectronCLI {
       if (result.success && result.stdout) {
         return result.stdout.trim();
       }
-    } catch (error) {
+    } catch {
       // Command failed
     }
     return null;

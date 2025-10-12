@@ -15,6 +15,9 @@ import {
 import { MonitoringInternalEvent } from '../../repository-monitoring-server/types';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 
+// Type alias for git state event payload (structure defined in repository-monitoring-server)
+type GitStateEventPayload = { event: { type: string }; [key: string]: unknown };
+
 // Create singleton manager instance
 let repositoryMonitoringManager: RepositoryMonitoringManager | null = null;
 
@@ -415,7 +418,7 @@ export function registerRepositoryMonitoringHandlers(): void {
   );
 
   // Forward git state events to renderer windows
-  manager.on(MonitoringInternalEvent.GIT_STATE_EVENT, (payload: any) => {
+  manager.on(MonitoringInternalEvent.GIT_STATE_EVENT, (payload: GitStateEventPayload) => {
     console.log(
       '[RepositoryMonitoring] Forwarding git state event to renderer:',
       payload.event.type,

@@ -1,7 +1,9 @@
 // Terminal module wrapper
 // Loads terminal functionality which is always available
 
-export function getTerminalManager(): any {
+import type { TerminalManager } from './terminal';
+
+export function getTerminalManager(): TerminalManager | null {
   const terminalModule = require('./terminal');
   return terminalModule.default;
 }

@@ -74,6 +74,7 @@ import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 import { MarkdownRenderingPanel, ExcalidrawPanel } from './panels';
 import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
 import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
+import { AgentSessionsPanel } from '../panels/components/AgentSessionsPanel';
 import { AgentContextTreePanel } from '../panels/components/AgentContextTreePanel';
 import { useHighlightLayers } from '../contexts/HighlightLayersContext';
 import { CityVisualizationPanel } from '../panels/components/CityVisualizationPanel';
@@ -126,7 +127,19 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         },
       },
       middle: 'tabbedTerminal',
-      right: 'cityVisualization',
+      right: {
+        type: 'tabs',
+        panels: [
+          'cityVisualization',
+          'agentEvents',
+          'codeViewer',
+          'markdownViewer',
+          'excalidrawDiagram',
+        ],
+        config: {
+          defaultActiveTab: 0,
+        },
+      },
     });
 
     // Terminal panel state
@@ -142,6 +155,8 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [workspacesLoaded, setWorkspacesLoaded] = useState(false);
     const [hasStateDeviation, setHasStateDeviation] = useState(false);
     const [panelResetKey, setPanelResetKey] = useState(0);
+    const [rightPanelActiveTabIndex, setRightPanelActiveTabIndex] =
+      useState<number>(0);
 
     // File tree services - shared across all views
     const cityDataCache = useMemo(() => new CityDataCacheService(), []);
@@ -1103,26 +1118,54 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       [repositoryPath],
     );
 
-    const openFileInRightPane = useCallback(async (filePath: string) => {
-      setSelectedFile(filePath);
+    // Helper function to focus a specific panel in the right pane tabs
+    const focusRightPanelTab = useCallback(
+      (panelId: string) => {
+        const rightPanel = panelLayout.right;
 
-      // Check if it's a markdown file
-      const isMarkdown =
-        filePath.toLowerCase().endsWith('.md') ||
-        filePath.toLowerCase().endsWith('.mdx');
+        // Only update if right panel is a tab group
+        if (
+          typeof rightPanel === 'object' &&
+          rightPanel !== null &&
+          'type' in rightPanel &&
+          rightPanel.type === 'tabs'
+        ) {
+          const tabIndex = rightPanel.panels.indexOf(panelId);
+          if (tabIndex !== -1) {
+            setRightPanelActiveTabIndex(tabIndex);
+          }
+        }
+      },
+      [panelLayout],
+    );
 
-      if (isMarkdown) {
-        // Open in BOTH markdown viewer and code viewer (editor)
-        setSelectedDocPath(filePath);
-        setSelectedDocType('markdown');
-        setSelectedCodeFile(filePath);
-        setRightPaneMode('document');
-      } else {
-        // Show all other files in code viewer only
-        setSelectedCodeFile(filePath);
-        setRightPaneMode('document');
-      }
-    }, []);
+    const openFileInRightPane = useCallback(
+      async (filePath: string) => {
+        setSelectedFile(filePath);
+
+        // Check if it's a markdown file
+        const isMarkdown =
+          filePath.toLowerCase().endsWith('.md') ||
+          filePath.toLowerCase().endsWith('.mdx');
+
+        if (isMarkdown) {
+          // Open in BOTH markdown viewer and code viewer (editor)
+          setSelectedDocPath(filePath);
+          setSelectedDocType('markdown');
+          setSelectedCodeFile(filePath);
+          setRightPaneMode('document');
+          // Focus the markdown viewer tab
+          focusRightPanelTab('markdownViewer');
+        } else {
+          // Show all other files in code viewer only
+          setSelectedCodeFile(filePath);
+          setRightPaneMode('document');
+          // Focus the code viewer tab
+          focusRightPanelTab('codeViewer');
+        }
+      },
+      [focusRightPanelTab],
+    );
 
     const handleFileClick = useCallback(
       (filePath: string) => {
@@ -1680,6 +1723,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             maxEvents={100}
           />
         ),
+        agentSessions: (
+          <AgentSessionsPanel
+            repositoryPath={
+              selectedSource?.type === 'local' ? selectedSource.location : null
+            }
+          />
+        ),
         agentContext: (
           <AgentContextTreePanel
             repositoryPath={
@@ -1810,6 +1860,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         icon: <Activity size={14} />,
         visible: true,
         content: panelContentMap.agentEvents,
+      },
+      {
+        id: 'agentSessions',
+        label: 'Agent Sessions',
+        icon: <Activity size={14} />,
+        visible: true,
+        content: panelContentMap.agentSessions,
       },
       {
         id: 'agentContext',
@@ -2251,10 +2308,16 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                       tabPosition: 'top',
                     } as TabsConfig,
                   },
-                  middle: 'cityVisualization',
+                  middle: 'tabbedTerminal',
                   right: {
                     type: 'tabs',
-                    panels: ['search', 'gitChanges', 'dependencies', 'tools'],
+                    panels: [
+                      'cityVisualization',
+                      'agentEvents',
+                      'codeViewer',
+                      'markdownViewer',
+                      'excalidrawDiagram',
+                    ],
                     config: {
                       defaultActiveTab: 0,
                       tabPosition: 'top',
@@ -2283,8 +2346,31 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                 }
 
                 // Use provided layout or default
-                const actualPanelLayout: PanelLayout =
+                let actualPanelLayout: PanelLayout =
                   panelLayout || defaultLayout;
+
+                // Add controlled tab props to right panel if it's a tab group
+                const rightPanel = actualPanelLayout.right;
+                if (
+                  typeof rightPanel === 'object' &&
+                  rightPanel !== null &&
+                  'type' in rightPanel &&
+                  rightPanel.type === 'tabs'
+                ) {
+                  actualPanelLayout = {
+                    ...actualPanelLayout,
+                    right: {
+                      ...rightPanel,
+                      config: {
+                        ...rightPanel.config,
+                        activeTabIndex: rightPanelActiveTabIndex,
+                        onTabChange: (index: number) => {
+                          setRightPanelActiveTabIndex(index);
+                        },
+                      },
+                    },
+                  };
+                }
 
                 return (
                   <div
@@ -2775,6 +2861,54 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     <div style={{ fontWeight: 600 }}>Write</div>
                     <div style={{ color: theme.colors.textSecondary }}>
                       src/utils.ts
+                    </div>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              id: 'agentSessions',
+              label: 'Agent Sessions',
+              icon: <Activity size={16} />,
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '11px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '8px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '6px',
+                      borderLeft: `3px solid #3b82f6`,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+                      Session abc123
+                    </div>
+                    <div style={{ fontSize: '10px', color: theme.colors.textSecondary }}>
+                      Last event: Read • src/index.ts
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      padding: '8px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '6px',
+                      borderLeft: `3px solid #10b981`,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+                      Session def456
+                    </div>
+                    <div style={{ fontSize: '10px', color: theme.colors.textSecondary }}>
+                      Last event: Write • src/utils.ts
                     </div>
                   </div>
                 </div>

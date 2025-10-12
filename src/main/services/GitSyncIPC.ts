@@ -136,7 +136,7 @@ class GitSyncIPC {
   /**
    * Utility function to emit git-sync messages to all renderer processes
    */
-  public emitMessage(connectionKey: string, message: any) {
+  public emitMessage(connectionKey: string, message: GitSyncMessage) {
     const allWindows = BrowserWindow.getAllWindows();
     allWindows.forEach((window) => {
       if (window.webContents && !window.webContents.isDestroyed()) {

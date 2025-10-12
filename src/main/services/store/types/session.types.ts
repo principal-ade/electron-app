@@ -17,7 +17,7 @@ export interface SessionSummary {
     filePath?: string;
     toolName?: string;
     timestamp: number;
-    metadata?: any;
+    metadata?: Record<string, unknown>;
   };
   lastStopTime?: number;
   reviewedLastStop: boolean;

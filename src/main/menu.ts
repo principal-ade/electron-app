@@ -4,7 +4,6 @@ import {
   shell,
   BrowserWindow,
   MenuItemConstructorOptions,
-  dialog,
 } from 'electron';
 
 // Import openMarkdownFile function

@@ -174,7 +174,7 @@ Until these changes are made to alexandria-ui, we can create a wrapper component
 
 ```typescript
 // QualityHexagonWrapper.tsx
-import { QualityHexagon } from '@a24z/alexandria-ui';
+import { QualityHexagon } from '@principal-ai/agent-monitoring-ui';
 import { useEffect, useRef, useState } from 'react';
 
 export function QualityHexagonWrapper({ metrics, tier }) {

@@ -6,7 +6,7 @@ This document outlines the current state and remaining work needed to integrate 
 ## Architecture Components
 
 ### 1. alexandria-ui (Visualization Layer)
-**Package**: `@a24z/alexandria-ui`
+**Package**: `@principal-ai/agent-monitoring-ui`
 **Purpose**: Provides the QualityHexagon React component for visualizing code quality metrics
 
 **Key Files**:
@@ -74,7 +74,7 @@ This document outlines the current state and remaining work needed to integrate 
 1. **All required packages installed**:
    - `@principal-ai/codebase-quality-lenses@^0.1.5` - Tool execution with parsing
    - `@principal-ai/codebase-composition@^0.2.0` - Tool discovery and package analysis
-   - `@a24z/alexandria-ui@^0.0.4` - QualityHexagon UI components
+   - `@principal-ai/agent-monitoring-ui@^0.0.4` - QualityHexagon UI components
 
 2. **Quality Lens Service** (`src/main/quality-lenses/QualityLensService.ts`):
    - Singleton service for executing quality tools through lenses
@@ -174,7 +174,7 @@ Create React components in the renderer process:
 
 ```typescript
 // src/renderer/components/QualityHexagon.tsx
-import { QualityHexagon } from '@a24z/alexandria-ui';
+import { QualityHexagon } from '@principal-ai/agent-monitoring-ui';
 
 export function ProjectQualityView({ projectPath }) {
   const [metrics, setMetrics] = useState(null);

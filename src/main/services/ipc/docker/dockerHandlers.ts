@@ -58,7 +58,7 @@ export function registerDockerHandlers() {
   // Run Knip analysis in Docker
   ipcMain.handle(
     'docker:run-knip',
-    async (event, projectPath: string, options?: any) => {
+    async (event, projectPath: string, options?: Record<string, unknown>) => {
       try {
         const result = await dockerService.runKnipInDocker(
           projectPath,

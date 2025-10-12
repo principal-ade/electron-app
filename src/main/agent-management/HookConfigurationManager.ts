@@ -68,6 +68,14 @@ export class HookConfigurationManager {
   }
 
   /**
+   * Get the agent session events ports
+   * Always returns [3045, 3043] for both dev and production
+   */
+  private getAgentSessionEventsPorts(): [number, number] {
+    return [3045, 3043];
+  }
+
+  /**
    * Add hooks to an agent's configuration
    */
   async addHooks(agentType: SupportedAgent): Promise<HookOperationResult> {
@@ -85,7 +93,7 @@ export class HookConfigurationManager {
       // Handle Claude using the new library
       if (agentType === 'claude') {
         const options: HookOptions = {
-          port: [3043, 3044], // Default ports, should be configurable
+          port: this.getAgentSessionEventsPorts(), // Agent events ports [3045, 3043]
           dir: '~/.principle/hooks',
         };
 
@@ -105,7 +113,7 @@ export class HookConfigurationManager {
       // Handle Cline using the ClineConfigManager
       if (agentType === 'cline') {
         const options: HookOptions = {
-          port: [3043, 3044], // Default ports, should be configurable
+          port: this.getAgentSessionEventsPorts(), // Agent events ports [3045, 3043]
           dir: '~/.principle/hooks',
         };
 
