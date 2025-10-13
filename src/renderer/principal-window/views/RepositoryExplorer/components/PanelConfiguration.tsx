@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import type { RepositoryPanelVisibility } from '../../../../../shared/types/repositoryPanel.types';
-import { repositoryPanelDefinitions } from '../../../../panels/registry';
+import { getRepositoryPanelsForSurface } from '../../../../panels/registry';
 
 interface PanelConfigurationProps {
   panelVisibility: RepositoryPanelVisibility;
@@ -16,21 +16,7 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
 }) => {
   const { theme } = useTheme();
 
-  // Filter to only show Repository Explorer panels
-  const explorerPanelIds = [
-    'gitChanges',
-    'files',
-    'gitStatus',
-    'gitHistory',
-    'tasksAndNotes',
-    'cityVisualization',
-    'actions',
-    'packageInfo',
-  ];
-
-  const explorerPanels = repositoryPanelDefinitions.filter((panel) =>
-    explorerPanelIds.includes(panel.id),
-  );
+  const explorerPanels = getRepositoryPanelsForSurface('explorer');
 
   const handleToggle = (key: keyof RepositoryPanelVisibility) => {
     onPanelVisibilityChange({

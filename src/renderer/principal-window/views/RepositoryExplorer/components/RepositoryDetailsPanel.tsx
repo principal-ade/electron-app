@@ -119,7 +119,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   // Panel configuration state
   const [showConfiguration, setShowConfiguration] = useState(false);
   const [panelVisibility, setPanelVisibility] =
-    useState<RepositoryPanelVisibility>(createDefaultPanelVisibility());
+    useState<RepositoryPanelVisibility>(
+      createDefaultPanelVisibility({ surfaces: ['explorer'] }),
+    );
 
   // Branch sync status states
   const [branchStatus, setBranchStatus] = useState<GitBranchStatus | null>(
@@ -394,7 +396,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
         const repoState = preferences.repositoryUIStates?.[repositoryId];
 
         if (repoState?.panelVisibility) {
-          const defaultVisibility = createDefaultPanelVisibility();
+          const defaultVisibility = createDefaultPanelVisibility({
+            surfaces: ['explorer'],
+          });
           const nextVisibility: RepositoryPanelVisibility = {
             ...defaultVisibility,
           };
@@ -409,7 +413,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
           setPanelVisibility(nextVisibility);
         } else {
-          setPanelVisibility(createDefaultPanelVisibility());
+          setPanelVisibility(
+            createDefaultPanelVisibility({ surfaces: ['explorer'] }),
+          );
         }
       } catch (error) {
         console.error('Error loading panel preferences:', error);

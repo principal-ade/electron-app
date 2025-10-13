@@ -1,13 +1,15 @@
 import React from 'react';
 import type {
-  RepositoryPanelId,
-  RepositoryPanelVisibility,
-} from '../../shared/types/repositoryPanel.types';
-import type {
   RepositoryPanelActions,
   RepositoryPanelContextValue,
-  RepositoryPanelSlice,
 } from './RepositoryPanelProvider';
+import {
+  repositoryPanelCatalog,
+  type RepositoryPanelDefinitionBase,
+  type RepositoryPanelId,
+  type RepositoryPanelSurface,
+  type RepositoryPanelVisibility,
+} from '../../shared/panels/repositoryPanelCatalog';
 import { GitChangesPanel } from './components/GitChangesPanel';
 import { GitIssuesPanel } from './components/GitIssuesPanel';
 import { GitPullRequestsPanel } from './components/GitPullRequestsPanel';
@@ -22,215 +24,65 @@ export interface RepositoryPanelRenderProps {
   actions: RepositoryPanelActions;
 }
 
-export interface RepositoryPanelDefinition {
-  id: RepositoryPanelId;
-  label: string;
-  description?: string;
-  defaultLocation: 'left' | 'right';
-  slices?: RepositoryPanelSlice[];
-  render?: (props: RepositoryPanelRenderProps) => React.ReactNode;
-}
+type RepositoryPanelRenderer = (
+  props: RepositoryPanelRenderProps,
+) => React.ReactNode;
 
-export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
-  // Repository Explorer panels
-  {
-    id: 'gitChanges',
-    label: 'Git Changes',
-    description:
-      'Review staged, unstaged, and untracked changes for the repository.',
-    defaultLocation: 'left',
-    slices: ['git'],
-    render: ({ actions }) => <GitChangesPanel onFileClick={actions.openFile} />,
-  },
-  {
-    id: 'gitIssues',
-    label: 'Git Issues',
-    description: 'Browse, triage, and manage GitHub issues for this repository.',
-    defaultLocation: 'left',
-    render: ({ context }) => (
-      <GitIssuesPanel repository={context.repository ?? undefined} />
-    ),
-  },
-  {
-    id: 'gitPullRequests',
-    label: 'Git Pull Requests',
-    description:
-      'Review open, merged, and closed pull requests associated with this repository.',
-    defaultLocation: 'left',
-    render: ({ context }) => (
-      <GitPullRequestsPanel repository={context.repository ?? undefined} />
-    ),
-  },
-  {
-    id: 'files',
-    label: 'Markdown Documents',
-    description:
-      'Recently updated markdown documentation discovered in the repository.',
-    defaultLocation: 'left',
-    slices: ['markdown'],
-  },
-  {
-    id: 'gitStatus',
-    label: 'Git Status',
-    description:
-      'Branch details, upstream alignment, and the latest commit metadata.',
-    defaultLocation: 'left',
-    slices: ['git'],
-  },
-  {
-    id: 'gitHistory',
-    label: 'Commit History',
-    description: 'Review recent commits from the current repository.',
-    defaultLocation: 'left',
-    slices: ['git'],
-    render: ({ context }) => (
-      <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />
-    ),
-  },
-  {
-    id: 'tasksAndNotes',
-    label: 'Tasks & Notes',
-    description: 'Project notes and TODOs captured across the repository.',
-    defaultLocation: 'left',
-    slices: ['markdown'],
-  },
-  {
-    id: 'cityVisualization',
-    label: 'City Visualization',
-    description:
-      'Interactive code-city visualization derived from the repository structure.',
-    defaultLocation: 'right',
-    slices: ['fileTree'],
-  },
-  {
-    id: 'actions',
-    label: 'Repository Actions',
-    description: 'Run project-specific automations and scripts.',
-    defaultLocation: 'right',
-    slices: ['fileTree'],
-  },
-  {
-    id: 'packageInfo',
-    label: 'Package Information',
-    description:
-      'Package insights, quality metrics, and dependency layers detected in the codebase.',
-    defaultLocation: 'right',
-    slices: ['packages'],
-  },
-  // Repository Manager panels
-  {
-    id: 'fileTree',
-    label: 'Files',
-    description: 'Browse the complete file tree structure of the repository.',
-    defaultLocation: 'left',
-    slices: ['fileTree'],
-  },
-  {
-    id: 'search',
-    label: 'Search',
-    description: 'Search files by name and content with advanced filtering.',
-    defaultLocation: 'left',
-    slices: ['fileTree'],
-  },
-  {
-    id: 'dependencies',
-    label: 'Dependencies',
-    description: 'Explore package architecture and dependency relationships.',
-    defaultLocation: 'left',
-    slices: ['packages', 'fileTree'],
-  },
-  {
-    id: 'tools',
-    label: 'Tools',
-    description: 'Development tools and utilities for the repository.',
-    defaultLocation: 'left',
-    slices: ['packages'],
-    render: ({ context }) => (
-      <ToolsPanel
-        packageLayers={context.packages}
-        repositoryPath={context.repositoryPath || ''}
-      />
-    ),
-  },
-  {
-    id: 'docs',
-    label: 'Docs',
-    description: 'Documentation viewer for markdown and diagram files.',
-    defaultLocation: 'left',
-    slices: ['markdown'],
-  },
-  {
-    id: 'terminal',
-    label: 'Terminal',
-    description: 'Integrated terminal for repository commands.',
-    defaultLocation: 'right',
-    slices: [],
-  },
-  {
-    id: 'carouselTerminal',
-    label: 'Carousel Terminal',
-    description: 'Horizontally scrolling terminal carousel with snap navigation.',
-    defaultLocation: 'right',
-    slices: [],
-  },
-  // Viewer panels (decoupled, context-dependent content)
-  {
-    id: 'codeViewer',
-    label: 'Code Viewer',
-    description: 'View source code files with syntax highlighting.',
-    defaultLocation: 'right',
-    slices: ['fileTree'],
-  },
-  {
-    id: 'markdownViewer',
-    label: 'Markdown Viewer',
-    description: 'View markdown files as documents or slides with toggle.',
-    defaultLocation: 'right',
-    slices: ['markdown'],
-  },
-  {
-    id: 'excalidrawDiagram',
-    label: 'Excalidraw Diagram',
-    description: 'View and interact with excalidraw diagrams.',
-    defaultLocation: 'right',
-    slices: [],
-  },
-  {
-    id: 'excalidrawEditor',
-    label: 'Excalidraw Editor',
-    description: 'Create and edit excalidraw drawings saved to Memory Palace.',
-    defaultLocation: 'right',
-    slices: [],
-    render: () => <ExcalidrawPanel />,
-  },
-  {
-    id: 'drawingsList',
-    label: 'Drawings',
-    description: 'Browse and manage excalidraw drawings in the repository.',
-    defaultLocation: 'left',
-    slices: [],
-    render: () => <DrawingsListPanel />,
-  },
-  {
-    id: 'agentContext',
-    label: 'Agent Context',
-    description:
-      'View files accessed by agent sessions organized in a multi-tree view.',
-    defaultLocation: 'left',
-    slices: [],
-    render: ({ context, actions }) => (
-      <AgentContextTreePanel
-        repositoryPath={context.repositoryPath}
-        onFileSelect={actions.openFile}
-      />
-    ),
-  },
-];
+export type RepositoryPanelDefinition = RepositoryPanelDefinitionBase & {
+  render?: RepositoryPanelRenderer;
+};
+
+const panelRenderers: Partial<Record<RepositoryPanelId, RepositoryPanelRenderer>> = {
+  gitChanges: ({ actions }) => <GitChangesPanel onFileClick={actions.openFile} />,
+  gitIssues: ({ context }) => (
+    <GitIssuesPanel repository={context.repository ?? undefined} />
+  ),
+  gitPullRequests: ({ context }) => (
+    <GitPullRequestsPanel repository={context.repository ?? undefined} />
+  ),
+  gitHistory: ({ context }) => (
+    <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />
+  ),
+  tools: ({ context }) => (
+    <ToolsPanel
+      packageLayers={context.packages}
+      repositoryPath={context.repositoryPath || ''}
+    />
+  ),
+  excalidrawEditor: () => <ExcalidrawPanel />,
+  drawingsList: () => <DrawingsListPanel />,
+  agentContext: ({ context, actions }) => (
+    <AgentContextTreePanel
+      repositoryPath={context.repositoryPath}
+      onFileSelect={actions.openFile}
+    />
+  ),
+};
+
+export const repositoryPanelDefinitions = repositoryPanelCatalog.map(
+  (definition) => ({
+    ...definition,
+    render: panelRenderers[definition.id],
+  }),
+) as const satisfies readonly RepositoryPanelDefinition[];
+export type {
+  RepositoryPanelVisibility,
+  RepositoryPanelId,
+} from '../../shared/panels/repositoryPanelCatalog';
 
 const repositoryPanelDefinitionMap = new Map<
   RepositoryPanelId,
   RepositoryPanelDefinition
 >(repositoryPanelDefinitions.map((definition) => [definition.id, definition]));
+
+export function getRepositoryPanelsForSurface(
+  surface: RepositoryPanelSurface | RepositoryPanelSurface[],
+): RepositoryPanelDefinition[] {
+  const surfaces = Array.isArray(surface) ? surface : [surface];
+  return repositoryPanelDefinitions.filter((definition) =>
+    definition.surfaces.some((panelSurface) => surfaces.includes(panelSurface)),
+  );
+}
 
 export function getRepositoryPanelDefinition(
   id: RepositoryPanelId,
@@ -242,9 +94,18 @@ export function getRepositoryPanelDefinition(
   return definition;
 }
 
-export function createDefaultPanelVisibility(): RepositoryPanelVisibility {
+export function createDefaultPanelVisibility({
+  surfaces,
+}: {
+  surfaces?: RepositoryPanelSurface[];
+} = {}): RepositoryPanelVisibility {
+  const surfaceSet = surfaces ? new Set(surfaces) : null;
   return repositoryPanelDefinitions.reduce((visibility, definition) => {
-    visibility[definition.id] = true;
+    const shouldShow =
+      surfaceSet === null
+        ? true
+        : definition.surfaces.some((surface) => surfaceSet.has(surface));
+    visibility[definition.id] = shouldShow;
     return visibility;
   }, {} as RepositoryPanelVisibility);
 }
