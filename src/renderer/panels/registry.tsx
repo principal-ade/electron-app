@@ -9,6 +9,7 @@ import type {
   RepositoryPanelSlice,
 } from './RepositoryPanelProvider';
 import { GitChangesPanel } from './components/GitChangesPanel';
+import { GitIssuesPanel } from './components/GitIssuesPanel';
 import { ExcalidrawPanel } from './components/ExcalidrawPanel';
 import { DrawingsListPanel } from './components/DrawingsListPanel';
 import { ToolsPanel } from './components/ToolsPanel';
@@ -38,6 +39,15 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
     defaultLocation: 'left',
     slices: ['git'],
     render: ({ actions }) => <GitChangesPanel onFileClick={actions.openFile} />,
+  },
+  {
+    id: 'gitIssues',
+    label: 'Git Issues',
+    description: 'Browse, triage, and manage GitHub issues for this repository.',
+    defaultLocation: 'left',
+    render: ({ context }) => (
+      <GitIssuesPanel repository={context.repository ?? undefined} />
+    ),
   },
   {
     id: 'files',
