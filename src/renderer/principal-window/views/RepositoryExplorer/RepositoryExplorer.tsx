@@ -11,6 +11,7 @@ import { useTheme } from '@a24z/industry-theme';
 import type {
   EnhancedAlexandriaEntry,
   GitStatus,
+  GitChangeSelectionStatus,
 } from '../../../../shared/types/repository.types';
 import { AlexandriaService } from '../../../main-process-api/AlexandriaService';
 import { WindowService } from '../../../main-process-api/WindowService';
@@ -63,15 +64,33 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   });
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [rightPanelTab, setRightPanelTab] = useState<
-    'preview' | 'terminal' | 'markdown'
+    'preview' | 'terminal' | 'markdown' | 'diff'
   >('preview');
+  const [fileSelectionMode, setFileSelectionMode] = useState<
+    'preview' | 'diff'
+  >('preview');
+  const [selectedGitStatus, setSelectedGitStatus] = useState<
+    GitChangeSelectionStatus | undefined
+  >(undefined);
 
   const handleFileSelect = useCallback(
-    (filePath: string | null) => {
+    (
+      filePath: string | null,
+      options?: { mode?: 'preview' | 'diff'; gitStatus?: GitChangeSelectionStatus },
+    ) => {
       setSelectedFilePath(filePath);
       if (filePath) {
         onEnsureRightPanelOpen?.();
       }
+
+      if (!filePath) {
+        setFileSelectionMode('preview');
+        setSelectedGitStatus(undefined);
+        return;
+      }
+
+      setFileSelectionMode(options?.mode ?? 'preview');
+      setSelectedGitStatus(options?.gitStatus);
     },
     [onEnsureRightPanelOpen],
   );
@@ -610,8 +629,12 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
         onRightPanelTabChange={setRightPanelTab}
         onRightPanelClose={() => {
           setSelectedFilePath(null);
+          setFileSelectionMode('preview');
+          setSelectedGitStatus(undefined);
           onCollapseRightPanel?.();
         }}
+        fileSelectionMode={fileSelectionMode}
+        selectedGitStatus={selectedGitStatus}
       />
     );
   };

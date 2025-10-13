@@ -22,7 +22,10 @@ import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { PackageLayer } from '@principal-ai/codebase-composition';
 import { RepositoryTitlebar } from '../components/Titlebar';
 
-import type { Repository } from '../../shared/types/repository.types';
+import type {
+  Repository,
+  GitChangeSelectionStatus,
+} from '../../shared/types/repository.types';
 import { SecretsModal } from './shared/SecretsModal';
 import { LinksModal } from './shared/LinksModal';
 import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
@@ -74,6 +77,7 @@ import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 import { MarkdownRenderingPanel, ExcalidrawPanel } from './panels';
 import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
+import { GitDiffPanel } from '../panels/components/GitDiffPanel';
 import { AgentEventsPanel } from '../panels/components/AgentEventsPanel';
 import { AgentSessionsPanel } from '../panels/components/AgentSessionsPanel';
 import { AgentContextTreePanel } from '../panels/components/AgentContextTreePanel';
@@ -272,6 +276,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [selectedCodeFile, setSelectedCodeFile] = useState<string | null>(
       null,
     );
+    const [selectedDiffFile, setSelectedDiffFile] = useState<
+      { path: string; status?: GitChangeSelectionStatus } | null
+    >(null);
 
     // Toolbar state
     const [toolbarExpanded, setToolbarExpanded] = useState(false);
@@ -1144,6 +1151,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
 
     const openFileInRightPane = useCallback(
       async (filePath: string) => {
+        setSelectedDiffFile(null);
         setSelectedFile(filePath);
 
         // Check if it's a markdown file
@@ -1175,6 +1183,16 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         void openFileInRightPane(filePath);
       },
       [openFileInRightPane],
+    );
+
+    const handleGitChangeSelect = useCallback(
+      (filePath: string, status?: GitChangeSelectionStatus) => {
+        setSelectedFile(filePath);
+        setSelectedDiffFile({ path: filePath, status });
+        setRightPaneMode('document');
+        focusRightPanelTab('gitDiffViewer');
+      },
+      [focusRightPanelTab],
     );
 
     const handleSearchFileSelect = useCallback(
@@ -1643,6 +1661,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       }
     }, [repositoryPathForTools]);
 
+    useEffect(() => {
+      setSelectedDiffFile(null);
+    }, [selectedSource?.id]);
+
     // Create panel content map - matches registry IDs
     const panelContentMap = React.useMemo(() => {
       const map: Record<string, React.ReactNode> = {
@@ -1674,7 +1696,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             repositoryPath={
               selectedSource?.type === 'local' ? selectedSource.location : null
             }
-            actions={{ openFile: handleFileClick }}
+            actions={{
+              openGitDiff: handleGitChangeSelect,
+              openFile: handleFileClick,
+            }}
           >
             <GitChangesPanel variant="tab" />
           </RepositoryPanelProvider>
@@ -1795,6 +1820,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       handleSearchResultHover,
       handleFolderFiltersChange,
       handleFileClick,
+      handleGitChangeSelect,
       setPackageLayers,
       handlePackageAnalysisStart,
       handlePackageAnalysisEnd,
@@ -2025,6 +2051,21 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         />
       );
     }, [selectedCodeFile, selectedSource, fileViewerContentProvider]);
+
+    const gitDiffViewerPanel = useMemo(() => {
+      return (
+        <GitDiffPanel
+          filePath={selectedDiffFile?.path ?? null}
+          repositoryPath={
+            selectedSource?.type === 'local' ? selectedSource.location : null
+          }
+          status={selectedDiffFile?.status}
+          onClose={() => {
+            setSelectedDiffFile(null);
+          }}
+        />
+      );
+    }, [selectedDiffFile, selectedSource]);
 
     const markdownViewerPanel = useMemo(() => {
       const shouldShow = selectedDocType !== 'excalidraw';
@@ -2361,6 +2402,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     content: codeViewerPanel,
                   },
                   {
+                    id: 'gitDiffViewer',
+                    label: 'Diff Viewer',
+                    content: gitDiffViewerPanel,
+                  },
+                  {
                     id: 'markdownViewer',
                     label: 'Markdown Viewer',
                     content: markdownViewerPanel,
@@ -2389,6 +2435,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                       'cityVisualization',
                       'agentEvents',
                       'codeViewer',
+                      'gitDiffViewer',
                       'markdownViewer',
                       'excalidrawDiagram',
                     ],

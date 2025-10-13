@@ -23,6 +23,12 @@ export interface GitStatus {
   deleted: Array<{ path: string; lastModified?: string }>;
 }
 
+export type GitChangeSelectionStatus =
+  | 'staged'
+  | 'unstaged'
+  | 'untracked'
+  | 'deleted';
+
 /**
  * Local git repository information
  * Represents a git repository on the local filesystem

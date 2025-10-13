@@ -3,10 +3,14 @@ import { useTheme } from '@a24z/industry-theme';
 import { GitStatusFileTree, type GitFileStatus } from '@a24z/dynamic-file-tree';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';
+import type { GitChangeSelectionStatus } from '../../../shared/types/repository.types';
 import { GitChangesContextMenu } from '../../components/GitChangesContextMenu';
 
 interface GitChangesPanelProps {
-  onFileClick?: (filePath: string) => void;
+  onFileClick?: (
+    filePath: string,
+    status?: GitChangeSelectionStatus,
+  ) => void;
   emptyMessage?: string;
   loadingMessage?: string;
   variant?: 'panel' | 'tab'; // panel shows wrapper with border/header, tab shows just the tree
@@ -30,14 +34,21 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
 
   const handleFileSelect = useCallback(
     (filePath: string) => {
+      const status = getFileStatus(filePath);
+
       if (onFileClick) {
-        onFileClick(filePath);
+        onFileClick(filePath, status);
+        return;
+      }
+
+      if (actions.openGitDiff) {
+        actions.openGitDiff(filePath, status);
         return;
       }
 
       actions.openFile?.(filePath);
     },
-    [actions.openFile, onFileClick],
+    [actions.openFile, actions.openGitDiff, getFileStatus, onFileClick],
   );
 
   // Context menu state

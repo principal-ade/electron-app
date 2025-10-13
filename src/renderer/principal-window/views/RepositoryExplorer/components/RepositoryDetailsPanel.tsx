@@ -57,6 +57,7 @@ import { RightPanel } from './RightPanel';
 import { usePanelPersistence } from '../../../../hooks/usePanelPersistence';
 import type { Task } from '../../../../../shared/main-process-api-interfaces/PalaceTasksAPI';
 import { PalaceTasksService } from '../../../../main-process-api/PalaceTasksService';
+import type { GitChangeSelectionStatus } from '../../../../../shared/types/repository.types';
 
 interface RepositoryDetailsPanelProps {
   selectedRepository: EnhancedAlexandriaEntry | null;
@@ -69,13 +70,20 @@ interface RepositoryDetailsPanelProps {
   onRepositoryRemoved?: (removedRepoName: string) => void;
   onRefresh?: () => Promise<void> | void;
   isRefreshing?: boolean;
-  onFileSelect?: (filePath: string | null) => void;
+  onFileSelect?: (
+    filePath: string | null,
+    options?: { mode?: 'preview' | 'diff'; gitStatus?: GitChangeSelectionStatus },
+  ) => void;
   onOpenTerminal?: () => void;
   // Props for nested right panel (File Preview + Terminal + Markdown)
   selectedFilePath?: string | null;
-  rightPanelTab?: 'preview' | 'terminal' | 'markdown';
-  onRightPanelTabChange?: (tab: 'preview' | 'terminal' | 'markdown') => void;
+  rightPanelTab?: 'preview' | 'terminal' | 'markdown' | 'diff';
+  onRightPanelTabChange?: (
+    tab: 'preview' | 'terminal' | 'markdown' | 'diff',
+  ) => void;
   onRightPanelClose?: () => void;
+  fileSelectionMode?: 'preview' | 'diff';
+  selectedGitStatus?: GitChangeSelectionStatus;
 }
 
 export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
@@ -95,6 +103,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   rightPanelTab = 'preview',
   onRightPanelTabChange,
   onRightPanelClose,
+  fileSelectionMode = 'preview',
+  selectedGitStatus,
 }) => {
   const { theme } = useTheme();
   const { registerLayer, unregisterLayer } = useHighlightLayers();
@@ -759,7 +769,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
       // If we have an onFileSelect handler, use it for preview
       if (onFileSelect) {
-        onFileSelect(filePath);
+        onFileSelect(filePath, { mode: 'preview' });
       } else {
         // Fallback to original behavior: open in editor window
         try {
@@ -798,6 +808,19 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       }
     },
     [selectedRepository, onFileSelect],
+  );
+
+  const handleGitChangeSelect = useCallback(
+    (filePath: string, status?: GitChangeSelectionStatus) => {
+      if (onFileSelect && onRightPanelTabChange) {
+        onFileSelect(filePath, { mode: 'diff', gitStatus: status });
+        onRightPanelTabChange('diff');
+        return;
+      }
+
+      void handleFileClick(filePath);
+    },
+    [handleFileClick, onFileSelect, onRightPanelTabChange],
   );
 
   // Handle clicking a markdown file from the Markdown Documents list.
@@ -1239,7 +1262,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                           {panelVisibility.gitChanges && hasGitChanges && (
                             <RepositoryPanelProvider
                               repositoryPath={selectedRepository?.path ?? null}
-                              actions={{ openFile: handleFileClick }}
+                              actions={{
+                                openGitDiff: handleGitChangeSelect,
+                                openFile: handleFileClick,
+                              }}
                             >
                               <GitChangesPanel />
                             </RepositoryPanelProvider>
@@ -1433,6 +1459,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                       filePath={selectedFilePath || null}
                       repositoryPath={selectedRepository.path}
                       activeTab={rightPanelTab}
+                      selectionMode={fileSelectionMode}
+                      gitStatus={selectedGitStatus}
                       onTabChange={onRightPanelTabChange}
                       onClose={onRightPanelClose}
                     />

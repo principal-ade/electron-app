@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useMemo } from 'react';
 import type {
   EnhancedAlexandriaEntry,
   GitStatus,
+  GitChangeSelectionStatus,
 } from '../../shared/types/repository.types';
 import type {
   RepositoryCacheData,
@@ -22,6 +23,10 @@ export type RepositoryPanelSlice =
 
 export interface RepositoryPanelActions {
   openFile?: (filePath: string) => void;
+  openGitDiff?: (
+    filePath: string,
+    status?: GitChangeSelectionStatus,
+  ) => void;
 }
 
 export interface RepositoryPanelContextValue {
