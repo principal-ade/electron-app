@@ -317,6 +317,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [selectedDocType, setSelectedDocType] = useState<
       'markdown' | 'excalidraw'
     >('markdown');
+    const [createExcalidrawTrigger, setCreateExcalidrawTrigger] = useState(0);
 
     // Right pane mode
     const [rightPaneMode, setRightPaneMode] = useState<RightPaneMode>('city');
@@ -1827,7 +1828,8 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                 setRightPaneMode('document');
               }}
               onCreateNew={() => {
-                // Open ExcalidrawPanel in create mode
+                // Switch the right pane to the Excalidraw editor and start a fresh canvas
+                setCreateExcalidrawTrigger((prev) => prev + 1);
                 setSelectedDocPath(null);
                 setSelectedDocType('excalidraw');
                 setRightPaneMode('document');
@@ -2150,6 +2152,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       () => (
         <ExcalidrawPanel
           filePath={selectedDocType === 'excalidraw' ? selectedDocPath : null}
+          createNewTrigger={createExcalidrawTrigger}
           source={selectedSource}
           contentProvider={fileViewerContentProvider}
           onClose={() => {
@@ -2161,6 +2164,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       [
         selectedDocPath,
         selectedDocType,
+        createExcalidrawTrigger,
         selectedSource,
         fileViewerContentProvider,
       ],

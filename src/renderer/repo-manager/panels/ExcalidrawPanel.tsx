@@ -12,6 +12,9 @@ interface ExcalidrawPanelProps {
   // File path
   filePath: string | null;
 
+  // When this value changes, start the create new flow
+  createNewTrigger?: number;
+
   // Source and content provider (like MarkdownRenderingPanel)
   source?: FileTreeSource | null;
   contentProvider?: {
@@ -24,6 +27,7 @@ interface ExcalidrawPanelProps {
 
 export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
   filePath,
+  createNewTrigger,
   source,
   contentProvider,
   onClose,
@@ -36,6 +40,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const latestFilePathRef = useRef<string | null>(null);
+  const lastCreateNewTriggerRef = useRef<number | undefined>(undefined);
 
   const isLocalFile = source?.type === 'local';
   const sourceLocation = source?.type === 'local' ? source.location : null;
@@ -145,6 +150,26 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
   const handleCloseNewDrawing = () => {
     setIsCreatingNew(false);
   };
+
+  useEffect(() => {
+    if (createNewTrigger === undefined) {
+      return;
+    }
+
+    if (createNewTrigger !== lastCreateNewTriggerRef.current) {
+      lastCreateNewTriggerRef.current = createNewTrigger;
+
+      if (createNewTrigger > 0) {
+        setIsCreatingNew(true);
+      }
+    }
+  }, [createNewTrigger]);
+
+  useEffect(() => {
+    if (filePath) {
+      setIsCreatingNew(false);
+    }
+  }, [filePath]);
 
   // Show new drawing editor if user clicked create
   if (isCreatingNew) {
