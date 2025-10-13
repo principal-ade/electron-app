@@ -159,6 +159,10 @@ export interface UserPreferences {
       sizes?: { left: number; middle: number; right: number };
       collapsed?: { left?: boolean; right?: boolean };
     };
+    repositoryDetailsNested?: {
+      sizes?: { left: number; middle: number; right: number };
+      collapsed?: { left?: boolean; right?: boolean };
+    };
     terminalManager?: {
       sizes?: { left: number; right: number };
       collapsed?: { left?: boolean };

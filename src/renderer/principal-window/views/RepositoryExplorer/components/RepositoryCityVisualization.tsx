@@ -6,8 +6,12 @@ import {
   ArchitectureMapHighlightLayers,
   MultiVersionCityBuilder,
 } from '@principal-ai/code-city-react';
-import { FileTree } from '@principal-ai/repository-abstraction';
-import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
+import type { FileTree as RepositoryFileTree } from '@principal-ai/repository-abstraction';
+import type { FileTree as CityFileTree } from '@principal-ai/code-city-builder';
+import type {
+  EnhancedAlexandriaEntry,
+  Repository as NormalizedRepository,
+} from '../../../../../shared/types/repository.types';
 import { FileTreeSourceService } from '../../../../services/FileTreeSourceService';
 import { CityDataCacheService } from '../../../../services/CityDataCacheService';
 import { WindowService } from '../../../../main-process-api/WindowService';
@@ -144,10 +148,22 @@ export const RepositoryCityVisualization: React.FC<
 
       try {
         // Initialize sources from repository
-        const sources = services.fileTreeService.initializeFromRepository({
+        const repositoryForService = {
           ...repository,
-          localClones: repository.path ? [{ path: repository.path }] : [],
-        });
+          localClones: repository.path
+            ? [
+                {
+                  path: repository.path,
+                  addedAt: Date.now(),
+                  lastAccessed: Date.now(),
+                },
+              ]
+            : [],
+        } as unknown as NormalizedRepository;
+
+        const sources = services.fileTreeService.initializeFromRepository(
+          repositoryForService,
+        );
 
         if (sources.length === 0) {
           throw new Error('No valid sources found for repository');
@@ -170,8 +186,11 @@ export const RepositoryCityVisualization: React.FC<
         });
 
         // Prepare trees for city building
-        const versions = new Map<string, FileTree>();
-        versions.set(primarySource.id, loadedSource.tree);
+        const versions = new Map<string, CityFileTree>();
+        versions.set(
+          primarySource.id,
+          loadedSource.tree as RepositoryFileTree as unknown as CityFileTree,
+        );
 
         // Optionally add HEAD tree for git changes
         if (showGitChanges) {

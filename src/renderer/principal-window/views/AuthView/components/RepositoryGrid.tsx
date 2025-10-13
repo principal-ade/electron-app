@@ -8,7 +8,10 @@ import {
   ToggleLeft,
   ToggleRight,
 } from 'lucide-react';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type {
+  AlexandriaEntry,
+  GithubRepository as AlexandriaGithubRepository,
+} from '@a24z/core-library';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import type { GitHubRepository } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
 import { UnifiedRepositoryCard } from './UnifiedRepositoryCard';
@@ -161,15 +164,34 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
 
       // If we have remote data, enrich the local repo with it
       if (remoteData) {
-        // Merge remote data into local repo
+        const baseGitHub: AlexandriaGithubRepository = repo.github
+          ? { ...repo.github }
+          : {
+              id:
+                owner && owner.length > 0
+                  ? `${owner}/${repo.name}`
+                  : repo.name,
+              owner: owner ?? '',
+              name: repo.name,
+              stars: 0,
+              lastUpdated: new Date().toISOString(),
+            };
+
+        // Merge remote data into local repo while respecting the type definition
         repo.github = {
-          ...repo.github,
-          description: remoteData.description || repo.github?.description,
-          primaryLanguage: remoteData.language || repo.github?.primaryLanguage,
-          url: remoteData.html_url,
-          lastCommit: remoteData.pushed_at || repo.github?.lastCommit,
-          owner: owner || repo.github?.owner || '',
-          isFork: remoteData.fork,
+          ...baseGitHub,
+          description: remoteData.description ?? baseGitHub.description,
+          primaryLanguage: remoteData.language ?? baseGitHub.primaryLanguage,
+          lastCommit: remoteData.pushed_at ?? baseGitHub.lastCommit,
+          defaultBranch:
+            remoteData.default_branch ?? baseGitHub.defaultBranch,
+          owner: owner ?? baseGitHub.owner,
+          name: remoteData.name ?? baseGitHub.name,
+          isPublic:
+            baseGitHub.isPublic !== undefined
+              ? baseGitHub.isPublic
+              : !remoteData.private,
+          lastUpdated: remoteData.updated_at ?? baseGitHub.lastUpdated,
         };
       }
 

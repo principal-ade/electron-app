@@ -882,6 +882,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 const treeData = fileTreeData.get(repo.path);
                 const gitStatus = gitStatusData.get(repo.path);
                 const gitToggling = gitWatchingState.get(repo.path);
+                const repoPackageData = packageData.get(repo.path);
                 return (
                   <div
                     key={repo.path}
@@ -996,9 +997,9 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                               )}
                             </div>
                           )}
-                          {packageData.get(repo.path) &&
-                            !packageData.get(repo.path)?.loading &&
-                            packageData.get(repo.path)?.packages > 0 && (
+                          {repoPackageData &&
+                            !repoPackageData.loading &&
+                            (repoPackageData.packages ?? 0) > 0 && (
                               <div
                                 style={{
                                   fontSize: '12px',
@@ -1008,13 +1009,13 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                                   alignItems: 'center',
                                   gap: '8px',
                                 }}
-                              >
-                                <span>📦</span>
-                                <span>
-                                  {packageData.get(repo.path)?.packages}{' '}
-                                  packages
-                                </span>
-                                {packageData.get(repo.path)?.monorepo && (
+                                >
+                                  <span>📦</span>
+                                  <span>
+                                  {repoPackageData.packages}{' '}
+                                    packages
+                                  </span>
+                                {repoPackageData.monorepo && (
                                   <span
                                     style={{
                                       color: theme.colors.info,
@@ -1180,7 +1181,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                           {/* Get Packages button */}
                           <button
                             onClick={() => fetchPackages(repo.path)}
-                            disabled={packageData.get(repo.path)?.loading}
+                            disabled={repoPackageData?.loading}
                             style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -1190,19 +1191,17 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                               border: `1px solid ${theme.colors.border}`,
                               borderRadius: '4px',
                               backgroundColor: theme.colors.background,
-                              color: packageData.get(repo.path)?.loading
+                              color: repoPackageData?.loading
                                 ? theme.colors.textSecondary
                                 : theme.colors.success,
-                              cursor: packageData.get(repo.path)?.loading
+                              cursor: repoPackageData?.loading
                                 ? 'not-allowed'
                                 : 'pointer',
-                              opacity: packageData.get(repo.path)?.loading
-                                ? 0.5
-                                : 1,
+                              opacity: repoPackageData?.loading ? 0.5 : 1,
                               transition: 'all 0.15s ease',
                             }}
                             onMouseEnter={(e) => {
-                              if (!packageData.get(repo.path)?.loading) {
+                              if (!repoPackageData?.loading) {
                                 e.currentTarget.style.backgroundColor = `${theme.colors.success}10`;
                                 e.currentTarget.style.borderColor =
                                   theme.colors.success;
@@ -1217,9 +1216,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                             title="Extract package information"
                           >
                             📦
-                            {packageData.get(repo.path)?.loading
-                              ? 'Loading...'
-                              : 'Get Packages'}
+                            {repoPackageData?.loading ? 'Loading...' : 'Get Packages'}
                           </button>
 
                           {/* Remove button */}

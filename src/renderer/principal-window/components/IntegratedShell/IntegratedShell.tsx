@@ -89,9 +89,14 @@ export const IntegratedShell: React.FC = () => {
 
           if (viewKey && prefs.panelLayouts?.[viewKey]?.collapsed) {
             const collapsed = prefs.panelLayouts[viewKey].collapsed;
+            const left = collapsed.left ?? defaults.left;
+            const right =
+              viewKey === 'repositoryExplorer'
+                ? (collapsed as { right?: boolean }).right ?? defaults.right
+                : defaults.right;
             newViewStates[view] = {
-              left: collapsed.left ?? defaults.left,
-              right: collapsed.right ?? defaults.right,
+              left,
+              right,
             };
           } else {
             newViewStates[view] = defaults;
@@ -131,25 +136,34 @@ export const IntegratedShell: React.FC = () => {
     const newCollapsed = !sidebarCollapsed;
 
     // Update state for current view
-    setViewCollapsedStates((prev) => ({
-      ...prev,
-      [activeView]: {
-        ...prev[activeView],
-        left: newCollapsed,
-      },
-    }));
+    setViewCollapsedStates((prev) => {
+      const previousState = prev[activeView] ?? getViewDefaults(activeView);
+      return {
+        ...prev,
+        [activeView]: {
+          ...previousState,
+          left: newCollapsed,
+        },
+      };
+    });
 
     if (preferencesLoaded) {
       try {
         const viewKey = getViewKey(activeView);
         if (viewKey) {
+          const collapsedUpdate: { left?: boolean; right?: boolean } = {
+            left: newCollapsed,
+          };
+          if (viewKey === 'repositoryExplorer') {
+            const previousRight =
+              viewCollapsedStates[activeView]?.right ??
+              getViewDefaults(activeView).right;
+            collapsedUpdate.right = previousRight;
+          }
           await UserPreferencesService.updatePreferences({
             panelLayouts: {
               [viewKey]: {
-                collapsed: {
-                  left: newCollapsed,
-                  right: viewCollapsedStates[activeView]?.right, // Preserve right state
-                },
+                collapsed: collapsedUpdate,
               },
             },
           });
@@ -164,23 +178,28 @@ export const IntegratedShell: React.FC = () => {
     const newCollapsed = !rightSidebarCollapsed;
 
     // Update state for current view
-    setViewCollapsedStates((prev) => ({
-      ...prev,
-      [activeView]: {
-        ...prev[activeView],
-        right: newCollapsed,
-      },
-    }));
+    setViewCollapsedStates((prev) => {
+      const previousState = prev[activeView] ?? getViewDefaults(activeView);
+      return {
+        ...prev,
+        [activeView]: {
+          ...previousState,
+          right: newCollapsed,
+        },
+      };
+    });
 
     if (preferencesLoaded) {
       try {
         const viewKey = getViewKey(activeView);
-        if (viewKey) {
+        if (viewKey === 'repositoryExplorer') {
           await UserPreferencesService.updatePreferences({
             panelLayouts: {
               [viewKey]: {
                 collapsed: {
-                  left: viewCollapsedStates[activeView]?.left, // Preserve left state
+                  left:
+                    viewCollapsedStates[activeView]?.left ??
+                    getViewDefaults(activeView).left,
                   right: newCollapsed,
                 },
               },
@@ -194,24 +213,27 @@ export const IntegratedShell: React.FC = () => {
   };
 
   const ensureRightSidebarOpen = () => {
-    if (!rightSidebarCollapsed) {
+    if (activeView !== 'repository' || !rightSidebarCollapsed) {
       return;
     }
 
     const currentLeftCollapsed =
       viewCollapsedStates[activeView]?.left ?? getViewDefaults(activeView).left;
 
-    setViewCollapsedStates((prev) => ({
-      ...prev,
-      [activeView]: {
-        ...prev[activeView],
-        right: false,
-      },
-    }));
+    setViewCollapsedStates((prev) => {
+      const previousState = prev[activeView] ?? getViewDefaults(activeView);
+      return {
+        ...prev,
+        [activeView]: {
+          ...previousState,
+          right: false,
+        },
+      };
+    });
 
     if (preferencesLoaded) {
       const viewKey = getViewKey(activeView);
-      if (viewKey) {
+      if (viewKey === 'repositoryExplorer') {
         void UserPreferencesService.updatePreferences({
           panelLayouts: {
             [viewKey]: {
@@ -229,24 +251,27 @@ export const IntegratedShell: React.FC = () => {
   };
 
   const collapseRightSidebar = () => {
-    if (rightSidebarCollapsed) {
+    if (activeView !== 'repository' || rightSidebarCollapsed) {
       return;
     }
 
     const currentLeftCollapsed =
       viewCollapsedStates[activeView]?.left ?? getViewDefaults(activeView).left;
 
-    setViewCollapsedStates((prev) => ({
-      ...prev,
-      [activeView]: {
-        ...prev[activeView],
-        right: true,
-      },
-    }));
+    setViewCollapsedStates((prev) => {
+      const previousState = prev[activeView] ?? getViewDefaults(activeView);
+      return {
+        ...prev,
+        [activeView]: {
+          ...previousState,
+          right: true,
+        },
+      };
+    });
 
     if (preferencesLoaded) {
       const viewKey = getViewKey(activeView);
-      if (viewKey) {
+      if (viewKey === 'repositoryExplorer') {
         void UserPreferencesService.updatePreferences({
           panelLayouts: {
             [viewKey]: {
