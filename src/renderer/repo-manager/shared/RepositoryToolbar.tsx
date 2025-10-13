@@ -15,7 +15,7 @@ export interface ToolbarItem {
   id: string;
   label: string;
   shortLabel?: string;
-  icon: React.ReactNode;
+  icon: React.ReactElement<{ size?: number }>;
   count?: number;
   color?: string;
   active: boolean;
@@ -106,7 +106,7 @@ export const RepositoryToolbar: React.FC<RepositoryToolbarProps> = ({
               }}
               title={item.tooltip || `Toggle ${item.label}`}
             >
-              {React.cloneElement(item.icon as React.ReactElement, {
+              {React.cloneElement(item.icon, {
                 size: 14,
               })}
               <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>

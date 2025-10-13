@@ -257,15 +257,6 @@ export class AgentSessionService {
   }
 
   /**
-   * Delete a session from active storage
-   * @param sessionId - The session ID to delete
-   * @returns Promise indicating success
-   */
-  static deleteFromActive(sessionId: string): Promise<boolean> {
-    return window.mainProcess.agentSession.deleteFromActive(sessionId);
-  }
-
-  /**
    * Reprocess a session's events
    * @param sessionId - The session ID to reprocess
    * @returns Promise with reprocessing result

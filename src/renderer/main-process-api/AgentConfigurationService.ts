@@ -169,7 +169,11 @@ export class AgentConfigurationService {
     try {
       const result =
         await window.mainProcess.agentConfig.readAgentSettings(agentType);
-      return result.success ? result.settings : null;
+      if (!result.success) {
+        return null;
+      }
+
+      return result.settings ?? null;
     } catch (error) {
       console.error(`Failed to read ${agentType} settings:`, error);
       return null;

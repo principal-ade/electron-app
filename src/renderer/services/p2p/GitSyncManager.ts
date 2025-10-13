@@ -1,8 +1,5 @@
 import { PeerManager, PeerData } from './PeerManager';
-import {
-  GitService,
-  GitStatus as GitServiceStatus,
-} from '../../main-process-api/GitService';
+import { GitService } from '../../main-process-api/GitService';
 
 export interface GitSyncData {
   type: 'git-sync';
@@ -30,6 +27,15 @@ export interface SyncStatus {
   conflicts: string[];
 }
 
+type GitSyncPeerMessage = PeerData<GitSyncData['data']> & {
+  type: 'git-sync';
+  action: GitSyncData['action'];
+};
+
+function isGitSyncPeerMessage(data: PeerData): data is GitSyncPeerMessage {
+  return data.type === 'git-sync' && typeof data.action === 'string';
+}
+
 export class GitSyncManager {
   private peerManager: PeerManager;
   private currentRepoPath: string = '';
@@ -45,8 +51,12 @@ export class GitSyncManager {
     const originalCallback = peerManager['onDataReceived'];
     peerManager.setCallbacks({
       onDataReceived: (peerId: string, data: PeerData) => {
-        if (data.type === 'git-sync') {
-          this.handleGitSyncMessage(peerId, data as GitSyncData);
+        if (isGitSyncPeerMessage(data)) {
+          this.handleGitSyncMessage(peerId, {
+            type: 'git-sync',
+            action: data.action,
+            data: data.data,
+          });
         }
         originalCallback?.(peerId, data);
       },

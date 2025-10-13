@@ -3,7 +3,8 @@ import { GitBranch } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { CityData } from '@principal-ai/code-city-react';
 import { MultiVersionCityBuilder } from '@principal-ai/code-city-react';
-import { FileTree } from '@principal-ai/repository-abstraction';
+import type { FileTree } from '@principal-ai/repository-abstraction';
+import type { FileTree as BuilderFileTree } from '@principal-ai/code-city-builder';
 import { FileTreeSource } from '../../types/file-tree-source';
 import { SourceSelectionService } from '../../services/SourceSelectionService';
 
@@ -68,11 +69,14 @@ export const CityMapManager: React.FC<CityMapManagerProps> = ({
       setIsBuilding(true);
 
       try {
-        const versions = new Map<string, FileTree>();
-        versions.set(activeSource.id, fileTree);
+        const versions = new Map<string, BuilderFileTree>();
+        versions.set(activeSource.id, fileTree as unknown as BuilderFileTree);
 
         if (gitEnabled && headTree && !hasNoCommits) {
-          versions.set(`${activeSource.id}-HEAD`, headTree);
+          versions.set(
+            `${activeSource.id}-HEAD`,
+            headTree as unknown as BuilderFileTree,
+          );
         }
 
         const { unionCity, presenceByVersion } = MultiVersionCityBuilder.build(

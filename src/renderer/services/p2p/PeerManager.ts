@@ -7,9 +7,10 @@ export interface PeerInfo {
   connected: boolean;
 }
 
-export interface PeerData {
-  type: 'cursor' | 'selection' | 'edit' | 'file-open' | 'chat';
-  data: any;
+export interface PeerData<TData = any> {
+  type: string;
+  data: TData;
+  action?: string;
   timestamp: number;
 }
 
@@ -143,6 +144,7 @@ export class PeerManager {
     const peerData: PeerData = {
       type: data.type,
       data: data.data,
+      action: data.action,
       timestamp: data.timestamp || Date.now(),
     };
 

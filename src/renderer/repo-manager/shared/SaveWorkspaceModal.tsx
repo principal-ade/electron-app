@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
+import type { WorkspaceLayout } from '../../../shared/types/userPreferences.types';
 
 export interface SaveWorkspaceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (
     name: string,
-    options: {
+    options?: {
       description?: string;
       includeSizes?: boolean;
       includeCollapsed?: boolean;
     },
-  ) => Promise<void>;
+  ) => Promise<WorkspaceLayout | void>;
 }
 
 export const SaveWorkspaceModal: React.FC<SaveWorkspaceModalProps> = ({

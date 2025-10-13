@@ -16,6 +16,7 @@ export interface HighlightLayer {
   name: string;
   enabled: boolean;
   color: string;
+  opacity?: number;
   priority: number;
   items: HighlightItem[];
 }
