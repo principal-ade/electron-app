@@ -3,7 +3,6 @@ import { MultiVersionCityBuilder } from '@principal-ai/code-city-react';
 import type { FileTree as RepositoryFileTree } from '@principal-ai/repository-abstraction';
 import type { FileTree as CityFileTree } from '@principal-ai/code-city-builder';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
-import type { AlexandriaEntry } from '@a24z/core-library';
 import { RepositoryMonitoringService } from '../../../../main-process-api/RepositoryMonitoringService';
 
 export interface CityBuildResult {
@@ -59,7 +58,7 @@ export class RepositoryCityService {
         };
       }
 
-      console.log(
+      console.info(
         '[RepositoryCityService] Building city for:',
         repository.name,
       );
@@ -82,7 +81,7 @@ export class RepositoryCityService {
 
       // Calculate tree stats from the FileTree
       const treeStats = this.calculateTreeStats(fileTree);
-      console.log('[RepositoryCityService] Tree stats:', treeStats);
+      console.info('[RepositoryCityService] Tree stats:', treeStats);
 
       // Prepare trees for city building
       const versions = new Map<string, CityFileTree>();
@@ -94,12 +93,12 @@ export class RepositoryCityService {
 
       // TODO: Optionally add HEAD tree for git changes
       if (options.includeGitHead) {
-        console.log(
+        console.info(
           '[RepositoryCityService] Git HEAD support not yet implemented',
         );
       }
 
-      console.log(
+      console.info(
         '[RepositoryCityService] Building city with',
         versions.size,
         'version(s)',
@@ -133,7 +132,7 @@ export class RepositoryCityService {
       const cityTime = performance.now() - cityStartTime;
 
       const totalTime = buildTime + cityTime;
-      console.log(
+      console.info(
         '[RepositoryCityService] City built successfully:',
         `build=${buildTime.toFixed(1)}ms`,
         `city=${cityTime.toFixed(1)}ms`,

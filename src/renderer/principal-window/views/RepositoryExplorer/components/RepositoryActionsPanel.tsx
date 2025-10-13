@@ -14,6 +14,7 @@ import { useRepositorySecretsStatus } from '../hooks/useRepositorySecretsStatus'
 import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import { getRequiredSecrets } from '../../../../utils/workflowParser';
+import type { ParsedWorkflow, ParsedJob } from '../../../../utils/workflowParser';
 
 interface RepositoryActionsPanelProps {
   repoId: string | null | undefined;
@@ -63,6 +64,23 @@ const extractWorkflowActionsFromTree = async (
 
   const actions: ActWorkflowAction[] = [];
 
+  const extractFileContent = (result: unknown): string | null => {
+    if (typeof result === 'string') {
+      return result;
+    }
+
+    if (
+      result &&
+      typeof result === 'object' &&
+      'content' in result &&
+      typeof (result as { content: unknown }).content === 'string'
+    ) {
+      return (result as { content: string }).content;
+    }
+
+    return null;
+  };
+
   for (const file of workflowFiles) {
     const fileName = file.path.split('/').pop() || file.path;
 
@@ -71,8 +89,7 @@ const extractWorkflowActionsFromTree = async (
       const fullPath = `${repositoryPath}/${file.path}`;
       const result = await FileSystemService.readFile(fullPath);
 
-      const content =
-        typeof result === 'string' ? result : (result as any)?.content;
+      const content = extractFileContent(result);
 
       if (!content) {
         console.warn('[RepositoryActionsPanel] No content for:', file.path);
@@ -85,7 +102,7 @@ const extractWorkflowActionsFromTree = async (
       const { parseWorkflowFile } = await import(
         '../../../../utils/workflowParser'
       );
-      const parsed = parseWorkflowFile(content);
+      const parsed: ParsedWorkflow | null = parseWorkflowFile(content);
 
       if (!parsed || !parsed.jobs) {
         console.warn(
@@ -98,8 +115,9 @@ const extractWorkflowActionsFromTree = async (
         parsed.name || fileName.replace(/\.(yml|yaml)$/i, '');
 
       // Create one action per job
-      for (const [jobId, job] of Object.entries(parsed.jobs)) {
-        const jobName = (job as any).name || jobId;
+      for (const jobId of Object.keys(parsed.jobs)) {
+        const job: ParsedJob = parsed.jobs[jobId];
+        const jobName = job.name ?? jobId;
         const label = `${workflowName} › ${jobName}`;
 
         actions.push({
@@ -227,10 +245,6 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
       tone: theme.colors.warning,
     };
   }, [repoId, error, isLoading, isConfigured, theme]);
-
-  const handleConfigureClick = () => {
-    onConfigure?.();
-  };
 
   const handleRunClick = (action: ActWorkflowAction) => {
     if (!onRun) {

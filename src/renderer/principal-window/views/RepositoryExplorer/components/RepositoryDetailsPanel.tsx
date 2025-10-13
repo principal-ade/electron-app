@@ -183,17 +183,17 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       return null;
     }
 
-    const candidates: Array<unknown> = [
-      (selectedRepository as any).id,
-      (selectedRepository as any).repoId,
-      (selectedRepository as any).repositoryId,
-      (selectedRepository as any).alexandriaId,
-      (selectedRepository as any).github?.id,
+    const candidates: Array<string | number | null | undefined> = [
+      selectedRepository.id,
+      selectedRepository.repoId,
+      selectedRepository.repositoryId,
+      selectedRepository.alexandriaId,
+      selectedRepository.github?.id,
     ];
 
-    const owner = (selectedRepository as any).github?.owner;
+    const owner = selectedRepository.github?.owner;
     const repoName =
-      (selectedRepository as any).github?.name ?? selectedRepository.name;
+      selectedRepository.github?.name ?? selectedRepository.name;
 
     if (owner && repoName) {
       candidates.push(`${owner}/${repoName}`);

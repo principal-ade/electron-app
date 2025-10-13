@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Map as MapIcon, Layers, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Map as MapIcon, Layers } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { CityData, HighlightLayer } from '@principal-ai/code-city-react';
 import {
@@ -7,7 +7,11 @@ import {
   MultiVersionCityBuilder,
 } from '@principal-ai/code-city-react';
 import type { FileTree as RepositoryFileTree } from '@principal-ai/repository-abstraction';
-import type { FileTree as CityFileTree } from '@principal-ai/code-city-builder';
+import type {
+  CityBuilding,
+  CityDistrict,
+  FileTree as CityFileTree,
+} from '@principal-ai/code-city-builder';
 import type {
   EnhancedAlexandriaEntry,
   Repository as NormalizedRepository,
@@ -43,11 +47,12 @@ export interface RepositoryCityVisualizationProps {
 }
 
 interface HoverInfo {
-  hoveredDistrict: any | null;
-  hoveredBuilding: any | null;
+  hoveredDistrict: CityDistrict | null;
+  hoveredBuilding: CityBuilding | null;
   fileTooltip: { text: string } | null;
   directoryTooltip: { text: string } | null;
   fileCount: number | null;
+  mousePos: { x: number; y: number };
 }
 
 /**
@@ -112,11 +117,11 @@ export const RepositoryCityVisualization: React.FC<
         let owner = 'local';
         let repo = repository.name;
 
-        if ((repository as any).github?.owner) {
-          owner = (repository as any).github.owner;
+        if (repository.github?.owner) {
+          owner = repository.github.owner;
         }
-        if ((repository as any).github?.name) {
-          repo = (repository as any).github.name;
+        if (repository.github?.name) {
+          repo = repository.github.name;
         }
 
         await WindowService.openLocalFiles({
@@ -197,7 +202,7 @@ export const RepositoryCityVisualization: React.FC<
           try {
             // Try to get HEAD tree (this would need to be implemented)
             // For now, we'll just use the working tree
-            console.log(
+            console.info(
               '[RepositoryCityVisualization] Git changes requested but HEAD tree loading not implemented yet',
             );
           } catch (gitError) {
