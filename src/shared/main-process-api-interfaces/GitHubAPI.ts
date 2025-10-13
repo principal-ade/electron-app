@@ -2,7 +2,7 @@ export enum GitHubAPIEvent {
   DETECT_REPOSITORY = 'github:detect-repository',
   GET_ISSUES = 'github:get-issues',
   CREATE_ISSUE = 'github:create-issue',
-  //GET_PULL_REQUESTS = 'github:get-pull-requests',
+  GET_PULL_REQUESTS = 'github:get-pull-requests',
   //GET_THREAD = 'github:get-thread',
   REFRESH_DATA = 'github:refresh-data',
   CHECK_AUTH_STATUS = 'github:check-auth-status',
@@ -79,6 +79,31 @@ export interface GitHubIssue {
     avatar_url: string;
   }>;
   pull_request?: PullRequestReference;
+}
+
+export interface GitHubPullRequest {
+  id: number;
+  number: number;
+  title: string;
+  state: 'open' | 'closed';
+  body: string | null;
+  html_url: string;
+  created_at: string;
+  updated_at: string;
+  merged_at: string | null;
+  draft?: boolean;
+  comments: number;
+  review_comments: number;
+  user: {
+    login: string;
+    avatar_url: string;
+  };
+  head: {
+    ref: string;
+  };
+  base: {
+    ref: string;
+  };
 }
 
 export interface CreateIssueRequest {
@@ -174,11 +199,10 @@ export interface GitHubAPI {
     repo: string,
     issue: CreateIssueRequest,
   ) => Promise<CreateIssueResponse>;
-  //getPullRequests: (
-  //  owner: string,
-  //  repo: string,
-  //  options?: any,
-  //) => Promise<any[]>;
+  getPullRequests: (
+    owner: string,
+    repo: string,
+  ) => Promise<GitHubPullRequest[]>;
   //getThread: (owner: string, repo: string, number: number) => Promise<any>;
   refreshData: (owner: string, repo: string) => Promise<void>;
   checkAuthStatus: () => Promise<{

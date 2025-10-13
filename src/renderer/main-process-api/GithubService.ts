@@ -4,6 +4,8 @@ import type {
   GitHubOrganization,
   GitHubUser,
   TokenInfo,
+  GitHubPullRequest,
+  CreateIssueRequest,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export class GithubService {
@@ -42,7 +44,19 @@ export class GithubService {
     return result || [];
   }
 
-  static async createIssue(owner: string, repo: string, issue: any) {
+  static async getPullRequests(
+    owner: string,
+    repo: string,
+  ): Promise<GitHubPullRequest[]> {
+    const result = await window.mainProcess.github.getPullRequests(owner, repo);
+    return result || [];
+  }
+
+  static async createIssue(
+    owner: string,
+    repo: string,
+    issue: CreateIssueRequest,
+  ) {
     const result = await window.mainProcess.github.createIssue(
       owner,
       repo,
