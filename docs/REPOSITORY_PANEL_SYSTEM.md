@@ -11,14 +11,19 @@ This document summarizes the configurable panel architecture that now powers the
 ## Directory Layout
 
 ```
+src/shared/panels/
+└── repositoryPanelCatalog.ts     # Canonical metadata for every panel (no React)
+
 src/renderer/panels/
 ├── RepositoryPanelProvider.tsx   # Context + hooks that expose repository slices
 ├── components/
 │   └── GitChangesPanel.tsx       # Example of a shared panel implementation
-└── registry.tsx                  # Canonical list of panel definitions
+└── registry.tsx                  # Attaches React renderers to the shared catalog
 ```
 
-Related shared types live in `src/shared/types/repositoryPanel.types.ts`.
+Shared types re-export the catalog definitions from
+`src/shared/types/repositoryPanel.types.ts` so every environment consumes the
+same literal metadata.
 
 ## RepositoryPanelProvider
 
@@ -37,32 +42,44 @@ The provider is responsible for:
 
 ## Panel Registry
 
-The registry centralizes panel metadata in `repositoryPanelDefinitions`.
+The shared catalog (`repositoryPanelCatalog`) centralizes panel metadata and is
+extended in the renderer's `repositoryPanelDefinitions` with optional React
+renderers.
 
 Each `RepositoryPanelDefinition` includes:
 
 - `id`: Stable identifier used for persistence and analytics.
 - `label` / `description`: Display text for configuration menus.
 - `defaultLocation`: Suggested column (`left` or `right`).
+- `surfaces`: Tags describing which host surfaces should surface the panel (e.g.,
+  `explorer`, `manager`, `agent`). Configuration UIs can filter definitions by
+  these tags instead of maintaining bespoke allow-lists.
 - `slices`: The cache slices required by the panel (`'git'`, `'markdown'`, `'fileTree'`, `'packages'`, `'quality'`). The provider uses this to know what data must be loaded before a panel renders.
-- `render`: Optional React renderer when the panel ships a default UI (e.g., `GitChangesPanel`). Layouts can omit `render` and embed their own bespoke component while still benefiting from centralized metadata.
+- `render`: Optional React renderer when the panel ships a default UI (e.g., `GitChangesPanel`). Renderers are attached in `src/renderer/panels/registry.tsx` so the shared catalog stays framework-agnostic. Layouts can omit `render` and embed their own bespoke component while still benefiting from centralized metadata.
+
+Because the catalog is declared `as const`, TypeScript derives
+`RepositoryPanelId` automatically from the metadata. Adding a panel only
+requires touching the shared catalog entry (and optionally its renderer); the
+shared type re-exports always stay in sync.
 
 Utility exports include:
 
 - `getRepositoryPanelDefinition(id)` for lookup.
-- `createDefaultPanelVisibility()` to seed preference stores.
+- `getRepositoryPanelsForSurface(surface)` to filter definitions by tagged surface.
+- `createDefaultPanelVisibility({ surfaces })` to seed preference stores without
+  duplicating per-surface defaults.
 
 ### Adding a Panel
 
 1. **Create the component** (if it has its own UI) under `src/renderer/panels/components/`. Use `useRepositoryPanelContext()` to read slices instead of wiring props from each host view.
-2. **Register the panel** by appending to `repositoryPanelDefinitions` with the appropriate metadata and `slices` list. This keeps IDs consistent across all surfaces.
+2. **Register the panel** by appending to `repositoryPanelDefinitions` with the appropriate metadata, `surfaces`, and `slices` list. This keeps IDs consistent across all surfaces.
 3. **Supply actions if needed.** When a panel needs callbacks (e.g., opening a file), access them via `context.actions` to stay decoupled from specific views.
 
 ## Using Panels Inside a View
 
 1. **Wrap the layout** with `RepositoryPanelProvider`, passing `repositoryPath` and any shared `actions`.
 2. **Choose panels** from `repositoryPanelDefinitions`. For example, the repository manager now includes the `gitChanges` panel in its tab list by referencing the registry entry instead of hardcoding JSX.
-3. **Persist visibility/layout** using the shared preference helpers (`RepositoryPanelVisibility`, `createDefaultPanelVisibility()`) rather than view-specific lists.
+3. **Persist visibility/layout** using the shared preference helpers (`RepositoryPanelVisibility`, `createDefaultPanelVisibility({ surfaces })`) rather than view-specific lists.
 
 ## Migration Checklist
 

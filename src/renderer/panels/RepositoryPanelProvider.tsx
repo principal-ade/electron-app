@@ -4,6 +4,7 @@ import type {
   GitStatus,
   GitChangeSelectionStatus,
 } from '../../shared/types/repository.types';
+import type { RepositoryPanelSlice } from '../../shared/panels/repositoryPanelCatalog';
 import type {
   RepositoryCacheData,
   MarkdownFile,
@@ -13,13 +14,6 @@ import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type { GitStatusWithFiles } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { useRepositoryData } from '../hooks/useRepositoryData';
-
-export type RepositoryPanelSlice =
-  | 'git'
-  | 'markdown'
-  | 'fileTree'
-  | 'packages'
-  | 'quality';
 
 export interface RepositoryPanelActions {
   openFile?: (filePath: string) => void;
