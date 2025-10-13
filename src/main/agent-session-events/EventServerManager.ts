@@ -361,7 +361,7 @@ export class EventServerManager extends EventEmitter {
     this.log('info', `Event type: ${repoNormalizedEvent.eventType}`);
     this.log('info', `Session ID: ${normalizedSessionId}`);
     this.log('info', `Tool name: ${repoNormalizedEvent.toolName}`);
-    this.log('info', `Repository info: ${JSON.stringify(repoNormalizedEvent.repositoryInfo)}`);
+    this.log('info', `Repository info: ${JSON.stringify(repoNormalizedEvent.repository)}`);
 
     // Determine if this is a new session (first event for this session)
     const isNewSession = repoNormalizedEvent.eventType === 'session-start';
@@ -379,7 +379,7 @@ export class EventServerManager extends EventEmitter {
       window.webContents.send(eventName, {
         sessionId: normalizedSessionId,
         repository:
-          repoNormalizedEvent.repositoryInfo?.root ||
+          repoNormalizedEvent.repository?.root ||
           repoNormalizedEvent.workingDirectory,
       });
 

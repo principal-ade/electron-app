@@ -250,7 +250,7 @@ const setupTerminalManager = () => {
   console.log(
     '[Terminal] Cleaning up any existing terminal sessions on startup...',
   );
-  terminalManager.destroyAllSessions();
+  terminalManager?.destroyAllSessions();
   return terminalManager;
 };
 

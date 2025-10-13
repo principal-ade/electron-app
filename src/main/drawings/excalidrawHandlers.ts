@@ -104,6 +104,7 @@ class ExcalidrawHandlers {
                 id,
                 name: data.name || 'Recovered Diagram',
                 isRepoAgnostic: true,
+                filePath,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
               });
@@ -138,6 +139,7 @@ class ExcalidrawHandlers {
                       name: data.name || 'Recovered Diagram',
                       isRepoAgnostic: false,
                       projectHash: dir,
+                      filePath,
                       createdAt: new Date().toISOString(),
                       updatedAt: new Date().toISOString(),
                     });
@@ -244,7 +246,8 @@ class ExcalidrawHandlers {
         return { success: false, error: 'Diagram not found' };
       }
 
-      const diagram = await fs.readJson(indexEntry.filePath);
+      const filePath = this.resolveDiagramFilePath(indexEntry);
+      const diagram = await fs.readJson(filePath);
       return { success: true, data: diagram };
     } catch (error) {
       console.error('Failed to load diagram:', error);
@@ -295,7 +298,8 @@ class ExcalidrawHandlers {
       }
 
       // Delete the file
-      await fs.remove(indexEntry.filePath);
+      const filePath = this.resolveDiagramFilePath(indexEntry);
+      await fs.remove(filePath);
 
       // Remove from index
       this.index.delete(diagramId);
@@ -576,6 +580,31 @@ class ExcalidrawHandlers {
       ExcalidrawAPIEvents.DELETE_ALEXANDRIA_DIAGRAM,
       this.deleteAlexandriaDiagram.bind(this),
     );
+  }
+
+  private resolveDiagramFilePath(entry: DiagramIndexEntry): string {
+    if (entry.filePath) {
+      return entry.filePath;
+    }
+
+    if (entry.isRepoAgnostic) {
+      return path.join(
+        this.storageDir,
+        'repo-agnostic',
+        `${entry.id}.excalidraw`,
+      );
+    }
+
+    if (entry.projectPath) {
+      const projectHash = this.getProjectHash(entry.projectPath);
+      return path.join(this.storageDir, projectHash, `${entry.id}.excalidraw`);
+    }
+
+    if (entry.projectHash) {
+      return path.join(this.storageDir, entry.projectHash, `${entry.id}.excalidraw`);
+    }
+
+    throw new Error(`Unable to resolve file path for diagram ${entry.id}`);
   }
 }
 
