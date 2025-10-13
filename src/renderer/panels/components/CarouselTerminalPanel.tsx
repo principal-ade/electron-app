@@ -70,6 +70,18 @@ export const CarouselTerminalPanel = forwardRef<
     const terminalRefs = useRef<Map<string, TerminalPanelRef>>(new Map());
     const carouselRef = useRef<SnapCarouselRef>(null);
 
+    // Store refs to callbacks to avoid recreating event listeners
+    const addNewTabRef = useRef<typeof addNewTab | null>(null);
+    const closeTabRef = useRef<typeof closeTab | null>(null);
+    const switchPanelRef = useRef<typeof switchPanel | null>(null);
+
+    // Track if we're currently creating a tab to prevent duplicates
+    const isCreatingTabRef = useRef(false);
+
+    // Store state used by keyboard handlers
+    const tabsRef = useRef<TerminalTab[]>(tabs);
+    const currentPanelIndexRef = useRef<number>(currentPanelIndex);
+
     // Expose carousel methods via ref
     React.useImperativeHandle(ref, () => ({
       scrollToPanel: (index: number) => {
@@ -289,33 +301,67 @@ export const CarouselTerminalPanel = forwardRef<
 
     const activeTab = tabs[currentPanelIndex];
 
+    // Keep callback refs up to date
+    useEffect(() => {
+      addNewTabRef.current = addNewTab;
+      closeTabRef.current = closeTab;
+      switchPanelRef.current = switchPanel;
+    }, [addNewTab, closeTab, switchPanel]);
+
+    useEffect(() => {
+      tabsRef.current = tabs;
+      currentPanelIndexRef.current = currentPanelIndex;
+    }, [tabs, currentPanelIndex]);
+
     // Keyboard shortcuts for carousel navigation
     useEffect(() => {
       const handleKeyDown = async (e: KeyboardEvent) => {
         // Command/Ctrl + T to open new tab
         if ((e.metaKey || e.ctrlKey) && e.key === 't') {
+          if (e.repeat) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+
           e.preventDefault();
           e.stopPropagation();
-          addNewTab();
+
+          if (isCreatingTabRef.current) {
+            return;
+          }
+
+          isCreatingTabRef.current = true;
+          addNewTabRef.current?.();
+
+          setTimeout(() => {
+            isCreatingTabRef.current = false;
+          }, 500);
           return;
         }
 
         // Command/Ctrl + W to close active tab
         if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
-          if (activeTab && tabs.length > 0) {
+          const currentTabs = tabsRef.current;
+          const currentIndex = currentPanelIndexRef.current;
+          const currentActiveTab = currentTabs[currentIndex];
+          if (currentActiveTab && currentTabs.length > 0) {
             e.preventDefault();
             e.stopPropagation();
-            closeTab(activeTab.id);
+            closeTabRef.current?.(currentActiveTab.id);
           }
           return;
         }
 
         // Command/Ctrl + B to scroll to bottom
         if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
-          if (activeTab) {
+          const currentTabs = tabsRef.current;
+          const currentIndex = currentPanelIndexRef.current;
+          const currentActiveTab = currentTabs[currentIndex];
+          if (currentActiveTab) {
             e.preventDefault();
             e.stopPropagation();
-            const terminalRef = terminalRefs.current.get(activeTab.id);
+            const terminalRef = terminalRefs.current.get(currentActiveTab.id);
             if (terminalRef) {
               terminalRef.scrollToBottom();
             }
@@ -325,7 +371,10 @@ export const CarouselTerminalPanel = forwardRef<
 
         // Command/Ctrl + O to open repository for the active tab
         if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
-          if (activeTab && activeTab.directory !== directory) {
+          const currentTabs = tabsRef.current;
+          const currentIndex = currentPanelIndexRef.current;
+          const currentActiveTab = currentTabs[currentIndex];
+          if (currentActiveTab && currentActiveTab.directory !== directory) {
             e.preventDefault();
             e.stopPropagation();
 
@@ -340,7 +389,7 @@ export const CarouselTerminalPanel = forwardRef<
             try {
               // Find the repository that contains this directory
               const repo = await RepositoryService.getRepositoryByLocalPath(
-                activeTab.directory,
+                currentActiveTab.directory,
               );
 
               if (repo) {
@@ -360,44 +409,43 @@ export const CarouselTerminalPanel = forwardRef<
         // Command/Ctrl + Left Arrow to go to previous panel
         if ((e.metaKey || e.ctrlKey) && e.key === 'ArrowLeft') {
           e.preventDefault();
-          const prevIndex = Math.max(0, currentPanelIndex - 1);
-          switchPanel(prevIndex);
+          const currentIndex = currentPanelIndexRef.current;
+          const prevIndex = Math.max(0, currentIndex - 1);
+          switchPanelRef.current?.(prevIndex);
           return;
         }
 
         // Command/Ctrl + Right Arrow to go to next panel
         if ((e.metaKey || e.ctrlKey) && e.key === 'ArrowRight') {
           e.preventDefault();
-          const nextIndex = Math.min(tabs.length - 1, currentPanelIndex + 1);
-          switchPanel(nextIndex);
+          const currentTabs = tabsRef.current;
+          const currentIndex = currentPanelIndexRef.current;
+          const nextIndex = Math.min(
+            currentTabs.length - 1,
+            currentIndex + 1,
+          );
+          switchPanelRef.current?.(nextIndex);
           return;
         }
 
         // Command/Ctrl + number (1-9) to switch panels
         if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '9') {
           e.preventDefault();
+          const currentTabs = tabsRef.current;
           const keyNum = parseInt(e.key, 10);
 
           // Command + 9 always goes to last panel
-          const panelIndex = keyNum === 9 ? tabs.length - 1 : keyNum - 1;
+          const panelIndex = keyNum === 9 ? currentTabs.length - 1 : keyNum - 1;
 
-          if (panelIndex >= 0 && panelIndex < tabs.length) {
-            switchPanel(panelIndex);
+          if (panelIndex >= 0 && panelIndex < currentTabs.length) {
+            switchPanelRef.current?.(panelIndex);
           }
         }
       };
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [
-      tabs,
-      switchPanel,
-      currentPanelIndex,
-      closeTab,
-      addNewTab,
-      activeTab,
-      directory,
-    ]);
+    }, [directory]);
 
     // Create carousel panels
     const carouselPanels = tabs.map((tab, index) => {
