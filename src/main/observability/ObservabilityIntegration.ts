@@ -283,12 +283,12 @@ export class ObservabilityIntegration extends EventEmitter {
 
       switch (storageMode) {
         case 'local':
-          testSdk = TursoObservabilitySDK.createLocal(':memory:'); // Use in-memory DB for testing
+          testSdk = TursoObservabilitySDK.createLocal(config.localDbPath || 'observability.db');
           break;
 
         case 'local-with-sync':
           testSdk = TursoObservabilitySDK.createEmbeddedReplica(
-            ':memory:',
+            config.localDbPath || 'observability.db',
             config.tursoUrl!,
             config.tursoAuthToken || '',
             config.syncInterval || 5000
@@ -337,9 +337,12 @@ export class ObservabilityIntegration extends EventEmitter {
   async updateConfiguration(config: ObservabilityConfig): Promise<void> {
     await this.saveConfiguration(config);
 
-    // If already initialized and config changed, restart
+    // If already initialized, restart with new config
     if (this.isInitialized) {
       await this.shutdown();
+      await this.initialize();
+    } else if (config.enabled && config.storageMode !== 'none') {
+      // If not initialized but config enables observability, initialize now
       await this.initialize();
     }
   }

@@ -294,7 +294,7 @@ export const ObservabilitySettings: React.FC = () => {
                   marginTop: '4px',
                 }}
               >
-                Path to local SQLite database file (relative or absolute)
+                Path to local SQLite database file. Use an absolute path (e.g., /Users/username/data/observability.db) or a relative path will be resolved from the app's working directory.
               </p>
             </div>
           )}

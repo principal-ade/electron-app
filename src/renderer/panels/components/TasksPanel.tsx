@@ -44,9 +44,16 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
         const response = await PalaceTasksService.getTasks(repositoryPath, {
           status: 'pending', // Only show pending tasks by default
         });
+        console.log('[TasksPanel] Loaded tasks:', response.tasks);
+        if (response.tasks.length > 0) {
+          console.log(
+            '[TasksPanel] First task directoryPath:',
+            response.tasks[0].directoryPath,
+          );
+        }
         setTasks(response.tasks);
       } catch (err) {
-        console.error('Failed to load tasks:', err);
+        console.error('[TasksPanel] Failed to load tasks:', err);
         setError('Failed to load tasks');
         setTasks([]);
       } finally {
@@ -162,19 +169,45 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
   );
 
   const handleCopyPath = useCallback(
-    async (task: Task, event: React.MouseEvent) => {
+    async (task: Task, event: React.MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation(); // Prevent task click when copying
 
+      // Capture button reference before async operation
+      const button = event.currentTarget;
+      const originalColor = button.style.color;
+
       try {
-        await navigator.clipboard.writeText(task.directoryPath);
-        // Optional: Show a brief success indicator
-        console.info('Path copied:', task.directoryPath);
+        // Construct the task file path
+        // Format: {repositoryPath}/.alexandria/work/tasks/{status}/{taskId}.task.md
+        const taskFilePath = `${task.repositoryPath}/.alexandria/work/tasks/${task.status}/${task.id}.task.md`;
+
+        console.log('[TasksPanel] Copying task file path:', taskFilePath);
+
+        await navigator.clipboard.writeText(taskFilePath);
+
+        // Show success feedback by briefly changing the button
+        if (button) {
+          button.style.color = theme.colors.success || '#10b981';
+          button.title = 'Copied!';
+
+          setTimeout(() => {
+            if (button) {
+              button.style.color = originalColor;
+              button.title = 'Copy task file path';
+            }
+          }, 1000);
+        }
+
+        console.info('[TasksPanel] Task file path copied:', taskFilePath);
       } catch (err) {
-        console.error('Failed to copy path:', err);
-        setError('Failed to copy path');
+        console.error('[TasksPanel] Failed to copy path:', err);
+        setError('Failed to copy path to clipboard');
+
+        // Clear error after 3 seconds
+        setTimeout(() => setError(null), 3000);
       }
     },
-    [],
+    [theme.colors.success],
   );
 
   return (

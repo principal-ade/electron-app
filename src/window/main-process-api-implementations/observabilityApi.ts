@@ -3,6 +3,7 @@
  */
 
 import { ipcRenderer } from 'electron';
+import { ObservabilityEvent } from '../../shared/ipc-events/ObservabilityEvents';
 
 export interface ObservabilityConfig {
   tursoUrl?: string;
@@ -34,7 +35,7 @@ export const observabilityAPI = {
     config?: ObservabilityConfig;
     error?: string;
   }> => {
-    return ipcRenderer.invoke('observability:getConfig');
+    return ipcRenderer.invoke(ObservabilityEvent.GET_CONFIG);
   },
 
   /**
@@ -43,7 +44,7 @@ export const observabilityAPI = {
   saveConfig: async (
     config: ObservabilityConfig,
   ): Promise<{ success: boolean; error?: string }> => {
-    return ipcRenderer.invoke('observability:saveConfig', config);
+    return ipcRenderer.invoke(ObservabilityEvent.SAVE_CONFIG, config);
   },
 
   /**
@@ -52,7 +53,7 @@ export const observabilityAPI = {
   testConnection: async (
     config: ObservabilityConfig,
   ): Promise<ConnectionTestResult> => {
-    return ipcRenderer.invoke('observability:testConnection', config);
+    return ipcRenderer.invoke(ObservabilityEvent.TEST_CONNECTION, config);
   },
 
   /**
@@ -63,6 +64,15 @@ export const observabilityAPI = {
     status?: ObservabilityStatus;
     error?: string;
   }> => {
-    return ipcRenderer.invoke('observability:getStatus');
+    return ipcRenderer.invoke(ObservabilityEvent.GET_STATUS);
+  },
+
+  /**
+   * Resolve a database path to its absolute path
+   */
+  resolvePath: async (
+    dbPath: string,
+  ): Promise<{ success: boolean; resolvedPath?: string; error?: string }> => {
+    return ipcRenderer.invoke(ObservabilityEvent.RESOLVE_PATH, dbPath);
   },
 };

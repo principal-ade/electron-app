@@ -71,6 +71,17 @@ class ObservabilityServiceClass {
     }
     return result.status!;
   }
+
+  /**
+   * Resolve a database path to its absolute path
+   */
+  async resolvePath(dbPath: string): Promise<string> {
+    const result = await window.mainProcess.observability.resolvePath(dbPath);
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to resolve path');
+    }
+    return result.resolvedPath!;
+  }
 }
 
 export const ObservabilityService = new ObservabilityServiceClass();

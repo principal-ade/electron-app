@@ -255,7 +255,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
     const unsubscribe = AgentSessionSDKService.onProcessedEvent((event) => {
       // Check if this event belongs to the current repository
       const eventRepoPath =
-        event.repositoryInfo?.root || event.workingDirectory;
+        event.repository?.root || event.workingDirectory;
 
       if (eventRepoPath !== repositoryPath) {
         return;

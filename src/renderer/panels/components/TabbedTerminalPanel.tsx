@@ -84,9 +84,6 @@ export const TabbedTerminalPanel = forwardRef<
     // Switch to a tab
     const switchTab = useCallback(
       (tabId: string) => {
-        // Get the currently active tab before switching
-        const previousActiveTab = tabs.find((t) => t.isActive);
-
         setTabs((prevTabs) => {
           const newTabs = prevTabs.map((t) => ({
             ...t,

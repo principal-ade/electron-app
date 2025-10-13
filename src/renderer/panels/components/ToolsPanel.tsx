@@ -122,7 +122,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   >(new Map());
   const [showingResult, setShowingResult] = useState<string | null>(null);
 
-  const highlightCallbackRef = useRef<typeof onHighlightLayersChange>();
+  const highlightCallbackRef = useRef<typeof onHighlightLayersChange>(undefined);
   const latestHighlightLayersRef = useRef<HighlightLayer[]>([]);
 
   useEffect(() => {
@@ -607,24 +607,27 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
                             </div>
                             <div style={{ display: 'flex', gap: 4 }}>
                               {tool.hasConfig && (
-                                <FileCode
-                                  size={14}
-                                  color={theme.colors.success}
-                                  title="Has configuration file"
-                                />
+                                <span title="Has configuration file">
+                                  <FileCode
+                                    size={14}
+                                    color={theme.colors.success}
+                                  />
+                                </span>
                               )}
                               {tool.isInstalled ? (
-                                <CheckCircle
-                                  size={14}
-                                  color={theme.colors.primary}
-                                  title="Installed"
-                                />
+                                <span title="Installed">
+                                  <CheckCircle
+                                    size={14}
+                                    color={theme.colors.primary}
+                                  />
+                                </span>
                               ) : (
-                                <XCircle
-                                  size={14}
-                                  color={theme.colors.textSecondary}
-                                  title="Not installed"
-                                />
+                                <span title="Not installed">
+                                  <XCircle
+                                    size={14}
+                                    color={theme.colors.textSecondary}
+                                  />
+                                </span>
                               )}
                             </div>
                           </div>
@@ -1127,7 +1130,6 @@ export function createHighlightLayersFromLensResults(
             items: Array.from(filesWithErrors).map((path) => ({
               path,
               type: 'file' as const,
-              renderStrategy: 'fill' as const,
             })),
             enabled: true,
             priority: 10,
@@ -1144,7 +1146,6 @@ export function createHighlightLayersFromLensResults(
             items: Array.from(filesWithWarnings).map((path) => ({
               path,
               type: 'file' as const,
-              renderStrategy: 'fill' as const,
             })),
             enabled: true,
             priority: 5,
@@ -1178,7 +1179,6 @@ export function createHighlightLayersFromLensResults(
           items = analyzedFiles.map((file) => ({
             path: file.path,
             type: 'file' as const,
-            renderStrategy: 'fill' as const,
           }));
 
           console.info(
@@ -1196,7 +1196,6 @@ export function createHighlightLayersFromLensResults(
             {
               path: highlightPath,
               type: 'directory' as const,
-              renderStrategy: 'fill' as const,
             },
           ];
         }

@@ -154,7 +154,7 @@ export const GitCommitHistoryPanel: React.FC<GitCommitHistoryPanelProps> = ({
           style={{
             padding: '12px',
             borderRadius: '6px',
-            backgroundColor: theme.colors.errorBackground || '#3f1d1d',
+            backgroundColor: `${theme.colors.error || '#ef4444'}15`,
             color: theme.colors.error || '#ef4444',
             fontSize: theme.fontSizes[1],
           }}

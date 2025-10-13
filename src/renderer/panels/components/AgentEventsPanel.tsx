@@ -71,7 +71,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
       console.info('[AgentEventsPanel] Event type:', event.eventType);
       console.info('[AgentEventsPanel] Session ID:', event.sessionId);
       console.info('[AgentEventsPanel] Tool name:', event.toolName);
-      console.info('[AgentEventsPanel] Event repositoryInfo:', event.repositoryInfo);
+      console.info('[AgentEventsPanel] Event repository:', event.repository);
       console.info('[AgentEventsPanel] Event workingDirectory:', event.workingDirectory);
       console.info('[AgentEventsPanel] Panel repositoryPath:', repositoryPath);
       console.info('[AgentEventsPanel] filterByRepo:', filterByRepo);
@@ -79,7 +79,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
       // Filter by repository if enabled
       if (filterByRepo && repositoryPath) {
         const eventRepoPath =
-          event.repositoryInfo?.root || event.workingDirectory;
+          event.repository?.root || event.workingDirectory;
         console.info(
           '[AgentEventsPanel] Comparing paths - eventRepoPath:',
           eventRepoPath,
@@ -218,34 +218,31 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
   ): string[] => {
     const paths: string[] = [];
 
-    switch (event.eventType) {
-      case 'file_read':
-      case 'file_write':
-      case 'file_edit':
-        if (event.data?.path) {
-          paths.push(event.data.path);
+    // Handle file operations - check for path in data
+    if (event.data && typeof event.data === 'object') {
+      const data = event.data as Record<string, unknown>;
+
+      // Try to get path from data.path
+      if (typeof data.path === 'string') {
+        paths.push(data.path);
+      }
+
+      // Try to get path from data.parameters for tool use events
+      if (data.parameters && typeof data.parameters === 'object') {
+        const params = data.parameters as Record<string, unknown>;
+        const filePath = params.file_path;
+        if (typeof filePath === 'string') paths.push(filePath);
+        const genericPath = params.path;
+        if (typeof genericPath === 'string') paths.push(genericPath);
+        const multiplePaths = params.paths;
+        if (Array.isArray(multiplePaths)) {
+          paths.push(
+            ...multiplePaths.filter((item): item is string =>
+              typeof item === 'string',
+            ),
+          );
         }
-        break;
-      case 'tool_use':
-        if (
-          event.data?.parameters &&
-          typeof event.data.parameters === 'object'
-        ) {
-          const params = event.data.parameters as Record<string, unknown>;
-          const filePath = params.file_path;
-          if (typeof filePath === 'string') paths.push(filePath);
-          const genericPath = params.path;
-          if (typeof genericPath === 'string') paths.push(genericPath);
-          const multiplePaths = params.paths;
-          if (Array.isArray(multiplePaths)) {
-            paths.push(
-              ...multiplePaths.filter((item): item is string =>
-                typeof item === 'string',
-              ),
-            );
-          }
-        }
-        break;
+      }
     }
 
     return paths;
@@ -669,7 +666,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                       </div>
 
                       {/* Repository info */}
-                      {entry.event.repositoryInfo && (
+                      {entry.event.repository && (
                         <div style={{ marginBottom: '12px' }}>
                           <div
                             style={{
@@ -682,15 +679,15 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                           </div>
                           <div style={{ fontSize: '11px' }}>
                             <div>
-                              📦 {entry.event.repositoryInfo.owner}/
-                              {entry.event.repositoryInfo.repo}
+                              📦 {entry.event.repository.owner}/
+                              {entry.event.repository.repo}
                             </div>
                             <div style={{ color: theme.colors.textSecondary }}>
-                              📂 {entry.event.repositoryInfo.root}
+                              📂 {entry.event.repository.root}
                             </div>
                             <div style={{ color: theme.colors.textSecondary }}>
                               🌿{' '}
-                              {entry.event.repositoryInfo.branch || 'unknown'}
+                              {entry.event.repository.branch || 'unknown'}
                             </div>
                           </div>
                         </div>

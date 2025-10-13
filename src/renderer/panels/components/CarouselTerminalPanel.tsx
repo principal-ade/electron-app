@@ -354,12 +354,17 @@ export const CarouselTerminalPanel = forwardRef<
 
         // Command/Ctrl + W to close active tab
         if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
+          e.preventDefault();
+          e.stopPropagation();
+
           const currentTabs = tabsRef.current;
           const currentIndex = currentPanelIndexRef.current;
-          const currentActiveTab = currentTabs[currentIndex];
+
+          // Get the actual current panel from the carousel to ensure we're in sync
+          const actualCurrentIndex = carouselRef.current?.getCurrentPanel() ?? currentIndex;
+          const currentActiveTab = currentTabs[actualCurrentIndex];
+
           if (currentActiveTab && currentTabs.length > 0) {
-            e.preventDefault();
-            e.stopPropagation();
             closeTabRef.current?.(currentActiveTab.id);
           }
           return;

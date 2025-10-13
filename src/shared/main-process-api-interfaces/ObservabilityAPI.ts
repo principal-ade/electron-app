@@ -58,4 +58,13 @@ export interface ObservabilityAPI {
     status?: ObservabilityStatus;
     error?: string;
   }>;
+
+  /**
+   * Resolve a database path to its absolute path
+   */
+  resolvePath(dbPath: string): Promise<{
+    success: boolean;
+    resolvedPath?: string;
+    error?: string;
+  }>;
 }

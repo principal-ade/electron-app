@@ -116,7 +116,7 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
           }
         },
       }),
-      [terminal, directory],
+      [terminal],
     );
 
     const createTerminalSession = useCallback(
