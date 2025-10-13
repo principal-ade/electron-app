@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AgentSessionSDKService } from '../main-process-api/AgentSessionSDKService';
-import { AgentSessionRecord } from '../../shared/sessionTypes';
+import type { SessionState } from '../../shared/event-processing/SessionEventProcessor';
+import { sessionEventProcessor } from '../../shared/event-processing/SessionEventProcessor';
 
 export interface UseAgentSessionsOptions {
   directory: string;
@@ -8,7 +9,7 @@ export interface UseAgentSessionsOptions {
 }
 
 export interface UseAgentSessionsResult {
-  sessions: AgentSessionRecord[];
+  sessions: SessionState[];
   activeSessionId: string | null;
   isLoading: boolean;
   error: Error | null;
@@ -26,7 +27,7 @@ export function useAgentSessions({
   directory,
   autoWatch = true,
 }: UseAgentSessionsOptions): UseAgentSessionsResult {
-  const [sessions, setSessions] = useState<AgentSessionRecord[]>([]);
+  const [sessions, setSessions] = useState<SessionState[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -57,27 +58,35 @@ export function useAgentSessions({
               summary.sessionId,
               summary.repository,
             );
-            return fullSession;
+            if (fullSession) {
+              return fullSession;
+            }
           } catch (err) {
             console.warn(
               `Failed to fetch full session ${summary.sessionId}:`,
               err,
             );
-            // Return a minimal session record if fetch fails
-            return {
-              sessionId: summary.sessionId,
-              workingDirectory: directory,
-              firstAccess: summary.startTime,
-              lastActivity: summary.lastActivity,
-              reviewedLastStop: false,
-              fileAccesses: {},
-              fileWrites: {},
-            } as AgentSessionRecord;
           }
+
+          const fallback = sessionEventProcessor.initializeSession(
+            summary.sessionId,
+            summary.repository || directory,
+          );
+
+          return {
+            ...fallback,
+            workingDirectory: summary.repository || directory,
+            firstAccess: summary.startTime,
+            lastActivity: summary.lastActivity,
+            eventCount: summary.eventCount,
+            isActive: summary.active,
+            metadata: fallback.metadata,
+            customName: summary.customName,
+          } as SessionState;
         }),
       );
 
-      setSessions(fullSessions.filter(Boolean));
+      setSessions(fullSessions);
 
       // Find active session
       const activeSession = projectSessions.summaries.find((s) => s.active);
@@ -105,7 +114,7 @@ export function useAgentSessions({
       setSessions((prev) =>
         prev.map((s) => ({
           ...s,
-          active: s.sessionId === sessionId,
+          isActive: s.sessionId === sessionId,
         })),
       );
     } catch (err) {

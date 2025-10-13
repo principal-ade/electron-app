@@ -16,7 +16,7 @@ import {
   diagramEventBus,
   DIAGRAM_EVENTS,
 } from '../../services/DiagramEventBus';
-import { ExcalidrawDiagramData } from '../../../../shared/main-process-api-interfaces/ExcalidrawAPI';
+import { ExcalidrawDiagramData } from '../../../shared/main-process-api-interfaces/ExcalidrawAPI';
 import { LibraryItem } from '@excalidraw/excalidraw/types';
 import { OrderedExcalidrawElement } from '@excalidraw/excalidraw/element/types';
 

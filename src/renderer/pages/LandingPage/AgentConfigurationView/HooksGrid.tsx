@@ -15,14 +15,12 @@ import {
 
 import { HookSquare } from './HookSquare';
 import { HookTypeCard } from './HookTypeCard';
+import type {
+  AgentHookConfig,
+  AgentSettings,
+} from '../../../../shared/types/agent-settings.types';
 
-interface Hook {
-  matcher: string;
-  hooks: Array<{
-    type: 'command';
-    command: string;
-  }>;
-}
+type Hook = AgentHookConfig;
 
 interface HooksGridProps {
   agentType: SupportedAgent;
@@ -71,18 +69,26 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
     loadHooks(types);
   }, [agentType]);
 
+  const ensureConfig = (config: AgentSettings | null): AgentSettings => ({
+    provider: config?.provider ?? agentType,
+    enabled: config?.enabled ?? false,
+    settings: config?.settings ?? {},
+    hooks: { ...(config?.hooks ?? {}) },
+  });
+
   const loadHooks = async (hookTypes?: readonly HookType[]) => {
     setLoading(true);
     const typesToLoad = hookTypes || availableHookTypes;
 
     try {
-      const config =
-        await AgentConfigurationService.readAgentSettings(agentType);
+      const config = ensureConfig(
+        await AgentConfigurationService.readAgentSettings(agentType),
+      );
       const newHooksData: Record<string, Hook[]> = {};
 
       // Load hooks for all available hook types
       // The main process now normalizes the hooks format for all agents
-      if (config?.hooks) {
+      if (config.hooks) {
         for (const hookType of typesToLoad) {
           if (config.hooks[hookType]) {
             newHooksData[hookType] = config.hooks[hookType];
@@ -137,16 +143,21 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
    */
   const saveHooks = async (updatedHooks: Hook[], hookType: HookType) => {
     try {
-      const config =
-        (await AgentConfigurationService.readAgentSettings(agentType)) || {};
+      const currentConfig = ensureConfig(
+        await AgentConfigurationService.readAgentSettings(agentType),
+      );
 
-      // The main process now handles format conversion for all agents
-      if (!config.hooks) config.hooks = {};
-      config.hooks[hookType] = updatedHooks;
+      const nextConfig: AgentSettings = {
+        ...currentConfig,
+        hooks: {
+          ...currentConfig.hooks,
+          [hookType]: updatedHooks,
+        },
+      };
 
       const success = await AgentConfigurationService.updateAgentSettings(
         agentType,
-        config,
+        nextConfig,
       );
       if (success) {
         setHooksData((prev) => ({
@@ -244,18 +255,19 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
   // Auto-configure standard hooks
   const autoConfigureHooks = async () => {
     try {
-      const config =
-        (await AgentConfigurationService.readAgentSettings(agentType)) || {};
+      const config = ensureConfig(
+        await AgentConfigurationService.readAgentSettings(agentType),
+      );
       const hookPaths =
         await AgentConfigurationService.getAgentHooksFilePath(agentType);
 
-      // The main process now handles format conversion for all agents
-      if (!config.hooks) config.hooks = {};
-
       // Configure hooks for all available types
+      const updatedHooks: Record<string, Hook[]> = {
+        ...config.hooks,
+      };
       for (const hookType of availableHookTypes) {
-        if (!config.hooks[hookType] || config.hooks[hookType].length === 0) {
-          config.hooks[hookType] = [
+        if (!updatedHooks[hookType] || updatedHooks[hookType].length === 0) {
+          updatedHooks[hookType] = [
             {
               matcher: getDefaultMatcher(hookType),
               hooks: [
@@ -269,9 +281,14 @@ export const HooksGrid: React.FC<HooksGridProps> = ({
         }
       }
 
+      const nextConfig: AgentSettings = {
+        ...config,
+        hooks: updatedHooks,
+      };
+
       const success = await AgentConfigurationService.updateAgentSettings(
         agentType,
-        config,
+        nextConfig,
       );
       if (success) {
         await loadHooks();

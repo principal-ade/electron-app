@@ -17,6 +17,28 @@ import type { Repository } from '../../../shared/types/repository.types';
 import type { GitBranchStatus } from '../../main-process-api/GitService';
 import { GitService } from '../../main-process-api/GitService';
 
+type HookComparisonStatus = {
+  ahead: number;
+  behind: number;
+  canFastForward?: boolean;
+};
+
+type ComparisonTuple = [
+  leftLabel: string,
+  leftName: string,
+  leftIcon: React.ReactNode,
+  leftColor: string,
+  rightLabel: string,
+  rightName: string,
+  rightIcon: React.ReactNode,
+  rightColor: string,
+  status: HookComparisonStatus | null,
+  title: string,
+  description?: string,
+  onSync?: () => void | Promise<void>,
+  syncLabel?: string,
+];
+
 interface BadgeInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -729,7 +751,7 @@ export const BadgeInfoModal: React.FC<BadgeInfoModalProps> = ({
                     const branchStatus = cloneBranchStatuses[selectedClonePath];
 
                     // Determine what comparisons to show
-                    const comparisons = [];
+                    const comparisons: ComparisonTuple[] = [];
 
                     // 1. Local vs Remote (current branch)
                     if (branchStatus.hasUpstream) {

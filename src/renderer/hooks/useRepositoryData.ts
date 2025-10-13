@@ -9,12 +9,48 @@ import {
   type RepositoryCacheData,
 } from '../services/RepositoryDataCache';
 import type { AlexandriaEntry } from '@a24z/core-library';
+import type { EnhancedAlexandriaEntry } from '../../shared/types/repository.types';
 
 /**
  * Generate a unique component ID for cache subscriptions
  */
 function generateComponentId(): string {
   return `component-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+function createPlaceholderCacheEntry(
+  repo: AlexandriaEntry,
+): RepositoryCacheData {
+  const enhancedRepo = repo as EnhancedAlexandriaEntry;
+  const gitBranch =
+    typeof enhancedRepo.gitBranch === 'string' ? enhancedRepo.gitBranch : '';
+
+  return {
+    repository: enhancedRepo,
+    gitStatus: null,
+    gitBranch,
+    branchStatus: {
+      ahead: 0,
+      behind: 0,
+      upstream: undefined,
+      canFastForward: false,
+      needsUpstream: false,
+    },
+    gitRemote: null,
+    fileTree: null,
+    markdownFiles: [],
+    packages: [],
+    qualityMetrics: null,
+    packageSummary: null,
+    lastFullRefresh: Date.now(),
+    partialUpdates: {
+      git: Date.now(),
+      files: Date.now(),
+      packages: Date.now(),
+      quality: Date.now(),
+    },
+    cacheSlices: {},
+  };
 }
 
 /**
@@ -298,22 +334,7 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
       );
       if (index === -1) {
         // Repository not in array yet, add it with minimal cache data
-        return [
-          ...prev,
-          {
-            repository: repo,
-            gitStatus: null,
-            gitBranch: null,
-            branchStatus: {
-              ahead: 0,
-              behind: 0,
-              canFastForward: false,
-              needsUpstream: false,
-            },
-            markdownFiles: [],
-            lastFullRefresh: Date.now(),
-          },
-        ];
+        return [...prev, createPlaceholderCacheEntry(repo)];
       }
 
       const updated = [...prev];
@@ -512,9 +533,13 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
       return;
     }
 
-    const activePaths = new Set(
-      repositories.map((entry) => entry.repository.path),
-    );
+    const activePaths = new Set<string>();
+    repositories.forEach((entry) => {
+      const repoPath = entry.repository.path;
+      if (repoPath) {
+        activePaths.add(repoPath as unknown as string);
+      }
+    });
     subscriptionsRef.current.forEach((unsubscribe, path) => {
       if (!activePaths.has(path)) {
         unsubscribe();

@@ -33,7 +33,7 @@ export interface UIAgentSessionData extends Partial<AgentSessionRecord> {
   };
   lastEvent: {
     type: EventActivityType;
-    fileName: string;
+    fileName?: string;
     timestamp: number;
   };
 

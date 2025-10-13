@@ -13,11 +13,35 @@ import { ProjectSessions } from '../../shared/main-process-api-interfaces/AgentS
  * SDK-based Session Service
  */
 export class AgentSessionSDKService {
+  private static callCounts: Record<string, number> = {};
+
+  private static recordCall(method: string): void {
+    this.callCounts[method] = (this.callCounts[method] ?? 0) + 1;
+  }
+
+  static printCallStats(): void {
+    const entries = Object.entries(this.callCounts).sort(
+      (a, b) => b[1] - a[1],
+    );
+
+    if (entries.length === 0) {
+      console.log('[AgentSessionSDKService] No calls recorded yet.');
+      return;
+    }
+
+    console.group('[AgentSessionSDKService] Call statistics');
+    entries.forEach(([method, count]) => {
+      console.log(`${method}: ${count}`);
+    });
+    console.groupEnd();
+  }
+
   /**
    * Get active sessions grouped by project/repository
    * Replaces: getActiveSessions() returning DirectorySessions[]
    */
   static async getActiveSessionsByProject(): Promise<ProjectSessions[]> {
+    this.recordCall('getActiveSessionsByProject');
     return window.mainProcess.agentSessionSDK.getActiveSessionsByProject();
   }
 
@@ -29,6 +53,7 @@ export class AgentSessionSDKService {
     sessionId: string,
     repository: string,
   ): Promise<SessionState | null> {
+    this.recordCall('getSDKSession');
     return window.mainProcess.agentSessionSDK.getSDKSession(
       sessionId,
       repository,
@@ -42,6 +67,7 @@ export class AgentSessionSDKService {
   static async getSDKSessionEvents(
     sessionId: string,
   ): Promise<RepoNormalizedUniversalAgentSessionEvent[] | null> {
+    this.recordCall('getSDKSessionEvents');
     return window.mainProcess.agentSessionSDK.getSDKSessionEvents(sessionId);
   }
 
@@ -52,6 +78,7 @@ export class AgentSessionSDKService {
   static async getActiveSessionsForDirectory(
     directory: string,
   ): Promise<ProjectSessions | null> {
+    this.recordCall('getActiveSessionsForDirectory');
     return window.mainProcess.agentSessionSDK.getActiveSessionsForDirectory(
       directory,
     );
@@ -66,6 +93,7 @@ export class AgentSessionSDKService {
     healthStatus?: 'healthy' | 'unhealthy' | 'unknown';
     error?: string;
   }> {
+    this.recordCall('checkEventServerHealth');
     return window.mainProcess.agentSessionSDK.checkEventServerHealth();
   }
 
@@ -76,6 +104,7 @@ export class AgentSessionSDKService {
   static onProcessedEvent(
     callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
   ): () => void {
+    this.recordCall('onProcessedEvent');
     console.log(
       '[AgentSessionSDKService] Setting up onProcessedEvent subscription',
     );

@@ -38,12 +38,12 @@ export interface RepositoryTitlebarProps {
   onWorkspaceSelect?: (workspaceId: string) => void;
   onSaveWorkspace?: (
     name: string,
-    options: {
+    options?: {
       description?: string;
       includeSizes?: boolean;
       includeCollapsed?: boolean;
     },
-  ) => Promise<void>;
+  ) => Promise<WorkspaceLayout | void>;
   hasStateDeviation?: boolean;
   onUpdateWorkspaceDefaults?: () => void;
   onResetToWorkspaceDefaults?: () => void;

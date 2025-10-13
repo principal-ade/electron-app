@@ -1,7 +1,7 @@
 import React from 'react';
 import { Activity, RefreshCw } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
-import { printCallStats } from '../main-process-api/AgentSessionSDKService';
+import { AgentSessionSDKService } from '../main-process-api/AgentSessionSDKService';
 
 /**
  * Debug component to track SDK service usage
@@ -11,7 +11,7 @@ export const SDKServiceDebug: React.FC = () => {
   const { theme } = useTheme();
 
   const handlePrintStats = () => {
-    printCallStats();
+    AgentSessionSDKService.printCallStats();
     console.log('SDK Service call statistics printed to console');
   };
 

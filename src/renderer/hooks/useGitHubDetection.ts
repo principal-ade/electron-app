@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { GitHubRepositoryInfo } from '../store/contexts/AppContext';
+import type { GitRemote } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import { GithubService } from '../main-process-api/GithubService';
+
+export interface GitHubRepositoryInfo {
+  isGitRepository: boolean;
+  remotes: GitRemote[];
+  owner?: string;
+  repo?: string;
+  isGitHub: boolean;
+  path: string;
+}
 
 export interface GitHubDetectionResult {
   isGitRepository: boolean;
