@@ -4,6 +4,10 @@ import type { AlexandriaEntry } from '@a24z/core-library';
  * Enhanced Alexandria repository entry with git status information
  */
 export interface EnhancedAlexandriaEntry extends AlexandriaEntry {
+  id?: string | number;
+  repoId?: string | number;
+  repositoryId?: string | number;
+  alexandriaId?: string | number;
   gitBranch?: string;
   isDirty?: boolean;
   dirtyFileCount?: number;

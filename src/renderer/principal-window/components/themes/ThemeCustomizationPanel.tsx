@@ -205,10 +205,12 @@ const FONT_CONTROLS: FontControlConfig[] = [
   },
 ];
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 export const ThemeCustomizationPanel: React.FC<
   ThemeCustomizationPanelProps
 > = ({ themeName, onClose }) => {
-  console.log('ThemeCustomizationPanel component initialized!', { themeName });
   const { theme } = useTheme();
   const [currentTheme, setCurrentTheme] = useState<Theme | null>(null);
   const [baseTheme, setBaseTheme] = useState<Theme | null>(null);
@@ -219,11 +221,8 @@ export const ThemeCustomizationPanel: React.FC<
   // Load theme on mount and capture snapshot
   useEffect(() => {
     const loadTheme = async () => {
-      console.log('Loading theme:', themeName);
       const active = await ThemeService.getActiveTheme(themeName);
       const base = ThemeService.getBaseTheme(themeName);
-
-      console.log('Theme loaded:', { active, base });
 
       if (active) {
         setCurrentTheme(active);
@@ -245,15 +244,19 @@ export const ThemeCustomizationPanel: React.FC<
   const getThemeValue = (themeToRead: Theme | null, path: string): string => {
     if (!themeToRead) return '';
 
-    const parts = path.split('.');
-    let value: any = themeToRead;
+    let value: unknown = themeToRead;
 
-    for (const part of parts) {
-      if (value && typeof value === 'object') {
-        value = value[part];
-      } else {
+    for (const part of path.split('.')) {
+      if (!isRecord(value)) {
         return '';
       }
+
+      const record = value as Record<string, unknown>;
+      if (!Object.prototype.hasOwnProperty.call(record, part)) {
+        return '';
+      }
+
+      value = record[part];
     }
 
     return typeof value === 'string' ? value : '';
@@ -341,14 +344,8 @@ export const ThemeCustomizationPanel: React.FC<
   };
 
   if (!currentTheme || !baseTheme) {
-    console.log('ThemeCustomizationPanel: waiting for themes to load...', {
-      currentTheme,
-      baseTheme,
-    });
     return null;
   }
-
-  console.log('ThemeCustomizationPanel: rendering panel!');
 
   return (
     <>
