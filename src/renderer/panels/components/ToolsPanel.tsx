@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import {
   Wrench,
   Package,
@@ -121,6 +121,17 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   >(new Map());
   const [showingResult, setShowingResult] = useState<string | null>(null);
 
+  const highlightCallbackRef = useRef<typeof onHighlightLayersChange>();
+  const latestHighlightLayersRef = useRef<HighlightLayer[]>([]);
+
+  useEffect(() => {
+    highlightCallbackRef.current = onHighlightLayersChange;
+
+    if (onHighlightLayersChange) {
+      onHighlightLayersChange(latestHighlightLayersRef.current);
+    }
+  }, [onHighlightLayersChange]);
+
   // Process package layers to extract tool information
   const packageTools = useMemo(() => {
     if (!packageLayers) return [];
@@ -199,7 +210,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
 
   // Update highlight layers when results change
   useEffect(() => {
-    if (!onHighlightLayersChange) {
+    if (!highlightCallbackRef.current) {
       console.info('[ToolsTab] No onHighlightLayersChange callback provided');
       return;
     }
@@ -241,8 +252,10 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
     console.info(
       `[ToolsTab] Calling onHighlightLayersChange with ${allLayers.length} total layers`,
     );
-    onHighlightLayersChange(allLayers);
-  }, [toolResults, packageTools, onHighlightLayersChange]);
+
+    latestHighlightLayersRef.current = allLayers;
+    highlightCallbackRef.current(allLayers);
+  }, [toolResults, packageTools]);
 
   const togglePackage = (packagePath: string) => {
     setExpandedPackages((prev) => {
