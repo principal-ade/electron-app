@@ -71,8 +71,14 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
     if (repository.github?.owner && repository.github?.name) {
       return `${repository.github.owner}/${repository.github.name}`;
     }
-    if (repository.id) {
-      return repository.id;
+    if (repository.github?.id) {
+      return repository.github.id;
+    }
+    if (repository.remoteUrl) {
+      return repository.remoteUrl;
+    }
+    if (repository.path) {
+      return repository.path;
     }
     return repository.name || 'unknown';
   };

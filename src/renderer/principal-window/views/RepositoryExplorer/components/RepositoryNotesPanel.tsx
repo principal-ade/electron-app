@@ -10,19 +10,17 @@ interface RepositoryNotesPanelProps {
   isLoading?: boolean;
 }
 
-interface NoteWrapper {
-  note: RepositoryNote;
+type ExtendedRepositoryNote = RepositoryNote & {
   isParentDirectory?: boolean;
   pathDistance?: number;
-  gitInfo?: unknown;
-}
+};
 
 export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
   repositoryPath,
   isLoading: externalLoading = false,
 }) => {
   const { theme } = useTheme();
-  const [notes, setNotes] = useState<RepositoryNote[]>([]);
+  const [notes, setNotes] = useState<ExtendedRepositoryNote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
@@ -36,19 +34,10 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
         await RepositoryNotesService.getNotesForPath(repositoryPath);
 
       if (response && Array.isArray(response.notes)) {
-        // Handle the nested note structure where each item has a 'note' property
-        const processedNotes = response.notes
-          .filter(
-            (item: NoteWrapper) => item.note && typeof item.note === 'object',
-          )
-          .map((item: NoteWrapper) => ({
-            ...item.note,
-            // Keep any additional properties from the wrapper if needed
-            isParentDirectory: item.isParentDirectory,
-            pathDistance: item.pathDistance,
-            // Ensure gitInfo is preserved (use from wrapper if missing in note)
-            gitInfo: item.note.gitInfo || item.gitInfo,
-          }));
+        const processedNotes = response.notes.map((note) => ({
+          ...note,
+          gitInfo: note.gitInfo,
+        }));
         setNotes(processedNotes);
       } else {
         console.error('Invalid notes response:', response);

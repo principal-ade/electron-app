@@ -1,13 +1,14 @@
 import type { CityData } from '@principal-ai/code-city-react';
 import { MultiVersionCityBuilder } from '@principal-ai/code-city-react';
-import { FileTree } from '@principal-ai/repository-abstraction';
+import type { FileTree as RepositoryFileTree } from '@principal-ai/repository-abstraction';
+import type { FileTree as CityFileTree } from '@principal-ai/code-city-builder';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { RepositoryMonitoringService } from '../../../../main-process-api/RepositoryMonitoringService';
 
 export interface CityBuildResult {
   cityData: CityData | null;
-  fileTree: FileTree | null;
+  fileTree: RepositoryFileTree | null;
   treeStats: { fileCount: number; directoryCount: number } | null;
   error?: string;
 }
@@ -84,9 +85,12 @@ export class RepositoryCityService {
       console.log('[RepositoryCityService] Tree stats:', treeStats);
 
       // Prepare trees for city building
-      const versions = new Map<string, FileTree>();
+      const versions = new Map<string, CityFileTree>();
       const sourceId = `monitoring-${repository.path}`;
-      versions.set(sourceId, fileTree);
+      versions.set(
+        sourceId,
+        fileTree as unknown as CityFileTree,
+      );
 
       // TODO: Optionally add HEAD tree for git changes
       if (options.includeGitHead) {
@@ -156,7 +160,7 @@ export class RepositoryCityService {
   /**
    * Calculate file and directory statistics from a FileTree
    */
-  private calculateTreeStats(fileTree: FileTree): {
+  private calculateTreeStats(fileTree: RepositoryFileTree): {
     fileCount: number;
     directoryCount: number;
   } {

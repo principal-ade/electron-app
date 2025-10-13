@@ -71,6 +71,18 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const stagedCount = Array.isArray(gitStatus?.staged)
+    ? gitStatus.staged.length
+    : 0;
+  const unstagedCount = Array.isArray(gitStatus?.unstaged)
+    ? gitStatus.unstaged.length
+    : 0;
+  const untrackedCount = Array.isArray(gitStatus?.untracked)
+    ? gitStatus.untracked.length
+    : 0;
+  const totalChangeCount = stagedCount + unstagedCount + untrackedCount;
+  const hasUncommittedChanges = totalChangeCount > 0;
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -172,7 +184,7 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
             </h2>
 
             {/* Dirty State Indicator */}
-            {gitStatus?.isDirty && (
+            {hasUncommittedChanges && (
               <span
                 style={{
                   display: 'flex',
@@ -187,9 +199,7 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
                 }}
               >
                 ●{' '}
-                {(gitStatus.staged || 0) +
-                  (gitStatus.unstaged || 0) +
-                  (gitStatus.untracked || 0)}
+                {totalChangeCount}
               </span>
             )}
 

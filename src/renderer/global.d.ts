@@ -10,6 +10,7 @@ declare global {
       minimize: () => void;
       maximize: () => void;
       close: () => void;
+      closeWithConfirmation: () => Promise<boolean>;
       isMaximized: () => Promise<boolean>;
       onMaximizeChange: (callback: (isMaximized: boolean) => void) => void;
     };

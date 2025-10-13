@@ -193,9 +193,9 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
 
     if (error) {
       return {
-        icon: <AlertCircle size={16} color={theme.colors.danger} />,
+        icon: <AlertCircle size={16} color={theme.colors.error} />,
         text: 'Unable to verify secrets configuration.',
-        tone: theme.colors.danger,
+        tone: theme.colors.error,
       };
     }
 
@@ -266,7 +266,7 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
           style={{
             fontSize: '18px',
             fontWeight: 600,
-            color: theme.colors.textPrimary,
+            color: theme.colors.text,
           }}
         >
           Workflow Actions
@@ -379,7 +379,7 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
                     <div
                       style={{
                         fontWeight: 600,
-                        color: theme.colors.textPrimary,
+                        color: theme.colors.text,
                       }}
                     >
                       {action.label}

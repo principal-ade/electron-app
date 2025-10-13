@@ -14,7 +14,13 @@ export function withComponentTracking<P extends object>(
   componentName: string,
   componentPath?: string,
 ) {
-  return React.forwardRef<unknown, P & ComponentTrackingProps>((props, ref) => {
+  return React.forwardRef<unknown, P & ComponentTrackingProps>((props, _ref) => {
+    const {
+      'data-component-name': _ignoredName,
+      'data-component-path': _ignoredPath,
+      ...rest
+    } = props;
+
     return (
       <div
         data-component-name={componentName}
@@ -23,7 +29,7 @@ export function withComponentTracking<P extends object>(
         }
         style={{ display: 'contents' }} // This makes the wrapper div invisible
       >
-        <Component {...props} ref={ref} />
+        <Component {...(rest as P)} />
       </div>
     );
   });

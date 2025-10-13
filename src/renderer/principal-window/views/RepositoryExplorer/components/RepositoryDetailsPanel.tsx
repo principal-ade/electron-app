@@ -60,6 +60,8 @@ import type { Task } from '../../../../../shared/main-process-api-interfaces/Pal
 import { PalaceTasksService } from '../../../../main-process-api/PalaceTasksService';
 import type { GitChangeSelectionStatus } from '../../../../../shared/types/repository.types';
 
+type TaskWithDocumentPath = Task & { documentPath?: string };
+
 interface RepositoryDetailsPanelProps {
   selectedRepository: EnhancedAlexandriaEntry | null;
   repositories: EnhancedAlexandriaEntry[];
@@ -848,16 +850,16 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
   // Handle clicking a task to view it in the markdown viewer
   const handleTaskClick = useCallback(
-    async (task: Task) => {
+    async (task: TaskWithDocumentPath) => {
       if (!selectedRepository) return;
 
       try {
         // The task content is already markdown, stored in the task's document path
         // Get the full task to ensure we have all details
-        const fullTask = await PalaceTasksService.getTask(
+        const fullTask = (await PalaceTasksService.getTask(
           selectedRepository.path,
           task.id,
-        );
+        )) as TaskWithDocumentPath | null;
 
         if (!fullTask) {
           console.error('[RepositoryDetailsPanel] Could not retrieve task');
