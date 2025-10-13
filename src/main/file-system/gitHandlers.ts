@@ -269,6 +269,19 @@ export function registerGitHandlers(): void {
     },
   );
 
+  // Get commit history
+  ipcMain.handle(
+    GitEvents.GET_COMMIT_HISTORY,
+    async (_event, directory: string, limit?: number) => {
+      try {
+        return await gitService.getCommitHistory(directory, limit);
+      } catch (error) {
+        console.error('[Git] Failed to get commit history:', error);
+        throw error;
+      }
+    },
+  );
+
   // Execute git command
   ipcMain.handle(
     GitEvents.EXECUTE_COMMAND,

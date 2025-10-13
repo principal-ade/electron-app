@@ -138,6 +138,16 @@ export class GitService {
     return window.mainProcess.git.getUncommittedChanges(directory);
   }
 
+  static async getCommitHistory(
+    directory: string,
+    limit = 50,
+  ): Promise<GitCommitInfo[]> {
+    console.log(
+      `[GitService] Getting commit history for: ${directory} (limit=${limit})`,
+    );
+    return window.mainProcess.git.getCommitHistory(directory, limit);
+  }
+
   static async fastForwardMerge(
     directory: string,
   ): Promise<{ success: boolean; message: string }> {

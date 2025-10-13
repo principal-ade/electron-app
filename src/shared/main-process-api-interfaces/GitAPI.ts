@@ -6,6 +6,7 @@ export enum GitEvents {
   GET_STATUS = 'git:get-status',
   GET_DETAILED_CHANGES = 'git:get-detailed-changes',
   GET_UNCOMMITTED_CHANGES = 'git:get-uncommitted-changes',
+  GET_COMMIT_HISTORY = 'git:get-commit-history',
   EXECUTE_COMMAND = 'git:exec-command',
   CLONE_REPOSITORY = 'git:clone-repository',
   CHECK_AUTH_METHODS = 'git:check-auth-methods',
@@ -39,6 +40,17 @@ export interface GitAPI {
     fileStats: Record<string, { additions: number; deletions: number }>;
   }>;
   getUncommittedChanges: (directory: string) => Promise<string[]>;
+  getCommitHistory: (
+    directory: string,
+    limit?: number,
+  ) => Promise<
+    Array<{
+      hash: string;
+      message: string;
+      author: string;
+      date: string;
+    }>
+  >;
   execCommand: (
     directory: string,
     args: string[],

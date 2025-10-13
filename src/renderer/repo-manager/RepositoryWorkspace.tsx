@@ -19,6 +19,7 @@ import {
   GitPullRequest,
   Palette,
   Package,
+  History,
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { PackageLayer } from '@principal-ai/codebase-composition';
@@ -79,6 +80,7 @@ import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 import { GitIssuesPanel } from '../panels/components/GitIssuesPanel';
 import { GitPullRequestsPanel } from '../panels/components/GitPullRequestsPanel';
+import { GitCommitHistoryPanel } from '../panels/components/GitCommitHistoryPanel';
 import { MarkdownRenderingPanel, ExcalidrawPanel } from './panels';
 import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
 import { GitDiffPanel } from '../panels/components/GitDiffPanel';
@@ -1708,6 +1710,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             <GitChangesPanel variant="tab" />
           </RepositoryPanelProvider>
         ),
+        gitHistory: (
+          <GitCommitHistoryPanel
+            repositoryPath={
+              selectedSource?.type === 'local' ? selectedSource.location : null
+            }
+          />
+        ),
         gitIssues: (
           <GitIssuesPanel
             repository={{
@@ -1887,6 +1896,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         icon: <GitBranch size={14} />,
         visible: selectedSource?.type === 'local',
         content: panelContentMap.gitChanges,
+      },
+      {
+        id: 'gitHistory',
+        label: 'Commit History',
+        icon: <History size={14} />,
+        visible: selectedSource?.type === 'local',
+        content: panelContentMap.gitHistory,
       },
       {
         id: 'gitIssues',
@@ -2793,6 +2809,88 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   >
                     <span>-</span>
                     <span>deleted.ts</span>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              id: 'gitHistory',
+              label: 'Commit History',
+              icon: <History size={16} />,
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '6px',
+                      padding: '8px',
+                      backgroundColor: theme.colors.background,
+                    }}
+                  >
+                    <span style={{ fontWeight: 600 }}>
+                      chore: add commit history panel
+                    </span>
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: theme.colors.textSecondary,
+                        fontSize: '11px',
+                      }}
+                    >
+                      <span>Alex Engineer</span>
+                      <span>•</span>
+                      <span style={{ fontFamily: theme.fonts.monospace }}>
+                        1a2b3c4d
+                      </span>
+                      <span>•</span>
+                      <span>2 hours ago</span>
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '6px',
+                      padding: '8px',
+                      backgroundColor: theme.colors.background,
+                    }}
+                  >
+                    <span style={{ fontWeight: 600 }}>
+                      fix: handle empty repositories gracefully
+                    </span>
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: theme.colors.textSecondary,
+                        fontSize: '11px',
+                      }}
+                    >
+                      <span>Jamie Dev</span>
+                      <span>•</span>
+                      <span style={{ fontFamily: theme.fonts.monospace }}>
+                        5e6f7a8b
+                      </span>
+                      <span>•</span>
+                      <span>Yesterday</span>
+                    </span>
                   </div>
                 </div>
               ),
