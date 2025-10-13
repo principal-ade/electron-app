@@ -54,3 +54,9 @@ coverage/
 .electron/
 electron-builder.yml
 electron-builder.json
+
+# Database files
+*.db
+*.db-info
+*.db-shm
+*.db-wal
