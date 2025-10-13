@@ -90,7 +90,14 @@ export class GitHubAdapter {
       headers?: Record<string, string>;
       body?: any;
     } = {},
-  ): Promise<{ success: boolean; data?: any; headers?: any; error?: string }> {
+  ): Promise<{
+    success: boolean;
+    data?: any;
+    headers?: any;
+    status?: number;
+    statusText?: string;
+    error?: string;
+  }> {
     const token = await this.getGitHubToken();
     if (!token) {
       return { success: false, error: 'No GitHub token available' };
@@ -110,6 +117,8 @@ export class GitHubAdapter {
       if (!response.ok) {
         return {
           success: false,
+          status: response.status,
+          statusText: response.statusText,
           error: `GitHub API error: ${response.status} ${response.statusText}`,
         };
       }
@@ -119,6 +128,8 @@ export class GitHubAdapter {
         success: true,
         data,
         headers: Object.fromEntries(response.headers.entries()),
+        status: response.status,
+        statusText: response.statusText,
       };
     } catch (error) {
       console.error('[GitHub] API call failed:', error);
@@ -1425,6 +1436,7 @@ export class GitHubAdapter {
     console.log(`[GitHub] Fetching issues for ${owner}/${repo}`);
 
     // First, try using gh CLI which handles authentication for private repos
+    let cliAuthError = false;
     try {
       const ghResult = await this.executeCommand([
         'gh',
@@ -1464,19 +1476,10 @@ export class GitHubAdapter {
         ghResult.stderr?.includes('401')
       ) {
         // gh CLI is not authenticated
+        cliAuthError = true;
         console.log(
-          '[GitHub] gh CLI not authenticated, user needs to run: gh auth login',
+          '[GitHub] gh CLI not authenticated, will attempt token-based API fallback',
         );
-
-        // Return a special error object that the UI can detect
-        return [
-          {
-            error: 'authentication_required',
-            message:
-              'GitHub CLI authentication required. Please run "gh auth login" in your terminal to authenticate.',
-            requiresAuth: true,
-          },
-        ];
       } else {
         console.warn('[GitHub] gh CLI failed, falling back to HTTPS API', {
           stderr: ghResult.stderr,
@@ -1484,6 +1487,65 @@ export class GitHubAdapter {
       }
     } catch (error) {
       console.warn('[GitHub] gh CLI error, falling back to HTTPS API:', error);
+    }
+
+    // Try token-based API using stored credentials
+    const apiEndpoint = `/repos/${owner}/${repo}/issues?state=all&per_page=100`;
+    const apiResult = await this.makeGitHubAPICall(apiEndpoint);
+
+    if (apiResult.success && Array.isArray(apiResult.data)) {
+      const issues = (
+        apiResult.data as Array<{ pull_request?: unknown }>
+      ).filter((issue) => !issue.pull_request);
+      console.log(
+        `[GitHub] Successfully fetched ${issues.length} issues via token-based API`,
+      );
+      return issues;
+    }
+
+    if (apiResult.status === 404) {
+      console.log('[GitHub] Repository is private or not found (404) via API');
+      return [
+        {
+          error: 'private_repo',
+          message:
+            'This repository is private. Please authenticate with GitHub (via "gh auth login" or by adding a personal access token) to continue.',
+          requiresAuth: true,
+        },
+      ];
+    }
+
+    if (apiResult.status === 403) {
+      console.log('[GitHub] API rate limit or permissions issue (403) via token');
+      return [
+        {
+          error: 'rate_limit',
+          message:
+            'GitHub API rate limit exceeded. Please authenticate with GitHub (via "gh auth login" or by adding a personal access token) to increase your rate limit.',
+          requiresAuth: true,
+        },
+      ];
+    }
+
+    if (!apiResult.success && apiResult.error) {
+      console.warn('[GitHub] Token-based API request failed', {
+        error: apiResult.error,
+        status: apiResult.status,
+      });
+    }
+
+    if (cliAuthError) {
+      console.log(
+        '[GitHub] gh CLI authentication required and token-based API unavailable',
+      );
+      return [
+        {
+          error: 'authentication_required',
+          message:
+            'GitHub authentication required. Please run "gh auth login" or add a personal access token in Principal to continue.',
+          requiresAuth: true,
+        },
+      ];
     }
 
     // Fallback to HTTPS API for public repos
