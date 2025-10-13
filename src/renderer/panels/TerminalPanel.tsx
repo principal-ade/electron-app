@@ -59,6 +59,7 @@ interface TerminalPanelProps {
 
 export interface TerminalPanelRef {
   scrollToBottom: () => void;
+  focus: () => void;
 }
 
 const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(

@@ -47,7 +47,6 @@ export const PanelConfiguratorModal: React.FC<PanelConfiguratorModalProps> = ({
           backgroundColor: theme.colors.background,
           borderRadius: '8px',
           padding: '24px',
-          maxWidth: '900px',
           width: '90%',
           maxHeight: '80vh',
           overflow: 'auto',

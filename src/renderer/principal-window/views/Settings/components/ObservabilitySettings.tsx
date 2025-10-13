@@ -5,13 +5,17 @@ import {
   ObservabilityService,
   ObservabilityConfig,
   ConnectionTestResult,
+  StorageMode,
 } from '../../../../main-process-api/ObservabilityService';
 
 export const ObservabilitySettings: React.FC = () => {
   const { theme } = useTheme();
   const [config, setConfig] = useState<ObservabilityConfig>({
+    storageMode: 'none',
+    localDbPath: 'observability.db',
     tursoUrl: '',
     tursoAuthToken: '',
+    syncInterval: 5000,
     environment: 'development',
     enabled: false,
   });
@@ -90,8 +94,14 @@ export const ObservabilitySettings: React.FC = () => {
     );
   };
 
-  const canSave = config.tursoUrl && isValidTursoUrl(config.tursoUrl);
-  const canTest = config.tursoUrl && isValidTursoUrl(config.tursoUrl);
+  const canSave =
+    config.storageMode === 'none' ||
+    config.storageMode === 'local' ||
+    (config.storageMode === 'local-with-sync' && config.tursoUrl && isValidTursoUrl(config.tursoUrl));
+
+  const canTest =
+    config.storageMode === 'local' ||
+    (config.storageMode === 'local-with-sync' && config.tursoUrl && isValidTursoUrl(config.tursoUrl));
 
   if (loading) {
     return (
@@ -136,7 +146,7 @@ export const ObservabilitySettings: React.FC = () => {
           <h3
             style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}
           >
-            Turso Database Configuration
+            Observability Configuration
           </h3>
           <p
             style={{
@@ -146,44 +156,162 @@ export const ObservabilitySettings: React.FC = () => {
               fontSize: '14px',
             }}
           >
-            Configure the connection to your Turso database for agent event
-            tracking.
+            Configure how agent event data is stored and tracked.
           </p>
 
-          {/* Enable toggle */}
+          {/* Storage Mode Selection */}
           <div style={{ marginBottom: '24px' }}>
             <label
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                cursor: 'pointer',
-                fontSize: '14px',
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={config.enabled}
-                onChange={(e) =>
-                  setConfig({ ...config, enabled: e.target.checked })
-                }
-                className="observability-checkbox"
-              />
-              <span style={{ fontWeight: 500 }}>Enable Observability</span>
-            </label>
-          </div>
-
-          {/* Turso Database URL */}
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              style={{
                 display: 'block',
-                marginBottom: '8px',
+                marginBottom: '12px',
                 fontSize: '14px',
                 fontWeight: 500,
               }}
             >
-              Turso Database URL
+              Storage Mode
             </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  padding: '12px',
+                  border: `1px solid ${config.storageMode === 'none' ? theme.colors.primary : theme.colors.border}`,
+                  borderRadius: '8px',
+                  backgroundColor: config.storageMode === 'none' ? theme.colors.primary + '10' : 'transparent',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="storageMode"
+                  checked={config.storageMode === 'none'}
+                  onChange={() => setConfig({ ...config, storageMode: 'none' })}
+                  style={{ marginRight: '8px', marginTop: '2px' }}
+                />
+                <div>
+                  <div style={{ fontWeight: 500 }}>None</div>
+                  <div style={{ fontSize: '12px', color: theme.colors.textSecondary, marginTop: '4px' }}>
+                    Disable observability tracking completely
+                  </div>
+                </div>
+              </label>
+
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  padding: '12px',
+                  border: `1px solid ${config.storageMode === 'local' ? theme.colors.primary : theme.colors.border}`,
+                  borderRadius: '8px',
+                  backgroundColor: config.storageMode === 'local' ? theme.colors.primary + '10' : 'transparent',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="storageMode"
+                  checked={config.storageMode === 'local'}
+                  onChange={() => setConfig({ ...config, storageMode: 'local' })}
+                  style={{ marginRight: '8px', marginTop: '2px' }}
+                />
+                <div>
+                  <div style={{ fontWeight: 500 }}>Local</div>
+                  <div style={{ fontSize: '12px', color: theme.colors.textSecondary, marginTop: '4px' }}>
+                    Store data locally in SQLite database (offline, privacy-focused)
+                  </div>
+                </div>
+              </label>
+
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  padding: '12px',
+                  border: `1px solid ${config.storageMode === 'local-with-sync' ? theme.colors.primary : theme.colors.border}`,
+                  borderRadius: '8px',
+                  backgroundColor: config.storageMode === 'local-with-sync' ? theme.colors.primary + '10' : 'transparent',
+                }}
+              >
+                <input
+                  type="radio"
+                  name="storageMode"
+                  checked={config.storageMode === 'local-with-sync'}
+                  onChange={() => setConfig({ ...config, storageMode: 'local-with-sync' })}
+                  style={{ marginRight: '8px', marginTop: '2px' }}
+                />
+                <div>
+                  <div style={{ fontWeight: 500 }}>Local with Cloud Sync</div>
+                  <div style={{ fontSize: '12px', color: theme.colors.textSecondary, marginTop: '4px' }}>
+                    Local database with background sync to Turso cloud (best of both worlds)
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Local Database Path - only for local and local-with-sync modes */}
+          {(config.storageMode === 'local' || config.storageMode === 'local-with-sync') && (
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                Local Database Path
+              </label>
+              <input
+                type="text"
+                value={config.localDbPath ?? 'observability.db'}
+                onChange={(e) =>
+                  setConfig({ ...config, localDbPath: e.target.value })
+                }
+                placeholder="observability.db"
+                className="observability-input"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '8px',
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  color: theme.colors.text,
+                  fontSize: '14px',
+                  transition: 'all 0.2s',
+                }}
+              />
+              <p
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: '12px',
+                  marginTop: '4px',
+                }}
+              >
+                Path to local SQLite database file (relative or absolute)
+              </p>
+            </div>
+          )}
+
+          {/* Turso Database URL - only for local-with-sync mode */}
+          {config.storageMode === 'local-with-sync' && (
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                Turso Database URL
+              </label>
             <div style={{ position: 'relative' }}>
               <input
                 type={showUrl ? 'text' : 'password'}
@@ -239,29 +367,31 @@ export const ObservabilitySettings: React.FC = () => {
                 Please enter a valid Turso URL (libsql://, wss://, or https://)
               </p>
             )}
-            <p
-              style={{
-                color: theme.colors.textSecondary,
-                fontSize: '12px',
-                marginTop: '4px',
-              }}
-            >
-              Your Turso database URL from the Turso dashboard
-            </p>
-          </div>
+              <p
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: '12px',
+                  marginTop: '4px',
+                }}
+              >
+                Your Turso database URL from the Turso dashboard
+              </p>
+            </div>
+          )}
 
-          {/* Turso Auth Token */}
-          <div style={{ marginBottom: '20px' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: 500,
-              }}
-            >
-              Turso Auth Token
-            </label>
+          {/* Turso Auth Token - only for local-with-sync mode */}
+          {config.storageMode === 'local-with-sync' && (
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                Turso Auth Token
+              </label>
             <div style={{ position: 'relative' }}>
               <input
                 type={showAuthToken ? 'text' : 'password'}
@@ -304,19 +434,67 @@ export const ObservabilitySettings: React.FC = () => {
                 </button>
               )}
             </div>
-            <p
-              style={{
-                color: theme.colors.textSecondary,
-                fontSize: '12px',
-                marginTop: '4px',
-              }}
-            >
-              Get this from your Turso dashboard under "Database Tokens"
-            </p>
-          </div>
+              <p
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: '12px',
+                  marginTop: '4px',
+                }}
+              >
+                Get this from your Turso dashboard under "Database Tokens"
+              </p>
+            </div>
+          )}
+
+          {/* Sync Interval - only for local-with-sync mode */}
+          {config.storageMode === 'local-with-sync' && (
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                Sync Interval (milliseconds)
+              </label>
+              <input
+                type="number"
+                min="1000"
+                step="1000"
+                value={config.syncInterval ?? 5000}
+                onChange={(e) =>
+                  setConfig({ ...config, syncInterval: parseInt(e.target.value) || 5000 })
+                }
+                placeholder="5000"
+                className="observability-input"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '8px',
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  color: theme.colors.text,
+                  fontSize: '14px',
+                  transition: 'all 0.2s',
+                }}
+              />
+              <p
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: '12px',
+                  marginTop: '4px',
+                }}
+              >
+                How often to sync local data to cloud (in milliseconds, e.g., 5000 = 5 seconds)
+              </p>
+            </div>
+          )}
 
           {/* Environment */}
-          <div style={{ marginBottom: '24px' }}>
+          {config.storageMode !== 'none' && (
+            <div style={{ marginBottom: '24px' }}>
             <label
               style={{
                 display: 'block',
@@ -351,11 +529,12 @@ export const ObservabilitySettings: React.FC = () => {
                 cursor: 'pointer',
               }}
             >
-              <option value="development">Development</option>
-              <option value="staging">Staging</option>
-              <option value="production">Production</option>
-            </select>
-          </div>
+                <option value="development">Development</option>
+                <option value="staging">Staging</option>
+                <option value="production">Production</option>
+              </select>
+            </div>
+          )}
 
           {/* Error message */}
           {error && (

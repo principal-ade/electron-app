@@ -63,6 +63,14 @@ export const TabbedTerminalPanel = forwardRef<
     // Store refs to terminal panels for each tab
     const terminalRefs = useRef<Map<string, TerminalPanelRef>>(new Map());
 
+    // Store refs to callbacks to avoid recreating event listeners
+    const addNewTabRef = useRef<typeof addNewTab | null>(null);
+    const closeTabRef = useRef<typeof closeTab | null>(null);
+    const switchTabRef = useRef<typeof switchTab | null>(null);
+
+    // Track if we're currently creating a tab to prevent duplicates
+    const isCreatingTabRef = useRef(false);
+
     // Create unique context for this tabbed terminal instance
     const terminalContext = React.useMemo(
       () => `tabbed-terminal:${repositoryKey}`,
@@ -241,6 +249,22 @@ export const TabbedTerminalPanel = forwardRef<
 
     const activeTab = tabs.find((t) => t.id === activeTabId);
 
+    // Keep callback refs up to date
+    useEffect(() => {
+      addNewTabRef.current = addNewTab;
+      closeTabRef.current = closeTab;
+      switchTabRef.current = switchTab;
+    }, [addNewTab, closeTab, switchTab]);
+
+    // Store tabs and activeTabId in refs for event handler
+    const tabsRef = useRef(tabs);
+    const activeTabIdRef = useRef(activeTabId);
+
+    useEffect(() => {
+      tabsRef.current = tabs;
+      activeTabIdRef.current = activeTabId;
+    }, [tabs, activeTabId]);
+
     // Keyboard shortcuts for tab navigation
     useEffect(() => {
       const handleKeyDown = async (e: KeyboardEvent) => {
@@ -248,26 +272,42 @@ export const TabbedTerminalPanel = forwardRef<
         if ((e.metaKey || e.ctrlKey) && e.key === 't') {
           e.preventDefault();
           e.stopPropagation();
-          addNewTab();
+
+          // Prevent multiple rapid tab creations
+          if (isCreatingTabRef.current) {
+            console.log('[TabbedTerminalPanel] Ignoring duplicate tab creation');
+            return;
+          }
+
+          isCreatingTabRef.current = true;
+          addNewTabRef.current?.();
+
+          // Reset the flag after a short delay
+          setTimeout(() => {
+            isCreatingTabRef.current = false;
+          }, 500);
           return;
         }
 
         // Command/Ctrl + W to close active tab
         if ((e.metaKey || e.ctrlKey) && e.key === 'w') {
-          if (activeTabId && tabs.length > 0) {
+          const currentActiveTabId = activeTabIdRef.current;
+          const currentTabs = tabsRef.current;
+          if (currentActiveTabId && currentTabs.length > 0) {
             e.preventDefault();
             e.stopPropagation();
-            closeTab(activeTabId);
+            closeTabRef.current?.(currentActiveTabId);
           }
           return;
         }
 
         // Command/Ctrl + B to scroll to bottom
         if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
-          if (activeTabId) {
+          const currentActiveTabId = activeTabIdRef.current;
+          if (currentActiveTabId) {
             e.preventDefault();
             e.stopPropagation();
-            const terminalRef = terminalRefs.current.get(activeTabId);
+            const terminalRef = terminalRefs.current.get(currentActiveTabId);
             if (terminalRef) {
               terminalRef.scrollToBottom();
             }
@@ -277,7 +317,12 @@ export const TabbedTerminalPanel = forwardRef<
 
         // Command/Ctrl + O to open repository for the active tab
         if ((e.metaKey || e.ctrlKey) && e.key === 'o') {
-          if (activeTab && activeTab.directory !== directory) {
+          const currentTabs = tabsRef.current;
+          const currentActiveTabId = activeTabIdRef.current;
+          const currentActiveTab = currentTabs.find(
+            (t) => t.id === currentActiveTabId,
+          );
+          if (currentActiveTab && currentActiveTab.directory !== directory) {
             e.preventDefault();
             e.stopPropagation();
 
@@ -292,7 +337,7 @@ export const TabbedTerminalPanel = forwardRef<
             try {
               // Find the repository that contains this directory
               const repo = await RepositoryService.getRepositoryByLocalPath(
-                activeTab.directory,
+                currentActiveTab.directory,
               );
 
               if (repo) {
@@ -312,15 +357,16 @@ export const TabbedTerminalPanel = forwardRef<
         // Command/Ctrl + number (1-9) to switch tabs
         if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '9') {
           e.preventDefault();
+          const currentTabs = tabsRef.current;
           const keyNum = parseInt(e.key, 10);
 
           // Command + 9 always goes to last tab
-          const tabIndex = keyNum === 9 ? tabs.length - 1 : keyNum - 1;
+          const tabIndex = keyNum === 9 ? currentTabs.length - 1 : keyNum - 1;
 
-          if (tabIndex >= 0 && tabIndex < tabs.length) {
-            const targetTab = tabs[tabIndex];
+          if (tabIndex >= 0 && tabIndex < currentTabs.length) {
+            const targetTab = currentTabs[tabIndex];
             if (targetTab) {
-              switchTab(targetTab.id);
+              switchTabRef.current?.(targetTab.id);
             }
           }
         }
@@ -328,15 +374,7 @@ export const TabbedTerminalPanel = forwardRef<
 
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [
-      tabs,
-      switchTab,
-      activeTabId,
-      closeTab,
-      addNewTab,
-      activeTab,
-      directory,
-    ]);
+    }, [directory]); // Only re-create handler when directory changes
 
     return (
       <div

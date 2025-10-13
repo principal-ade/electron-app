@@ -2,9 +2,14 @@
  * Observability API Interface
  */
 
+export type StorageMode = 'none' | 'local' | 'local-with-sync';
+
 export interface ObservabilityConfig {
+  storageMode?: StorageMode;
+  localDbPath?: string;
   tursoUrl?: string;
   tursoAuthToken?: string;
+  syncInterval?: number;
   environment?: 'development' | 'staging' | 'production';
   enabled?: boolean;
 }

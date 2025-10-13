@@ -32,6 +32,32 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     fileTree,
   } = useRepositoryPanelContext();
 
+  // Determine file status based on git status data
+  const getFileStatus = useCallback(
+    (
+      filePath: string,
+    ): 'staged' | 'unstaged' | 'untracked' | 'deleted' | undefined => {
+      // Check staged files
+      if (gitStatus.staged.some((f) => f.path === filePath)) {
+        return 'staged';
+      }
+      // Check deleted files
+      if (gitStatus.deleted.some((f) => f.path === filePath)) {
+        return 'deleted';
+      }
+      // Check untracked files
+      if (gitStatus.untracked.some((f) => f.path === filePath)) {
+        return 'untracked';
+      }
+      // Check unstaged files
+      if (gitStatus.unstaged.some((f) => f.path === filePath)) {
+        return 'unstaged';
+      }
+      return undefined;
+    },
+    [gitStatus],
+  );
+
   const handleFileSelect = useCallback(
     (filePath: string) => {
       const status = getFileStatus(filePath);
@@ -59,32 +85,6 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     isFolder: boolean;
     fileStatus?: 'staged' | 'unstaged' | 'untracked' | 'deleted';
   } | null>(null);
-
-  // Determine file status based on git status data
-  const getFileStatus = useCallback(
-    (
-      filePath: string,
-    ): 'staged' | 'unstaged' | 'untracked' | 'deleted' | undefined => {
-      // Check staged files
-      if (gitStatus.staged.some((f) => f.path === filePath)) {
-        return 'staged';
-      }
-      // Check deleted files
-      if (gitStatus.deleted.some((f) => f.path === filePath)) {
-        return 'deleted';
-      }
-      // Check untracked files
-      if (gitStatus.untracked.some((f) => f.path === filePath)) {
-        return 'untracked';
-      }
-      // Check unstaged files
-      if (gitStatus.unstaged.some((f) => f.path === filePath)) {
-        return 'unstaged';
-      }
-      return undefined;
-    },
-    [gitStatus],
-  );
 
   const handleContextMenu = useCallback(
     (event: React.MouseEvent, nodePath: string, isFolder: boolean) => {

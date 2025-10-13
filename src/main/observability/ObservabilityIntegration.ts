@@ -16,9 +16,14 @@ interface TursoConfig {
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 
+export type StorageMode = 'none' | 'local' | 'local-with-sync';
+
 export interface ObservabilityConfig {
+  storageMode?: StorageMode;
+  localDbPath?: string;
   tursoUrl?: string;
   tursoAuthToken?: string;
+  syncInterval?: number;
   environment?: 'development' | 'staging' | 'production';
   batchSize?: number;
   flushInterval?: number;
@@ -53,8 +58,11 @@ export class ObservabilityIntegration extends EventEmitter {
       const stored = await this.storage.getSecrets('observability-config');
       if (stored && Object.keys(stored).length > 0) {
         return {
+          storageMode: (stored.storageMode as StorageMode) || 'none',
+          localDbPath: stored.localDbPath,
           tursoUrl: stored.tursoUrl,
           tursoAuthToken: stored.tursoAuthToken,
+          syncInterval: stored.syncInterval ? parseInt(stored.syncInterval) : 5000,
           environment: (stored.environment as 'development' | 'staging' | 'production') || 'development',
           enabled: stored.enabled === 'true',
           debug: stored.debug === 'true',
@@ -74,8 +82,11 @@ export class ObservabilityIntegration extends EventEmitter {
    */
   async saveConfiguration(config: ObservabilityConfig): Promise<void> {
     const secrets: Record<string, string> = {};
+    if (config.storageMode) secrets.storageMode = config.storageMode;
+    if (config.localDbPath) secrets.localDbPath = config.localDbPath;
     if (config.tursoUrl) secrets.tursoUrl = config.tursoUrl;
     if (config.tursoAuthToken) secrets.tursoAuthToken = config.tursoAuthToken;
+    if (config.syncInterval !== undefined) secrets.syncInterval = config.syncInterval.toString();
     if (config.environment) secrets.environment = config.environment;
     secrets.enabled = config.enabled ? 'true' : 'false';
     secrets.debug = config.debug ? 'true' : 'false';
@@ -89,16 +100,41 @@ export class ObservabilityIntegration extends EventEmitter {
   }
 
   /**
-   * Initialize SDK with Turso configuration
+   * Initialize SDK based on storage mode
    */
-  private async initializeSDK(config: TursoConfig): Promise<void> {
-    // Initialize the Turso SDK
-    this.sdk = new TursoObservabilitySDK(config);
+  private async initializeSDK(storageMode: StorageMode, config: ObservabilityConfig): Promise<void> {
+    // @ts-ignore - Type definitions not available yet
+    const { TursoObservabilitySDK } = await import('@a24z/observability-sdk');
+
+    switch (storageMode) {
+      case 'local':
+        // Local mode - SQLite file only
+        this.sdk = TursoObservabilitySDK.createLocal(config.localDbPath || 'observability.db');
+        console.log(`[ObservabilityIntegration] Local mode initialized: ${config.localDbPath || 'observability.db'}`);
+        break;
+
+      case 'local-with-sync':
+        // Embedded replica mode - local file with cloud sync
+        if (!config.tursoUrl) {
+          throw new Error('Turso URL required for local-with-sync mode');
+        }
+        this.sdk = TursoObservabilitySDK.createEmbeddedReplica(
+          config.localDbPath || 'observability.db',
+          config.tursoUrl,
+          config.tursoAuthToken || '',
+          config.syncInterval || 5000
+        );
+        console.log(`[ObservabilityIntegration] Local-with-sync mode initialized: ${config.localDbPath || 'observability.db'} syncing to ${config.tursoUrl}`);
+        break;
+
+      default:
+        throw new Error(`Unknown storage mode: ${storageMode}`);
+    }
 
     // Initialize the database schema (creates tables if they don't exist)
     await this.sdk.initializeSchema();
 
-    console.log('[ObservabilityIntegration] Turso SDK initialized with schema');
+    console.log('[ObservabilityIntegration] SDK initialized with schema');
   }
 
   /**
@@ -116,23 +152,23 @@ export class ObservabilityIntegration extends EventEmitter {
         this.config = { ...this.config, ...loadedConfig };
       }
 
-      // Check if we have Turso configuration
-      const tursoUrl = this.config.tursoUrl || process.env.TURSO_DATABASE_URL;
-      const tursoAuthToken =
-        this.config.tursoAuthToken || process.env.TURSO_AUTH_TOKEN;
+      // Determine storage mode (fallback to env vars for backward compatibility)
+      const storageMode = this.config.storageMode || 'none';
 
-      if (!tursoUrl || this.config.enabled === false) {
-        console.log(
-          '[ObservabilityIntegration] Observability disabled or no Turso URL configured',
-        );
+      // Check if observability is disabled
+      if (storageMode === 'none' || this.config.enabled === false) {
+        console.log('[ObservabilityIntegration] Observability disabled');
         return;
       }
 
-      // Initialize the SDK with Turso configuration
-      await this.initializeSDK({
-        url: tursoUrl,
-        authToken: tursoAuthToken,
-      });
+      // For backward compatibility, check env vars if config is missing
+      if (storageMode === 'local-with-sync') {
+        this.config.tursoUrl = this.config.tursoUrl || process.env.TURSO_DATABASE_URL;
+        this.config.tursoAuthToken = this.config.tursoAuthToken || process.env.TURSO_AUTH_TOKEN;
+      }
+
+      // Initialize the SDK based on storage mode
+      await this.initializeSDK(storageMode, this.config);
 
       this.isInitialized = true;
       console.log('[ObservabilityIntegration] SDK ready for event processing');
@@ -229,16 +265,39 @@ export class ObservabilityIntegration extends EventEmitter {
   async testConnection(
     config: ObservabilityConfig,
   ): Promise<{ success: boolean; error?: string }> {
-    if (!config.tursoUrl) {
-      return { success: false, error: 'Turso Database URL is required' };
+    const storageMode = config.storageMode || 'none';
+
+    if (storageMode === 'none') {
+      return { success: false, error: 'Storage mode is set to none' };
+    }
+
+    if (storageMode === 'local-with-sync' && !config.tursoUrl) {
+      return { success: false, error: 'Turso Database URL is required for local-with-sync mode' };
     }
 
     try {
-      // Create a temporary SDK instance to test the connection
-      const testSdk = new TursoObservabilitySDK({
-        url: config.tursoUrl,
-        authToken: config.tursoAuthToken,
-      });
+      // @ts-ignore - Type definitions not available yet
+      const { TursoObservabilitySDK } = await import('@a24z/observability-sdk');
+
+      let testSdk;
+
+      switch (storageMode) {
+        case 'local':
+          testSdk = TursoObservabilitySDK.createLocal(':memory:'); // Use in-memory DB for testing
+          break;
+
+        case 'local-with-sync':
+          testSdk = TursoObservabilitySDK.createEmbeddedReplica(
+            ':memory:',
+            config.tursoUrl!,
+            config.tursoAuthToken || '',
+            config.syncInterval || 5000
+          );
+          break;
+
+        default:
+          return { success: false, error: `Unknown storage mode: ${storageMode}` };
+      }
 
       // Initialize the schema (creates tables if they don't exist)
       await testSdk.initializeSchema();
