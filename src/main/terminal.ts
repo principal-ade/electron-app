@@ -1008,3 +1008,4 @@ if (pty) {
 
 export default terminalManager;
 export { terminalManager };
+export type { TerminalManager };
