@@ -59,6 +59,15 @@ export const gitAPI = {
     return ipcRenderer.invoke(GitEvents.GET_UNCOMMITTED_CHANGES, directory);
   },
 
+  getCommitHistory: async (
+    directory: string,
+    limit?: number,
+  ): Promise<
+    Array<{ hash: string; message: string; author: string; date: string }>
+  > => {
+    return ipcRenderer.invoke(GitEvents.GET_COMMIT_HISTORY, directory, limit);
+  },
+
   execCommand: async (
     directory: string,
     args: string[],

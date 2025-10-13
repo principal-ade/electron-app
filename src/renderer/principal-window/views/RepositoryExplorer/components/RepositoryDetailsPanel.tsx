@@ -50,6 +50,7 @@ import {
 import { PanelConfiguration } from './PanelConfiguration';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { RepositoryPanelProvider } from '../../../../panels/RepositoryPanelProvider';
+import { GitCommitHistoryPanel } from '../../../../panels/components/GitCommitHistoryPanel';
 import { GitChangesPanel } from '../../../../panels/components/GitChangesPanel';
 import { createDefaultPanelVisibility } from '../../../../panels/registry';
 import { useHighlightLayers } from '../../../../contexts/HighlightLayersContext';
@@ -1283,6 +1284,13 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                           {/* Git Status / Last Commit Info */}
                           {panelVisibility.gitStatus && (
                             <GitStatusPanel repository={selectedRepository} />
+                          )}
+
+                          {/* Git Commit History */}
+                          {panelVisibility.gitHistory && (
+                            <GitCommitHistoryPanel
+                              repositoryPath={selectedRepository?.path ?? null}
+                            />
                           )}
 
                           {/* Repository Tasks and Notes Panel */}

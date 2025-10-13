@@ -15,6 +15,7 @@ import { ExcalidrawPanel } from './components/ExcalidrawPanel';
 import { DrawingsListPanel } from './components/DrawingsListPanel';
 import { ToolsPanel } from './components/ToolsPanel';
 import { AgentContextTreePanel } from './components/AgentContextTreePanel';
+import { GitCommitHistoryPanel } from './components/GitCommitHistoryPanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -75,6 +76,16 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
       'Branch details, upstream alignment, and the latest commit metadata.',
     defaultLocation: 'left',
     slices: ['git'],
+  },
+  {
+    id: 'gitHistory',
+    label: 'Commit History',
+    description: 'Review recent commits from the current repository.',
+    defaultLocation: 'left',
+    slices: ['git'],
+    render: ({ context }) => (
+      <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />
+    ),
   },
   {
     id: 'tasksAndNotes',

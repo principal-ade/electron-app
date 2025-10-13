@@ -3,6 +3,13 @@ import * as fs from 'fs/promises';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import type { GitStatus } from '../../shared/types/repository.types';
 
+export interface GitCommitHistoryEntry {
+  hash: string;
+  message: string;
+  author: string;
+  date: string;
+}
+
 export interface GitRepositoryInfo {
   root: string;
   relativePath: string;
@@ -607,6 +614,51 @@ export class GitRepositoryService {
       };
     } catch (error) {
       console.error('Failed to get detailed changes:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get commit history for a directory
+   */
+  async getCommitHistory(
+    directory: string,
+    limit = 50,
+  ): Promise<GitCommitHistoryEntry[]> {
+    try {
+      const git = await gitClientFactory.getClient(directory);
+      const format = '%H%x1f%an%x1f%ad%x1f%s%x1e';
+      const logOutput = await git.raw([
+        'log',
+        `-${Math.max(limit, 1)}`,
+        '--date=iso-strict',
+        `--pretty=${format}`,
+      ]);
+
+      return logOutput
+        .split('\x1e')
+        .map((entry: string) => entry.trim())
+        .filter((entry: string) => entry.length > 0)
+        .map((entry: string) => {
+          const [hash, author, date, message] = entry.split('\x1f');
+          return {
+            hash: hash?.trim() ?? '',
+            author: author?.trim() ?? '',
+            date: date?.trim() ?? '',
+            message: message?.trim() ?? '',
+          } satisfies GitCommitHistoryEntry;
+        });
+    } catch (error) {
+      // Empty repositories or git failures should not break the UI
+      if (
+        error instanceof Error &&
+        (error.message.includes('does not have any commits yet') ||
+          error.message.includes('unknown revision'))
+      ) {
+        return [];
+      }
+
+      console.error('[GitRepositoryService] Failed to get commit history:', error);
       throw error;
     }
   }

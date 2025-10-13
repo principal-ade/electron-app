@@ -5,6 +5,7 @@ export type RepositoryPanelId =
   | 'gitPullRequests'
   | 'files'
   | 'gitStatus'
+  | 'gitHistory'
   | 'tasksAndNotes'
   | 'cityVisualization'
   | 'actions'

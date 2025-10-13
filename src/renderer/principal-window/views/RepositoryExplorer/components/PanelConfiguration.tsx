@@ -21,6 +21,7 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
     'gitChanges',
     'files',
     'gitStatus',
+    'gitHistory',
     'tasksAndNotes',
     'cityVisualization',
     'actions',
