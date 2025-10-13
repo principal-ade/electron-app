@@ -10,6 +10,7 @@ import type {
 } from './RepositoryPanelProvider';
 import { GitChangesPanel } from './components/GitChangesPanel';
 import { GitIssuesPanel } from './components/GitIssuesPanel';
+import { GitPullRequestsPanel } from './components/GitPullRequestsPanel';
 import { ExcalidrawPanel } from './components/ExcalidrawPanel';
 import { DrawingsListPanel } from './components/DrawingsListPanel';
 import { ToolsPanel } from './components/ToolsPanel';
@@ -47,6 +48,16 @@ export const repositoryPanelDefinitions: RepositoryPanelDefinition[] = [
     defaultLocation: 'left',
     render: ({ context }) => (
       <GitIssuesPanel repository={context.repository ?? undefined} />
+    ),
+  },
+  {
+    id: 'gitPullRequests',
+    label: 'Git Pull Requests',
+    description:
+      'Review open, merged, and closed pull requests associated with this repository.',
+    defaultLocation: 'left',
+    render: ({ context }) => (
+      <GitPullRequestsPanel repository={context.repository ?? undefined} />
     ),
   },
   {

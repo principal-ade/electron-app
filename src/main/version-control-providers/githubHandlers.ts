@@ -1563,6 +1563,138 @@ export class GitHubAdapter {
       req.end();
     });
   }
+
+  async getPullRequests(owner: string, repo: string): Promise<any[]> {
+    console.log(`[GitHub] Fetching pull requests for ${owner}/${repo}`);
+
+    try {
+      const ghResult = await this.executeCommand([
+        'gh',
+        'api',
+        `/repos/${owner}/${repo}/pulls`,
+        '--method',
+        'GET',
+        '--field',
+        'state=all',
+        '--field',
+        'per_page=100',
+      ]);
+
+      if (ghResult.success && ghResult.stdout.trim()) {
+        try {
+          const pullRequests = JSON.parse(ghResult.stdout);
+          if (Array.isArray(pullRequests)) {
+            console.log(
+              `[GitHub] Successfully fetched ${pullRequests.length} pull requests via gh CLI`,
+            );
+            return pullRequests;
+          }
+        } catch (error) {
+          console.warn('[GitHub] Failed to parse gh CLI pull requests output', {
+            error,
+            stdoutSample: ghResult.stdout.slice(0, 200),
+          });
+        }
+      } else if (
+        ghResult.stderr?.includes('authentication') ||
+        ghResult.stderr?.includes('401')
+      ) {
+        console.log(
+          '[GitHub] gh CLI not authenticated, user needs to run: gh auth login',
+        );
+
+        return [
+          {
+            error: 'authentication_required',
+            message:
+              'GitHub CLI authentication required. Please run "gh auth login" in your terminal to authenticate.',
+            requiresAuth: true,
+          },
+        ];
+      } else {
+        console.warn('[GitHub] gh CLI pull request fetch failed, falling back', {
+          stderr: ghResult.stderr,
+        });
+      }
+    } catch (error) {
+      console.warn('[GitHub] gh CLI error when fetching pull requests:', error);
+    }
+
+    console.log(
+      '[GitHub] Attempting to fetch pull requests via HTTPS API (public repos only)',
+    );
+    const https = require('https');
+
+    return new Promise((resolve) => {
+      const options = {
+        hostname: 'api.github.com',
+        path: `/repos/${owner}/${repo}/pulls?state=all&per_page=100`,
+        method: 'GET',
+        headers: {
+          Accept: 'application/vnd.github.v3+json',
+          'User-Agent': 'Principal-AI',
+        },
+      };
+
+      const req = https.request(options, (res: any) => {
+        let data = '';
+
+        res.on('data', (chunk: any) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            try {
+              const pullRequests = JSON.parse(data);
+              console.log(
+                `[GitHub] Found ${pullRequests.length} pull requests via HTTPS`,
+              );
+              resolve(pullRequests);
+            } catch (error) {
+              console.error(
+                '[GitHub] Failed to parse pull requests response:',
+                error,
+              );
+              resolve([]);
+            }
+          } else if (res.statusCode === 404) {
+            console.log('[GitHub] Repository is private or not found (404)');
+            resolve([
+              {
+                error: 'private_repo',
+                message:
+                  'This repository is private. Please authenticate with GitHub CLI by running "gh auth login" in your terminal.',
+                requiresAuth: true,
+              },
+            ]);
+          } else if (res.statusCode === 403) {
+            console.log('[GitHub] API rate limit exceeded');
+            resolve([
+              {
+                error: 'rate_limit',
+                message:
+                  'GitHub API rate limit exceeded. Please authenticate with GitHub CLI by running "gh auth login" to increase your rate limit.',
+                requiresAuth: true,
+              },
+            ]);
+          } else {
+            console.error(
+              `[GitHub] Failed to fetch pull requests: ${res.statusCode}`,
+            );
+            resolve([]);
+          }
+        });
+      });
+
+      req.on('error', (error: any) => {
+        console.error('[GitHub] Error fetching pull requests:', error);
+        resolve([]);
+      });
+
+      req.end();
+    });
+  }
 }
 
 // Register IPC handlers
@@ -1993,6 +2125,18 @@ export function registerGitHubIpcHandlers(
         return [];
       }
       return adapter.getIssues(owner, repo);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_PULL_REQUESTS,
+    async (event, owner: string, repo: string) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_PULL_REQUESTS');
+        return [];
+      }
+      return adapter.getPullRequests(owner, repo);
     },
   );
 

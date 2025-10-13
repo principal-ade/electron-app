@@ -16,6 +16,7 @@ import {
   Activity,
   ListTodo,
   AlertCircle,
+  GitPullRequest,
   Palette,
   Package,
 } from 'lucide-react';
@@ -77,6 +78,7 @@ import { FileTreePanelContent } from '../panels/components/FileTreePanelContent'
 import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 import { GitIssuesPanel } from '../panels/components/GitIssuesPanel';
+import { GitPullRequestsPanel } from '../panels/components/GitPullRequestsPanel';
 import { MarkdownRenderingPanel, ExcalidrawPanel } from './panels';
 import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
 import { GitDiffPanel } from '../panels/components/GitDiffPanel';
@@ -1716,6 +1718,16 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             }}
           />
         ),
+        gitPullRequests: (
+          <GitPullRequestsPanel
+            repository={{
+              owner: ghOwner || repository.owner,
+              name: ghRepo || repository.name,
+              remoteUrl: repository.remoteUrl,
+              github: null,
+            }}
+          />
+        ),
         dependencies: selectedSource ? (
           <RepoSourceArchitecturePanelSimple
             source={selectedSource}
@@ -1882,6 +1894,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         icon: <AlertCircle size={14} />,
         visible: !!repoInfo,
         content: panelContentMap.gitIssues,
+      },
+      {
+        id: 'gitPullRequests',
+        label: 'Git Pull Requests',
+        icon: <GitPullRequest size={14} />,
+        visible: !!repoInfo,
+        content: panelContentMap.gitPullRequests,
       },
       {
         id: 'dependencies',
@@ -2841,6 +2860,73 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     <span>2 comments</span>
                     <span>•</span>
                     <span>Last updated 3h ago</span>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              id: 'gitPullRequests',
+              label: 'Git Pull Requests',
+              icon: <GitPullRequest size={16} />,
+              preview: (
+                <div
+                  style={{
+                    padding: '12px',
+                    fontSize: '12px',
+                    color: theme.colors.text,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        backgroundColor: '#2563eb22',
+                        color: '#2563eb',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      Open
+                    </span>
+                    <span style={{ fontWeight: 600 }}>#42 Refine onboarding flow</span>
+                  </div>
+                  <div
+                    style={{
+                      paddingLeft: '4px',
+                      color: theme.colors.textSecondary,
+                      fontSize: '11px',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    Updates wizard copy and adds validation to the profile form.
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      color: theme.colors.textSecondary,
+                      fontSize: '11px',
+                    }}
+                  >
+                    <span>•</span>
+                    <span>1 review</span>
+                    <span>•</span>
+                    <span>Last updated 1d ago</span>
                   </div>
                 </div>
               ),
