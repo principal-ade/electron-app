@@ -6,7 +6,7 @@
  * to display multiple agent sessions side-by-side.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { MultiFileTree } from '@a24z/dynamic-file-tree';
 import type {
@@ -29,36 +29,13 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
   const [sources, setSources] = useState<LoadedFileTreeSource[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Load initial sources
-  useEffect(() => {
-    console.log(
-      '[AgentContextTreePanel] Loading sources for repository:',
-      repositoryPath,
-    );
-    loadSources();
-  }, [repositoryPath]);
-
-  // Subscribe to session updates
-  useEffect(() => {
-    const unsubscribe = AgentContextTrackingService.subscribe((sessions) => {
-      console.log('[AgentContextTreePanel] Sessions updated:', sessions.size);
-      loadSources();
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [repositoryPath]);
+  const isMountedRef = useRef(false);
 
   const loadSources = useCallback(() => {
     setLoading(true);
     try {
       const treeSources = AgentContextTrackingService.getSessionsAsTreeSources(
         repositoryPath || undefined,
-      );
-      console.log(
-        '[AgentContextTreePanel] Loaded sources:',
-        treeSources.length,
       );
       setSources(treeSources);
     } catch (error) {
@@ -69,14 +46,40 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
     }
   }, [repositoryPath]);
 
+  // Load initial sources
+  useEffect(() => {
+    if (isMountedRef.current) {
+      console.info(
+        '[AgentContextTreePanel] Reloading sources for repository:',
+        repositoryPath,
+      );
+    } else {
+      console.info(
+        '[AgentContextTreePanel] Loading sources for repository:',
+        repositoryPath,
+      );
+      isMountedRef.current = true;
+    }
+    loadSources();
+  }, [repositoryPath, loadSources]);
+
+  // Subscribe to session updates
+  useEffect(() => {
+    const unsubscribe = AgentContextTrackingService.subscribe((sessions) => {
+      console.info(
+        '[AgentContextTreePanel] Sessions updated:',
+        sessions.size,
+      );
+      loadSources();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [loadSources]);
+
   const handleFileSelect = useCallback(
     (source: FileTreeSource, filePath: string) => {
-      console.log(
-        '[AgentContextTreePanel] File selected:',
-        filePath,
-        'from session:',
-        source.id,
-      );
       if (onFileSelect) {
         onFileSelect(filePath);
       }

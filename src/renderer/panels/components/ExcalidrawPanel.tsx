@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pencil, Plus } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { ExcalidrawWrapper } from '../../components/shared/ExcalidrawWrapper';

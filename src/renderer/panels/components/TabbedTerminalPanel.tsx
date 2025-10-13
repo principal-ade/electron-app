@@ -6,6 +6,7 @@ import React, {
   useRef,
 } from 'react';
 import { Terminal as TerminalIcon, X, Plus, Bug, Monitor } from 'lucide-react';
+import type { AlexandriaEntry } from '@a24z/core-library';
 import { useTheme } from '@a24z/industry-theme';
 import TerminalPanel, { TerminalPanelRef } from '../TerminalPanel';
 import { TerminalService } from '../../main-process-api/TerminalService';
@@ -49,7 +50,7 @@ export const TabbedTerminalPanel = forwardRef<
       showAllTerminals = false,
       onShowAllTerminalsChange,
     },
-    ref,
+    _ref,
   ) => {
     const { theme } = useTheme();
     const [tabs, setTabs] = useState<TerminalTab[]>(initialTabs);
@@ -101,7 +102,7 @@ export const TabbedTerminalPanel = forwardRef<
           }, 50);
         });
       },
-      [activeTabId, sessionIds],
+      [],
     );
 
     // Create a new terminal tab
@@ -199,7 +200,7 @@ export const TabbedTerminalPanel = forwardRef<
       showAllTerminals,
       directory,
       terminalContext,
-      initialTabs.length,
+      initialTabs,
       onTabsChange,
     ]);
 
@@ -247,8 +248,6 @@ export const TabbedTerminalPanel = forwardRef<
       [],
     );
 
-    const activeTab = tabs.find((t) => t.id === activeTabId);
-
     // Keep callback refs up to date
     useEffect(() => {
       addNewTabRef.current = addNewTab;
@@ -275,7 +274,7 @@ export const TabbedTerminalPanel = forwardRef<
 
           // Prevent multiple rapid tab creations
           if (isCreatingTabRef.current) {
-            console.log('[TabbedTerminalPanel] Ignoring duplicate tab creation');
+            console.info('[TabbedTerminalPanel] Ignoring duplicate tab creation');
             return;
           }
 
@@ -342,7 +341,9 @@ export const TabbedTerminalPanel = forwardRef<
 
               if (repo) {
                 // Open the repository dashboard
-                await WindowService.openRepositoryDashboard(repo as any);
+                  await WindowService.openRepositoryDashboard(
+                    repo as unknown as AlexandriaEntry,
+                  );
               }
             } catch (error) {
               console.error(

@@ -14,15 +14,6 @@ interface QualityHexagonPanelProps {
   compact?: boolean;
 }
 
-interface PackageDisplayData {
-  name: string;
-  path: string;
-  version?: string;
-  dependencies?: number;
-  devDependencies?: number;
-  scripts?: string[];
-}
-
 export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   directory,
   compact = false,
@@ -41,16 +32,19 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
     setError(null);
 
     try {
-      console.log('[QualityHexagon] Fetching packages for:', directory);
+      console.info('[QualityHexagon] Fetching packages for:', directory);
       const result = await RepositoryMonitoringService.getPackages(directory);
 
       if (result) {
-        console.log('[QualityHexagon] Packages fetched:', result);
-        console.log('[QualityHexagon] Quality metrics check:', result.packages.map(pkg => ({
-          name: pkg.packageData.name,
-          hasQualityMetrics: !!pkg.qualityMetrics,
-          qualityMetrics: pkg.qualityMetrics
-        })));
+        console.info('[QualityHexagon] Packages fetched:', result);
+        console.info(
+          '[QualityHexagon] Quality metrics check:',
+          result.packages.map((pkg) => ({
+            name: pkg.packageData.name,
+            hasQualityMetrics: !!pkg.qualityMetrics,
+            qualityMetrics: pkg.qualityMetrics,
+          })),
+        );
         setPackages(result.packages);
         setSummary(result.summary);
       } else {
@@ -169,8 +163,8 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
             >
               {(() => {
                 // Log what we're receiving from the composition package
-                console.log('[QualityHexagon] Rendering hexagon for:', pkg.packageData.name);
-                console.log('[QualityHexagon] Raw hexagon data:', pkg.qualityMetrics.hexagon);
+                console.info('[QualityHexagon] Rendering hexagon for:', pkg.packageData.name);
+                console.info('[QualityHexagon] Raw hexagon data:', pkg.qualityMetrics.hexagon);
 
                 // Convert Partial<QualityMetrics> to full QualityMetrics with defaults
                 const fullMetrics = {
@@ -182,7 +176,7 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
                   documentation: pkg.qualityMetrics.hexagon.documentation ?? 0,
                 };
 
-                console.log('[QualityHexagon] Full metrics with defaults:', fullMetrics);
+                console.info('[QualityHexagon] Full metrics with defaults:', fullMetrics);
 
                 return compact ? (
                   <QualityHexagonCompact

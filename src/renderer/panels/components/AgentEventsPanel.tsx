@@ -49,17 +49,17 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
 
   // Log when panel mounts/repositoryPath changes
   useEffect(() => {
-    console.log('[AgentEventsPanel] ========== PANEL MOUNTED/UPDATED ==========');
-    console.log('[AgentEventsPanel] repositoryPath:', repositoryPath);
-    console.log('[AgentEventsPanel] filterByRepo:', filterByRepo);
-    console.log('[AgentEventsPanel] Current events count:', events.length);
-  }, [repositoryPath]);
+    console.info('[AgentEventsPanel] ========== PANEL MOUNTED/UPDATED ==========');
+    console.info('[AgentEventsPanel] repositoryPath:', repositoryPath);
+    console.info('[AgentEventsPanel] filterByRepo:', filterByRepo);
+    console.info('[AgentEventsPanel] Current events count:', events.length);
+  }, [repositoryPath, filterByRepo, events.length]);
 
   // Listen for processed events
   useEffect(() => {
     let eventCounter = 0;
 
-    console.log(
+    console.info(
       '[AgentEventsPanel] Setting up event listener, repositoryPath:',
       repositoryPath,
       'filterByRepo:',
@@ -67,20 +67,20 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
     );
 
     const unsubscribe = AgentSessionSDKService.onProcessedEvent((event) => {
-      console.log('[AgentEventsPanel] ========== RECEIVED EVENT ==========');
-      console.log('[AgentEventsPanel] Event type:', event.eventType);
-      console.log('[AgentEventsPanel] Session ID:', event.sessionId);
-      console.log('[AgentEventsPanel] Tool name:', event.toolName);
-      console.log('[AgentEventsPanel] Event repositoryInfo:', event.repositoryInfo);
-      console.log('[AgentEventsPanel] Event workingDirectory:', event.workingDirectory);
-      console.log('[AgentEventsPanel] Panel repositoryPath:', repositoryPath);
-      console.log('[AgentEventsPanel] filterByRepo:', filterByRepo);
+      console.info('[AgentEventsPanel] ========== RECEIVED EVENT ==========');
+      console.info('[AgentEventsPanel] Event type:', event.eventType);
+      console.info('[AgentEventsPanel] Session ID:', event.sessionId);
+      console.info('[AgentEventsPanel] Tool name:', event.toolName);
+      console.info('[AgentEventsPanel] Event repositoryInfo:', event.repositoryInfo);
+      console.info('[AgentEventsPanel] Event workingDirectory:', event.workingDirectory);
+      console.info('[AgentEventsPanel] Panel repositoryPath:', repositoryPath);
+      console.info('[AgentEventsPanel] filterByRepo:', filterByRepo);
 
       // Filter by repository if enabled
       if (filterByRepo && repositoryPath) {
         const eventRepoPath =
           event.repositoryInfo?.root || event.workingDirectory;
-        console.log(
+        console.info(
           '[AgentEventsPanel] Comparing paths - eventRepoPath:',
           eventRepoPath,
           'vs repositoryPath:',
@@ -89,15 +89,15 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
           eventRepoPath === repositoryPath,
         );
         if (eventRepoPath !== repositoryPath) {
-          console.log(
+          console.info(
             '[AgentEventsPanel] ❌ Event filtered out - different repository',
           );
-          console.log('[AgentEventsPanel] ===================================');
+          console.info('[AgentEventsPanel] ===================================');
           return;
         }
-        console.log('[AgentEventsPanel] ✅ Event accepted - repository matches');
+        console.info('[AgentEventsPanel] ✅ Event accepted - repository matches');
       } else {
-        console.log('[AgentEventsPanel] ✅ Event accepted - no filtering');
+        console.info('[AgentEventsPanel] ✅ Event accepted - no filtering');
       }
 
       // Add event to list
@@ -227,12 +227,22 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
         }
         break;
       case 'tool_use':
-        if (event.data?.parameters) {
-          const params = event.data.parameters as any;
-          if (params.file_path) paths.push(params.file_path);
-          if (params.path) paths.push(params.path);
-          if (params.paths && Array.isArray(params.paths)) {
-            paths.push(...params.paths);
+        if (
+          event.data?.parameters &&
+          typeof event.data.parameters === 'object'
+        ) {
+          const params = event.data.parameters as Record<string, unknown>;
+          const filePath = params.file_path;
+          if (typeof filePath === 'string') paths.push(filePath);
+          const genericPath = params.path;
+          if (typeof genericPath === 'string') paths.push(genericPath);
+          const multiplePaths = params.paths;
+          if (Array.isArray(multiplePaths)) {
+            paths.push(
+              ...multiplePaths.filter((item): item is string =>
+                typeof item === 'string',
+              ),
+            );
           }
         }
         break;
@@ -705,12 +715,12 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                               gap: '2px',
                             }}
                           >
-                            {filePaths.map((path, idx) => (
-                              <div
-                                key={idx}
-                                style={{
-                                  fontSize: '11px',
-                                  fontFamily: 'monospace',
+                              {filePaths.map((path) => (
+                                <div
+                                  key={path}
+                                  style={{
+                                    fontSize: '11px',
+                                    fontFamily: 'monospace',
                                   color: theme.colors.text,
                                   padding: '2px 6px',
                                   backgroundColor: theme.colors.background,

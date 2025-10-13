@@ -95,6 +95,11 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
     >(null);
     const lastResizeTimeRef = useRef<number>(0);
     const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isVisibleRef = useRef(isVisible);
+
+    useEffect(() => {
+      isVisibleRef.current = isVisible;
+    }, [isVisible]);
 
     // Expose scrollToBottom method via ref
     useImperativeHandle(
@@ -356,16 +361,9 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
 
       setTerminal(term);
 
-      // Focus terminal if autoFocus is enabled
-      if (autoFocus) {
-        setTimeout(() => {
-          term.focus();
-        }, 100); // Small delay to ensure terminal is fully rendered
-      }
-
       // Handle resize - both window resize and container resize
       const handleResize = () => {
-        if (!fitAddonRef.current || !isVisible) return;
+        if (!fitAddonRef.current || !isVisibleRef.current) return;
 
         const now = Date.now();
         // Debounce resize operations to prevent excessive calls
@@ -396,7 +394,7 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
           entry &&
           entry.contentRect.width > 0 &&
           entry.contentRect.height > 0 &&
-          isVisible
+          isVisibleRef.current
         ) {
           handleResize();
         }
@@ -415,7 +413,7 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
         term.dispose();
         // Don't destroy the session here - it should persist
       };
-    }, [theme]); // Only depend on theme, not sessionId
+    }, [theme, terminal]);
 
     // Handle connecting to existing session
     useEffect(() => {

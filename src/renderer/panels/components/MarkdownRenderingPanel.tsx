@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FileText, Presentation, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { FileText, Copy, Check, X } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { MarkdownDocumentViewer } from '../../repo-manager/shared/MarkdownDocumentViewer';
 import { PanelEmptyState } from '../../repo-manager/panels/PanelEmptyState';
@@ -210,6 +210,35 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
         </span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                border: 'none',
+                background: 'none',
+                color: theme.colors.textSecondary,
+                padding: '6px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease',
+                fontSize: '11px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <X size={14} />
+              <span>Close</span>
+            </button>
+          )}
+
           {/* View mode toggle - only show if document has slides */}
           {hasSlides && (
             <div
