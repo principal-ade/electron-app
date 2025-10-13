@@ -8,20 +8,53 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import {
-  Activity,
-  Filter,
-  Search,
-  RefreshCw,
-  Clock,
-  AlertCircle,
-} from 'lucide-react';
+import { Activity, Search, RefreshCw, AlertCircle } from 'lucide-react';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
 import type { EnhancedUIAgentSessionData } from '../../types/session.types';
 import type { SessionCardData } from '../../repo-manager/shared/AgentSessionCard';
 import { AgentSessionCard } from '../../repo-manager/shared/AgentSessionCard';
+import type {
+  FileOperation,
+  TodoItem,
+} from '../../main-process-api/AgentSessionService';
+import { EventActivityType, ToolName } from '../../../shared/sessionEnums';
+
+const SESSION_COLORS: readonly string[] = [
+  '#3b82f6', // Blue
+  '#10b981', // Green
+  '#8b5cf6', // Purple
+  '#f59e0b', // Amber
+  '#ef4444', // Red
+  '#06b6d4', // Cyan
+  '#ec4899', // Pink
+  '#14b8a6', // Teal
+];
+
+const mapToolToActivityType = (toolName?: string): EventActivityType => {
+  switch (toolName) {
+    case ToolName.READ:
+    case ToolName.NOTEBOOK_READ:
+      return EventActivityType.READ;
+    case ToolName.WRITE:
+    case ToolName.NOTEBOOK_WRITE:
+      return EventActivityType.WRITE;
+    case ToolName.EDIT:
+    case ToolName.MULTI_EDIT:
+    case ToolName.NOTEBOOK_EDIT:
+      return EventActivityType.EDIT;
+    case ToolName.WEB_FETCH:
+    case ToolName.WEB_SEARCH:
+      return EventActivityType.WEB;
+    case ToolName.BASH:
+      return EventActivityType.BASH;
+    case ToolName.TODO_WRITE:
+      return EventActivityType.TODO_WRITE;
+    default:
+      return EventActivityType.TOOL;
+  }
+};
 
 export interface AgentSessionsPanelProps {
   repositoryPath?: string | null;
@@ -38,12 +71,8 @@ interface SessionWithEvents {
     fileName?: string;
     description?: string;
   };
-  fileOperations?: Map<string, any>;
-  lastTodos?: Array<{
-    id: string;
-    content: string;
-    status: 'pending' | 'in_progress' | 'completed';
-  }>;
+  fileOperations?: Map<string, FileOperation>;
+  lastTodos?: TodoItem[];
 }
 
 export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
@@ -60,35 +89,24 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
 
   // Log when panel mounts/repositoryPath changes
   useEffect(() => {
-    console.log('[AgentSessionsPanel] ========== PANEL MOUNTED/UPDATED ==========');
-    console.log('[AgentSessionsPanel] repositoryPath:', repositoryPath);
-    console.log('[AgentSessionsPanel] Current sessions count:', sessions.length);
-  }, [repositoryPath]);
+    console.info('[AgentSessionsPanel] ========== PANEL MOUNTED/UPDATED ==========');
+    console.info('[AgentSessionsPanel] repositoryPath:', repositoryPath);
+    console.info('[AgentSessionsPanel] Current sessions count:', sessions.length);
+  }, [repositoryPath, sessions.length]);
 
   // Color palette for sessions
-  const sessionColors = [
-    '#3b82f6', // Blue
-    '#10b981', // Green
-    '#8b5cf6', // Purple
-    '#f59e0b', // Amber
-    '#ef4444', // Red
-    '#06b6d4', // Cyan
-    '#ec4899', // Pink
-    '#14b8a6', // Teal
-  ];
-
   const getSessionColor = useCallback(
     (index: number): string => {
-      return sessionColors[index % sessionColors.length];
+      return SESSION_COLORS[index % SESSION_COLORS.length];
     },
-    [sessionColors],
+    [],
   );
 
   // Fetch a single session by ID
   const fetchSingleSession = useCallback(
     async (sessionId: string, repository: string): Promise<SessionWithEvents | null> => {
       try {
-        console.log('[AgentSessionsPanel] Fetching single session:', sessionId);
+        console.info('[AgentSessionsPanel] Fetching single session:', sessionId);
 
         // Get full session details
         const fullSession = await AgentSessionSDKService.getSDKSession(
@@ -126,7 +144,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         // Create enhanced session with status
         const enhancedSession: EnhancedUIAgentSessionData = {
           ...fullSession,
-          sessionId: sessionId,
+          sessionId,
           directory: repository,
           workingDirectory: repository,
           lastActivity: fullSession.lastActivity || Date.now(),
@@ -135,12 +153,12 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
           eventCount: events?.length || 0,
           lastEvent: latestEvent
             ? {
-                type: 'tool_use' as any,
+                type: mapToolToActivityType(latestEvent.toolName),
                 fileName: latestEvent.fileName || '',
                 timestamp: latestEvent.timestamp,
               }
             : {
-                type: 'session_start' as any,
+                type: EventActivityType.TOOL,
                 fileName: '',
                 timestamp: fullSession.firstAccess || Date.now(),
               },
@@ -190,7 +208,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
 
     try {
       setIsLoading(true);
-      console.log('[AgentSessionsPanel] Fetching sessions for:', repositoryPath);
+      console.info('[AgentSessionsPanel] Fetching sessions for:', repositoryPath);
 
       // Get active sessions for this directory
       const projectSessions =
@@ -199,12 +217,12 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         );
 
       if (!projectSessions || projectSessions.summaries.length === 0) {
-        console.log('[AgentSessionsPanel] No sessions found');
+        console.info('[AgentSessionsPanel] No sessions found');
         setSessions([]);
         return;
       }
 
-      console.log(
+      console.info(
         `[AgentSessionsPanel] Found ${projectSessions.summaries.length} sessions`,
       );
 
@@ -238,25 +256,27 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
   // Listen for real-time event updates
   useEffect(() => {
     if (!repositoryPath) {
-      console.log('[AgentSessionsPanel] ⚠️ No repositoryPath - skipping event listener setup');
+      console.info(
+        '[AgentSessionsPanel] ⚠️ No repositoryPath - skipping event listener setup',
+      );
       return;
     }
 
-    console.log('[AgentSessionsPanel] Setting up event listener for:', repositoryPath);
+    console.info('[AgentSessionsPanel] Setting up event listener for:', repositoryPath);
 
     const unsubscribe = AgentSessionSDKService.onProcessedEvent((event) => {
-      console.log('[AgentSessionsPanel] ========== RECEIVED EVENT ==========');
-      console.log('[AgentSessionsPanel] Event type:', event.eventType);
-      console.log('[AgentSessionsPanel] Session ID:', event.sessionId);
-      console.log('[AgentSessionsPanel] Tool name:', event.toolName);
-      console.log('[AgentSessionsPanel] Event repositoryInfo:', event.repositoryInfo);
-      console.log('[AgentSessionsPanel] Event workingDirectory:', event.workingDirectory);
-      console.log('[AgentSessionsPanel] Panel repositoryPath:', repositoryPath);
+      console.info('[AgentSessionsPanel] ========== RECEIVED EVENT ==========');
+      console.info('[AgentSessionsPanel] Event type:', event.eventType);
+      console.info('[AgentSessionsPanel] Session ID:', event.sessionId);
+      console.info('[AgentSessionsPanel] Tool name:', event.toolName);
+      console.info('[AgentSessionsPanel] Event repositoryInfo:', event.repositoryInfo);
+      console.info('[AgentSessionsPanel] Event workingDirectory:', event.workingDirectory);
+      console.info('[AgentSessionsPanel] Panel repositoryPath:', repositoryPath);
 
       // Check if this event belongs to the current repository
       const eventRepoPath =
         event.repositoryInfo?.root || event.workingDirectory;
-      console.log(
+      console.info(
         '[AgentSessionsPanel] Comparing paths - eventRepoPath:',
         eventRepoPath,
         'vs repositoryPath:',
@@ -266,13 +286,15 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
       );
 
       if (eventRepoPath !== repositoryPath) {
-        console.log('[AgentSessionsPanel] ❌ Event filtered out - different repository');
-        console.log('[AgentSessionsPanel] ====================================');
+        console.info(
+          '[AgentSessionsPanel] ❌ Event filtered out - different repository',
+        );
+        console.info('[AgentSessionsPanel] ====================================');
         return;
       }
 
-      console.log('[AgentSessionsPanel] ✅ Event accepted - repository matches');
-      console.log('[AgentSessionsPanel] Updating session:', event.sessionId);
+      console.info('[AgentSessionsPanel] ✅ Event accepted - repository matches');
+      console.info('[AgentSessionsPanel] Updating session:', event.sessionId);
 
       // Update the session that received this event
       setSessions((prevSessions) => {
@@ -282,11 +304,11 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         );
 
         if (!sessionExists) {
-          console.log('[AgentSessionsPanel] 🆕 Detected new session:', event.sessionId);
+          console.info('[AgentSessionsPanel] 🆕 Detected new session:', event.sessionId);
           // Fetch the new session asynchronously and add it
           fetchSingleSession(event.sessionId, eventRepoPath).then((newSession) => {
             if (newSession) {
-              console.log('[AgentSessionsPanel] ✅ Added new session:', event.sessionId);
+              console.info('[AgentSessionsPanel] ✅ Added new session:', event.sessionId);
               setSessions((current) => {
                 // Check again to prevent duplicates
                 if (current.some((s) => s.session.sessionId === event.sessionId)) {

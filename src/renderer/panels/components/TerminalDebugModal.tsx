@@ -85,7 +85,7 @@ export const TerminalDebugModal: React.FC<TerminalDebugModalProps> = ({
     setError(null);
 
     const orphaned = getOrphanedSessions();
-    console.log(
+    console.info(
       '[TerminalDebug] Cleaning up',
       orphaned.length,
       'orphaned sessions',
@@ -93,7 +93,7 @@ export const TerminalDebugModal: React.FC<TerminalDebugModalProps> = ({
 
     try {
       for (const session of orphaned) {
-        console.log('[TerminalDebug] Destroying session:', session.id);
+        console.info('[TerminalDebug] Destroying session:', session.id);
         await TerminalService.destroy(session.id);
       }
 
@@ -111,7 +111,7 @@ export const TerminalDebugModal: React.FC<TerminalDebugModalProps> = ({
 
   const destroySession = async (sessionId: string) => {
     try {
-      console.log('[TerminalDebug] Destroying individual session:', sessionId);
+      console.info('[TerminalDebug] Destroying individual session:', sessionId);
       await TerminalService.destroy(sessionId);
       setRefreshCount((c) => c + 1);
     } catch (err) {

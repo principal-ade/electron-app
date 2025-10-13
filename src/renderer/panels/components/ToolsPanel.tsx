@@ -14,13 +14,14 @@ import {
   Info,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
+import type { Theme } from '@a24z/industry-theme';
 import type {
   PackageLayer,
   ConfigFile,
   PackageCommand,
 } from '@principal-ai/codebase-composition';
 import type { HighlightLayer } from '@principal-ai/code-city-react';
-import type { LensResult, Issue } from '@principal-ai/codebase-quality-lenses';
+import type { LensResult } from '@principal-ai/codebase-quality-lenses';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import type {
   ToolExecutionRequest,
@@ -199,7 +200,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   // Update highlight layers when results change
   useEffect(() => {
     if (!onHighlightLayersChange) {
-      console.log('[ToolsTab] No onHighlightLayersChange callback provided');
+      console.info('[ToolsTab] No onHighlightLayersChange callback provided');
       return;
     }
 
@@ -217,7 +218,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
           key.startsWith(keyPrefix) ||
           (pkg.packagePath === '' && key.startsWith(':'))
         ) {
-          console.log(
+          console.info(
             `[ToolsTab] Found result for package "${pkg.packagePath}":`,
             key,
           );
@@ -230,14 +231,14 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
           packageResults,
           pkg.packagePath,
         );
-        console.log(
+        console.info(
           `[ToolsTab] Created ${layers.length} layers for package ${pkg.packagePath}`,
         );
         allLayers.push(...layers);
       }
     });
 
-    console.log(
+    console.info(
       `[ToolsTab] Calling onHighlightLayersChange with ${allLayers.length} total layers`,
     );
     onHighlightLayersChange(allLayers);
@@ -311,7 +312,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
           setToolResults((prev) => {
             const newMap = new Map(prev);
             newMap.set(key, result);
-            console.log(
+            console.info(
               `[ToolsTab] Stored result with key "${key}", total results: ${newMap.size}`,
             );
             return newMap;
@@ -418,7 +419,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
           padding: 16,
         }}
       >
-        {packageTools.map((pkg, index) => {
+        {packageTools.map((pkg) => {
           const isExpanded = expandedPackages.has(pkg.packagePath);
           const isRoot = pkg.packagePath === '';
 
@@ -546,11 +547,11 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
                         marginTop: 12,
                       }}
                     >
-                      {pkg.tools.map((tool, toolIndex) => (
-                        <div
-                          key={`${tool.name}-${toolIndex}`}
-                          style={{
-                            padding: 12,
+                        {pkg.tools.map((tool) => (
+                          <div
+                            key={`${pkg.packagePath || 'root'}-${tool.name}`}
+                            style={{
+                              padding: 12,
                             borderRadius: 6,
                             backgroundColor: theme.colors.background,
                             border: `1px solid ${theme.colors.border}`,
@@ -886,7 +887,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
  */
 function renderLensResultStats(
   lensResult: LensResult,
-  theme: any,
+  theme: Theme,
 ): React.ReactNode {
   const { issues = [], metrics = {} } = lensResult;
 
@@ -1009,12 +1010,12 @@ export function createHighlightLayersFromLensResults(
 ): HighlightLayer[] {
   const layers: HighlightLayer[] = [];
 
-  console.log(
+  console.info(
     `[createHighlightLayers] Processing results for packagePath: "${packagePath}"`,
   );
 
   results.forEach((result, key) => {
-    console.log(`[createHighlightLayers] Processing result for key: ${key}`, {
+    console.info(`[createHighlightLayers] Processing result for key: ${key}`, {
       toolName: result.toolName,
       hasLensResult: !!result.lensResult,
       issuesCount: result.lensResult?.issues?.length || 0,
@@ -1044,7 +1045,7 @@ export function createHighlightLayersFromLensResults(
               fullPath = issue.file;
             }
 
-            console.log(`[createHighlightLayers] Issue file path:`, {
+            console.info(`[createHighlightLayers] Issue file path:`, {
               originalPath: issue.file,
               packagePath,
               fullPath,
@@ -1099,9 +1100,9 @@ export function createHighlightLayersFromLensResults(
         const filesAnalyzed = result.lensResult.metrics.filesAnalyzed;
 
         // Check if we have the analyzed files list from the lens result
-        const analyzedFiles = (result.lensResult as any)?.analyzedFiles;
+        const analyzedFiles = result.lensResult.analyzedFiles;
 
-        console.log(`[createHighlightLayers] Checking for analyzedFiles:`, {
+        console.info(`[createHighlightLayers] Checking for analyzedFiles:`, {
           hasAnalyzedFiles: !!analyzedFiles,
           analyzedFilesLength: analyzedFiles?.length,
           lensResultKeys: Object.keys(result.lensResult || {}),
@@ -1112,24 +1113,24 @@ export function createHighlightLayersFromLensResults(
 
         if (analyzedFiles && analyzedFiles.length > 0) {
           // We have the actual file list - use it!
-          console.log(
+          console.info(
             `[createHighlightLayers] Using ${analyzedFiles.length} analyzed files for success layer`,
           );
 
-          items = analyzedFiles.map((file: any) => ({
-            path: typeof file === 'string' ? file : file.path || file.relative,
+          items = analyzedFiles.map((file) => ({
+            path: file.path,
             type: 'file' as const,
             renderStrategy: 'fill' as const,
           }));
 
-          console.log(
+          console.info(
             `[createHighlightLayers] Created ${items.length} file items, first few:`,
             items.slice(0, 3),
           );
         } else {
           // Fallback to highlighting the whole package
           const highlightPath = packagePath || '';
-          console.log(
+          console.info(
             `[createHighlightLayers] No file list, highlighting package: "${highlightPath}"`,
           );
 
@@ -1142,7 +1143,7 @@ export function createHighlightLayersFromLensResults(
           ];
         }
 
-        console.log(`[createHighlightLayers] Creating success layer:`, {
+        console.info(`[createHighlightLayers] Creating success layer:`, {
           toolName: result.toolName,
           filesAnalyzed,
           packagePath,
@@ -1160,7 +1161,7 @@ export function createHighlightLayersFromLensResults(
           priority: 3,
         };
 
-        console.log(`[createHighlightLayers] Final layer:`, {
+        console.info(`[createHighlightLayers] Final layer:`, {
           id: layer.id,
           name: layer.name,
           itemsCount: layer.items.length,

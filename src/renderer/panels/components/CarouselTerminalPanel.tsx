@@ -6,6 +6,7 @@ import React, {
   useRef,
 } from 'react';
 import { X, Plus, Bug, Monitor, ChevronLeft, ChevronRight } from 'lucide-react';
+import type { AlexandriaEntry } from '@a24z/core-library';
 import { useTheme } from '@a24z/industry-theme';
 import { SnapCarousel, SnapCarouselRef } from '@a24z/panels';
 import TerminalPanel, { TerminalPanelRef } from '../TerminalPanel';
@@ -238,13 +239,7 @@ export const CarouselTerminalPanel = forwardRef<
         // DON'T destroy sessions on unmount - they should persist when panel is swapped
         // Sessions are only destroyed when user explicitly closes a tab
       };
-    }, [
-      showAllTerminals,
-      directory,
-      terminalContext,
-      initialTabs.length,
-      onTabsChange,
-    ]);
+    }, [showAllTerminals, directory, terminalContext, initialTabs, onTabsChange]);
 
     // Close a tab
     const closeTab = useCallback(
@@ -394,7 +389,9 @@ export const CarouselTerminalPanel = forwardRef<
 
               if (repo) {
                 // Open the repository dashboard
-                await WindowService.openRepositoryDashboard(repo as any);
+                await WindowService.openRepositoryDashboard(
+                  repo as unknown as AlexandriaEntry,
+                );
               }
             } catch (error) {
               console.error(

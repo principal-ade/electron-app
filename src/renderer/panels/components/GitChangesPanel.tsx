@@ -31,6 +31,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     actions,
     fileTree,
   } = useRepositoryPanelContext();
+  const { openGitDiff, openFile } = actions;
 
   // Determine file status based on git status data
   const getFileStatus = useCallback(
@@ -67,14 +68,14 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
         return;
       }
 
-      if (actions.openGitDiff) {
-        actions.openGitDiff(filePath, status);
+      if (openGitDiff) {
+        openGitDiff(filePath, status);
         return;
       }
 
-      actions.openFile?.(filePath);
+      openFile?.(filePath);
     },
-    [actions.openFile, actions.openGitDiff, getFileStatus, onFileClick],
+    [getFileStatus, onFileClick, openGitDiff, openFile],
   );
 
   // Context menu state
@@ -111,40 +112,6 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     setContextMenu(null);
   }, []);
 
-  if (!repositoryPath) {
-    const content = (
-      <div
-        style={{
-          padding: variant === 'panel' ? '16px' : '20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '160px',
-          color: theme.colors.textSecondary,
-          textAlign: 'center',
-        }}
-      >
-        Git changes are only available for local repositories.
-      </div>
-    );
-
-    if (variant === 'tab') {
-      return content;
-    }
-
-    return (
-      <div
-        style={{
-          backgroundColor: theme.colors.backgroundSecondary,
-          borderRadius: '8px',
-          border: `1px solid ${theme.colors.border}`,
-        }}
-      >
-        {content}
-      </div>
-    );
-  }
-
   const hasChanges =
     gitStatus.staged.length > 0 ||
     gitStatus.unstaged.length > 0 ||
@@ -152,7 +119,9 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     gitStatus.deleted.length > 0;
 
   const gitChangesData = useMemo(() => {
-    if (!hasChanges || gitStatusLoading) return null;
+    if (!repositoryPath || !hasChanges || gitStatusLoading) {
+      return null;
+    }
 
     // Helper function to expand directories using the fileTree
     const expandDirectories = (paths: string[]): string[] => {
@@ -230,13 +199,47 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
 
     return { tree, statusData };
   }, [
-    gitStatus,
-    repository?.path,
     repositoryPath,
     hasChanges,
     gitStatusLoading,
     fileTree,
+    gitStatus,
+    repository?.path,
   ]);
+
+  if (!repositoryPath) {
+    const content = (
+      <div
+        style={{
+          padding: variant === 'panel' ? '16px' : '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '160px',
+          color: theme.colors.textSecondary,
+          textAlign: 'center',
+        }}
+      >
+        Git changes are only available for local repositories.
+      </div>
+    );
+
+    if (variant === 'tab') {
+      return content;
+    }
+
+    return (
+      <div
+        style={{
+          backgroundColor: theme.colors.backgroundSecondary,
+          borderRadius: '8px',
+          border: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        {content}
+      </div>
+    );
+  }
 
   // Tab variant - just the tree with no wrapper
   if (variant === 'tab') {

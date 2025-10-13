@@ -6,7 +6,6 @@ import {
   XCircle,
   Calendar,
   AlertCircle,
-  FileText,
   Trash2,
   Copy,
 } from 'lucide-react';
@@ -169,7 +168,7 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
       try {
         await navigator.clipboard.writeText(task.directoryPath);
         // Optional: Show a brief success indicator
-        console.log('Path copied:', task.directoryPath);
+        console.info('Path copied:', task.directoryPath);
       } catch (err) {
         console.error('Failed to copy path:', err);
         setError('Failed to copy path');

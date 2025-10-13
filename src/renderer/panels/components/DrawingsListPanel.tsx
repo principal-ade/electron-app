@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Pencil, Trash2, Clock, Plus } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { AlexandriaDrawingService } from '../../main-process-api/AlexandriaDrawingService';
@@ -22,7 +22,7 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
     null,
   );
 
-  const loadDrawings = async () => {
+  const loadDrawings = useCallback(async () => {
     if (!repositoryPath) {
       setDrawings([]);
       setLoading(false);
@@ -45,11 +45,11 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [repositoryPath]);
 
   useEffect(() => {
-    loadDrawings();
-  }, [repositoryPath]);
+    void loadDrawings();
+  }, [loadDrawings]);
 
   const handleDrawingClick = (drawing: DiagramListItem) => {
     setSelectedDrawingId(drawing.id);
