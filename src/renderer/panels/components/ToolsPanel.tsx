@@ -12,6 +12,7 @@ import {
   Loader,
   X,
   Info,
+  Activity,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { Theme } from '@a24z/industry-theme';
@@ -890,6 +891,50 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
             {packageTools.reduce((sum, p) => sum + p.summary.installedTools, 0)}
           </span>
         </div>
+      </div>
+    </div>
+  );
+};
+
+export const ToolsPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '6px 8px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '4px',
+        }}
+      >
+        <Wrench size={14} />
+        <span>Build Tools</span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '6px 8px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '4px',
+        }}
+      >
+        <Activity size={14} />
+        <span>Linters</span>
       </div>
     </div>
   );

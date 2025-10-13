@@ -381,3 +381,41 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
     </div>
   );
 };
+
+export const DrawingsListPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <Pencil size={14} style={{ color: theme.colors.primary }} />
+        <span>architecture.excalidraw</span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <Pencil size={14} style={{ color: theme.colors.primary }} />
+        <span>flow-diagram.excalidraw</span>
+      </div>
+    </div>
+  );
+};

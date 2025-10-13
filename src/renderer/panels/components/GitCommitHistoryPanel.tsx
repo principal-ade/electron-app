@@ -260,3 +260,66 @@ export const GitCommitHistoryPanel: React.FC<GitCommitHistoryPanelProps> = ({
     </div>
   );
 };
+
+export const GitCommitHistoryPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      {[
+        {
+          title: 'chore: add commit history panel',
+          author: 'Alex Engineer',
+          sha: '1a2b3c4d',
+          time: '2 hours ago',
+        },
+        {
+          title: 'fix: handle empty repositories gracefully',
+          author: 'Jamie Dev',
+          sha: '5f6g7h8i',
+          time: 'Yesterday',
+        },
+      ].map((commit) => (
+        <div
+          key={commit.sha}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: '6px',
+            padding: '8px',
+            backgroundColor: theme.colors.background,
+          }}
+        >
+          <span style={{ fontWeight: 600 }}>{commit.title}</span>
+          <span
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              color: theme.colors.textSecondary,
+              fontSize: '11px',
+              fontFamily: theme.fonts.body,
+            }}
+          >
+            <span>{commit.author}</span>
+            <span>•</span>
+            <span style={{ fontFamily: theme.fonts.monospace }}>{commit.sha}</span>
+            <span>•</span>
+            <span>{commit.time}</span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};

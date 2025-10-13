@@ -360,3 +360,30 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
     </div>
   );
 };
+
+export const MarkdownRenderingPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      <div style={{ fontSize: '14px', fontWeight: 600 }}>Markdown Preview</div>
+      <div
+        style={{
+          fontSize: '11px',
+          color: theme.colors.textSecondary,
+        }}
+      >
+        Renders .md files with syntax highlighting
+      </div>
+    </div>
+  );
+};

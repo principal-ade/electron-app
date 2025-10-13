@@ -331,3 +331,51 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
     </div>
   );
 };
+
+export const AgentContextTreePanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}
+    >
+      <div style={{ fontWeight: 600, marginBottom: '4px' }}>Context Trees</div>
+      <div
+        style={{
+          paddingLeft: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <Activity size={12} style={{ color: theme.colors.primary }} />
+          <span style={{ fontSize: '11px' }}>Session 1</span>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <Activity size={12} style={{ color: theme.colors.primary }} />
+          <span style={{ fontSize: '11px' }}>Session 2</span>
+        </div>
+      </div>
+    </div>
+  );
+};

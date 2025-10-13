@@ -646,3 +646,51 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
     </div>
   );
 };
+
+export const AgentSessionsPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '11px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}
+    >
+      <div
+        style={{
+          padding: '8px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '6px',
+          borderLeft: `3px solid #3b82f6`,
+        }}
+      >
+        <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+          Session abc123
+        </div>
+        <div style={{ fontSize: '10px', color: theme.colors.textSecondary }}>
+          Last event: Read • src/index.ts
+        </div>
+      </div>
+      <div
+        style={{
+          padding: '8px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '6px',
+          borderLeft: `3px solid #10b981`,
+        }}
+      >
+        <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+          Session def456
+        </div>
+        <div style={{ fontSize: '10px', color: theme.colors.textSecondary }}>
+          Last event: Write • src/utils.ts
+        </div>
+      </div>
+    </div>
+  );
+};

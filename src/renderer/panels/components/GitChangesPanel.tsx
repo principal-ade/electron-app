@@ -393,3 +393,54 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     </div>
   );
 };
+
+export const GitChangesPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          color: '#22c55e',
+        }}
+      >
+        <span>+</span>
+        <span>new-file.ts</span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          color: '#f59e0b',
+        }}
+      >
+        <span>M</span>
+        <span>modified.ts</span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          color: '#ef4444',
+        }}
+      >
+        <span>-</span>
+        <span>deleted.ts</span>
+      </div>
+    </div>
+  );
+};

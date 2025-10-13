@@ -520,3 +520,32 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
     </div>
   );
 };
+
+export const FilePreviewPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '11px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        fontFamily: 'monospace',
+      }}
+    >
+      <div>
+        <span style={{ color: '#c678dd' }}>export</span>{' '}
+        <span style={{ color: '#61afef' }}>function</span>{' '}
+        <span style={{ color: '#e5c07b' }}>hello</span>() {'{'}
+      </div>
+      <div style={{ paddingLeft: '12px' }}>
+        console.<span style={{ color: '#61afef' }}>log</span>(
+        <span style={{ color: '#98c379' }}>'Hello'</span>);
+      </div>
+      <div>{'}'}</div>
+    </div>
+  );
+};

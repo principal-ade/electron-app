@@ -509,3 +509,30 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
     </div>
   );
 };
+
+export const QualityHexagonPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      <div style={{ fontSize: '14px', fontWeight: 600 }}>Package Quality</div>
+      <div
+        style={{
+          fontSize: '11px',
+          color: theme.colors.textSecondary,
+        }}
+      >
+        View package metrics, quality hexagon, and available lenses
+      </div>
+    </div>
+  );
+};

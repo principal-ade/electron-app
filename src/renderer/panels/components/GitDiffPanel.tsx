@@ -441,3 +441,33 @@ export const GitDiffPanel: React.FC<GitDiffPanelProps> = ({
     </div>
   );
 };
+
+export const GitDiffPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '11px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        fontFamily: 'monospace',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          gap: '8px',
+        }}
+      >
+        <span style={{ color: theme.colors.textSecondary }}>@@ 12,5 @@</span>
+      </div>
+      <div style={{ color: '#ef4444' }}>- const count = oldValue;</div>
+      <div style={{ color: '#22c55e' }}>+ const count = newValue;</div>
+      <div style={{ color: theme.colors.textSecondary }}>  return count;</div>
+    </div>
+  );
+};
