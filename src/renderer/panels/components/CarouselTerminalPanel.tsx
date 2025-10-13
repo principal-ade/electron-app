@@ -81,7 +81,10 @@ export const CarouselTerminalPanel = forwardRef<
     }));
 
     // Create unique context for this carousel terminal instance
-    const terminalContext = `carousel-terminal:${repositoryKey}`;
+    const terminalContext = React.useMemo(
+      () => `carousel-terminal:${repositoryKey}`,
+      [repositoryKey],
+    );
 
     // Switch to a panel
     const switchPanel = useCallback(

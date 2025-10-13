@@ -384,11 +384,16 @@ export class WorkspaceLayoutService {
       'code-review': {
         id: 'code-review',
         name: 'Code Review',
-        description: 'File tree, code viewer, and git changes',
+        description:
+          'Git changes and file tree on left, code viewer in middle, city map on right',
         layout: {
-          left: 'fileTree',
+          left: {
+            type: 'tabs',
+            panels: ['gitChanges', 'fileTree'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
           middle: 'codeViewer',
-          right: 'gitChanges',
+          right: 'cityVisualization',
         },
         defaultSizes: { left: 20, middle: 50, right: 30 },
         defaultCollapsed: { left: false, right: false },
@@ -399,14 +404,14 @@ export class WorkspaceLayoutService {
       documentation: {
         id: 'documentation',
         name: 'Documentation',
-        description: 'Docs, markdown viewer, and dependencies',
+        description: 'Docs, markdown viewer, and code viewer',
         layout: {
           left: 'docs',
           middle: 'markdownViewer',
-          right: 'dependencies',
+          right: 'codeViewer',
         },
         defaultSizes: { left: 20, middle: 50, right: 30 },
-        defaultCollapsed: { left: false, right: false },
+        defaultCollapsed: { left: false, right: true },
         createdAt: now,
         updatedAt: now,
         isBuiltIn: true,
@@ -415,11 +420,11 @@ export class WorkspaceLayoutService {
         id: 'agent-work',
         name: 'Agent Work',
         description:
-          'File tree, agent context, git changes, tabbed terminal, city map, agent events, code viewer, and markdown slides',
+          'Agent sessions, file tree, agent context, git changes, tabbed terminal, city map, agent events, code viewer, and markdown slides',
         layout: {
           left: {
             type: 'tabs',
-            panels: ['fileTree', 'agentContext', 'gitChanges'],
+            panels: ['agentSessions', 'fileTree', 'agentContext', 'gitChanges'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
           middle: 'tabbedTerminal',
@@ -436,6 +441,102 @@ export class WorkspaceLayoutService {
         },
         defaultSizes: { left: 20, middle: 45, right: 35 },
         defaultCollapsed: { left: false, right: false },
+        createdAt: now,
+        updatedAt: now,
+        isBuiltIn: true,
+      },
+      'agent-work-carousel': {
+        id: 'agent-work-carousel',
+        name: 'Agent Work Carousel',
+        description:
+          'Agent sessions, file tree, agent context, git changes, carousel terminal, city map, agent events, code viewer, and markdown slides',
+        layout: {
+          left: {
+            type: 'tabs',
+            panels: ['agentSessions', 'fileTree', 'agentContext', 'gitChanges'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
+          middle: 'carouselTerminal',
+          right: {
+            type: 'tabs',
+            panels: [
+              'cityVisualization',
+              'agentEvents',
+              'codeViewer',
+              'markdownViewer',
+            ],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
+        },
+        defaultSizes: { left: 20, middle: 45, right: 35 },
+        defaultCollapsed: { left: false, right: false },
+        createdAt: now,
+        updatedAt: now,
+        isBuiltIn: true,
+      },
+      'quality-check': {
+        id: 'quality-check',
+        name: 'Quality Check',
+        description:
+          'Package information, tools, and dependencies on left; city visualization map in middle; code viewer on right (collapsed)',
+        layout: {
+          left: {
+            type: 'tabs',
+            panels: ['packageInfo', 'tools', 'dependencies'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
+          middle: 'cityVisualization',
+          right: 'codeViewer',
+        },
+        defaultSizes: { left: 20, middle: 45, right: 35 },
+        defaultCollapsed: { left: false, right: true },
+        createdAt: now,
+        updatedAt: now,
+        isBuiltIn: true,
+      },
+      drawing: {
+        id: 'drawing',
+        name: 'Drawing',
+        description: 'Drawings and docs, excalidraw diagram, markdown viewer',
+        layout: {
+          left: {
+            type: 'tabs',
+            panels: ['drawings', 'docs'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
+          middle: 'excalidrawDiagram',
+          right: 'markdownViewer',
+        },
+        defaultSizes: { left: 20, middle: 50, right: 30 },
+        defaultCollapsed: { left: false, right: true },
+        createdAt: now,
+        updatedAt: now,
+        isBuiltIn: true,
+      },
+      'old-school': {
+        id: 'old-school',
+        name: 'Old School',
+        description:
+          'File tree, git changes, and docs on left; code viewer and markdown viewer in middle; tabbed terminal and city map on right (collapsed)',
+        layout: {
+          left: {
+            type: 'tabs',
+            panels: ['fileTree', 'gitChanges', 'docs'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
+          middle: {
+            type: 'tabs',
+            panels: ['codeViewer', 'markdownViewer'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
+          right: {
+            type: 'tabs',
+            panels: ['tabbedTerminal', 'cityVisualization'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
+        },
+        defaultSizes: { left: 20, middle: 50, right: 30 },
+        defaultCollapsed: { left: false, right: true },
         createdAt: now,
         updatedAt: now,
         isBuiltIn: true,
@@ -460,6 +561,10 @@ export class WorkspaceLayoutService {
             'code-review',
             'documentation',
             'agent-work',
+            'agent-work-carousel',
+            'quality-check',
+            'drawing',
+            'old-school',
           ],
         },
       });

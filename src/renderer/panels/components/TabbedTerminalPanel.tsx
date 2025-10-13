@@ -64,7 +64,10 @@ export const TabbedTerminalPanel = forwardRef<
     const terminalRefs = useRef<Map<string, TerminalPanelRef>>(new Map());
 
     // Create unique context for this tabbed terminal instance
-    const terminalContext = `tabbed-terminal:${repositoryKey}`;
+    const terminalContext = React.useMemo(
+      () => `tabbed-terminal:${repositoryKey}`,
+      [repositoryKey],
+    );
 
     // Switch to a tab
     const switchTab = useCallback(
