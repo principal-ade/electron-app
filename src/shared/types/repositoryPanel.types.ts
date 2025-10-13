@@ -1,6 +1,7 @@
 export type RepositoryPanelId =
   // Repository Explorer panels
   | 'gitChanges'
+  | 'gitIssues'
   | 'files'
   | 'gitStatus'
   | 'tasksAndNotes'
