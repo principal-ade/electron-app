@@ -1,36 +1,5 @@
 {
-  "elements": [
-    {
-      "id": "-u3M_XziQOVpcPRqLhKzt",
-      "type": "ellipse",
-      "x": 77.05859375,
-      "y": 160.9765625,
-      "width": 130.578125,
-      "height": 101.10546875,
-      "angle": 0,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 2,
-      "strokeStyle": "solid",
-      "roughness": 1,
-      "opacity": 100,
-      "groupIds": [],
-      "frameId": null,
-      "index": "a0",
-      "roundness": {
-        "type": 2
-      },
-      "seed": 310897940,
-      "version": 19,
-      "versionNonce": 603393196,
-      "isDeleted": false,
-      "boundElements": null,
-      "updated": 1760023827779,
-      "link": null,
-      "locked": false
-    }
-  ],
+  "elements": [],
   "appState": {
     "showWelcomeScreen": true,
     "theme": "dark",
@@ -60,17 +29,7 @@
       "type": "selection",
       "customType": null,
       "locked": false,
-      "lastActiveTool": {
-        "type": "hand",
-        "customType": null,
-        "locked": false,
-        "lastActiveTool": {
-          "type": "selection",
-          "customType": null,
-          "locked": false,
-          "lastActiveTool": null
-        }
-      }
+      "lastActiveTool": null
     },
     "penMode": false,
     "penDetected": false,
@@ -90,7 +49,7 @@
     "isRotating": false,
     "lastPointerDownWith": "mouse",
     "multiElement": null,
-    "name": "something",
+    "name": "Untitled-2025-10-13-1340",
     "contextMenu": null,
     "openMenu": null,
     "openPopup": null,
@@ -100,14 +59,10 @@
       "shown": false,
       "data": null
     },
-    "previousSelectedElementIds": {
-      "i-gIM9kPEy8MnY4yTy2Ub": true
-    },
+    "previousSelectedElementIds": {},
     "resizingElement": null,
     "scrolledOutside": false,
-    "selectedElementIds": {
-      "-u3M_XziQOVpcPRqLhKzt": true
-    },
+    "selectedElementIds": {},
     "hoveredElementIds": {},
     "selectedGroupIds": {},
     "selectedElementsAreBeingDragged": false,
@@ -139,7 +94,10 @@
     "showHyperlinkPopup": false,
     "selectedLinearElement": null,
     "snapLines": [],
-    "originSnapOffset": null,
+    "originSnapOffset": {
+      "x": 0,
+      "y": 0
+    },
     "objectsSnapModeEnabled": false,
     "userToFollow": null,
     "followedBy": {},

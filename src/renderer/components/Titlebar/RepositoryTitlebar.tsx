@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Layers, Key, ExternalLink, Link2 } from 'lucide-react';
+import { Layout, Layers, Key, ExternalLink, Link2, NotebookPen } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
@@ -22,6 +22,7 @@ export interface RepositoryTitlebarProps {
   onSourceSelect?: (source: FileTreeSource) => void;
   onSecretsClick?: () => void;
   onLinksClick?: () => void;
+  onAddNoteClick?: () => void;
   onHelpClick?: () => void;
   onForkBadgeClick?: () => void;
   mode?: RepositoryMode;
@@ -58,6 +59,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   onSourceSelect,
   onSecretsClick,
   onLinksClick,
+  onAddNoteClick,
   onHelpClick,
   onForkBadgeClick,
   mode,
@@ -264,6 +266,41 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             title="Manage repository links"
           >
             <Link2 size={14} />
+          </button>
+        )}
+
+        {/* Add Note button - only show for local clones */}
+        {hasLocalClone && onAddNoteClick && (
+          <button
+            onClick={onAddNoteClick}
+            style={{
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              width: '32px',
+              height: '32px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+            title="Add note"
+          >
+            <NotebookPen size={14} />
           </button>
         )}
 

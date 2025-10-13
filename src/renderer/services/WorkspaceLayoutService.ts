@@ -385,14 +385,18 @@ export class WorkspaceLayoutService {
         id: 'code-review',
         name: 'Code Review',
         description:
-          'Git changes, pull requests, and file tree on left, code viewer in middle, city map on right',
+          'Git changes, pull requests, and file tree on left, git diff and code viewer in middle, city map on right',
         layout: {
           left: {
             type: 'tabs',
             panels: ['gitChanges', 'gitPullRequests', 'fileTree'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
-          middle: 'codeViewer',
+          middle: {
+            type: 'tabs',
+            panels: ['gitDiff', 'codeViewer'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
           right: 'cityVisualization',
         },
         defaultSizes: { left: 20, middle: 50, right: 30 },
@@ -478,7 +482,7 @@ export class WorkspaceLayoutService {
         id: 'quality-check',
         name: 'Quality Check',
         description:
-          'Package information, tools, and dependencies on left; city visualization map in middle; code viewer on right (collapsed)',
+          'Package information, tools, and dependencies on left; city visualization map in middle; carousel terminal and code viewer on right (collapsed)',
         layout: {
           left: {
             type: 'tabs',
@@ -486,7 +490,11 @@ export class WorkspaceLayoutService {
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
           middle: 'cityVisualization',
-          right: 'codeViewer',
+          right: {
+            type: 'tabs',
+            panels: ['carouselTerminal', 'codeViewer'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
         },
         defaultSizes: { left: 20, middle: 45, right: 35 },
         defaultCollapsed: { left: false, right: true },
@@ -497,7 +505,7 @@ export class WorkspaceLayoutService {
       drawing: {
         id: 'drawing',
         name: 'Drawing',
-        description: 'Drawings and docs, excalidraw diagram, markdown viewer',
+        description: 'Drawings and docs, excalidraw diagram, carousel terminal and markdown viewer',
         layout: {
           left: {
             type: 'tabs',
@@ -505,7 +513,11 @@ export class WorkspaceLayoutService {
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
           middle: 'excalidrawDiagram',
-          right: 'markdownViewer',
+          right: {
+            type: 'tabs',
+            panels: ['carouselTerminal', 'markdownViewer'],
+            config: { defaultActiveTab: 0, tabPosition: 'top' },
+          },
         },
         defaultSizes: { left: 20, middle: 50, right: 30 },
         defaultCollapsed: { left: false, right: true },
@@ -517,11 +529,11 @@ export class WorkspaceLayoutService {
         id: 'old-school',
         name: 'Old School',
         description:
-          'File tree, git changes, and docs on left; code viewer and markdown viewer in middle; tabbed terminal and city map on right (collapsed)',
+          'File tree, search, git changes, and docs on left; code viewer and markdown viewer in middle; tabbed terminal and city map on right (collapsed)',
         layout: {
           left: {
             type: 'tabs',
-            panels: ['fileTree', 'gitChanges', 'docs'],
+            panels: ['fileTree', 'search', 'gitChanges', 'docs'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
           middle: {

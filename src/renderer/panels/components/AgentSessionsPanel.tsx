@@ -87,12 +87,12 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  // Log when panel mounts/repositoryPath changes
-  useEffect(() => {
-    console.info('[AgentSessionsPanel] ========== PANEL MOUNTED/UPDATED ==========');
-    console.info('[AgentSessionsPanel] repositoryPath:', repositoryPath);
-    console.info('[AgentSessionsPanel] Current sessions count:', sessions.length);
-  }, [repositoryPath, sessions.length]);
+  // Log when panel mounts/repositoryPath changes (commented out for less noise)
+  // useEffect(() => {
+  //   console.info('[AgentSessionsPanel] ========== PANEL MOUNTED/UPDATED ==========');
+  //   console.info('[AgentSessionsPanel] repositoryPath:', repositoryPath);
+  //   console.info('[AgentSessionsPanel] Current sessions count:', sessions.length);
+  // }, [repositoryPath, sessions.length]);
 
   // Color palette for sessions
   const getSessionColor = useCallback(
@@ -106,7 +106,6 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
   const fetchSingleSession = useCallback(
     async (sessionId: string, repository: string): Promise<SessionWithEvents | null> => {
       try {
-        console.info('[AgentSessionsPanel] Fetching single session:', sessionId);
 
         // Get full session details
         const fullSession = await AgentSessionSDKService.getSDKSession(
@@ -208,7 +207,6 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
 
     try {
       setIsLoading(true);
-      console.info('[AgentSessionsPanel] Fetching sessions for:', repositoryPath);
 
       // Get active sessions for this directory
       const projectSessions =
@@ -217,14 +215,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         );
 
       if (!projectSessions || projectSessions.summaries.length === 0) {
-        console.info('[AgentSessionsPanel] No sessions found');
         setSessions([]);
         return;
       }
-
-      console.info(
-        `[AgentSessionsPanel] Found ${projectSessions.summaries.length} sessions`,
-      );
 
       // Fetch full session data and events for each session
       const sessionsWithEvents = await Promise.all(
@@ -256,45 +249,17 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
   // Listen for real-time event updates
   useEffect(() => {
     if (!repositoryPath) {
-      console.info(
-        '[AgentSessionsPanel] ⚠️ No repositoryPath - skipping event listener setup',
-      );
       return;
     }
 
-    console.info('[AgentSessionsPanel] Setting up event listener for:', repositoryPath);
-
     const unsubscribe = AgentSessionSDKService.onProcessedEvent((event) => {
-      console.info('[AgentSessionsPanel] ========== RECEIVED EVENT ==========');
-      console.info('[AgentSessionsPanel] Event type:', event.eventType);
-      console.info('[AgentSessionsPanel] Session ID:', event.sessionId);
-      console.info('[AgentSessionsPanel] Tool name:', event.toolName);
-      console.info('[AgentSessionsPanel] Event repositoryInfo:', event.repositoryInfo);
-      console.info('[AgentSessionsPanel] Event workingDirectory:', event.workingDirectory);
-      console.info('[AgentSessionsPanel] Panel repositoryPath:', repositoryPath);
-
       // Check if this event belongs to the current repository
       const eventRepoPath =
         event.repositoryInfo?.root || event.workingDirectory;
-      console.info(
-        '[AgentSessionsPanel] Comparing paths - eventRepoPath:',
-        eventRepoPath,
-        'vs repositoryPath:',
-        repositoryPath,
-        'match:',
-        eventRepoPath === repositoryPath,
-      );
 
       if (eventRepoPath !== repositoryPath) {
-        console.info(
-          '[AgentSessionsPanel] ❌ Event filtered out - different repository',
-        );
-        console.info('[AgentSessionsPanel] ====================================');
         return;
       }
-
-      console.info('[AgentSessionsPanel] ✅ Event accepted - repository matches');
-      console.info('[AgentSessionsPanel] Updating session:', event.sessionId);
 
       // Update the session that received this event
       setSessions((prevSessions) => {
@@ -304,11 +269,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         );
 
         if (!sessionExists) {
-          console.info('[AgentSessionsPanel] 🆕 Detected new session:', event.sessionId);
           // Fetch the new session asynchronously and add it
           fetchSingleSession(event.sessionId, eventRepoPath).then((newSession) => {
             if (newSession) {
-              console.info('[AgentSessionsPanel] ✅ Added new session:', event.sessionId);
               setSessions((current) => {
                 // Check again to prevent duplicates
                 if (current.some((s) => s.session.sessionId === event.sessionId)) {

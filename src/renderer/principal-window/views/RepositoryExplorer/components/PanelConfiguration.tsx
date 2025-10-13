@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import type { RepositoryPanelVisibility } from '../../../../../shared/types/repositoryPanel.types';
+import type { RepositoryPanelId } from '../../../../../shared/panels/repositoryPanelCatalog';
 import { getRepositoryPanelsForSurface } from '../../../../panels/registry';
 
 interface PanelConfigurationProps {
@@ -18,7 +19,7 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
 
   const explorerPanels = getRepositoryPanelsForSurface('explorer');
 
-  const handleToggle = (key: keyof RepositoryPanelVisibility) => {
+  const handleToggle = (key: RepositoryPanelId) => {
     onPanelVisibilityChange({
       ...panelVisibility,
       [key]: !panelVisibility[key],
@@ -82,32 +83,34 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
           gap: '12px',
         }}
       >
-        {explorerPanels.map(({ id, label }) => (
-          <label
-            key={id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 12px',
-              backgroundColor: theme.colors.backgroundLight,
-              border: `1px solid ${theme.colors.border}`,
-              borderRadius: '6px',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.background;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundLight;
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={panelVisibility[id] ?? true}
-              onChange={() => handleToggle(id)}
+        {explorerPanels.map(({ id, label }) => {
+          const panelId = id as RepositoryPanelId;
+          return (
+            <label
+              key={id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 12px',
+                backgroundColor: theme.colors.backgroundLight,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '6px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundLight;
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={panelVisibility[panelId] ?? true}
+                onChange={() => handleToggle(panelId)}
               style={{
                 width: '16px',
                 height: '16px',
@@ -124,7 +127,8 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
               {label}
             </span>
           </label>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

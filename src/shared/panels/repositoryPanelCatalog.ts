@@ -73,6 +73,14 @@ export const repositoryPanelCatalog = [
     surfaces: ['explorer'] as const,
   },
   {
+    id: 'gitDiff',
+    label: 'Git Diff',
+    description: 'View side-by-side diffs of file changes with Monaco editor.',
+    defaultLocation: 'right',
+    slices: ['git'] as const,
+    surfaces: ['explorer', 'manager', 'agent'] as const,
+  },
+  {
     id: 'tasksAndNotes',
     label: 'Tasks & Notes',
     description: 'Project notes and TODOs captured across the repository.',

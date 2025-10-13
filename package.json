@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.75",
+  "version": "0.0.76",
   "description": "Principal ADE - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -173,6 +173,7 @@
     "@principal-ade/industry-themed-monaco-editor": "^0.1.6",
     "@principal-ai/agent-monitoring": "^0.3.8",
     "@principal-ai/agent-monitoring-ui": "^0.1.6",
+    "@principal-ai/code-city-builder": "^0.1.0",
     "@principal-ai/code-city-react": "^0.1.1",
     "@principal-ai/codebase-composition": "^0.2.0",
     "@principal-ai/codebase-quality-lenses": "^0.1.5",
@@ -249,6 +250,7 @@
     "@eslint/js": "^9.32.0",
     "@playwright/test": "^1.52.0",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.15",
+    "@principal-ai/code-city-builder": "^0.1.0",
     "@svgr/webpack": "^8.1.0",
     "@tailwindcss/postcss": "^4",
     "@teamsupercell/typings-for-css-modules-loader": "^2.5.2",

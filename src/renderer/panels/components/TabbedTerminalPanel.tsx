@@ -72,6 +72,9 @@ export const TabbedTerminalPanel = forwardRef<
     // Track if we're currently creating a tab to prevent duplicates
     const isCreatingTabRef = useRef(false);
 
+    // Track if we've already initialized to prevent re-initialization
+    const hasInitializedRef = useRef(false);
+
     // Create unique context for this tabbed terminal instance
     const terminalContext = React.useMemo(
       () => `tabbed-terminal:${repositoryKey}`,
@@ -81,6 +84,9 @@ export const TabbedTerminalPanel = forwardRef<
     // Switch to a tab
     const switchTab = useCallback(
       (tabId: string) => {
+        // Get the currently active tab before switching
+        const previousActiveTab = tabs.find((t) => t.isActive);
+
         setTabs((prevTabs) => {
           const newTabs = prevTabs.map((t) => ({
             ...t,
@@ -90,19 +96,21 @@ export const TabbedTerminalPanel = forwardRef<
         });
         setActiveTabId(tabId);
 
-        // Trigger resize for the newly active terminal after DOM updates
+        // Focus the newly active terminal immediately
+        // Use a longer delay to ensure DOM visibility has updated
         requestAnimationFrame(() => {
           setTimeout(() => {
             const terminalRef = terminalRefs.current.get(tabId);
             if (terminalRef) {
-              // Force a resize by temporarily hiding and showing
-              // This ensures xterm.js recalculates dimensions
+              // Focus the terminal so keyboard input goes to the right tab
+              terminalRef.focus();
+              // Scroll to bottom for convenience
               terminalRef.scrollToBottom();
             }
-          }, 50);
+          }, 150); // Longer delay to ensure visibility effect has completed
         });
       },
-      [],
+      [tabs],
     );
 
     // Create a new terminal tab
@@ -132,6 +140,13 @@ export const TabbedTerminalPanel = forwardRef<
 
     // Initialize - restore existing sessions or cleanup orphaned ones
     useEffect(() => {
+      // Only initialize once to prevent infinite loops
+      if (hasInitializedRef.current) {
+        return;
+      }
+
+      hasInitializedRef.current = true;
+
       // Restore existing sessions or use initialTabs
       const restoreOrCleanup = async () => {
         try {
@@ -176,6 +191,7 @@ export const TabbedTerminalPanel = forwardRef<
             onTabsChange?.(restoredTabs);
           } else if (initialTabs.length > 0) {
             // If initialTabs were provided, use those (parent is managing state)
+            setTabs(initialTabs);
             setActiveTabId(
               initialTabs.find((t) => t.isActive)?.id ||
                 initialTabs[0]?.id ||
@@ -196,12 +212,13 @@ export const TabbedTerminalPanel = forwardRef<
         // DON'T destroy sessions on unmount - they should persist when panel is swapped
         // Sessions are only destroyed when user explicitly closes a tab
       };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
       showAllTerminals,
       directory,
       terminalContext,
-      initialTabs,
-      onTabsChange,
+      // NOTE: initialTabs and onTabsChange are intentionally in deps but we use
+      // hasInitializedRef to prevent re-initialization loops
     ]);
 
     // Close a tab

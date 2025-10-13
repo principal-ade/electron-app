@@ -1,0 +1,18 @@
+{
+  "id": "note-1760382576569-m8z6z42b7",
+  "note": "Add the ability to hide terminals from tehe carousel",
+  "anchors": [
+    "."
+  ],
+  "tags": [
+    "general"
+  ],
+  "metadata": {
+    "directoryPath": "/Users/griever/Developer/electron-app",
+    "relativePath": ".",
+    "confidence": "medium",
+    "type": "explanation"
+  },
+  "timestamp": 1760382576569,
+  "codebaseViewId": "default"
+}

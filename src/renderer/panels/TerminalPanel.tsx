@@ -101,7 +101,7 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
       isVisibleRef.current = isVisible;
     }, [isVisible]);
 
-    // Expose scrollToBottom method via ref
+    // Expose scrollToBottom and focus methods via ref
     useImperativeHandle(
       ref,
       () => ({
@@ -110,8 +110,13 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
             terminal.scrollToBottom();
           }
         },
+        focus: () => {
+          if (terminal) {
+            terminal.focus();
+          }
+        },
       }),
-      [terminal],
+      [terminal, directory],
     );
 
     const createTerminalSession = useCallback(
@@ -413,7 +418,8 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
         term.dispose();
         // Don't destroy the session here - it should persist
       };
-    }, [theme, terminal]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [theme]); // Only depend on theme, not terminal - otherwise it recreates infinitely
 
     // Handle connecting to existing session
     useEffect(() => {

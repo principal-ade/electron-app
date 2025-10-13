@@ -34,6 +34,7 @@ import { LinksModal } from './shared/LinksModal';
 import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
 import { BadgeInfoModal } from './shared/BadgeInfoModal';
 import { PanelConfiguratorModal } from './shared/PanelConfiguratorModal';
+import { AddNoteModal } from '../principal-window/views/RepositoryExplorer/components/AddNoteModal';
 import {
   ConfigurablePanelLayout,
   type PanelDefinitionWithContent,
@@ -123,6 +124,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     // Modal states
     const [showSecretsModal, setShowSecretsModal] = useState(false);
     const [showLinksModal, setShowLinksModal] = useState(false);
+    const [showAddNoteModal, setShowAddNoteModal] = useState(false);
     const [showSourceHelpModal, setShowSourceHelpModal] = useState(false);
     const [showBadgeInfoModal, setShowBadgeInfoModal] = useState(false);
     const [showPanelConfigModal, setShowPanelConfigModal] = useState(false);
@@ -1428,6 +1430,19 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       fetchNotes();
     }, [repository.remoteUrl]);
 
+    // Handler for when a note is added
+    const handleNoteAdded = useCallback(async () => {
+      if (!repository.remoteUrl) return;
+      try {
+        const notes = await RepositoryNotesService.getNotesForRepository(
+          repository.remoteUrl,
+        );
+        setTribalKnowledgeNotes(notes);
+      } catch (error) {
+        console.error('Failed to fetch repository notes:', error);
+      }
+    }, [repository.remoteUrl]);
+
     // Create search highlight layer
     useEffect(() => {
       if (searchResults.length === 0) {
@@ -2239,6 +2254,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           onSourceSelect={setSelectedSource}
           onSecretsClick={() => setShowSecretsModal(true)}
           onLinksClick={() => setShowLinksModal(true)}
+          onAddNoteClick={() => setShowAddNoteModal(true)}
           onHelpClick={() => setShowSourceHelpModal(true)}
           onForkBadgeClick={() => setShowBadgeInfoModal(true)}
           onConfigurePanels={() => setShowPanelConfigModal(true)}
@@ -2465,6 +2481,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     content: codeViewerPanel,
                   },
                   {
+                    id: 'gitDiff',
+                    label: 'Git Diff',
+                    content: gitDiffViewerPanel,
+                  },
+                  {
                     id: 'gitDiffViewer',
                     label: 'Diff Viewer',
                     content: gitDiffViewerPanel,
@@ -2485,7 +2506,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                 const defaultLayout: PanelLayout = {
                   left: {
                     type: 'tabs',
-                    panels: ['fileTree', 'docs'],
+                    panels: ['fileTree', 'search', 'docs'],
                     config: {
                       defaultActiveTab: 0,
                       tabPosition: 'top',
@@ -2642,6 +2663,17 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           onClose={() => setShowLinksModal(false)}
           repository={repository}
           selectedSource={selectedSource}
+        />
+
+        <AddNoteModal
+          isOpen={showAddNoteModal}
+          onClose={() => setShowAddNoteModal(false)}
+          onNoteAdded={handleNoteAdded}
+          repositoryPath={
+            selectedSource?.type === 'local'
+              ? selectedSource.location
+              : repository.localClones?.[0]?.path || ''
+          }
         />
 
         <SourceBadgeHelpModal
@@ -3408,7 +3440,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                       borderRadius: '4px',
                     }}
                   >
-                    <input type="checkbox" checked style={{ margin: 0 }} />
+                    <input type="checkbox" checked readOnly style={{ margin: 0 }} />
                     <span
                       style={{
                         textDecoration: 'line-through',

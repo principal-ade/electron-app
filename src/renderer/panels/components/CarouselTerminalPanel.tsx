@@ -79,6 +79,9 @@ export const CarouselTerminalPanel = forwardRef<
     // Track if we're currently creating a tab to prevent duplicates
     const isCreatingTabRef = useRef(false);
 
+    // Track if we've already initialized to prevent re-initialization
+    const hasInitializedRef = useRef(false);
+
     // Store state used by keyboard handlers
     const tabsRef = useRef<TerminalTab[]>(tabs);
     const currentPanelIndexRef = useRef<number>(currentPanelIndex);
@@ -178,6 +181,13 @@ export const CarouselTerminalPanel = forwardRef<
 
     // Initialize - restore existing sessions or cleanup orphaned ones
     useEffect(() => {
+      // Only initialize once to prevent infinite loops
+      if (hasInitializedRef.current) {
+        return;
+      }
+
+      hasInitializedRef.current = true;
+
       // Restore existing sessions or use initialTabs
       const restoreOrCleanup = async () => {
         try {
@@ -239,7 +249,14 @@ export const CarouselTerminalPanel = forwardRef<
         // DON'T destroy sessions on unmount - they should persist when panel is swapped
         // Sessions are only destroyed when user explicitly closes a tab
       };
-    }, [showAllTerminals, directory, terminalContext, initialTabs, onTabsChange]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+      showAllTerminals,
+      directory,
+      terminalContext,
+      // NOTE: initialTabs and onTabsChange are intentionally in deps but we use
+      // hasInitializedRef to prevent re-initialization loops
+    ]);
 
     // Close a tab
     const closeTab = useCallback(

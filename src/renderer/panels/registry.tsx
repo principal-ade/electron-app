@@ -13,6 +13,7 @@ import {
 import { GitChangesPanel } from './components/GitChangesPanel';
 import { GitIssuesPanel } from './components/GitIssuesPanel';
 import { GitPullRequestsPanel } from './components/GitPullRequestsPanel';
+import { GitDiffPanel } from './components/GitDiffPanel';
 import { ExcalidrawPanel } from './components/ExcalidrawPanel';
 import { DrawingsListPanel } from './components/DrawingsListPanel';
 import { ToolsPanel } from './components/ToolsPanel';
@@ -43,6 +44,12 @@ const panelRenderers: Partial<Record<RepositoryPanelId, RepositoryPanelRenderer>
   gitHistory: ({ context }) => (
     <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />
   ),
+  gitDiff: ({ context }) => (
+    <GitDiffPanel
+      filePath={null}
+      repositoryPath={context.repositoryPath}
+    />
+  ),
   tools: ({ context }) => (
     <ToolsPanel
       packageLayers={context.packages}
@@ -64,7 +71,7 @@ export const repositoryPanelDefinitions = repositoryPanelCatalog.map(
     ...definition,
     render: panelRenderers[definition.id],
   }),
-) as const satisfies readonly RepositoryPanelDefinition[];
+) satisfies readonly RepositoryPanelDefinition[];
 export type {
   RepositoryPanelVisibility,
   RepositoryPanelId,
