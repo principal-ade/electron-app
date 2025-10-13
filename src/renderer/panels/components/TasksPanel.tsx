@@ -442,3 +442,54 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
     </div>
   );
 };
+
+export const TasksPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '6px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '4px',
+        }}
+      >
+        <input type="checkbox" style={{ margin: 0 }} />
+        <span>Implement feature X</span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '6px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '4px',
+        }}
+      >
+        <input type="checkbox" defaultChecked readOnly style={{ margin: 0 }} />
+        <span
+          style={{
+            textDecoration: 'line-through',
+            color: theme.colors.textSecondary,
+          }}
+        >
+          Fix bug Y
+        </span>
+      </div>
+    </div>
+  );
+};

@@ -216,3 +216,70 @@ export const GitPullRequestsPanel: React.FC<GitPullRequestsPanelProps> = ({
     </div>
   );
 };
+
+export const GitPullRequestsPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '2px 8px',
+            borderRadius: '999px',
+            backgroundColor: '#3b82f622',
+            color: '#3b82f6',
+            fontSize: '11px',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+          }}
+        >
+          Review
+        </span>
+        <span style={{ fontWeight: 600 }}>#42 Refine panel layout system</span>
+      </div>
+      <div
+        style={{
+          paddingLeft: '4px',
+          color: theme.colors.textSecondary,
+          fontSize: '11px',
+          lineHeight: 1.4,
+        }}
+      >
+        Adds preview registry and consolidates configurator metadata.
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: theme.colors.textSecondary,
+          fontSize: '11px',
+        }}
+      >
+        <span>•</span>
+        <span>4 checks</span>
+        <span>•</span>
+        <span>1 reviewer</span>
+      </div>
+    </div>
+  );
+};

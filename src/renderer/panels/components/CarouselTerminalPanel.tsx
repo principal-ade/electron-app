@@ -846,4 +846,63 @@ export const CarouselTerminalPanel = forwardRef<
   },
 );
 
+export const CarouselTerminalPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '11px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '4px',
+        }}
+      >
+        <div
+          style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: theme.colors.primary,
+          }}
+        />
+        <div
+          style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: theme.colors.backgroundTertiary,
+          }}
+        />
+        <div
+          style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            backgroundColor: theme.colors.backgroundTertiary,
+          }}
+        />
+      </div>
+      <div
+        style={{
+          fontFamily: 'monospace',
+          color: theme.colors.textSecondary,
+        }}
+      >
+        $ npm run build
+      </div>
+    </div>
+  );
+};
+
 CarouselTerminalPanel.displayName = 'CarouselTerminalPanel';

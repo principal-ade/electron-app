@@ -449,3 +449,51 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
     </div>
   );
 };
+
+export const AlexandriaDocsPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <FileText size={14} style={{ color: theme.colors.primary }} />
+        <span>README.md</span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <FileText size={14} style={{ color: theme.colors.primary }} />
+        <span>CONTRIBUTING.md</span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <Book size={14} style={{ color: theme.colors.primary }} />
+        <span>docs/</span>
+      </div>
+    </div>
+  );
+};

@@ -701,4 +701,58 @@ export const TabbedTerminalPanel = forwardRef<
   },
 );
 
+export const TabbedTerminalPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '11px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          gap: '4px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          paddingBottom: '4px',
+        }}
+      >
+        <span
+          style={{
+            padding: '4px 8px',
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.background,
+            borderRadius: '4px 4px 0 0',
+          }}
+        >
+          bash
+        </span>
+        <span
+          style={{
+            padding: '4px 8px',
+            backgroundColor: theme.colors.backgroundTertiary,
+            borderRadius: '4px 4px 0 0',
+          }}
+        >
+          npm
+        </span>
+      </div>
+      <div
+        style={{
+          fontFamily: 'monospace',
+          color: theme.colors.textSecondary,
+        }}
+      >
+        $ npm run dev
+      </div>
+    </div>
+  );
+};
+
 TabbedTerminalPanel.displayName = 'TabbedTerminalPanel';

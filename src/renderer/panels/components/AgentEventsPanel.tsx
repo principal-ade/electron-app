@@ -778,3 +778,43 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
     </div>
   );
 };
+
+export const AgentEventsPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '11px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}
+    >
+      <div
+        style={{
+          padding: '6px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '4px',
+          borderLeft: `3px solid #3b82f6`,
+        }}
+      >
+        <div style={{ fontWeight: 600 }}>Read</div>
+        <div style={{ color: theme.colors.textSecondary }}>src/index.ts</div>
+      </div>
+      <div
+        style={{
+          padding: '6px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '4px',
+          borderLeft: `3px solid #22c55e`,
+        }}
+      >
+        <div style={{ fontWeight: 600 }}>Write</div>
+        <div style={{ color: theme.colors.textSecondary }}>src/utils.ts</div>
+      </div>
+    </div>
+  );
+};

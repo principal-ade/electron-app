@@ -1,4 +1,6 @@
 import React, { useState, useCallback } from 'react';
+import { useTheme } from '@a24z/industry-theme';
+import { FolderTree, FileCode } from 'lucide-react';
 import { FileTreeTab } from './FileTreeTab';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';
 import { FileTreeContextMenu } from '../../components/FileTreeContextMenu';
@@ -71,5 +73,62 @@ export const FileTreePanelContent: React.FC<FileTreePanelContentProps> = ({
         />
       )}
     </>
+  );
+};
+
+export const FileTreePanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <FolderTree size={14} style={{ color: theme.colors.primary }} />
+        <span style={{ fontWeight: 600 }}>src/</span>
+      </div>
+      <div
+        style={{
+          paddingLeft: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <FileCode size={12} />
+          <span>index.ts</span>
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <FileCode size={12} />
+          <span>utils.ts</span>
+        </div>
+      </div>
+    </div>
   );
 };

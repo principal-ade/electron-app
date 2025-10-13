@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FolderOpen, AlertCircle } from 'lucide-react';
+import { FolderOpen, AlertCircle, Layers } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { FileTree } from '@principal-ai/repository-abstraction';
 import {
@@ -338,6 +338,59 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
         onPackageSelected={onPackageSelected}
         onPackageDeselected={onPackageDeselected}
       />
+    </div>
+  );
+};
+
+export const RepoSourceArchitecturePanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <Layers size={14} style={{ color: theme.colors.primary }} />
+        <span style={{ fontWeight: 600 }}>root</span>
+      </div>
+      <div
+        style={{
+          paddingLeft: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+        }}
+      >
+        <div
+          style={{
+            fontSize: '11px',
+            color: theme.colors.textSecondary,
+          }}
+        >
+          packages/core
+        </div>
+        <div
+          style={{
+            fontSize: '11px',
+            color: theme.colors.textSecondary,
+          }}
+        >
+          packages/ui
+        </div>
+      </div>
     </div>
   );
 };

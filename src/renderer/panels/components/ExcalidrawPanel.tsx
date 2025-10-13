@@ -187,3 +187,33 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
     </div>
   );
 };
+
+export const ExcalidrawPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        height: '80px',
+      }}
+    >
+      <Pencil size={32} style={{ color: theme.colors.primary }} />
+      <span
+        style={{
+          fontSize: '11px',
+          color: theme.colors.textSecondary,
+        }}
+      >
+        Diagram Editor
+      </span>
+    </div>
+  );
+};

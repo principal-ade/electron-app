@@ -7,6 +7,7 @@ import {
   Layers,
   Eye,
   EyeOff,
+  Building2,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import {
@@ -534,6 +535,36 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
           </div>
         )}
       </div>
+    </div>
+  );
+};
+
+export const CityVisualizationPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        height: '80px',
+      }}
+    >
+      <Building2 size={32} style={{ color: theme.colors.primary }} />
+      <span
+        style={{
+          fontSize: '11px',
+          color: theme.colors.textSecondary,
+        }}
+      >
+        3D Code City
+      </span>
     </div>
   );
 };

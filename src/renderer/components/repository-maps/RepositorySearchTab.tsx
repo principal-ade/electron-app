@@ -7,7 +7,7 @@ import React, {
 } from 'react';
 import { FileTree } from '@principal-ai/repository-abstraction';
 import { useTheme } from '@a24z/industry-theme';
-import { Code, Check, AlertCircle } from 'lucide-react';
+import { Code, Check, AlertCircle, Search } from 'lucide-react';
 import { LocalSearchPanel } from '../shared/LocalSearchPanel';
 import { FileTreeSource } from '../../types/file-tree-source';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
@@ -405,6 +405,51 @@ export const RepositorySearchTab: React.FC<RepositorySearchTabProps> = ({
           onSearchResultsChange={handleSearchResultsChange}
           onSearchResultHover={onSearchResultHover}
         />
+      </div>
+    </div>
+  );
+};
+
+export const RepositorySearchTabPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '6px 8px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '4px',
+          border: `1px solid ${theme.colors.border}`,
+        }}
+      >
+        <Search
+          size={12}
+          style={{ color: theme.colors.textSecondary }}
+        />
+        <span style={{ color: theme.colors.textSecondary }}>
+          Search files...
+        </span>
+      </div>
+      <div
+        style={{
+          fontSize: '11px',
+          color: theme.colors.textSecondary,
+        }}
+      >
+        3 results
       </div>
     </div>
   );

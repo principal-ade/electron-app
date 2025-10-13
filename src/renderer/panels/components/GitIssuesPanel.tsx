@@ -214,3 +214,70 @@ export const GitIssuesPanel: React.FC<GitIssuesPanelProps> = ({ repository }) =>
     </div>
   );
 };
+
+export const GitIssuesPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '2px 8px',
+            borderRadius: '999px',
+            backgroundColor: '#22c55e22',
+            color: '#22c55e',
+            fontSize: '11px',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+          }}
+        >
+          Open
+        </span>
+        <span style={{ fontWeight: 600 }}>#128 Improve login flow</span>
+      </div>
+      <div
+        style={{
+          paddingLeft: '4px',
+          color: theme.colors.textSecondary,
+          fontSize: '11px',
+          lineHeight: 1.4,
+        }}
+      >
+        Clarify error messaging and add retry button for OAuth.
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: theme.colors.textSecondary,
+          fontSize: '11px',
+        }}
+      >
+        <span>•</span>
+        <span>2 comments</span>
+        <span>•</span>
+        <span>Last updated 3h ago</span>
+      </div>
+    </div>
+  );
+};
