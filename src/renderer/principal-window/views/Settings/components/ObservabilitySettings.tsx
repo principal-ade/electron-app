@@ -56,7 +56,14 @@ export const ObservabilitySettings: React.FC = () => {
     setTestResult(null);
     setSaveSuccess(false);
     try {
-      await ObservabilityService.saveConfiguration(config);
+      // Map storageMode to enabled flag
+      // enabled=true when storageMode is 'local' or 'local-with-sync'
+      // enabled=false when storageMode is 'none'
+      const configToSave = {
+        ...config,
+        enabled: config.storageMode !== 'none',
+      };
+      await ObservabilityService.saveConfiguration(configToSave);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
@@ -73,7 +80,12 @@ export const ObservabilitySettings: React.FC = () => {
     setTestResult(null);
     setError(null);
     try {
-      const result = await ObservabilityService.testConnection(config);
+      // Use same logic as handleSave - map storageMode to enabled
+      const configToTest = {
+        ...config,
+        enabled: config.storageMode !== 'none',
+      };
+      const result = await ObservabilityService.testConnection(configToTest);
       setTestResult(result);
     } catch (err) {
       setError(

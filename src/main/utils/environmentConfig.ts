@@ -14,7 +14,9 @@ export class EnvironmentConfig {
 
   static {
     // Log warning if running in unsafe mode
+    // Check if app is available (not available in worker contexts)
     if (
+      app &&
       !app.isPackaged &&
       !this._forceProductionPaths &&
       !this._hasWarnedAboutUnsafeMode
@@ -30,6 +32,9 @@ export class EnvironmentConfig {
    * Get user data path that works consistently in dev and prod
    */
   static getUserDataPath(): string {
+    if (!app) {
+      throw new Error('EnvironmentConfig.getUserDataPath() cannot be used in worker context');
+    }
     if (app.isPackaged || this._forceProductionPaths) {
       return app.getPath('userData');
     }
@@ -41,6 +46,9 @@ export class EnvironmentConfig {
    * Get assets path that works in both environments
    */
   static getAssetsPath(...paths: string[]): string {
+    if (!app) {
+      throw new Error('EnvironmentConfig.getAssetsPath() cannot be used in worker context');
+    }
     const RESOURCES_PATH = app.isPackaged
       ? path.join(process.resourcesPath, 'assets')
       : path.join(__dirname, '../../assets');
@@ -83,6 +91,10 @@ export class EnvironmentConfig {
    * Check if we should use production constraints in dev
    */
   static shouldUseProductionConstraints(): boolean {
+    if (!app) {
+      // In worker context, assume production constraints
+      return this._forceProductionPaths || this._isPackagedSimulation || true;
+    }
     return (
       app.isPackaged || this._forceProductionPaths || this._isPackagedSimulation
     );
@@ -92,6 +104,10 @@ export class EnvironmentConfig {
    * Check if we're simulating a packaged environment
    */
   static isPackagedOrSimulated(): boolean {
+    if (!app) {
+      // In worker context, assume packaged
+      return this._isPackagedSimulation || true;
+    }
     return app.isPackaged || this._isPackagedSimulation;
   }
 
@@ -145,6 +161,10 @@ export class EnvironmentConfig {
    * Log warnings for production-incompatible code
    */
   static warnIfProductionIncompatible(feature: string): void {
+    if (!app) {
+      // In worker context, skip warnings
+      return;
+    }
     if (
       !app.isPackaged &&
       !this._forceProductionPaths &&

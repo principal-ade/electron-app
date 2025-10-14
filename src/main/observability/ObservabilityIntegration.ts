@@ -183,6 +183,7 @@ export class ObservabilityIntegration extends EventEmitter {
     try {
       // Load configuration from UnifiedSecureStorage
       const loadedConfig = await this.loadConfiguration();
+
       if (loadedConfig) {
         this.config = { ...this.config, ...loadedConfig };
       }
