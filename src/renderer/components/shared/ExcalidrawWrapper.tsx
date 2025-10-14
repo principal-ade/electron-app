@@ -77,6 +77,7 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
 
   // Track last saved content hash to avoid unnecessary saves
   const lastSavedContentRef = useRef<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Update refs when props change (when loading a different diagram)
   useEffect(() => {
@@ -88,6 +89,8 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
       setDraftNumber(null);
       // Reset initial load flag when switching diagrams
       isInitialLoadRef.current = true;
+      // Reset unsaved changes when switching diagrams
+      setHasUnsavedChanges(false);
 
       // If diagramId is null and we have the API, clear the scene for new diagram
       if (!diagramId && excalidrawAPI) {
@@ -225,11 +228,18 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
   }, [excalidrawAPI, libraryItems]);
 
   // Create refs to hold the latest values without causing re-renders
-  const saveDataRef = useRef({
+  const saveDataRef = useRef<{
+    excalidrawAPI: any;
+    diagramName: string;
+    projectPath: string | undefined;
+    currentLibraryItems: readonly LibraryItem[];
+    useAlexandriaStorage: boolean;
+  }>({
     excalidrawAPI,
     diagramName: currentDiagramName,
     projectPath,
     currentLibraryItems,
+    useAlexandriaStorage,
   });
 
   // Update the ref when values change
@@ -286,23 +296,16 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
         ...serializableAppState
       } = appState;
 
-      const data: ExcalidrawDiagramData = {
-        elements,
-        appState: serializableAppState,
-        files,
-        libraryItems: currentLibraryItems,
-        type: 'excalidraw',
-        version: 2,
-        source: window.appName,
-      };
-
       // Generate draft name if needed
       let saveName = diagramName;
-      if (!currentDiagramIdRef.current && saveName === 'Untitled Diagram') {
+      let fileNameToUse = currentDiagramIdRef.current || currentDiagramId;
+
+      if (!fileNameToUse && saveName === 'Untitled Diagram') {
         if (!draftNumberRef.current) {
-          // Get next draft number
-          const diagrams =
-            await ExcalidrawStorageService.listDiagrams(projectPath);
+          // Get next draft number - use the appropriate service based on storage type
+          const diagrams = useAlexandriaStorage && projectPath
+            ? await AlexandriaDrawingService.listDiagrams(projectPath)
+            : await ExcalidrawStorageService.listDiagrams(projectPath);
           const draftNumbers = diagrams
             .filter((d) => d.name.startsWith('Draft #'))
             .map((d) => {
@@ -314,15 +317,39 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
           setDraftNumber(draftNumberRef.current);
         }
         saveName = `Draft #${draftNumberRef.current}`;
+        fileNameToUse = saveName; // Use the draft name as the filename
         setCurrentDiagramName(saveName); // Update the name state
+
+        // Update Excalidraw's appState with the draft name immediately
+        if (excalidrawAPI) {
+          excalidrawAPI.updateScene({
+            appState: {
+              name: saveName,
+            },
+          });
+        }
       }
+
+      // Update the appState.name to match saveName before saving
+      const data: ExcalidrawDiagramData = {
+        elements,
+        appState: {
+          ...serializableAppState,
+          name: saveName, // Use saveName instead of whatever is in appState
+        },
+        files,
+        libraryItems: currentLibraryItems,
+        type: 'excalidraw',
+        version: 2,
+        source: window.appName,
+      };
 
       let savedId: string;
 
       if (useAlexandriaStorage && projectPath) {
         // Use Alexandria service for drawings
-        const fileName =
-          currentDiagramIdRef.current || currentDiagramId || saveName;
+        // For new drawings, fileNameToUse is the draft name; for existing ones, it's the ID
+        const fileName = fileNameToUse || saveName;
         const fileNameWithExt = fileName.endsWith('.excalidraw')
           ? fileName
           : `${fileName}.excalidraw`;
@@ -363,6 +390,9 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
           projectPath,
         });
       }
+
+      // Mark as saved
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error('[ExcalidrawWrapper] Failed to save diagram:', error);
     } finally {
@@ -415,8 +445,10 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
     }, 0);
   };
 
-  const handleSaveName = () => {
+  const handleSaveName = async () => {
     const newName = editingName.trim() || 'Untitled Diagram';
+    const oldName = currentDiagramName;
+
     setCurrentDiagramName(newName);
     setIsEditingName(false);
     // Update the ref immediately so save uses the new name
@@ -431,9 +463,63 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
       });
     }
 
-    // If we have a diagram ID, save the updated name
-    if (currentDiagramId) {
-      handleSave();
+    // If we have a diagram ID, save and optionally rename the file
+    if (currentDiagramId && useAlexandriaStorage && projectPath) {
+      // If the name changed and this is a named drawing (not just appState update)
+      // we should rename the file
+      const oldFileName = currentDiagramId.endsWith('.excalidraw')
+        ? currentDiagramId
+        : `${currentDiagramId}.excalidraw`;
+      const newFileName = newName.endsWith('.excalidraw')
+        ? newName
+        : `${newName}.excalidraw`;
+
+      // Only rename if the filename would actually change
+      if (oldFileName !== newFileName && oldName !== newName) {
+        try {
+          // Rename the file in Alexandria storage
+          const success = await AlexandriaDrawingService.renameDiagram(
+            oldFileName,
+            newFileName,
+            projectPath,
+          );
+
+          if (success) {
+            // Update the diagram ID to the new filename (without extension)
+            const newId = newName.replace('.excalidraw', '');
+            currentDiagramIdRef.current = newId;
+            setCurrentDiagramId(newId);
+
+            // Notify parent component of the ID change
+            if (onSave) {
+              onSave(newId);
+            }
+
+            // Emit rename event
+            diagramEventBus.emit(DIAGRAM_EVENTS.DIAGRAM_SAVED, {
+              id: newId,
+              name: newName,
+              projectPath,
+            });
+          } else {
+            console.error('Failed to rename diagram file');
+            // Revert the name change in UI
+            setCurrentDiagramName(oldName);
+            setEditingName(oldName);
+          }
+        } catch (error) {
+          console.error('Error renaming diagram:', error);
+          // Revert the name change in UI
+          setCurrentDiagramName(oldName);
+          setEditingName(oldName);
+        }
+      } else {
+        // Just save the updated appState without renaming the file
+        await handleSave();
+      }
+    } else if (currentDiagramId) {
+      // For non-Alexandria storage, just save
+      await handleSave();
     }
   };
 
@@ -543,6 +629,7 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
             );
 
             if (contentHash !== lastSavedContentRef.current) {
+              setHasUnsavedChanges(true);
               lastSavedContentRef.current = contentHash;
               debouncedSave();
             }
@@ -559,7 +646,7 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
             loadScene: false, // Hide "Load" button (prevents loading new diagrams)
             export: {
               saveFileToDisk: true, // Keep ability to export to disk
-              onExportToBackend: false, // Remove backend export options
+              onExportToBackend: undefined, // Remove backend export options
             },
           },
         }}
@@ -618,9 +705,10 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
                   : 'New Diagram'}
               </span>
             ) : null}
-            {showSaveButton && (
+            {showSaveButton && hasUnsavedChanges && (
               <button
                 onClick={handleManualSave}
+                disabled={isSaving}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -628,17 +716,20 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
                   padding: '6px 12px',
                   border: 'none',
                   borderRadius: '8px',
-                  backgroundColor: theme.colors.primary,
+                  backgroundColor: isSaving
+                    ? theme.colors.backgroundSecondary
+                    : theme.colors.primary,
                   color: 'white',
-                  cursor: 'pointer',
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
                   fontSize: '14px',
                   fontWeight: 500,
                   transition: 'all 0.2s',
                   position: 'relative',
+                  opacity: isSaving ? 0.6 : 1,
                 }}
                 title="Save (Cmd/Ctrl+S)"
               >
-                Save
+                {isSaving ? 'Saving...' : 'Save'}
               </button>
             )}
             {showSaveToRepository && onSaveToRepository && (
@@ -680,40 +771,7 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
                 Save to Repository
               </button>
             )}
-            {showNewDiagramButton && onClose && (
-              <button
-                onClick={onClose}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '32px',
-                  height: '32px',
-                  border: 'none',
-                  borderRadius: '8px',
-                  backgroundColor: theme.colors.primary,
-                  color: 'white',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-                title="New Diagram"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="currentColor"
-                >
-                  <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
-                </svg>
-              </button>
-            )}
+            {/* New Diagram button removed - managed by parent panels */}
             {/* MainMenu removed - all menu functionality disabled to give full control to our UI */}
           </div>
         )}

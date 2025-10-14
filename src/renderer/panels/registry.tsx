@@ -14,7 +14,7 @@ import { GitChangesPanel } from './components/GitChangesPanel';
 import { GitIssuesPanel } from './components/GitIssuesPanel';
 import { GitPullRequestsPanel } from './components/GitPullRequestsPanel';
 import { GitDiffPanel } from './components/GitDiffPanel';
-import { ExcalidrawPanel } from './components/ExcalidrawPanel';
+import { AlexandriaDrawingPanel } from './components/AlexandriaDrawingPanel';
 import { DrawingsListPanel } from './components/DrawingsListPanel';
 import { ToolsPanel } from './components/ToolsPanel';
 import { AgentContextTreePanel } from './components/AgentContextTreePanel';
@@ -56,7 +56,7 @@ const panelRenderers: Partial<Record<RepositoryPanelId, RepositoryPanelRenderer>
       repositoryPath={context.repositoryPath || ''}
     />
   ),
-  excalidrawEditor: () => <ExcalidrawPanel />,
+  excalidrawEditor: () => <AlexandriaDrawingPanel />,
   drawingsList: () => <DrawingsListPanel />,
   agentContext: ({ context, actions }) => (
     <AgentContextTreePanel

@@ -424,11 +424,11 @@ export class WorkspaceLayoutService {
         id: 'agent-work',
         name: 'Agent Work',
         description:
-          'Agent sessions, file tree, agent context, git changes, docs, tabbed terminal, city map, agent events, code viewer, and markdown slides',
+          'Tasks, agent sessions, file tree, agent context, git changes, docs, tabbed terminal, city map, agent events, code viewer, and markdown slides',
         layout: {
           left: {
             type: 'tabs',
-            panels: ['agentSessions', 'fileTree', 'agentContext', 'gitChanges', 'docs'],
+            panels: ['tasks', 'agentSessions', 'fileTree', 'agentContext', 'gitChanges', 'docs'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
           middle: 'tabbedTerminal',
@@ -453,11 +453,11 @@ export class WorkspaceLayoutService {
         id: 'agent-work-carousel',
         name: 'Agent Work Carousel',
         description:
-          'Agent sessions, file tree, agent context, git changes, docs, carousel terminal, city map, agent events, code viewer, and markdown slides',
+          'Tasks, agent sessions, file tree, agent context, git changes, docs, carousel terminal, city map, agent events, code viewer, and markdown slides',
         layout: {
           left: {
             type: 'tabs',
-            panels: ['agentSessions', 'fileTree', 'agentContext', 'gitChanges', 'docs'],
+            panels: ['tasks', 'agentSessions', 'fileTree', 'agentContext', 'gitChanges', 'docs'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
           middle: 'carouselTerminal',

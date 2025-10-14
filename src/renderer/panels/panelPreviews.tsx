@@ -37,7 +37,7 @@ import { TabbedTerminalPanelPreview } from './components/TabbedTerminalPanel';
 import { CarouselTerminalPanelPreview } from './components/CarouselTerminalPanel';
 import { FilePreviewPanelPreview } from './components/FilePreviewPanel';
 import { MarkdownRenderingPanelPreview } from './components/MarkdownRenderingPanel';
-import { ExcalidrawPanelPreview } from './components/ExcalidrawPanel';
+import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPanel';
 import { QualityHexagonPanelPreview } from './components/QualityHexagonPanel';
 import { GitDiffPanelPreview } from './components/GitDiffPanel';
 
@@ -137,7 +137,7 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   },
   excalidrawDiagram: {
     icon: <Pencil size={16} />,
-    preview: <ExcalidrawPanelPreview />,
+    preview: <AlexandriaDrawingPanelPreview />,
   },
   packageInfo: {
     icon: <Package size={16} />,

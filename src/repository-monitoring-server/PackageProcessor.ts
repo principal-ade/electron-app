@@ -12,6 +12,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import type { PackageSummary } from './types';
+import { QualityScoreEnrichment } from './QualityScoreEnrichment';
 
 /**
  * File system adapter for reading package.json files in the worker process
@@ -100,9 +101,11 @@ class WorkerFileSystemAdapter implements FileSystemAdapter {
 
 export class PackageProcessor {
   private packageModule: PackageLayerModule;
+  private enrichment: QualityScoreEnrichment;
 
   constructor() {
     this.packageModule = new PackageLayerModule();
+    this.enrichment = new QualityScoreEnrichment();
   }
 
   /**
@@ -135,7 +138,13 @@ export class PackageProcessor {
         `[PackageProcessor] Found ${packages.length} packages in ${repoPath}`,
       );
 
-      return packages;
+      // Enrich packages with real quality scores from lenses
+      const enrichedPackages = await this.enrichment.enrichPackages(
+        packages,
+        repoPath,
+      );
+
+      return enrichedPackages;
     } catch (error) {
       console.error('[PackageProcessor] Failed to extract packages:', error);
       return [];

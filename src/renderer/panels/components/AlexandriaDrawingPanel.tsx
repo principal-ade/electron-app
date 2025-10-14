@@ -6,23 +6,18 @@ import { AlexandriaDrawingService } from '../../main-process-api/AlexandriaDrawi
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';
 import type { ExcalidrawDiagramData } from '../../../shared/main-process-api-interfaces/ExcalidrawAPI';
 
-interface ExcalidrawPanelProps {
-  // Optional initial drawing to load
+interface AlexandriaDrawingPanelProps {
+  // Optional initial drawing to load (without .excalidraw extension)
   drawingId?: string;
-  drawingName?: string;
 }
 
-export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
+export const AlexandriaDrawingPanel: React.FC<AlexandriaDrawingPanelProps> = ({
   drawingId: initialDrawingId,
-  drawingName: initialDrawingName,
 }) => {
   const { theme } = useTheme();
   const { repositoryPath } = useRepositoryPanelContext();
   const [currentDrawingId, setCurrentDrawingId] = useState<string | undefined>(
     initialDrawingId,
-  );
-  const [currentDrawingName, setCurrentDrawingName] = useState<string>(
-    initialDrawingName || 'Untitled Drawing',
   );
   const [drawingData, setDrawingData] = useState<ExcalidrawDiagramData | null>(
     null,
@@ -56,7 +51,6 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
 
   const handleCreateNewDrawing = () => {
     setCurrentDrawingId(undefined);
-    setCurrentDrawingName('Untitled Drawing');
     setDrawingData(null);
     setHasDrawing(true);
   };
@@ -173,22 +167,26 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
       }}
     >
       <ExcalidrawWrapper
-        initialData={drawingData}
+        initialData={drawingData || undefined}
         diagramId={currentDrawingId}
-        diagramName={currentDrawingName}
+        diagramName={
+          drawingData?.appState?.name ||
+          currentDrawingId?.replace('.excalidraw', '') ||
+          'Untitled Diagram'
+        }
         projectPath={repositoryPath}
         onSave={handleSave}
         useAlexandriaStorage={true}
         showSaveButton={true}
         showNameEditor={true}
-        showNewDiagramButton={true}
+        showNewDiagramButton={false}
         onClose={handleCreateNewDrawing}
       />
     </div>
   );
 };
 
-export const ExcalidrawPanelPreview: React.FC = () => {
+export const AlexandriaDrawingPanelPreview: React.FC = () => {
   const { theme } = useTheme();
 
   return (

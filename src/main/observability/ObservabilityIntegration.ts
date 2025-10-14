@@ -140,6 +140,19 @@ export class ObservabilityIntegration extends EventEmitter {
         if (!config.tursoUrl) {
           throw new Error('Turso URL required for local-with-sync mode');
         }
+
+        // CRITICAL: Initialize schema in cloud database first
+        // Without this, sync attempts will fail because tables don't exist in cloud
+        console.log('[ObservabilityIntegration] Initializing cloud schema...');
+        const cloudSDK = TursoObservabilitySDK.createCloud(
+          config.tursoUrl,
+          config.tursoAuthToken || ''
+        );
+        await cloudSDK.initializeSchema();
+        await cloudSDK.close();
+        console.log('[ObservabilityIntegration] Cloud schema initialized');
+
+        // Now create embedded replica with sync
         this.sdk = TursoObservabilitySDK.createEmbeddedReplica(
           resolvedDbPath,
           config.tursoUrl,
@@ -312,6 +325,14 @@ export class ObservabilityIntegration extends EventEmitter {
           break;
 
         case 'local-with-sync':
+          // Initialize cloud schema first (same as in initializeSDK)
+          const testCloudSDK = TursoObservabilitySDK.createCloud(
+            config.tursoUrl!,
+            config.tursoAuthToken || ''
+          );
+          await testCloudSDK.initializeSchema();
+          await testCloudSDK.close();
+
           testSdk = TursoObservabilitySDK.createEmbeddedReplica(
             resolvedDbPath,
             config.tursoUrl!,

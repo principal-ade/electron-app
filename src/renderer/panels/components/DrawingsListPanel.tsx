@@ -4,6 +4,10 @@ import { useTheme } from '@a24z/industry-theme';
 import { AlexandriaDrawingService } from '../../main-process-api/AlexandriaDrawingService';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';
 import type { DiagramListItem } from '../../main-process-api/ExcalidrawStorageService';
+import {
+  diagramEventBus,
+  DIAGRAM_EVENTS,
+} from '../../services/DiagramEventBus';
 
 interface DrawingsListPanelProps {
   onDrawingSelect?: (drawingId: string, drawingName: string) => void;
@@ -49,6 +53,25 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
 
   useEffect(() => {
     void loadDrawings();
+  }, [loadDrawings]);
+
+  // Listen to diagram events to refresh the list
+  useEffect(() => {
+    const handleDiagramCreated = () => {
+      void loadDrawings();
+    };
+
+    const handleDiagramSaved = () => {
+      void loadDrawings();
+    };
+
+    diagramEventBus.on(DIAGRAM_EVENTS.DIAGRAM_CREATED, handleDiagramCreated);
+    diagramEventBus.on(DIAGRAM_EVENTS.DIAGRAM_SAVED, handleDiagramSaved);
+
+    return () => {
+      diagramEventBus.off(DIAGRAM_EVENTS.DIAGRAM_CREATED, handleDiagramCreated);
+      diagramEventBus.off(DIAGRAM_EVENTS.DIAGRAM_SAVED, handleDiagramSaved);
+    };
   }, [loadDrawings]);
 
   const handleDrawingClick = (drawing: DiagramListItem) => {
