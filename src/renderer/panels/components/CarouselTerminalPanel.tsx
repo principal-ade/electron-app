@@ -70,6 +70,7 @@ export const CarouselTerminalPanel = forwardRef<
     // Store refs to terminal panels for each tab
     const terminalRefs = useRef<Map<string, TerminalPanelRef>>(new Map());
     const carouselRef = useRef<SnapCarouselRef>(null);
+    const pendingPanelIndexRef = useRef<number | null>(null);
 
     // Store refs to callbacks to avoid recreating event listeners
     const addNewTabRef = useRef<typeof addNewTab | null>(null);
@@ -106,7 +107,11 @@ export const CarouselTerminalPanel = forwardRef<
     const switchPanel = useCallback(
       (index: number) => {
         if (index >= 0 && index < tabs.length) {
+          pendingPanelIndexRef.current = index;
           carouselRef.current?.scrollToPanel(index);
+          if (!carouselRef.current) {
+            pendingPanelIndexRef.current = null;
+          }
           setCurrentPanelIndex(index);
 
           // Update active tab
@@ -138,6 +143,16 @@ export const CarouselTerminalPanel = forwardRef<
     // Handle carousel panel change
     const handlePanelChange = useCallback(
       (index: number) => {
+        const pendingIndex = pendingPanelIndexRef.current;
+
+        if (pendingIndex !== null) {
+          if (pendingIndex !== index) {
+            return;
+          }
+
+          pendingPanelIndexRef.current = null;
+        }
+
         setCurrentPanelIndex(index);
         setTabs((prevTabs) => {
           const newTabs = prevTabs.map((t, i) => ({
