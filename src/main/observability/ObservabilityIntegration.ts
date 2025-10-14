@@ -6,6 +6,8 @@
  */
 
 import { EventEmitter } from 'events';
+import { app } from 'electron';
+import * as path from 'path';
 // @ts-ignore - Type definitions not available yet
 import { TursoObservabilitySDK } from '@a24z/observability-sdk';
 
@@ -100,17 +102,37 @@ export class ObservabilityIntegration extends EventEmitter {
   }
 
   /**
+   * Resolve database path to absolute path in userData directory
+   * This is critical for packaged apps where relative paths may resolve to read-only directories
+   */
+  private resolveDbPath(dbPath?: string): string {
+    const finalPath = dbPath || 'observability.db';
+
+    // If it's already an absolute path, return it
+    if (path.isAbsolute(finalPath)) {
+      return finalPath;
+    }
+
+    // For relative paths, resolve from userData directory
+    const userDataPath = app.getPath('userData');
+    return path.resolve(userDataPath, finalPath);
+  }
+
+  /**
    * Initialize SDK based on storage mode
    */
   private async initializeSDK(storageMode: StorageMode, config: ObservabilityConfig): Promise<void> {
     // @ts-ignore - Type definitions not available yet
     const { TursoObservabilitySDK } = await import('@a24z/observability-sdk');
 
+    // Resolve the database path to an absolute path in userData directory
+    const resolvedDbPath = this.resolveDbPath(config.localDbPath);
+
     switch (storageMode) {
       case 'local':
         // Local mode - SQLite file only
-        this.sdk = TursoObservabilitySDK.createLocal(config.localDbPath || 'observability.db');
-        console.log(`[ObservabilityIntegration] Local mode initialized: ${config.localDbPath || 'observability.db'}`);
+        this.sdk = TursoObservabilitySDK.createLocal(resolvedDbPath);
+        console.log(`[ObservabilityIntegration] Local mode initialized: ${resolvedDbPath}`);
         break;
 
       case 'local-with-sync':
@@ -119,12 +141,12 @@ export class ObservabilityIntegration extends EventEmitter {
           throw new Error('Turso URL required for local-with-sync mode');
         }
         this.sdk = TursoObservabilitySDK.createEmbeddedReplica(
-          config.localDbPath || 'observability.db',
+          resolvedDbPath,
           config.tursoUrl,
           config.tursoAuthToken || '',
           config.syncInterval || 5000
         );
-        console.log(`[ObservabilityIntegration] Local-with-sync mode initialized: ${config.localDbPath || 'observability.db'} syncing to ${config.tursoUrl}`);
+        console.log(`[ObservabilityIntegration] Local-with-sync mode initialized: ${resolvedDbPath} syncing to ${config.tursoUrl}`);
         break;
 
       default:
@@ -279,16 +301,19 @@ export class ObservabilityIntegration extends EventEmitter {
       // @ts-ignore - Type definitions not available yet
       const { TursoObservabilitySDK } = await import('@a24z/observability-sdk');
 
+      // Resolve the database path to an absolute path in userData directory
+      const resolvedDbPath = this.resolveDbPath(config.localDbPath);
+
       let testSdk;
 
       switch (storageMode) {
         case 'local':
-          testSdk = TursoObservabilitySDK.createLocal(config.localDbPath || 'observability.db');
+          testSdk = TursoObservabilitySDK.createLocal(resolvedDbPath);
           break;
 
         case 'local-with-sync':
           testSdk = TursoObservabilitySDK.createEmbeddedReplica(
-            config.localDbPath || 'observability.db',
+            resolvedDbPath,
             config.tursoUrl!,
             config.tursoAuthToken || '',
             config.syncInterval || 5000
