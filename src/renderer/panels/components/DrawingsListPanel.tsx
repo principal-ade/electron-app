@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Pencil, Trash2, Clock, Plus } from 'lucide-react';
+import { Pencil, Trash2, Clock, Plus, Copy } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { AlexandriaDrawingService } from '../../main-process-api/AlexandriaDrawingService';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';
@@ -78,6 +78,24 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
     setSelectedDrawingId(drawing.id);
     if (onDrawingSelect) {
       onDrawingSelect(drawing.id, drawing.name);
+    }
+  };
+
+  const handleCopyPath = async (
+    drawing: DiagramListItem,
+    e: React.MouseEvent,
+  ) => {
+    e.stopPropagation();
+
+    if (!drawing.filePath) {
+      console.error('File path not available for this drawing');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(drawing.filePath);
+    } catch (err) {
+      console.error('Failed to copy path to clipboard:', err);
     }
   };
 
@@ -358,31 +376,60 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
                       {drawing.name}
                     </span>
                   </div>
-                  <button
-                    onClick={(e) => handleDeleteDrawing(drawing, e)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      padding: '4px',
-                      border: 'none',
-                      borderRadius: '4px',
-                      backgroundColor: 'transparent',
-                      color: theme.colors.textSecondary,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = `${theme.colors.error}20`;
-                      e.currentTarget.style.color = theme.colors.error;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = theme.colors.textSecondary;
-                    }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <button
+                      onClick={(e) => handleCopyPath(drawing, e)}
+                      title="Copy file path"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        backgroundColor: 'transparent',
+                        color: theme.colors.textSecondary,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = `${theme.colors.primary}20`;
+                        e.currentTarget.style.color = theme.colors.primary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = theme.colors.textSecondary;
+                      }}
+                    >
+                      <Copy size={14} />
+                    </button>
+                    <button
+                      onClick={(e) => handleDeleteDrawing(drawing, e)}
+                      title="Delete drawing"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px',
+                        border: 'none',
+                        borderRadius: '4px',
+                        backgroundColor: 'transparent',
+                        color: theme.colors.textSecondary,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = `${theme.colors.error}20`;
+                        e.currentTarget.style.color = theme.colors.error;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = theme.colors.textSecondary;
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
                 <div
                   style={{

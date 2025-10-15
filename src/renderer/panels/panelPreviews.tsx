@@ -126,6 +126,14 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   carouselTerminal: {
     icon: <TerminalIcon size={16} />,
     preview: <CarouselTerminalPanelPreview />,
+    label: 'Carousel Terminal',
+    description: 'Manage multiple terminals in a carousel layout with side-by-side navigation.',
+  },
+  multiTerminal: {
+    icon: <TerminalIcon size={16} />,
+    preview: <TabbedTerminalPanelPreview />,
+    label: 'Multi Terminal',
+    description: 'Flexible terminal panel that can switch between tabbed and carousel layouts.',
   },
   codeViewer: {
     icon: <FileCode size={16} />,

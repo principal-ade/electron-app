@@ -14,6 +14,7 @@ export interface DiagramListItem {
   createdAt: Date;
   updatedAt: Date;
   thumbnail?: string;
+  filePath?: string;
 }
 
 export class ExcalidrawStorageService {

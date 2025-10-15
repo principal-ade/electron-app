@@ -98,6 +98,7 @@ import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { TabbedTerminalPanel } from '../panels/components/TabbedTerminalPanel';
 import { CarouselTerminalPanel } from '../panels/components/CarouselTerminalPanel';
+import { MultiTerminalPanel } from '../panels/components/MultiTerminalPanel';
 import { panelPreviewRegistry } from '../panels/panelPreviews';
 import { repositoryPanelDefinitions } from '../panels/registry';
 
@@ -2500,6 +2501,61 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     </div>
                   );
 
+                // Multi Terminal panel (combines tabbed and carousel with toggle button)
+                const isMultiTerminalVisible =
+                  propsPanelLayout.middle === 'multiTerminal' ||
+                  propsPanelLayout.left === 'multiTerminal' ||
+                  propsPanelLayout.right === 'multiTerminal';
+                const multiTerminalPanel =
+                  selectedSource?.type === 'local' ? (
+                    <div
+                      style={{
+                        height: '100%',
+                        width: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                    >
+                      <MultiTerminalPanel
+                        directory={selectedSource.location}
+                        repositoryKey={repositoryKey}
+                        isVisible={isMultiTerminalVisible}
+                        hideHeader={false}
+                        key={`multi-terminal-${selectedSource.location}`}
+                        showAllTerminals={showAllTerminals}
+                        onShowAllTerminalsChange={setShowAllTerminals}
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        backgroundColor: theme.colors.backgroundSecondary,
+                        color: theme.colors.textSecondary,
+                        padding: '20px',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '16px',
+                          fontWeight: 600,
+                          marginBottom: '8px',
+                          color: theme.colors.text,
+                        }}
+                      >
+                        Terminal Unavailable
+                      </div>
+                      <div style={{ fontSize: '14px' }}>
+                        Terminal is only available for local repository clones
+                      </div>
+                    </div>
+                  );
+
                 // Create all panel definitions
                 const allPanels: PanelDefinitionWithContent[] = [
                   ...leftPanelTabs,
@@ -2512,6 +2568,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     id: 'carouselTerminal',
                     label: 'Carousel Terminal',
                     content: carouselTerminalPanel,
+                  },
+                  {
+                    id: 'multiTerminal',
+                    label: 'Multi Terminal',
+                    content: multiTerminalPanel,
                   },
                   {
                     id: 'cityVisualization',

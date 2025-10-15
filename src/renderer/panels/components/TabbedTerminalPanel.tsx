@@ -5,7 +5,7 @@ import React, {
   forwardRef,
   useRef,
 } from 'react';
-import { Terminal as TerminalIcon, X, Plus, Bug, Monitor } from 'lucide-react';
+import { Terminal as TerminalIcon, X, Plus, Bug, Monitor, Grid3x3 } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { useTheme } from '@a24z/industry-theme';
 import TerminalPanel, { TerminalPanelRef } from '../TerminalPanel';
@@ -29,6 +29,7 @@ interface TabbedTerminalPanelProps {
   initialTabs?: TerminalTab[];
   showAllTerminals?: boolean;
   onShowAllTerminalsChange?: (showAll: boolean) => void;
+  onToggleView?: () => void;
 }
 
 export interface TabbedTerminalPanelRef {
@@ -49,6 +50,7 @@ export const TabbedTerminalPanel = forwardRef<
       initialTabs = [],
       showAllTerminals = false,
       onShowAllTerminalsChange,
+      onToggleView,
     },
     _ref,
   ) => {
@@ -75,9 +77,10 @@ export const TabbedTerminalPanel = forwardRef<
     // Track if we've already initialized to prevent re-initialization
     const hasInitializedRef = useRef(false);
 
-    // Create unique context for this tabbed terminal instance
+    // Create unique context for this terminal instance
+    // Use shared 'terminal:' prefix so sessions persist when switching between carousel/tabbed panels
     const terminalContext = React.useMemo(
-      () => `tabbed-terminal:${repositoryKey}`,
+      () => `terminal:${repositoryKey}`,
       [repositoryKey],
     );
 
@@ -149,10 +152,11 @@ export const TabbedTerminalPanel = forwardRef<
         try {
           const allSessions = await TerminalService.list();
 
-          // Find sessions that belong to this tabbed terminal instance
+          // Find sessions that belong to this terminal instance
+          // Use shared 'terminal:' prefix so sessions persist when switching between carousel/tabbed panels
           const ourSessions = allSessions.filter(
             (session) =>
-              session.context?.startsWith('tabbed-terminal:') &&
+              session.context?.startsWith('terminal:') &&
               (showAllTerminals || session.directory === directory),
           );
 
@@ -163,7 +167,7 @@ export const TabbedTerminalPanel = forwardRef<
             const restoredSessionIds = new Map<string, string>();
 
             ourSessions.forEach((session, index) => {
-              // Extract tab ID from context (format: "tabbed-terminal:repoKey:tab-12345")
+              // Extract tab ID from context (format: "terminal:repoKey:tab-12345")
               const contextParts = session.context?.split(':') || [];
               const tabId =
                 contextParts[contextParts.length - 1] ||
@@ -217,6 +221,65 @@ export const TabbedTerminalPanel = forwardRef<
       // NOTE: initialTabs and onTabsChange are intentionally in deps but we use
       // hasInitializedRef to prevent re-initialization loops
     ]);
+
+    // Re-filter sessions when showAllTerminals changes (after initial mount)
+    useEffect(() => {
+      // Skip if we haven't initialized yet
+      if (!hasInitializedRef.current) {
+        return;
+      }
+
+      const updateSessionsForShowAllTerminals = async () => {
+        try {
+          const allSessions = await TerminalService.list();
+
+          // Find sessions that belong to this terminal instance
+          const ourSessions = allSessions.filter(
+            (session) =>
+              session.context?.startsWith('terminal:') &&
+              (showAllTerminals || session.directory === directory),
+          );
+
+          // Restore tabs from the filtered sessions
+          const restoredTabs: TerminalTab[] = [];
+          const restoredSessionIds = new Map<string, string>();
+
+          ourSessions.forEach((session, index) => {
+            // Extract tab ID from context (format: "terminal:repoKey:tab-12345")
+            const contextParts = session.context?.split(':') || [];
+            const tabId =
+              contextParts[contextParts.length - 1] ||
+              `tab-${Date.now()}-${index}`;
+
+            const tab: TerminalTab = {
+              id: tabId,
+              label: showAllTerminals
+                ? `${session.directory.split('/').pop() || session.directory}`
+                : directory.split('/').pop() || directory,
+              directory: session.directory,
+              isActive: index === 0, // Make first tab active
+            };
+
+            restoredTabs.push(tab);
+            restoredSessionIds.set(tabId, session.id);
+          });
+
+          if (restoredTabs.length > 0) {
+            setTabs(restoredTabs);
+            setSessionIds(restoredSessionIds);
+            setActiveTabId(restoredTabs[0]?.id || null);
+            onTabsChange?.(restoredTabs);
+          }
+        } catch (err) {
+          console.error(
+            '[TabbedTerminal] Failed to update sessions for showAllTerminals:',
+            err,
+          );
+        }
+      };
+
+      updateSessionsForShowAllTerminals();
+    }, [showAllTerminals, directory, terminalContext, onTabsChange]);
 
     // Close a tab
     const closeTab = useCallback(
@@ -501,6 +564,34 @@ export const TabbedTerminalPanel = forwardRef<
                   tabs.length > 0 ? `1px solid ${theme.colors.border}` : 'none',
               }}
             >
+              {/* Toggle view button - only show in multi-terminal mode */}
+              {onToggleView && (
+                <button
+                  onClick={onToggleView}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '36px',
+                    height: '100%',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    cursor: 'pointer',
+                    color: theme.colors.textSecondary,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  title="Switch to carousel view"
+                >
+                  <Grid3x3 size={14} />
+                </button>
+              )}
+
               {/* Show all terminals toggle */}
               <button
                 onClick={() => onShowAllTerminalsChange?.(!showAllTerminals)}

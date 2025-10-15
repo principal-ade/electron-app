@@ -484,6 +484,14 @@ class ExcalidrawHandlers {
             }
           }
 
+          // Construct the full file path
+          const drawingPath = path.join(
+            repositoryPath,
+            '.alexandria',
+            'drawings',
+            drawing.name,
+          );
+
           diagrams.push({
             id: drawing.id,
             name: displayName,
@@ -491,6 +499,7 @@ class ExcalidrawHandlers {
             isRepoAgnostic: false,
             createdAt: new Date(drawing.created),
             updatedAt: new Date(drawing.modified),
+            filePath: drawingPath,
           });
         } catch (err) {
           console.error(`Failed to process drawing ${drawing.name}:`, err);
