@@ -98,6 +98,7 @@ export const RemoteFileViewerModal: React.FC<RemoteFileViewerModalProps> = ({
         justifyContent: 'center',
         zIndex: 1000,
       }}
+      onClick={onClose}
     >
       <div
         style={{
@@ -112,6 +113,7 @@ export const RemoteFileViewerModal: React.FC<RemoteFileViewerModalProps> = ({
             '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
           position: 'relative',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Close button overlay */}
         <button

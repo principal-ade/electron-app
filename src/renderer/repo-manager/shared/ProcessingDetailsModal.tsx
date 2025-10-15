@@ -127,6 +127,7 @@ export const ProcessingDetailsModal: React.FC<ProcessingDetailsModalProps> = ({
         justifyContent: 'center',
         zIndex: 10000,
       }}
+      onClick={onClose}
     >
       <div
         style={{
@@ -140,6 +141,7 @@ export const ProcessingDetailsModal: React.FC<ProcessingDetailsModalProps> = ({
           border: `1px solid ${theme.colors.border}`,
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div

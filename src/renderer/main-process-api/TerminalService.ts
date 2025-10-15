@@ -2,6 +2,8 @@ import {
   TerminalData,
   TerminalExit,
   TerminalInfo,
+  TerminalOwnershipStatus,
+  TerminalOwnershipResult,
 } from '../../shared/main-process-api-interfaces/TerminalService';
 
 export class TerminalService {
@@ -85,5 +87,32 @@ export class TerminalService {
     }) => void,
   ): () => void {
     return window.mainProcess.terminal.onWindowClose?.(callback) || (() => {});
+  }
+
+  static async checkOwnership(
+    sessionId: string,
+  ): Promise<TerminalOwnershipStatus> {
+    return window.mainProcess.terminal.checkOwnership(sessionId);
+  }
+
+  static async claimOwnership(
+    sessionId: string,
+    force?: boolean,
+  ): Promise<TerminalOwnershipResult> {
+    return window.mainProcess.terminal.claimOwnership(sessionId, force);
+  }
+
+  static async releaseOwnership(
+    sessionId: string,
+  ): Promise<TerminalOwnershipResult> {
+    return window.mainProcess.terminal.releaseOwnership(sessionId);
+  }
+
+  static onOwnershipLost(
+    callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
+  ): () => void {
+    return (
+      window.mainProcess.terminal.onOwnershipLost?.(callback) || (() => {})
+    );
   }
 }

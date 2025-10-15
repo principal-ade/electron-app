@@ -81,4 +81,9 @@ export const windowAPI: WindowAPI = {
       },
     );
   },
+
+  /**
+   * Get the unique ID of the current window
+   */
+  getWindowId: () => ipcRenderer.invoke(WindowEvent.GET_WINDOW_ID),
 };

@@ -35,6 +35,8 @@ interface TerminalSession {
   agentSessionId?: string; // Associated AI session
   createdAt: number;
   lastActivity: number;
+  ownedByWindowId?: number; // NEW: Which window currently has the active xterm.js instance
+  ownershipClaimedAt?: number; // NEW: When ownership was last claimed
 }
 
 class TerminalManager {
@@ -603,7 +605,9 @@ class TerminalManager {
           agentSessionId: session.agentSessionId,
           createdAt: session.createdAt,
           lastActivity: session.lastActivity,
-          status: 'active',
+          status: 'active' as const,
+          ownedByWindowId: session.ownedByWindowId,
+          ownershipClaimedAt: session.ownershipClaimedAt,
         }),
       );
       return terminals;
@@ -712,6 +716,111 @@ class TerminalManager {
 
       return openWindows;
     });
+
+    // Check ownership of a terminal session
+    ipcMain.handle(
+      TerminalAPIEvents.CHECK_OWNERSHIP,
+      async (event, sessionId: string) => {
+        const session = this.sessions.get(sessionId);
+        if (!session) {
+          return { exists: false, ownedByWindowId: null, canClaim: false };
+        }
+
+        const senderWindowId = BrowserWindow.fromWebContents(event.sender)?.id;
+        const isOwnedByThisWindow = session.ownedByWindowId === senderWindowId;
+        const isUnowned = !session.ownedByWindowId;
+
+        // Check if owned by a window that no longer exists
+        let ownerWindowExists = false;
+        if (session.ownedByWindowId) {
+          const ownerWindow = BrowserWindow.fromId(session.ownedByWindowId);
+          ownerWindowExists = ownerWindow && !ownerWindow.isDestroyed();
+        }
+
+        return {
+          exists: true,
+          ownedByWindowId: session.ownedByWindowId,
+          ownedByThisWindow: isOwnedByThisWindow,
+          canClaim: isUnowned || !ownerWindowExists,
+          ownerWindowExists,
+        };
+      },
+    );
+
+    // Claim ownership of a terminal session
+    ipcMain.handle(
+      TerminalAPIEvents.CLAIM_OWNERSHIP,
+      async (event, sessionId: string, force: boolean = false) => {
+        const session = this.sessions.get(sessionId);
+        if (!session) {
+          return { success: false, reason: 'Session not found' };
+        }
+
+        const senderWindowId = BrowserWindow.fromWebContents(event.sender)?.id;
+        if (!senderWindowId) {
+          return { success: false, reason: 'Could not determine window ID' };
+        }
+
+        // Check if already owned by another window
+        if (session.ownedByWindowId && session.ownedByWindowId !== senderWindowId) {
+          const ownerWindow = BrowserWindow.fromId(session.ownedByWindowId);
+          const ownerExists = ownerWindow && !ownerWindow.isDestroyed();
+
+          if (ownerExists && !force) {
+            return {
+              success: false,
+              reason: 'Owned by another window',
+              ownedByWindowId: session.ownedByWindowId,
+            };
+          }
+
+          // If owner window doesn't exist or force=true, notify old owner (if it exists)
+          if (ownerExists) {
+            ownerWindow.webContents.send(TerminalAPIEvents.OWNERSHIP_LOST, {
+              sessionId,
+              newOwnerWindowId: senderWindowId,
+            });
+          }
+        }
+
+        // Claim ownership
+        session.ownedByWindowId = senderWindowId;
+        session.ownershipClaimedAt = Date.now();
+
+        console.log(
+          `[Terminal] Window ${senderWindowId} claimed ownership of session ${sessionId}`,
+        );
+
+        return { success: true };
+      },
+    );
+
+    // Release ownership of a terminal session
+    ipcMain.handle(
+      TerminalAPIEvents.RELEASE_OWNERSHIP,
+      async (event, sessionId: string) => {
+        const session = this.sessions.get(sessionId);
+        if (!session) {
+          return { success: false, reason: 'Session not found' };
+        }
+
+        const senderWindowId = BrowserWindow.fromWebContents(event.sender)?.id;
+
+        // Only the owner can release ownership
+        if (session.ownedByWindowId !== senderWindowId) {
+          return { success: false, reason: 'Not the owner' };
+        }
+
+        session.ownedByWindowId = undefined;
+        session.ownershipClaimedAt = undefined;
+
+        console.log(
+          `[Terminal] Window ${senderWindowId} released ownership of session ${sessionId}`,
+        );
+
+        return { success: true };
+      },
+    );
   }
 
   // Create terminal with command - used internally by other services

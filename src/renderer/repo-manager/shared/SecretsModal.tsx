@@ -393,6 +393,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
           justifyContent: 'center',
           zIndex: 10000,
         }}
+        onClick={onClose}
       >
         <div
           style={{
@@ -405,6 +406,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
             flexDirection: 'column',
             border: `1px solid ${theme.colors.border}`,
           }}
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div

@@ -5,6 +5,8 @@ import type {
   TerminalInfo,
   TerminalData,
   TerminalExit,
+  TerminalOwnershipStatus,
+  TerminalOwnershipResult,
 } from '../../shared/main-process-api-interfaces/TerminalService';
 
 export const terminalAPI: TerminalAPI = {
@@ -120,5 +122,41 @@ export const terminalAPI: TerminalAPI = {
 
   refresh: async (sessionId: string): Promise<boolean> => {
     return ipcRenderer.invoke(TerminalAPIEvents.REFRESH, sessionId);
+  },
+
+  checkOwnership: async (
+    sessionId: string,
+  ): Promise<TerminalOwnershipStatus> => {
+    return ipcRenderer.invoke(TerminalAPIEvents.CHECK_OWNERSHIP, sessionId);
+  },
+
+  claimOwnership: async (
+    sessionId: string,
+    force?: boolean,
+  ): Promise<TerminalOwnershipResult> => {
+    return ipcRenderer.invoke(
+      TerminalAPIEvents.CLAIM_OWNERSHIP,
+      sessionId,
+      force,
+    );
+  },
+
+  releaseOwnership: async (
+    sessionId: string,
+  ): Promise<TerminalOwnershipResult> => {
+    return ipcRenderer.invoke(TerminalAPIEvents.RELEASE_OWNERSHIP, sessionId);
+  },
+
+  onOwnershipLost: (
+    callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
+  ) => {
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      data: { sessionId: string; newOwnerWindowId: number },
+    ) => callback(data);
+    ipcRenderer.on(TerminalAPIEvents.OWNERSHIP_LOST, listener);
+    return () => {
+      ipcRenderer.removeListener(TerminalAPIEvents.OWNERSHIP_LOST, listener);
+    };
   },
 };

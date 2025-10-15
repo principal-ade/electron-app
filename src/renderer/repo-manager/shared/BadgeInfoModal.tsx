@@ -677,6 +677,7 @@ export const BadgeInfoModal: React.FC<BadgeInfoModalProps> = ({
         justifyContent: 'center',
         zIndex: 3000,
       }}
+      onClick={onClose}
     >
       <div
         style={{
@@ -690,6 +691,7 @@ export const BadgeInfoModal: React.FC<BadgeInfoModalProps> = ({
           overflowY: 'auto',
           boxShadow: theme.shadows?.[1] || '0 4px 24px rgba(0, 0, 0, 0.2)',
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div
           style={{

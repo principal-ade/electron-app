@@ -173,23 +173,36 @@ export const CarouselTerminalPanel = forwardRef<
         const directoryName = targetDir.split('/').pop() || targetDir;
         const newTab: TerminalTab = {
           id: `tab-${Date.now()}`,
-          label: label || (showAllTerminals ? directoryName : directoryName),
+          label: label || directoryName,
           directory: targetDir,
           command,
           isActive: true,
         };
 
+        let newTabIndex = 0;
         setTabs((prevTabs) => {
           const updatedTabs = prevTabs.map((t) => ({ ...t, isActive: false }));
           const newTabs = [...updatedTabs, newTab];
+          newTabIndex = newTabs.length - 1;
           onTabsChange?.(newTabs);
           return newTabs;
         });
 
-        // Scroll to the new tab
-        setTimeout(() => {
-          carouselRef.current?.scrollToPanel(tabs.length);
-        }, 100);
+        // Set pending index IMMEDIATELY before any carousel updates
+        pendingPanelIndexRef.current = newTabIndex;
+
+        // Update current panel index immediately
+        setCurrentPanelIndex(newTabIndex);
+
+        // Scroll to the new tab after DOM updates
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            carouselRef.current?.scrollToPanel(newTabIndex);
+            if (!carouselRef.current) {
+              pendingPanelIndexRef.current = null;
+            }
+          }, 150);
+        });
       },
       [directory, showAllTerminals, onTabsChange, tabs.length],
     );
@@ -276,7 +289,6 @@ export const CarouselTerminalPanel = forwardRef<
     // Close a tab
     const closeTab = useCallback(
       async (tabId: string) => {
-        const tabIndex = tabs.findIndex((t) => t.id === tabId);
         const sessionId = sessionIds.get(tabId);
 
         if (sessionId) {
@@ -293,6 +305,7 @@ export const CarouselTerminalPanel = forwardRef<
         }
 
         setTabs((prevTabs) => {
+          const tabIndex = prevTabs.findIndex((t) => t.id === tabId);
           const newTabs = prevTabs.filter((t) => t.id !== tabId);
 
           // If we closed the current panel, navigate appropriately
@@ -309,13 +322,16 @@ export const CarouselTerminalPanel = forwardRef<
             });
           } else if (newTabs.length === 0) {
             setCurrentPanelIndex(0);
+          } else if (tabIndex < currentPanelIndex) {
+            // If we closed a tab before the current one, decrement currentPanelIndex
+            setCurrentPanelIndex(currentPanelIndex - 1);
           }
 
           onTabsChange?.(newTabs);
           return newTabs;
         });
       },
-      [tabs, currentPanelIndex, sessionIds, onTabsChange],
+      [currentPanelIndex, sessionIds, onTabsChange],
     );
 
     // Handle terminal session creation

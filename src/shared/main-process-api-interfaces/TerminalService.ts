@@ -16,6 +16,10 @@ export enum TerminalAPIEvents {
   CHECK_COMMAND = 'terminal:checkCommand',
   CLEAR_PATH_CACHE = 'terminal:clearPathCache',
   GET_OPEN_WINDOWS = 'terminal:getOpenWindows',
+  CHECK_OWNERSHIP = 'terminal:checkOwnership',
+  CLAIM_OWNERSHIP = 'terminal:claimOwnership',
+  RELEASE_OWNERSHIP = 'terminal:releaseOwnership',
+  OWNERSHIP_LOST = 'terminal:ownershipLost',
 }
 
 export interface TerminalInfo {
@@ -26,6 +30,22 @@ export interface TerminalInfo {
   createdAt: number;
   lastActivity: number;
   status: 'active' | 'disconnected';
+  ownedByWindowId?: number; // NEW: Which window has active ownership
+  ownershipClaimedAt?: number; // NEW: When ownership was claimed
+}
+
+export interface TerminalOwnershipStatus {
+  exists: boolean;
+  ownedByWindowId: number | null;
+  ownedByThisWindow?: boolean;
+  canClaim: boolean;
+  ownerWindowExists?: boolean;
+}
+
+export interface TerminalOwnershipResult {
+  success: boolean;
+  reason?: string;
+  ownedByWindowId?: number;
 }
 export interface TerminalData {
   sessionId: string;
@@ -71,4 +91,13 @@ export interface TerminalAPI {
     }) => void,
   ) => () => void;
   refresh: (sessionId: string) => Promise<boolean>;
+  checkOwnership: (sessionId: string) => Promise<TerminalOwnershipStatus>;
+  claimOwnership: (
+    sessionId: string,
+    force?: boolean,
+  ) => Promise<TerminalOwnershipResult>;
+  releaseOwnership: (sessionId: string) => Promise<TerminalOwnershipResult>;
+  onOwnershipLost: (
+    callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
+  ) => () => void;
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Layers, Key, ExternalLink, Link2, NotebookPen } from 'lucide-react';
+import { Layout, Layers, Key, ExternalLink, Link2, NotebookPen, ArrowLeftRight } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
@@ -33,6 +33,7 @@ export interface RepositoryTitlebarProps {
   rightSidebarCollapsed?: boolean;
   onToggleRightSidebar?: () => void;
   onConfigurePanels?: () => void;
+  onSwitchPanels?: () => void;
   // Workspace layout props
   availableWorkspaces?: Record<string, WorkspaceLayout>;
   currentWorkspaceId?: string | null;
@@ -70,6 +71,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   rightSidebarCollapsed = false,
   onToggleRightSidebar,
   onConfigurePanels,
+  onSwitchPanels,
   availableWorkspaces,
   currentWorkspaceId,
   onWorkspaceSelect,
@@ -382,6 +384,39 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             }}
           >
             <Layout size={14} />
+          </button>
+        )}
+        {onSwitchPanels && (
+          <button
+            onClick={onSwitchPanels}
+            title="Switch left and right panels"
+            style={{
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              width: '32px',
+              height: '32px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+          >
+            <ArrowLeftRight size={14} />
           </button>
         )}
         {showSidebarControls && onToggleSidebar && (

@@ -11,6 +11,8 @@ import {
   ExternalLink,
   ChevronDown,
   X,
+  Monitor,
+  ArrowRight,
 } from 'lucide-react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -96,6 +98,19 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
     const lastResizeTimeRef = useRef<number>(0);
     const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isVisibleRef = useRef(isVisible);
+
+    // Ownership tracking state
+    const [ownershipStatus, setOwnershipStatus] = useState<{
+      isOwned: boolean;
+      ownedByWindowId: number | null;
+      canTakeControl: boolean;
+    }>({
+      isOwned: false,
+      ownedByWindowId: null,
+      canTakeControl: true,
+    });
+    // Start with true for new terminals, will be set to false if ownership check fails
+    const [shouldRenderTerminal, setShouldRenderTerminal] = useState(true);
 
     useEffect(() => {
       isVisibleRef.current = isVisible;
@@ -262,7 +277,125 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
       createTerminalSession,
     ]);
 
-    // Initialize terminal UI - only once per component mount
+    // Check and claim ownership when we have a session ID
+    useEffect(() => {
+      if (!sessionId || !isVisible) {
+        return;
+      }
+
+      let isMounted = true;
+
+      const checkAndClaimOwnership = async () => {
+        try {
+          // Check current ownership status
+          const status = await TerminalService.checkOwnership(sessionId);
+
+          if (!isMounted) return;
+
+          // If the session doesn't exist, something went wrong
+          if (!status.exists) {
+            console.error(
+              `[TerminalPanel] Session ${sessionId} does not exist`,
+            );
+            setShouldRenderTerminal(false);
+            return;
+          }
+
+          // If this window already owns it or it's unowned, claim/reclaim it
+          if (status.ownedByThisWindow || status.canClaim) {
+            const result = await TerminalService.claimOwnership(sessionId, false);
+
+            if (!isMounted) return;
+
+            if (result.success) {
+              console.log(
+                `[TerminalPanel] Successfully claimed ownership of session ${sessionId}`,
+              );
+              setOwnershipStatus({
+                isOwned: false,
+                ownedByWindowId: null,
+                canTakeControl: true,
+              });
+              setShouldRenderTerminal(true);
+            } else {
+              // Ownership claim failed - another window owns it
+              console.log(
+                `[TerminalPanel] Session ${sessionId} is owned by window ${result.ownedByWindowId}`,
+              );
+              setOwnershipStatus({
+                isOwned: true,
+                ownedByWindowId: result.ownedByWindowId || null,
+                canTakeControl: false,
+              });
+              setShouldRenderTerminal(false);
+            }
+          } else {
+            // Owned by another window
+            console.log(
+              `[TerminalPanel] Session ${sessionId} is owned by window ${status.ownedByWindowId}`,
+            );
+            setOwnershipStatus({
+              isOwned: true,
+              ownedByWindowId: status.ownedByWindowId,
+              canTakeControl: true,
+            });
+            setShouldRenderTerminal(false);
+          }
+        } catch (error) {
+          console.error('[TerminalPanel] Failed to check ownership:', error);
+          // On error, allow rendering
+          if (isMounted) {
+            setShouldRenderTerminal(true);
+          }
+        }
+      };
+
+      checkAndClaimOwnership();
+
+      return () => {
+        isMounted = false;
+        // Release ownership when component unmounts
+        if (sessionId) {
+          TerminalService.releaseOwnership(sessionId).catch((err) => {
+            console.error('[TerminalPanel] Failed to release ownership:', err);
+          });
+        }
+      };
+    }, [sessionId, isVisible]);
+
+    // Listen for ownership lost events
+    useEffect(() => {
+      if (!sessionId) {
+        return;
+      }
+
+      const unsubscribe = TerminalService.onOwnershipLost(
+        (data: { sessionId: string; newOwnerWindowId: number }) => {
+          if (data.sessionId === sessionId) {
+            console.log(
+              `[TerminalPanel] Lost ownership of session ${sessionId} to window ${data.newOwnerWindowId}`,
+            );
+            setOwnershipStatus({
+              isOwned: true,
+              ownedByWindowId: data.newOwnerWindowId,
+              canTakeControl: true,
+            });
+            setShouldRenderTerminal(false);
+            // Dispose the terminal instance if it exists
+            if (terminal) {
+              terminal.dispose();
+              setTerminal(null);
+            }
+          }
+        },
+      );
+
+      return () => {
+        unsubscribe();
+      };
+    }, [sessionId, terminal]);
+
+    // Initialize terminal UI - only once per component mount AND only if we have ownership
     useEffect(() => {
       if (!terminalRef.current) {
         return;
@@ -270,6 +403,11 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
 
       // Check if we already have a terminal instance
       if (terminal) {
+        return;
+      }
+
+      // Only create terminal if we should render it (have ownership)
+      if (!shouldRenderTerminal) {
         return;
       }
 
@@ -419,7 +557,7 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
         // Don't destroy the session here - it should persist
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [theme]); // Only depend on theme, not terminal - otherwise it recreates infinitely
+    }, [theme, shouldRenderTerminal]); // Depend on shouldRenderTerminal to create terminal when ownership is gained
 
     // Handle connecting to existing session
     useEffect(() => {
@@ -605,6 +743,39 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
       }
     };
 
+    const handleSwitchToOwnerWindow = async () => {
+      if (ownershipStatus.ownedByWindowId) {
+        try {
+          await TerminalService.focusWindow(ownershipStatus.ownedByWindowId);
+        } catch (error) {
+          console.error('Failed to focus owner window:', error);
+        }
+      }
+    };
+
+    const handleTakeControl = async () => {
+      if (sessionId) {
+        try {
+          const result = await TerminalService.claimOwnership(sessionId, true);
+          if (result.success) {
+            console.log(
+              `[TerminalPanel] Successfully took control of session ${sessionId}`,
+            );
+            setOwnershipStatus({
+              isOwned: false,
+              ownedByWindowId: null,
+              canTakeControl: true,
+            });
+            setShouldRenderTerminal(true);
+          } else {
+            console.error('[TerminalPanel] Failed to take control:', result);
+          }
+        } catch (error) {
+          console.error('[TerminalPanel] Failed to take control:', error);
+        }
+      }
+    };
+
     return (
       <div
         className={className}
@@ -778,6 +949,106 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
           }}
         >
           {debugLayout}
+          {/* Ownership placeholder when terminal is owned by another window */}
+          {ownershipStatus.isOwned && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: theme.colors.background,
+                gap: '16px',
+                padding: '32px',
+              }}
+            >
+              <Monitor size={48} color={theme.colors.textSecondary} />
+              <div
+                style={{
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  color: theme.colors.text,
+                  textAlign: 'center',
+                }}
+              >
+                This terminal is active in another window
+              </div>
+              <div
+                style={{
+                  fontSize: '14px',
+                  color: theme.colors.textSecondary,
+                  textAlign: 'center',
+                  maxWidth: '400px',
+                }}
+              >
+                Window ID: {ownershipStatus.ownedByWindowId}
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  marginTop: '8px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={handleSwitchToOwnerWindow}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: theme.colors.primary,
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'opacity 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.8';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                >
+                  <ArrowRight size={16} />
+                  Switch to Window
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTakeControl}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.text,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundSecondary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  Take Control Here
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

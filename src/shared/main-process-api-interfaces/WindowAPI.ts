@@ -108,4 +108,11 @@ export interface WindowAPI {
   onMainWindowMinimizeStateChange(
     callback: (isMinimized: boolean) => void,
   ): void;
+
+  /**
+   * Get the unique ID of the current window
+   * Useful for isolating resources (like terminal sessions) per window
+   * @returns The Electron BrowserWindow ID
+   */
+  getWindowId(): Promise<number>;
 }

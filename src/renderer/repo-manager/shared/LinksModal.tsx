@@ -266,6 +266,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
         justifyContent: 'center',
         zIndex: 10000,
       }}
+      onClick={onClose}
     >
       <div
         style={{
@@ -278,6 +279,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
           flexDirection: 'column',
           border: `1px solid ${theme.colors.border}`,
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div

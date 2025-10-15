@@ -30,6 +30,7 @@ export const SourceBadgeHelpModal: React.FC<{
         justifyContent: 'center',
         zIndex: 10000,
       }}
+      onClick={onClose}
     >
       <div
         style={{
@@ -42,6 +43,7 @@ export const SourceBadgeHelpModal: React.FC<{
           overflow: 'auto',
           border: `1px solid ${theme.colors.border}`,
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div
           style={{
