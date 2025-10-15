@@ -8,15 +8,11 @@
 import { EventEmitter } from 'events';
 import { app } from 'electron';
 import * as path from 'path';
-// @ts-ignore - Type definitions not available yet
-import { TursoObservabilitySDK } from '@a24z/observability-sdk';
-
-interface TursoConfig {
-  url: string;
-  authToken?: string;
-}
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
+
+// @ts-ignore - SDK type definitions not available yet
+import { TursoObservabilitySDK } from '@a24z/observability-sdk';
 
 export type StorageMode = 'none' | 'local' | 'local-with-sync';
 
@@ -122,9 +118,6 @@ export class ObservabilityIntegration extends EventEmitter {
    * Initialize SDK based on storage mode
    */
   private async initializeSDK(storageMode: StorageMode, config: ObservabilityConfig): Promise<void> {
-    // @ts-ignore - Type definitions not available yet
-    const { TursoObservabilitySDK } = await import('@a24z/observability-sdk');
-
     // Resolve the database path to an absolute path in userData directory
     const resolvedDbPath = this.resolveDbPath(config.localDbPath);
 
@@ -166,7 +159,13 @@ export class ObservabilityIntegration extends EventEmitter {
         throw new Error(`Unknown storage mode: ${storageMode}`);
     }
 
-    // Initialize the database schema (creates tables if they don't exist)
+    // Initialize the database schema with automatic migration (SDK v0.5.0+)
+    // The SDK now handles:
+    // - Schema version detection
+    // - Automatic backups before migration (local databases)
+    // - Adding missing columns/tables
+    // - Seamless migration from old schema versions
+    // - Zero breaking changes on SDK updates
     await this.sdk.initializeSchema();
 
     console.log('[ObservabilityIntegration] SDK initialized with schema');
@@ -312,9 +311,6 @@ export class ObservabilityIntegration extends EventEmitter {
     }
 
     try {
-      // @ts-ignore - Type definitions not available yet
-      const { TursoObservabilitySDK } = await import('@a24z/observability-sdk');
-
       // Resolve the database path to an absolute path in userData directory
       const resolvedDbPath = this.resolveDbPath(config.localDbPath);
 

@@ -10,24 +10,24 @@
 
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import { QualityMetricsCalculator } from '@principal-ai/codebase-composition';
-import type { LensResult } from '@principal-ai/codebase-quality-lenses';
+import type { LensResult, Lens } from '@principal-ai/codebase-quality-lenses';
 import {
   ESLintLens,
   JestLens,
   TypeScriptLens,
   KnipLens,
 } from '@principal-ai/codebase-quality-lenses';
-import { ElectronCLIBridgeExecutor } from '../main/quality-lenses/ElectronCLIBridgeExecutor';
+import { NodeExecutor } from './NodeExecutor';
 
 /**
  * Service for enriching packages with real quality scores
  */
 export class QualityScoreEnrichment {
-  private executor: ElectronCLIBridgeExecutor;
-  private lenses: Map<string, any>;
+  private executor: NodeExecutor;
+  private lenses: Map<string, Lens>;
 
   constructor() {
-    this.executor = new ElectronCLIBridgeExecutor();
+    this.executor = new NodeExecutor();
     this.lenses = new Map();
     this.initializeLenses();
   }
@@ -68,10 +68,24 @@ export class QualityScoreEnrichment {
     const packagePath = pkg.packageData.path || '';
     const cwd = packagePath ? `${repoPath}/${packagePath}` : repoPath;
 
+    // Filter to only lenses that have executable commands
+    const executableLenses = this.getExecutableLenses(pkg, pkg.qualityMetrics.availableLenses);
+
+    if (executableLenses.length === 0) {
+      console.info(
+        `[QualityScoreEnrichment] No executable commands found for any lenses in: ${pkg.packageData.name}`,
+      );
+      return pkg;
+    }
+
+    console.info(
+      `[QualityScoreEnrichment] Found ${executableLenses.length} executable lenses: ${executableLenses.join(', ')}`,
+    );
+
     // Run lenses and collect scores
     const lensScores = new Map<string, number>();
 
-    for (const lensId of pkg.qualityMetrics.availableLenses) {
+    for (const lensId of executableLenses) {
       try {
         const score = await this.runLensAndGetScore(lensId, cwd, pkg);
         if (score !== null) {
@@ -91,8 +105,10 @@ export class QualityScoreEnrichment {
 
     // Use composition package to calculate hexagon from scores
     // This uses the LENS_TO_METRIC_MAP to properly map lens IDs to hexagon metrics
+    // Only include lenses that successfully returned scores
+    const successfulLenses = Array.from(lensScores.keys());
     const hexagon = QualityMetricsCalculator.calculateMetrics(
-      this.createDetectedLensesMap(pkg.qualityMetrics.availableLenses),
+      this.createDetectedLensesMap(successfulLenses),
       lensScores,
     );
 
@@ -111,8 +127,8 @@ export class QualityScoreEnrichment {
    */
   private createDetectedLensesMap(
     availableLenses: string[],
-  ): Map<string, { lensId: string; operations: Set<any> }> {
-    const map = new Map();
+  ): Map<string, { lensId: string; operations: Set<string> }> {
+    const map = new Map<string, { lensId: string; operations: Set<string> }>();
     for (const lensId of availableLenses) {
       map.set(lensId, {
         lensId,
@@ -120,6 +136,31 @@ export class QualityScoreEnrichment {
       });
     }
     return map;
+  }
+
+  /**
+   * Get list of lenses that have executable commands
+   */
+  private getExecutableLenses(pkg: PackageLayer, availableLenses: string[]): string[] {
+    const commands = pkg.packageData.availableCommands || [];
+    const executableLenses: string[] = [];
+
+    for (const lensId of availableLenses) {
+      // Check if there's a command marked as a lens command for this lensId
+      const hasLensCommand = commands.some(
+        (cmd) => cmd.isLensCommand && cmd.lensId === lensId
+      );
+
+      if (hasLensCommand) {
+        executableLenses.push(lensId);
+      } else {
+        console.warn(
+          `[QualityScoreEnrichment] Lens "${lensId}" marked as available but has no executable command in ${pkg.packageData.name}`
+        );
+      }
+    }
+
+    return executableLenses;
   }
 
   /**
@@ -150,6 +191,16 @@ export class QualityScoreEnrichment {
     // Parse command string
     const { command: cmd, args } = this.parseCommandString(command);
 
+    console.info(
+      `[QualityScoreEnrichment] Configuring lens ${lensId}:`,
+      {
+        cwd,
+        command: cmd,
+        args,
+        fullCommand: command,
+      }
+    );
+
     // Configure lens
     lens.configure({
       cwd,
@@ -165,6 +216,39 @@ export class QualityScoreEnrichment {
     // Run lens
     const result: LensResult = await lens.run();
 
+    console.info(
+      `[QualityScoreEnrichment] Lens result for ${lensId}:`,
+      {
+        success: result.success,
+        hasQualityScore: result.qualityScore !== undefined,
+        qualityScore: result.qualityScore,
+        hasMetrics: !!result.metrics,
+        metricsKeys: result.metrics ? Object.keys(result.metrics) : [],
+        hasRaw: !!result.raw,
+        rawExitCode: result.raw?.exitCode,
+        hasError: !!result.error,
+        errorMessage: result.error?.message,
+      }
+    );
+
+    // Log the error if lens failed
+    if (!result.success) {
+      console.error(
+        `[QualityScoreEnrichment] Lens ${lensId} failed. Full error object:`,
+        result.error
+      );
+      console.error(
+        `[QualityScoreEnrichment] Error type:`,
+        typeof result.error
+      );
+      if (result.error) {
+        console.error(
+          `[QualityScoreEnrichment] Error keys:`,
+          Object.keys(result.error)
+        );
+      }
+    }
+
     // Extract quality score (should always be present in v0.1.7+)
     if (result.qualityScore !== undefined) {
       return result.qualityScore;
@@ -173,6 +257,10 @@ export class QualityScoreEnrichment {
     // No qualityScore field - unexpected for v0.1.7+
     console.warn(
       `[QualityScoreEnrichment] No qualityScore in result for ${lensId}`,
+    );
+    console.warn(
+      `[QualityScoreEnrichment] Full result object keys:`,
+      Object.keys(result)
     );
     return null;
   }
@@ -183,29 +271,15 @@ export class QualityScoreEnrichment {
   private findLensCommand(pkg: PackageLayer, lensId: string): string | null {
     const commands = pkg.packageData.availableCommands || [];
 
-    // Look for lens: commands first
+    // Only look for commands explicitly marked as lens commands
     for (const cmd of commands) {
       if (cmd.isLensCommand && cmd.lensId === lensId) {
         return cmd.command;
       }
     }
 
-    // Fallback: look for common script names
-    const scriptMap: Record<string, string[]> = {
-      eslint: ['lint', 'eslint'],
-      typescript: ['typecheck', 'type-check', 'tsc'],
-      test: ['test'],
-      jest: ['test', 'jest'],
-      knip: ['knip', 'unused'],
-    };
-
-    const scriptNames = scriptMap[lensId] || [];
-    for (const cmd of commands) {
-      if (scriptNames.includes(cmd.name)) {
-        return cmd.command;
-      }
-    }
-
+    // No fallback - if composition package marked it as available,
+    // it should have provided a command
     return null;
   }
 

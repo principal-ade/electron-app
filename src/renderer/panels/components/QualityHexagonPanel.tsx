@@ -4,7 +4,7 @@ import {
   QualityHexagonDetailed,
 } from '@principal-ai/agent-monitoring-ui';
 import { useTheme } from '@a24z/industry-theme';
-import { Grid2x2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Grid2x2, RefreshCw } from 'lucide-react';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
 import type { PackageSummary } from '../../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
@@ -23,7 +23,7 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
   const [summary, setSummary] = useState<PackageSummary | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedPackages, setExpandedPackages] = useState<Set<string>>(
+  const [rerunningPackages, setRerunningPackages] = useState<Set<string>>(
     new Set(),
   );
 
@@ -67,29 +67,47 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
     }
   }, [directory, fetchPackages]);
 
-  const togglePackage = (pkgPath: string) => {
-    setExpandedPackages((prev) => {
-      const next = new Set(prev);
-      if (next.has(pkgPath)) {
-        next.delete(pkgPath);
-      } else {
-        next.add(pkgPath);
+  const rerunEnrichment = useCallback(
+    async (packagePath: string) => {
+      const pkgKey = packagePath || 'root';
+      setRerunningPackages((prev) => new Set(prev).add(pkgKey));
+
+      try {
+        console.info(
+          `[QualityHexagon] Rerunning enrichment for repository: ${directory}`,
+        );
+        // First refresh the repository to clear cache and re-run enrichment
+        await RepositoryMonitoringService.refreshRepository(directory);
+
+        // Then fetch the updated packages
+        const result = await RepositoryMonitoringService.getPackages(directory);
+
+        if (result) {
+          console.info(
+            `[QualityHexagon] Enrichment completed, ${result.packages.length} packages updated`,
+          );
+          setPackages(result.packages);
+          setSummary(result.summary);
+        }
+      } catch (err) {
+        console.error('[QualityHexagon] Failed to rerun enrichment:', err);
+        setError(
+          err instanceof Error ? err.message : 'Failed to rerun enrichment',
+        );
+      } finally {
+        setRerunningPackages((prev) => {
+          const next = new Set(prev);
+          next.delete(pkgKey);
+          return next;
+        });
       }
-      return next;
-    });
-  };
+    },
+    [directory],
+  );
 
   const renderPackageInfo = (pkg: PackageLayer) => {
-    const depCount = pkg.packageData.dependencies
-      ? Object.keys(pkg.packageData.dependencies).length
-      : 0;
-    const devDepCount = pkg.packageData.devDependencies
-      ? Object.keys(pkg.packageData.devDependencies).length
-      : 0;
-    const scripts =
-      pkg.packageData.availableCommands?.map((cmd) => cmd.name) || [];
     const pkgPath = pkg.packageData.path || 'root';
-    const isExpanded = expandedPackages.has(pkgPath);
+    const isRerunning = rerunningPackages.has(pkgPath);
 
     return (
       <div
@@ -102,24 +120,30 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
           border: `1px solid ${theme.colors.border}`,
         }}
       >
+        {/* Package Header - Name, Version, Path inline with Rerun button */}
         <div
-          onClick={() => togglePackage(pkgPath)}
           style={{
-            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '12px',
             gap: '8px',
-            marginBottom: '8px',
           }}
         >
-          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          <div style={{ flex: 1 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '8px',
+              flexWrap: 'wrap',
+              flex: 1,
+            }}
+          >
             <div
               style={{
                 fontSize: theme.fontSizes[2],
                 fontWeight: 600,
                 color: theme.colors.text,
-                marginBottom: '4px',
               }}
             >
               {pkg.packageData.name || 'Unnamed Package'}
@@ -141,13 +165,46 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
                   fontSize: theme.fontSizes[0],
                   color: theme.colors.textSecondary,
                   fontFamily: theme.fonts.monospace,
-                  marginTop: '2px',
                 }}
               >
-                {pkg.packageData.path || 'root'}
+                {pkg.packageData.path}
               </div>
             )}
           </div>
+
+          {/* Rerun Button */}
+          <button
+            onClick={() => rerunEnrichment(pkgPath)}
+            disabled={isRerunning}
+            title="Rerun quality lenses for this package"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 8px',
+              background: isRerunning
+                ? theme.colors.backgroundSecondary
+                : theme.colors.primary,
+              color: isRerunning
+                ? theme.colors.textSecondary
+                : theme.colors.background,
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isRerunning ? 'wait' : 'pointer',
+              fontSize: theme.fontSizes[0],
+              fontWeight: 500,
+              opacity: isRerunning ? 0.6 : 1,
+              transition: 'all 0.2s',
+            }}
+          >
+            <RefreshCw
+              size={12}
+              style={{
+                animation: isRerunning ? 'spin 1s linear infinite' : 'none',
+              }}
+            />
+            {isRerunning ? 'Running...' : 'Rerun'}
+          </button>
         </div>
 
         {/* Quality Hexagon Visualization */}
@@ -251,92 +308,6 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
                       </span>
                     </div>
                   )}
-              </div>
-            )}
-          </>
-        )}
-
-        {isExpanded && (
-          <>
-            <div
-              style={{
-                display: 'flex',
-                gap: '16px',
-                marginTop: '8px',
-                flexWrap: 'wrap',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: theme.fontSizes[1],
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                <span style={{ fontWeight: 500 }}>Dependencies:</span>{' '}
-                {depCount}
-              </div>
-              <div
-                style={{
-                  fontSize: theme.fontSizes[1],
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                <span style={{ fontWeight: 500 }}>Dev Dependencies:</span>{' '}
-                {devDepCount}
-              </div>
-              {scripts.length > 0 && (
-                <div
-                  style={{
-                    fontSize: theme.fontSizes[1],
-                    color: theme.colors.textSecondary,
-                  }}
-                >
-                  <span style={{ fontWeight: 500 }}>Scripts:</span>{' '}
-                  {scripts.length}
-                </div>
-              )}
-            </div>
-
-            {scripts.length > 0 && (
-              <div style={{ marginTop: '8px' }}>
-                <div
-                  style={{
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.textSecondary,
-                    marginBottom: '4px',
-                    fontWeight: 600,
-                  }}
-                >
-                  Available Scripts:
-                </div>
-                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                  {scripts.slice(0, 10).map((script) => (
-                    <span
-                      key={script}
-                      style={{
-                        padding: '2px 8px',
-                        background: theme.colors.backgroundSecondary,
-                        borderRadius: '10px',
-                        fontSize: theme.fontSizes[0],
-                        color: theme.colors.textSecondary,
-                        fontFamily: theme.fonts.monospace,
-                      }}
-                    >
-                      {script}
-                    </span>
-                  ))}
-                  {scripts.length > 10 && (
-                    <span
-                      style={{
-                        fontSize: theme.fontSizes[0],
-                        color: theme.colors.textSecondary,
-                        padding: '2px 8px',
-                      }}
-                    >
-                      +{scripts.length - 10} more
-                    </span>
-                  )}
-                </div>
               </div>
             )}
           </>
