@@ -96,8 +96,6 @@ import { DrawingsListPanel } from '../panels/components/DrawingsListPanel';
 import { QualityHexagonPanel } from '../panels/components/QualityHexagonPanel';
 import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
-import { TabbedTerminalPanel } from '../panels/components/TabbedTerminalPanel';
-import { CarouselTerminalPanel } from '../panels/components/CarouselTerminalPanel';
 import { MultiTerminalPanel } from '../panels/components/MultiTerminalPanel';
 import { panelPreviewRegistry } from '../panels/panelPreviews';
 import { repositoryPanelDefinitions } from '../panels/registry';
@@ -2391,116 +2389,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   right: 'middle',
                 };
 
-                // Tabbed Terminal panel
-                const isTabbedTerminalVisible =
-                  propsPanelLayout.middle === 'tabbedTerminal' ||
-                  propsPanelLayout.left === 'tabbedTerminal' ||
-                  propsPanelLayout.right === 'tabbedTerminal';
-                const tabbedTerminalPanel =
-                  selectedSource?.type === 'local' ? (
-                    <div
-                      style={{
-                        height: '100%',
-                        width: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                      }}
-                    >
-                      <TabbedTerminalPanel
-                        directory={selectedSource.location}
-                        repositoryKey={repositoryKey}
-                        isVisible={isTabbedTerminalVisible}
-                        hideHeader={false}
-                        key={`tabbed-terminal-${selectedSource.location}`}
-                        showAllTerminals={showAllTerminals}
-                        onShowAllTerminalsChange={setShowAllTerminals}
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexDirection: 'column',
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        color: theme.colors.textSecondary,
-                        padding: '20px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: '16px',
-                          fontWeight: 600,
-                          marginBottom: '8px',
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Terminal Unavailable
-                      </div>
-                      <div style={{ fontSize: '14px' }}>
-                        Terminal is only available for local repository clones
-                      </div>
-                    </div>
-                  );
-
-                // Carousel Terminal panel
-                const isCarouselTerminalVisible =
-                  propsPanelLayout.middle === 'carouselTerminal' ||
-                  propsPanelLayout.left === 'carouselTerminal' ||
-                  propsPanelLayout.right === 'carouselTerminal';
-                const carouselTerminalPanel =
-                  selectedSource?.type === 'local' ? (
-                    <div
-                      style={{
-                        height: '100%',
-                        width: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                      }}
-                    >
-                      <CarouselTerminalPanel
-                        directory={selectedSource.location}
-                        repositoryKey={repositoryKey}
-                        isVisible={isCarouselTerminalVisible}
-                        hideHeader={false}
-                        key={`carousel-terminal-${selectedSource.location}`}
-                        showAllTerminals={showAllTerminals}
-                        onShowAllTerminalsChange={setShowAllTerminals}
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      style={{
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexDirection: 'column',
-                        backgroundColor: theme.colors.backgroundSecondary,
-                        color: theme.colors.textSecondary,
-                        padding: '20px',
-                        textAlign: 'center',
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: '16px',
-                          fontWeight: 600,
-                          marginBottom: '8px',
-                          color: theme.colors.text,
-                        }}
-                      >
-                        Terminal Unavailable
-                      </div>
-                      <div style={{ fontSize: '14px' }}>
-                        Terminal is only available for local repository clones
-                      </div>
-                    </div>
-                  );
-
                 // Multi Terminal panel (combines tabbed and carousel with toggle button)
                 const isMultiTerminalVisible =
                   propsPanelLayout.middle === 'multiTerminal' ||
@@ -2559,16 +2447,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                 // Create all panel definitions
                 const allPanels: PanelDefinitionWithContent[] = [
                   ...leftPanelTabs,
-                  {
-                    id: 'tabbedTerminal',
-                    label: 'Tabbed Terminal',
-                    content: tabbedTerminalPanel,
-                  },
-                  {
-                    id: 'carouselTerminal',
-                    label: 'Carousel Terminal',
-                    content: carouselTerminalPanel,
-                  },
                   {
                     id: 'multiTerminal',
                     label: 'Multi Terminal',

@@ -81,12 +81,12 @@ export const repositoryPanelCatalog = [
     surfaces: ['explorer', 'manager', 'agent'] as const,
   },
   {
-    id: 'tasksAndNotes',
-    label: 'Tasks & Notes',
-    description: 'Project notes and TODOs captured across the repository.',
+    id: 'tasks',
+    label: 'Tasks',
+    description: 'Track repository TODOs, notes, and follow-up actions.',
     defaultLocation: 'left',
     slices: ['markdown'] as const,
-    surfaces: ['explorer'] as const,
+    surfaces: ['explorer', 'manager', 'agent'] as const,
   },
   {
     id: 'cityVisualization',
@@ -155,17 +155,9 @@ export const repositoryPanelCatalog = [
     surfaces: ['manager', 'agent'] as const,
   },
   {
-    id: 'terminal',
-    label: 'Terminal',
-    description: 'Integrated terminal for repository commands.',
-    defaultLocation: 'right',
-    slices: [] as const,
-    surfaces: ['manager'] as const,
-  },
-  {
-    id: 'carouselTerminal',
-    label: 'Carousel Terminal',
-    description: 'Horizontally scrolling terminal carousel with snap navigation.',
+    id: 'multiTerminal',
+    label: 'Multi Terminal',
+    description: 'Flexible terminal panel that can switch between tabbed and carousel layouts.',
     defaultLocation: 'right',
     slices: [] as const,
     surfaces: ['manager'] as const,
@@ -203,12 +195,28 @@ export const repositoryPanelCatalog = [
     surfaces: ['excalidraw'] as const,
   },
   {
-    id: 'drawingsList',
+    id: 'drawings',
     label: 'Drawings',
-    description: 'Browse and manage excalidraw drawings in the repository.',
+    description: 'Browse and manage Excalidraw diagrams saved in the repository.',
     defaultLocation: 'left',
     slices: [] as const,
-    surfaces: ['excalidraw'] as const,
+    surfaces: ['excalidraw', 'manager', 'agent'] as const,
+  },
+  {
+    id: 'agentEvents',
+    label: 'Agent Events',
+    description: 'Live stream of agent actions with repository file context.',
+    defaultLocation: 'right',
+    slices: [] as const,
+    surfaces: ['manager', 'agent'] as const,
+  },
+  {
+    id: 'agentSessions',
+    label: 'Agent Sessions',
+    description: 'Summaries of recent agent activity grouped by session.',
+    defaultLocation: 'left',
+    slices: [] as const,
+    surfaces: ['manager', 'agent'] as const,
   },
   {
     id: 'agentContext',
@@ -226,4 +234,7 @@ export type RepositoryPanelCatalogEntry =
 
 export type RepositoryPanelId = RepositoryPanelCatalogEntry['id'];
 
-export type RepositoryPanelVisibility = Record<RepositoryPanelId, boolean>;
+export type RepositoryPanelVisibility = {
+  visibility: Record<RepositoryPanelId, boolean>;
+  order: RepositoryPanelId[];
+};

@@ -57,7 +57,7 @@ const panelRenderers: Partial<Record<RepositoryPanelId, RepositoryPanelRenderer>
     />
   ),
   excalidrawEditor: () => <AlexandriaDrawingPanel />,
-  drawingsList: () => <DrawingsListPanel />,
+  drawings: () => <DrawingsListPanel />,
   agentContext: ({ context, actions }) => (
     <AgentContextTreePanel
       repositoryPath={context.repositoryPath}
@@ -107,12 +107,19 @@ export function createDefaultPanelVisibility({
   surfaces?: RepositoryPanelSurface[];
 } = {}): RepositoryPanelVisibility {
   const surfaceSet = surfaces ? new Set(surfaces) : null;
-  return repositoryPanelDefinitions.reduce((visibility, definition) => {
+  const visibility: Record<RepositoryPanelId, boolean> = {};
+  const order: RepositoryPanelId[] = [];
+
+  repositoryPanelDefinitions.forEach((definition) => {
     const shouldShow =
       surfaceSet === null
         ? true
         : definition.surfaces.some((surface) => surfaceSet.has(surface));
     visibility[definition.id] = shouldShow;
-    return visibility;
-  }, {} as RepositoryPanelVisibility);
+    if (shouldShow) {
+      order.push(definition.id);
+    }
+  });
+
+  return { visibility, order };
 }

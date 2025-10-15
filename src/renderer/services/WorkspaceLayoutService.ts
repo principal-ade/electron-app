@@ -349,7 +349,7 @@ export class WorkspaceLayoutService {
         id: 'project-management',
         name: 'Project Management',
         description:
-          'Tasks, dependencies, issues, file tree, docs, drawings, tabbed terminal, city visualization, code viewer, markdown slides, and excalidraw',
+          'Tasks, dependencies, issues, file tree, docs, drawings, multi terminal, city visualization, code viewer, markdown slides, and excalidraw',
         layout: {
           left: {
             type: 'tabs',
@@ -363,7 +363,7 @@ export class WorkspaceLayoutService {
             ],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
-          middle: 'tabbedTerminal',
+          middle: 'multiTerminal',
           right: {
             type: 'tabs',
             panels: [
@@ -424,43 +424,14 @@ export class WorkspaceLayoutService {
         id: 'agent-work',
         name: 'Agent Work',
         description:
-          'Tasks, agent sessions, file tree, agent context, git changes, docs, tabbed terminal, city map, agent events, code viewer, and markdown slides',
+          'Tasks, agent sessions, file tree, agent context, git changes, docs, multi terminal, city map, agent events, code viewer, and markdown slides',
         layout: {
           left: {
             type: 'tabs',
             panels: ['tasks', 'agentSessions', 'fileTree', 'agentContext', 'gitChanges', 'docs'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
-          middle: 'tabbedTerminal',
-          right: {
-            type: 'tabs',
-            panels: [
-              'cityVisualization',
-              'agentEvents',
-              'codeViewer',
-              'markdownViewer',
-            ],
-            config: { defaultActiveTab: 0, tabPosition: 'top' },
-          },
-        },
-        defaultSizes: { left: 20, middle: 45, right: 35 },
-        defaultCollapsed: { left: false, right: false },
-        createdAt: now,
-        updatedAt: now,
-        isBuiltIn: true,
-      },
-      'agent-work-carousel': {
-        id: 'agent-work-carousel',
-        name: 'Agent Work Carousel',
-        description:
-          'Tasks, agent sessions, file tree, agent context, git changes, docs, carousel terminal, city map, agent events, code viewer, and markdown slides',
-        layout: {
-          left: {
-            type: 'tabs',
-            panels: ['tasks', 'agentSessions', 'fileTree', 'agentContext', 'gitChanges', 'docs'],
-            config: { defaultActiveTab: 0, tabPosition: 'top' },
-          },
-          middle: 'carouselTerminal',
+          middle: 'multiTerminal',
           right: {
             type: 'tabs',
             panels: [
@@ -482,7 +453,7 @@ export class WorkspaceLayoutService {
         id: 'quality-check',
         name: 'Quality Check',
         description:
-          'Package information, tools, and dependencies on left; city visualization map in middle; carousel terminal and code viewer on right (collapsed)',
+          'Package information, tools, and dependencies on left; city visualization map in middle; multi terminal and code viewer on right (collapsed)',
         layout: {
           left: {
             type: 'tabs',
@@ -492,7 +463,7 @@ export class WorkspaceLayoutService {
           middle: 'cityVisualization',
           right: {
             type: 'tabs',
-            panels: ['carouselTerminal', 'codeViewer'],
+            panels: ['multiTerminal', 'codeViewer'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
         },
@@ -505,7 +476,7 @@ export class WorkspaceLayoutService {
       drawing: {
         id: 'drawing',
         name: 'Drawing',
-        description: 'Drawings and docs, excalidraw diagram, carousel terminal and markdown viewer',
+        description: 'Drawings and docs, excalidraw diagram, multi terminal and markdown viewer',
         layout: {
           left: {
             type: 'tabs',
@@ -515,7 +486,7 @@ export class WorkspaceLayoutService {
           middle: 'excalidrawDiagram',
           right: {
             type: 'tabs',
-            panels: ['carouselTerminal', 'markdownViewer'],
+            panels: ['multiTerminal', 'markdownViewer'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
         },
@@ -529,7 +500,7 @@ export class WorkspaceLayoutService {
         id: 'old-school',
         name: 'Old School',
         description:
-          'File tree, search, git changes, and docs on left; code viewer and markdown viewer in middle; tabbed terminal and city map on right (collapsed)',
+          'File tree, search, git changes, and docs on left; code viewer and markdown viewer in middle; multi terminal and city map on right (collapsed)',
         layout: {
           left: {
             type: 'tabs',
@@ -543,7 +514,7 @@ export class WorkspaceLayoutService {
           },
           right: {
             type: 'tabs',
-            panels: ['tabbedTerminal', 'cityVisualization'],
+            panels: ['multiTerminal', 'cityVisualization'],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
         },
@@ -573,7 +544,6 @@ export class WorkspaceLayoutService {
             'code-review',
             'documentation',
             'agent-work',
-            'agent-work-carousel',
             'quality-check',
             'drawing',
             'old-school',

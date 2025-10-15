@@ -402,16 +402,31 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           const defaultVisibility = createDefaultPanelVisibility({
             surfaces: ['explorer'],
           });
-          const nextVisibility: RepositoryPanelVisibility = {
-            ...defaultVisibility,
-          };
 
-          for (const [key, value] of Object.entries(
-            repoState.panelVisibility,
-          )) {
-            if (typeof value === 'boolean' && key in nextVisibility) {
-              nextVisibility[key as RepositoryPanelId] = value;
+          // Handle both old (boolean record) and new (visibility + order) formats
+          let nextVisibility: RepositoryPanelVisibility;
+
+          if ('visibility' in repoState.panelVisibility && 'order' in repoState.panelVisibility) {
+            // New format
+            nextVisibility = repoState.panelVisibility as RepositoryPanelVisibility;
+          } else {
+            // Old format - migrate to new format
+            const oldVisibility = repoState.panelVisibility as Record<RepositoryPanelId, boolean>;
+            const visibility: Record<RepositoryPanelId, boolean> = {
+              ...defaultVisibility.visibility,
+            };
+            const order: RepositoryPanelId[] = [];
+
+            for (const [key, value] of Object.entries(oldVisibility)) {
+              if (typeof value === 'boolean' && key in visibility) {
+                visibility[key as RepositoryPanelId] = value;
+                if (value) {
+                  order.push(key as RepositoryPanelId);
+                }
+              }
             }
+
+            nextVisibility = { visibility, order };
           }
 
           setPanelVisibility(nextVisibility);
@@ -566,7 +581,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           setWorkflowOutput((prev) => [...prev, data.message]);
           break;
 
-        case 'step':
+        case 'step': {
           const stepIcon =
             data.status === 'success'
               ? '✓'
@@ -575,6 +590,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 : '▶';
           setWorkflowOutput((prev) => [...prev, `${stepIcon} ${data.label}`]);
           break;
+        }
 
         case 'error':
           setWorkflowOutput((prev) => [...prev, `ERROR: ${data.message}`]);
@@ -1020,6 +1036,135 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     [repositoryId, selectedRepository],
   );
 
+  // Create ordered panels based on user's panel order preference
+  const orderedPanels = useMemo(() => {
+    return panelVisibility.order.filter(
+      (panelId) => panelVisibility.visibility[panelId]
+    );
+  }, [panelVisibility]);
+
+  // Render a panel based on its ID
+  const renderPanel = useCallback(
+    (panelId: RepositoryPanelId) => {
+      switch (panelId) {
+        case 'gitChanges':
+          if (!hasGitChanges) return null;
+          return (
+            <RepositoryPanelProvider
+              key={panelId}
+              repositoryPath={selectedRepository?.path ?? null}
+              actions={{
+                openGitDiff: handleGitChangeSelect,
+                openFile: handleFileClick,
+              }}
+            >
+              <GitChangesPanel />
+            </RepositoryPanelProvider>
+          );
+
+        case 'files':
+          return (
+            <MarkdownDocumentsPanel
+              key={panelId}
+              markdownFiles={sortedMarkdownFiles}
+              isLoading={isLoadingDocs}
+              onMarkdownClick={handleFileClick}
+            />
+          );
+
+        case 'gitStatus':
+          return (
+            <GitStatusPanel
+              key={panelId}
+              repository={selectedRepository}
+            />
+          );
+
+        case 'gitHistory':
+          return (
+            <GitCommitHistoryPanel
+              key={panelId}
+              repositoryPath={selectedRepository?.path ?? null}
+            />
+          );
+
+        case 'tasks':
+          return (
+            <RepositoryTasksAndNotesPanel
+              key={panelId}
+              repositoryPath={selectedRepository.path}
+              isLoading={false}
+              onTaskClick={handleTaskClick}
+            />
+          );
+
+        case 'cityVisualization':
+          return (
+            <div key={panelId} style={{ height: '400px' }}>
+              <CityVisualizationPanel
+                cityData={cityData}
+                loading={isBuildingCity}
+                treeStats={treeStats}
+                onFileClick={handleFileClick}
+                onRequestCityData={buildCityData}
+                loadingMessage="Building repository structure visualization..."
+                emptyMessage={
+                  cityError ||
+                  'Repository structure not available'
+                }
+              />
+            </div>
+          );
+
+        case 'actions':
+          if (!hasWorkflowActions) return null;
+          return (
+            <RepositoryActionsPanel
+              key={panelId}
+              repoId={repositoryId}
+              repositoryPath={selectedRepository.path}
+              fileTree={fileTree}
+              onConfigure={handleConfigureSecrets}
+              onRun={handleRunRepositoryAction}
+              runningActionId={runningActionId}
+            />
+          );
+
+        case 'packageInfo':
+          return (
+            <QualityHexagonPanel
+              key={panelId}
+              directory={selectedRepository.path}
+              compact={false}
+            />
+          );
+
+        default:
+          return null;
+      }
+    },
+    [
+      hasGitChanges,
+      selectedRepository,
+      sortedMarkdownFiles,
+      isLoadingDocs,
+      handleFileClick,
+      handleGitChangeSelect,
+      handleTaskClick,
+      cityData,
+      isBuildingCity,
+      treeStats,
+      buildCityData,
+      cityError,
+      hasWorkflowActions,
+      repositoryId,
+      fileTree,
+      handleConfigureSecrets,
+      handleRunRepositoryAction,
+      runningActionId,
+    ],
+  );
+
   // Format relative time
   const getRelativeTime = (dateStr: string | undefined) => {
     if (!dateStr) return 'Never';
@@ -1278,221 +1423,134 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                         backgroundColor: theme.colors.background,
                       }}
                     >
-                      {/* Main Content Grid */}
+                      {/* Main Content Grid - Responsive layout */}
                       <div
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 600px), 1fr))',
                           gap: '16px',
                         }}
                       >
-                        {/* Left Column - Git Changes, Documents, Status and Notes */}
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '16px',
-                            height: 'fit-content',
-                            minWidth: 0,
-                          }}
-                        >
-                          {/* Git Changes */}
-                          {panelVisibility.gitChanges && hasGitChanges && (
-                            <RepositoryPanelProvider
-                              repositoryPath={selectedRepository?.path ?? null}
-                              actions={{
-                                openGitDiff: handleGitChangeSelect,
-                                openFile: handleFileClick,
-                              }}
-                            >
-                              <GitChangesPanel />
-                            </RepositoryPanelProvider>
-                          )}
-
-                          {/* Markdown Documents */}
-                          {panelVisibility.files && (
-                            <MarkdownDocumentsPanel
-                              markdownFiles={sortedMarkdownFiles}
-                              isLoading={isLoadingDocs}
-                              onMarkdownClick={handleFileClick}
-                            />
-                          )}
-
-                          {/* Git Status / Last Commit Info */}
-                          {panelVisibility.gitStatus && (
-                            <GitStatusPanel repository={selectedRepository} />
-                          )}
-
-                          {/* Git Commit History */}
-                          {panelVisibility.gitHistory && (
-                            <GitCommitHistoryPanel
-                              repositoryPath={selectedRepository?.path ?? null}
-                            />
-                          )}
-
-                          {/* Repository Tasks and Notes Panel */}
-                          {panelVisibility.tasksAndNotes && (
-                            <RepositoryTasksAndNotesPanel
-                              repositoryPath={selectedRepository.path}
-                              isLoading={false}
-                              onTaskClick={handleTaskClick}
-                            />
-                          )}
-                        </div>
-
-                        {/* Right Column - City Visualization and Package Information */}
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '16px',
-                            minWidth: 0,
-                          }}
-                        >
-                          {/* City Visualization */}
-                          {panelVisibility.cityVisualization &&
-                            selectedRepository && (
-                              <div>
-                                <div style={{ height: '400px' }}>
-                                  <CityVisualizationPanel
-                                    cityData={cityData}
-                                    loading={isBuildingCity}
-                                    treeStats={treeStats}
-                                    onFileClick={handleFileClick}
-                                    onRequestCityData={buildCityData}
-                                    loadingMessage="Building repository structure visualization..."
-                                    emptyMessage={
-                                      cityError ||
-                                      'Repository structure not available'
-                                    }
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                          {panelVisibility.actions && hasWorkflowActions && (
-                            <RepositoryActionsPanel
-                              repoId={repositoryId}
-                              repositoryPath={selectedRepository.path}
-                              fileTree={fileTree}
-                              onConfigure={handleConfigureSecrets}
-                              onRun={handleRunRepositoryAction}
-                              runningActionId={runningActionId}
-                            />
-                          )}
-
-                          {/* Workflow Output Console */}
-                          {workflowOutput.length > 0 && (
+                        {/* Render panels in user-defined order */}
+                        {orderedPanels.map((panelId) => {
+                          const panel = renderPanel(panelId);
+                          return panel ? (
                             <div
+                              key={panelId}
                               style={{
-                                marginTop: '16px',
-                                padding: '16px',
-                                backgroundColor:
-                                  theme.colors.backgroundSecondary,
-                                borderRadius: '8px',
-                                border: `1px solid ${theme.colors.border}`,
+                                minWidth: 0,
                               }}
                             >
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  marginBottom: '12px',
-                                }}
-                              >
-                                <h3
-                                  style={{
-                                    margin: 0,
-                                    fontSize: '14px',
-                                    fontWeight: 600,
-                                    color: theme.colors.text,
-                                  }}
-                                >
-                                  Workflow Output
-                                  {workflowStatus === 'running' && (
-                                    <span
-                                      style={{
-                                        marginLeft: '8px',
-                                        fontSize: '12px',
-                                        color: theme.colors.info || '#3b82f6',
-                                      }}
-                                    >
-                                      (Running...)
-                                    </span>
-                                  )}
-                                  {workflowStatus === 'success' && (
-                                    <span
-                                      style={{
-                                        marginLeft: '8px',
-                                        fontSize: '12px',
-                                        color:
-                                          theme.colors.success || '#10b981',
-                                      }}
-                                    >
-                                      ✓ Success
-                                    </span>
-                                  )}
-                                  {workflowStatus === 'failed' && (
-                                    <span
-                                      style={{
-                                        marginLeft: '8px',
-                                        fontSize: '12px',
-                                        color: theme.colors.error || '#ef4444',
-                                      }}
-                                    >
-                                      ✖ Failed
-                                    </span>
-                                  )}
-                                </h3>
-                                <button
-                                  onClick={() => {
-                                    setWorkflowOutput([]);
-                                    setWorkflowStatus('idle');
-                                  }}
-                                  style={{
-                                    padding: '4px 8px',
-                                    fontSize: '12px',
-                                    backgroundColor: 'transparent',
-                                    border: `1px solid ${theme.colors.border}`,
-                                    borderRadius: '4px',
-                                    color: theme.colors.textSecondary,
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  Clear
-                                </button>
-                              </div>
-                              <div
-                                style={{
-                                  fontFamily: 'monospace',
-                                  fontSize: '12px',
-                                  backgroundColor: theme.colors.background,
-                                  padding: '12px',
-                                  borderRadius: '4px',
-                                  maxHeight: '300px',
-                                  overflowY: 'auto',
-                                  whiteSpace: 'pre-wrap',
-                                  color: theme.colors.text,
-                                }}
-                              >
-                                {workflowOutput.map((line, i) => (
-                                  <div key={i} style={{ marginBottom: '2px' }}>
-                                    {line}
-                                  </div>
-                                ))}
-                              </div>
+                              {panel}
                             </div>
-                          )}
-                          {/* Package Information Panel */}
-                          {panelVisibility.packageInfo && (
-                            <QualityHexagonPanel
-                              directory={selectedRepository.path}
-                              compact={false}
-                            />
-                          )}
-                        </div>
+                          ) : null;
+                        })}
                       </div>
+
+                      {/* Workflow Output Console - Always shown when there's output */}
+                      {workflowOutput.length > 0 && (
+                        <div
+                          style={{
+                            marginTop: '16px',
+                            padding: '16px',
+                            backgroundColor:
+                              theme.colors.backgroundSecondary,
+                            borderRadius: '8px',
+                            border: `1px solid ${theme.colors.border}`,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: '12px',
+                            }}
+                          >
+                            <h3
+                              style={{
+                                margin: 0,
+                                fontSize: '14px',
+                                fontWeight: 600,
+                                color: theme.colors.text,
+                              }}
+                            >
+                              Workflow Output
+                              {workflowStatus === 'running' && (
+                                <span
+                                  style={{
+                                    marginLeft: '8px',
+                                    fontSize: '12px',
+                                    color: theme.colors.info || '#3b82f6',
+                                  }}
+                                >
+                                  (Running...)
+                                </span>
+                              )}
+                              {workflowStatus === 'success' && (
+                                <span
+                                  style={{
+                                    marginLeft: '8px',
+                                    fontSize: '12px',
+                                    color:
+                                      theme.colors.success || '#10b981',
+                                  }}
+                                >
+                                  ✓ Success
+                                </span>
+                              )}
+                              {workflowStatus === 'failed' && (
+                                <span
+                                  style={{
+                                    marginLeft: '8px',
+                                    fontSize: '12px',
+                                    color: theme.colors.error || '#ef4444',
+                                  }}
+                                >
+                                  ✖ Failed
+                                </span>
+                              )}
+                            </h3>
+                            <button
+                              onClick={() => {
+                                setWorkflowOutput([]);
+                                setWorkflowStatus('idle');
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                backgroundColor: 'transparent',
+                                border: `1px solid ${theme.colors.border}`,
+                                borderRadius: '4px',
+                                color: theme.colors.textSecondary,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div
+                            style={{
+                              fontFamily: 'monospace',
+                              fontSize: '12px',
+                              backgroundColor: theme.colors.background,
+                              padding: '12px',
+                              borderRadius: '4px',
+                              maxHeight: '300px',
+                              overflowY: 'auto',
+                              whiteSpace: 'pre-wrap',
+                              color: theme.colors.text,
+                            }}
+                          >
+                            {workflowOutput.map((line, i) => (
+                              // eslint-disable-next-line react/no-array-index-key
+                              <div key={`${line}-${i}`} style={{ marginBottom: '2px' }}>
+                                {line}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ),
                 },

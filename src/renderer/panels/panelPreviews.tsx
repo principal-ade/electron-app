@@ -34,7 +34,6 @@ import { AgentContextTreePanelPreview } from './components/AgentContextTreePanel
 import { TasksPanelPreview } from './components/TasksPanel';
 import { CityVisualizationPanelPreview } from './components/CityVisualizationPanel';
 import { TabbedTerminalPanelPreview } from './components/TabbedTerminalPanel';
-import { CarouselTerminalPanelPreview } from './components/CarouselTerminalPanel';
 import { FilePreviewPanelPreview } from './components/FilePreviewPanel';
 import { MarkdownRenderingPanelPreview } from './components/MarkdownRenderingPanel';
 import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPanel';
@@ -116,18 +115,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   cityVisualization: {
     icon: <Building2 size={16} />,
     preview: <CityVisualizationPanelPreview />,
-  },
-  tabbedTerminal: {
-    icon: <TerminalIcon size={16} />,
-    preview: <TabbedTerminalPanelPreview />,
-    label: 'Tabbed Terminal',
-    description: 'Manage multiple terminals in a traditional tabbed layout.',
-  },
-  carouselTerminal: {
-    icon: <TerminalIcon size={16} />,
-    preview: <CarouselTerminalPanelPreview />,
-    label: 'Carousel Terminal',
-    description: 'Manage multiple terminals in a carousel layout with side-by-side navigation.',
   },
   multiTerminal: {
     icon: <TerminalIcon size={16} />,

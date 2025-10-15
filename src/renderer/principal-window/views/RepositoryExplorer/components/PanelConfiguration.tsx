@@ -20,9 +20,30 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
   const explorerPanels = getRepositoryPanelsForSurface('explorer');
 
   const handleToggle = (key: RepositoryPanelId) => {
+    const isCurrentlyVisible = panelVisibility.visibility[key];
+    const newVisibility = !isCurrentlyVisible;
+
+    // Update visibility
+    const updatedVisibility = {
+      ...panelVisibility.visibility,
+      [key]: newVisibility,
+    };
+
+    // Update order
+    let updatedOrder: RepositoryPanelId[];
+    if (newVisibility) {
+      // Panel is being enabled - add to end of order if not already there
+      updatedOrder = panelVisibility.order.includes(key)
+        ? panelVisibility.order
+        : [...panelVisibility.order, key];
+    } else {
+      // Panel is being disabled - remove from order
+      updatedOrder = panelVisibility.order.filter((id) => id !== key);
+    }
+
     onPanelVisibilityChange({
-      ...panelVisibility,
-      [key]: !panelVisibility[key],
+      visibility: updatedVisibility,
+      order: updatedOrder,
     });
   };
 
@@ -109,7 +130,7 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
             >
               <input
                 type="checkbox"
-                checked={panelVisibility[panelId] ?? true}
+                checked={panelVisibility.visibility[panelId] ?? true}
                 onChange={() => handleToggle(panelId)}
               style={{
                 width: '16px',
