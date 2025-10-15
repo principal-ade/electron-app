@@ -2,10 +2,10 @@
  * IPC handlers for observability configuration and management
  */
 
-import { ipcMain, app } from 'electron';
+import { ipcMain, app, shell } from 'electron';
 import * as path from 'path';
 import { getObservabilityIntegration } from './ObservabilityIntegration';
-import type { ObservabilityConfig } from './ObservabilityIntegration';
+import type { ObservabilityConfig, StorageMode } from './ObservabilityIntegration';
 import { ObservabilityEvent } from '../../shared/ipc-events/ObservabilityEvents';
 
 export function registerObservabilityHandlers(): void {
@@ -120,6 +120,81 @@ export function registerObservabilityHandlers(): void {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to resolve path',
+      };
+    }
+  });
+
+  /**
+   * Get the current database path based on config
+   */
+  ipcMain.handle(ObservabilityEvent.GET_DB_PATH, async () => {
+    try {
+      const config = await observability.getConfiguration();
+      const storageMode = (config.storageMode || 'none') as StorageMode;
+
+      if (storageMode === 'none') {
+        return { success: false, error: 'Observability not configured' };
+      }
+
+      // Use same logic as resolveDbPath in ObservabilityIntegration
+      let fileName: string;
+      if (storageMode === 'local-with-sync' && config.tursoUrl) {
+        // Extract DB name from Turso URL
+        const withoutProtocol = config.tursoUrl.replace(/^(libsql|wss|https):\/\//, '');
+        const dbName = withoutProtocol.split(/[./]/)[0] || 'observability';
+        fileName = `${dbName}.db`;
+      } else {
+        fileName = 'observability.db';
+      }
+
+      const userDataPath = app.getPath('userData');
+      const dbPath = path.resolve(userDataPath, fileName);
+
+      return { success: true, dbPath };
+    } catch (error) {
+      console.error('[ObservabilityHandlers] Failed to get DB path:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get DB path',
+      };
+    }
+  });
+
+  /**
+   * Open database file location in Finder/Explorer
+   */
+  ipcMain.handle(ObservabilityEvent.OPEN_DB_IN_FINDER, async () => {
+    try {
+      const config = await observability.getConfiguration();
+      const storageMode = (config.storageMode || 'none') as StorageMode;
+
+      if (storageMode === 'none') {
+        return { success: false, error: 'Observability not configured' };
+      }
+
+      // Use same logic as resolveDbPath in ObservabilityIntegration
+      let fileName: string;
+      if (storageMode === 'local-with-sync' && config.tursoUrl) {
+        // Extract DB name from Turso URL
+        const withoutProtocol = config.tursoUrl.replace(/^(libsql|wss|https):\/\//, '');
+        const dbName = withoutProtocol.split(/[./]/)[0] || 'observability';
+        fileName = `${dbName}.db`;
+      } else {
+        fileName = 'observability.db';
+      }
+
+      const userDataPath = app.getPath('userData');
+      const dbPath = path.resolve(userDataPath, fileName);
+
+      // Show the file in Finder/Explorer
+      shell.showItemInFolder(dbPath);
+
+      return { success: true };
+    } catch (error) {
+      console.error('[ObservabilityHandlers] Failed to open in Finder:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to open in Finder',
       };
     }
   });

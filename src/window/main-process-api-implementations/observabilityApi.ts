@@ -8,7 +8,6 @@ import { ObservabilityEvent } from '../../shared/ipc-events/ObservabilityEvents'
 export interface ObservabilityConfig {
   tursoUrl?: string;
   tursoAuthToken?: string;
-  environment?: 'development' | 'staging' | 'production';
   enabled?: boolean;
 }
 
@@ -74,5 +73,19 @@ export const observabilityAPI = {
     dbPath: string,
   ): Promise<{ success: boolean; resolvedPath?: string; error?: string }> => {
     return ipcRenderer.invoke(ObservabilityEvent.RESOLVE_PATH, dbPath);
+  },
+
+  /**
+   * Get the current database file path
+   */
+  getDbPath: async (): Promise<{ success: boolean; dbPath?: string; error?: string }> => {
+    return ipcRenderer.invoke(ObservabilityEvent.GET_DB_PATH);
+  },
+
+  /**
+   * Open the database file location in Finder/Explorer
+   */
+  openDbInFinder: async (): Promise<{ success: boolean; error?: string }> => {
+    return ipcRenderer.invoke(ObservabilityEvent.OPEN_DB_IN_FINDER);
   },
 };

@@ -8,6 +8,7 @@ import {
   GitPullRequest,
   Upload,
   Settings,
+  Edit2,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
@@ -36,6 +37,8 @@ interface RepositoryHeaderProps {
   onTerminalWindowsUpdate: (windows: Map<string, number>) => void;
   onOpenTerminal?: () => void;
   isNestedRightPanelCollapsed?: boolean;
+  onRefresh?: () => Promise<void> | void;
+  isRefreshing?: boolean;
 }
 
 const spinAnimation = `
@@ -66,6 +69,8 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
   onTerminalWindowsUpdate,
   onOpenTerminal,
   isNestedRightPanelCollapsed,
+  onRefresh,
+  isRefreshing = false,
 }) => {
   const { theme } = useTheme();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -144,6 +149,13 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
       console.error('Error opening terminal:', error);
     }
   }, [repository, terminalWindows, onTerminalWindowsUpdate, onOpenTerminal]);
+
+  const handleOpenGitHubRepo = useCallback(() => {
+    if (repository.github?.owner && repository.github?.name) {
+      const url = `https://github.com/${repository.github.owner}/${repository.github.name}`;
+      window.open(url, '_blank');
+    }
+  }, [repository.github?.owner, repository.github?.name]);
 
   return (
     <div
@@ -283,15 +295,93 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
               </div>
             )}
           </div>
-          <p
+          {/* Description Section with Edit and Sync Buttons */}
+          <div
             style={{
-              margin: '0',
-              fontSize: theme.fontSizes[1],
-              color: theme.colors.textSecondary,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginTop: '4px',
             }}
           >
-            {repository.github?.description || 'No Description'}
-          </p>
+            <p
+              style={{
+                margin: '0',
+                fontSize: theme.fontSizes[1],
+                color: theme.colors.textSecondary,
+                flex: 1,
+              }}
+            >
+              {repository.github?.description || 'No Description'}
+            </p>
+            {/* Only show edit/sync buttons for public repos or when authenticated */}
+            {repository.github?.owner &&
+             repository.github?.name &&
+             !repository.github?.isPrivate && (
+              <>
+                <button
+                  onClick={handleOpenGitHubRepo}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '4px',
+                    backgroundColor: 'transparent',
+                    color: theme.colors.textSecondary,
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    opacity: 0.6,
+                    transition: 'opacity 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '0.6';
+                  }}
+                  title="Edit description on GitHub"
+                >
+                  <Edit2 size={12} />
+                </button>
+                {onRefresh && (
+                  <button
+                    onClick={() => onRefresh()}
+                    disabled={isRefreshing}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '4px',
+                      backgroundColor: 'transparent',
+                      color: theme.colors.textSecondary,
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                      opacity: isRefreshing ? 0.4 : 0.6,
+                      transition: 'opacity 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isRefreshing) {
+                        e.currentTarget.style.opacity = '1';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isRefreshing) {
+                        e.currentTarget.style.opacity = '0.6';
+                      }
+                    }}
+                    title="Sync repository metadata from GitHub"
+                  >
+                    <RefreshCw
+                      size={12}
+                      style={{
+                        animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+                      }}
+                    />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         </div>
         <div
           style={{

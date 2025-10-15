@@ -441,28 +441,36 @@ export class AlexandriaRegistryService {
     if (!repo) return null;
 
     try {
-      // Update GitHub metadata using git CLI fallback
-      if (!repo.github?.owner || repo.github.owner === 'local') {
-        const githubMetadata = await this.fetchGitHubMetadata(
-          repo.path,
-          repo.remoteUrl,
-        );
-        if (githubMetadata) {
-          try {
-            await this.outpostManager.updateGitHubMetadata(
-              name,
-              githubMetadata,
-            );
-            console.log(
-              '[refreshRepository] Updated GitHub metadata for:',
-              name,
-            );
-          } catch (error) {
-            console.error(
-              '[refreshRepository] Failed to update GitHub metadata:',
-              error,
-            );
-          }
+      // Always fetch and update GitHub metadata when explicitly refreshing
+      const githubMetadata = await this.fetchGitHubMetadata(
+        repo.path,
+        repo.remoteUrl,
+      );
+      console.log('[refreshRepository] Fetched GitHub metadata:', githubMetadata);
+      if (githubMetadata) {
+        try {
+          await this.outpostManager.updateGitHubMetadata(
+            name,
+            githubMetadata,
+          );
+          console.log(
+            '[refreshRepository] Updated GitHub metadata for:',
+            name,
+          );
+
+          // Verify the update was persisted
+          const verifyEntry = this.outpostManager
+            .getAllEntries()
+            .find((e) => e.name === name);
+          console.log('[refreshRepository] Verified entry after update:', {
+            name: verifyEntry?.name,
+            description: verifyEntry?.github?.description,
+          });
+        } catch (error) {
+          console.error(
+            '[refreshRepository] Failed to update GitHub metadata:',
+            error,
+          );
         }
       }
 

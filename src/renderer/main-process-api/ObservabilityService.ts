@@ -10,7 +10,6 @@ export interface ObservabilityConfig {
   tursoUrl?: string;
   tursoAuthToken?: string;
   syncInterval?: number;
-  environment?: 'development' | 'staging' | 'production';
   enabled?: boolean;
 }
 
@@ -81,6 +80,27 @@ class ObservabilityServiceClass {
       throw new Error(result.error || 'Failed to resolve path');
     }
     return result.resolvedPath!;
+  }
+
+  /**
+   * Get the current database file path
+   */
+  async getDbPath(): Promise<string> {
+    const result = await window.mainProcess.observability.getDbPath();
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to get database path');
+    }
+    return result.dbPath!;
+  }
+
+  /**
+   * Open the database file location in Finder/Explorer
+   */
+  async openDbInFinder(): Promise<void> {
+    const result = await window.mainProcess.observability.openDbInFinder();
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to open in Finder');
+    }
   }
 }
 

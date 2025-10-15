@@ -250,14 +250,7 @@ export class EventServerManager extends EventEmitter {
    */
   private setupObservability(): void {
     // Get singleton instance but don't initialize yet
-    const nodeEnv = process.env.NODE_ENV;
-    const environment:  'development' | 'staging' | 'production' =
-      nodeEnv === 'production' ? 'production' :
-      nodeEnv === 'staging' ? 'staging' :
-      'development'; // 'test' and 'development' both map to 'development'
-
     this.observability = getObservabilityIntegration({
-      environment,
       debug: process.env.DEBUG_OBSERVABILITY === 'true',
     });
 

@@ -22,7 +22,6 @@ export interface ObservabilityConfig {
   tursoUrl?: string;
   tursoAuthToken?: string;
   syncInterval?: number;
-  environment?: 'development' | 'staging' | 'production';
   batchSize?: number;
   flushInterval?: number;
   debug?: boolean;
@@ -61,7 +60,6 @@ export class ObservabilityIntegration extends EventEmitter {
           tursoUrl: stored.tursoUrl,
           tursoAuthToken: stored.tursoAuthToken,
           syncInterval: stored.syncInterval ? parseInt(stored.syncInterval) : 5000,
-          environment: (stored.environment as 'development' | 'staging' | 'production') || 'development',
           enabled: stored.enabled === 'true',
           debug: stored.debug === 'true',
         };
@@ -85,7 +83,6 @@ export class ObservabilityIntegration extends EventEmitter {
     if (config.tursoUrl) secrets.tursoUrl = config.tursoUrl;
     if (config.tursoAuthToken) secrets.tursoAuthToken = config.tursoAuthToken;
     if (config.syncInterval !== undefined) secrets.syncInterval = config.syncInterval.toString();
-    if (config.environment) secrets.environment = config.environment;
     secrets.enabled = config.enabled ? 'true' : 'false';
     secrets.debug = config.debug ? 'true' : 'false';
 
@@ -98,20 +95,43 @@ export class ObservabilityIntegration extends EventEmitter {
   }
 
   /**
+   * Extract database name from Turso URL
+   * Example: libsql://my-database-abc123.turso.io -> my-database-abc123
+   */
+  private extractDbNameFromTursoUrl(tursoUrl: string): string {
+    try {
+      // Remove protocol (libsql://, wss://, https://)
+      const withoutProtocol = tursoUrl.replace(/^(libsql|wss|https):\/\//, '');
+      // Extract the database name (everything before the first dot or slash)
+      const dbName = withoutProtocol.split(/[./]/)[0];
+      return dbName || 'observability';
+    } catch {
+      return 'observability';
+    }
+  }
+
+  /**
    * Resolve database path to absolute path in userData directory
    * This is critical for packaged apps where relative paths may resolve to read-only directories
+   *
+   * For local-with-sync mode: derives name from Turso URL
+   * For local mode: uses fixed name 'observability.db'
    */
-  private resolveDbPath(dbPath?: string): string {
-    const finalPath = dbPath || 'observability.db';
+  private resolveDbPath(storageMode: StorageMode, tursoUrl?: string): string {
+    let fileName: string;
 
-    // If it's already an absolute path, return it
-    if (path.isAbsolute(finalPath)) {
-      return finalPath;
+    if (storageMode === 'local-with-sync' && tursoUrl) {
+      // Derive local DB name from Turso URL
+      const dbName = this.extractDbNameFromTursoUrl(tursoUrl);
+      fileName = `${dbName}.db`;
+    } else {
+      // Use fixed name for local mode
+      fileName = 'observability.db';
     }
 
-    // For relative paths, resolve from userData directory
+    // Always resolve to userData directory
     const userDataPath = app.getPath('userData');
-    return path.resolve(userDataPath, finalPath);
+    return path.resolve(userDataPath, fileName);
   }
 
   /**
@@ -119,7 +139,7 @@ export class ObservabilityIntegration extends EventEmitter {
    */
   private async initializeSDK(storageMode: StorageMode, config: ObservabilityConfig): Promise<void> {
     // Resolve the database path to an absolute path in userData directory
-    const resolvedDbPath = this.resolveDbPath(config.localDbPath);
+    const resolvedDbPath = this.resolveDbPath(storageMode, config.tursoUrl);
 
     switch (storageMode) {
       case 'local':
@@ -187,19 +207,13 @@ export class ObservabilityIntegration extends EventEmitter {
         this.config = { ...this.config, ...loadedConfig };
       }
 
-      // Determine storage mode (fallback to env vars for backward compatibility)
+      // Determine storage mode
       const storageMode = this.config.storageMode || 'none';
 
       // Check if observability is disabled
       if (storageMode === 'none' || this.config.enabled === false) {
         console.log('[ObservabilityIntegration] Observability disabled');
         return;
-      }
-
-      // For backward compatibility, check env vars if config is missing
-      if (storageMode === 'local-with-sync') {
-        this.config.tursoUrl = this.config.tursoUrl || process.env.TURSO_DATABASE_URL;
-        this.config.tursoAuthToken = this.config.tursoAuthToken || process.env.TURSO_AUTH_TOKEN;
       }
 
       // Initialize the SDK based on storage mode
@@ -312,7 +326,7 @@ export class ObservabilityIntegration extends EventEmitter {
 
     try {
       // Resolve the database path to an absolute path in userData directory
-      const resolvedDbPath = this.resolveDbPath(config.localDbPath);
+      const resolvedDbPath = this.resolveDbPath(storageMode, config.tursoUrl);
 
       let testSdk;
 

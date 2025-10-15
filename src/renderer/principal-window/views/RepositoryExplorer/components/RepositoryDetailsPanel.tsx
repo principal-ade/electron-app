@@ -138,6 +138,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     needsUpstream: boolean;
   } | null>(null);
   const isCheckingRef = useRef(false);
+  const [isRefreshingGitHub, setIsRefreshingGitHub] = useState(false);
 
   // City visualization state
   const [cityData, setCityData] = useState<CityData | null>(null);
@@ -457,6 +458,32 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const handleRemoveClick = () => {
     setShowRemoveDialog(true);
   };
+
+  const handleRefreshGitHubMetadata = useCallback(async () => {
+    if (!selectedRepository?.name || isRefreshingGitHub) return;
+
+    setIsRefreshingGitHub(true);
+
+    try {
+      // Call Alexandria service to refresh GitHub metadata only
+      // This fetches from GitHub API and updates the Alexandria registry
+      const refreshedRepo = await AlexandriaService.refreshRepository(
+        selectedRepository.name,
+      );
+
+      if (refreshedRepo) {
+        console.log('[RepositoryDetailsPanel] GitHub metadata refreshed:', refreshedRepo);
+        // The REPOSITORY_UPDATED event will automatically update the UI via useAllRepositories hook
+      }
+    } catch (error) {
+      console.error(
+        '[RepositoryDetailsPanel] Error refreshing GitHub metadata:',
+        error,
+      );
+    } finally {
+      setIsRefreshingGitHub(false);
+    }
+  }, [selectedRepository?.name, isRefreshingGitHub]);
 
   const handleRemoveConfirm = async (deleteLocal: boolean) => {
     if (!selectedRepository) return;
@@ -1212,6 +1239,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
             onTerminalWindowsUpdate={setTerminalWindows}
             onOpenTerminal={handleToggleNestedRightPanel}
             isNestedRightPanelCollapsed={nestedRightPanelCollapsed}
+            onRefresh={handleRefreshGitHubMetadata}
+            isRefreshing={isRefreshingGitHub}
           />
 
           {/* Panel Configuration */}
