@@ -47,6 +47,7 @@
     "fdir": "^6.5.0",
     "flexsearch": "^0.8.205",
     "gpt-tokenizer": "^3.0.1",
+    "graphviz-react": "^1.2.5",
     "hast-util-sanitize": "^5.0.2",
     "highlight.js": "^11.11.1",
     "ignore": "^7.0.5",
