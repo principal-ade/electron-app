@@ -1008,6 +1008,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   // Render a panel based on its ID
   const renderPanel = useCallback(
     (panelId: RepositoryPanelId) => {
+      // Early return if no repository selected
+      if (!selectedRepository) return null;
+
       switch (panelId) {
         case 'gitStatus':
           return (

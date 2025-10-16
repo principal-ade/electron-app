@@ -177,9 +177,8 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
       const originalColor = button.style.color;
 
       try {
-        // Construct the task file path
-        // Format: {repositoryPath}/.alexandria/work/tasks/{status}/{taskId}.task.md
-        const taskFilePath = `${task.repositoryPath}/.alexandria/work/tasks/${task.status}/${task.id}.task.md`;
+        // Use the filePath provided by core-library
+        const taskFilePath = `${task.repositoryPath}/${task.filePath}`;
 
         console.log('[TasksPanel] Copying task file path:', taskFilePath);
 

@@ -207,7 +207,7 @@ export const CarouselTerminalPanel = forwardRef<
           }, 150);
         });
       },
-      [directory, showAllTerminals, onTabsChange, tabs.length],
+      [directory, onTabsChange],
     );
 
     // Initialize - restore existing sessions or cleanup orphaned ones

@@ -110,7 +110,7 @@ export const TabbedTerminalPanel = forwardRef<
           }, 150); // Longer delay to ensure visibility effect has completed
         });
       },
-      [tabs],
+      [],
     );
 
     // Create a new terminal tab

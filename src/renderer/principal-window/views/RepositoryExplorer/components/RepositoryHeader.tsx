@@ -314,10 +314,10 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
             >
               {repository.github?.description || 'No Description'}
             </p>
-            {/* Only show edit/sync buttons for public repos or when authenticated */}
+            {/* Only show edit/sync buttons for public repos */}
             {repository.github?.owner &&
              repository.github?.name &&
-             !repository.github?.isPrivate && (
+             repository.github?.isPublic && (
               <>
                 <button
                   onClick={handleOpenGitHubRepo}

@@ -613,9 +613,7 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
       <RepositoryDetailsPanel
         selectedRepository={selectedRepository}
         repositories={repositories}
-        markdownFiles={markdownFiles}
         gitStatus={gitStatus}
-        isLoadingDocs={false}
         isLoadingRepository={isLoadingSelectedRepo}
         onOpenDashboard={handleSelectRepository}
         onRepositoryRemoved={handleRepositoryRemoved}

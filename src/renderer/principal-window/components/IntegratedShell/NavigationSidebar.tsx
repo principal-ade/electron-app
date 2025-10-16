@@ -6,6 +6,7 @@ import {
   Settings,
   Activity,
   User,
+  Network,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
 import type { NavigationView } from './IntegratedShell';
@@ -77,8 +78,9 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     );
 
   const navItems: NavItem[] = [
-    { id: 'terminal', icon: <Terminal size={20} />, label: 'Term' },
+    { id: 'graphs', icon: <Network size={20} />, label: 'Graphs' },
     { id: 'repository', icon: <Github size={20} />, label: 'Repos' },
+    { id: 'terminal', icon: <Terminal size={20} />, label: 'Term' },
     { id: 'search', icon: <Search size={20} />, label: 'Search' },
     {
       id: 'monitoring',

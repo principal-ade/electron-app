@@ -155,7 +155,7 @@ export class AlexandriaRegistryService {
     stars?: number;
     defaultBranch?: string;
     topics?: string[];
-    isPrivate?: boolean;
+    isPublic?: boolean;
   } | null> {
     try {
       // If no remote URL provided, try to get it from git
@@ -210,7 +210,7 @@ export class AlexandriaRegistryService {
         return {
           owner: owner,
           name: repoName,
-          isPrivate: true,
+          isPublic: false,
         };
       }
 
@@ -245,7 +245,7 @@ export class AlexandriaRegistryService {
         stars: data.stargazers_count,
         defaultBranch: data.default_branch,
         topics: data.topics,
-        isPrivate: data.private,
+        isPublic: data.private === false,
       };
     } catch (error) {
       console.error('[fetchGitHubMetadata] Error fetching metadata:', error);

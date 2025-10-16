@@ -45,7 +45,8 @@ interface UsePanelPersistenceOptions {
     | 'roomsManager'
     | 'terminalManager'
     | 'authView'
-    | 'repositoryDetailsNested';
+    | 'repositoryDetailsNested'
+    | 'graphsView';
   defaultSizes: PanelSizes | TwoPanelSizes;
   collapsed: PanelCollapsed | { left?: boolean }; // Initial collapsed state
   panelType: 'three-panel' | 'two-panel';
