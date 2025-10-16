@@ -1,19 +1,19 @@
 import React, { useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Network, Package, Eye, GitBranch } from 'lucide-react';
-import {
-  ConfigurablePanelLayout,
-  type PanelLayout,
-} from '@a24z/panels';
+import { Network, Package, Eye } from 'lucide-react';
+import { ConfigurablePanelLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 import { useAllRepositories } from '../../../hooks/useRepositoryData';
-import { buildDependencyGraphs, type DependencyGraph } from './graphDataBuilder';
+import { buildDependencyGraphs } from './graphDataBuilder';
+import { GraphVizPanel } from '../../../panels/components/GraphVizPanel';
+import { graphToDot } from './graphToDot';
 
 export const GraphsView: React.FC = () => {
   const { theme } = useTheme();
-  const { repositories, loading, error } = useAllRepositories();
+  const { repositories, loading } = useAllRepositories();
   const [selectedGraphId, setSelectedGraphId] = useState<string | null>(null);
+  const [selectedTopLevelNodes, setSelectedTopLevelNodes] = useState<string[]>([]);
 
   // Build dependency graphs using cluster detection
   const graphs = useMemo(() => {
@@ -25,6 +25,75 @@ export const GraphsView: React.FC = () => {
   const selectedGraph = useMemo(() => {
     return graphs.find((g) => g.id === selectedGraphId) || null;
   }, [graphs, selectedGraphId]);
+
+  // Initialize selected top-level nodes when graph changes
+  React.useEffect(() => {
+    if (selectedGraph) {
+      setSelectedTopLevelNodes(selectedGraph.metadata.topLevelRepositories);
+    } else {
+      setSelectedTopLevelNodes([]);
+    }
+  }, [selectedGraph?.id]);
+
+  // Filter graph based on selected top-level nodes
+  const filteredGraph = useMemo(() => {
+    if (!selectedGraph || selectedTopLevelNodes.length === 0) {
+      return selectedGraph;
+    }
+
+    // Find all nodes reachable from selected top-level nodes
+    const reachableNodes = new Set<string>();
+    const nodesToVisit = selectedTopLevelNodes.map(
+      (name) => selectedGraph.nodes.find((n) => n.name === name)?.id
+    ).filter((id): id is string => id !== undefined);
+
+    while (nodesToVisit.length > 0) {
+      const nodeId = nodesToVisit.pop()!;
+      if (reachableNodes.has(nodeId)) continue;
+
+      reachableNodes.add(nodeId);
+
+      // Add all nodes this one depends on
+      selectedGraph.edges
+        .filter((e) => e.source === nodeId)
+        .forEach((e) => {
+          if (!reachableNodes.has(e.target)) {
+            nodesToVisit.push(e.target);
+          }
+        });
+    }
+
+    // Filter nodes and edges
+    const filteredNodes = selectedGraph.nodes.filter((n) =>
+      reachableNodes.has(n.id)
+    );
+    const filteredEdges = selectedGraph.edges.filter(
+      (e) => reachableNodes.has(e.source) && reachableNodes.has(e.target)
+    );
+
+    return {
+      ...selectedGraph,
+      nodes: filteredNodes,
+      edges: filteredEdges,
+    };
+  }, [selectedGraph, selectedTopLevelNodes]);
+
+  // Memoize the DOT string to prevent re-rendering the graph
+  const graphDot = useMemo(() => {
+    if (!filteredGraph) return '';
+    return graphToDot(filteredGraph, {
+      rankdir: 'TB',
+      showPackageNames: true,
+      showVersionRanges: false,
+    });
+  }, [filteredGraph]);
+
+  // Memoize graphviz options
+  const graphVizOptions = useMemo(() => ({
+    engine: 'dot' as const,
+    fit: true,
+    zoom: true,
+  }), []);
 
   // Use panel persistence hook for three-panel layout
   const panelState = usePanelPersistence({
@@ -287,7 +356,30 @@ export const GraphsView: React.FC = () => {
       );
     }
 
-    // Show selected graph info
+    // Show selected graph with GraphViz visualization
+    const toggleTopLevelNode = (nodeName: string) => {
+      setSelectedTopLevelNodes((prev) => {
+        if (prev.includes(nodeName)) {
+          // Don't allow deselecting the last node
+          if (prev.length === 1) return prev;
+          return prev.filter((n) => n !== nodeName);
+        } else {
+          return [...prev, nodeName];
+        }
+      });
+    };
+
+    const selectAllNodes = () => {
+      setSelectedTopLevelNodes(selectedGraph.metadata.topLevelRepositories);
+    };
+
+    const deselectAllNodes = () => {
+      // Keep at least one selected
+      if (selectedGraph.metadata.topLevelRepositories.length > 0) {
+        setSelectedTopLevelNodes([selectedGraph.metadata.topLevelRepositories[0]]);
+      }
+    };
+
     return (
       <div
         style={{
@@ -316,345 +408,121 @@ export const GraphsView: React.FC = () => {
               {selectedGraph.name}
             </h3>
           </div>
+
+          {/* Top-level nodes filter buttons */}
+          {selectedGraph.metadata.topLevelRepositories.length > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                marginBottom: '8px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '12px',
+                  color: theme.colors.textSecondary,
+                  fontWeight: 500,
+                }}
+              >
+                Filter:
+              </span>
+              {selectedGraph.metadata.topLevelRepositories.map((nodeName) => {
+                const isSelected = selectedTopLevelNodes.includes(nodeName);
+                return (
+                  <button
+                    key={nodeName}
+                    onClick={() => toggleTopLevelNode(nodeName)}
+                    style={{
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      backgroundColor: isSelected
+                        ? theme.colors.primary
+                        : theme.colors.background,
+                      color: isSelected ? '#ffffff' : theme.colors.text,
+                      border: `1px solid ${isSelected ? theme.colors.primary : theme.colors.border}`,
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.backgroundColor = theme.colors.background;
+                      }
+                    }}
+                  >
+                    {nodeName}
+                  </button>
+                );
+              })}
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+                <button
+                  onClick={selectAllNodes}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    backgroundColor: theme.colors.background,
+                    color: theme.colors.textSecondary,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '3px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  All
+                </button>
+                <button
+                  onClick={deselectAllNodes}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    backgroundColor: theme.colors.background,
+                    color: theme.colors.textSecondary,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '3px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
           <div
             style={{
               fontSize: '12px',
               color: theme.colors.textSecondary,
             }}
           >
-            {selectedGraph.nodes.length} nodes · {selectedGraph.edges.length}{' '}
+            {filteredGraph?.nodes.length || 0} nodes · {filteredGraph?.edges.length || 0}{' '}
             edges
+            {selectedTopLevelNodes.length < selectedGraph.metadata.topLevelRepositories.length && (
+              <span style={{ marginLeft: '8px', fontStyle: 'italic' }}>
+                (showing {selectedTopLevelNodes.length} of{' '}
+                {selectedGraph.metadata.topLevelRepositories.length} top-level)
+              </span>
+            )}
           </div>
         </div>
 
         <div
           style={{
             flex: 1,
-            overflow: 'auto',
-            padding: '24px',
+            overflow: 'hidden',
           }}
         >
-          <div
-            style={{
-              maxWidth: '800px',
-              margin: '0 auto',
-            }}
-          >
-            {/* Graph Statistics */}
-            <div
-              style={{
-                marginBottom: '24px',
-                padding: '20px',
-                backgroundColor: theme.colors.backgroundSecondary,
-                borderRadius: '8px',
-                border: `1px solid ${theme.colors.border}`,
-              }}
-            >
-              <h4
-                style={{
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  marginBottom: '16px',
-                  color: theme.colors.text,
-                }}
-              >
-                Overview
-              </h4>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '16px',
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      fontSize: '12px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '4px',
-                    }}
-                  >
-                    Repositories
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '24px',
-                      fontWeight: 600,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    {selectedGraph.metadata.totalRepositories}
-                  </div>
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: '12px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '4px',
-                    }}
-                  >
-                    Top-Level Repos
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '24px',
-                      fontWeight: 600,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    {selectedGraph.metadata.topLevelRepositories.length}
-                  </div>
-                </div>
-                <div>
-                  <div
-                    style={{
-                      fontSize: '12px',
-                      color: theme.colors.textSecondary,
-                      marginBottom: '4px',
-                    }}
-                  >
-                    Connections
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '24px',
-                      fontWeight: 600,
-                      color: theme.colors.primary,
-                    }}
-                  >
-                    {selectedGraph.edges.length}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Top-Level Repositories */}
-            {selectedGraph.metadata.topLevelRepositories.length > 0 && (
-              <div
-                style={{
-                  marginBottom: '24px',
-                  padding: '20px',
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  borderRadius: '8px',
-                  border: `1px solid ${theme.colors.border}`,
-                }}
-              >
-                <h4
-                  style={{
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    marginBottom: '8px',
-                    color: theme.colors.text,
-                  }}
-                >
-                  Top-Level Repositories
-                </h4>
-                <p
-                  style={{
-                    fontSize: '12px',
-                    color: theme.colors.textSecondary,
-                    marginBottom: '16px',
-                  }}
-                >
-                  These repositories have no incoming dependencies from other
-                  repos in this cluster
-                </p>
-                <div
-                  style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-                >
-                  {selectedGraph.metadata.topLevelRepositories.map((repoName) => {
-                    const node = selectedGraph.nodes.find(
-                      (n) => n.name === repoName && n.type === 'repository',
-                    );
-                    if (!node) return null;
-
-                    const outgoingEdges = selectedGraph.edges.filter(
-                      (e) => e.source === node.id,
-                    );
-
-                    return (
-                      <div
-                        key={node.id}
-                        style={{
-                          padding: '12px',
-                          backgroundColor: theme.colors.background,
-                          borderRadius: '6px',
-                          border: `1px solid ${theme.colors.border}`,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            marginBottom: '6px',
-                          }}
-                        >
-                          <GitBranch size={14} color={theme.colors.primary} />
-                          <div
-                            style={{
-                              fontSize: '14px',
-                              fontWeight: 600,
-                              color: theme.colors.text,
-                            }}
-                          >
-                            {node.name}
-                          </div>
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '12px',
-                            color: theme.colors.textSecondary,
-                            display: 'flex',
-                            gap: '12px',
-                            flexWrap: 'wrap',
-                          }}
-                        >
-                          <span>{node.packageNames.length} packages</span>
-                          <span>→ {outgoingEdges.length} dependencies</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* All Repositories in Cluster */}
-            <div
-              style={{
-                marginBottom: '24px',
-                padding: '20px',
-                backgroundColor: theme.colors.backgroundSecondary,
-                borderRadius: '8px',
-                border: `1px solid ${theme.colors.border}`,
-              }}
-            >
-              <h4
-                style={{
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  marginBottom: '16px',
-                  color: theme.colors.text,
-                }}
-              >
-                All Repositories
-              </h4>
-              <div
-                style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-              >
-                {selectedGraph.nodes
-                  .filter((n) => n.type === 'repository')
-                  .map((node) => {
-                    const outgoingEdges = selectedGraph.edges.filter(
-                      (e) => e.source === node.id,
-                    );
-                    const incomingEdges = selectedGraph.edges.filter(
-                      (e) => e.target === node.id,
-                    );
-                    const isTopLevel =
-                      selectedGraph.metadata.topLevelRepositories.includes(
-                        node.name,
-                      );
-
-                    return (
-                      <div
-                        key={node.id}
-                        style={{
-                          padding: '12px',
-                          backgroundColor: isTopLevel
-                            ? theme.colors.primary + '10'
-                            : theme.colors.background,
-                          borderRadius: '6px',
-                          border: `1px solid ${
-                            isTopLevel ? theme.colors.primary : theme.colors.border
-                          }`,
-                        }}
-                      >
-                        <div
-                          style={{
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            color: theme.colors.text,
-                            marginBottom: '4px',
-                          }}
-                        >
-                          {node.name}
-                          {isTopLevel && (
-                            <span
-                              style={{
-                                marginLeft: '8px',
-                                fontSize: '11px',
-                                color: theme.colors.primary,
-                                fontWeight: 600,
-                              }}
-                            >
-                              TOP-LEVEL
-                            </span>
-                          )}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '11px',
-                            color: theme.colors.textSecondary,
-                            marginBottom: '6px',
-                          }}
-                        >
-                          Packages: {node.packageNames.join(', ')}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: '12px',
-                            color: theme.colors.textSecondary,
-                            display: 'flex',
-                            gap: '12px',
-                          }}
-                        >
-                          <span>↑ {incomingEdges.length} depended on by</span>
-                          <span>→ {outgoingEdges.length} depends on</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-
-            {/* Placeholder for future visualization */}
-            <div
-              style={{
-                padding: '32px',
-                backgroundColor: theme.colors.backgroundSecondary,
-                borderRadius: '8px',
-                border: `2px dashed ${theme.colors.border}`,
-                textAlign: 'center',
-              }}
-            >
-              <Network
-                size={48}
-                color={theme.colors.textSecondary}
-                style={{ margin: '0 auto 16px', display: 'block' }}
-              />
-              <div
-                style={{
-                  fontSize: '14px',
-                  color: theme.colors.textSecondary,
-                  marginBottom: '8px',
-                }}
-              >
-                Graph visualization coming soon
-              </div>
-              <div
-                style={{
-                  fontSize: '12px',
-                  color: theme.colors.textSecondary,
-                }}
-              >
-                Interactive dependency graph will be displayed here
-              </div>
-            </div>
-          </div>
+          <GraphVizPanel
+            dot={graphDot}
+            showHeader={false}
+            options={graphVizOptions}
+          />
         </div>
       </div>
     );
