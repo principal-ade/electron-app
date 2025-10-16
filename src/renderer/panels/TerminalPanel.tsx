@@ -98,6 +98,7 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
     const lastResizeTimeRef = useRef<number>(0);
     const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isVisibleRef = useRef(isVisible);
+    const lastDataWriteTimeRef = useRef<number>(0);
 
     // Ownership tracking state
     const [ownershipStatus, setOwnershipStatus] = useState<{
@@ -506,7 +507,7 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
 
       // Handle resize - both window resize and container resize
       const handleResize = () => {
-        if (!fitAddonRef.current || !isVisibleRef.current) return;
+        if (!fitAddonRef.current || !isVisibleRef.current || !term) return;
 
         const now = Date.now();
         // Debounce resize operations to prevent excessive calls
@@ -515,15 +516,51 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
             clearTimeout(resizeTimeoutRef.current);
           }
           resizeTimeoutRef.current = setTimeout(() => {
-            if (fitAddonRef.current) {
+            if (fitAddonRef.current && term) {
+              // Save scroll position before resize
+              const scrollPosition = term.buffer.active.viewportY;
+              const baseScrollback = term.buffer.active.baseY;
+              const wasAtBottom =
+                scrollPosition + term.rows >= baseScrollback + term.rows;
+
               fitAddonRef.current.fit();
+
+              // Restore scroll position after resize
+              requestAnimationFrame(() => {
+                if (term) {
+                  if (wasAtBottom) {
+                    term.scrollToBottom();
+                  } else {
+                    term.scrollToLine(scrollPosition);
+                  }
+                }
+              });
+
               lastResizeTimeRef.current = Date.now();
             }
           }, 100);
           return;
         }
 
+        // Save scroll position before resize
+        const scrollPosition = term.buffer.active.viewportY;
+        const baseScrollback = term.buffer.active.baseY;
+        const wasAtBottom =
+          scrollPosition + term.rows >= baseScrollback + term.rows;
+
         fitAddonRef.current.fit();
+
+        // Restore scroll position after resize
+        requestAnimationFrame(() => {
+          if (term) {
+            if (wasAtBottom) {
+              term.scrollToBottom();
+            } else {
+              term.scrollToLine(scrollPosition);
+            }
+          }
+        });
+
         lastResizeTimeRef.current = now;
       };
 
@@ -566,7 +603,13 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
         // Trigger a resize to force the PTY to repaint its buffer
         // This is needed when connecting to an existing session to see the current content
         setTimeout(() => {
-          if (fitAddonRef.current && sessionId) {
+          if (fitAddonRef.current && sessionId && terminal) {
+            // Save scroll position before resize
+            const scrollPosition = terminal.buffer.active.viewportY;
+            const baseScrollback = terminal.buffer.active.baseY;
+            const wasAtBottom =
+              scrollPosition + terminal.rows >= baseScrollback + terminal.rows;
+
             const dimensions = fitAddonRef.current.proposeDimensions();
             if (dimensions) {
               // First resize to slightly different dimensions to force a redraw
@@ -582,7 +625,16 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
                       sessionId,
                       dimensions.cols,
                       dimensions.rows,
-                    );
+                    ).then(() => {
+                      // Restore scroll position after both resizes complete
+                      if (terminal) {
+                        if (wasAtBottom) {
+                          terminal.scrollToBottom();
+                        } else {
+                          terminal.scrollToLine(scrollPosition);
+                        }
+                      }
+                    });
                   }, 50);
                 })
                 .catch((err) =>
@@ -614,9 +666,42 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
         // Trigger a resize when terminal becomes visible
         // This ensures proper dimensions after being hidden
         const resizeTerminal = () => {
-          if (fitAddonRef.current) {
-            fitAddonRef.current.fit();
+          if (!fitAddonRef.current || !terminal) return;
+
+          // Save scroll position before resize
+          const scrollPosition = terminal.buffer.active.viewportY;
+          const baseScrollback = terminal.buffer.active.baseY;
+          const wasAtBottom =
+            scrollPosition + terminal.rows >= baseScrollback + terminal.rows;
+
+          fitAddonRef.current.fit();
+
+          // Check if data was recently written (within last 200ms)
+          // If so, delay scroll restoration to avoid conflicts
+          const timeSinceLastWrite = Date.now() - lastDataWriteTimeRef.current;
+          const shouldDelayRestore = timeSinceLastWrite < 200;
+
+          const restoreScroll = () => {
+            if (terminal) {
+              if (wasAtBottom) {
+                // If user was at bottom, stay at bottom
+                terminal.scrollToBottom();
+              } else {
+                // Otherwise, restore previous position
+                terminal.scrollToLine(scrollPosition);
+              }
+            }
+          };
+
+          // Restore scroll position after resize
+          if (shouldDelayRestore) {
+            // Data was recently written, wait longer before restoring scroll
+            setTimeout(restoreScroll, 150);
+          } else {
+            // No recent data writes, restore immediately
+            requestAnimationFrame(restoreScroll);
           }
+
           // Also trigger resize on the terminal to update backend
           if (terminal && sessionId) {
             const dimensions = fitAddonRef.current?.proposeDimensions();
@@ -650,6 +735,8 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
       const unsubscribe = TerminalService.onData(
         async (data: { sessionId: string; data: string }) => {
           if (data.sessionId === sessionId) {
+            // Track when data is written to prevent scroll position conflicts
+            lastDataWriteTimeRef.current = Date.now();
             terminal.write(data.data);
           }
         },

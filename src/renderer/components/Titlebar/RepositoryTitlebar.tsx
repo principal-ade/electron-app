@@ -389,7 +389,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
         {onSwitchPanels && (
           <button
             onClick={onSwitchPanels}
-            title="Switch left and right panels"
+            title="Switch right and middle panels"
             style={{
               WebkitAppRegion:
                 'no-drag' as React.CSSProperties['WebkitAppRegion'],

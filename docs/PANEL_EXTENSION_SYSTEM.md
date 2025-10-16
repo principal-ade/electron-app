@@ -32,7 +32,6 @@ export const repositoryPanelCatalog = [
     id: 'tasks',
     label: 'Tasks',
     description: 'Project notes and TODOs...',
-    defaultLocation: 'left',
     slices: ['markdown'] as const,
     surfaces: ['explorer'] as const,
   },
@@ -42,7 +41,6 @@ export const repositoryPanelCatalog = [
 - Defines **metadata** for each panel
 - Specifies **surfaces** (where panels appear: 'explorer', 'manager', 'agent', 'viewer', 'excalidraw')
 - Defines **slices** (data requirements: 'git', 'markdown', 'fileTree', 'packages', 'quality')
-- Sets **default location** (left/right sidebar)
 
 #### 2. **Panel Previews** (`src/renderer/panels/panelPreviews.tsx`)
 ```typescript
@@ -237,7 +235,6 @@ Every panel extension requires a `manifest.json`:
   "panel": {
     "id": "myCustomPanel",
     "label": "Custom Panel",
-    "defaultLocation": "left",
     "surfaces": ["explorer", "manager"],
     "slices": ["fileTree", "git"],
     "icon": "./icon.svg"
@@ -431,7 +428,6 @@ export interface ExtensionManifest {
   panel: {
     id: string;
     label: string;
-    defaultLocation: 'left' | 'right';
     surfaces: RepositoryPanelSurface[];
     slices?: RepositoryPanelSlice[];
     icon?: string;
@@ -523,7 +519,6 @@ export class PanelExtensionRegistry {
       id: panel.id,
       label: panel.label,
       description: panel.description,
-      defaultLocation: panel.defaultLocation,
       surfaces: panel.surfaces,
       slices: panel.slices,
       render: (props) => (
@@ -686,7 +681,6 @@ export const activate: PanelExtension = (context) => {
   "panel": {
     "id": "tasks",
     "label": "Tasks",
-    "defaultLocation": "left",
     "surfaces": ["explorer", "manager"],
     "slices": ["markdown"]
   },
@@ -789,7 +783,7 @@ All existing panels continue to work without modification:
     },
     "panel": {
       "type": "object",
-      "required": ["id", "label", "defaultLocation"],
+      "required": ["id", "label"],
       "properties": {
         "id": {
           "type": "string",
@@ -799,10 +793,6 @@ All existing panels continue to work without modification:
         "label": {
           "type": "string",
           "description": "Display label"
-        },
-        "defaultLocation": {
-          "enum": ["left", "right"],
-          "description": "Default sidebar location"
         },
         "surfaces": {
           "type": "array",
@@ -928,7 +918,6 @@ export interface ExtensionManifest {
   panel: {
     id: string;
     label: string;
-    defaultLocation: 'left' | 'right';
     surfaces: RepositoryPanelSurface[];
     slices?: RepositoryPanelSlice[];
     icon?: string;

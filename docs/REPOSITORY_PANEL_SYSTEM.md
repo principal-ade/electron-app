@@ -50,7 +50,6 @@ Each `RepositoryPanelDefinition` includes:
 
 - `id`: Stable identifier used for persistence and analytics.
 - `label` / `description`: Display text for configuration menus.
-- `defaultLocation`: Suggested column (`left` or `right`).
 - `surfaces`: Tags describing which host surfaces should surface the panel (e.g.,
   `explorer`, `manager`, `agent`). Configuration UIs can filter definitions by
   these tags instead of maintaining bespoke allow-lists.

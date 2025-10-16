@@ -16,7 +16,6 @@ export interface RepositoryPanelDefinitionBase {
   id: string;
   label: string;
   description?: string;
-  defaultLocation: 'left' | 'right';
   surfaces: readonly RepositoryPanelSurface[];
   slices?: readonly RepositoryPanelSlice[];
 }
@@ -27,7 +26,6 @@ export const repositoryPanelCatalog = [
     label: 'Git Changes',
     description:
       'Review staged, unstaged, and untracked changes for the repository.',
-    defaultLocation: 'left',
     slices: ['git'] as const,
     surfaces: ['explorer', 'manager', 'agent'] as const,
   },
@@ -35,7 +33,6 @@ export const repositoryPanelCatalog = [
     id: 'gitIssues',
     label: 'Git Issues',
     description: 'Browse, triage, and manage GitHub issues for this repository.',
-    defaultLocation: 'left',
     surfaces: ['explorer'] as const,
   },
   {
@@ -43,7 +40,6 @@ export const repositoryPanelCatalog = [
     label: 'Git Pull Requests',
     description:
       'Review open, merged, and closed pull requests associated with this repository.',
-    defaultLocation: 'left',
     surfaces: ['explorer'] as const,
   },
   {
@@ -51,7 +47,6 @@ export const repositoryPanelCatalog = [
     label: 'Markdown Documents',
     description:
       'Recently updated markdown documentation discovered in the repository.',
-    defaultLocation: 'left',
     slices: ['markdown'] as const,
     surfaces: ['explorer'] as const,
   },
@@ -60,7 +55,6 @@ export const repositoryPanelCatalog = [
     label: 'Git Status',
     description:
       'Branch details, upstream alignment, and the latest commit metadata.',
-    defaultLocation: 'left',
     slices: ['git'] as const,
     surfaces: ['explorer'] as const,
   },
@@ -68,7 +62,6 @@ export const repositoryPanelCatalog = [
     id: 'gitHistory',
     label: 'Commit History',
     description: 'Review recent commits from the current repository.',
-    defaultLocation: 'left',
     slices: ['git'] as const,
     surfaces: ['explorer'] as const,
   },
@@ -76,7 +69,6 @@ export const repositoryPanelCatalog = [
     id: 'gitDiff',
     label: 'Git Diff',
     description: 'View side-by-side diffs of file changes with Monaco editor.',
-    defaultLocation: 'right',
     slices: ['git'] as const,
     surfaces: ['explorer', 'manager', 'agent'] as const,
   },
@@ -84,7 +76,6 @@ export const repositoryPanelCatalog = [
     id: 'tasks',
     label: 'Tasks',
     description: 'Track repository TODOs, notes, and follow-up actions.',
-    defaultLocation: 'left',
     slices: ['markdown'] as const,
     surfaces: ['explorer', 'manager', 'agent'] as const,
   },
@@ -93,7 +84,6 @@ export const repositoryPanelCatalog = [
     label: 'City Visualization',
     description:
       'Interactive code-city visualization derived from the repository structure.',
-    defaultLocation: 'right',
     slices: ['fileTree'] as const,
     surfaces: ['explorer', 'manager', 'agent'] as const,
   },
@@ -101,7 +91,6 @@ export const repositoryPanelCatalog = [
     id: 'actions',
     label: 'Repository Actions',
     description: 'Run project-specific automations and scripts.',
-    defaultLocation: 'right',
     slices: ['fileTree'] as const,
     surfaces: ['explorer'] as const,
   },
@@ -110,7 +99,6 @@ export const repositoryPanelCatalog = [
     label: 'Package Information',
     description:
       'Package insights, quality metrics, and dependency layers detected in the codebase.',
-    defaultLocation: 'right',
     slices: ['packages'] as const,
     surfaces: ['explorer', 'manager'] as const,
   },
@@ -118,7 +106,6 @@ export const repositoryPanelCatalog = [
     id: 'fileTree',
     label: 'Files',
     description: 'Browse the complete file tree structure of the repository.',
-    defaultLocation: 'left',
     slices: ['fileTree'] as const,
     surfaces: ['manager'] as const,
   },
@@ -126,7 +113,6 @@ export const repositoryPanelCatalog = [
     id: 'search',
     label: 'Search',
     description: 'Search files by name and content with advanced filtering.',
-    defaultLocation: 'left',
     slices: ['fileTree'] as const,
     surfaces: ['manager'] as const,
   },
@@ -134,7 +120,6 @@ export const repositoryPanelCatalog = [
     id: 'dependencies',
     label: 'Dependencies',
     description: 'Explore package architecture and dependency relationships.',
-    defaultLocation: 'left',
     slices: ['packages', 'fileTree'] as const,
     surfaces: ['manager'] as const,
   },
@@ -142,7 +127,6 @@ export const repositoryPanelCatalog = [
     id: 'tools',
     label: 'Tools',
     description: 'Development tools and utilities for the repository.',
-    defaultLocation: 'left',
     slices: ['packages'] as const,
     surfaces: ['manager'] as const,
   },
@@ -150,7 +134,6 @@ export const repositoryPanelCatalog = [
     id: 'docs',
     label: 'Docs',
     description: 'Documentation viewer for markdown and diagram files.',
-    defaultLocation: 'left',
     slices: ['markdown'] as const,
     surfaces: ['manager', 'agent'] as const,
   },
@@ -158,7 +141,6 @@ export const repositoryPanelCatalog = [
     id: 'multiTerminal',
     label: 'Multi Terminal',
     description: 'Flexible terminal panel that can switch between tabbed and carousel layouts.',
-    defaultLocation: 'right',
     slices: [] as const,
     surfaces: ['manager'] as const,
   },
@@ -166,7 +148,6 @@ export const repositoryPanelCatalog = [
     id: 'codeViewer',
     label: 'Code Viewer',
     description: 'View source code files with syntax highlighting.',
-    defaultLocation: 'right',
     slices: ['fileTree'] as const,
     surfaces: ['viewer', 'agent'] as const,
   },
@@ -174,7 +155,6 @@ export const repositoryPanelCatalog = [
     id: 'markdownViewer',
     label: 'Markdown Viewer',
     description: 'View markdown files as documents or slides with toggle.',
-    defaultLocation: 'right',
     slices: ['markdown'] as const,
     surfaces: ['viewer', 'agent'] as const,
   },
@@ -182,7 +162,6 @@ export const repositoryPanelCatalog = [
     id: 'excalidrawDiagram',
     label: 'Excalidraw Diagram',
     description: 'View and interact with excalidraw diagrams.',
-    defaultLocation: 'right',
     slices: [] as const,
     surfaces: ['viewer', 'excalidraw'] as const,
   },
@@ -190,7 +169,6 @@ export const repositoryPanelCatalog = [
     id: 'excalidrawEditor',
     label: 'Excalidraw Editor',
     description: 'Create and edit excalidraw drawings saved to Memory Palace.',
-    defaultLocation: 'right',
     slices: [] as const,
     surfaces: ['excalidraw'] as const,
   },
@@ -198,7 +176,6 @@ export const repositoryPanelCatalog = [
     id: 'drawings',
     label: 'Drawings',
     description: 'Browse and manage Excalidraw diagrams saved in the repository.',
-    defaultLocation: 'left',
     slices: [] as const,
     surfaces: ['excalidraw', 'manager', 'agent'] as const,
   },
@@ -206,7 +183,6 @@ export const repositoryPanelCatalog = [
     id: 'agentEvents',
     label: 'Agent Events',
     description: 'Live stream of agent actions with repository file context.',
-    defaultLocation: 'right',
     slices: [] as const,
     surfaces: ['manager', 'agent'] as const,
   },
@@ -214,7 +190,6 @@ export const repositoryPanelCatalog = [
     id: 'agentSessions',
     label: 'Agent Sessions',
     description: 'Summaries of recent agent activity grouped by session.',
-    defaultLocation: 'left',
     slices: [] as const,
     surfaces: ['manager', 'agent'] as const,
   },
@@ -223,7 +198,6 @@ export const repositoryPanelCatalog = [
     label: 'Agent Context',
     description:
       'View files accessed by agent sessions organized in a multi-tree view.',
-    defaultLocation: 'left',
     slices: [] as const,
     surfaces: ['agent'] as const,
   },

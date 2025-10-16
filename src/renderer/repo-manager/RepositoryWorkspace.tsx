@@ -172,6 +172,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [workspacesLoaded, setWorkspacesLoaded] = useState(false);
     const [hasStateDeviation, setHasStateDeviation] = useState(false);
     const [panelResetKey, setPanelResetKey] = useState(0);
+    const [leftPanelActiveTabIndex, setLeftPanelActiveTabIndex] =
+      useState<number>(0);
+    const [middlePanelActiveTabIndex, setMiddlePanelActiveTabIndex] =
+      useState<number>(0);
     const [rightPanelActiveTabIndex, setRightPanelActiveTabIndex] =
       useState<number>(0);
 
@@ -750,11 +754,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     }, [currentWorkspaceId, repositoryKey, availableWorkspaces]);
 
     const handleSwitchPanels = useCallback(() => {
-      // Swap left and right panel configurations
+      // Swap right and middle panel configurations
       const newLayout: PanelLayout = {
-        left: panelLayout.right,
-        middle: panelLayout.middle,
-        right: panelLayout.left,
+        left: panelLayout.left,
+        middle: panelLayout.right,
+        right: panelLayout.middle,
       };
 
       // Update the layout
@@ -1128,14 +1132,74 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       selectedSource?.metadata?.currentBranch,
     ]);
 
+    // Helper function to focus a specific panel tab (searches all panels)
+    const focusPanelTab = useCallback(
+      (panelId: string) => {
+        // Check left panel
+        const leftPanel = panelLayout.left;
+        if (
+          typeof leftPanel === 'object' &&
+          leftPanel !== null &&
+          'type' in leftPanel &&
+          leftPanel.type === 'tabs'
+        ) {
+          const tabIndex = leftPanel.panels.indexOf(panelId);
+          if (tabIndex !== -1) {
+            setLeftPanelActiveTabIndex(tabIndex);
+            return; // Found it, we're done
+          }
+        }
+
+        // Check middle panel
+        const middlePanel = panelLayout.middle;
+        if (
+          typeof middlePanel === 'object' &&
+          middlePanel !== null &&
+          'type' in middlePanel &&
+          middlePanel.type === 'tabs'
+        ) {
+          const tabIndex = middlePanel.panels.indexOf(panelId);
+          if (tabIndex !== -1) {
+            setMiddlePanelActiveTabIndex(tabIndex);
+            return; // Found it, we're done
+          }
+        }
+
+        // Check right panel
+        const rightPanel = panelLayout.right;
+        if (
+          typeof rightPanel === 'object' &&
+          rightPanel !== null &&
+          'type' in rightPanel &&
+          rightPanel.type === 'tabs'
+        ) {
+          const tabIndex = rightPanel.panels.indexOf(panelId);
+          if (tabIndex !== -1) {
+            setRightPanelActiveTabIndex(tabIndex);
+            return; // Found it, we're done
+          }
+        }
+
+        // Panel not found in any tab group (it's either a single panel or doesn't exist)
+        // This is fine - single panels don't need focusing
+      },
+      [panelLayout],
+    );
+
     // Handle documentation selection
     const handleDocumentSelect = useCallback(
       async (filePath: string, type: 'markdown' | 'excalidraw') => {
         setSelectedDocPath(filePath);
         setSelectedDocType(type);
         setRightPaneMode('document');
+        // Focus the appropriate viewer tab
+        if (type === 'markdown') {
+          focusPanelTab('markdownViewer');
+        } else {
+          focusPanelTab('excalidrawDiagram');
+        }
       },
-      [],
+      [focusPanelTab],
     );
 
     // Handle task click - open task markdown in viewer
@@ -1147,29 +1211,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         setSelectedDocPath(taskDocPath);
         setSelectedDocType('markdown');
         setRightPaneMode('document');
+        // Focus the markdown viewer tab
+        focusPanelTab('markdownViewer');
       },
-      [repositoryPath],
-    );
-
-    // Helper function to focus a specific panel in the right pane tabs
-    const focusRightPanelTab = useCallback(
-      (panelId: string) => {
-        const rightPanel = panelLayout.right;
-
-        // Only update if right panel is a tab group
-        if (
-          typeof rightPanel === 'object' &&
-          rightPanel !== null &&
-          'type' in rightPanel &&
-          rightPanel.type === 'tabs'
-        ) {
-          const tabIndex = rightPanel.panels.indexOf(panelId);
-          if (tabIndex !== -1) {
-            setRightPanelActiveTabIndex(tabIndex);
-          }
-        }
-      },
-      [panelLayout],
+      [repositoryPath, focusPanelTab],
     );
 
     const openFileInRightPane = useCallback(
@@ -1189,16 +1234,16 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           setSelectedCodeFile(filePath);
           setRightPaneMode('document');
           // Focus the markdown viewer tab
-          focusRightPanelTab('markdownViewer');
+          focusPanelTab('markdownViewer');
         } else {
           // Show all other files in code viewer only
           setSelectedCodeFile(filePath);
           setRightPaneMode('document');
           // Focus the code viewer tab
-          focusRightPanelTab('codeViewer');
+          focusPanelTab('codeViewer');
         }
       },
-      [focusRightPanelTab],
+      [focusPanelTab],
     );
 
     const handleFileClick = useCallback(
@@ -1213,9 +1258,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         setSelectedFile(filePath);
         setSelectedDiffFile({ path: filePath, status });
         setRightPaneMode('document');
-        focusRightPanelTab('gitDiffViewer');
+        focusPanelTab('gitDiffViewer');
       },
-      [focusRightPanelTab],
+      [focusPanelTab],
     );
 
     const handleSearchFileSelect = useCallback(
@@ -2535,6 +2580,52 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                 // Use provided layout or default
                 let actualPanelLayout: PanelLayout =
                   panelLayout || defaultLayout;
+
+                // Add controlled tab props to left panel if it's a tab group
+                const leftPanel = actualPanelLayout.left;
+                if (
+                  typeof leftPanel === 'object' &&
+                  leftPanel !== null &&
+                  'type' in leftPanel &&
+                  leftPanel.type === 'tabs'
+                ) {
+                  actualPanelLayout = {
+                    ...actualPanelLayout,
+                    left: {
+                      ...leftPanel,
+                      config: {
+                        ...leftPanel.config,
+                        activeTabIndex: leftPanelActiveTabIndex,
+                        onTabChange: (index: number) => {
+                          setLeftPanelActiveTabIndex(index);
+                        },
+                      },
+                    },
+                  };
+                }
+
+                // Add controlled tab props to middle panel if it's a tab group
+                const middlePanel = actualPanelLayout.middle;
+                if (
+                  typeof middlePanel === 'object' &&
+                  middlePanel !== null &&
+                  'type' in middlePanel &&
+                  middlePanel.type === 'tabs'
+                ) {
+                  actualPanelLayout = {
+                    ...actualPanelLayout,
+                    middle: {
+                      ...middlePanel,
+                      config: {
+                        ...middlePanel.config,
+                        activeTabIndex: middlePanelActiveTabIndex,
+                        onTabChange: (index: number) => {
+                          setMiddlePanelActiveTabIndex(index);
+                        },
+                      },
+                    },
+                  };
+                }
 
                 // Add controlled tab props to right panel if it's a tab group
                 const rightPanel = actualPanelLayout.right;
