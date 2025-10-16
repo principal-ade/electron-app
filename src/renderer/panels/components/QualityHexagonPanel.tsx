@@ -65,7 +65,8 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
       setError(null);
       fetchPackages();
     }
-  }, [directory, fetchPackages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [directory]); // fetchPackages intentionally excluded to avoid infinite loop
 
   const rerunEnrichment = useCallback(
     async (packagePath: string) => {

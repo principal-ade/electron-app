@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Copy, Check, X } from 'lucide-react';
+import { FileText, Copy, Check, X, Trash2 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { MarkdownDocumentViewer } from '../../repo-manager/shared/MarkdownDocumentViewer';
 import { PanelEmptyState } from '../../repo-manager/panels/PanelEmptyState';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
+import { FileDeleteConfirmDialog } from '../../components/FileDeleteConfirmDialog';
 import type { FileTreeSource } from '../../types/file-tree-source';
 
 interface MarkdownRenderingPanelProps {
@@ -33,6 +34,7 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedPath, setCopiedPath] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const latestFilePathRef = useRef<string | null>(null);
 
   const isLocalFile = source?.type === 'local';
@@ -170,6 +172,38 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
     }
   };
 
+  const handleDelete = async () => {
+    if (!filePath) return;
+
+    // Construct absolute path for deletion
+    const absolutePath =
+      isLocalFile && sourceLocation
+        ? filePath.startsWith('/')
+          ? filePath
+          : `${sourceLocation}/${filePath}`
+        : filePath;
+
+    try {
+      const result = await FileSystemService.deleteFile(absolutePath);
+
+      if (result?.success) {
+        // Close the panel after successful deletion
+        setShowDeleteConfirm(false);
+        if (onClose) {
+          onClose();
+        }
+      } else {
+        throw new Error(result?.error || 'Failed to delete file');
+      }
+    } catch (err) {
+      console.error('Error deleting file:', err);
+      setError(
+        `Failed to delete file: ${err instanceof Error ? err.message : 'Unknown error'}`
+      );
+      setShowDeleteConfirm(false);
+    }
+  };
+
   return (
     <div
       style={{
@@ -210,6 +244,37 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
         </span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+          {/* Delete button - only show for local files */}
+          {isLocalFile && (
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                border: 'none',
+                background: 'none',
+                color: theme.colors.error || '#ef4444',
+                padding: '6px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease',
+                fontSize: '11px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              title="Delete file"
+            >
+              <Trash2 size={14} />
+              <span>Delete</span>
+            </button>
+          )}
+
           {onClose && (
             <button
               type="button"
@@ -357,6 +422,22 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
           onCheckboxChange={() => {}}
         />
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && filePath && (
+        <FileDeleteConfirmDialog
+          filePath={
+            isLocalFile && sourceLocation
+              ? filePath.startsWith('/')
+                ? filePath
+                : `${sourceLocation}/${filePath}`
+              : filePath
+          }
+          fileName={fileName}
+          onConfirm={handleDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </div>
   );
 };

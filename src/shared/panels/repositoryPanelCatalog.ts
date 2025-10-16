@@ -27,7 +27,7 @@ export const repositoryPanelCatalog = [
     description:
       'Review staged, unstaged, and untracked changes for the repository.',
     slices: ['git'] as const,
-    surfaces: ['explorer', 'manager', 'agent'] as const,
+    surfaces: ['manager', 'agent'] as const,
   },
   {
     id: 'gitIssues',
@@ -43,14 +43,6 @@ export const repositoryPanelCatalog = [
     surfaces: ['explorer'] as const,
   },
   {
-    id: 'files',
-    label: 'Markdown Documents',
-    description:
-      'Recently updated markdown documentation discovered in the repository.',
-    slices: ['markdown'] as const,
-    surfaces: ['explorer'] as const,
-  },
-  {
     id: 'gitStatus',
     label: 'Git Status',
     description:
@@ -63,14 +55,14 @@ export const repositoryPanelCatalog = [
     label: 'Commit History',
     description: 'Review recent commits from the current repository.',
     slices: ['git'] as const,
-    surfaces: ['explorer'] as const,
+    surfaces: ['manager', 'agent'] as const,
   },
   {
     id: 'gitDiff',
     label: 'Git Diff',
     description: 'View side-by-side diffs of file changes with Monaco editor.',
     slices: ['git'] as const,
-    surfaces: ['explorer', 'manager', 'agent'] as const,
+    surfaces: ['manager', 'agent'] as const,
   },
   {
     id: 'tasks',

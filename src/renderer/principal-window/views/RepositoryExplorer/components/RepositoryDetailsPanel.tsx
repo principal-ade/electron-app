@@ -28,18 +28,17 @@ import { RepositoryMonitoringService } from '../../../../main-process-api/Reposi
 import { WindowService } from '../../../../main-process-api/WindowService';
 import { RemoveRepositoryDialog } from './RemoveRepositoryDialog';
 import { TerminalService } from '../../../../main-process-api/TerminalService';
-import { RepositoryTasksAndNotesPanel } from './RepositoryTasksAndNotesPanel';
+import { RepositoryTasksAndNotesPanel } from '../../../../panels/components/RepositoryTasksAndNotesPanel';
 import {
   GitService,
   GitBranchStatus,
 } from '../../../../main-process-api/GitService';
 import { RepositoryHeader } from './RepositoryHeader';
-import { GitStatusPanel } from './GitStatusPanel';
-import { MarkdownDocumentsPanel } from './MarkdownDocumentsPanel';
+import { GitStatusPanel } from '../../../../panels/components/GitStatusPanel';
 import { QualityHexagonPanel } from '../../../../panels/components/QualityHexagonPanel';
 import { RepositoryCityService } from './city';
 import { CityVisualizationPanel } from '../../../../panels/components/CityVisualizationPanel';
-import { RepositoryActionsPanel } from './RepositoryActionsPanel';
+import { RepositoryActionsPanel } from '../../../../panels/components/RepositoryActionsPanel';
 import { SecretsModal } from './SecretsModal';
 import { ActRunnerService } from '../../../../main-process-api/ActRunnerService';
 import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
@@ -49,9 +48,6 @@ import {
 } from '../../../../../shared/types/act.types';
 import { PanelConfiguration } from './PanelConfiguration';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
-import { RepositoryPanelProvider } from '../../../../panels/RepositoryPanelProvider';
-import { GitCommitHistoryPanel } from '../../../../panels/components/GitCommitHistoryPanel';
-import { GitChangesPanel } from '../../../../panels/components/GitChangesPanel';
 import { createDefaultPanelVisibility } from '../../../../panels/registry';
 import { useHighlightLayers } from '../../../../contexts/HighlightLayersContext';
 import { RightPanel } from './RightPanel';
@@ -65,9 +61,7 @@ type TaskWithDocumentPath = Task & { documentPath?: string };
 interface RepositoryDetailsPanelProps {
   selectedRepository: EnhancedAlexandriaEntry | null;
   repositories: EnhancedAlexandriaEntry[];
-  markdownFiles: Array<{ path: string; lastModified?: string }>;
   gitStatus: GitStatus;
-  isLoadingDocs: boolean;
   isLoadingRepository?: boolean;
   onOpenDashboard: (repo: EnhancedAlexandriaEntry) => void;
   onRepositoryRemoved?: (removedRepoName: string) => void;
@@ -92,9 +86,7 @@ interface RepositoryDetailsPanelProps {
 export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   selectedRepository,
   repositories,
-  markdownFiles,
   gitStatus,
-  isLoadingDocs,
   isLoadingRepository = false,
   onOpenDashboard,
   onRepositoryRemoved,
@@ -380,14 +372,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       );
     });
   }, [fileTree]);
-
-  const sortedMarkdownFiles = useMemo(() => {
-    return [...markdownFiles].sort((a, b) => {
-      const aTime = a.lastModified ? new Date(a.lastModified).getTime() : 0;
-      const bTime = b.lastModified ? new Date(b.lastModified).getTime() : 0;
-      return bTime - aTime;
-    });
-  }, [markdownFiles]);
 
   // Load panel visibility preferences when repository changes
   useEffect(() => {
@@ -875,28 +859,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     [handleFileClick, onFileSelect, onRightPanelTabChange],
   );
 
-  // Handle clicking a markdown file from the Markdown Documents list.
-  // Opens the dedicated markdown-view special window for a single file.
-  const handleOpenMarkdown = useCallback(
-    async (filePath: string) => {
-      if (!selectedRepository) return;
-
-      try {
-        const absolutePath = `${selectedRepository.path}/${filePath}`;
-        await WindowService.openMarkdownView(
-          absolutePath,
-          selectedRepository.name,
-        );
-      } catch (error) {
-        console.error(
-          '[RepositoryDetailsPanel] Error opening markdown view:',
-          error,
-        );
-      }
-    },
-    [selectedRepository],
-  );
-
   // Handle clicking a task to view it in the markdown viewer
   const handleTaskClick = useCallback(
     async (task: TaskWithDocumentPath) => {
@@ -1047,44 +1009,11 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   const renderPanel = useCallback(
     (panelId: RepositoryPanelId) => {
       switch (panelId) {
-        case 'gitChanges':
-          if (!hasGitChanges) return null;
-          return (
-            <RepositoryPanelProvider
-              key={panelId}
-              repositoryPath={selectedRepository?.path ?? null}
-              actions={{
-                openGitDiff: handleGitChangeSelect,
-                openFile: handleFileClick,
-              }}
-            >
-              <GitChangesPanel />
-            </RepositoryPanelProvider>
-          );
-
-        case 'files':
-          return (
-            <MarkdownDocumentsPanel
-              key={panelId}
-              markdownFiles={sortedMarkdownFiles}
-              isLoading={isLoadingDocs}
-              onMarkdownClick={handleFileClick}
-            />
-          );
-
         case 'gitStatus':
           return (
             <GitStatusPanel
               key={panelId}
               repository={selectedRepository}
-            />
-          );
-
-        case 'gitHistory':
-          return (
-            <GitCommitHistoryPanel
-              key={panelId}
-              repositoryPath={selectedRepository?.path ?? null}
             />
           );
 
@@ -1144,12 +1073,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       }
     },
     [
-      hasGitChanges,
       selectedRepository,
-      sortedMarkdownFiles,
-      isLoadingDocs,
       handleFileClick,
-      handleGitChangeSelect,
       handleTaskClick,
       cityData,
       isBuildingCity,

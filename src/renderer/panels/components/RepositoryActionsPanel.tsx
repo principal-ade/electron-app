@@ -10,11 +10,11 @@ import {
 } from 'lucide-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 
-import { useRepositorySecretsStatus } from '../hooks/useRepositorySecretsStatus';
-import type { ActWorkflowAction } from '../../../../../shared/types/act.types';
-import { FileSystemService } from '../../../../main-process-api/FileSystemService';
-import { getRequiredSecrets } from '../../../../utils/workflowParser';
-import type { ParsedWorkflow, ParsedJob } from '../../../../utils/workflowParser';
+import { useRepositorySecretsStatus } from '../../principal-window/views/RepositoryExplorer/hooks/useRepositorySecretsStatus';
+import type { ActWorkflowAction } from '../../../shared/types/act.types';
+import { FileSystemService } from '../../main-process-api/FileSystemService';
+import { getRequiredSecrets } from '../../utils/workflowParser';
+import type { ParsedWorkflow, ParsedJob } from '../../utils/workflowParser';
 
 interface RepositoryActionsPanelProps {
   repoId: string | null | undefined;
@@ -100,7 +100,7 @@ const extractWorkflowActionsFromTree = async (
 
       // Parse workflow to extract jobs
       const { parseWorkflowFile } = await import(
-        '../../../../utils/workflowParser'
+        '../../utils/workflowParser'
       );
       const parsed: ParsedWorkflow | null = parseWorkflowFile(content);
 

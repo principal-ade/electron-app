@@ -1,16 +1,37 @@
 {
   "version": "1.0.0",
-  "lastUpdated": 1759986525392,
-  "tasks": {},
+  "lastUpdated": 1760590973328,
+  "tasks": {
+    "task-1760590973328-czf08nja1": {
+      "id": "task-1760590973328-czf08nja1",
+      "status": "pending",
+      "priority": "high",
+      "directoryPath": "",
+      "senderId": "electron-app",
+      "tags": [
+        "database",
+        "observability",
+        "normalization",
+        "api"
+      ],
+      "receivedAt": 1760590973328,
+      "updatedAt": 1760590973328,
+      "filePath": "active/task-1760590973328-czf08nja1.task.md"
+    }
+  },
   "byStatus": {
-    "pending": [],
+    "pending": [
+      "task-1760590973328-czf08nja1"
+    ],
     "acknowledged": [],
     "in_progress": [],
     "completed": [],
     "failed": []
   },
   "bySender": {
-    "electron-app": []
+    "electron-app": [
+      "task-1760590973328-czf08nja1"
+    ]
   },
   "byADE": {}
 }

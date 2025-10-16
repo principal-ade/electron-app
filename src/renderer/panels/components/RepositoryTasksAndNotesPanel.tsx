@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import type { Task } from '../../../../../shared/main-process-api-interfaces/PalaceTasksAPI';
-import { RepositoryNotesPanel } from './RepositoryNotesPanel';
-import { TasksPanel } from '../../../../panels/components/TasksPanel';
+import type { Task } from '../../../shared/main-process-api-interfaces/PalaceTasksAPI';
+import { RepositoryNotesPanel } from '../../principal-window/views/RepositoryExplorer/components/RepositoryNotesPanel';
+import { TasksPanel } from './TasksPanel';
 
 interface RepositoryTasksAndNotesPanelProps {
   repositoryPath: string;

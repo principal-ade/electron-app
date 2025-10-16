@@ -1,16 +1,21 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Search, FileText, Book, Loader, Eye, EyeOff } from 'lucide-react';
+import { Search, FileText, Book, Loader, Eye, EyeOff, ArrowDownAZ, Clock } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { AlexandriaDocsService } from '../../main-process-api/AlexandriaDocsService';
+import { documentSearchService } from '../../services/DocumentSearchService';
+import { promises as fs } from 'fs';
 
 interface AlexandriaDocItem {
   path: string;
   name: string;
   relativePath: string;
   isTracked: boolean;
+  mtime?: Date;
 }
+
+type SortMode = 'alphabetical' | 'recentlyEdited';
 
 interface AlexandriaDocsPanelProps {
   repositoryPath: string;
@@ -30,6 +35,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [alexandriaEntry, setAlexandriaEntry] =
     useState<AlexandriaEntry | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>('alphabetical');
 
   // Fetch Alexandria entry and documents
   const fetchDocuments = useCallback(async () => {
@@ -56,43 +62,53 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
       // Convert document paths to our format
       const docItems: AlexandriaDocItem[] = [];
 
-      // Add tracked documents
+      // Add tracked documents with file stats
       for (const docPath of tracked) {
         const fileName = docPath.split('/').pop() || docPath;
         const name = fileName.replace(/\.(md|MD)$/i, '');
         const fullPath = `${repositoryPath}/${docPath}`.replace(/\/+/g, '/');
+
+        // Get file modification time
+        let mtime: Date | undefined;
+        try {
+          const stats = await fs.stat(fullPath);
+          mtime = stats.mtime;
+        } catch (err) {
+          console.warn(`Failed to get mtime for ${fullPath}:`, err);
+        }
 
         docItems.push({
           path: fullPath,
           name: name,
           relativePath: docPath,
           isTracked: true,
+          mtime,
         });
       }
 
-      // Add untracked documents
+      // Add untracked documents with file stats
       for (const docPath of untracked) {
         const fileName = docPath.split('/').pop() || docPath;
         const name = fileName.replace(/\.(md|MD)$/i, '');
         const fullPath = `${repositoryPath}/${docPath}`.replace(/\/+/g, '/');
+
+        // Get file modification time
+        let mtime: Date | undefined;
+        try {
+          const stats = await fs.stat(fullPath);
+          mtime = stats.mtime;
+        } catch (err) {
+          console.warn(`Failed to get mtime for ${fullPath}:`, err);
+        }
 
         docItems.push({
           path: fullPath,
           name: name,
           relativePath: docPath,
           isTracked: false,
+          mtime,
         });
       }
-
-      // Sort by tracked status first (tracked first), then by relative path
-      docItems.sort((a, b) => {
-        if (a.isTracked !== b.isTracked) {
-          return a.isTracked ? -1 : 1;
-        }
-        return a.relativePath
-          .toLowerCase()
-          .localeCompare(b.relativePath.toLowerCase());
-      });
 
       setDocuments(docItems);
 
@@ -112,14 +128,69 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
     fetchDocuments();
   }, [fetchDocuments]);
 
-  // Filter documents based on search
-  const filteredDocuments = searchQuery
-    ? documents.filter(
-        (doc) =>
-          doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          doc.relativePath.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    : documents;
+  // Subscribe to repository changes
+  useEffect(() => {
+    const unsubscribe = AlexandriaService.onRepositoryChange((event) => {
+      // Refresh documents if a repository was updated
+      if (event.type === 'updated' && event.repository) {
+        // Only refresh if this is the repository we're viewing
+        if (event.repository.localPath === repositoryPath) {
+          console.info('[AlexandriaDocsPanel] Repository updated, refreshing documents');
+          fetchDocuments();
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [repositoryPath, fetchDocuments]);
+
+  // Subscribe to document changes
+  useEffect(() => {
+    const unsubscribe = documentSearchService.onDocumentChanged((event) => {
+      // Refresh documents if a document was added, modified, or deleted in this repository
+      if (event.document.path.startsWith(repositoryPath)) {
+        console.info(
+          `[AlexandriaDocsPanel] Document ${event.type}: ${event.document.path}, refreshing list`
+        );
+        fetchDocuments();
+      }
+    });
+
+    return unsubscribe;
+  }, [repositoryPath, fetchDocuments]);
+
+  // Filter and sort documents
+  const filteredDocuments = React.useMemo(() => {
+    // First filter by search query
+    let filtered = searchQuery
+      ? documents.filter(
+          (doc) =>
+            doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            doc.relativePath.toLowerCase().includes(searchQuery.toLowerCase()),
+        )
+      : documents;
+
+    // Then sort based on selected mode
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortMode === 'recentlyEdited') {
+        // Sort by modification time (most recent first)
+        if (!a.mtime && !b.mtime) return 0;
+        if (!a.mtime) return 1;
+        if (!b.mtime) return -1;
+        return b.mtime.getTime() - a.mtime.getTime();
+      } else {
+        // Sort alphabetically - tracked first, then by path
+        if (a.isTracked !== b.isTracked) {
+          return a.isTracked ? -1 : 1;
+        }
+        return a.relativePath
+          .toLowerCase()
+          .localeCompare(b.relativePath.toLowerCase());
+      }
+    });
+
+    return sorted;
+  }, [documents, searchQuery, sortMode]);
 
   return (
     <div
@@ -166,21 +237,44 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
               Alexandria Documents
             </span>
           </div>
-          {alexandriaEntry && (
-            <span
-              style={{
-                fontSize: '11px',
-                color: theme.colors.textSecondary,
-                backgroundColor: theme.colors.backgroundTertiary,
-                padding: '2px 6px',
-                borderRadius: '4px',
-                fontWeight: 500,
-              }}
-            >
-              {documents.length}{' '}
-              {documents.length === 1 ? 'document' : 'documents'}
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {alexandriaEntry && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: theme.colors.textSecondary,
+                  backgroundColor: theme.colors.backgroundTertiary,
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  fontWeight: 500,
+                }}
+              >
+                {documents.length}{' '}
+                {documents.length === 1 ? 'document' : 'documents'}
+              </span>
+            )}
+            {documents.length > 0 && (
+              <select
+                value={sortMode}
+                onChange={(e) => setSortMode(e.target.value as SortMode)}
+                style={{
+                  fontSize: '11px',
+                  color: theme.colors.text,
+                  backgroundColor: theme.colors.backgroundTertiary,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  fontWeight: 500,
+                }}
+                title="Sort documents"
+              >
+                <option value="alphabetical">A-Z</option>
+                <option value="recentlyEdited">Recently Edited</option>
+              </select>
+            )}
+          </div>
         </div>
 
         {/* Search Input */}
