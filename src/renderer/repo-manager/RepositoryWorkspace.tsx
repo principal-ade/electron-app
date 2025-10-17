@@ -175,12 +175,12 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [workspacesLoaded, setWorkspacesLoaded] = useState(false);
     const [hasStateDeviation, setHasStateDeviation] = useState(false);
     const [panelResetKey, setPanelResetKey] = useState(0);
-    const [leftPanelActiveTabIndex, setLeftPanelActiveTabIndex] =
-      useState<number>(0);
-    const [middlePanelActiveTabIndex, setMiddlePanelActiveTabIndex] =
-      useState<number>(0);
-    const [rightPanelActiveTabIndex, setRightPanelActiveTabIndex] =
-      useState<number>(0);
+    const [leftPanelActivePanelId, setLeftPanelActivePanelId] =
+      useState<string | null>(null);
+    const [middlePanelActivePanelId, setMiddlePanelActivePanelId] =
+      useState<string | null>(null);
+    const [rightPanelActivePanelId, setRightPanelActivePanelId] =
+      useState<string | null>(null);
 
     // File tree services - shared across all views
     const cityDataCache = useMemo(() => new CityDataCacheService(), []);
@@ -402,6 +402,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             // Apply saved sizes and collapsed state
             setPanelSizes(repoState.sizes);
             setPanelCollapsedState(repoState.collapsed);
+
+            // Load active panel IDs if they exist
+            if (repoState.activePanels) {
+              setLeftPanelActivePanelId(repoState.activePanels.left ?? null);
+              setMiddlePanelActivePanelId(repoState.activePanels.middle ?? null);
+              setRightPanelActivePanelId(repoState.activePanels.right ?? null);
+            }
           }
         } catch (error) {
           console.error(
@@ -610,6 +617,41 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       },
       [panelPreferencesLoaded],
     );
+
+    // Persist active panel IDs when they change
+    useEffect(() => {
+      if (!panelPreferencesLoaded) return;
+
+      const persistActivePanels = async () => {
+        try {
+          const currentState =
+            await WorkspaceLayoutService.getRepositoryState(repositoryKey);
+          if (!currentState) return;
+
+          await WorkspaceLayoutService.setRepositoryState(repositoryKey, {
+            ...currentState,
+            activePanels: {
+              left: leftPanelActivePanelId ?? undefined,
+              middle: middlePanelActivePanelId ?? undefined,
+              right: rightPanelActivePanelId ?? undefined,
+            },
+          });
+        } catch (error) {
+          console.error(
+            '[RepositoryWorkspace] Failed to persist active panel IDs:',
+            error,
+          );
+        }
+      };
+
+      void persistActivePanels();
+    }, [
+      leftPanelActivePanelId,
+      middlePanelActivePanelId,
+      rightPanelActivePanelId,
+      repositoryKey,
+      panelPreferencesLoaded,
+    ]);
 
     // Workspace layout handlers
     const handleWorkspaceSelect = useCallback(
@@ -1146,9 +1188,8 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           'type' in leftPanel &&
           leftPanel.type === 'tabs'
         ) {
-          const tabIndex = leftPanel.panels.indexOf(panelId);
-          if (tabIndex !== -1) {
-            setLeftPanelActiveTabIndex(tabIndex);
+          if (leftPanel.panels.includes(panelId)) {
+            setLeftPanelActivePanelId(panelId);
             return; // Found it, we're done
           }
         }
@@ -1161,9 +1202,8 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           'type' in middlePanel &&
           middlePanel.type === 'tabs'
         ) {
-          const tabIndex = middlePanel.panels.indexOf(panelId);
-          if (tabIndex !== -1) {
-            setMiddlePanelActiveTabIndex(tabIndex);
+          if (middlePanel.panels.includes(panelId)) {
+            setMiddlePanelActivePanelId(panelId);
             return; // Found it, we're done
           }
         }
@@ -1176,9 +1216,8 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           'type' in rightPanel &&
           rightPanel.type === 'tabs'
         ) {
-          const tabIndex = rightPanel.panels.indexOf(panelId);
-          if (tabIndex !== -1) {
-            setRightPanelActiveTabIndex(tabIndex);
+          if (rightPanel.panels.includes(panelId)) {
+            setRightPanelActivePanelId(panelId);
             return; // Found it, we're done
           }
         }
@@ -2592,15 +2631,25 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   'type' in leftPanel &&
                   leftPanel.type === 'tabs'
                 ) {
+                  // Convert panel ID to index, fallback to defaultActiveTab if panel not found
+                  const activeIndex = leftPanelActivePanelId
+                    ? leftPanel.panels.indexOf(leftPanelActivePanelId)
+                    : -1;
+                  const finalIndex = activeIndex >= 0 ? activeIndex : (leftPanel.config?.defaultActiveTab ?? 0);
+
                   actualPanelLayout = {
                     ...actualPanelLayout,
                     left: {
                       ...leftPanel,
                       config: {
                         ...leftPanel.config,
-                        activeTabIndex: leftPanelActiveTabIndex,
+                        activeTabIndex: finalIndex,
                         onTabChange: (index: number) => {
-                          setLeftPanelActiveTabIndex(index);
+                          // Store panel ID instead of index
+                          const panelId = leftPanel.panels[index];
+                          if (panelId) {
+                            setLeftPanelActivePanelId(panelId);
+                          }
                         },
                       },
                     },
@@ -2615,15 +2664,25 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   'type' in middlePanel &&
                   middlePanel.type === 'tabs'
                 ) {
+                  // Convert panel ID to index, fallback to defaultActiveTab if panel not found
+                  const activeIndex = middlePanelActivePanelId
+                    ? middlePanel.panels.indexOf(middlePanelActivePanelId)
+                    : -1;
+                  const finalIndex = activeIndex >= 0 ? activeIndex : (middlePanel.config?.defaultActiveTab ?? 0);
+
                   actualPanelLayout = {
                     ...actualPanelLayout,
                     middle: {
                       ...middlePanel,
                       config: {
                         ...middlePanel.config,
-                        activeTabIndex: middlePanelActiveTabIndex,
+                        activeTabIndex: finalIndex,
                         onTabChange: (index: number) => {
-                          setMiddlePanelActiveTabIndex(index);
+                          // Store panel ID instead of index
+                          const panelId = middlePanel.panels[index];
+                          if (panelId) {
+                            setMiddlePanelActivePanelId(panelId);
+                          }
                         },
                       },
                     },
@@ -2638,15 +2697,25 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   'type' in rightPanel &&
                   rightPanel.type === 'tabs'
                 ) {
+                  // Convert panel ID to index, fallback to defaultActiveTab if panel not found
+                  const activeIndex = rightPanelActivePanelId
+                    ? rightPanel.panels.indexOf(rightPanelActivePanelId)
+                    : -1;
+                  const finalIndex = activeIndex >= 0 ? activeIndex : (rightPanel.config?.defaultActiveTab ?? 0);
+
                   actualPanelLayout = {
                     ...actualPanelLayout,
                     right: {
                       ...rightPanel,
                       config: {
                         ...rightPanel.config,
-                        activeTabIndex: rightPanelActiveTabIndex,
+                        activeTabIndex: finalIndex,
                         onTabChange: (index: number) => {
-                          setRightPanelActiveTabIndex(index);
+                          // Store panel ID instead of index
+                          const panelId = rightPanel.panels[index];
+                          if (panelId) {
+                            setRightPanelActivePanelId(panelId);
+                          }
                         },
                       },
                     },

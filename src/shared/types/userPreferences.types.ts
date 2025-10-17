@@ -186,6 +186,11 @@ export interface UserPreferences {
         layout?: PanelLayout; // Only saved for custom layouts (no workspace)
         sizes: { left: number; middle: number; right: number };
         collapsed: { left?: boolean; right?: boolean };
+        activePanels?: {
+          left?: string; // Active panel ID for left tab group
+          middle?: string; // Active panel ID for middle tab group
+          right?: string; // Active panel ID for right tab group
+        };
       }
     >;
     // Built-in workspace layout IDs that can't be deleted
