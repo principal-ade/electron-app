@@ -1076,7 +1076,7 @@ export class RepositoryMonitoringServer {
       for (const pkg of packagesResult.packages) {
         const { dependencies, devDependencies } = pkg.packageData;
 
-        // Check regular dependencies
+        // Check regular dependencies (exact match)
         if (dependencies && dependencies[dependencyId]) {
           return {
             name: dependencyId,
@@ -1086,7 +1086,7 @@ export class RepositoryMonitoringServer {
           };
         }
 
-        // Check dev dependencies
+        // Check dev dependencies (exact match)
         if (devDependencies && devDependencies[dependencyId]) {
           return {
             name: dependencyId,
@@ -1094,6 +1094,40 @@ export class RepositoryMonitoringServer {
             packagePath: pkg.packageData.path,
             isDevDependency: true,
           };
+        }
+
+        // Check for partial match in regular dependencies (e.g., "industry-themed-monaco-editor" matches "@principal-ade/industry-themed-monaco-editor")
+        if (dependencies) {
+          for (const [depName, depVersion] of Object.entries(dependencies)) {
+            if (depName.includes('/')) {
+              const baseDepName = depName.split('/').pop();
+              if (baseDepName === dependencyId) {
+                return {
+                  name: depName, // Return the full scoped name
+                  version: depVersion,
+                  packagePath: pkg.packageData.path,
+                  isDevDependency: false,
+                };
+              }
+            }
+          }
+        }
+
+        // Check for partial match in dev dependencies
+        if (devDependencies) {
+          for (const [depName, depVersion] of Object.entries(devDependencies)) {
+            if (depName.includes('/')) {
+              const baseDepName = depName.split('/').pop();
+              if (baseDepName === dependencyId) {
+                return {
+                  name: depName, // Return the full scoped name
+                  version: depVersion,
+                  packagePath: pkg.packageData.path,
+                  isDevDependency: true,
+                };
+              }
+            }
+          }
         }
       }
 
@@ -1123,12 +1157,15 @@ export class RepositoryMonitoringServer {
 
         // Check if any package in this repo matches the dependency ID
         for (const pkg of packagesResult.packages) {
-          if (pkg.packageData.name === dependencyId) {
+          const packageName = pkg.packageData.name;
+
+          // Exact match
+          if (packageName === dependencyId) {
             // Found a matching package! Create AlexandriaEntry-like info
             const gitInfo = await this.getBasicGitInfo(repoPath);
 
             return {
-              name: pkg.packageData.name || dependencyId,
+              name: packageName || dependencyId,
               path: repoPath,
               description: `Local package: ${dependencyId}`,
               remoteUrl: gitInfo?.remoteUrl,
@@ -1137,6 +1174,25 @@ export class RepositoryMonitoringServer {
               lastCommitAuthor: gitInfo?.lastCommitAuthor,
               lastCommitHash: gitInfo?.lastCommitHash,
             };
+          }
+
+          // Partial match for scoped packages (e.g., "industry-themed-monaco-editor" matches "@principal-ade/industry-themed-monaco-editor")
+          if (packageName && packageName.includes('/')) {
+            const basePackageName = packageName.split('/').pop();
+            if (basePackageName === dependencyId) {
+              const gitInfo = await this.getBasicGitInfo(repoPath);
+
+              return {
+                name: packageName,
+                path: repoPath,
+                description: `Local package: ${packageName}`,
+                remoteUrl: gitInfo?.remoteUrl,
+                lastCommit: gitInfo?.lastCommit,
+                lastCommitMessage: gitInfo?.lastCommitMessage,
+                lastCommitAuthor: gitInfo?.lastCommitAuthor,
+                lastCommitHash: gitInfo?.lastCommitHash,
+              };
+            }
           }
         }
 

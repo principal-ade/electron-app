@@ -22,7 +22,7 @@
     "@excalidraw/excalidraw": "^0.18.0",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
-    "@principal-ade/industry-themed-monaco-editor": "^0.1.6",
+    "@principal-ade/industry-themed-monaco-editor": "^0.1.8",
     "@principal-ai/agent-monitoring": "^0.3.8",
     "@principal-ai/agent-monitoring-ui": "^0.1.6",
     "@principal-ai/code-city-builder": "^0.1.0",

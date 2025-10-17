@@ -217,19 +217,38 @@ export class ActRunnerService extends EventEmitter {
       return true;
     }
 
-    const candidates = [this.preferredBinary, 'act'].filter(
-      (value): value is string =>
-        typeof value === 'string' && value.trim().length > 0,
-    );
+    // Try candidates in priority order:
+    // 1. User-specified path (explicit user preference takes priority)
+    // 2. Bundled binary (guaranteed to work in packaged app)
+    // 3. System-installed 'act' in PATH (fallback for dev/advanced users)
+
+    const candidates: string[] = [];
+
+    // Add user-specified path first if provided
+    if (this.preferredBinary && this.preferredBinary.trim().length > 0) {
+      candidates.push(this.preferredBinary);
+    }
+
+    // Add bundled binary as primary option for packaged apps
+    const { EnvironmentConfig } = await import('../../utils/environmentConfig');
+    const bundledPath = await EnvironmentConfig.getBundledActPath();
+    if (bundledPath) {
+      candidates.push(bundledPath);
+    }
+
+    // Fall back to system PATH
+    candidates.push('act');
 
     for (const candidate of candidates) {
       const resolved = await this.probeBinary(candidate);
       if (resolved) {
         this.resolvedBinary = resolved;
+        console.log(`[ActRunnerService] Using act binary: ${resolved}`);
         return true;
       }
     }
 
+    console.warn('[ActRunnerService] No act binary found in any location');
     return false;
   }
 

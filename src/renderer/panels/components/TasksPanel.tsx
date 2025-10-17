@@ -168,6 +168,35 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
     [repositoryPath],
   );
 
+  const handleCompleteTask = useCallback(
+    async (task: Task, event: React.MouseEvent) => {
+      event.stopPropagation(); // Prevent task click when completing
+
+      const confirmed = window.confirm(
+        `Mark this task as completed?\n\n${getTaskTitle(task.content)}`,
+      );
+      if (!confirmed) return;
+
+      try {
+        const success = await PalaceTasksService.updateTaskStatus(
+          repositoryPath,
+          task.id,
+          'completed',
+        );
+        if (success) {
+          // Remove the task from the local state (since it's completed and we only show pending)
+          setTasks((prevTasks) => prevTasks.filter((t) => t.id !== task.id));
+        } else {
+          setError('Failed to complete task');
+        }
+      } catch (err) {
+        console.error('Failed to complete task:', err);
+        setError('Failed to complete task');
+      }
+    },
+    [repositoryPath],
+  );
+
   const handleCopyPath = useCallback(
     async (task: Task, event: React.MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation(); // Prevent task click when copying
@@ -361,6 +390,33 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                         {task.priority}
                       </span>
                     )}
+                    <button
+                      onClick={(e) => handleCompleteTask(task, e)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: '4px',
+                        cursor: 'pointer',
+                        color: theme.colors.textSecondary,
+                        display: 'flex',
+                        alignItems: 'center',
+                        borderRadius: '4px',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}15`;
+                        e.currentTarget.style.color =
+                          theme.colors.success || '#10b981';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color =
+                          theme.colors.textSecondary;
+                      }}
+                      title="Mark as completed"
+                    >
+                      <CheckCircle2 size={14} />
+                    </button>
                     <button
                       onClick={(e) => handleCopyPath(task, e)}
                       style={{

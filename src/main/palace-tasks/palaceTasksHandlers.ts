@@ -70,20 +70,54 @@ export function registerPalaceTasksHandlers() {
   );
 
   // Update task status
-  // TODO: Waiting on @a24z/core-library to implement updateTaskStatus method
-  // Dependency task submitted - see .alexandria/work/tasks/active/
   ipcMain.handle(
     PalaceTasksAPIEvent.UPDATE_TASK_STATUS,
     async (
       _event,
-      _repositoryPath: string,
-      _taskId: string,
-      _status: TaskStatus,
+      repositoryPath: string,
+      taskId: string,
+      status: TaskStatus,
     ): Promise<boolean> => {
-      console.warn(
-        '[PalaceTasksHandlers] updateTaskStatus not yet implemented in @a24z/core-library',
-      );
-      return false;
+      try {
+        const fsAdapter = new NodeFileSystemAdapter();
+        const validatedPath = MemoryPalace.validateRepositoryPath(
+          fsAdapter,
+          repositoryPath,
+        ) as ValidatedRepositoryPath;
+        const palace = new MemoryPalace(validatedPath, fsAdapter);
+
+        // Handle different status transitions
+        switch (status) {
+          case 'completed': {
+            // For UI-triggered completions, use a placeholder git reference
+            const gitRefs = {
+              commitSha: 'manual-completion-' + Date.now(),
+              branch: 'unknown',
+            };
+            const result = palace.completeTask(taskId, gitRefs);
+            return result !== null;
+          }
+          case 'failed': {
+            const result = palace.failTask(taskId, 'Marked as failed from UI');
+            return result !== null;
+          }
+          case 'in_progress': {
+            const result = palace.startWorkingOnTask(taskId, 'ui-user');
+            return result !== null;
+          }
+          default:
+            console.warn(
+              `[PalaceTasksHandlers] Status '${status}' not supported for update`,
+            );
+            return false;
+        }
+      } catch (error) {
+        console.error(
+          '[PalaceTasksHandlers] Error updating task status:',
+          error,
+        );
+        return false;
+      }
     },
   );
 

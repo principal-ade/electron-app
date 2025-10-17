@@ -55,6 +55,54 @@ export class EnvironmentConfig {
     return path.join(RESOURCES_PATH, ...paths);
   }
 
+  /**
+   * Get bundled binary path that works in both environments
+   * In packaged app: resources/bin/
+   * In dev: resources/bin/ (if downloaded)
+   */
+  static getBundledBinaryPath(...paths: string[]): string {
+    if (!app) {
+      throw new Error('EnvironmentConfig.getBundledBinaryPath() cannot be used in worker context');
+    }
+    const RESOURCES_PATH = app.isPackaged
+      ? path.join(process.resourcesPath, 'bin')
+      : path.join(__dirname, '../../resources/bin');
+    return path.join(RESOURCES_PATH, ...paths);
+  }
+
+  /**
+   * Get the bundled act binary path for the current platform
+   * Returns null if the binary doesn't exist
+   */
+  static async getBundledActPath(): Promise<string | null> {
+    const fs = require('fs/promises');
+    const { constants: fsConstants } = require('fs');
+
+    let binaryName: string;
+
+    switch (process.platform) {
+      case 'darwin':
+        binaryName = process.arch === 'arm64' ? 'act-darwin-arm64' : 'act-darwin-x64';
+        break;
+      case 'linux':
+        binaryName = process.arch === 'arm64' ? 'act-linux-arm64' : 'act-linux-x64';
+        break;
+      case 'win32':
+        binaryName = 'act-win32-x64.exe';
+        break;
+      default:
+        return null;
+    }
+
+    try {
+      const binaryPath = this.getBundledBinaryPath(binaryName);
+      await fs.access(binaryPath, fsConstants.X_OK);
+      return binaryPath;
+    } catch {
+      return null;
+    }
+  }
+
   static getHomeDir(): string {
     return os.homedir();
   }
