@@ -1,0 +1,442 @@
+{
+  "elements": [
+    {
+      "id": "OiMJsiAPBsukG8F6GqOsU",
+      "type": "rectangle",
+      "x": 79.87109375,
+      "y": 267.69921875,
+      "width": 220.74609375,
+      "height": 128.36328125,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "a0",
+      "roundness": {
+        "type": 3
+      },
+      "seed": 466267221,
+      "version": 75,
+      "versionNonce": 25779669,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "XCbM6LWyaiHio-aBUl5IQ",
+          "type": "arrow"
+        },
+        {
+          "id": "68DFQRAJe1OYHEmB4qCwf",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1760721398952,
+      "link": null,
+      "locked": false
+    },
+    {
+      "id": "t0DSWZ5ggOZhEh8ClBxJY",
+      "type": "rectangle",
+      "x": 469.544921875,
+      "y": 267.552734375,
+      "width": 220.74609375,
+      "height": 128.36328125,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "a1",
+      "roundness": {
+        "type": 3
+      },
+      "seed": 1999395419,
+      "version": 170,
+      "versionNonce": 1259887227,
+      "isDeleted": false,
+      "boundElements": [
+        {
+          "id": "XCbM6LWyaiHio-aBUl5IQ",
+          "type": "arrow"
+        },
+        {
+          "id": "68DFQRAJe1OYHEmB4qCwf",
+          "type": "arrow"
+        }
+      ],
+      "updated": 1760721396355,
+      "link": null,
+      "locked": false
+    },
+    {
+      "id": "XCbM6LWyaiHio-aBUl5IQ",
+      "type": "arrow",
+      "x": 317.65234375,
+      "y": 322.67578125,
+      "width": 133.62890625,
+      "height": 0.28515625,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "a2",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 587810235,
+      "version": 176,
+      "versionNonce": 978176501,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1760721392121,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          133.62890625,
+          -0.28515625
+        ]
+      ],
+      "lastCommittedPoint": null,
+      "startBinding": {
+        "elementId": "OiMJsiAPBsukG8F6GqOsU",
+        "focus": -0.13867725729222877,
+        "gap": 17.03515625
+      },
+      "endBinding": {
+        "elementId": "t0DSWZ5ggOZhEh8ClBxJY",
+        "focus": 0.14931194865522945,
+        "gap": 18.263671875
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false
+    },
+    {
+      "id": "Z8oT89VKdyWJ_YO152P--",
+      "type": "text",
+      "x": 220.85546875,
+      "y": 192.33984375,
+      "width": 359.677734375,
+      "height": 25,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "a3",
+      "roundness": null,
+      "seed": 1958878133,
+      "version": 113,
+      "versionNonce": 1853657275,
+      "isDeleted": false,
+      "boundElements": null,
+      "updated": 1760721389774,
+      "link": null,
+      "locked": false,
+      "text": "Chat With Principal Engineer Through Slack",
+      "fontSize": 20,
+      "fontFamily": 5,
+      "textAlign": "left",
+      "verticalAlign": "top",
+      "containerId": null,
+      "originalText": "Chat With Principal Engineer Through Slack",
+      "autoResize": true,
+      "lineHeight": 1.25
+    },
+    {
+      "id": "68DFQRAJe1OYHEmB4qCwf",
+      "type": "arrow",
+      "x": 453.9040135810338,
+      "y": 354.13492927084855,
+      "width": 143.32421875,
+      "height": 0.5625,
+      "angle": 0,
+      "strokeColor": "#1e1e1e",
+      "backgroundColor": "transparent",
+      "fillStyle": "solid",
+      "strokeWidth": 2,
+      "strokeStyle": "solid",
+      "roughness": 1,
+      "opacity": 100,
+      "groupIds": [],
+      "frameId": null,
+      "index": "a4",
+      "roundness": {
+        "type": 2
+      },
+      "seed": 657819771,
+      "version": 364,
+      "versionNonce": 1035054229,
+      "isDeleted": false,
+      "boundElements": [],
+      "updated": 1760721398953,
+      "link": null,
+      "locked": false,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -143.32421875,
+          0.5625
+        ]
+      ],
+      "lastCommittedPoint": null,
+      "startBinding": {
+        "elementId": "t0DSWZ5ggOZhEh8ClBxJY",
+        "focus": -0.3390242659264747,
+        "gap": 15.64090829396622
+      },
+      "endBinding": {
+        "elementId": "OiMJsiAPBsukG8F6GqOsU",
+        "focus": 0.3604257978830599,
+        "gap": 9.96260733103378
+      },
+      "startArrowhead": null,
+      "endArrowhead": "arrow",
+      "elbowed": false
+    }
+  ],
+  "appState": {
+    "showWelcomeScreen": true,
+    "theme": "dark",
+    "currentChartType": "bar",
+    "currentItemBackgroundColor": "transparent",
+    "currentItemEndArrowhead": "arrow",
+    "currentItemFillStyle": "solid",
+    "currentItemFontFamily": 5,
+    "currentItemFontSize": 20,
+    "currentItemOpacity": 100,
+    "currentItemRoughness": 1,
+    "currentItemStartArrowhead": null,
+    "currentItemStrokeColor": "#1e1e1e",
+    "currentItemRoundness": "round",
+    "currentItemArrowType": "round",
+    "currentItemStrokeStyle": "solid",
+    "currentItemStrokeWidth": 2,
+    "currentItemTextAlign": "left",
+    "currentHoveredFontFamily": null,
+    "cursorButton": "up",
+    "activeEmbeddable": null,
+    "newElement": null,
+    "editingTextElement": null,
+    "editingGroupId": null,
+    "editingLinearElement": null,
+    "activeTool": {
+      "type": "selection",
+      "customType": null,
+      "locked": false,
+      "lastActiveTool": null
+    },
+    "penMode": false,
+    "penDetected": false,
+    "errorMessage": null,
+    "exportBackground": true,
+    "exportScale": 2,
+    "exportEmbedScene": false,
+    "exportWithDarkMode": false,
+    "fileHandle": null,
+    "gridSize": 20,
+    "gridStep": 5,
+    "gridModeEnabled": false,
+    "isBindingEnabled": true,
+    "defaultSidebarDockedPreference": false,
+    "isLoading": false,
+    "isResizing": false,
+    "isRotating": false,
+    "lastPointerDownWith": "mouse",
+    "multiElement": null,
+    "name": "Slack Integration",
+    "contextMenu": null,
+    "openMenu": null,
+    "openPopup": null,
+    "openSidebar": null,
+    "openDialog": null,
+    "pasteDialog": {
+      "shown": false,
+      "data": null
+    },
+    "previousSelectedElementIds": {
+      "68DFQRAJe1OYHEmB4qCwf": true
+    },
+    "resizingElement": null,
+    "scrolledOutside": false,
+    "selectedElementIds": {
+      "68DFQRAJe1OYHEmB4qCwf": true
+    },
+    "hoveredElementIds": {},
+    "selectedGroupIds": {},
+    "selectedElementsAreBeingDragged": false,
+    "selectionElement": null,
+    "shouldCacheIgnoreZoom": false,
+    "stats": {
+      "open": false,
+      "panels": 3
+    },
+    "startBoundElement": null,
+    "suggestedBindings": [],
+    "frameRendering": {
+      "enabled": true,
+      "clip": true,
+      "name": true,
+      "outline": true
+    },
+    "frameToHighlight": null,
+    "editingFrame": null,
+    "elementsToHighlight": null,
+    "toast": null,
+    "viewBackgroundColor": "#ffffff",
+    "zenModeEnabled": false,
+    "zoom": {
+      "value": 1
+    },
+    "viewModeEnabled": false,
+    "pendingImageElementId": null,
+    "showHyperlinkPopup": false,
+    "selectedLinearElement": {
+      "elementId": "68DFQRAJe1OYHEmB4qCwf",
+      "selectedPointsIndices": null,
+      "pointerDownState": {
+        "prevSelectedPointsIndices": null,
+        "lastClickedPoint": 1,
+        "lastClickedIsEndPoint": true,
+        "origin": {
+          "x": 450.6015625,
+          "y": 327.8828125
+        },
+        "segmentMidpoint": {
+          "value": null,
+          "index": null,
+          "added": false
+        }
+      },
+      "isDragging": false,
+      "lastUncommittedPoint": null,
+      "pointerOffset": {
+        "x": 0,
+        "y": 0
+      },
+      "startBindingElement": {
+        "id": "t0DSWZ5ggOZhEh8ClBxJY",
+        "type": "rectangle",
+        "x": 469.544921875,
+        "y": 267.552734375,
+        "width": 220.74609375,
+        "height": 128.36328125,
+        "angle": 0,
+        "strokeColor": "#1e1e1e",
+        "backgroundColor": "transparent",
+        "fillStyle": "solid",
+        "strokeWidth": 2,
+        "strokeStyle": "solid",
+        "roughness": 1,
+        "opacity": 100,
+        "groupIds": [],
+        "frameId": null,
+        "index": "a1",
+        "roundness": {
+          "type": 3
+        },
+        "seed": 1999395419,
+        "version": 170,
+        "versionNonce": 1259887227,
+        "isDeleted": false,
+        "boundElements": [
+          {
+            "id": "XCbM6LWyaiHio-aBUl5IQ",
+            "type": "arrow"
+          },
+          {
+            "id": "68DFQRAJe1OYHEmB4qCwf",
+            "type": "arrow"
+          }
+        ],
+        "updated": 1760721396355,
+        "link": null,
+        "locked": false
+      },
+      "endBindingElement": {
+        "id": "OiMJsiAPBsukG8F6GqOsU",
+        "type": "rectangle",
+        "x": 79.87109375,
+        "y": 267.69921875,
+        "width": 220.74609375,
+        "height": 128.36328125,
+        "angle": 0,
+        "strokeColor": "#1e1e1e",
+        "backgroundColor": "transparent",
+        "fillStyle": "solid",
+        "strokeWidth": 2,
+        "strokeStyle": "solid",
+        "roughness": 1,
+        "opacity": 100,
+        "groupIds": [],
+        "frameId": null,
+        "index": "a0",
+        "roundness": {
+          "type": 3
+        },
+        "seed": 466267221,
+        "version": 75,
+        "versionNonce": 25779669,
+        "isDeleted": false,
+        "boundElements": [
+          {
+            "id": "XCbM6LWyaiHio-aBUl5IQ",
+            "type": "arrow"
+          },
+          {
+            "id": "68DFQRAJe1OYHEmB4qCwf",
+            "type": "arrow"
+          }
+        ],
+        "updated": 1760721398952,
+        "link": null,
+        "locked": false
+      },
+      "hoverPointIndex": -1,
+      "segmentMidPointHoveredCoords": null,
+      "elbowed": false
+    },
+    "snapLines": [],
+    "originSnapOffset": null,
+    "objectsSnapModeEnabled": false,
+    "userToFollow": null,
+    "followedBy": {},
+    "isCropping": false,
+    "croppingElementId": null,
+    "searchMatches": []
+  },
+  "files": {},
+  "libraryItems": [],
+  "type": "excalidraw",
+  "version": 2,
+  "source": "Principal ADE"
+}

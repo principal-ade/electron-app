@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.89",
+  "version": "0.0.90",
   "description": "Principal ADE - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -170,7 +170,7 @@
     "@excalidraw/math": "^0.18.0-f0063e113",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
-    "@principal-ade/industry-themed-monaco-editor": "^0.1.6",
+    "@principal-ade/industry-themed-monaco-editor": "^0.1.7",
     "@principal-ai/agent-monitoring": "^0.3.9",
     "@principal-ai/agent-monitoring-ui": "^0.1.6",
     "@principal-ai/code-city-builder": "^0.1.0",
