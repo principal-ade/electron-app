@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { X, ExternalLink } from 'lucide-react';
-import { FileViewer } from '../../components/FileViewer';
+import { HeadlessFileEditorPanel } from '../../panels/components/HeadlessFileEditorPanel';
 import { ContentProvider } from '../../services/ContentProviders';
 
 interface RemoteFileViewerModalProps {
@@ -247,14 +247,12 @@ export const RemoteFileViewerModal: React.FC<RemoteFileViewerModalProps> = ({
             borderRadius: '12px',
           }}
         >
-          <FileViewer
+          <HeadlessFileEditorPanel
             key={relativePath} // Force remount when file changes
             filePath={relativePath}
-            displayPath={relativePath}
-            className="full-height"
             contentLoader={contentLoader}
             editable={false}
-            enableVimMode={false}
+            vimModeOverride={false}
           />
         </div>
       </div>

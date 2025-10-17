@@ -19,7 +19,7 @@ import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { useTheme } from '@a24z/industry-theme';
 
-import { FileViewer } from '../components/FileViewer';
+import { HeadlessFileEditorPanel } from '../panels/components/HeadlessFileEditorPanel';
 import { StoreViewerTitlebar } from '../components/Titlebar';
 import { StoreService } from '../main-process-api/StoreService';
 import { AgentSessionEventsService } from '../main-process-api/AgentSessionEventsService';
@@ -768,11 +768,11 @@ export const StoreViewer: React.FC<StoreViewerProps> = () => {
         </div>
         {/* File Viewer */}
         <div className="flex-1 overflow-hidden">
-          <FileViewer
+          <HeadlessFileEditorPanel
             key={storePath} // Force remount when path changes
             filePath={storePath}
             editable={false}
-            enableVimMode={false}
+            vimModeOverride={false}
           />
         </div>
       </div>

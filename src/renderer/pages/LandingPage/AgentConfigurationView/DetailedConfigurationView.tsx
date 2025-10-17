@@ -19,7 +19,7 @@ import { AgentConfigurationService } from '../../../main-process-api/AgentConfig
 
 import { HooksGrid } from './HooksGrid';
 import { HooksToggle } from './HooksToggle';
-import { WatchingFileViewer } from './WatchingFileViewer';
+import { HeadlessFileEditorPanel } from '../../../panels/components/HeadlessFileEditorPanel';
 
 // =============================================================================
 // TYPES
@@ -1128,14 +1128,12 @@ export const DetailedConfigurationView: React.FC<
 
         if (fileExists) {
           return (
-            <WatchingFileViewer
+            <HeadlessFileEditorPanel
               filePath={filePath}
-              className="h-full"
               editable={isEditMode}
               onSave={handleSaveConfig}
               onModifiedChange={setHasUnsavedChanges}
               onContentChange={setCurrentFileContent}
-              hideInternalSaveButton
             />
           );
         }

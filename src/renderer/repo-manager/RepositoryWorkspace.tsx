@@ -134,27 +134,30 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       Record<string, any>
     >({});
 
-    // Panel layout state - default layout
+    // Panel layout state - default layout ('old-school' workspace)
     const [panelLayout, setPanelLayout] = useState<PanelLayout>({
       left: {
         type: 'tabs',
-        panels: ['fileTree', 'docs'],
+        panels: ['fileTree', 'search', 'gitChanges', 'docs'],
         config: {
           defaultActiveTab: 0,
+          tabPosition: 'top',
         },
       },
-      middle: 'tabbedTerminal',
-      right: {
+      middle: {
         type: 'tabs',
-        panels: [
-          'cityVisualization',
-          'agentEvents',
-          'codeViewer',
-          'markdownViewer',
-          'excalidrawDiagram',
-        ],
+        panels: ['codeViewer', 'markdownViewer'],
         config: {
           defaultActiveTab: 0,
+          tabPosition: 'top',
+        },
+      },
+      right: {
+        type: 'tabs',
+        panels: ['multiTerminal', 'cityVisualization'],
+        config: {
+          defaultActiveTab: 0,
+          tabPosition: 'top',
         },
       },
     });
@@ -226,16 +229,16 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [panelCollapsedState, setPanelCollapsedState] = useState<{
       left?: boolean;
       right?: boolean;
-    }>({ left: false, right: false });
+    }>({ left: false, right: true }); // 'old-school' default: right collapsed
     const [panelSizes, setPanelSizes] = useState<{
       left: number;
       middle: number;
       right: number;
     }>({
       left: 20,
-      middle: 45,
-      right: 35,
-    });
+      middle: 50,
+      right: 30,
+    }); // 'old-school' default sizes
     const [panelPreferencesLoaded, setPanelPreferencesLoaded] = useState(false);
 
     // Panel content state (from DevelopmentWorkspace)
@@ -2529,27 +2532,27 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   },
                 ];
 
-                // Default layout
+                // Default layout (fallback - matches 'old-school' workspace)
                 const defaultLayout: PanelLayout = {
                   left: {
                     type: 'tabs',
-                    panels: ['fileTree', 'search', 'docs'],
+                    panels: ['fileTree', 'search', 'gitChanges', 'docs'],
                     config: {
                       defaultActiveTab: 0,
                       tabPosition: 'top',
                     } as TabsConfig,
                   },
-                  middle: 'tabbedTerminal',
+                  middle: {
+                    type: 'tabs',
+                    panels: ['codeViewer', 'markdownViewer'],
+                    config: {
+                      defaultActiveTab: 0,
+                      tabPosition: 'top',
+                    } as TabsConfig,
+                  },
                   right: {
                     type: 'tabs',
-                    panels: [
-                      'cityVisualization',
-                      'agentEvents',
-                      'codeViewer',
-                      'gitDiffViewer',
-                      'markdownViewer',
-                      'excalidrawDiagram',
-                    ],
+                    panels: ['multiTerminal', 'cityVisualization'],
                     config: {
                       defaultActiveTab: 0,
                       tabPosition: 'top',

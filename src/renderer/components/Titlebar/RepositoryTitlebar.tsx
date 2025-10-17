@@ -444,10 +444,10 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             WebkitAppRegion:
               'no-drag' as React.CSSProperties['WebkitAppRegion'],
             background: mainWindowMinimized
-              ? theme.colors.backgroundTertiary
-              : 'transparent',
+              ? 'transparent'
+              : theme.colors.backgroundTertiary,
             border: 'none',
-            color: mainWindowMinimized ? theme.colors.text : theme.colors.muted,
+            color: mainWindowMinimized ? theme.colors.muted : theme.colors.text,
             cursor: 'pointer',
             padding: '6px',
             borderRadius: '4px',
@@ -464,7 +464,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             e.currentTarget.style.color = theme.colors.text;
           }}
           onMouseLeave={(e) => {
-            if (!mainWindowMinimized) {
+            if (mainWindowMinimized) {
               e.currentTarget.style.backgroundColor = 'transparent';
               e.currentTarget.style.color = theme.colors.muted;
             } else {
