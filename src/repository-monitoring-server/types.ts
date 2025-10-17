@@ -37,6 +37,7 @@ export enum MonitoringInternalEvent {
   GIT_STATE_EVENT = 'git-state-event',
   WORKSPACE_CHANGED = 'workspace-change',
   CACHE_SYNC = 'cache-sync',
+  BUILD_ARTIFACTS_DETECTED = 'build-artifacts-detected',
 }
 
 /**
@@ -223,6 +224,15 @@ export interface WorkspaceChangeEventPayload {
   repoPath: string;
   state?: GitState;
   changes?: FileChange[];
+}
+
+/**
+ * Build artifacts detected event payload
+ */
+export interface BuildArtifactsDetectedPayload {
+  repoPath: string;
+  artifacts: string[];
+  timestamp: number;
 }
 
 /**

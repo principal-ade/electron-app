@@ -152,6 +152,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   // File color state - default to showing file colors
   const [showFileColors, setShowFileColors] = useState(true);
 
+  // Build artifacts state
+  const [buildArtifacts, setBuildArtifacts] = useState<string[]>([]);
+  const [showArtifactsWarning, setShowArtifactsWarning] = useState(false);
+
   const cityService = useMemo(() => RepositoryCityService.getInstance(), []);
 
   // State for nested panel collapse
@@ -621,8 +625,37 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     };
   }, []);
 
+  // Listen for build artifacts detected events
+  useEffect(() => {
+    console.info('[RepositoryDetailsPanel] Setting up build artifacts listener');
+
+    const unsubscribe = RepositoryMonitoringService.onBuildArtifactsDetected(
+      (payload) => {
+        console.info('[RepositoryDetailsPanel] Build artifacts event received:', {
+          eventRepoPath: payload.repoPath,
+          selectedRepoPath: selectedRepository?.path,
+          artifacts: payload.artifacts,
+        });
+
+        if (selectedRepository?.path && payload.repoPath === selectedRepository.path) {
+          console.info('[RepositoryDetailsPanel] Showing build artifacts warning');
+          setBuildArtifacts(payload.artifacts);
+          setShowArtifactsWarning(true);
+        }
+      }
+    );
+
+    return () => {
+      console.info('[RepositoryDetailsPanel] Removing build artifacts listener');
+      unsubscribe();
+    };
+  }, [selectedRepository?.path]);
+
   useEffect(() => {
     setRunningActionId(null);
+    // Clear artifacts warning when repository changes
+    setBuildArtifacts([]);
+    setShowArtifactsWarning(false);
   }, [repositoryId]);
 
   const checkForUpdates = useCallback(async () => {
@@ -1374,6 +1407,126 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                           ) : null;
                         })}
                       </div>
+
+                      {/* TEMP: Test button to manually trigger warning */}
+                      <button
+                        onClick={() => {
+                          console.info('[RepositoryDetailsPanel] TEST: Manually triggering artifacts warning');
+                          setBuildArtifacts(['test/artifact1.txt', 'test/artifact2.cache']);
+                          setShowArtifactsWarning(true);
+                        }}
+                        style={{
+                          marginTop: '16px',
+                          padding: '8px 16px',
+                          backgroundColor: theme.colors.primary,
+                          color: theme.colors.background,
+                          border: 'none',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        TEST: Show Artifacts Warning
+                      </button>
+
+                      {/* Build Artifacts Warning - Show when unignored artifacts detected */}
+                      {showArtifactsWarning && buildArtifacts.length > 0 && (
+                        <div
+                          style={{
+                            marginTop: '16px',
+                            padding: '16px',
+                            backgroundColor: theme.colors.backgroundSecondary,
+                            borderRadius: '8px',
+                            border: `2px solid ${theme.colors.warning || '#f59e0b'}`,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'flex-start',
+                              marginBottom: '12px',
+                            }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <h3
+                                style={{
+                                  margin: 0,
+                                  fontSize: '14px',
+                                  fontWeight: 600,
+                                  color: theme.colors.warning || '#f59e0b',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                }}
+                              >
+                                <span>⚠️</span>
+                                Unignored Build Artifacts Detected
+                              </h3>
+                              <p
+                                style={{
+                                  margin: '8px 0 0 0',
+                                  fontSize: '12px',
+                                  color: theme.colors.textSecondary,
+                                }}
+                              >
+                                Quality lens execution created files that triggered a rebuild cycle.
+                                Consider adding these to your .gitignore to prevent feedback loops.
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setShowArtifactsWarning(false);
+                                setBuildArtifacts([]);
+                              }}
+                              style={{
+                                padding: '4px 8px',
+                                fontSize: '12px',
+                                backgroundColor: 'transparent',
+                                border: `1px solid ${theme.colors.border}`,
+                                borderRadius: '4px',
+                                color: theme.colors.textSecondary,
+                                cursor: 'pointer',
+                                marginLeft: '12px',
+                              }}
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                          <div
+                            style={{
+                              fontFamily: 'monospace',
+                              fontSize: '11px',
+                              backgroundColor: theme.colors.background,
+                              padding: '12px',
+                              borderRadius: '4px',
+                              maxHeight: '200px',
+                              overflowY: 'auto',
+                              color: theme.colors.text,
+                            }}
+                          >
+                            {buildArtifacts.map((artifact, i) => (
+                              <div
+                                key={`${artifact}-${i}`}
+                                style={{
+                                  marginBottom: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    color: theme.colors.warning || '#f59e0b',
+                                  }}
+                                >
+                                  •
+                                </span>
+                                {artifact}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Workflow Output Console - Always shown when there's output */}
                       {workflowOutput.length > 0 && (

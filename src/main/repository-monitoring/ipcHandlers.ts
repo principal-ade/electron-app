@@ -462,5 +462,22 @@ export function registerRepositoryMonitoringHandlers(): void {
     },
   );
 
+  // Forward build artifacts detected events to renderer windows
+  manager.on(
+    MonitoringInternalEvent.BUILD_ARTIFACTS_DETECTED,
+    (payload: import('../../shared/main-process-api-interfaces/RepositoryMonitoringAPI').BuildArtifactsDetectedPayload) => {
+      console.log(
+        `[RepositoryMonitoring] Forwarding build artifacts detected to renderer: ${payload.repoPath} - ${payload.artifacts.length} artifacts`,
+      );
+      const windows = BrowserWindow.getAllWindows();
+      windows.forEach((window) => {
+        window.webContents.send(
+          RepositoryMonitoringAPIEvent.BUILD_ARTIFACTS_DETECTED,
+          payload,
+        );
+      });
+    },
+  );
+
   console.log('[RepositoryMonitoring] IPC handlers registered');
 }

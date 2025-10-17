@@ -135,6 +135,7 @@ export enum RepositoryMonitoringAPIEvent {
   GET_CACHE_SNAPSHOT = 'repository-monitoring:get-cache-snapshot',
   GET_GIT_REMOTE_INFO = 'repository-monitoring:get-git-remote-info',
   INVALIDATE_GIT_REMOTE_CACHE = 'repository-monitoring:invalidate-git-remote-cache',
+  BUILD_ARTIFACTS_DETECTED = 'repository-monitoring:build-artifacts-detected',
 }
 
 export interface RepositoryMonitoringResult {
@@ -190,6 +191,12 @@ export interface WorkspaceChangeEventPayload {
   changes?: FileChange[];
 }
 
+export interface BuildArtifactsDetectedPayload {
+  repoPath: string;
+  artifacts: string[];
+  timestamp: number;
+}
+
 export interface MonitoringStatus {
   repositories: RepositoryInfo[]; // List of registered repositories with details
   currentMemory: number; // Current RSS in bytes
@@ -220,6 +227,9 @@ export interface RepositoryMonitoringAPI {
     callback: (event: WorkspaceChangeEventPayload) => void,
   ): () => void;
   onCacheSync(callback: (event: RepositoryCacheSyncEvent) => void): () => void;
+  onBuildArtifactsDetected(
+    callback: (payload: BuildArtifactsDetectedPayload) => void,
+  ): () => void;
   executeTool(request: ToolExecutionRequest): Promise<ToolExecutionResponse>;
   getGitRemoteInfo(repoPath: string): Promise<GitRemoteInfo | null>;
   invalidateGitRemoteCache(

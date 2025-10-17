@@ -2,6 +2,7 @@ import { ipcMain, net } from 'electron';
 import { GitRepositoryService } from './gitRepositoryService';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { GitEvents } from '../../shared/main-process-api-interfaces/GitAPI';
+import { GitRemoteService } from '../../repository-monitoring-server/GitRemoteService';
 
 // Create a single instance of the git service
 const gitService = new GitRepositoryService();
@@ -353,105 +354,38 @@ export function registerGitHandlers(): void {
     GitEvents.CHECK_AUTH_METHODS,
     async (_event, remoteUrl: string) => {
       try {
+        console.log(
+          `[gitHandlers] Checking auth methods for ${remoteUrl} using GitRemoteService`,
+        );
+
+        // Use GitRemoteService for non-blocking auth check
+        const authResult = await GitRemoteService.checkAuthMethods(remoteUrl);
+
         const result = {
-          ssh: { available: false, reason: '' },
-          https: { available: false, reason: '' },
+          ssh: authResult.ssh,
+          https: authResult.https,
           suggestions: [] as string[],
         };
 
-        // Extract owner/repo and service from ANY input format
-        let service = '';
-        let owner = '';
-        let repo = '';
-
-        // First, normalize if it's a browser URL (remove /tree/, /blob/, etc)
-        let cleanUrl = remoteUrl.replace(/\/+$/, '');
-        const patterns = [
-          '/tree/',
-          '/blob/',
-          '/commits/',
-          '/pulls',
-          '/issues',
-          '/wiki',
-          '/settings',
-          '/actions',
-        ];
-        for (const pattern of patterns) {
-          const index = cleanUrl.indexOf(pattern);
-          if (index !== -1) {
-            cleanUrl = cleanUrl.substring(0, index);
-            break;
-          }
+        // Extract service for better error messages
+        let service = 'git';
+        if (remoteUrl.includes('github.com')) {
+          service = 'github.com';
+        } else if (remoteUrl.includes('gitlab.com')) {
+          service = 'gitlab.com';
+        } else if (remoteUrl.includes('bitbucket.org')) {
+          service = 'bitbucket.org';
         }
-
-        // Try to extract from SSH format (git@service:owner/repo.git)
-        let match = cleanUrl.match(/git@([^:]+):([^/]+)\/(.+?)(?:\.git)?$/);
-        if (match) {
-          service = match[1];
-          owner = match[2];
-          repo = match[3].replace(/\.git$/, '');
-        }
-
-        // Try to extract from HTTPS format (https://service/owner/repo.git)
-        if (!owner) {
-          match = cleanUrl.match(
-            /https?:\/\/([^/]+)\/([^/]+)\/([^/.]+)(?:\.git)?/,
-          );
-          if (match) {
-            service = match[1];
-            owner = match[2];
-            repo = match[3].replace(/\.git$/, '');
-          }
-        }
-
-        // Try SSH with protocol format (ssh://git@service/owner/repo.git)
-        if (!owner) {
-          match = cleanUrl.match(
-            /ssh:\/\/git@([^/]+)\/([^/]+)\/(.+?)(?:\.git)?$/,
-          );
-          if (match) {
-            service = match[1];
-            owner = match[2];
-            repo = match[3].replace(/\.git$/, '');
-          }
-        }
-
-        // If we couldn't extract owner/repo, return error
-        if (!owner || !repo || !service) {
-          return {
-            ssh: { available: false, reason: 'Could not parse repository URL' },
-            https: {
-              available: false,
-              reason: 'Could not parse repository URL',
-            },
-            suggestions: [
-              'Invalid repository URL format. Please provide a valid Git URL.',
-            ],
-          };
-        }
-
-        // Now construct both SSH and HTTPS URLs from the extracted info
-        const httpsUrl = `https://${service}/${owner}/${repo}.git`;
-        const sshUrl = `git@${service}:${owner}/${repo}.git`;
-
-        // Test both URLs in parallel for better performance
-        const [httpsTest, sshTest] = await Promise.all([
-          testGitAccess(httpsUrl),
-          testGitAccess(sshUrl),
-        ]);
-
-        result.https.available = httpsTest.accessible;
-        result.https.reason = httpsTest.message;
-        result.ssh.available = sshTest.accessible;
-        result.ssh.reason = sshTest.message;
 
         // Generate helpful suggestions based on results
         if (!result.ssh.available && !result.https.available) {
           // Neither method works - provide detailed guidance
           const isGitHubPrivate =
-            service.includes('github.com') &&
+            service === 'github.com' &&
             (result.https.reason?.includes('Authentication required') ||
-              result.ssh.reason?.includes('Authentication required'));
+              result.https.reason?.includes('private') ||
+              result.ssh.reason?.includes('Authentication required') ||
+              result.ssh.reason?.includes('private'));
 
           if (isGitHubPrivate) {
             result.suggestions.push(

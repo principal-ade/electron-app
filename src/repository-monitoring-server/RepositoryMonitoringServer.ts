@@ -50,6 +50,10 @@ export class RepositoryMonitoringServer {
   private cacheRegistry: RepositoryCacheRegistry;
   private rebuildTimers: Map<string, Map<CacheSlice, NodeJS.Timeout>> =
     new Map();
+  // Track rebuilds in progress to prevent feedback loops from quality lens artifacts
+  private rebuildInProgress: Map<string, Set<CacheSlice>> = new Map();
+  // Track unignored build artifacts detected during quality lens execution
+  private detectedBuildArtifacts: Map<string, Set<string>> = new Map();
 
   constructor() {
     this.fileTreeBuilder = new FileTreeBuilder();
@@ -287,23 +291,87 @@ export class RepositoryMonitoringServer {
   }
 
   private async buildPackagesSlice(repoPath: string) {
-    const fileTreeEntry = await this.cacheRegistry.getOrBuild(
-      repoPath,
-      'fileTree',
-      () => this.buildFileTreeSlice(repoPath),
-    );
-
-    if (!fileTreeEntry.data) {
-      throw new Error(`File tree unavailable for packages slice: ${repoPath}`);
+    // Mark rebuild as in progress to prevent feedback loops from quality lens artifacts
+    let inProgress = this.rebuildInProgress.get(repoPath);
+    if (!inProgress) {
+      inProgress = new Set();
+      this.rebuildInProgress.set(repoPath, inProgress);
     }
+    inProgress.add('packages');
 
-    const packages = await this.packageProcessor.extractPackages(
-      fileTreeEntry.data,
-      repoPath,
+    // Clear any previously detected artifacts for this repo
+    this.detectedBuildArtifacts.delete(repoPath);
+
+    console.info(
+      `[RepositoryMonitoring] Starting packages rebuild for ${repoPath}`,
     );
-    const summary = await this.packageProcessor.getPackageSummary(packages);
 
-    return { packages, summary };
+    try {
+      const fileTreeEntry = await this.cacheRegistry.getOrBuild(
+        repoPath,
+        'fileTree',
+        () => this.buildFileTreeSlice(repoPath),
+      );
+
+      if (!fileTreeEntry.data) {
+        throw new Error(
+          `File tree unavailable for packages slice: ${repoPath}`,
+        );
+      }
+
+      const packages = await this.packageProcessor.extractPackages(
+        fileTreeEntry.data,
+        repoPath,
+      );
+      const summary = await this.packageProcessor.getPackageSummary(packages);
+
+      return { packages, summary };
+    } finally {
+      // Clear in-progress flag
+      const progressSet = this.rebuildInProgress.get(repoPath);
+      if (progressSet) {
+        progressSet.delete('packages');
+        if (progressSet.size === 0) {
+          this.rebuildInProgress.delete(repoPath);
+        }
+      }
+
+      // Log any detected artifacts
+      const artifacts = this.detectedBuildArtifacts.get(repoPath);
+      if (artifacts && artifacts.size > 0) {
+        console.warn(
+          `[RepositoryMonitoring] Detected ${artifacts.size} unignored build artifacts during quality lens execution for ${repoPath}:`,
+        );
+        console.warn(
+          `[RepositoryMonitoring] Artifact paths:`,
+          Array.from(artifacts),
+        );
+        console.warn(
+          `[RepositoryMonitoring] Consider adding these to .gitignore to prevent feedback loops`,
+        );
+
+        // Emit event to notify UI about unignored artifacts
+        if (process.parentPort) {
+          const payload: import('./types').BuildArtifactsDetectedPayload = {
+            repoPath,
+            artifacts: Array.from(artifacts),
+            timestamp: Date.now(),
+          };
+
+          process.parentPort.postMessage({
+            type: 'event',
+            event: {
+              name: MonitoringInternalEvent.BUILD_ARTIFACTS_DETECTED,
+              data: payload,
+            },
+          });
+        }
+      }
+
+      console.info(
+        `[RepositoryMonitoring] Completed packages rebuild for ${repoPath}`,
+      );
+    }
   }
 
   private async buildGitStatusSlice(
@@ -763,7 +831,33 @@ export class RepositoryMonitoringServer {
   }
 
   private handleWorkspaceChangeEvent(event: WorkspaceChangeEventPayload): void {
-    const { repoPath, state: gitState } = event;
+    const { repoPath, state: gitState, changes } = event;
+
+    // Check if packages rebuild is in progress
+    const inProgress = this.rebuildInProgress.get(repoPath);
+    const packagesRebuilding = inProgress?.has('packages');
+
+    if (packagesRebuilding) {
+      // Quality lens execution detected - track artifacts but don't trigger rebuild
+      console.info(
+        `[RepositoryMonitoring] Ignoring workspace changes during package rebuild for ${repoPath} (likely quality lens artifacts)`,
+      );
+
+      // Track the files that changed during rebuild
+      if (changes && changes.length > 0) {
+        let artifacts = this.detectedBuildArtifacts.get(repoPath);
+        if (!artifacts) {
+          artifacts = new Set();
+          this.detectedBuildArtifacts.set(repoPath, artifacts);
+        }
+        // Add all changed file paths to the artifacts set
+        const artifactsSet = artifacts;
+        changes.forEach((change) => artifactsSet.add(change.path));
+      }
+
+      // Don't trigger another rebuild - prevents infinite loop
+      return;
+    }
 
     this.fileTreeCache.delete(repoPath);
     this.packageCache.delete(repoPath);

@@ -6,6 +6,7 @@ import {
   type WorkspaceChangeEventPayload,
   type ToolExecutionRequest,
   type RepositoryCacheSyncEvent,
+  type BuildArtifactsDetectedPayload,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
@@ -144,6 +145,25 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
     return () => {
       ipcRenderer.removeListener(
         RepositoryMonitoringAPIEvent.CACHE_SYNC,
+        handler,
+      );
+    };
+  },
+
+  onBuildArtifactsDetected: (
+    callback: (payload: BuildArtifactsDetectedPayload) => void,
+  ): (() => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      payload: BuildArtifactsDetectedPayload,
+    ) => callback(payload);
+    ipcRenderer.on(
+      RepositoryMonitoringAPIEvent.BUILD_ARTIFACTS_DETECTED,
+      handler,
+    );
+    return () => {
+      ipcRenderer.removeListener(
+        RepositoryMonitoringAPIEvent.BUILD_ARTIFACTS_DETECTED,
         handler,
       );
     };
