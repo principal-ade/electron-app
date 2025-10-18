@@ -328,6 +328,29 @@ export class RepositoryMonitoringService {
   }
 
   /**
+   * Run quality enrichment for a repository (on-demand only)
+   * This will run all quality lenses and update the package metrics
+   */
+  static async runQualityEnrichment(
+    repoPath: string,
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.runQualityEnrichment(
+        repoPath,
+      );
+    } catch (error) {
+      console.error(
+        '[RepositoryMonitoring] Error running quality enrichment:',
+        error,
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
    * Execute a tool using quality lenses
    */
   static async executeTool(

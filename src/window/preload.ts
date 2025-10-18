@@ -174,6 +174,29 @@ try {
   console.error('[Preload] ❌ Failed to expose titlebar API:', error);
 }
 
+// Expose window switcher API
+try {
+  contextBridge.exposeInMainWorld('electronAPI', {
+    getWindowList: () => ipcRenderer.send('window-switcher:get-list'),
+    selectWindow: (windowId: number) =>
+      ipcRenderer.send('window-switcher:select', windowId),
+    onWindowListUpdate: (callback: (data: any) => void) => {
+      ipcRenderer.on('window-switcher:update-list', (_, data) =>
+        callback(data),
+      );
+    },
+    onSelectNext: (callback: () => void) => {
+      ipcRenderer.on('window-switcher:select-next', () => callback());
+    },
+    onSelectPrevious: (callback: () => void) => {
+      ipcRenderer.on('window-switcher:select-previous', () => callback());
+    },
+  });
+  console.info('[Preload] ✅ Window Switcher API exposed');
+} catch (error) {
+  console.error('[Preload] ❌ Failed to expose window switcher API:', error);
+}
+
 try {
   contextBridge.exposeInMainWorld('appName', 'Principal ADE');
   console.info('[Preload] ✅ AppName exposed');

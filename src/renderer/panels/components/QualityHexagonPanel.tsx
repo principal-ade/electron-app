@@ -75,12 +75,19 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
 
       try {
         console.info(
-          `[QualityHexagon] Rerunning enrichment for repository: ${directory}`,
+          `[QualityHexagon] Running quality enrichment for repository: ${directory}`,
         );
-        // First refresh the repository to clear cache and re-run enrichment
-        await RepositoryMonitoringService.refreshRepository(directory);
+        // Run quality enrichment (this will execute all quality lenses)
+        const enrichmentResult =
+          await RepositoryMonitoringService.runQualityEnrichment(directory);
 
-        // Then fetch the updated packages
+        if (!enrichmentResult.success) {
+          throw new Error(
+            enrichmentResult.error || 'Quality enrichment failed',
+          );
+        }
+
+        // Then fetch the updated packages with quality metrics
         const result = await RepositoryMonitoringService.getPackages(directory);
 
         if (result) {

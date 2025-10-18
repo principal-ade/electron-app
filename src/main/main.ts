@@ -11,6 +11,7 @@
 import path from 'path';
 import { app, protocol, ipcMain, dialog, BrowserWindow } from 'electron';
 import log from 'electron-log';
+import { windowSwitcher } from './window/windowSwitcher';
 import {
   createWindow,
   applicationWindows,
@@ -176,6 +177,26 @@ if (isDebug) {
   });
 }
 
+// Window switcher keyboard shortcut (only active when app windows are focused)
+app.on('browser-window-created', (_, window) => {
+  log.info('[Window Switcher] Attaching keyboard listener to window');
+
+  window.webContents.on('before-input-event', (event, input) => {
+    // Window switcher with Cmd+; (Mac) / Ctrl+; (Win/Linux)
+    // Using semicolon since backtick is captured by macOS
+    if (
+      input.type === 'keyDown' &&
+      input.code === 'Semicolon' &&
+      ((process.platform === 'darwin' && input.meta && !input.control && !input.shift) ||
+       (process.platform !== 'darwin' && input.control && !input.meta && !input.shift))
+    ) {
+      log.info('[Window Switcher] ✅ Shortcut triggered!');
+      windowSwitcher.show();
+      event.preventDefault();
+    }
+  });
+});
+
 app.on('window-all-closed', async () => {
   // Services are stopped in 'will-quit' to support macOS behavior where the app can run without windows.
 
@@ -313,6 +334,7 @@ app
     // Window handlers are now registered in initializeServices() via modernWindowHandlers
 
     createWindow();
+
     app.on('activate', () => {
       if (applicationWindows.size === 0 && !getIsRestarting()) {
         console.log(

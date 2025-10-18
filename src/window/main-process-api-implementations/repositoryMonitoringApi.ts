@@ -169,6 +169,13 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
     };
   },
 
+  runQualityEnrichment: async (repoPath: string) => {
+    return ipcRenderer.invoke(
+      RepositoryMonitoringAPIEvent.RUN_QUALITY_ENRICHMENT,
+      repoPath,
+    );
+  },
+
   executeTool: async (request: ToolExecutionRequest) => {
     return ipcRenderer.invoke(
       RepositoryMonitoringAPIEvent.EXECUTE_TOOL,

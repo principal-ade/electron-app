@@ -386,15 +386,37 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
       };
     }, [sessionId]);
 
-    // Handle connecting to existing session - trigger resize to show buffer
+    // Handle connecting to existing session - trigger refresh and resize to show buffer
     useEffect(() => {
-      if (terminalRef.current && sessionId && terminalId) {
-        setTimeout(() => {
-          if (terminalRef.current && sessionId) {
+      if (!sessionId || !terminalId) {
+        return;
+      }
+
+      // When reconnecting to an existing session, we need to:
+      // 1. Refresh the backend PTY to send buffer contents
+      // 2. Fit the terminal UI to ensure proper dimensions
+      const refreshAndFit = async () => {
+        try {
+          // First, refresh the backend to force PTY to send buffer
+          await TerminalService.refresh(sessionId);
+
+          // Then fit the terminal UI after a short delay to ensure buffer is received
+          setTimeout(() => {
+            if (terminalRef.current) {
+              terminalRef.current.fit();
+            }
+          }, 100);
+        } catch (error) {
+          console.error('[TerminalPanelV2] Failed to refresh terminal:', error);
+          // Still try to fit even if refresh fails
+          if (terminalRef.current) {
             terminalRef.current.fit();
           }
-        }, 200);
-      }
+        }
+      };
+
+      // Wait a bit for terminal to be fully initialized
+      setTimeout(refreshAndFit, 200);
     }, [sessionId, terminalId]);
 
     // Callbacks for XTerminalPanel

@@ -136,6 +136,7 @@ export enum RepositoryMonitoringAPIEvent {
   GET_GIT_REMOTE_INFO = 'repository-monitoring:get-git-remote-info',
   INVALIDATE_GIT_REMOTE_CACHE = 'repository-monitoring:invalidate-git-remote-cache',
   BUILD_ARTIFACTS_DETECTED = 'repository-monitoring:build-artifacts-detected',
+  RUN_QUALITY_ENRICHMENT = 'repository-monitoring:run-quality-enrichment',
 }
 
 export interface RepositoryMonitoringResult {
@@ -230,6 +231,9 @@ export interface RepositoryMonitoringAPI {
   onBuildArtifactsDetected(
     callback: (payload: BuildArtifactsDetectedPayload) => void,
   ): () => void;
+  runQualityEnrichment(
+    repoPath: string,
+  ): Promise<{ success: boolean; error?: string }>;
   executeTool(request: ToolExecutionRequest): Promise<ToolExecutionResponse>;
   getGitRemoteInfo(repoPath: string): Promise<GitRemoteInfo | null>;
   invalidateGitRemoteCache(

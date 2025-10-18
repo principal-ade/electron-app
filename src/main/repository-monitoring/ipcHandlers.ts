@@ -392,6 +392,29 @@ export function registerRepositoryMonitoringHandlers(): void {
     },
   );
 
+  // Run quality enrichment on-demand
+  ipcMain.handle(
+    RepositoryMonitoringAPIEvent.RUN_QUALITY_ENRICHMENT,
+    async (_event, repoPath: string) => {
+      console.log(
+        `[RepositoryMonitoring] RUN_QUALITY_ENRICHMENT request for: ${repoPath}`,
+      );
+      try {
+        await manager.runQualityEnrichment(repoPath);
+        return { success: true };
+      } catch (error) {
+        console.error(
+          '[RepositoryMonitoring] Error running quality enrichment:',
+          error,
+        );
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        };
+      }
+    },
+  );
+
   // Forward events from manager to renderer windows
   manager.on(MonitoringInternalEvent.METRICS_UPDATED, (data: unknown) => {
     const windows = BrowserWindow.getAllWindows();

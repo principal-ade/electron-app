@@ -153,6 +153,13 @@ async function handleMessage(rawMessage: unknown): Promise<void> {
         result = { success: true };
         break;
 
+      case 'runQualityEnrichment':
+        if (!message.path)
+          throw new Error('Path required for runQualityEnrichment');
+        await server.runQualityEnrichment(message.path);
+        result = { success: true };
+        break;
+
       case 'register':
         if (!message.path) throw new Error('Path required for register');
         await server.registerRepository(message.path);

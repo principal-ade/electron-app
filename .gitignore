@@ -8,6 +8,7 @@ release/app/node_modules/
 dist/
 out/
 build/
+resources/
 .erb/dll/
 .erb/mocks/
 .webpack/

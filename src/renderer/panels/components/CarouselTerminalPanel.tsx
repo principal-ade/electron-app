@@ -574,6 +574,13 @@ export const CarouselTerminalPanel = forwardRef<
             backgroundColor: theme.colors.background,
             borderRight: `1px solid ${theme.colors.border}`,
           }}
+          onKeyDown={(e) => {
+            // Prevent space and other keys from bubbling to carousel
+            // This allows normal typing in the terminal without triggering carousel navigation
+            if (e.key === ' ' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+              e.stopPropagation();
+            }
+          }}
         >
           {/* Panel header with tab info and close button */}
           {!hideHeader && (
@@ -895,7 +902,16 @@ export const CarouselTerminalPanel = forwardRef<
         )}
 
         {/* Carousel content */}
-        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <div
+          style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
+          onKeyDown={(e) => {
+            // Prevent space from triggering carousel navigation
+            // Space should only be used in the terminal itself
+            if (e.key === ' ' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+              e.stopPropagation();
+            }
+          }}
+        >
           {tabs.length > 0 ? (
             <SnapCarousel
               ref={carouselRef}

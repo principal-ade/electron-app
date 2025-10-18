@@ -458,6 +458,14 @@ export class RepositoryMonitoringManager extends EventEmitter {
   }
 
   /**
+   * Run quality enrichment for a repository (on-demand only)
+   * This rebuilds the packages slice with quality lenses enabled
+   */
+  async runQualityEnrichment(path: string): Promise<void> {
+    await this.sendRequest({ type: 'runQualityEnrichment', path });
+  }
+
+  /**
    * Register a repository for monitoring
    */
   async registerRepository(path: string): Promise<void> {

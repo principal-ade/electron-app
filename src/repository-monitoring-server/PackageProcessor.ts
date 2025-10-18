@@ -112,12 +112,17 @@ export class PackageProcessor {
    * Extract packages from a file tree
    * @param fileTree The file tree to analyze
    * @param repoPath The absolute path to the repository
+   * @param options Optional configuration
+   * @param options.enrichWithQualityScores Whether to run quality lenses (default: false)
    * @returns Array of PackageLayer objects representing found packages
    */
   async extractPackages(
     fileTree: FileTree,
     repoPath: string,
+    options: { enrichWithQualityScores?: boolean } = {},
   ): Promise<PackageLayer[]> {
+    const { enrichWithQualityScores = false } = options;
+
     try {
       // Create file reader adapter for this repository
       const adapter = new WorkerFileSystemAdapter(repoPath);
@@ -138,13 +143,22 @@ export class PackageProcessor {
         `[PackageProcessor] Found ${packages.length} packages in ${repoPath}`,
       );
 
-      // Enrich packages with real quality scores from lenses
-      const enrichedPackages = await this.enrichment.enrichPackages(
-        packages,
-        repoPath,
-      );
+      // Only enrich with quality scores if explicitly requested (on-demand)
+      if (enrichWithQualityScores) {
+        console.info(
+          `[PackageProcessor] Running quality lenses for ${packages.length} packages in ${repoPath}`,
+        );
+        const enrichedPackages = await this.enrichment.enrichPackages(
+          packages,
+          repoPath,
+        );
+        return enrichedPackages;
+      }
 
-      return enrichedPackages;
+      console.info(
+        `[PackageProcessor] Skipping quality enrichment (on-demand only)`,
+      );
+      return packages;
     } catch (error) {
       console.error('[PackageProcessor] Failed to extract packages:', error);
       return [];

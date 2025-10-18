@@ -248,6 +248,7 @@ export type MainToServerMessageType =
   | 'getPackages'
   | 'getRepositoryCacheSnapshot'
   | 'refresh'
+  | 'runQualityEnrichment'
   | 'register'
   | 'unregister'
   | 'getRegisteredPaths'

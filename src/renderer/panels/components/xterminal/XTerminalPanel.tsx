@@ -130,7 +130,24 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
           if (fitAddonRef.current && terminalRef.current && terminal) {
             const rect = terminalRef.current.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0) {
+              // Save scroll position before resize
+              const scrollPosition = terminal.buffer.active.viewportY;
+              const baseScrollback = terminal.buffer.active.baseY;
+              const wasAtBottom =
+                scrollPosition + terminal.rows >= baseScrollback + terminal.rows;
+
               fitAddonRef.current.fit();
+
+              // Restore scroll position after resize
+              requestAnimationFrame(() => {
+                if (terminal) {
+                  if (wasAtBottom) {
+                    terminal.scrollToBottom();
+                  } else {
+                    terminal.scrollToLine(scrollPosition);
+                  }
+                }
+              });
             }
           }
         },
@@ -246,7 +263,7 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
 
       setTerminal(term);
 
-      // Simple fit function using only FitAddon
+      // Fit function with scroll position preservation
       const performFit = () => {
         if (!fitAddonRef.current || !terminalRef.current || !term) return;
 
@@ -254,14 +271,29 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
 
         // Only fit if container has valid dimensions
         if (rect.width > 0 && rect.height > 0) {
+          // Save scroll position before resize
+          const scrollPosition = term.buffer.active.viewportY;
+          const baseScrollback = term.buffer.active.baseY;
+          const wasAtBottom =
+            scrollPosition + term.rows >= baseScrollback + term.rows;
+
           fitAddonRef.current.fit();
+
+          // Restore scroll position after resize
+          requestAnimationFrame(() => {
+            if (term) {
+              if (wasAtBottom) {
+                term.scrollToBottom();
+              } else {
+                term.scrollToLine(scrollPosition);
+              }
+            }
+          });
         }
       };
 
-      // Initial fit after terminal is ready
-      requestAnimationFrame(() => {
-        performFit();
-      });
+      // No eager initial fit - let ResizeObserver handle it when container has stable dimensions
+      // This prevents sizing issues on app startup when layout isn't ready yet
 
       // Handle resize with debouncing
       const handleResize = () => {
@@ -350,10 +382,27 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
       if (terminal && fitAddonRef.current && isVisible) {
         // Give the layout a moment to settle, then fit
         setTimeout(() => {
-          if (fitAddonRef.current && terminalRef.current) {
+          if (fitAddonRef.current && terminalRef.current && terminal) {
             const rect = terminalRef.current.getBoundingClientRect();
             if (rect.width > 0 && rect.height > 0) {
+              // Save scroll position before resize
+              const scrollPosition = terminal.buffer.active.viewportY;
+              const baseScrollback = terminal.buffer.active.baseY;
+              const wasAtBottom =
+                scrollPosition + terminal.rows >= baseScrollback + terminal.rows;
+
               fitAddonRef.current.fit();
+
+              // Restore scroll position after resize
+              requestAnimationFrame(() => {
+                if (terminal) {
+                  if (wasAtBottom) {
+                    terminal.scrollToBottom();
+                  } else {
+                    terminal.scrollToLine(scrollPosition);
+                  }
+                }
+              });
             }
           }
         }, 50);

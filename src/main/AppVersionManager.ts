@@ -75,14 +75,14 @@ export default class AppVersionManager {
       delete process.env.ELECTRON_UPDATER_ALLOW_INVALID_SIGNATURE;
     }
 
-    // Configure update feed URL for custom endpoint (proxies to GitHub)
+    // Configure update feed URL for GitHub releases (direct)
     try {
       autoUpdater.setFeedURL({
-        provider: 'generic',
-        url: 'https://principal-ade.com/api/updates',
-        channel: 'latest',
+        provider: 'github',
+        owner: 'principal-ade',
+        repo: 'landing-page',
       });
-      log.info('[AppUpdater] Update feed URL configured successfully');
+      log.info('[AppUpdater] Update feed URL configured for GitHub releases');
     } catch (error) {
       log.error('[AppUpdater] Failed to set update feed URL:', error);
     }

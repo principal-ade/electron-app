@@ -598,55 +598,59 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
 
     // Handle connecting to existing session
     useEffect(() => {
-      if (terminal && sessionId && terminalId && fitAddonRef.current) {
-        // We're reconnecting to an existing session
-        // Trigger a resize to force the PTY to repaint its buffer
-        // This is needed when connecting to an existing session to see the current content
-        setTimeout(() => {
-          if (fitAddonRef.current && sessionId && terminal) {
-            // Save scroll position before resize
-            const scrollPosition = terminal.buffer.active.viewportY;
-            const baseScrollback = terminal.buffer.active.baseY;
-            const wasAtBottom =
-              scrollPosition + terminal.rows >= baseScrollback + terminal.rows;
-
-            const dimensions = fitAddonRef.current.proposeDimensions();
-            if (dimensions) {
-              // First resize to slightly different dimensions to force a redraw
-              TerminalService.resize(
-                sessionId,
-                dimensions.cols,
-                dimensions.rows - 1,
-              )
-                .then(() => {
-                  // Then resize back to actual dimensions
-                  setTimeout(() => {
-                    TerminalService.resize(
-                      sessionId,
-                      dimensions.cols,
-                      dimensions.rows,
-                    ).then(() => {
-                      // Restore scroll position after both resizes complete
-                      if (terminal) {
-                        if (wasAtBottom) {
-                          terminal.scrollToBottom();
-                        } else {
-                          terminal.scrollToLine(scrollPosition);
-                        }
-                      }
-                    });
-                  }, 50);
-                })
-                .catch((err) =>
-                  console.error(
-                    '[TerminalPanel] Failed to resize terminal:',
-                    err,
-                  ),
-                );
-            }
-          }
-        }, 200); // Give time for terminal to initialize
+      if (!terminal || !sessionId || !terminalId || !fitAddonRef.current) {
+        return;
       }
+
+      // We're reconnecting to an existing session
+      // Trigger a refresh to force the PTY to send its buffer content
+      // This is needed when connecting to an existing session to see the current content
+      const refreshAndResize = async () => {
+        try {
+          if (!sessionId || !terminal || !fitAddonRef.current) {
+            return;
+          }
+
+          // Save scroll position before refresh
+          const scrollPosition = terminal.buffer.active.viewportY;
+          const baseScrollback = terminal.buffer.active.baseY;
+          const wasAtBottom =
+            scrollPosition + terminal.rows >= baseScrollback + terminal.rows;
+
+          // Refresh the backend PTY to send buffer contents
+          await TerminalService.refresh(sessionId);
+
+          // Then fit the terminal UI after a short delay to ensure buffer is received
+          setTimeout(() => {
+            if (fitAddonRef.current && terminal) {
+              fitAddonRef.current.fit();
+
+              // Restore scroll position after resize
+              requestAnimationFrame(() => {
+                if (terminal) {
+                  if (wasAtBottom) {
+                    terminal.scrollToBottom();
+                  } else {
+                    terminal.scrollToLine(scrollPosition);
+                  }
+                }
+              });
+            }
+          }, 100);
+        } catch (err) {
+          console.error(
+            '[TerminalPanel] Failed to refresh terminal:',
+            err,
+          );
+          // Still try to fit even if refresh fails
+          if (fitAddonRef.current) {
+            fitAddonRef.current.fit();
+          }
+        }
+      };
+
+      // Give time for terminal to initialize
+      setTimeout(refreshAndResize, 200);
     }, [terminal, sessionId, terminalId]);
 
     // Focus terminal when component becomes visible

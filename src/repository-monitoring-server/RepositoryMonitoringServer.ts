@@ -658,6 +658,83 @@ export class RepositoryMonitoringServer {
   }
 
   /**
+   * Run quality enrichment for a repository (on-demand only)
+   * This rebuilds packages with quality lenses enabled
+   */
+  async runQualityEnrichment(path: string): Promise<void> {
+    console.log(
+      `[RepositoryMonitoring] Running quality enrichment for: ${path}`,
+    );
+
+    // Clear the package cache to force rebuild
+    this.packageCache.delete(path);
+
+    // Rebuild packages slice with enrichment enabled
+    await this.cacheRegistry
+      .scheduleRebuild(path, 'packages', () =>
+        this.buildPackagesSliceWithEnrichment(path),
+      )
+      .catch((error) => {
+        console.error(
+          `[RepositoryMonitoring] Failed to run quality enrichment for ${path}:`,
+          error,
+        );
+        throw error;
+      });
+  }
+
+  /**
+   * Build packages slice with quality enrichment enabled
+   */
+  private async buildPackagesSliceWithEnrichment(repoPath: string): Promise<{
+    packages: PackageLayer[];
+    summary: PackageSummary;
+  }> {
+    try {
+      // Mark rebuild as in progress to prevent feedback loops from quality lens artifacts
+      if (!this.rebuildInProgress.has(repoPath)) {
+        this.rebuildInProgress.set(repoPath, new Set());
+      }
+      this.rebuildInProgress.get(repoPath)!.add('packages');
+
+      console.info(
+        `[RepositoryMonitoring] Building packages slice WITH enrichment for: ${repoPath}`,
+      );
+
+      const fileTreeEntry = await this.cacheRegistry.getOrBuild(
+        repoPath,
+        'fileTree',
+        () => this.buildFileTreeSlice(repoPath),
+      );
+
+      if (!fileTreeEntry.data) {
+        throw new Error(
+          `File tree unavailable for packages slice: ${repoPath}`,
+        );
+      }
+
+      // Extract packages WITH quality enrichment
+      const packages = await this.packageProcessor.extractPackages(
+        fileTreeEntry.data,
+        repoPath,
+        { enrichWithQualityScores: true }, // Enable enrichment!
+      );
+      const summary = await this.packageProcessor.getPackageSummary(packages);
+
+      return { packages, summary };
+    } finally {
+      // Clear in-progress flag
+      const progressSet = this.rebuildInProgress.get(repoPath);
+      if (progressSet) {
+        progressSet.delete('packages');
+        if (progressSet.size === 0) {
+          this.rebuildInProgress.delete(repoPath);
+        }
+      }
+    }
+  }
+
+  /**
    * Get git status for a repository
    */
   async getGitStatus(repoPath: string): Promise<GitStatusMetadata> {
