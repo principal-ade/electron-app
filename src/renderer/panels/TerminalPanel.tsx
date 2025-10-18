@@ -854,6 +854,30 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
               canTakeControl: true,
             });
             setShouldRenderTerminal(true);
+
+            // Trigger a fit/resize after a short delay to force the PTY to repaint
+            // This ensures the terminal buffer is sent to the new owner window
+            setTimeout(() => {
+              if (fitAddonRef.current && terminal) {
+                const scrollPosition = terminal.buffer.active.viewportY;
+                const baseScrollback = terminal.buffer.active.baseY;
+                const wasAtBottom =
+                  scrollPosition + terminal.rows >= baseScrollback + terminal.rows;
+
+                fitAddonRef.current.fit();
+
+                // Restore scroll position after resize
+                requestAnimationFrame(() => {
+                  if (terminal) {
+                    if (wasAtBottom) {
+                      terminal.scrollToBottom();
+                    } else {
+                      terminal.scrollToLine(scrollPosition);
+                    }
+                  }
+                });
+              }
+            }, 100);
           } else {
             console.error('[TerminalPanel] Failed to take control:', result);
           }
