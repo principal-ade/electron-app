@@ -19,6 +19,7 @@ import { DrawingsListPanel } from './components/DrawingsListPanel';
 import { ToolsPanel } from './components/ToolsPanel';
 import { AgentContextTreePanel } from './components/AgentContextTreePanel';
 import { GitCommitHistoryPanel } from './components/GitCommitHistoryPanel';
+import { MDXEditorPanel } from './components/MDXEditorPanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -62,6 +63,14 @@ const panelRenderers: Partial<Record<RepositoryPanelId, RepositoryPanelRenderer>
     <AgentContextTreePanel
       repositoryPath={context.repositoryPath}
       onFileSelect={actions.openFile}
+    />
+  ),
+  mdxEditor: ({ context }) => (
+    <MDXEditorPanel
+      filePath={null}
+      onSave={(content) => {
+        console.log('Markdown saved:', content);
+      }}
     />
   ),
 };

@@ -60,3 +60,5 @@ electron-builder.json
 *.db-info
 *.db-shm
 *.db-wal
+*storybook.log
+storybook-static

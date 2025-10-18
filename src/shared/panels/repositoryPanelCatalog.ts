@@ -193,6 +193,13 @@ export const repositoryPanelCatalog = [
     slices: [] as const,
     surfaces: ['agent'] as const,
   },
+  {
+    id: 'mdxEditor',
+    label: 'MDX Editor',
+    description: 'Rich markdown editor with live preview and formatting tools.',
+    slices: ['markdown', 'fileTree'] as const,
+    surfaces: ['manager', 'viewer', 'agent'] as const,
+  },
 ] as const satisfies readonly RepositoryPanelDefinitionBase[];
 
 export type RepositoryPanelCatalogEntry =

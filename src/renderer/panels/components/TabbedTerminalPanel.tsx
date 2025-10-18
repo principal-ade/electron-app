@@ -8,7 +8,7 @@ import React, {
 import { Terminal as TerminalIcon, X, Plus, Bug, Monitor, Grid3x3 } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { useTheme } from '@a24z/industry-theme';
-import TerminalPanel, { TerminalPanelRef } from '../TerminalPanel';
+import TerminalPanelV2, { TerminalPanelV2Ref } from '../TerminalPanelV2';
 import { TerminalService } from '../../main-process-api/TerminalService';
 import { TerminalDebugModal } from './TerminalDebugModal';
 
@@ -64,7 +64,7 @@ export const TabbedTerminalPanel = forwardRef<
     const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
 
     // Store refs to terminal panels for each tab
-    const terminalRefs = useRef<Map<string, TerminalPanelRef>>(new Map());
+    const terminalRefs = useRef<Map<string, TerminalPanelV2Ref>>(new Map());
 
     // Store refs to callbacks to avoid recreating event listeners
     const addNewTabRef = useRef<typeof addNewTab | null>(null);
@@ -689,11 +689,10 @@ export const TabbedTerminalPanel = forwardRef<
         <div
           style={{
             flex: 1,
-            display: 'grid',
-            gridTemplateAreas: '"terminal"',
+            display: 'flex',
+            flexDirection: 'column',
             overflow: 'hidden',
             width: '100%',
-            height: '100%',
             minHeight: 0,
           }}
         >
@@ -703,15 +702,15 @@ export const TabbedTerminalPanel = forwardRef<
               <div
                 key={tab.id}
                 style={{
-                  gridArea: 'terminal',
-                  display: isActiveTab ? 'block' : 'none',
+                  display: isActiveTab ? 'flex' : 'none',
+                  flexDirection: 'column',
                   height: '100%',
                   width: '100%',
                   minHeight: 0,
                   position: 'relative',
                 }}
               >
-                <TerminalPanel
+                <TerminalPanelV2
                   ref={(el) => {
                     if (el) {
                       terminalRefs.current.set(tab.id, el);

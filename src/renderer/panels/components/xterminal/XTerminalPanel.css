@@ -1,0 +1,121 @@
+/* Terminal container base styles */
+.terminal-container-fix {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+/* Remove default xterm padding */
+.terminal-container-fix .xterm {
+  padding: 0;
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  /* Ensure consistent font rendering */
+  font-variant-ligatures: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ensure the xterm-helper-textarea is properly positioned */
+.xterm-helper-textarea {
+  position: absolute !important;
+  opacity: 0 !important;
+  left: -9999em !important;
+  top: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  z-index: -5 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  resize: none !important;
+}
+
+/* Viewport scrolling */
+.xterm-viewport {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+/* ===== SCROLLBAR CUSTOMIZATION ===== */
+
+/* Option 1: Overlay scrollbar that doesn't take space (recommended) */
+.terminal-container-fix .xterm-viewport {
+  /* Make scrollbar overlay the content */
+  overflow-y: overlay !important;
+  /* Fallback for browsers that don't support overlay */
+  overflow-y: auto !important;
+  scrollbar-width: thin; /* Firefox */
+}
+
+/* Custom webkit scrollbar styling (Chrome, Edge, Electron) */
+.terminal-container-fix .xterm-viewport::-webkit-scrollbar {
+  width: 10px;
+  background: transparent;
+}
+
+.terminal-container-fix .xterm-viewport::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.terminal-container-fix .xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.terminal-container-fix .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+  background-clip: content-box;
+}
+
+.terminal-container-fix .xterm-viewport::-webkit-scrollbar-thumb:active {
+  background: rgba(255, 255, 255, 0.4);
+  background-clip: content-box;
+}
+
+/* Option 2: Hide scrollbar but keep scroll functionality */
+.terminal-container-fix.hide-scrollbar .xterm-viewport {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.terminal-container-fix.hide-scrollbar .xterm-viewport::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Option 3: Ultra-thin scrollbar */
+.terminal-container-fix.thin-scrollbar .xterm-viewport::-webkit-scrollbar {
+  width: 4px;
+}
+
+.terminal-container-fix.thin-scrollbar .xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-container-fix.thin-scrollbar .xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+/* Option 4: Auto-hiding scrollbar (shows on hover) */
+.terminal-container-fix.auto-hide-scrollbar .xterm-viewport::-webkit-scrollbar {
+  width: 10px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.terminal-container-fix.auto-hide-scrollbar:hover .xterm-viewport::-webkit-scrollbar {
+  opacity: 1;
+}
+
+.terminal-container-fix.auto-hide-scrollbar .xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0);
+  transition: background 0.3s;
+}
+
+.terminal-container-fix.auto-hide-scrollbar:hover .xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}

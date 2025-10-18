@@ -524,6 +524,22 @@ export class WorkspaceLayoutService {
         updatedAt: now,
         isBuiltIn: true,
       },
+      'principal-office': {
+        id: 'principal-office',
+        name: 'Principal Office',
+        description:
+          'Alexandria docs on left, MDX editor in middle, multi terminal on right',
+        layout: {
+          left: 'docs',
+          middle: 'mdxEditor',
+          right: 'multiTerminal',
+        },
+        defaultSizes: { left: 20, middle: 50, right: 30 },
+        defaultCollapsed: { left: false, right: false },
+        createdAt: now,
+        updatedAt: now,
+        isBuiltIn: true,
+      },
     };
   }
 
@@ -547,6 +563,7 @@ export class WorkspaceLayoutService {
             'quality-check',
             'drawing',
             'old-school',
+            'principal-office',
           ],
         },
       });

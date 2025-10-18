@@ -97,6 +97,7 @@ import { QualityHexagonPanel } from '../panels/components/QualityHexagonPanel';
 import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { MultiTerminalPanel } from '../panels/components/MultiTerminalPanel';
+import { MDXEditorPanel } from '../panels/components/MDXEditorPanel';
 import { panelPreviewRegistry } from '../panels/panelPreviews';
 import { repositoryPanelDefinitions } from '../panels/registry';
 
@@ -1984,6 +1985,25 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           selectedSource?.type === 'local' ? (
             <QualityHexagonPanel directory={selectedSource.location} />
           ) : null,
+        mdxEditor: (
+          <RepositoryPanelProvider
+            repositoryPath={
+              selectedSource?.type === 'local' ? selectedSource.location : null
+            }
+            actions={{ openFile: handleSearchFileSelect }}
+          >
+            <MDXEditorPanel
+              variant="tab"
+              filePath={
+                selectedDocPath &&
+                (selectedDocPath.endsWith('.md') ||
+                  selectedDocPath.endsWith('.mdx'))
+                  ? selectedDocPath
+                  : null
+              }
+            />
+          </RepositoryPanelProvider>
+        ),
       };
       return map;
     }, [
@@ -2017,6 +2037,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       handleDocumentSelect,
       selectedDocPath,
       handleTaskClick,
+      cacheData,
     ]);
 
     // Build tabs from registry using panel content
@@ -2125,6 +2146,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         icon: <Package size={14} />,
         visible: selectedSource?.type === 'local',
         content: panelContentMap.packageInfo,
+      },
+      {
+        id: 'mdxEditor',
+        label: 'MDX Editor',
+        icon: <FileText size={14} />,
+        visible: true,
+        content: panelContentMap.mdxEditor,
       },
     ];
 

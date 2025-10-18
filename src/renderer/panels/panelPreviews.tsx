@@ -39,6 +39,7 @@ import { MarkdownRenderingPanelPreview } from './components/MarkdownRenderingPan
 import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPanel';
 import { QualityHexagonPanelPreview } from './components/QualityHexagonPanel';
 import { GitDiffPanelPreview } from './components/GitDiffPanel';
+import { MDXEditorPanelPreview } from './components/MDXEditorPanel';
 
 export interface PanelPreviewMetadata {
   icon: React.ReactNode;
@@ -141,6 +142,12 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   gitDiff: {
     icon: <GitBranch size={16} />,
     preview: <GitDiffPanelPreview />,
+  },
+  mdxEditor: {
+    icon: <FileText size={16} />,
+    preview: <MDXEditorPanelPreview />,
+    label: 'MDX Editor',
+    description: 'Rich markdown editor with live preview and formatting tools.',
   },
 };
 
