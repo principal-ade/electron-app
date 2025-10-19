@@ -1,10 +1,10 @@
 {
   "version": "1.0.0",
-  "lastUpdated": 1760590973328,
+  "lastUpdated": 1760838712282,
   "tasks": {
     "task-1760590973328-czf08nja1": {
       "id": "task-1760590973328-czf08nja1",
-      "status": "pending",
+      "status": "completed",
       "priority": "high",
       "directoryPath": "",
       "senderId": "electron-app",
@@ -15,17 +15,18 @@
         "api"
       ],
       "receivedAt": 1760590973328,
-      "updatedAt": 1760590973328,
-      "filePath": "active/task-1760590973328-czf08nja1.task.md"
+      "updatedAt": 1760838712280,
+      "completedAt": 1760838712280,
+      "filePath": "history/task-1760590973328-czf08nja1.hist.md"
     }
   },
   "byStatus": {
-    "pending": [
-      "task-1760590973328-czf08nja1"
-    ],
+    "pending": [],
     "acknowledged": [],
     "in_progress": [],
-    "completed": [],
+    "completed": [
+      "task-1760590973328-czf08nja1"
+    ],
     "failed": []
   },
   "bySender": {
