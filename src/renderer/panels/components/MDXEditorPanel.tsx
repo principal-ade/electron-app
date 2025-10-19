@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  MDXEditor,
   headingsPlugin,
   listsPlugin,
   quotePlugin,
@@ -27,6 +26,8 @@ import {
   DiffSourceToggleWrapper,
 } from '@mdxeditor/editor';
 import '@mdxeditor/editor/style.css';
+import { ThemedMDXEditorWithProvider } from '@principal-ade/industry-themed-mdx-editor';
+import '@principal-ade/industry-themed-mdx-editor/styles.css';
 import { useTheme } from '@a24z/industry-theme';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
@@ -114,34 +115,39 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
     setParseError(null); // Clear parse errors when content changes
   }, []);
 
-  const handleSave = useCallback(async () => {
-    if (onSave) {
-      onSave(markdown);
-    }
+  const handleSave = useCallback(
+    async (content?: string) => {
+      const contentToSave = content || markdown;
 
-    if (currentFilePath && repositoryPath) {
-      try {
-        const fullPath = currentFilePath.startsWith('/')
-          ? currentFilePath
-          : `${repositoryPath}/${currentFilePath}`;
-        const result = await FileSystemService.writeFile(fullPath, markdown);
-
-        // Check if save was successful
-        if (result && typeof result === 'object' && 'success' in result) {
-          if (result.success) {
-            console.log('File saved successfully:', fullPath);
-          } else {
-            const errorMsg = 'error' in result ? result.error : 'Unknown error';
-            console.error('Error saving file:', errorMsg);
-            alert(`Failed to save file: ${errorMsg}`);
-          }
-        }
-      } catch (error) {
-        console.error('Error saving file:', error);
-        alert(`Failed to save file: ${error}`);
+      if (onSave) {
+        onSave(contentToSave);
       }
-    }
-  }, [markdown, onSave, currentFilePath, repositoryPath]);
+
+      if (currentFilePath && repositoryPath) {
+        try {
+          const fullPath = currentFilePath.startsWith('/')
+            ? currentFilePath
+            : `${repositoryPath}/${currentFilePath}`;
+          const result = await FileSystemService.writeFile(fullPath, contentToSave);
+
+          // Check if save was successful
+          if (result && typeof result === 'object' && 'success' in result) {
+            if (result.success) {
+              console.log('File saved successfully:', fullPath);
+            } else {
+              const errorMsg = 'error' in result ? result.error : 'Unknown error';
+              console.error('Error saving file:', errorMsg);
+              alert(`Failed to save file: ${errorMsg}`);
+            }
+          }
+        } catch (error) {
+          console.error('Error saving file:', error);
+          alert(`Failed to save file: ${error}`);
+        }
+      }
+    },
+    [markdown, onSave, currentFilePath, repositoryPath]
+  );
 
   if (!isMounted) {
     return (
@@ -151,7 +157,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           height: '100%',
-          color: theme.colors.foreground,
+          color: theme.colors.text,
         }}
       >
         Loading editor...
@@ -167,7 +173,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           height: '100%',
-          color: theme.colors.foreground,
+          color: theme.colors.text,
         }}
       >
         Loading file...
@@ -204,7 +210,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           height: '100%',
-          color: theme.colors.foregroundSecondary,
+          color: theme.colors.textSecondary,
           padding: '40px',
           textAlign: 'center',
         }}
@@ -218,7 +224,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
             margin: '0 0 8px 0',
             fontSize: '16px',
             fontWeight: 600,
-            color: theme.colors.foreground,
+            color: theme.colors.text,
           }}
         >
           No File Selected
@@ -247,12 +253,17 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
         width: '100%',
       }}
     >
-      <MDXEditor
+      <ThemedMDXEditorWithProvider
         key={currentFilePath || 'default'}
         markdown={safeMarkdown}
+        onSave={async (content) => {
+          await handleSave(content);
+        }}
         onChange={handleChange}
         readOnly={readOnly}
-        contentEditableClassName="mdx-editor-content"
+        filePath={currentFilePath || undefined}
+        enableSaveShortcut={!readOnly}
+        hideStatusBar={variant === 'tab'}
         onError={(error) => {
           console.error('MDXEditor error:', error);
           if (error && typeof error === 'object' && 'message' in error) {
@@ -401,7 +412,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
             margin: 0,
             fontSize: '14px',
             fontWeight: 600,
-            color: theme.colors.foreground,
+            color: theme.colors.text,
           }}
         >
           MDX Editor
@@ -411,7 +422,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
                 marginLeft: '8px',
                 fontSize: '12px',
                 fontWeight: 400,
-                color: theme.colors.foregroundSecondary,
+                color: theme.colors.textSecondary,
               }}
             >
               {filePath}
@@ -420,7 +431,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
         </h3>
         {!readOnly && (
           <button
-            onClick={handleSave}
+            onClick={() => handleSave()}
             style={{
               padding: '4px 12px',
               fontSize: '12px',
@@ -462,7 +473,7 @@ export const MDXEditorPanelPreview: React.FC = () => {
         style={{
           fontSize: '14px',
           fontWeight: 600,
-          color: theme.colors.foreground,
+          color: theme.colors.text,
           marginBottom: '4px',
         }}
       >
@@ -471,7 +482,7 @@ export const MDXEditorPanelPreview: React.FC = () => {
       <div
         style={{
           fontSize: '12px',
-          color: theme.colors.foregroundSecondary,
+          color: theme.colors.textSecondary,
           textAlign: 'center',
         }}
       >

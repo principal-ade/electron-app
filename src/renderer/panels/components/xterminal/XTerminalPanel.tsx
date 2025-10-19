@@ -16,8 +16,9 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
-import { WebglAddon } from '@xterm/addon-webgl';
-import { Unicode11Addon } from '@xterm/addon-unicode11';
+// Disabled for performance - uncomment if needed:
+// import { WebglAddon } from '@xterm/addon-webgl';
+// import { Unicode11Addon } from '@xterm/addon-unicode11';
 import '@xterm/xterm/css/xterm.css';
 import './XTerminalPanel.css';
 
@@ -75,7 +76,7 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
     const [terminal, setTerminal] = useState<Terminal | null>(null);
     const fitAddonRef = useRef<FitAddon | null>(null);
     const searchAddonRef = useRef<SearchAddon | null>(null);
-    const webglAddonRef = useRef<WebglAddon | null>(null);
+    // webglAddonRef removed - WebGL disabled for performance
     const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isVisibleRef = useRef(isVisible);
 
@@ -219,11 +220,11 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
       searchAddonRef.current = searchAddon;
       term.loadAddon(searchAddon);
 
-      // Add Unicode11Addon for better Unicode/emoji support
-      const unicode11Addon = new Unicode11Addon();
-      term.loadAddon(unicode11Addon);
-      // Activate Unicode 11 support
-      term.unicode.activeVersion = '11';
+      // PERFORMANCE: Unicode11Addon disabled by default
+      // Adds processing overhead for emoji/unicode rendering. Enable if needed:
+      // const unicode11Addon = new Unicode11Addon();
+      // term.loadAddon(unicode11Addon);
+      // term.unicode.activeVersion = '11';
 
       // Add WebLinksAddon with custom handler
       const webLinksAddon = new WebLinksAddon((event, uri) => {
@@ -241,25 +242,26 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
       // Open terminal in the DOM
       term.open(terminalRef.current);
 
-      // Try to use WebGL renderer for better performance
-      // Note: WebGL addon must be loaded AFTER terminal is opened
-      try {
-        const webglAddon = new WebglAddon();
-        webglAddonRef.current = webglAddon;
-
-        // Check if WebGL is supported before loading
-        webglAddon.onContextLoss(() => {
-          // If WebGL context is lost, dispose the addon
-          webglAddon.dispose();
-          webglAddonRef.current = null;
-          console.warn('[XTerminal] WebGL context lost, falling back to canvas renderer');
-        });
-
-        term.loadAddon(webglAddon);
-      } catch (e) {
-        console.warn('[XTerminal] WebGL renderer not supported, using canvas renderer', e);
-        webglAddonRef.current = null;
-      }
+      // PERFORMANCE: WebGL renderer disabled by default
+      // WebGL can cause performance issues in Electron apps with multiple terminals:
+      // - GPU context switching overhead when switching tabs
+      // - Limited WebGL contexts (~16) can cause issues with many tabs
+      // - Canvas renderer is more stable and often faster for terminal text
+      //
+      // Uncomment below to enable WebGL if needed:
+      // try {
+      //   const webglAddon = new WebglAddon();
+      //   webglAddonRef.current = webglAddon;
+      //   webglAddon.onContextLoss(() => {
+      //     webglAddon.dispose();
+      //     webglAddonRef.current = null;
+      //     console.warn('[XTerminal] WebGL context lost, falling back to canvas renderer');
+      //   });
+      //   term.loadAddon(webglAddon);
+      // } catch (e) {
+      //   console.warn('[XTerminal] WebGL renderer not supported, using canvas renderer', e);
+      //   webglAddonRef.current = null;
+      // }
 
       setTerminal(term);
 

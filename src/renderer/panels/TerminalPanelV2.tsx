@@ -94,6 +94,7 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
       canTakeControl: true,
     });
     const [shouldRenderTerminal, setShouldRenderTerminal] = useState(true);
+    const ownershipCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Expose scrollToBottom and focus methods via ref
     useImperativeHandle(
@@ -249,8 +250,22 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
     ]);
 
     // Check and claim ownership when we have a session ID
+    // Debounced to prevent IPC storm when rapidly switching tabs
     useEffect(() => {
-      if (!sessionId || !isVisible) {
+      if (!sessionId) {
+        return;
+      }
+
+      // Clear any pending ownership check
+      if (ownershipCheckTimeoutRef.current) {
+        clearTimeout(ownershipCheckTimeoutRef.current);
+      }
+
+      // If not visible, release ownership and skip the check
+      if (!isVisible) {
+        TerminalService.releaseOwnership(sessionId).catch((err) => {
+          console.error('[TerminalPanelV2] Failed to release ownership:', err);
+        });
         return;
       }
 
@@ -315,14 +330,15 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
         }
       };
 
-      checkAndClaimOwnership();
+      // Debounce ownership checks by 150ms to prevent IPC storm during tab switching
+      ownershipCheckTimeoutRef.current = setTimeout(() => {
+        checkAndClaimOwnership();
+      }, 150);
 
       return () => {
         isMounted = false;
-        if (sessionId) {
-          TerminalService.releaseOwnership(sessionId).catch((err) => {
-            console.error('[TerminalPanelV2] Failed to release ownership:', err);
-          });
+        if (ownershipCheckTimeoutRef.current) {
+          clearTimeout(ownershipCheckTimeoutRef.current);
         }
       };
     }, [sessionId, isVisible]);
@@ -386,37 +402,24 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
       };
     }, [sessionId]);
 
-    // Handle connecting to existing session - trigger refresh and resize to show buffer
+    // Handle connecting to existing session - trigger refresh to show buffer
+    // Note: We removed the duplicate fit() call here since XTerminalPanel handles resizing
     useEffect(() => {
       if (!sessionId || !terminalId) {
         return;
       }
 
-      // When reconnecting to an existing session, we need to:
-      // 1. Refresh the backend PTY to send buffer contents
-      // 2. Fit the terminal UI to ensure proper dimensions
-      const refreshAndFit = async () => {
+      // When reconnecting to an existing session, refresh the backend PTY to send buffer contents
+      const refreshSession = async () => {
         try {
-          // First, refresh the backend to force PTY to send buffer
           await TerminalService.refresh(sessionId);
-
-          // Then fit the terminal UI after a short delay to ensure buffer is received
-          setTimeout(() => {
-            if (terminalRef.current) {
-              terminalRef.current.fit();
-            }
-          }, 100);
         } catch (error) {
           console.error('[TerminalPanelV2] Failed to refresh terminal:', error);
-          // Still try to fit even if refresh fails
-          if (terminalRef.current) {
-            terminalRef.current.fit();
-          }
         }
       };
 
-      // Wait a bit for terminal to be fully initialized
-      setTimeout(refreshAndFit, 200);
+      // Wait a bit for terminal to be fully initialized before refreshing
+      setTimeout(refreshSession, 200);
     }, [sessionId, terminalId]);
 
     // Callbacks for XTerminalPanel
