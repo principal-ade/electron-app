@@ -23,6 +23,7 @@
     "@mdxeditor/editor": "^3.47.0",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
+    "@principal-ade/industry-themed-mdx-editor": "^0.1.0",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.8",
     "@principal-ai/agent-monitoring": "^0.3.9",
     "@principal-ai/agent-monitoring-ui": "^0.1.6",
