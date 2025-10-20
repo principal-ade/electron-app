@@ -446,17 +446,14 @@ export class AlexandriaRegistryService {
         repo.path,
         repo.remoteUrl,
       );
-      console.log('[refreshRepository] Fetched GitHub metadata:', githubMetadata);
+      console.log(
+        '[refreshRepository] Fetched GitHub metadata:',
+        githubMetadata,
+      );
       if (githubMetadata) {
         try {
-          await this.outpostManager.updateGitHubMetadata(
-            name,
-            githubMetadata,
-          );
-          console.log(
-            '[refreshRepository] Updated GitHub metadata for:',
-            name,
-          );
+          await this.outpostManager.updateGitHubMetadata(name, githubMetadata);
+          console.log('[refreshRepository] Updated GitHub metadata for:', name);
 
           // Verify the update was persisted
           const verifyEntry = this.outpostManager

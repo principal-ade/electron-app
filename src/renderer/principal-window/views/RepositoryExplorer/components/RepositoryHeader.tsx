@@ -210,8 +210,7 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
                   fontWeight: 600,
                 }}
               >
-                ●{' '}
-                {totalChangeCount}
+                ● {totalChangeCount}
               </span>
             )}
 
@@ -316,37 +315,11 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
             </p>
             {/* Only show edit/sync buttons for public repos */}
             {repository.github?.owner &&
-             repository.github?.name &&
-             repository.github?.isPublic && (
-              <>
-                <button
-                  onClick={handleOpenGitHubRepo}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '4px',
-                    backgroundColor: 'transparent',
-                    color: theme.colors.textSecondary,
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    opacity: 0.6,
-                    transition: 'opacity 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '0.6';
-                  }}
-                  title="Edit description on GitHub"
-                >
-                  <Edit2 size={12} />
-                </button>
-                {onRefresh && (
+              repository.github?.name &&
+              repository.github?.isPublic && (
+                <>
                   <button
-                    onClick={() => onRefresh()}
-                    disabled={isRefreshing}
+                    onClick={handleOpenGitHubRepo}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -355,32 +328,60 @@ export const RepositoryHeader: React.FC<RepositoryHeaderProps> = ({
                       color: theme.colors.textSecondary,
                       border: 'none',
                       borderRadius: '4px',
-                      cursor: isRefreshing ? 'not-allowed' : 'pointer',
-                      opacity: isRefreshing ? 0.4 : 0.6,
+                      cursor: 'pointer',
+                      opacity: 0.6,
                       transition: 'opacity 0.2s',
                     }}
                     onMouseEnter={(e) => {
-                      if (!isRefreshing) {
-                        e.currentTarget.style.opacity = '1';
-                      }
+                      e.currentTarget.style.opacity = '1';
                     }}
                     onMouseLeave={(e) => {
-                      if (!isRefreshing) {
-                        e.currentTarget.style.opacity = '0.6';
-                      }
+                      e.currentTarget.style.opacity = '0.6';
                     }}
-                    title="Sync repository metadata from GitHub"
+                    title="Edit description on GitHub"
                   >
-                    <RefreshCw
-                      size={12}
-                      style={{
-                        animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
-                      }}
-                    />
+                    <Edit2 size={12} />
                   </button>
-                )}
-              </>
-            )}
+                  {onRefresh && (
+                    <button
+                      onClick={() => onRefresh()}
+                      disabled={isRefreshing}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '4px',
+                        backgroundColor: 'transparent',
+                        color: theme.colors.textSecondary,
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: isRefreshing ? 'not-allowed' : 'pointer',
+                        opacity: isRefreshing ? 0.4 : 0.6,
+                        transition: 'opacity 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isRefreshing) {
+                          e.currentTarget.style.opacity = '1';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isRefreshing) {
+                          e.currentTarget.style.opacity = '0.6';
+                        }
+                      }}
+                      title="Sync repository metadata from GitHub"
+                    >
+                      <RefreshCw
+                        size={12}
+                        style={{
+                          animation: isRefreshing
+                            ? 'spin 1s linear infinite'
+                            : 'none',
+                        }}
+                      />
+                    </button>
+                  )}
+                </>
+              )}
           </div>
         </div>
         <div

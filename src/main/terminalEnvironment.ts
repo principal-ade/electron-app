@@ -189,21 +189,23 @@ export class TerminalEnvironment {
 
       // Log detailed PATH composition
       const pathArray = Array.from(allPathElements);
-      console.log(
-        `[TerminalEnvironment] PATH composition breakdown:`,
-      );
+      console.log(`[TerminalEnvironment] PATH composition breakdown:`);
       console.log(
         `  - From shell extraction: ${paths.length > 0 ? paths[0].split(':').length : 0} directories`,
       );
       console.log(
         `  - Additional paths found: ${additionalPaths.filter((p) => require('fs').existsSync(p)).length} directories`,
       );
-      console.log(`  - From process.env.PATH: ${process.env.PATH?.split(':').length || 0} directories`);
+      console.log(
+        `  - From process.env.PATH: ${process.env.PATH?.split(':').length || 0} directories`,
+      );
 
       // Check final PATH for important tools
       const bunPath = pathArray.find((p) => p.includes('.bun/bin'));
       if (bunPath) {
-        console.log(`[TerminalEnvironment] ✓ Final PATH includes Bun: ${bunPath}`);
+        console.log(
+          `[TerminalEnvironment] ✓ Final PATH includes Bun: ${bunPath}`,
+        );
       } else {
         console.warn(`[TerminalEnvironment] ⚠ Final PATH MISSING Bun`);
       }

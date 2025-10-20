@@ -1,6 +1,12 @@
 import React, { useState, forwardRef } from 'react';
-import { TabbedTerminalPanel, TabbedTerminalPanelRef } from './TabbedTerminalPanel';
-import { CarouselTerminalPanel, CarouselTerminalPanelRef } from './CarouselTerminalPanel';
+import {
+  TabbedTerminalPanel,
+  TabbedTerminalPanelRef,
+} from './TabbedTerminalPanel';
+import {
+  CarouselTerminalPanel,
+  CarouselTerminalPanelRef,
+} from './CarouselTerminalPanel';
 
 type TerminalViewMode = 'tabbed' | 'carousel';
 
@@ -15,28 +21,29 @@ interface MultiTerminalPanelProps {
   idealPanelWidth?: number;
 }
 
-export const MultiTerminalPanel = forwardRef<TabbedTerminalPanelRef | CarouselTerminalPanelRef, MultiTerminalPanelProps>(
-  (props, ref) => {
-    const [viewMode, setViewMode] = useState<TerminalViewMode>('tabbed');
+export const MultiTerminalPanel = forwardRef<
+  TabbedTerminalPanelRef | CarouselTerminalPanelRef,
+  MultiTerminalPanelProps
+>((props, ref) => {
+  const [viewMode, setViewMode] = useState<TerminalViewMode>('tabbed');
 
-    const handleToggleView = () => {
-      setViewMode((prev) => (prev === 'tabbed' ? 'carousel' : 'tabbed'));
-    };
+  const handleToggleView = () => {
+    setViewMode((prev) => (prev === 'tabbed' ? 'carousel' : 'tabbed'));
+  };
 
-    return viewMode === 'tabbed' ? (
-      <TabbedTerminalPanel
-        {...props}
-        ref={ref as React.ForwardedRef<TabbedTerminalPanelRef>}
-        onToggleView={handleToggleView}
-      />
-    ) : (
-      <CarouselTerminalPanel
-        {...props}
-        ref={ref as React.ForwardedRef<CarouselTerminalPanelRef>}
-        onToggleView={handleToggleView}
-      />
-    );
-  },
-);
+  return viewMode === 'tabbed' ? (
+    <TabbedTerminalPanel
+      {...props}
+      ref={ref as React.ForwardedRef<TabbedTerminalPanelRef>}
+      onToggleView={handleToggleView}
+    />
+  ) : (
+    <CarouselTerminalPanel
+      {...props}
+      ref={ref as React.ForwardedRef<CarouselTerminalPanelRef>}
+      onToggleView={handleToggleView}
+    />
+  );
+});
 
 MultiTerminalPanel.displayName = 'MultiTerminalPanel';

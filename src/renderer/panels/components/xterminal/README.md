@@ -117,12 +117,12 @@ See [`types.ts`](./types.ts) for complete prop definitions.
 
 ```tsx
 interface XTerminalPanelRef {
-  write: (data: string) => void;      // Write data to terminal
-  scrollToBottom: () => void;          // Scroll to bottom
-  focus: () => void;                   // Focus terminal
-  clear: () => void;                   // Clear screen
+  write: (data: string) => void; // Write data to terminal
+  scrollToBottom: () => void; // Scroll to bottom
+  focus: () => void; // Focus terminal
+  clear: () => void; // Clear screen
   getTerminal: () => Terminal | null; // Get xterm instance
-  fit: () => void;                     // Resize to fit container
+  fit: () => void; // Resize to fit container
 }
 ```
 

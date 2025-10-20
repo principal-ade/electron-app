@@ -135,9 +135,7 @@ export const PullRequestsTab: React.FC<PullRequestsTabProps> = ({
       } catch (err) {
         console.error('Error fetching pull requests:', err);
         setError(
-          err instanceof Error
-            ? err.message
-            : 'Failed to fetch pull requests.',
+          err instanceof Error ? err.message : 'Failed to fetch pull requests.',
         );
       } finally {
         if (skipInitialLoading) {
@@ -211,7 +209,8 @@ export const PullRequestsTab: React.FC<PullRequestsTabProps> = ({
         <div style={{ maxWidth: '360px', lineHeight: 1.5 }}>{error}</div>
         {authRequired && (
           <div style={{ fontSize: '13px', opacity: 0.8 }}>
-            Run <code>gh auth login</code> in your terminal to authenticate with GitHub.
+            Run <code>gh auth login</code> in your terminal to authenticate with
+            GitHub.
           </div>
         )}
       </div>
@@ -239,7 +238,13 @@ export const PullRequestsTab: React.FC<PullRequestsTabProps> = ({
           }}
         >
           <div>
-            <div style={{ fontSize: '18px', fontWeight: 600, color: theme.colors.text }}>
+            <div
+              style={{
+                fontSize: '18px',
+                fontWeight: 600,
+                color: theme.colors.text,
+              }}
+            >
               Pull Requests
             </div>
             <div
@@ -301,18 +306,14 @@ export const PullRequestsTab: React.FC<PullRequestsTabProps> = ({
                   backgroundColor: isActive
                     ? theme.colors.primary
                     : theme.colors.background,
-                  color: isActive
-                    ? theme.colors.background
-                    : theme.colors.text,
+                  color: isActive ? theme.colors.background : theme.colors.text,
                   fontSize: '13px',
                   fontWeight: isActive ? 600 : 500,
                   cursor: 'pointer',
                 }}
               >
                 {label}
-                <span style={{ opacity: 0.8 }}>
-                  ({counts[value]})
-                </span>
+                <span style={{ opacity: 0.8 }}>({counts[value]})</span>
               </button>
             );
           })}
@@ -340,7 +341,8 @@ export const PullRequestsTab: React.FC<PullRequestsTabProps> = ({
             <GitPullRequest size={32} style={{ marginBottom: '12px' }} />
             <div style={{ fontWeight: 600 }}>No pull requests found</div>
             <div style={{ marginTop: '4px', fontSize: '13px' }}>
-              There are no {filter !== 'all' ? `${filter} ` : ''}pull requests to display.
+              There are no {filter !== 'all' ? `${filter} ` : ''}pull requests
+              to display.
             </div>
           </div>
         ) : (
@@ -355,7 +357,8 @@ export const PullRequestsTab: React.FC<PullRequestsTabProps> = ({
                 : theme.colors.error || '#ef4444';
             const badgeBg = `${badgeColor}22`;
 
-            const totalComments = (pr.comments || 0) + (pr.review_comments || 0);
+            const totalComments =
+              (pr.comments || 0) + (pr.review_comments || 0);
 
             return (
               <div
@@ -378,8 +381,22 @@ export const PullRequestsTab: React.FC<PullRequestsTabProps> = ({
                     gap: '12px',
                   }}
                 >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      flex: 1,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        flexWrap: 'wrap',
+                      }}
+                    >
                       <span
                         style={{
                           display: 'inline-flex',
@@ -438,17 +455,38 @@ export const PullRequestsTab: React.FC<PullRequestsTabProps> = ({
                       }}
                     >
                       <span>by {pr.user?.login ?? 'unknown'}</span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <Calendar size={12} /> Opened {formatDate(pr.created_at)}
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <Calendar size={12} /> Opened{' '}
+                        {formatDate(pr.created_at)}
                       </span>
                       {!isOpen && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          {isMerged ? 'Merged' : 'Closed'} {formatDate(pr.merged_at || pr.updated_at)}
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          {isMerged ? 'Merged' : 'Closed'}{' '}
+                          {formatDate(pr.merged_at || pr.updated_at)}
                         </span>
                       )}
                       {totalComments > 0 && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <MessageSquare size={12} /> {totalComments} comment{totalComments === 1 ? '' : 's'}
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <MessageSquare size={12} /> {totalComments} comment
+                          {totalComments === 1 ? '' : 's'}
                         </span>
                       )}
                     </div>
@@ -464,7 +502,9 @@ export const PullRequestsTab: React.FC<PullRequestsTabProps> = ({
                     >
                       <GitBranch size={14} />
                       <span>
-                        {pr.base?.ref ?? 'unknown'} <span style={{ opacity: 0.6 }}>←</span> {pr.head?.ref ?? 'unknown'}
+                        {pr.base?.ref ?? 'unknown'}{' '}
+                        <span style={{ opacity: 0.6 }}>←</span>{' '}
+                        {pr.head?.ref ?? 'unknown'}
                       </span>
                     </div>
 
@@ -519,7 +559,8 @@ export const PullRequestsTab: React.FC<PullRequestsTabProps> = ({
                       color: theme.colors.primary,
                     }}
                   >
-                    <GitMerge size={14} /> Merged into {pr.base?.ref ?? 'base'} from {pr.head?.ref ?? 'head'}
+                    <GitMerge size={14} /> Merged into {pr.base?.ref ?? 'base'}{' '}
+                    from {pr.head?.ref ?? 'head'}
                   </div>
                 )}
               </div>

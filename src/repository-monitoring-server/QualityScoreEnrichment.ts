@@ -69,7 +69,10 @@ export class QualityScoreEnrichment {
     const cwd = packagePath ? `${repoPath}/${packagePath}` : repoPath;
 
     // Filter to only lenses that have executable commands
-    const executableLenses = this.getExecutableLenses(pkg, pkg.qualityMetrics.availableLenses);
+    const executableLenses = this.getExecutableLenses(
+      pkg,
+      pkg.qualityMetrics.availableLenses,
+    );
 
     if (executableLenses.length === 0) {
       console.info(
@@ -141,21 +144,24 @@ export class QualityScoreEnrichment {
   /**
    * Get list of lenses that have executable commands
    */
-  private getExecutableLenses(pkg: PackageLayer, availableLenses: string[]): string[] {
+  private getExecutableLenses(
+    pkg: PackageLayer,
+    availableLenses: string[],
+  ): string[] {
     const commands = pkg.packageData.availableCommands || [];
     const executableLenses: string[] = [];
 
     for (const lensId of availableLenses) {
       // Check if there's a command marked as a lens command for this lensId
       const hasLensCommand = commands.some(
-        (cmd) => cmd.isLensCommand && cmd.lensId === lensId
+        (cmd) => cmd.isLensCommand && cmd.lensId === lensId,
       );
 
       if (hasLensCommand) {
         executableLenses.push(lensId);
       } else {
         console.warn(
-          `[QualityScoreEnrichment] Lens "${lensId}" marked as available but has no executable command in ${pkg.packageData.name}`
+          `[QualityScoreEnrichment] Lens "${lensId}" marked as available but has no executable command in ${pkg.packageData.name}`,
         );
       }
     }
@@ -191,15 +197,12 @@ export class QualityScoreEnrichment {
     // Parse command string
     const { command: cmd, args } = this.parseCommandString(command);
 
-    console.info(
-      `[QualityScoreEnrichment] Configuring lens ${lensId}:`,
-      {
-        cwd,
-        command: cmd,
-        args,
-        fullCommand: command,
-      }
-    );
+    console.info(`[QualityScoreEnrichment] Configuring lens ${lensId}:`, {
+      cwd,
+      command: cmd,
+      args,
+      fullCommand: command,
+    });
 
     // Configure lens
     lens.configure({
@@ -216,35 +219,32 @@ export class QualityScoreEnrichment {
     // Run lens
     const result: LensResult = await lens.run();
 
-    console.info(
-      `[QualityScoreEnrichment] Lens result for ${lensId}:`,
-      {
-        success: result.success,
-        hasQualityScore: result.qualityScore !== undefined,
-        qualityScore: result.qualityScore,
-        hasMetrics: !!result.metrics,
-        metricsKeys: result.metrics ? Object.keys(result.metrics) : [],
-        hasRaw: !!result.raw,
-        rawExitCode: result.raw?.exitCode,
-        hasError: !!result.error,
-        errorMessage: result.error?.message,
-      }
-    );
+    console.info(`[QualityScoreEnrichment] Lens result for ${lensId}:`, {
+      success: result.success,
+      hasQualityScore: result.qualityScore !== undefined,
+      qualityScore: result.qualityScore,
+      hasMetrics: !!result.metrics,
+      metricsKeys: result.metrics ? Object.keys(result.metrics) : [],
+      hasRaw: !!result.raw,
+      rawExitCode: result.raw?.exitCode,
+      hasError: !!result.error,
+      errorMessage: result.error?.message,
+    });
 
     // Log the error if lens failed
     if (!result.success) {
       console.error(
         `[QualityScoreEnrichment] Lens ${lensId} failed. Full error object:`,
-        result.error
+        result.error,
       );
       console.error(
         `[QualityScoreEnrichment] Error type:`,
-        typeof result.error
+        typeof result.error,
       );
       if (result.error) {
         console.error(
           `[QualityScoreEnrichment] Error keys:`,
-          Object.keys(result.error)
+          Object.keys(result.error),
         );
       }
     }
@@ -260,7 +260,7 @@ export class QualityScoreEnrichment {
     );
     console.warn(
       `[QualityScoreEnrichment] Full result object keys:`,
-      Object.keys(result)
+      Object.keys(result),
     );
     return null;
   }

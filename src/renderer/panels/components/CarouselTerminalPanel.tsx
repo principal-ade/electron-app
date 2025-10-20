@@ -5,7 +5,15 @@ import React, {
   forwardRef,
   useRef,
 } from 'react';
-import { X, Plus, Bug, Monitor, ChevronLeft, ChevronRight, Grid3x3 } from 'lucide-react';
+import {
+  X,
+  Plus,
+  Bug,
+  Monitor,
+  ChevronLeft,
+  ChevronRight,
+  Grid3x3,
+} from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { useTheme } from '@a24z/industry-theme';
 import { SnapCarousel, SnapCarouselRef } from '@a24z/panels';
@@ -374,7 +382,10 @@ export const CarouselTerminalPanel = forwardRef<
           // If we closed the current panel, navigate appropriately
           if (tabIndex === currentPanelIndex && newTabs.length > 0) {
             // Navigate to the previous panel or stay at the same index
-            const newIndex = Math.max(0, Math.min(tabIndex, newTabs.length - 1));
+            const newIndex = Math.max(
+              0,
+              Math.min(tabIndex, newTabs.length - 1),
+            );
             setCurrentPanelIndex(newIndex);
             setTimeout(() => {
               carouselRef.current?.scrollToPanel(newIndex);
@@ -455,7 +466,8 @@ export const CarouselTerminalPanel = forwardRef<
           const currentIndex = currentPanelIndexRef.current;
 
           // Get the actual current panel from the carousel to ensure we're in sync
-          const actualCurrentIndex = carouselRef.current?.getCurrentPanel() ?? currentIndex;
+          const actualCurrentIndex =
+            carouselRef.current?.getCurrentPanel() ?? currentIndex;
           const currentActiveTab = currentTabs[actualCurrentIndex];
 
           if (currentActiveTab && currentTabs.length > 0) {
@@ -533,10 +545,7 @@ export const CarouselTerminalPanel = forwardRef<
           e.preventDefault();
           const currentTabs = tabsRef.current;
           const currentIndex = currentPanelIndexRef.current;
-          const nextIndex = Math.min(
-            currentTabs.length - 1,
-            currentIndex + 1,
-          );
+          const nextIndex = Math.min(currentTabs.length - 1, currentIndex + 1);
           switchPanelRef.current?.(nextIndex);
           return;
         }
@@ -577,7 +586,11 @@ export const CarouselTerminalPanel = forwardRef<
           onKeyDown={(e) => {
             // Prevent space and other keys from bubbling to carousel
             // This allows normal typing in the terminal without triggering carousel navigation
-            if (e.key === ' ' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            if (
+              e.key === ' ' ||
+              e.key === 'ArrowLeft' ||
+              e.key === 'ArrowRight'
+            ) {
               e.stopPropagation();
             }
           }}
@@ -733,7 +746,9 @@ export const CarouselTerminalPanel = forwardRef<
                   textAlign: 'center',
                 }}
               >
-                {tabs.length > 0 ? `${currentPanelIndex + 1} / ${tabs.length}` : '0 / 0'}
+                {tabs.length > 0
+                  ? `${currentPanelIndex + 1} / ${tabs.length}`
+                  : '0 / 0'}
               </span>
 
               <button
@@ -907,7 +922,13 @@ export const CarouselTerminalPanel = forwardRef<
           onKeyDown={(e) => {
             // Prevent space from triggering carousel navigation
             // Space should only be used in the terminal itself
-            if (e.key === ' ' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey) {
+            if (
+              e.key === ' ' &&
+              !e.metaKey &&
+              !e.ctrlKey &&
+              !e.shiftKey &&
+              !e.altKey
+            ) {
               e.stopPropagation();
             }
           }}

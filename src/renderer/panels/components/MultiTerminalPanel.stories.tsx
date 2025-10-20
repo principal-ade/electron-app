@@ -47,7 +47,7 @@ class MockTerminalService {
 
   static async getOrCreate(dir: string, context?: string): Promise<string> {
     const existing = Array.from(this.sessions.values()).find(
-      (s) => s.directory === dir && s.context === context
+      (s) => s.directory === dir && s.context === context,
     );
     if (existing) {
       return existing.id;
@@ -58,7 +58,7 @@ class MockTerminalService {
   static async createWithCommand(
     dir: string,
     command: string,
-    context?: string
+    context?: string,
   ): Promise<string> {
     const id = await this.create(dir, context);
     const session = this.sessions.get(id);
@@ -79,13 +79,13 @@ class MockTerminalService {
       session.lastActivity = new Date().toISOString();
       // Echo back to all listeners
       this.listeners.data.forEach((listener) =>
-        listener({ sessionId: id, data })
+        listener({ sessionId: id, data }),
       );
     }
   }
 
   static async onData(
-    callback: (data: { sessionId: string; data: string }) => void
+    callback: (data: { sessionId: string; data: string }) => void,
   ): Promise<() => void> {
     this.listeners.data.push(callback);
     return () => {
@@ -97,7 +97,7 @@ class MockTerminalService {
   }
 
   static async onExit(
-    callback: (exit: { sessionId: string; code: number }) => void
+    callback: (exit: { sessionId: string; code: number }) => void,
   ): Promise<() => void> {
     this.listeners.exit.push(callback);
     return () => {
@@ -108,11 +108,7 @@ class MockTerminalService {
     };
   }
 
-  static async resize(
-    id: string,
-    cols: number,
-    rows: number
-  ): Promise<void> {
+  static async resize(id: string, cols: number, rows: number): Promise<void> {
     // No-op for mock
   }
 
@@ -121,7 +117,7 @@ class MockTerminalService {
     if (session && session.buffer) {
       // Simulate sending the buffer contents
       this.listeners.data.forEach((listener) =>
-        listener({ sessionId: id, data: session.buffer })
+        listener({ sessionId: id, data: session.buffer }),
       );
       return true;
     }
@@ -149,7 +145,7 @@ class MockTerminalService {
   }
 
   static onOwnershipLost(
-    callback: (data: { sessionId: string; newOwnerWindowId: number }) => void
+    callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
   ) {
     this.listeners.ownershipLost.push(callback);
     return () => {
@@ -179,7 +175,7 @@ class MockTerminalService {
       session.buffer += content;
       // Notify listeners
       this.listeners.data.forEach((listener) =>
-        listener({ sessionId: id, data: content })
+        listener({ sessionId: id, data: content }),
       );
     }
   }
@@ -234,7 +230,7 @@ export const ModeSwitchingTest: Story = {
         // Create test sessions with rich content
         const session1 = await MockTerminalService.create(
           '/home/user/project',
-          'terminal:test-repo'
+          'terminal:test-repo',
         );
         MockTerminalService.addContent(
           session1,
@@ -247,18 +243,18 @@ export const ModeSwitchingTest: Story = {
             '  \x1b]8;;http://localhost:3000\x1b\\http://localhost:3000\x1b]8;;\x1b\\\r\n' +
             '\r\n' +
             '\x1b[33mReady in 2.3s\x1b[0m\r\n' +
-            '$ '
+            '$ ',
         );
 
         const session2 = await MockTerminalService.create(
           '/home/user/project',
-          'terminal:test-repo'
+          'terminal:test-repo',
         );
         MockTerminalService.addContent(
           session2,
           '$ git status\r\n' +
             'On branch main\r\n' +
-            'Your branch is up to date with \'origin/main\'.\r\n' +
+            "Your branch is up to date with 'origin/main'.\r\n" +
             '\r\n' +
             'Changes not staged for commit:\r\n' +
             '  (use "git add <file>..." to update what will be committed)\r\n' +
@@ -271,12 +267,12 @@ export const ModeSwitchingTest: Story = {
             '\x1b[31m        src/new-feature.ts\x1b[0m\r\n' +
             '\r\n' +
             'no changes added to commit (use "git add" and/or "git commit -a")\r\n' +
-            '$ '
+            '$ ',
         );
 
         const session3 = await MockTerminalService.create(
           '/home/user/project',
-          'terminal:test-repo'
+          'terminal:test-repo',
         );
         MockTerminalService.addContent(
           session3,
@@ -297,7 +293,7 @@ export const ModeSwitchingTest: Story = {
             '\x1b[1mTest Suites: \x1b[0m\x1b[32m12 passed\x1b[0m, 12 total\r\n' +
             '\x1b[1mTests:       \x1b[0m\x1b[32m56 passed\x1b[0m, 56 total\r\n' +
             '\x1b[1mTime:        \x1b[0m3.241s\r\n' +
-            '$ '
+            '$ ',
         );
 
         setSessionIds([session1, session2, session3]);
@@ -322,7 +318,7 @@ export const ModeSwitchingTest: Story = {
             'New content added at ' +
             new Date().toLocaleTimeString() +
             '\r\n' +
-            '$ '
+            '$ ',
         );
       }
     };
@@ -333,7 +329,9 @@ export const ModeSwitchingTest: Story = {
     };
 
     return (
-      <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <div
+        style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}
+      >
         {/* Control Panel */}
         <div
           style={{
@@ -416,26 +414,32 @@ export const ModeSwitchingTest: Story = {
           </div>
           <ol style={{ margin: 0, paddingLeft: '20px' }}>
             <li>
-              Notice that there are <strong>3 terminal sessions</strong> with different content already created
+              Notice that there are <strong>3 terminal sessions</strong> with
+              different content already created
             </li>
             <li>
-              Click the <strong>grid icon</strong> in the terminal panel header to{' '}
-              <strong>switch between tabbed and carousel modes</strong>
+              Click the <strong>grid icon</strong> in the terminal panel header
+              to <strong>switch between tabbed and carousel modes</strong>
             </li>
             <li>
-              Verify that the <strong>terminal content persists</strong> and is visible after switching modes
+              Verify that the <strong>terminal content persists</strong> and is
+              visible after switching modes
             </li>
             <li>
-              Click <strong>"Add More Content"</strong> to add content to a random terminal
+              Click <strong>"Add More Content"</strong> to add content to a
+              random terminal
             </li>
             <li>
-              Switch modes again and verify the <strong>new content is visible</strong>
+              Switch modes again and verify the{' '}
+              <strong>new content is visible</strong>
             </li>
             <li>
-              Click <strong>"Simulate Workspace Change"</strong> to remount the component (simulates workspace config change)
+              Click <strong>"Simulate Workspace Change"</strong> to remount the
+              component (simulates workspace config change)
             </li>
             <li>
-              Verify that <strong>all terminal content is still visible</strong> after remount
+              Verify that <strong>all terminal content is still visible</strong>{' '}
+              after remount
             </li>
           </ol>
         </div>
@@ -464,13 +468,15 @@ export const ModeSwitchingTest: Story = {
           }}
         >
           <div>
-            <strong style={{ color: '#0066cc' }}>Sessions:</strong> {sessionIds.length}
+            <strong style={{ color: '#0066cc' }}>Sessions:</strong>{' '}
+            {sessionIds.length}
           </div>
           <div>
             <strong style={{ color: '#0066cc' }}>Mount Key:</strong> {key}
           </div>
           <div>
-            <strong style={{ color: '#0066cc' }}>Fix Applied:</strong> TerminalService.refresh() on reconnect
+            <strong style={{ color: '#0066cc' }}>Fix Applied:</strong>{' '}
+            TerminalService.refresh() on reconnect
           </div>
         </div>
       </div>
@@ -495,7 +501,7 @@ export const Basic: Story = {
         if (sessions.length > 0) {
           MockTerminalService.addContent(
             sessions[0].id,
-            '$ npm start\r\nStarting server...\r\n\x1b[32mServer running on port 3000\x1b[0m\r\n$ '
+            '$ npm start\r\nStarting server...\r\n\x1b[32mServer running on port 3000\x1b[0m\r\n$ ',
           );
         }
       };
@@ -527,21 +533,30 @@ export const MultipleTabs: Story = {
         // Create multiple sessions
         const session1 = await MockTerminalService.create(
           '/home/user/project',
-          'terminal:demo'
+          'terminal:demo',
         );
-        MockTerminalService.addContent(session1, '$ npm run dev\r\nDev server running...\r\n$ ');
+        MockTerminalService.addContent(
+          session1,
+          '$ npm run dev\r\nDev server running...\r\n$ ',
+        );
 
         const session2 = await MockTerminalService.create(
           '/home/user/project',
-          'terminal:demo'
+          'terminal:demo',
         );
-        MockTerminalService.addContent(session2, '$ git status\r\nOn branch main\r\n$ ');
+        MockTerminalService.addContent(
+          session2,
+          '$ git status\r\nOn branch main\r\n$ ',
+        );
 
         const session3 = await MockTerminalService.create(
           '/home/user/project',
-          'terminal:demo'
+          'terminal:demo',
         );
-        MockTerminalService.addContent(session3, '$ npm test\r\nRunning tests...\r\n$ ');
+        MockTerminalService.addContent(
+          session3,
+          '$ npm test\r\nRunning tests...\r\n$ ',
+        );
       };
 
       initSessions();

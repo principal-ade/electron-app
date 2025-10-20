@@ -435,10 +435,7 @@ export const RepositorySearchTabPreview: React.FC = () => {
           border: `1px solid ${theme.colors.border}`,
         }}
       >
-        <Search
-          size={12}
-          style={{ color: theme.colors.textSecondary }}
-        />
+        <Search size={12} style={{ color: theme.colors.textSecondary }} />
         <span style={{ color: theme.colors.textSecondary }}>
           Search files...
         </span>

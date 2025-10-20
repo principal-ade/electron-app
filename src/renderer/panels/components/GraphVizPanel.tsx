@@ -33,7 +33,14 @@ interface GraphVizPanelProps {
     convertEqualSidedPolygons?: boolean;
     tweenPrecision?: number;
     growEnteringEdges?: boolean;
-    engine?: 'dot' | 'circo' | 'fdp' | 'neato' | 'osage' | 'patchwork' | 'twopi';
+    engine?:
+      | 'dot'
+      | 'circo'
+      | 'fdp'
+      | 'neato'
+      | 'osage'
+      | 'patchwork'
+      | 'twopi';
   };
 
   // Event handlers
@@ -122,7 +129,9 @@ export const GraphVizPanel: React.FC<GraphVizPanelProps> = ({
             textAlign: 'center',
           }}
         >
-          <div style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>
+          <div
+            style={{ marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}
+          >
             Error loading graph
           </div>
           <div style={{ fontSize: '12px', color: theme.colors.textSecondary }}>

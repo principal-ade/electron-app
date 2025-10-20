@@ -34,8 +34,12 @@ export type RepositoryPanelDefinition = RepositoryPanelDefinitionBase & {
   render?: RepositoryPanelRenderer;
 };
 
-const panelRenderers: Partial<Record<RepositoryPanelId, RepositoryPanelRenderer>> = {
-  gitChanges: ({ actions }) => <GitChangesPanel onFileClick={actions.openFile} />,
+const panelRenderers: Partial<
+  Record<RepositoryPanelId, RepositoryPanelRenderer>
+> = {
+  gitChanges: ({ actions }) => (
+    <GitChangesPanel onFileClick={actions.openFile} />
+  ),
   gitIssues: ({ context }) => (
     <GitIssuesPanel repository={context.repository ?? undefined} />
   ),
@@ -46,10 +50,7 @@ const panelRenderers: Partial<Record<RepositoryPanelId, RepositoryPanelRenderer>
     <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />
   ),
   gitDiff: ({ context }) => (
-    <GitDiffPanel
-      filePath={null}
-      repositoryPath={context.repositoryPath}
-    />
+    <GitDiffPanel filePath={null} repositoryPath={context.repositoryPath} />
   ),
   tools: ({ context }) => (
     <ToolsPanel

@@ -134,4 +134,20 @@ export default [{
     '@typescript-eslint/no-explicit-any': 'off',
     'no-console': 'off',
   },
+}, // Specific rules for storybook files
+{
+  files: ['.storybook/**/*.{ts,tsx,js,jsx}'],
+  languageOptions: {
+    parser: typescriptParser,
+    parserOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+    },
+  },
+  plugins: {
+    '@typescript-eslint': typescript,
+  },
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'off',
+  },
 }, ...storybook.configs["flat/recommended"]];

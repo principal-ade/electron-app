@@ -86,10 +86,7 @@ export class RepositoryCityService {
       // Prepare trees for city building
       const versions = new Map<string, CityFileTree>();
       const sourceId = `monitoring-${repository.path}`;
-      versions.set(
-        sourceId,
-        fileTree as unknown as CityFileTree,
-      );
+      versions.set(sourceId, fileTree as unknown as CityFileTree);
 
       // TODO: Optionally add HEAD tree for git changes
       if (options.includeGitHead) {

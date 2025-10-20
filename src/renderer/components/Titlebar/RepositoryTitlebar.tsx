@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Layers, Key, ExternalLink, Link2, NotebookPen, ArrowLeftRight } from 'lucide-react';
+import {
+  Layout,
+  Layers,
+  Key,
+  ExternalLink,
+  Link2,
+  NotebookPen,
+  ArrowLeftRight,
+} from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';

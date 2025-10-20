@@ -64,9 +64,10 @@ export function graphToDot(
     let label = node.name;
     if (showPackageNames && node.packageNames.length > 0) {
       const pkgList = node.packageNames.slice(0, 3).join('\\n');
-      const more = node.packageNames.length > 3
-        ? `\\n+${node.packageNames.length - 3} more`
-        : '';
+      const more =
+        node.packageNames.length > 3
+          ? `\\n+${node.packageNames.length - 3} more`
+          : '';
       label = `${node.name}\\n━━━━━━\\n${pkgList}${more}`;
     }
 
@@ -77,7 +78,7 @@ export function graphToDot(
     const style = isTopLevel ? 'filled,bold' : 'filled';
     const shape = node.type === 'external' ? 'ellipse' : 'box';
     lines.push(
-      `  "${node.id}" [label="${escapedLabel}", fillcolor="${nodeColor}", color="${nodeColor}", fontcolor="white", style="${style}", shape="${shape}"];`
+      `  "${node.id}" [label="${escapedLabel}", fillcolor="${nodeColor}", color="${nodeColor}", fontcolor="white", style="${style}", shape="${shape}"];`,
     );
   });
 
@@ -88,8 +89,8 @@ export function graphToDot(
     // Create edge label if showing details
     let edgeLabel = '';
     if (showVersionRanges && edge.dependencies.length > 0) {
-      const depLabels = edge.dependencies.map((dep) =>
-        `${dep.packageName}@${dep.versionRange}`
+      const depLabels = edge.dependencies.map(
+        (dep) => `${dep.packageName}@${dep.versionRange}`,
       );
       edgeLabel = ` [label="${depLabels.join('\\n')}", color="${edgeColor}"]`;
     } else {

@@ -176,12 +176,15 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [workspacesLoaded, setWorkspacesLoaded] = useState(false);
     const [hasStateDeviation, setHasStateDeviation] = useState(false);
     const [panelResetKey, setPanelResetKey] = useState(0);
-    const [leftPanelActivePanelId, setLeftPanelActivePanelId] =
-      useState<string | null>(null);
-    const [middlePanelActivePanelId, setMiddlePanelActivePanelId] =
-      useState<string | null>(null);
-    const [rightPanelActivePanelId, setRightPanelActivePanelId] =
-      useState<string | null>(null);
+    const [leftPanelActivePanelId, setLeftPanelActivePanelId] = useState<
+      string | null
+    >(null);
+    const [middlePanelActivePanelId, setMiddlePanelActivePanelId] = useState<
+      string | null
+    >(null);
+    const [rightPanelActivePanelId, setRightPanelActivePanelId] = useState<
+      string | null
+    >(null);
 
     // File tree services - shared across all views
     const cityDataCache = useMemo(() => new CityDataCacheService(), []);
@@ -294,9 +297,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [selectedCodeFile, setSelectedCodeFile] = useState<string | null>(
       null,
     );
-    const [selectedDiffFile, setSelectedDiffFile] = useState<
-      { path: string; status?: GitChangeSelectionStatus } | null
-    >(null);
+    const [selectedDiffFile, setSelectedDiffFile] = useState<{
+      path: string;
+      status?: GitChangeSelectionStatus;
+    } | null>(null);
 
     // Toolbar state
     const [toolbarExpanded, setToolbarExpanded] = useState(false);
@@ -407,7 +411,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             // Load active panel IDs if they exist
             if (repoState.activePanels) {
               setLeftPanelActivePanelId(repoState.activePanels.left ?? null);
-              setMiddlePanelActivePanelId(repoState.activePanels.middle ?? null);
+              setMiddlePanelActivePanelId(
+                repoState.activePanels.middle ?? null,
+              );
               setRightPanelActivePanelId(repoState.activePanels.right ?? null);
             }
           }
@@ -1790,16 +1796,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     }, [selectedSource?.id]);
 
     const repositoryPanelMetadata = React.useMemo(() => {
-      return repositoryPanelDefinitions.reduce(
-        (map, definition) => {
-          map.set(definition.id, {
-            label: definition.label,
-            description: definition.description,
-          });
-          return map;
-        },
-        new Map<string, { label: string; description?: string }>(),
-      );
+      return repositoryPanelDefinitions.reduce((map, definition) => {
+        map.set(definition.id, {
+          label: definition.label,
+          description: definition.description,
+        });
+        return map;
+      }, new Map<string, { label: string; description?: string }>());
     }, []);
 
     const availablePanelDefinitions = React.useMemo<PanelDefinition[]>(() => {
@@ -2663,7 +2666,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   const activeIndex = leftPanelActivePanelId
                     ? leftPanel.panels.indexOf(leftPanelActivePanelId)
                     : -1;
-                  const finalIndex = activeIndex >= 0 ? activeIndex : (leftPanel.config?.defaultActiveTab ?? 0);
+                  const finalIndex =
+                    activeIndex >= 0
+                      ? activeIndex
+                      : (leftPanel.config?.defaultActiveTab ?? 0);
 
                   actualPanelLayout = {
                     ...actualPanelLayout,
@@ -2696,7 +2702,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   const activeIndex = middlePanelActivePanelId
                     ? middlePanel.panels.indexOf(middlePanelActivePanelId)
                     : -1;
-                  const finalIndex = activeIndex >= 0 ? activeIndex : (middlePanel.config?.defaultActiveTab ?? 0);
+                  const finalIndex =
+                    activeIndex >= 0
+                      ? activeIndex
+                      : (middlePanel.config?.defaultActiveTab ?? 0);
 
                   actualPanelLayout = {
                     ...actualPanelLayout,
@@ -2729,7 +2738,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                   const activeIndex = rightPanelActivePanelId
                     ? rightPanel.panels.indexOf(rightPanelActivePanelId)
                     : -1;
-                  const finalIndex = activeIndex >= 0 ? activeIndex : (rightPanel.config?.defaultActiveTab ?? 0);
+                  const finalIndex =
+                    activeIndex >= 0
+                      ? activeIndex
+                      : (rightPanel.config?.defaultActiveTab ?? 0);
 
                   actualPanelLayout = {
                     ...actualPanelLayout,

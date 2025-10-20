@@ -17,10 +17,7 @@ import { useRepositoryData } from '../hooks/useRepositoryData';
 
 export interface RepositoryPanelActions {
   openFile?: (filePath: string) => void;
-  openGitDiff?: (
-    filePath: string,
-    status?: GitChangeSelectionStatus,
-  ) => void;
+  openGitDiff?: (filePath: string, status?: GitChangeSelectionStatus) => void;
 }
 
 export interface RepositoryPanelContextValue {

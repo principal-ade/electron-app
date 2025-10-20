@@ -66,10 +66,7 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
   // Subscribe to session updates
   useEffect(() => {
     const unsubscribe = AgentContextTrackingService.subscribe((sessions) => {
-      console.info(
-        '[AgentContextTreePanel] Sessions updated:',
-        sessions.size,
-      );
+      console.info('[AgentContextTreePanel] Sessions updated:', sessions.size);
       loadSources();
     });
 

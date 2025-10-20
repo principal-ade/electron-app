@@ -367,22 +367,36 @@ Start typing to see the save functionality in action...`,
     const [lastSaved, setLastSaved] = useState<string | null>(null);
 
     const handleSave = (content: string) => {
-      setSaveCount(prev => prev + 1);
+      setSaveCount((prev) => prev + 1);
       setLastSaved(new Date().toLocaleTimeString());
       console.log('Content saved:', content);
     };
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '600px', width: '100%' }}>
-        <div style={{
-          padding: '12px',
-          backgroundColor: '#2a2a2a',
-          borderBottom: '1px solid #444',
-          color: '#fff',
-          fontSize: '14px',
-        }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: '600px',
+          width: '100%',
+        }}
+      >
+        <div
+          style={{
+            padding: '12px',
+            backgroundColor: '#2a2a2a',
+            borderBottom: '1px solid #444',
+            color: '#fff',
+            fontSize: '14px',
+          }}
+        >
           Save Count: <strong>{saveCount}</strong>
-          {lastSaved && <> | Last Saved: <strong>{lastSaved}</strong></>}
+          {lastSaved && (
+            <>
+              {' '}
+              | Last Saved: <strong>{lastSaved}</strong>
+            </>
+          )}
         </div>
         <div style={{ flex: 1 }}>
           <MDXEditorPanel {...args} onSave={handleSave} />
@@ -397,7 +411,9 @@ Start typing to see the save functionality in action...`,
  */
 export const SideBySide: Story = {
   render: () => (
-    <div style={{ display: 'flex', height: '600px', width: '100%', gap: '2px' }}>
+    <div
+      style={{ display: 'flex', height: '600px', width: '100%', gap: '2px' }}
+    >
       <div style={{ flex: 1 }}>
         <MDXEditorPanel
           filePath="docs/left.md"
@@ -460,14 +476,16 @@ This content was loaded after a simulated delay.
 
     if (isLoading) {
       return (
-        <div style={{
-          height: '600px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#1a1a1a',
-          color: '#fff',
-        }}>
+        <div
+          style={{
+            height: '600px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#1a1a1a',
+            color: '#fff',
+          }}
+        >
           <div style={{ textAlign: 'center' }}>
             <div style={{ marginBottom: '16px' }}>Loading file...</div>
             <div style={{ fontSize: '12px', opacity: 0.6 }}>Please wait</div>
@@ -628,7 +646,14 @@ The dark theme provides:
 - Modern appearance`,
   },
   render: (args) => (
-    <div style={{ height: '600px', width: '100%', backgroundColor: '#0d0d0d', padding: '20px' }}>
+    <div
+      style={{
+        height: '600px',
+        width: '100%',
+        backgroundColor: '#0d0d0d',
+        padding: '20px',
+      }}
+    >
       <MDXEditorPanel {...args} />
     </div>
   ),

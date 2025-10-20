@@ -24,10 +24,7 @@ import './XTerminalPanel.css';
 
 import { useTheme } from '@a24z/industry-theme';
 
-import type {
-  XTerminalPanelProps,
-  XTerminalPanelRef,
-} from './types';
+import type { XTerminalPanelProps, XTerminalPanelRef } from './types';
 import type { ISearchOptions } from '@xterm/addon-search';
 
 /**
@@ -125,7 +122,10 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
         },
         findPrevious: (searchTerm: string, searchOptions?: ISearchOptions) => {
           if (searchAddonRef.current) {
-            return searchAddonRef.current.findPrevious(searchTerm, searchOptions);
+            return searchAddonRef.current.findPrevious(
+              searchTerm,
+              searchOptions,
+            );
           }
           return false;
         },
@@ -219,9 +219,8 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
         event.preventDefault();
 
         if (onLinkClick) {
-          const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(
-            uri,
-          );
+          const isLocalhost =
+            /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(uri);
           onLinkClick(uri, isLocalhost);
         }
       });
@@ -453,7 +452,10 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
               </span>
               {headerSubtitle && (
                 <span
-                  style={{ fontSize: '12px', color: theme.colors.textSecondary }}
+                  style={{
+                    fontSize: '12px',
+                    color: theme.colors.textSecondary,
+                  }}
                 >
                   {headerSubtitle}
                 </span>
@@ -586,9 +588,13 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
         <div
           ref={terminalRef}
           className={`terminal-container-fix ${
-            scrollbarStyle === 'hidden' ? 'hide-scrollbar' :
-            scrollbarStyle === 'thin' ? 'thin-scrollbar' :
-            scrollbarStyle === 'auto-hide' ? 'auto-hide-scrollbar' : ''
+            scrollbarStyle === 'hidden'
+              ? 'hide-scrollbar'
+              : scrollbarStyle === 'thin'
+                ? 'thin-scrollbar'
+                : scrollbarStyle === 'auto-hide'
+                  ? 'auto-hide-scrollbar'
+                  : ''
           }`}
           style={{
             flex: 1,

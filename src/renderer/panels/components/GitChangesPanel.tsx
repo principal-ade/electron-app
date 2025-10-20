@@ -7,10 +7,7 @@ import type { GitChangeSelectionStatus } from '../../../shared/types/repository.
 import { GitChangesContextMenu } from '../../components/GitChangesContextMenu';
 
 interface GitChangesPanelProps {
-  onFileClick?: (
-    filePath: string,
-    status?: GitChangeSelectionStatus,
-  ) => void;
+  onFileClick?: (filePath: string, status?: GitChangeSelectionStatus) => void;
   emptyMessage?: string;
   loadingMessage?: string;
   variant?: 'panel' | 'tab'; // panel shows wrapper with border/header, tab shows just the tree

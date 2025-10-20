@@ -1009,12 +1009,9 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                                   alignItems: 'center',
                                   gap: '8px',
                                 }}
-                                >
-                                  <span>📦</span>
-                                  <span>
-                                  {repoPackageData.packages}{' '}
-                                    packages
-                                  </span>
+                              >
+                                <span>📦</span>
+                                <span>{repoPackageData.packages} packages</span>
                                 {repoPackageData.monorepo && (
                                   <span
                                     style={{
@@ -1216,7 +1213,9 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                             title="Extract package information"
                           >
                             📦
-                            {repoPackageData?.loading ? 'Loading...' : 'Get Packages'}
+                            {repoPackageData?.loading
+                              ? 'Loading...'
+                              : 'Get Packages'}
                           </button>
 
                           {/* Remove button */}

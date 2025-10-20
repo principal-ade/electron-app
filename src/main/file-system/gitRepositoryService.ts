@@ -658,7 +658,10 @@ export class GitRepositoryService {
         return [];
       }
 
-      console.error('[GitRepositoryService] Failed to get commit history:', error);
+      console.error(
+        '[GitRepositoryService] Failed to get commit history:',
+        error,
+      );
       throw error;
     }
   }

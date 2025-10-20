@@ -304,7 +304,10 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
 
           // If this window already owns it or it's unowned, claim/reclaim it
           if (status.ownedByThisWindow || status.canClaim) {
-            const result = await TerminalService.claimOwnership(sessionId, false);
+            const result = await TerminalService.claimOwnership(
+              sessionId,
+              false,
+            );
 
             if (!isMounted) return;
 
@@ -638,10 +641,7 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
             }
           }, 100);
         } catch (err) {
-          console.error(
-            '[TerminalPanel] Failed to refresh terminal:',
-            err,
-          );
+          console.error('[TerminalPanel] Failed to refresh terminal:', err);
           // Still try to fit even if refresh fails
           if (fitAddonRef.current) {
             fitAddonRef.current.fit();
@@ -866,7 +866,8 @@ const TerminalPanel = forwardRef<TerminalPanelRef, TerminalPanelProps>(
                 const scrollPosition = terminal.buffer.active.viewportY;
                 const baseScrollback = terminal.buffer.active.baseY;
                 const wasAtBottom =
-                  scrollPosition + terminal.rows >= baseScrollback + terminal.rows;
+                  scrollPosition + terminal.rows >=
+                  baseScrollback + terminal.rows;
 
                 fitAddonRef.current.fit();
 

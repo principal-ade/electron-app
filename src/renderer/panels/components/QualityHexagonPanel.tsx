@@ -228,8 +228,14 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
             >
               {(() => {
                 // Log what we're receiving from the composition package
-                console.info('[QualityHexagon] Rendering hexagon for:', pkg.packageData.name);
-                console.info('[QualityHexagon] Raw hexagon data:', pkg.qualityMetrics.hexagon);
+                console.info(
+                  '[QualityHexagon] Rendering hexagon for:',
+                  pkg.packageData.name,
+                );
+                console.info(
+                  '[QualityHexagon] Raw hexagon data:',
+                  pkg.qualityMetrics.hexagon,
+                );
 
                 // Convert Partial<QualityMetrics> to full QualityMetrics with defaults
                 const fullMetrics = {
@@ -241,7 +247,10 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
                   documentation: pkg.qualityMetrics.hexagon.documentation ?? 0,
                 };
 
-                console.info('[QualityHexagon] Full metrics with defaults:', fullMetrics);
+                console.info(
+                  '[QualityHexagon] Full metrics with defaults:',
+                  fullMetrics,
+                );
 
                 return compact ? (
                   <QualityHexagonCompact
@@ -280,7 +289,8 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
                           color: theme.colors.success,
                         }}
                       >
-                        Available Lenses ({pkg.qualityMetrics.availableLenses.length}):{' '}
+                        Available Lenses (
+                        {pkg.qualityMetrics.availableLenses.length}):{' '}
                       </span>
                       <span
                         style={{
@@ -303,7 +313,8 @@ export const QualityHexagonPanel: React.FC<QualityHexagonPanelProps> = ({
                           color: theme.colors.warning,
                         }}
                       >
-                        Missing Lenses ({pkg.qualityMetrics.missingLenses.length}):{' '}
+                        Missing Lenses (
+                        {pkg.qualityMetrics.missingLenses.length}):{' '}
                       </span>
                       <span
                         style={{

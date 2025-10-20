@@ -380,7 +380,8 @@ export function registerRepositoryMonitoringHandlers(): void {
         console.error('[RepositoryMonitoring] Error executing tool:', error);
         return {
           success: false,
-          toolName: request.packageCommand.lensId || request.packageCommand.name,
+          toolName:
+            request.packageCommand.lensId || request.packageCommand.name,
           command: request.packageCommand.command,
           packagePath: request.packageLayer.packageData.path,
           exitCode: 1,
@@ -441,19 +442,22 @@ export function registerRepositoryMonitoringHandlers(): void {
   );
 
   // Forward git state events to renderer windows
-  manager.on(MonitoringInternalEvent.GIT_STATE_EVENT, (payload: GitStateEventPayload) => {
-    console.log(
-      '[RepositoryMonitoring] Forwarding git state event to renderer:',
-      payload.event.type,
-    );
-    const windows = BrowserWindow.getAllWindows();
-    windows.forEach((window) => {
-      window.webContents.send(
-        RepositoryMonitoringAPIEvent.GIT_STATE_EVENT,
-        payload,
+  manager.on(
+    MonitoringInternalEvent.GIT_STATE_EVENT,
+    (payload: GitStateEventPayload) => {
+      console.log(
+        '[RepositoryMonitoring] Forwarding git state event to renderer:',
+        payload.event.type,
       );
-    });
-  });
+      const windows = BrowserWindow.getAllWindows();
+      windows.forEach((window) => {
+        window.webContents.send(
+          RepositoryMonitoringAPIEvent.GIT_STATE_EVENT,
+          payload,
+        );
+      });
+    },
+  );
 
   manager.on(
     MonitoringInternalEvent.WORKSPACE_CHANGED,
@@ -488,7 +492,9 @@ export function registerRepositoryMonitoringHandlers(): void {
   // Forward build artifacts detected events to renderer windows
   manager.on(
     MonitoringInternalEvent.BUILD_ARTIFACTS_DETECTED,
-    (payload: import('../../shared/main-process-api-interfaces/RepositoryMonitoringAPI').BuildArtifactsDetectedPayload) => {
+    (
+      payload: import('../../shared/main-process-api-interfaces/RepositoryMonitoringAPI').BuildArtifactsDetectedPayload,
+    ) => {
       console.log(
         `[RepositoryMonitoring] Forwarding build artifacts detected to renderer: ${payload.repoPath} - ${payload.artifacts.length} artifacts`,
       );

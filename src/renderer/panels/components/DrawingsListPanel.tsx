@@ -376,7 +376,13 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
                       {drawing.name}
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
                     <button
                       onClick={(e) => handleCopyPath(drawing, e)}
                       title="Copy file path"
@@ -398,7 +404,8 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = theme.colors.textSecondary;
+                        e.currentTarget.style.color =
+                          theme.colors.textSecondary;
                       }}
                     >
                       <Copy size={14} />
@@ -424,7 +431,8 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = theme.colors.textSecondary;
+                        e.currentTarget.style.color =
+                          theme.colors.textSecondary;
                       }}
                     >
                       <Trash2 size={14} />

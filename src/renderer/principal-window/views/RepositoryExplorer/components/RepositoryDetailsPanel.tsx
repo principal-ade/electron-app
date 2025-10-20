@@ -69,7 +69,10 @@ interface RepositoryDetailsPanelProps {
   isRefreshing?: boolean;
   onFileSelect?: (
     filePath: string | null,
-    options?: { mode?: 'preview' | 'diff'; gitStatus?: GitChangeSelectionStatus },
+    options?: {
+      mode?: 'preview' | 'diff';
+      gitStatus?: GitChangeSelectionStatus;
+    },
   ) => void;
   onOpenTerminal?: () => void;
   // Props for nested right panel (File Preview + Terminal + Markdown)
@@ -189,8 +192,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     ];
 
     const owner = selectedRepository.github?.owner;
-    const repoName =
-      selectedRepository.github?.name ?? selectedRepository.name;
+    const repoName = selectedRepository.github?.name ?? selectedRepository.name;
 
     if (owner && repoName) {
       candidates.push(`${owner}/${repoName}`);
@@ -394,12 +396,19 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
           // Handle both old (boolean record) and new (visibility + order) formats
           let nextVisibility: RepositoryPanelVisibility;
 
-          if ('visibility' in repoState.panelVisibility && 'order' in repoState.panelVisibility) {
+          if (
+            'visibility' in repoState.panelVisibility &&
+            'order' in repoState.panelVisibility
+          ) {
             // New format
-            nextVisibility = repoState.panelVisibility as RepositoryPanelVisibility;
+            nextVisibility =
+              repoState.panelVisibility as RepositoryPanelVisibility;
           } else {
             // Old format - migrate to new format
-            const oldVisibility = repoState.panelVisibility as Record<RepositoryPanelId, boolean>;
+            const oldVisibility = repoState.panelVisibility as Record<
+              RepositoryPanelId,
+              boolean
+            >;
             const visibility: Record<RepositoryPanelId, boolean> = {
               ...defaultVisibility.visibility,
             };
@@ -475,7 +484,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       );
 
       if (refreshedRepo) {
-        console.log('[RepositoryDetailsPanel] GitHub metadata refreshed:', refreshedRepo);
+        console.log(
+          '[RepositoryDetailsPanel] GitHub metadata refreshed:',
+          refreshedRepo,
+        );
         // The REPOSITORY_UPDATED event will automatically update the UI via useAllRepositories hook
       }
     } catch (error) {
@@ -627,26 +639,38 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
 
   // Listen for build artifacts detected events
   useEffect(() => {
-    console.info('[RepositoryDetailsPanel] Setting up build artifacts listener');
+    console.info(
+      '[RepositoryDetailsPanel] Setting up build artifacts listener',
+    );
 
     const unsubscribe = RepositoryMonitoringService.onBuildArtifactsDetected(
       (payload) => {
-        console.info('[RepositoryDetailsPanel] Build artifacts event received:', {
-          eventRepoPath: payload.repoPath,
-          selectedRepoPath: selectedRepository?.path,
-          artifacts: payload.artifacts,
-        });
+        console.info(
+          '[RepositoryDetailsPanel] Build artifacts event received:',
+          {
+            eventRepoPath: payload.repoPath,
+            selectedRepoPath: selectedRepository?.path,
+            artifacts: payload.artifacts,
+          },
+        );
 
-        if (selectedRepository?.path && payload.repoPath === selectedRepository.path) {
-          console.info('[RepositoryDetailsPanel] Showing build artifacts warning');
+        if (
+          selectedRepository?.path &&
+          payload.repoPath === selectedRepository.path
+        ) {
+          console.info(
+            '[RepositoryDetailsPanel] Showing build artifacts warning',
+          );
           setBuildArtifacts(payload.artifacts);
           setShowArtifactsWarning(true);
         }
-      }
+      },
     );
 
     return () => {
-      console.info('[RepositoryDetailsPanel] Removing build artifacts listener');
+      console.info(
+        '[RepositoryDetailsPanel] Removing build artifacts listener',
+      );
       unsubscribe();
     };
   }, [selectedRepository?.path]);
@@ -1034,7 +1058,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   // Create ordered panels based on user's panel order preference
   const orderedPanels = useMemo(() => {
     return panelVisibility.order.filter(
-      (panelId) => panelVisibility.visibility[panelId]
+      (panelId) => panelVisibility.visibility[panelId],
     );
   }, [panelVisibility]);
 
@@ -1047,10 +1071,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
       switch (panelId) {
         case 'gitStatus':
           return (
-            <GitStatusPanel
-              key={panelId}
-              repository={selectedRepository}
-            />
+            <GitStatusPanel key={panelId} repository={selectedRepository} />
           );
 
         case 'tasks':
@@ -1073,10 +1094,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                 onFileClick={handleFileClick}
                 onRequestCityData={buildCityData}
                 loadingMessage="Building repository structure visualization..."
-                emptyMessage={
-                  cityError ||
-                  'Repository structure not available'
-                }
+                emptyMessage={cityError || 'Repository structure not available'}
               />
             </div>
           );
@@ -1388,7 +1406,8 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                       <div
                         style={{
                           display: 'grid',
-                          gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 600px), 1fr))',
+                          gridTemplateColumns:
+                            'repeat(auto-fill, minmax(min(100%, 600px), 1fr))',
                           gap: '16px',
                         }}
                       >
@@ -1411,8 +1430,13 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                       {/* TEMP: Test button to manually trigger warning */}
                       <button
                         onClick={() => {
-                          console.info('[RepositoryDetailsPanel] TEST: Manually triggering artifacts warning');
-                          setBuildArtifacts(['test/artifact1.txt', 'test/artifact2.cache']);
+                          console.info(
+                            '[RepositoryDetailsPanel] TEST: Manually triggering artifacts warning',
+                          );
+                          setBuildArtifacts([
+                            'test/artifact1.txt',
+                            'test/artifact2.cache',
+                          ]);
                           setShowArtifactsWarning(true);
                         }}
                         style={{
@@ -1469,8 +1493,9 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                                   color: theme.colors.textSecondary,
                                 }}
                               >
-                                Quality lens execution created files that triggered a rebuild cycle.
-                                Consider adding these to your .gitignore to prevent feedback loops.
+                                Quality lens execution created files that
+                                triggered a rebuild cycle. Consider adding these
+                                to your .gitignore to prevent feedback loops.
                               </p>
                             </div>
                             <button
@@ -1534,8 +1559,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                           style={{
                             marginTop: '16px',
                             padding: '16px',
-                            backgroundColor:
-                              theme.colors.backgroundSecondary,
+                            backgroundColor: theme.colors.backgroundSecondary,
                             borderRadius: '8px',
                             border: `1px solid ${theme.colors.border}`,
                           }}
@@ -1573,8 +1597,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                                   style={{
                                     marginLeft: '8px',
                                     fontSize: '12px',
-                                    color:
-                                      theme.colors.success || '#10b981',
+                                    color: theme.colors.success || '#10b981',
                                   }}
                                 >
                                   ✓ Success
@@ -1625,7 +1648,10 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                           >
                             {workflowOutput.map((line, i) => (
                               // eslint-disable-next-line react/no-array-index-key
-                              <div key={`${line}-${i}`} style={{ marginBottom: '2px' }}>
+                              <div
+                                key={`${line}-${i}`}
+                                style={{ marginBottom: '2px' }}
+                              >
                                 {line}
                               </div>
                             ))}

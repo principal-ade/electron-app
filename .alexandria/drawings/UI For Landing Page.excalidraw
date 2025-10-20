@@ -398,7 +398,7 @@
     }
   ],
   "appState": {
-    "showWelcomeScreen": true,
+    "showWelcomeScreen": false,
     "theme": "dark",
     "currentChartType": "bar",
     "currentItemBackgroundColor": "transparent",

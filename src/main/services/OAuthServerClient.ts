@@ -2,9 +2,15 @@
  * OAuthServerClient - Adapted from dev-collab-cli for Electron use
  *
  * Handles OAuth authentication flow with the server using PKCE
+ * Supports both GitHub OAuth and WorkOS providers
  */
 
 import crypto from 'crypto';
+import {
+  getAuthEndpoints,
+  getAuthProviderName,
+  type AuthEndpoints,
+} from './AuthProvider';
 
 interface AuthStartResponse {
   auth_url: string;
@@ -24,6 +30,7 @@ interface TokenResponse {
 
 export class OAuthServerClient {
   private serverUrl: string;
+  private endpoints: AuthEndpoints;
   private state: string;
   private codeVerifier: string;
   private codeChallenge: string;
@@ -34,6 +41,9 @@ export class OAuthServerClient {
       config?.serverUrl ||
       process.env.AUTH_SERVER_URL ||
       'https://principal-ade.com';
+
+    // Get endpoints for current provider
+    this.endpoints = getAuthEndpoints(this.serverUrl);
     this.forceReauth = config?.forceReauth || false;
 
     // Generate random state for session tracking
@@ -53,22 +63,25 @@ export class OAuthServerClient {
   }> {
     try {
       // 1. Start auth flow with server
-      console.log('[OAuthServerClient] Starting authentication...');
-
-      const startResponse = await fetch(
-        `${this.serverUrl}/api/auth/cli/start`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            code_challenge: this.codeChallenge,
-            state: this.state,
-            force_reauth: this.forceReauth,
-          }),
-        },
+      const providerName = getAuthProviderName();
+      console.log(
+        `[OAuthServerClient] Starting authentication with ${providerName}...`,
       );
+      console.log(
+        `[OAuthServerClient] Using endpoint: ${this.endpoints.start}`,
+      );
+
+      const startResponse = await fetch(this.endpoints.start, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code_challenge: this.codeChallenge,
+          state: this.state,
+          force_reauth: this.forceReauth,
+        }),
+      });
 
       if (!startResponse.ok) {
         const error = (await startResponse.json()) as { error?: string };
@@ -113,7 +126,7 @@ export class OAuthServerClient {
       }
 
       try {
-        const response = await fetch(`${this.serverUrl}/api/auth/cli/token`, {
+        const response = await fetch(this.endpoints.token, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

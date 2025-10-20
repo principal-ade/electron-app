@@ -166,9 +166,10 @@ export const RepositoryCityVisualization: React.FC<
             : [],
         } as unknown as NormalizedRepository;
 
-        const sources = services.fileTreeService.initializeFromRepository(
-          repositoryForService,
-        );
+        const sources =
+          services.fileTreeService.initializeFromRepository(
+            repositoryForService,
+          );
 
         if (sources.length === 0) {
           throw new Error('No valid sources found for repository');

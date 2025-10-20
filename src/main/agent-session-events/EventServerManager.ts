@@ -316,7 +316,8 @@ export class EventServerManager extends EventEmitter {
   ): Promise<void> {
     // The event-processing-server sends RepoNormalizedUniversalAgentSessionEvent
     // but ProcessedEventMessage.event is typed as unknown for flexibility
-    const repoNormalizedEvent = msg.event as RepoNormalizedUniversalAgentSessionEvent;
+    const repoNormalizedEvent =
+      msg.event as RepoNormalizedUniversalAgentSessionEvent;
 
     // Validate session ID
     if (
@@ -354,7 +355,10 @@ export class EventServerManager extends EventEmitter {
     this.log('info', `Event type: ${repoNormalizedEvent.eventType}`);
     this.log('info', `Session ID: ${normalizedSessionId}`);
     this.log('info', `Tool name: ${repoNormalizedEvent.toolName}`);
-    this.log('info', `Repository info: ${JSON.stringify(repoNormalizedEvent.repository)}`);
+    this.log(
+      'info',
+      `Repository info: ${JSON.stringify(repoNormalizedEvent.repository)}`,
+    );
 
     // Determine if this is a new session (first event for this session)
     const isNewSession = repoNormalizedEvent.eventType === 'session-start';
@@ -364,7 +368,10 @@ export class EventServerManager extends EventEmitter {
       : AgentSessionSDKAPIEvents.SESSION_UPDATED;
 
     this.log('info', `Sending event: ${eventName}`);
-    this.log('info', `Also sending: ${AgentSessionSDKAPIEvents.PROCESSED_EVENT}`);
+    this.log(
+      'info',
+      `Also sending: ${AgentSessionSDKAPIEvents.PROCESSED_EVENT}`,
+    );
 
     windows.forEach((window, index) => {
       this.log('info', `Sending to window ${index + 1}/${windows.length}`);

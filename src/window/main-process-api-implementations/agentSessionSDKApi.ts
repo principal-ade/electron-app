@@ -78,15 +78,11 @@ export const agentSessionSDKApi: AgentSessionSDKAPI = {
 
     ipcRenderer.on(AgentSessionSDKAPIEvents.PROCESSED_EVENT, handler);
 
-    console.log(
-      '[agentSessionSDKApi] IPC listener registered successfully',
-    );
+    console.log('[agentSessionSDKApi] IPC listener registered successfully');
 
     // Return unsubscribe function
     return () => {
-      console.log(
-        '[agentSessionSDKApi] Unsubscribing from IPC events',
-      );
+      console.log('[agentSessionSDKApi] Unsubscribing from IPC events');
       ipcRenderer.removeListener(
         AgentSessionSDKAPIEvents.PROCESSED_EVENT,
         handler,

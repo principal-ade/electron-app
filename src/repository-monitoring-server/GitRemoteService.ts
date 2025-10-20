@@ -327,7 +327,10 @@ export class GitRemoteService {
       }
 
       if (errorMsg.includes('Permission denied')) {
-        return { available: false, reason: 'Permission denied - check SSH keys' };
+        return {
+          available: false,
+          reason: 'Permission denied - check SSH keys',
+        };
       }
 
       if (errorMsg.includes('Host key verification failed')) {

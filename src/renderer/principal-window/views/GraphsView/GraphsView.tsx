@@ -13,7 +13,9 @@ export const GraphsView: React.FC = () => {
   const { theme } = useTheme();
   const { repositories, loading } = useAllRepositories();
   const [selectedGraphId, setSelectedGraphId] = useState<string | null>(null);
-  const [selectedTopLevelNodes, setSelectedTopLevelNodes] = useState<string[]>([]);
+  const [selectedTopLevelNodes, setSelectedTopLevelNodes] = useState<string[]>(
+    [],
+  );
 
   // Build dependency graphs using cluster detection
   const graphs = useMemo(() => {
@@ -43,9 +45,9 @@ export const GraphsView: React.FC = () => {
 
     // Find all nodes reachable from selected top-level nodes
     const reachableNodes = new Set<string>();
-    const nodesToVisit = selectedTopLevelNodes.map(
-      (name) => selectedGraph.nodes.find((n) => n.name === name)?.id
-    ).filter((id): id is string => id !== undefined);
+    const nodesToVisit = selectedTopLevelNodes
+      .map((name) => selectedGraph.nodes.find((n) => n.name === name)?.id)
+      .filter((id): id is string => id !== undefined);
 
     while (nodesToVisit.length > 0) {
       const nodeId = nodesToVisit.pop()!;
@@ -65,10 +67,10 @@ export const GraphsView: React.FC = () => {
 
     // Filter nodes and edges
     const filteredNodes = selectedGraph.nodes.filter((n) =>
-      reachableNodes.has(n.id)
+      reachableNodes.has(n.id),
     );
     const filteredEdges = selectedGraph.edges.filter(
-      (e) => reachableNodes.has(e.source) && reachableNodes.has(e.target)
+      (e) => reachableNodes.has(e.source) && reachableNodes.has(e.target),
     );
 
     return {
@@ -89,11 +91,14 @@ export const GraphsView: React.FC = () => {
   }, [filteredGraph]);
 
   // Memoize graphviz options
-  const graphVizOptions = useMemo(() => ({
-    engine: 'dot' as const,
-    fit: true,
-    zoom: true,
-  }), []);
+  const graphVizOptions = useMemo(
+    () => ({
+      engine: 'dot' as const,
+      fit: true,
+      zoom: true,
+    }),
+    [],
+  );
 
   // Use panel persistence hook for three-panel layout
   const panelState = usePanelPersistence({
@@ -376,7 +381,9 @@ export const GraphsView: React.FC = () => {
     const deselectAllNodes = () => {
       // Keep at least one selected
       if (selectedGraph.metadata.topLevelRepositories.length > 0) {
-        setSelectedTopLevelNodes([selectedGraph.metadata.topLevelRepositories[0]]);
+        setSelectedTopLevelNodes([
+          selectedGraph.metadata.topLevelRepositories[0],
+        ]);
       }
     };
 
@@ -450,12 +457,14 @@ export const GraphsView: React.FC = () => {
                     }}
                     onMouseEnter={(e) => {
                       if (!isSelected) {
-                        e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.backgroundSecondary;
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) {
-                        e.currentTarget.style.backgroundColor = theme.colors.background;
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.background;
                       }
                     }}
                   >
@@ -501,9 +510,10 @@ export const GraphsView: React.FC = () => {
               color: theme.colors.textSecondary,
             }}
           >
-            {filteredGraph?.nodes.length || 0} nodes · {filteredGraph?.edges.length || 0}{' '}
-            edges
-            {selectedTopLevelNodes.length < selectedGraph.metadata.topLevelRepositories.length && (
+            {filteredGraph?.nodes.length || 0} nodes ·{' '}
+            {filteredGraph?.edges.length || 0} edges
+            {selectedTopLevelNodes.length <
+              selectedGraph.metadata.topLevelRepositories.length && (
               <span style={{ marginLeft: '8px', fontStyle: 'italic' }}>
                 (showing {selectedTopLevelNodes.length} of{' '}
                 {selectedGraph.metadata.topLevelRepositories.length} top-level)

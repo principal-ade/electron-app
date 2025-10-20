@@ -66,7 +66,10 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
   useEffect(() => {
     const loadFileContent = async () => {
       if (!filePath || !repositoryPath) {
-        setMarkdown(initialContent || '# Welcome to MDXEditor\n\nStart editing your markdown content here...');
+        setMarkdown(
+          initialContent ||
+            '# Welcome to MDXEditor\n\nStart editing your markdown content here...',
+        );
         setCurrentFilePath(null);
         return;
       }
@@ -100,7 +103,10 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
       } catch (error) {
         console.error('Error loading file:', error);
         setLoadError(`Failed to load file: ${filePath}`);
-        setMarkdown(initialContent || '# Error Loading File\n\nFailed to load the requested file.');
+        setMarkdown(
+          initialContent ||
+            '# Error Loading File\n\nFailed to load the requested file.',
+        );
         setParseError(null);
       } finally {
         setIsLoading(false);
@@ -128,14 +134,18 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
           const fullPath = currentFilePath.startsWith('/')
             ? currentFilePath
             : `${repositoryPath}/${currentFilePath}`;
-          const result = await FileSystemService.writeFile(fullPath, contentToSave);
+          const result = await FileSystemService.writeFile(
+            fullPath,
+            contentToSave,
+          );
 
           // Check if save was successful
           if (result && typeof result === 'object' && 'success' in result) {
             if (result.success) {
               console.log('File saved successfully:', fullPath);
             } else {
-              const errorMsg = 'error' in result ? result.error : 'Unknown error';
+              const errorMsg =
+                'error' in result ? result.error : 'Unknown error';
               console.error('Error saving file:', errorMsg);
               alert(`Failed to save file: ${errorMsg}`);
             }
@@ -146,7 +156,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
         }
       }
     },
-    [markdown, onSave, currentFilePath, repositoryPath]
+    [markdown, onSave, currentFilePath, repositoryPath],
   );
 
   if (!isMounted) {
@@ -215,10 +225,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
           textAlign: 'center',
         }}
       >
-        <FileText
-          size={48}
-          style={{ marginBottom: '16px', opacity: 0.5 }}
-        />
+        <FileText size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
         <h3
           style={{
             margin: '0 0 8px 0',
@@ -244,7 +251,8 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
   }
 
   // Ensure markdown is always a string
-  const safeMarkdown = typeof markdown === 'string' ? markdown : String(markdown || '');
+  const safeMarkdown =
+    typeof markdown === 'string' ? markdown : String(markdown || '');
 
   const editorContent = (
     <div
@@ -372,13 +380,14 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
         >
           <span>⚠️</span>
           <span>
-            {parseError} - Switch to source mode using the toolbar button to edit the raw markdown.
+            {parseError} - Switch to source mode using the toolbar button to
+            edit the raw markdown.
           </span>
         </div>
-        {variant === 'tab' ? editorContent : (
-          <div style={{ flex: 1 }}>
-            {editorContent}
-          </div>
+        {variant === 'tab' ? (
+          editorContent
+        ) : (
+          <div style={{ flex: 1 }}>{editorContent}</div>
         )}
       </div>
     );

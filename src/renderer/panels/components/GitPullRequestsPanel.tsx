@@ -151,7 +151,10 @@ export const GitPullRequestsPanel: React.FC<GitPullRequestsPanelProps> = ({
 
   if (!isAuthenticated) {
     return renderState(
-      <AlertCircle size={32} style={{ color: theme.colors.warning || '#f59e0b' }} />,
+      <AlertCircle
+        size={32}
+        style={{ color: theme.colors.warning || '#f59e0b' }}
+      />,
       'Sign in to GitHub',
       'Connect your GitHub account to review repository pull requests.',
       <button
@@ -200,7 +203,10 @@ export const GitPullRequestsPanel: React.FC<GitPullRequestsPanelProps> = ({
 
   if (!repoInfo) {
     return renderState(
-      <AlertCircle size={32} style={{ color: theme.colors.warning || '#f59e0b' }} />,
+      <AlertCircle
+        size={32}
+        style={{ color: theme.colors.warning || '#f59e0b' }}
+      />,
       'Pull requests unavailable for this repository',
       'We could not determine a GitHub remote for this project. Configure a GitHub remote to work with pull requests.',
     );

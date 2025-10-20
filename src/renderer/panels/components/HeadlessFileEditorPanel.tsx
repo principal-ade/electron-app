@@ -18,7 +18,9 @@ interface HeadlessFileEditorPanelProps {
  * Headless file editor with Monaco - provides just the editor with file watching,
  * no UI chrome. Parent component provides all UI (save buttons, headers, etc).
  */
-export const HeadlessFileEditorPanel: React.FC<HeadlessFileEditorPanelProps> = ({
+export const HeadlessFileEditorPanel: React.FC<
+  HeadlessFileEditorPanelProps
+> = ({
   filePath,
   editable = false,
   onSave,
@@ -200,7 +202,7 @@ export const HeadlessFileEditorPanel: React.FC<HeadlessFileEditorPanelProps> = (
         onModifiedChange(modified);
       }
     },
-    [fileContent, onContentChange, onModifiedChange]
+    [fileContent, onContentChange, onModifiedChange],
   );
 
   // Handle save from editor (Cmd+S)
@@ -228,7 +230,7 @@ export const HeadlessFileEditorPanel: React.FC<HeadlessFileEditorPanelProps> = (
         isSavingRef.current = false;
       }
     },
-    [editorContent, onSave, onModifiedChange]
+    [editorContent, onSave, onModifiedChange],
   );
 
   const language = getLanguage(filePath);

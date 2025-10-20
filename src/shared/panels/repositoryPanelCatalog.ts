@@ -32,7 +32,8 @@ export const repositoryPanelCatalog = [
   {
     id: 'gitIssues',
     label: 'Git Issues',
-    description: 'Browse, triage, and manage GitHub issues for this repository.',
+    description:
+      'Browse, triage, and manage GitHub issues for this repository.',
     surfaces: ['explorer'] as const,
   },
   {
@@ -132,7 +133,8 @@ export const repositoryPanelCatalog = [
   {
     id: 'multiTerminal',
     label: 'Multi Terminal',
-    description: 'Flexible terminal panel that can switch between tabbed and carousel layouts.',
+    description:
+      'Flexible terminal panel that can switch between tabbed and carousel layouts.',
     slices: [] as const,
     surfaces: ['manager'] as const,
   },
@@ -167,7 +169,8 @@ export const repositoryPanelCatalog = [
   {
     id: 'drawings',
     label: 'Drawings',
-    description: 'Browse and manage Excalidraw diagrams saved in the repository.',
+    description:
+      'Browse and manage Excalidraw diagrams saved in the repository.',
     slices: [] as const,
     surfaces: ['excalidraw', 'manager', 'agent'] as const,
   },

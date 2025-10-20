@@ -303,9 +303,10 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
       if (!fileNameToUse && saveName === 'Untitled Diagram') {
         if (!draftNumberRef.current) {
           // Get next draft number - use the appropriate service based on storage type
-          const diagrams = useAlexandriaStorage && projectPath
-            ? await AlexandriaDrawingService.listDiagrams(projectPath)
-            : await ExcalidrawStorageService.listDiagrams(projectPath);
+          const diagrams =
+            useAlexandriaStorage && projectPath
+              ? await AlexandriaDrawingService.listDiagrams(projectPath)
+              : await ExcalidrawStorageService.listDiagrams(projectPath);
           const draftNumbers = diagrams
             .filter((d) => d.name.startsWith('Draft #'))
             .map((d) => {

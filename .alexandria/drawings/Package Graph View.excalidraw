@@ -928,12 +928,12 @@
       "shown": false,
       "data": null
     },
-    "previousSelectedElementIds": {},
-    "resizingElement": null,
-    "scrolledOutside": false,
-    "selectedElementIds": {
+    "previousSelectedElementIds": {
       "ktSapBPVSTpidQxNHIjLN": true
     },
+    "resizingElement": null,
+    "scrolledOutside": false,
+    "selectedElementIds": {},
     "hoveredElementIds": {},
     "selectedGroupIds": {},
     "selectedElementsAreBeingDragged": false,

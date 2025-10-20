@@ -5,7 +5,14 @@ import React, {
   forwardRef,
   useRef,
 } from 'react';
-import { Terminal as TerminalIcon, X, Plus, Bug, Monitor, Grid3x3 } from 'lucide-react';
+import {
+  Terminal as TerminalIcon,
+  X,
+  Plus,
+  Bug,
+  Monitor,
+  Grid3x3,
+} from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { useTheme } from '@a24z/industry-theme';
 import TerminalPanelV2, { TerminalPanelV2Ref } from '../TerminalPanelV2';
@@ -85,32 +92,29 @@ export const TabbedTerminalPanel = forwardRef<
     );
 
     // Switch to a tab
-    const switchTab = useCallback(
-      (tabId: string) => {
-        setTabs((prevTabs) => {
-          const newTabs = prevTabs.map((t) => ({
-            ...t,
-            isActive: t.id === tabId,
-          }));
-          return newTabs;
-        });
-        setActiveTabId(tabId);
+    const switchTab = useCallback((tabId: string) => {
+      setTabs((prevTabs) => {
+        const newTabs = prevTabs.map((t) => ({
+          ...t,
+          isActive: t.id === tabId,
+        }));
+        return newTabs;
+      });
+      setActiveTabId(tabId);
 
-        // Focus the newly active terminal immediately
-        // Use a longer delay to ensure DOM visibility has updated
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            const terminalRef = terminalRefs.current.get(tabId);
-            if (terminalRef) {
-              // Focus the terminal so keyboard input goes to the right tab
-              terminalRef.focus();
-              // Don't auto-scroll - respect user's current scroll position
-            }
-          }, 150); // Longer delay to ensure visibility effect has completed
-        });
-      },
-      [],
-    );
+      // Focus the newly active terminal immediately
+      // Use a longer delay to ensure DOM visibility has updated
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          const terminalRef = terminalRefs.current.get(tabId);
+          if (terminalRef) {
+            // Focus the terminal so keyboard input goes to the right tab
+            terminalRef.focus();
+            // Don't auto-scroll - respect user's current scroll position
+          }
+        }, 150); // Longer delay to ensure visibility effect has completed
+      });
+    }, []);
 
     // Create a new terminal tab
     const addNewTab = useCallback(
@@ -350,7 +354,9 @@ export const TabbedTerminalPanel = forwardRef<
 
           // Prevent multiple rapid tab creations
           if (isCreatingTabRef.current) {
-            console.info('[TabbedTerminalPanel] Ignoring duplicate tab creation');
+            console.info(
+              '[TabbedTerminalPanel] Ignoring duplicate tab creation',
+            );
             return;
           }
 
@@ -417,9 +423,9 @@ export const TabbedTerminalPanel = forwardRef<
 
               if (repo) {
                 // Open the repository dashboard
-                  await WindowService.openRepositoryDashboard(
-                    repo as unknown as AlexandriaEntry,
-                  );
+                await WindowService.openRepositoryDashboard(
+                  repo as unknown as AlexandriaEntry,
+                );
               }
             } catch (error) {
               console.error(

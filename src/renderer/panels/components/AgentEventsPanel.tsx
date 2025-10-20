@@ -49,7 +49,9 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
 
   // Log when panel mounts/repositoryPath changes
   useEffect(() => {
-    console.info('[AgentEventsPanel] ========== PANEL MOUNTED/UPDATED ==========');
+    console.info(
+      '[AgentEventsPanel] ========== PANEL MOUNTED/UPDATED ==========',
+    );
     console.info('[AgentEventsPanel] repositoryPath:', repositoryPath);
     console.info('[AgentEventsPanel] filterByRepo:', filterByRepo);
     console.info('[AgentEventsPanel] Current events count:', events.length);
@@ -72,14 +74,16 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
       console.info('[AgentEventsPanel] Session ID:', event.sessionId);
       console.info('[AgentEventsPanel] Tool name:', event.toolName);
       console.info('[AgentEventsPanel] Event repository:', event.repository);
-      console.info('[AgentEventsPanel] Event workingDirectory:', event.workingDirectory);
+      console.info(
+        '[AgentEventsPanel] Event workingDirectory:',
+        event.workingDirectory,
+      );
       console.info('[AgentEventsPanel] Panel repositoryPath:', repositoryPath);
       console.info('[AgentEventsPanel] filterByRepo:', filterByRepo);
 
       // Filter by repository if enabled
       if (filterByRepo && repositoryPath) {
-        const eventRepoPath =
-          event.repository?.root || event.workingDirectory;
+        const eventRepoPath = event.repository?.root || event.workingDirectory;
         console.info(
           '[AgentEventsPanel] Comparing paths - eventRepoPath:',
           eventRepoPath,
@@ -92,10 +96,14 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
           console.info(
             '[AgentEventsPanel] ❌ Event filtered out - different repository',
           );
-          console.info('[AgentEventsPanel] ===================================');
+          console.info(
+            '[AgentEventsPanel] ===================================',
+          );
           return;
         }
-        console.info('[AgentEventsPanel] ✅ Event accepted - repository matches');
+        console.info(
+          '[AgentEventsPanel] ✅ Event accepted - repository matches',
+        );
       } else {
         console.info('[AgentEventsPanel] ✅ Event accepted - no filtering');
       }
@@ -237,8 +245,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
         const multiplePaths = params.paths;
         if (Array.isArray(multiplePaths)) {
           paths.push(
-            ...multiplePaths.filter((item): item is string =>
-              typeof item === 'string',
+            ...multiplePaths.filter(
+              (item): item is string => typeof item === 'string',
             ),
           );
         }
@@ -686,8 +694,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                               📂 {entry.event.repository.root}
                             </div>
                             <div style={{ color: theme.colors.textSecondary }}>
-                              🌿{' '}
-                              {entry.event.repository.branch || 'unknown'}
+                              🌿 {entry.event.repository.branch || 'unknown'}
                             </div>
                           </div>
                         </div>
@@ -712,12 +719,12 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                               gap: '2px',
                             }}
                           >
-                              {filePaths.map((path) => (
-                                <div
-                                  key={path}
-                                  style={{
-                                    fontSize: '11px',
-                                    fontFamily: 'monospace',
+                            {filePaths.map((path) => (
+                              <div
+                                key={path}
+                                style={{
+                                  fontSize: '11px',
+                                  fontFamily: 'monospace',
                                   color: theme.colors.text,
                                   padding: '2px 6px',
                                   backgroundColor: theme.colors.background,

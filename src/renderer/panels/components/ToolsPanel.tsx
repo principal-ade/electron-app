@@ -1,4 +1,10 @@
-import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import React, {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 import {
   Wrench,
   Package,
@@ -122,7 +128,8 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
   >(new Map());
   const [showingResult, setShowingResult] = useState<string | null>(null);
 
-  const highlightCallbackRef = useRef<typeof onHighlightLayersChange>(undefined);
+  const highlightCallbackRef =
+    useRef<typeof onHighlightLayersChange>(undefined);
   const latestHighlightLayersRef = useRef<HighlightLayer[]>([]);
 
   useEffect(() => {
@@ -318,10 +325,7 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
             result,
           );
           if (result.qualityContext) {
-            console.info(
-              `[ToolsTab] Quality context:`,
-              result.qualityContext,
-            );
+            console.info(`[ToolsTab] Quality context:`, result.qualityContext);
           }
           setToolResults((prev) => {
             const newMap = new Map(prev);
@@ -561,11 +565,11 @@ export const ToolsPanel: React.FC<ToolsPanelProps> = ({
                         marginTop: 12,
                       }}
                     >
-                        {pkg.tools.map((tool) => (
-                          <div
-                            key={`${pkg.packagePath || 'root'}-${tool.name}`}
-                            style={{
-                              padding: 12,
+                      {pkg.tools.map((tool) => (
+                        <div
+                          key={`${pkg.packagePath || 'root'}-${tool.name}`}
+                          style={{
+                            padding: 12,
                             borderRadius: 6,
                             backgroundColor: theme.colors.background,
                             border: `1px solid ${theme.colors.border}`,

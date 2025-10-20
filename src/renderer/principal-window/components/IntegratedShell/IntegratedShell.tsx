@@ -94,7 +94,7 @@ export const IntegratedShell: React.FC = () => {
             const left = collapsed.left ?? defaults.left;
             const right =
               viewKey === 'repositoryExplorer'
-                ? (collapsed as { right?: boolean }).right ?? defaults.right
+                ? ((collapsed as { right?: boolean }).right ?? defaults.right)
                 : defaults.right;
             newViewStates[view] = {
               left,

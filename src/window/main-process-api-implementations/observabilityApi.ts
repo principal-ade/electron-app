@@ -78,7 +78,11 @@ export const observabilityAPI = {
   /**
    * Get the current database file path
    */
-  getDbPath: async (): Promise<{ success: boolean; dbPath?: string; error?: string }> => {
+  getDbPath: async (): Promise<{
+    success: boolean;
+    dbPath?: string;
+    error?: string;
+  }> => {
     return ipcRenderer.invoke(ObservabilityEvent.GET_DB_PATH);
   },
 

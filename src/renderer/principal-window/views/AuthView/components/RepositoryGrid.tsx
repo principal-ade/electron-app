@@ -168,9 +168,7 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
           ? { ...repo.github }
           : {
               id:
-                owner && owner.length > 0
-                  ? `${owner}/${repo.name}`
-                  : repo.name,
+                owner && owner.length > 0 ? `${owner}/${repo.name}` : repo.name,
               owner: owner ?? '',
               name: repo.name,
               stars: 0,
@@ -183,8 +181,7 @@ export const RepositoryGrid: React.FC<RepositoryGridProps> = ({
           description: remoteData.description ?? baseGitHub.description,
           primaryLanguage: remoteData.language ?? baseGitHub.primaryLanguage,
           lastCommit: remoteData.pushed_at ?? baseGitHub.lastCommit,
-          defaultBranch:
-            remoteData.default_branch ?? baseGitHub.defaultBranch,
+          defaultBranch: remoteData.default_branch ?? baseGitHub.defaultBranch,
           owner: owner ?? baseGitHub.owner,
           name: remoteData.name ?? baseGitHub.name,
           isPublic:

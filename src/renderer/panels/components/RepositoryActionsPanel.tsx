@@ -99,9 +99,7 @@ const extractWorkflowActionsFromTree = async (
       const requiredSecrets = getRequiredSecrets(content);
 
       // Parse workflow to extract jobs
-      const { parseWorkflowFile } = await import(
-        '../../utils/workflowParser'
-      );
+      const { parseWorkflowFile } = await import('../../utils/workflowParser');
       const parsed: ParsedWorkflow | null = parseWorkflowFile(content);
 
       if (!parsed || !parsed.jobs) {

@@ -1,6 +1,15 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Search, FileText, Book, Loader, Eye, EyeOff, ArrowDownAZ, Clock } from 'lucide-react';
+import {
+  Search,
+  FileText,
+  Book,
+  Loader,
+  Eye,
+  EyeOff,
+  ArrowDownAZ,
+  Clock,
+} from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { AlexandriaDocsService } from '../../main-process-api/AlexandriaDocsService';
@@ -135,7 +144,9 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
       if (event.type === 'updated' && event.repository) {
         // Only refresh if this is the repository we're viewing
         if (event.repository.localPath === repositoryPath) {
-          console.info('[AlexandriaDocsPanel] Repository updated, refreshing documents');
+          console.info(
+            '[AlexandriaDocsPanel] Repository updated, refreshing documents',
+          );
           fetchDocuments();
         }
       }
@@ -150,7 +161,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
       // Refresh documents if a document was added, modified, or deleted in this repository
       if (event.document.path.startsWith(repositoryPath)) {
         console.info(
-          `[AlexandriaDocsPanel] Document ${event.type}: ${event.document.path}, refreshing list`
+          `[AlexandriaDocsPanel] Document ${event.type}: ${event.document.path}, refreshing list`,
         );
         fetchDocuments();
       }

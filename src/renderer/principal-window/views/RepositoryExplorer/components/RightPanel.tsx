@@ -19,9 +19,7 @@ interface RightPanelProps {
   activeTab?: 'preview' | 'terminal' | 'markdown' | 'diff';
   selectionMode?: 'preview' | 'diff';
   gitStatus?: GitChangeSelectionStatus;
-  onTabChange?: (
-    tab: 'preview' | 'terminal' | 'markdown' | 'diff',
-  ) => void;
+  onTabChange?: (tab: 'preview' | 'terminal' | 'markdown' | 'diff') => void;
   onClose?: () => void;
 }
 
@@ -174,8 +172,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
               activeTab === 'diff'
                 ? `2px solid ${theme.colors.primary}`
                 : '2px solid transparent',
-            cursor:
-              selectionMode !== 'diff' ? 'not-allowed' : 'pointer',
+            cursor: selectionMode !== 'diff' ? 'not-allowed' : 'pointer',
             fontSize: '13px',
             fontWeight: activeTab === 'diff' ? 600 : 500,
             transition: 'all 0.2s',

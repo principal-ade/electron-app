@@ -20,7 +20,9 @@ interface GitIssuesPanelProps {
   repository?: RepositoryLike;
 }
 
-export const GitIssuesPanel: React.FC<GitIssuesPanelProps> = ({ repository }) => {
+export const GitIssuesPanel: React.FC<GitIssuesPanelProps> = ({
+  repository,
+}) => {
   const { theme } = useTheme();
   const {
     isAuthenticated,
@@ -149,7 +151,10 @@ export const GitIssuesPanel: React.FC<GitIssuesPanelProps> = ({ repository }) =>
 
   if (!isAuthenticated) {
     return renderState(
-      <AlertCircle size={32} style={{ color: theme.colors.warning || '#f59e0b' }} />,
+      <AlertCircle
+        size={32}
+        style={{ color: theme.colors.warning || '#f59e0b' }}
+      />,
       'Sign in to GitHub',
       'Connect your GitHub account to view, triage, and manage repository issues.',
       <button
@@ -198,7 +203,10 @@ export const GitIssuesPanel: React.FC<GitIssuesPanelProps> = ({ repository }) =>
 
   if (!repoInfo) {
     return renderState(
-      <AlertCircle size={32} style={{ color: theme.colors.warning || '#f59e0b' }} />,
+      <AlertCircle
+        size={32}
+        style={{ color: theme.colors.warning || '#f59e0b' }}
+      />,
       'Issues unavailable for this repository',
       'We could not determine a GitHub remote for this project. Configure a GitHub remote to work with issues.',
     );

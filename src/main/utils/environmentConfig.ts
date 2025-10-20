@@ -33,7 +33,9 @@ export class EnvironmentConfig {
    */
   static getUserDataPath(): string {
     if (!app) {
-      throw new Error('EnvironmentConfig.getUserDataPath() cannot be used in worker context');
+      throw new Error(
+        'EnvironmentConfig.getUserDataPath() cannot be used in worker context',
+      );
     }
     if (app.isPackaged || this._forceProductionPaths) {
       return app.getPath('userData');
@@ -47,7 +49,9 @@ export class EnvironmentConfig {
    */
   static getAssetsPath(...paths: string[]): string {
     if (!app) {
-      throw new Error('EnvironmentConfig.getAssetsPath() cannot be used in worker context');
+      throw new Error(
+        'EnvironmentConfig.getAssetsPath() cannot be used in worker context',
+      );
     }
     const RESOURCES_PATH = app.isPackaged
       ? path.join(process.resourcesPath, 'assets')
@@ -62,7 +66,9 @@ export class EnvironmentConfig {
    */
   static getBundledBinaryPath(...paths: string[]): string {
     if (!app) {
-      throw new Error('EnvironmentConfig.getBundledBinaryPath() cannot be used in worker context');
+      throw new Error(
+        'EnvironmentConfig.getBundledBinaryPath() cannot be used in worker context',
+      );
     }
     const RESOURCES_PATH = app.isPackaged
       ? path.join(process.resourcesPath, 'bin')
@@ -82,10 +88,12 @@ export class EnvironmentConfig {
 
     switch (process.platform) {
       case 'darwin':
-        binaryName = process.arch === 'arm64' ? 'act-darwin-arm64' : 'act-darwin-x64';
+        binaryName =
+          process.arch === 'arm64' ? 'act-darwin-arm64' : 'act-darwin-x64';
         break;
       case 'linux':
-        binaryName = process.arch === 'arm64' ? 'act-linux-arm64' : 'act-linux-x64';
+        binaryName =
+          process.arch === 'arm64' ? 'act-linux-arm64' : 'act-linux-x64';
         break;
       case 'win32':
         binaryName = 'act-win32-x64.exe';

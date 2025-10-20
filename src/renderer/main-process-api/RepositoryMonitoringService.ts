@@ -320,7 +320,9 @@ export class RepositoryMonitoringService {
    * Subscribe to build artifacts detected events
    */
   static onBuildArtifactsDetected(
-    callback: (payload: import('../../shared/main-process-api-interfaces/RepositoryMonitoringAPI').BuildArtifactsDetectedPayload) => void,
+    callback: (
+      payload: import('../../shared/main-process-api-interfaces/RepositoryMonitoringAPI').BuildArtifactsDetectedPayload,
+    ) => void,
   ): () => void {
     return window.mainProcess.repositoryMonitoring.onBuildArtifactsDetected(
       callback,

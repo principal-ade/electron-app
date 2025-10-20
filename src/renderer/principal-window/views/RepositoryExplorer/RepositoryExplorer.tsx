@@ -76,7 +76,10 @@ export const RepositoryExplorer: React.FC<RepositoryExplorerProps> = ({
   const handleFileSelect = useCallback(
     (
       filePath: string | null,
-      options?: { mode?: 'preview' | 'diff'; gitStatus?: GitChangeSelectionStatus },
+      options?: {
+        mode?: 'preview' | 'diff';
+        gitStatus?: GitChangeSelectionStatus;
+      },
     ) => {
       setSelectedFilePath(filePath);
       if (filePath) {

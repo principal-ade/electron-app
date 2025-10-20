@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Eye, EyeOff, CheckCircle, AlertCircle, Loader2, ExternalLink, FolderOpen, Edit2 } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+  ExternalLink,
+  FolderOpen,
+  Edit2,
+} from 'lucide-react';
 import {
   ObservabilityService,
   ObservabilityConfig,
@@ -21,7 +30,9 @@ export const ObservabilitySettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<ConnectionTestResult | null>(null);
+  const [testResult, setTestResult] = useState<ConnectionTestResult | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [showUrl, setShowUrl] = useState(false);
   const [showAuthToken, setShowAuthToken] = useState(false);
@@ -50,7 +61,9 @@ export const ObservabilitySettings: React.FC = () => {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load configuration');
+      setError(
+        err instanceof Error ? err.message : 'Failed to load configuration',
+      );
     } finally {
       setLoading(false);
     }
@@ -72,7 +85,9 @@ export const ObservabilitySettings: React.FC = () => {
       setTimeout(() => setSaveSuccess(false), 3000);
       await loadConfiguration(); // Reload to get DB path
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save configuration');
+      setError(
+        err instanceof Error ? err.message : 'Failed to save configuration',
+      );
     } finally {
       setSaving(false);
     }
@@ -90,7 +105,9 @@ export const ObservabilitySettings: React.FC = () => {
       const result = await ObservabilityService.testConnection(configToTest);
       setTestResult(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to test connection');
+      setError(
+        err instanceof Error ? err.message : 'Failed to test connection',
+      );
     } finally {
       setTesting(false);
     }
@@ -116,16 +133,26 @@ export const ObservabilitySettings: React.FC = () => {
   const canSave =
     config.storageMode === 'none' ||
     config.storageMode === 'local' ||
-    (config.storageMode === 'local-with-sync' && config.tursoUrl && isValidTursoUrl(config.tursoUrl));
+    (config.storageMode === 'local-with-sync' &&
+      config.tursoUrl &&
+      isValidTursoUrl(config.tursoUrl));
 
   const canTest =
     config.storageMode === 'local' ||
-    (config.storageMode === 'local-with-sync' && config.tursoUrl && isValidTursoUrl(config.tursoUrl));
+    (config.storageMode === 'local-with-sync' &&
+      config.tursoUrl &&
+      isValidTursoUrl(config.tursoUrl));
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-        <Loader2 size={32} className="animate-spin" color={theme.colors.primary} />
+      <div
+        style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}
+      >
+        <Loader2
+          size={32}
+          className="animate-spin"
+          color={theme.colors.primary}
+        />
       </div>
     );
   }
@@ -143,32 +170,53 @@ export const ObservabilitySettings: React.FC = () => {
         </style>
         <div style={{ maxWidth: '800px' }}>
           <div style={{ marginBottom: '32px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>
+            <h3
+              style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}
+            >
               Observability Configuration
             </h3>
-            <p style={{
-              marginTop: 0,
-              marginBottom: '24px',
-              color: theme.colors.textSecondary,
-              fontSize: '14px',
-            }}>
+            <p
+              style={{
+                marginTop: 0,
+                marginBottom: '24px',
+                color: theme.colors.textSecondary,
+                fontSize: '14px',
+              }}
+            >
               Configure how agent event data is stored and tracked.
             </p>
 
             {/* Display based on storage mode */}
             {config.storageMode === 'none' ? (
               // Not configured
-              <div style={{
-                padding: '32px',
-                border: `1px solid ${theme.colors.border}`,
-                borderRadius: '12px',
-                textAlign: 'center',
-              }}>
-                <AlertCircle size={48} color={theme.colors.textSecondary} style={{ marginBottom: '16px' }} />
-                <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
+              <div
+                style={{
+                  padding: '32px',
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '12px',
+                  textAlign: 'center',
+                }}
+              >
+                <AlertCircle
+                  size={48}
+                  color={theme.colors.textSecondary}
+                  style={{ marginBottom: '16px' }}
+                />
+                <h4
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    marginBottom: '8px',
+                  }}
+                >
                   Observability Not Configured
                 </h4>
-                <p style={{ color: theme.colors.textSecondary, marginBottom: '24px' }}>
+                <p
+                  style={{
+                    color: theme.colors.textSecondary,
+                    marginBottom: '24px',
+                  }}
+                >
                   Set up observability to track and analyze agent activity.
                 </p>
                 <button
@@ -192,20 +240,36 @@ export const ObservabilitySettings: React.FC = () => {
             ) : (
               // Configured - show details
               <div>
-                <div style={{
-                  padding: '20px',
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '12px',
-                  marginBottom: '16px',
-                }}>
+                <div
+                  style={{
+                    padding: '20px',
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '12px',
+                    marginBottom: '16px',
+                  }}
+                >
                   <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontSize: '12px', color: theme.colors.textSecondary, marginBottom: '4px' }}>
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: '4px',
+                      }}
+                    >
                       Storage Mode
                     </div>
                     <div style={{ fontSize: '16px', fontWeight: 600 }}>
-                      {config.storageMode === 'local' ? 'Local Only' : 'Local with Cloud Sync'}
+                      {config.storageMode === 'local'
+                        ? 'Local Only'
+                        : 'Local with Cloud Sync'}
                     </div>
-                    <div style={{ fontSize: '14px', color: theme.colors.textSecondary, marginTop: '4px' }}>
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        color: theme.colors.textSecondary,
+                        marginTop: '4px',
+                      }}
+                    >
                       {config.storageMode === 'local'
                         ? 'Data stored locally in SQLite database'
                         : 'Local database syncing to Turso cloud'}
@@ -213,18 +277,26 @@ export const ObservabilitySettings: React.FC = () => {
                   </div>
 
                   <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontSize: '12px', color: theme.colors.textSecondary, marginBottom: '4px' }}>
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: '4px',
+                      }}
+                    >
                       Local Database
                     </div>
                     {dbPath ? (
                       <>
-                        <div style={{
-                          fontSize: '13px',
-                          fontFamily: 'monospace',
-                          color: theme.colors.text,
-                          marginBottom: '8px',
-                          wordBreak: 'break-all',
-                        }}>
+                        <div
+                          style={{
+                            fontSize: '13px',
+                            fontFamily: 'monospace',
+                            color: theme.colors.text,
+                            marginBottom: '8px',
+                            wordBreak: 'break-all',
+                          }}
+                        >
                           {dbPath}
                         </div>
                         <button
@@ -250,11 +322,13 @@ export const ObservabilitySettings: React.FC = () => {
                         </button>
                       </>
                     ) : (
-                      <div style={{
-                        fontSize: '13px',
-                        color: theme.colors.textSecondary,
-                        fontStyle: 'italic',
-                      }}>
+                      <div
+                        style={{
+                          fontSize: '13px',
+                          color: theme.colors.textSecondary,
+                          fontStyle: 'italic',
+                        }}
+                      >
                         Database path not available
                       </div>
                     )}
@@ -262,7 +336,13 @@ export const ObservabilitySettings: React.FC = () => {
 
                   {config.storageMode === 'local-with-sync' && (
                     <div>
-                      <div style={{ fontSize: '12px', color: theme.colors.textSecondary, marginBottom: '4px' }}>
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: theme.colors.textSecondary,
+                          marginBottom: '4px',
+                        }}
+                      >
                         Cloud Database
                       </div>
                       <a
@@ -311,17 +391,23 @@ export const ObservabilitySettings: React.FC = () => {
 
             {/* Success message */}
             {saveSuccess && (
-              <div style={{
-                padding: '12px',
-                backgroundColor: theme.colors.success + '20',
-                border: `1px solid ${theme.colors.success}40`,
-                borderRadius: '8px',
-                marginTop: '16px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '8px',
-              }}>
-                <CheckCircle size={16} color={theme.colors.success} style={{ marginTop: '2px' }} />
+              <div
+                style={{
+                  padding: '12px',
+                  backgroundColor: theme.colors.success + '20',
+                  border: `1px solid ${theme.colors.success}40`,
+                  borderRadius: '8px',
+                  marginTop: '16px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                }}
+              >
+                <CheckCircle
+                  size={16}
+                  color={theme.colors.success}
+                  style={{ marginTop: '2px' }}
+                />
                 <span style={{ fontSize: '14px', color: theme.colors.success }}>
                   Configuration saved successfully!
                 </span>
@@ -330,17 +416,23 @@ export const ObservabilitySettings: React.FC = () => {
 
             {/* Error message */}
             {error && (
-              <div style={{
-                padding: '12px',
-                backgroundColor: theme.colors.error + '20',
-                border: `1px solid ${theme.colors.error}40`,
-                borderRadius: '8px',
-                marginTop: '16px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '8px',
-              }}>
-                <AlertCircle size={16} color={theme.colors.error} style={{ marginTop: '2px' }} />
+              <div
+                style={{
+                  padding: '12px',
+                  backgroundColor: theme.colors.error + '20',
+                  border: `1px solid ${theme.colors.error}40`,
+                  borderRadius: '8px',
+                  marginTop: '16px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                }}
+              >
+                <AlertCircle
+                  size={16}
+                  color={theme.colors.error}
+                  style={{ marginTop: '2px' }}
+                />
                 <span style={{ fontSize: '14px', color: theme.colors.error }}>
                   {error}
                 </span>
@@ -371,7 +463,14 @@ export const ObservabilitySettings: React.FC = () => {
       </style>
       <div style={{ maxWidth: '800px' }}>
         <div style={{ marginBottom: '32px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '8px',
+            }}
+          >
             <h3 style={{ fontSize: '18px', fontWeight: 600 }}>
               Edit Observability Configuration
             </h3>
@@ -395,36 +494,47 @@ export const ObservabilitySettings: React.FC = () => {
               Cancel
             </button>
           </div>
-          <p style={{
-            marginTop: 0,
-            marginBottom: '24px',
-            color: theme.colors.textSecondary,
-            fontSize: '14px',
-          }}>
+          <p
+            style={{
+              marginTop: 0,
+              marginBottom: '24px',
+              color: theme.colors.textSecondary,
+              fontSize: '14px',
+            }}
+          >
             Configure how agent event data is stored and tracked.
           </p>
 
           {/* Storage Mode Selection */}
           <div style={{ marginBottom: '24px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '12px',
-              fontSize: '14px',
-              fontWeight: 500,
-            }}>
+            <label
+              style={{
+                display: 'block',
+                marginBottom: '12px',
+                fontSize: '14px',
+                fontWeight: 500,
+              }}
+            >
               Storage Mode
             </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                cursor: 'pointer',
-                fontSize: '14px',
-                padding: '12px',
-                border: `1px solid ${config.storageMode === 'none' ? theme.colors.primary : theme.colors.border}`,
-                borderRadius: '8px',
-                backgroundColor: config.storageMode === 'none' ? theme.colors.primary + '10' : 'transparent',
-              }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+            >
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  padding: '12px',
+                  border: `1px solid ${config.storageMode === 'none' ? theme.colors.primary : theme.colors.border}`,
+                  borderRadius: '8px',
+                  backgroundColor:
+                    config.storageMode === 'none'
+                      ? theme.colors.primary + '10'
+                      : 'transparent',
+                }}
+              >
                 <input
                   type="radio"
                   name="storageMode"
@@ -434,58 +544,92 @@ export const ObservabilitySettings: React.FC = () => {
                 />
                 <div>
                   <div style={{ fontWeight: 500 }}>None</div>
-                  <div style={{ fontSize: '12px', color: theme.colors.textSecondary, marginTop: '4px' }}>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: theme.colors.textSecondary,
+                      marginTop: '4px',
+                    }}
+                  >
                     Disable observability tracking completely
                   </div>
                 </div>
               </label>
 
-              <label style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                cursor: 'pointer',
-                fontSize: '14px',
-                padding: '12px',
-                border: `1px solid ${config.storageMode === 'local' ? theme.colors.primary : theme.colors.border}`,
-                borderRadius: '8px',
-                backgroundColor: config.storageMode === 'local' ? theme.colors.primary + '10' : 'transparent',
-              }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  padding: '12px',
+                  border: `1px solid ${config.storageMode === 'local' ? theme.colors.primary : theme.colors.border}`,
+                  borderRadius: '8px',
+                  backgroundColor:
+                    config.storageMode === 'local'
+                      ? theme.colors.primary + '10'
+                      : 'transparent',
+                }}
+              >
                 <input
                   type="radio"
                   name="storageMode"
                   checked={config.storageMode === 'local'}
-                  onChange={() => setConfig({ ...config, storageMode: 'local' })}
+                  onChange={() =>
+                    setConfig({ ...config, storageMode: 'local' })
+                  }
                   style={{ marginRight: '8px', marginTop: '2px' }}
                 />
                 <div>
                   <div style={{ fontWeight: 500 }}>Local</div>
-                  <div style={{ fontSize: '12px', color: theme.colors.textSecondary, marginTop: '4px' }}>
-                    Store data locally in SQLite database (offline, privacy-focused)
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: theme.colors.textSecondary,
+                      marginTop: '4px',
+                    }}
+                  >
+                    Store data locally in SQLite database (offline,
+                    privacy-focused)
                   </div>
                 </div>
               </label>
 
-              <label style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                cursor: 'pointer',
-                fontSize: '14px',
-                padding: '12px',
-                border: `1px solid ${config.storageMode === 'local-with-sync' ? theme.colors.primary : theme.colors.border}`,
-                borderRadius: '8px',
-                backgroundColor: config.storageMode === 'local-with-sync' ? theme.colors.primary + '10' : 'transparent',
-              }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  padding: '12px',
+                  border: `1px solid ${config.storageMode === 'local-with-sync' ? theme.colors.primary : theme.colors.border}`,
+                  borderRadius: '8px',
+                  backgroundColor:
+                    config.storageMode === 'local-with-sync'
+                      ? theme.colors.primary + '10'
+                      : 'transparent',
+                }}
+              >
                 <input
                   type="radio"
                   name="storageMode"
                   checked={config.storageMode === 'local-with-sync'}
-                  onChange={() => setConfig({ ...config, storageMode: 'local-with-sync' })}
+                  onChange={() =>
+                    setConfig({ ...config, storageMode: 'local-with-sync' })
+                  }
                   style={{ marginRight: '8px', marginTop: '2px' }}
                 />
                 <div>
                   <div style={{ fontWeight: 500 }}>Local with Cloud Sync</div>
-                  <div style={{ fontSize: '12px', color: theme.colors.textSecondary, marginTop: '4px' }}>
-                    Local database with background sync to Turso cloud (best of both worlds)
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      color: theme.colors.textSecondary,
+                      marginTop: '4px',
+                    }}
+                  >
+                    Local database with background sync to Turso cloud (best of
+                    both worlds)
                   </div>
                 </div>
               </label>
@@ -495,19 +639,23 @@ export const ObservabilitySettings: React.FC = () => {
           {/* Turso Database URL - only for local-with-sync mode */}
           {config.storageMode === 'local-with-sync' && (
             <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: 500,
-              }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
                 Turso Database URL
               </label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showUrl ? 'text' : 'password'}
                   value={config.tursoUrl ?? ''}
-                  onChange={(e) => setConfig({ ...config, tursoUrl: e.target.value })}
+                  onChange={(e) =>
+                    setConfig({ ...config, tursoUrl: e.target.value })
+                  }
                   placeholder="libsql://[database]-[org].turso.io"
                   className="observability-input"
                   style={{
@@ -546,19 +694,24 @@ export const ObservabilitySettings: React.FC = () => {
                 </button>
               </div>
               {config.tursoUrl && !isValidTursoUrl(config.tursoUrl) && (
-                <p style={{
-                  color: theme.colors.error,
-                  fontSize: '12px',
-                  marginTop: '4px',
-                }}>
-                  Please enter a valid Turso URL (libsql://, wss://, or https://)
+                <p
+                  style={{
+                    color: theme.colors.error,
+                    fontSize: '12px',
+                    marginTop: '4px',
+                  }}
+                >
+                  Please enter a valid Turso URL (libsql://, wss://, or
+                  https://)
                 </p>
               )}
-              <p style={{
-                color: theme.colors.textSecondary,
-                fontSize: '12px',
-                marginTop: '4px',
-              }}>
+              <p
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: '12px',
+                  marginTop: '4px',
+                }}
+              >
                 Your Turso database URL from the Turso dashboard
               </p>
             </div>
@@ -567,19 +720,23 @@ export const ObservabilitySettings: React.FC = () => {
           {/* Turso Auth Token - only for local-with-sync mode */}
           {config.storageMode === 'local-with-sync' && (
             <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: 500,
-              }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
                 Turso Auth Token
               </label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showAuthToken ? 'text' : 'password'}
                   value={config.tursoAuthToken ?? ''}
-                  onChange={(e) => setConfig({ ...config, tursoAuthToken: e.target.value })}
+                  onChange={(e) =>
+                    setConfig({ ...config, tursoAuthToken: e.target.value })
+                  }
                   placeholder="Your Turso database auth token"
                   className="observability-input"
                   style={{
@@ -615,11 +772,13 @@ export const ObservabilitySettings: React.FC = () => {
                   </button>
                 )}
               </div>
-              <p style={{
-                color: theme.colors.textSecondary,
-                fontSize: '12px',
-                marginTop: '4px',
-              }}>
+              <p
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: '12px',
+                  marginTop: '4px',
+                }}
+              >
                 Get this from your Turso dashboard under "Database Tokens"
               </p>
             </div>
@@ -628,12 +787,14 @@ export const ObservabilitySettings: React.FC = () => {
           {/* Sync Interval - only for local-with-sync mode */}
           {config.storageMode === 'local-with-sync' && (
             <div style={{ marginBottom: '20px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '8px',
-                fontSize: '14px',
-                fontWeight: 500,
-              }}>
+              <label
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
                 Sync Interval (milliseconds)
               </label>
               <input
@@ -642,7 +803,10 @@ export const ObservabilitySettings: React.FC = () => {
                 step="1000"
                 value={config.syncInterval ?? 5000}
                 onChange={(e) =>
-                  setConfig({ ...config, syncInterval: parseInt(e.target.value) || 5000 })
+                  setConfig({
+                    ...config,
+                    syncInterval: parseInt(e.target.value) || 5000,
+                  })
                 }
                 placeholder="5000"
                 className="observability-input"
@@ -657,29 +821,38 @@ export const ObservabilitySettings: React.FC = () => {
                   transition: 'all 0.2s',
                 }}
               />
-              <p style={{
-                color: theme.colors.textSecondary,
-                fontSize: '12px',
-                marginTop: '4px',
-              }}>
-                How often to sync local data to cloud (in milliseconds, e.g., 5000 = 5 seconds)
+              <p
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: '12px',
+                  marginTop: '4px',
+                }}
+              >
+                How often to sync local data to cloud (in milliseconds, e.g.,
+                5000 = 5 seconds)
               </p>
             </div>
           )}
 
           {/* Error message */}
           {error && (
-            <div style={{
-              padding: '12px',
-              backgroundColor: theme.colors.error + '20',
-              border: `1px solid ${theme.colors.error}40`,
-              borderRadius: '8px',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '8px',
-            }}>
-              <AlertCircle size={16} color={theme.colors.error} style={{ marginTop: '2px' }} />
+            <div
+              style={{
+                padding: '12px',
+                backgroundColor: theme.colors.error + '20',
+                border: `1px solid ${theme.colors.error}40`,
+                borderRadius: '8px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+              }}
+            >
+              <AlertCircle
+                size={16}
+                color={theme.colors.error}
+                style={{ marginTop: '2px' }}
+              />
               <span style={{ fontSize: '14px', color: theme.colors.error }}>
                 {error}
               </span>
@@ -688,29 +861,43 @@ export const ObservabilitySettings: React.FC = () => {
 
           {/* Test result */}
           {testResult && (
-            <div style={{
-              padding: '12px',
-              backgroundColor: testResult.success
-                ? theme.colors.success + '20'
-                : theme.colors.error + '20',
-              border: `1px solid ${
-                testResult.success ? theme.colors.success : theme.colors.error
-              }40`,
-              borderRadius: '8px',
-              marginBottom: '16px',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '8px',
-            }}>
+            <div
+              style={{
+                padding: '12px',
+                backgroundColor: testResult.success
+                  ? theme.colors.success + '20'
+                  : theme.colors.error + '20',
+                border: `1px solid ${
+                  testResult.success ? theme.colors.success : theme.colors.error
+                }40`,
+                borderRadius: '8px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '8px',
+              }}
+            >
               {testResult.success ? (
-                <CheckCircle size={16} color={theme.colors.success} style={{ marginTop: '2px' }} />
+                <CheckCircle
+                  size={16}
+                  color={theme.colors.success}
+                  style={{ marginTop: '2px' }}
+                />
               ) : (
-                <AlertCircle size={16} color={theme.colors.error} style={{ marginTop: '2px' }} />
+                <AlertCircle
+                  size={16}
+                  color={theme.colors.error}
+                  style={{ marginTop: '2px' }}
+                />
               )}
-              <span style={{
-                fontSize: '14px',
-                color: testResult.success ? theme.colors.success : theme.colors.error,
-              }}>
+              <span
+                style={{
+                  fontSize: '14px',
+                  color: testResult.success
+                    ? theme.colors.success
+                    : theme.colors.error,
+                }}
+              >
                 {testResult.success
                   ? 'Connection successful! The database is accessible.'
                   : `Connection failed: ${testResult.error || 'Unknown error'}`}
@@ -731,7 +918,8 @@ export const ObservabilitySettings: React.FC = () => {
                 borderRadius: '8px',
                 fontSize: '14px',
                 fontWeight: 500,
-                cursor: canTest && !testing && !saving ? 'pointer' : 'not-allowed',
+                cursor:
+                  canTest && !testing && !saving ? 'pointer' : 'not-allowed',
                 opacity: canTest && !testing && !saving ? 1 : 0.5,
                 transition: 'all 0.2s',
                 display: 'flex',
@@ -756,7 +944,8 @@ export const ObservabilitySettings: React.FC = () => {
                 borderRadius: '8px',
                 fontSize: '14px',
                 fontWeight: 500,
-                cursor: canSave && !saving && !testing ? 'pointer' : 'not-allowed',
+                cursor:
+                  canSave && !saving && !testing ? 'pointer' : 'not-allowed',
                 opacity: canSave && !saving && !testing ? 1 : 0.5,
                 transition: 'all 0.2s',
                 display: 'flex',

@@ -91,11 +91,13 @@
   width: 4px;
 }
 
-.terminal-container-fix.thin-scrollbar .xterm-viewport::-webkit-scrollbar-track {
+.terminal-container-fix.thin-scrollbar
+  .xterm-viewport::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.terminal-container-fix.thin-scrollbar .xterm-viewport::-webkit-scrollbar-thumb {
+.terminal-container-fix.thin-scrollbar
+  .xterm-viewport::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 4px;
 }
@@ -107,15 +109,18 @@
   transition: opacity 0.3s;
 }
 
-.terminal-container-fix.auto-hide-scrollbar:hover .xterm-viewport::-webkit-scrollbar {
+.terminal-container-fix.auto-hide-scrollbar:hover
+  .xterm-viewport::-webkit-scrollbar {
   opacity: 1;
 }
 
-.terminal-container-fix.auto-hide-scrollbar .xterm-viewport::-webkit-scrollbar-thumb {
+.terminal-container-fix.auto-hide-scrollbar
+  .xterm-viewport::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0);
   transition: background 0.3s;
 }
 
-.terminal-container-fix.auto-hide-scrollbar:hover .xterm-viewport::-webkit-scrollbar-thumb {
+.terminal-container-fix.auto-hide-scrollbar:hover
+  .xterm-viewport::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
 }

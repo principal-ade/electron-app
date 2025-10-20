@@ -5,7 +5,10 @@
 import { ipcMain, app, shell } from 'electron';
 import * as path from 'path';
 import { getObservabilityIntegration } from './ObservabilityIntegration';
-import type { ObservabilityConfig, StorageMode } from './ObservabilityIntegration';
+import type {
+  ObservabilityConfig,
+  StorageMode,
+} from './ObservabilityIntegration';
 import { ObservabilityEvent } from '../../shared/ipc-events/ObservabilityEvents';
 
 export function registerObservabilityHandlers(): void {
@@ -99,30 +102,34 @@ export function registerObservabilityHandlers(): void {
   /**
    * Resolve database path to absolute path
    */
-  ipcMain.handle(ObservabilityEvent.RESOLVE_PATH, async (event, dbPath: string) => {
-    try {
-      if (!dbPath) {
-        dbPath = 'observability.db';
+  ipcMain.handle(
+    ObservabilityEvent.RESOLVE_PATH,
+    async (event, dbPath: string) => {
+      try {
+        if (!dbPath) {
+          dbPath = 'observability.db';
+        }
+
+        // If it's already an absolute path, return it
+        if (path.isAbsolute(dbPath)) {
+          return { success: true, resolvedPath: dbPath };
+        }
+
+        // For relative paths, resolve from userData directory
+        const userDataPath = app.getPath('userData');
+        const resolvedPath = path.resolve(userDataPath, dbPath);
+
+        return { success: true, resolvedPath };
+      } catch (error) {
+        console.error('[ObservabilityHandlers] Failed to resolve path:', error);
+        return {
+          success: false,
+          error:
+            error instanceof Error ? error.message : 'Failed to resolve path',
+        };
       }
-
-      // If it's already an absolute path, return it
-      if (path.isAbsolute(dbPath)) {
-        return { success: true, resolvedPath: dbPath };
-      }
-
-      // For relative paths, resolve from userData directory
-      const userDataPath = app.getPath('userData');
-      const resolvedPath = path.resolve(userDataPath, dbPath);
-
-      return { success: true, resolvedPath };
-    } catch (error) {
-      console.error('[ObservabilityHandlers] Failed to resolve path:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to resolve path',
-      };
-    }
-  });
+    },
+  );
 
   /**
    * Get the current database path based on config
@@ -140,7 +147,10 @@ export function registerObservabilityHandlers(): void {
       let fileName: string;
       if (storageMode === 'local-with-sync' && config.tursoUrl) {
         // Extract DB name from Turso URL
-        const withoutProtocol = config.tursoUrl.replace(/^(libsql|wss|https):\/\//, '');
+        const withoutProtocol = config.tursoUrl.replace(
+          /^(libsql|wss|https):\/\//,
+          '',
+        );
         const dbName = withoutProtocol.split(/[./]/)[0] || 'observability';
         fileName = `${dbName}.db`;
       } else {
@@ -176,7 +186,10 @@ export function registerObservabilityHandlers(): void {
       let fileName: string;
       if (storageMode === 'local-with-sync' && config.tursoUrl) {
         // Extract DB name from Turso URL
-        const withoutProtocol = config.tursoUrl.replace(/^(libsql|wss|https):\/\//, '');
+        const withoutProtocol = config.tursoUrl.replace(
+          /^(libsql|wss|https):\/\//,
+          '',
+        );
         const dbName = withoutProtocol.split(/[./]/)[0] || 'observability';
         fileName = `${dbName}.db`;
       } else {
@@ -194,7 +207,8 @@ export function registerObservabilityHandlers(): void {
       console.error('[ObservabilityHandlers] Failed to open in Finder:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to open in Finder',
+        error:
+          error instanceof Error ? error.message : 'Failed to open in Finder',
       };
     }
   });

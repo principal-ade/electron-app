@@ -132,23 +132,23 @@ export const PanelConfiguration: React.FC<PanelConfigurationProps> = ({
                 type="checkbox"
                 checked={panelVisibility.visibility[panelId] ?? true}
                 onChange={() => handleToggle(panelId)}
-              style={{
-                width: '16px',
-                height: '16px',
-                cursor: 'pointer',
-              }}
-            />
-            <span
-              style={{
-                fontSize: '13px',
-                fontWeight: 500,
-                color: theme.colors.text,
-              }}
-            >
-              {label}
-            </span>
-          </label>
-        );
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  cursor: 'pointer',
+                }}
+              />
+              <span
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                }}
+              >
+                {label}
+              </span>
+            </label>
+          );
         })}
       </div>
     </div>

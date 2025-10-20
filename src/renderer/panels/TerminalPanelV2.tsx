@@ -14,7 +14,10 @@ import { ShellService } from '../main-process-api/ShellService';
 import { DevSidecarService } from '../main-process-api/DevSidecarService';
 
 import { XTerminalPanel } from './components/xterminal';
-import type { XTerminalPanelRef, TerminalOverlayState } from './components/xterminal';
+import type {
+  XTerminalPanelRef,
+  TerminalOverlayState,
+} from './components/xterminal';
 
 /* eslint-disable no-console */
 
@@ -286,7 +289,10 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
           }
 
           if (status.ownedByThisWindow || status.canClaim) {
-            const result = await TerminalService.claimOwnership(sessionId, false);
+            const result = await TerminalService.claimOwnership(
+              sessionId,
+              false,
+            );
 
             if (!isMounted) return;
 
@@ -531,26 +537,27 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
     }, [sessionId]);
 
     // Build overlay state for ownership
-    const overlayState: TerminalOverlayState | undefined = ownershipStatus.isOwned
-      ? {
-          type: 'owned',
-          message: 'This terminal is active in another window',
-          subtitle: `Window ID: ${ownershipStatus.ownedByWindowId}`,
-          actions: [
-            {
-              label: 'Switch to Window',
-              onClick: handleSwitchToOwnerWindow,
-              primary: true,
-              icon: <ArrowRight size={16} />,
-            },
-            {
-              label: 'Take Control Here',
-              onClick: handleTakeControl,
-              primary: false,
-            },
-          ],
-        }
-      : undefined;
+    const overlayState: TerminalOverlayState | undefined =
+      ownershipStatus.isOwned
+        ? {
+            type: 'owned',
+            message: 'This terminal is active in another window',
+            subtitle: `Window ID: ${ownershipStatus.ownedByWindowId}`,
+            actions: [
+              {
+                label: 'Switch to Window',
+                onClick: handleSwitchToOwnerWindow,
+                primary: true,
+                icon: <ArrowRight size={16} />,
+              },
+              {
+                label: 'Take Control Here',
+                onClick: handleTakeControl,
+                primary: false,
+              },
+            ],
+          }
+        : undefined;
 
     // Build header badge for AI session
     const headerBadge = aiSessionInfo

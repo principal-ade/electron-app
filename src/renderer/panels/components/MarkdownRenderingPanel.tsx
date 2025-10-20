@@ -198,7 +198,7 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
     } catch (err) {
       console.error('Error deleting file:', err);
       setError(
-        `Failed to delete file: ${err instanceof Error ? err.message : 'Unknown error'}`
+        `Failed to delete file: ${err instanceof Error ? err.message : 'Unknown error'}`,
       );
       setShowDeleteConfirm(false);
     }
@@ -243,7 +243,14 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
           {fileName}
         </span>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexShrink: 0,
+          }}
+        >
           {/* Delete button - only show for local files */}
           {isLocalFile && (
             <button
@@ -263,7 +270,8 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
                 fontSize: '11px',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                e.currentTarget.style.backgroundColor =
+                  'rgba(239, 68, 68, 0.1)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
@@ -346,9 +354,7 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
                 }}
                 style={{
                   background:
-                    viewMode === 'book'
-                      ? theme.colors.primary
-                      : 'transparent',
+                    viewMode === 'book' ? theme.colors.primary : 'transparent',
                   color:
                     viewMode === 'book'
                       ? theme.colors.background
@@ -377,7 +383,9 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              color: copiedPath ? theme.colors.success : theme.colors.textSecondary,
+              color: copiedPath
+                ? theme.colors.success
+                : theme.colors.textSecondary,
               borderRadius: '4px',
               transition: 'all 0.2s',
               fontSize: '11px',

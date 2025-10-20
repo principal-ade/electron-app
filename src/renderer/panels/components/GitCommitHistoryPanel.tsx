@@ -66,7 +66,10 @@ export const GitCommitHistoryPanel: React.FC<GitCommitHistoryPanelProps> = ({
       const history = await GitService.getCommitHistory(repositoryPath, limit);
       setCommits(history);
     } catch (err) {
-      console.error('[GitCommitHistoryPanel] Failed to load commit history:', err);
+      console.error(
+        '[GitCommitHistoryPanel] Failed to load commit history:',
+        err,
+      );
       setError('Failed to load commit history');
     } finally {
       setIsLoading(false);
@@ -247,9 +250,17 @@ export const GitCommitHistoryPanel: React.FC<GitCommitHistoryPanelProps> = ({
                     {commit.hash.substring(0, 8)}
                   </span>
                   <span style={{ fontSize: '10px' }}>•</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
                     <Clock size={12} />
-                    <span title={new Date(commit.date).toLocaleString()}>{relative}</span>
+                    <span title={new Date(commit.date).toLocaleString()}>
+                      {relative}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -314,7 +325,9 @@ export const GitCommitHistoryPanelPreview: React.FC = () => {
           >
             <span>{commit.author}</span>
             <span>•</span>
-            <span style={{ fontFamily: theme.fonts.monospace }}>{commit.sha}</span>
+            <span style={{ fontFamily: theme.fonts.monospace }}>
+              {commit.sha}
+            </span>
             <span>•</span>
             <span>{commit.time}</span>
           </span>

@@ -95,18 +95,17 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
   // }, [repositoryPath, sessions.length]);
 
   // Color palette for sessions
-  const getSessionColor = useCallback(
-    (index: number): string => {
-      return SESSION_COLORS[index % SESSION_COLORS.length];
-    },
-    [],
-  );
+  const getSessionColor = useCallback((index: number): string => {
+    return SESSION_COLORS[index % SESSION_COLORS.length];
+  }, []);
 
   // Fetch a single session by ID
   const fetchSingleSession = useCallback(
-    async (sessionId: string, repository: string): Promise<SessionWithEvents | null> => {
+    async (
+      sessionId: string,
+      repository: string,
+    ): Promise<SessionWithEvents | null> => {
       try {
-
         // Get full session details
         const fullSession = await AgentSessionSDKService.getSDKSession(
           sessionId,
@@ -114,9 +113,8 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         );
 
         // Get events for this session
-        const events = await AgentSessionSDKService.getSDKSessionEvents(
-          sessionId,
-        );
+        const events =
+          await AgentSessionSDKService.getSDKSessionEvents(sessionId);
 
         // Extract file operations
         const fileOperations = events
@@ -254,8 +252,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
 
     const unsubscribe = AgentSessionSDKService.onProcessedEvent((event) => {
       // Check if this event belongs to the current repository
-      const eventRepoPath =
-        event.repository?.root || event.workingDirectory;
+      const eventRepoPath = event.repository?.root || event.workingDirectory;
 
       if (eventRepoPath !== repositoryPath) {
         return;
@@ -270,20 +267,24 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
 
         if (!sessionExists) {
           // Fetch the new session asynchronously and add it
-          fetchSingleSession(event.sessionId, eventRepoPath).then((newSession) => {
-            if (newSession) {
-              setSessions((current) => {
-                // Check again to prevent duplicates
-                if (current.some((s) => s.session.sessionId === event.sessionId)) {
-                  return current;
-                }
-                // Add new session and sort by last activity
-                return [...current, newSession].sort(
-                  (a, b) => b.session.lastActivity - a.session.lastActivity,
-                );
-              });
-            }
-          });
+          fetchSingleSession(event.sessionId, eventRepoPath).then(
+            (newSession) => {
+              if (newSession) {
+                setSessions((current) => {
+                  // Check again to prevent duplicates
+                  if (
+                    current.some((s) => s.session.sessionId === event.sessionId)
+                  ) {
+                    return current;
+                  }
+                  // Add new session and sort by last activity
+                  return [...current, newSession].sort(
+                    (a, b) => b.session.lastActivity - a.session.lastActivity,
+                  );
+                });
+              }
+            },
+          );
           // Return current sessions while we fetch the new one
           return prevSessions;
         }
@@ -345,9 +346,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
 
     // Apply status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(
-        (s) => s.session.status === statusFilter,
-      );
+      filtered = filtered.filter((s) => s.session.status === statusFilter);
     }
 
     // Apply search filter
@@ -581,7 +580,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+          >
             {filteredSessions.map((sessionWithEvents, index) => {
               const sessionColor = getSessionColor(index);
               const cardData: SessionCardData = {
@@ -616,12 +617,14 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                   }}
                   onOpenTerminal={
                     onOpenTerminal
-                      ? () => onOpenTerminal(sessionWithEvents.session.sessionId)
+                      ? () =>
+                          onOpenTerminal(sessionWithEvents.session.sessionId)
                       : undefined
                   }
                   onSessionDetailSelect={
                     onSessionSelect
-                      ? () => onSessionSelect(sessionWithEvents.session.sessionId)
+                      ? () =>
+                          onSessionSelect(sessionWithEvents.session.sessionId)
                       : undefined
                   }
                   getTimeAgo={getTimeAgo}

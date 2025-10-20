@@ -119,7 +119,12 @@ export class QualityLensService {
       console.log(
         `[QualityLensService] Not a lens command, executing directly: ${packageCommand.name}`,
       );
-      return this.executeNonLensCommand(request, packageCommand, cwd, startTime);
+      return this.executeNonLensCommand(
+        request,
+        packageCommand,
+        cwd,
+        startTime,
+      );
     }
 
     // Find lens by ID (no parsing needed!)
@@ -129,7 +134,12 @@ export class QualityLensService {
       console.warn(
         `[QualityLensService] No lens registered for: ${packageCommand.lensId}`,
       );
-      return this.executeNonLensCommand(request, packageCommand, cwd, startTime);
+      return this.executeNonLensCommand(
+        request,
+        packageCommand,
+        cwd,
+        startTime,
+      );
     }
 
     console.log(
@@ -138,9 +148,7 @@ export class QualityLensService {
 
     try {
       // Parse command string (composition package already validated it)
-      const { command, args } = this.parseCommandString(
-        packageCommand.command,
-      );
+      const { command, args } = this.parseCommandString(packageCommand.command);
 
       // Configure the lens
       lens.configure({
@@ -225,10 +233,6 @@ export class QualityLensService {
       );
     }
   }
-
-
-
-
 
   /**
    * Parse command string into command + args (used by new execution path)

@@ -269,7 +269,10 @@ function buildGraphForCluster(
     if (!deps) return;
 
     // Group dependencies by target repo
-    const depsToRepo = new Map<string, { packageName: string; versionRange: string; type: string }[]>();
+    const depsToRepo = new Map<
+      string,
+      { packageName: string; versionRange: string; type: string }[]
+    >();
 
     // Get all packages and their dependencies
     deps.forEach((targetRepo) => {
@@ -290,7 +293,7 @@ function buildGraphForCluster(
       edges.push({
         source: sourceRepo,
         target: targetRepo,
-        dependencies: depList.map(d => ({
+        dependencies: depList.map((d) => ({
           packageName: d.packageName,
           versionRange: d.versionRange,
           type: d.type as 'dependency' | 'devDependency' | 'peerDependency',
@@ -316,8 +319,8 @@ function buildGraphForCluster(
     topLevelNames.length === 1
       ? topLevelNames[0]
       : topLevelNames.length === 2
-      ? `${topLevelNames[0]} & ${topLevelNames[1]}`
-      : `${topLevelNames[0]} & ${topLevelNames.length - 1} others`;
+        ? `${topLevelNames[0]} & ${topLevelNames[1]}`
+        : `${topLevelNames[0]} & ${topLevelNames.length - 1} others`;
 
   // Check if any repo in cluster is a monorepo
   const isMonorepo = cluster.some((repo) => repoNodes.get(repo)!.isMonorepo);
@@ -344,10 +347,12 @@ export function getGraphStatistics(graph: DependencyGraph) {
   const stats = {
     totalNodes: graph.nodes.length,
     repositoryNodes: graph.nodes.filter((n) => n.type === 'repository').length,
-    externalDependencies: graph.nodes.filter((n) => n.type === 'external').length,
+    externalDependencies: graph.nodes.filter((n) => n.type === 'external')
+      .length,
     totalEdges: graph.edges.length,
     topLevelRepositories: graph.metadata.topLevelRepositories,
-    avgDependenciesPerRepo: graph.edges.length / graph.metadata.totalRepositories,
+    avgDependenciesPerRepo:
+      graph.edges.length / graph.metadata.totalRepositories,
   };
 
   return stats;

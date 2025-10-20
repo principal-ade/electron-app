@@ -428,7 +428,14 @@ export class WorkspaceLayoutService {
         layout: {
           left: {
             type: 'tabs',
-            panels: ['tasks', 'agentSessions', 'fileTree', 'agentContext', 'gitChanges', 'docs'],
+            panels: [
+              'tasks',
+              'agentSessions',
+              'fileTree',
+              'agentContext',
+              'gitChanges',
+              'docs',
+            ],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
           middle: 'multiTerminal',
@@ -476,7 +483,8 @@ export class WorkspaceLayoutService {
       drawing: {
         id: 'drawing',
         name: 'Drawing',
-        description: 'Drawings and docs, excalidraw diagram, multi terminal and markdown viewer',
+        description:
+          'Drawings and docs, excalidraw diagram, multi terminal and markdown viewer',
         layout: {
           left: {
             type: 'tabs',

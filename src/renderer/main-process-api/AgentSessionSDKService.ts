@@ -20,9 +20,7 @@ export class AgentSessionSDKService {
   }
 
   static printCallStats(): void {
-    const entries = Object.entries(this.callCounts).sort(
-      (a, b) => b[1] - a[1],
-    );
+    const entries = Object.entries(this.callCounts).sort((a, b) => b[1] - a[1]);
 
     if (entries.length === 0) {
       console.log('[AgentSessionSDKService] No calls recorded yet.');

@@ -33,7 +33,11 @@ class WindowSwitcher {
       return;
     }
 
-    if (this.isActive && this.switcherWindow && !this.switcherWindow.isDestroyed()) {
+    if (
+      this.isActive &&
+      this.switcherWindow &&
+      !this.switcherWindow.isDestroyed()
+    ) {
       // Already showing, just cycle to next
       this.selectNext();
       return;
@@ -56,7 +60,10 @@ class WindowSwitcher {
     this.isActive = false;
 
     // Activate the selected window
-    if (this.windowList.length > 0 && this.selectedIndex < this.windowList.length) {
+    if (
+      this.windowList.length > 0 &&
+      this.selectedIndex < this.windowList.length
+    ) {
       const selectedWindowId = this.windowList[this.selectedIndex].id;
       this.activateWindow(selectedWindowId);
     }
@@ -84,7 +91,9 @@ class WindowSwitcher {
   public selectPrevious(): void {
     if (!this.isActive || this.windowList.length === 0) return;
 
-    this.selectedIndex = (this.selectedIndex - 1 + this.windowList.length) % this.windowList.length;
+    this.selectedIndex =
+      (this.selectedIndex - 1 + this.windowList.length) %
+      this.windowList.length;
     this.sendUpdate();
   }
 
@@ -158,7 +167,7 @@ class WindowSwitcher {
     log.info(`[Window Switcher] App path: ${appPath}`);
     log.info(`[Window Switcher] Loading HTML from: ${htmlPath}`);
 
-    this.switcherWindow.loadFile(htmlPath).catch(err => {
+    this.switcherWindow.loadFile(htmlPath).catch((err) => {
       log.error('[Window Switcher] Failed to load HTML:', err);
       log.error('[Window Switcher] Attempted path:', htmlPath);
     });
@@ -219,7 +228,9 @@ class WindowSwitcher {
   private activateWindow(windowId: number): void {
     const appWindow = applicationWindows.get(windowId);
     if (!appWindow || !appWindow.window || appWindow.window.isDestroyed()) {
-      log.warn(`Cannot activate window ${windowId}: window not found or destroyed`);
+      log.warn(
+        `Cannot activate window ${windowId}: window not found or destroyed`,
+      );
       return;
     }
 

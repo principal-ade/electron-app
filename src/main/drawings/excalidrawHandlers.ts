@@ -610,7 +610,11 @@ class ExcalidrawHandlers {
     }
 
     if (entry.projectHash) {
-      return path.join(this.storageDir, entry.projectHash, `${entry.id}.excalidraw`);
+      return path.join(
+        this.storageDir,
+        entry.projectHash,
+        `${entry.id}.excalidraw`,
+      );
     }
 
     throw new Error(`Unable to resolve file path for diagram ${entry.id}`);

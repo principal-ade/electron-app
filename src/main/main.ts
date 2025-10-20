@@ -187,8 +187,14 @@ app.on('browser-window-created', (_, window) => {
     if (
       input.type === 'keyDown' &&
       input.code === 'Semicolon' &&
-      ((process.platform === 'darwin' && input.meta && !input.control && !input.shift) ||
-       (process.platform !== 'darwin' && input.control && !input.meta && !input.shift))
+      ((process.platform === 'darwin' &&
+        input.meta &&
+        !input.control &&
+        !input.shift) ||
+        (process.platform !== 'darwin' &&
+          input.control &&
+          !input.meta &&
+          !input.shift))
     ) {
       log.info('[Window Switcher] ✅ Shortcut triggered!');
       windowSwitcher.show();
@@ -225,7 +231,8 @@ app.on('before-quit', async (event) => {
     // Get the focused window or any available window
     const focusedWindow = BrowserWindow.getFocusedWindow();
     const windows = Array.from(applicationWindows.values());
-    const targetWindow = focusedWindow || (windows.length > 0 ? windows[0].window : null);
+    const targetWindow =
+      focusedWindow || (windows.length > 0 ? windows[0].window : null);
 
     if (targetWindow && !targetWindow.isDestroyed()) {
       const response = await dialog.showMessageBox(targetWindow, {

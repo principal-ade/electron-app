@@ -59,7 +59,9 @@ export class ObservabilityIntegration extends EventEmitter {
           localDbPath: stored.localDbPath,
           tursoUrl: stored.tursoUrl,
           tursoAuthToken: stored.tursoAuthToken,
-          syncInterval: stored.syncInterval ? parseInt(stored.syncInterval) : 5000,
+          syncInterval: stored.syncInterval
+            ? parseInt(stored.syncInterval)
+            : 5000,
           enabled: stored.enabled === 'true',
           debug: stored.debug === 'true',
         };
@@ -82,7 +84,8 @@ export class ObservabilityIntegration extends EventEmitter {
     if (config.localDbPath) secrets.localDbPath = config.localDbPath;
     if (config.tursoUrl) secrets.tursoUrl = config.tursoUrl;
     if (config.tursoAuthToken) secrets.tursoAuthToken = config.tursoAuthToken;
-    if (config.syncInterval !== undefined) secrets.syncInterval = config.syncInterval.toString();
+    if (config.syncInterval !== undefined)
+      secrets.syncInterval = config.syncInterval.toString();
     secrets.enabled = config.enabled ? 'true' : 'false';
     secrets.debug = config.debug ? 'true' : 'false';
 
@@ -137,7 +140,10 @@ export class ObservabilityIntegration extends EventEmitter {
   /**
    * Initialize SDK based on storage mode
    */
-  private async initializeSDK(storageMode: StorageMode, config: ObservabilityConfig): Promise<void> {
+  private async initializeSDK(
+    storageMode: StorageMode,
+    config: ObservabilityConfig,
+  ): Promise<void> {
     // Resolve the database path to an absolute path in userData directory
     const resolvedDbPath = this.resolveDbPath(storageMode, config.tursoUrl);
 
@@ -145,7 +151,9 @@ export class ObservabilityIntegration extends EventEmitter {
       case 'local':
         // Local mode - SQLite file only
         this.sdk = TursoObservabilitySDK.createLocal(resolvedDbPath);
-        console.log(`[ObservabilityIntegration] Local mode initialized: ${resolvedDbPath}`);
+        console.log(
+          `[ObservabilityIntegration] Local mode initialized: ${resolvedDbPath}`,
+        );
         break;
 
       case 'local-with-sync':
@@ -159,7 +167,7 @@ export class ObservabilityIntegration extends EventEmitter {
         console.log('[ObservabilityIntegration] Initializing cloud schema...');
         const cloudSDK = TursoObservabilitySDK.createCloud(
           config.tursoUrl,
-          config.tursoAuthToken || ''
+          config.tursoAuthToken || '',
         );
         await cloudSDK.initializeSchema();
         await cloudSDK.close();
@@ -170,9 +178,11 @@ export class ObservabilityIntegration extends EventEmitter {
           resolvedDbPath,
           config.tursoUrl,
           config.tursoAuthToken || '',
-          config.syncInterval || 5000
+          config.syncInterval || 5000,
         );
-        console.log(`[ObservabilityIntegration] Local-with-sync mode initialized: ${resolvedDbPath} syncing to ${config.tursoUrl}`);
+        console.log(
+          `[ObservabilityIntegration] Local-with-sync mode initialized: ${resolvedDbPath} syncing to ${config.tursoUrl}`,
+        );
         break;
 
       default:
@@ -321,7 +331,10 @@ export class ObservabilityIntegration extends EventEmitter {
     }
 
     if (storageMode === 'local-with-sync' && !config.tursoUrl) {
-      return { success: false, error: 'Turso Database URL is required for local-with-sync mode' };
+      return {
+        success: false,
+        error: 'Turso Database URL is required for local-with-sync mode',
+      };
     }
 
     try {
@@ -339,7 +352,7 @@ export class ObservabilityIntegration extends EventEmitter {
           // Initialize cloud schema first (same as in initializeSDK)
           const testCloudSDK = TursoObservabilitySDK.createCloud(
             config.tursoUrl!,
-            config.tursoAuthToken || ''
+            config.tursoAuthToken || '',
           );
           await testCloudSDK.initializeSchema();
           await testCloudSDK.close();
@@ -348,12 +361,15 @@ export class ObservabilityIntegration extends EventEmitter {
             resolvedDbPath,
             config.tursoUrl!,
             config.tursoAuthToken || '',
-            config.syncInterval || 5000
+            config.syncInterval || 5000,
           );
           break;
 
         default:
-          return { success: false, error: `Unknown storage mode: ${storageMode}` };
+          return {
+            success: false,
+            error: `Unknown storage mode: ${storageMode}`,
+          };
       }
 
       // Initialize the schema (creates tables if they don't exist)

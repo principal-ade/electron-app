@@ -89,7 +89,8 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     icon: <Pencil size={16} />,
     preview: <DrawingsListPanelPreview />,
     label: 'Drawings',
-    description: 'Browse and manage Excalidraw diagrams saved in the repository.',
+    description:
+      'Browse and manage Excalidraw diagrams saved in the repository.',
   },
   agentEvents: {
     icon: <Activity size={16} />,
@@ -121,7 +122,8 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     icon: <TerminalIcon size={16} />,
     preview: <TabbedTerminalPanelPreview />,
     label: 'Multi Terminal',
-    description: 'Flexible terminal panel that can switch between tabbed and carousel layouts.',
+    description:
+      'Flexible terminal panel that can switch between tabbed and carousel layouts.',
   },
   codeViewer: {
     icon: <FileCode size={16} />,
@@ -153,7 +155,9 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
 
 export type PanelPreviewId = keyof typeof panelPreviewRegistry;
 
-export function getPanelPreviewMetadata(id: string): PanelPreviewMetadata | null {
+export function getPanelPreviewMetadata(
+  id: string,
+): PanelPreviewMetadata | null {
   return panelPreviewRegistry[id] ?? null;
 }
 

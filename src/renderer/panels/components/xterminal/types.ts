@@ -111,18 +111,24 @@ export interface XTerminalPanelRef {
   fit: () => void;
 
   /** Search forward for the given text */
-  findNext: (searchTerm: string, searchOptions?: {
-    regex?: boolean;
-    wholeWord?: boolean;
-    caseSensitive?: boolean;
-  }) => boolean;
+  findNext: (
+    searchTerm: string,
+    searchOptions?: {
+      regex?: boolean;
+      wholeWord?: boolean;
+      caseSensitive?: boolean;
+    },
+  ) => boolean;
 
   /** Search backward for the given text */
-  findPrevious: (searchTerm: string, searchOptions?: {
-    regex?: boolean;
-    wholeWord?: boolean;
-    caseSensitive?: boolean;
-  }) => boolean;
+  findPrevious: (
+    searchTerm: string,
+    searchOptions?: {
+      regex?: boolean;
+      wholeWord?: boolean;
+      caseSensitive?: boolean;
+    },
+  ) => boolean;
 
   /** Clear search highlights */
   clearSearch: () => void;

@@ -129,7 +129,10 @@ export const GitDiffPanel: React.FC<GitDiffPanelProps> = ({
             const fsResult = await FileSystemService.readFile(absolutePath);
             workingTreeContent = fsResult?.content ?? '';
           } catch (readError) {
-            console.warn('Failed to read working tree file for diff:', readError);
+            console.warn(
+              'Failed to read working tree file for diff:',
+              readError,
+            );
             workingTreeContent = '';
           }
         }
@@ -467,7 +470,7 @@ export const GitDiffPanelPreview: React.FC = () => {
       </div>
       <div style={{ color: '#ef4444' }}>- const count = oldValue;</div>
       <div style={{ color: '#22c55e' }}>+ const count = newValue;</div>
-      <div style={{ color: theme.colors.textSecondary }}>  return count;</div>
+      <div style={{ color: theme.colors.textSecondary }}> return count;</div>
     </div>
   );
 };

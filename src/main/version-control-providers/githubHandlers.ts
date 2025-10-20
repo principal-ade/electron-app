@@ -1516,7 +1516,9 @@ export class GitHubAdapter {
     }
 
     if (apiResult.status === 403) {
-      console.log('[GitHub] API rate limit or permissions issue (403) via token');
+      console.log(
+        '[GitHub] API rate limit or permissions issue (403) via token',
+      );
       return [
         {
           error: 'rate_limit',
@@ -1674,9 +1676,12 @@ export class GitHubAdapter {
           },
         ];
       } else {
-        console.warn('[GitHub] gh CLI pull request fetch failed, falling back', {
-          stderr: ghResult.stderr,
-        });
+        console.warn(
+          '[GitHub] gh CLI pull request fetch failed, falling back',
+          {
+            stderr: ghResult.stderr,
+          },
+        );
       }
     } catch (error) {
       console.warn('[GitHub] gh CLI error when fetching pull requests:', error);

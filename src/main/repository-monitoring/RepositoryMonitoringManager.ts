@@ -607,7 +607,6 @@ export class RepositoryMonitoringManager extends EventEmitter {
     };
   }
 
-
   /**
    * Get server status
    */

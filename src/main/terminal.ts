@@ -762,7 +762,10 @@ class TerminalManager {
         }
 
         // Check if already owned by another window
-        if (session.ownedByWindowId && session.ownedByWindowId !== senderWindowId) {
+        if (
+          session.ownedByWindowId &&
+          session.ownedByWindowId !== senderWindowId
+        ) {
           const ownerWindow = BrowserWindow.fromId(session.ownedByWindowId);
           const ownerExists = ownerWindow && !ownerWindow.isDestroyed();
 
