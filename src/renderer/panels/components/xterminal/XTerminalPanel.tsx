@@ -79,6 +79,11 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
     // webglAddonRef removed - WebGL disabled for performance
     const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isVisibleRef = useRef(isVisible);
+    // Track if user has manually scrolled away from bottom
+    const userScrolledAwayRef = useRef(false);
+    const lastScrollPositionRef = useRef(0);
+    // Store performFit function to be called from multiple places
+    const performFitRef = useRef<(() => void) | null>(null);
 
     // Keep isVisible ref in sync
     useEffect(() => {
@@ -97,6 +102,8 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
         scrollToBottom: () => {
           if (terminal) {
             terminal.scrollToBottom();
+            // Reset user scroll intent when explicitly scrolled to bottom
+            userScrolledAwayRef.current = false;
           }
         },
         focus: () => {
@@ -128,28 +135,9 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
           }
         },
         fit: () => {
-          if (fitAddonRef.current && terminalRef.current && terminal) {
-            const rect = terminalRef.current.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              // Save scroll position before resize
-              const scrollPosition = terminal.buffer.active.viewportY;
-              const baseScrollback = terminal.buffer.active.baseY;
-              const wasAtBottom =
-                scrollPosition + terminal.rows >= baseScrollback + terminal.rows;
-
-              fitAddonRef.current.fit();
-
-              // Restore scroll position after resize
-              requestAnimationFrame(() => {
-                if (terminal) {
-                  if (wasAtBottom) {
-                    terminal.scrollToBottom();
-                  } else {
-                    terminal.scrollToLine(scrollPosition);
-                  }
-                }
-              });
-            }
+          // Use the centralized performFit function for consistency
+          if (performFitRef.current) {
+            performFitRef.current();
           }
         },
       }),
@@ -242,6 +230,22 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
       // Open terminal in the DOM
       term.open(terminalRef.current);
 
+      // Track user scroll intent to prevent auto-scrolling when user manually scrolls
+      const handleScroll = () => {
+        const scrollPosition = term.buffer.active.viewportY;
+        const baseScrollback = term.buffer.active.baseY;
+        const isAtBottom =
+          scrollPosition + term.rows >= baseScrollback + term.rows;
+
+        // If user scrolled and moved away from bottom, mark it
+        if (scrollPosition !== lastScrollPositionRef.current) {
+          userScrolledAwayRef.current = !isAtBottom;
+          lastScrollPositionRef.current = scrollPosition;
+        }
+      };
+
+      const scrollDisposable = term.onScroll(handleScroll);
+
       // PERFORMANCE: WebGL renderer disabled by default
       // WebGL can cause performance issues in Electron apps with multiple terminals:
       // - GPU context switching overhead when switching tabs
@@ -266,6 +270,7 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
       setTerminal(term);
 
       // Fit function with scroll position preservation
+      // This is the single source of truth for all fit operations
       const performFit = () => {
         if (!fitAddonRef.current || !terminalRef.current || !term) return;
 
@@ -273,7 +278,7 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
 
         // Only fit if container has valid dimensions
         if (rect.width > 0 && rect.height > 0) {
-          // Save scroll position before resize
+          // Check if user was at bottom before resize
           const scrollPosition = term.buffer.active.viewportY;
           const baseScrollback = term.buffer.active.baseY;
           const wasAtBottom =
@@ -281,18 +286,25 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
 
           fitAddonRef.current.fit();
 
-          // Restore scroll position after resize
+          // Restore scroll position based on user intent
           requestAnimationFrame(() => {
             if (term) {
-              if (wasAtBottom) {
+              // Only auto-scroll to bottom if:
+              // 1. User was at bottom before resize, AND
+              // 2. User hasn't manually scrolled away
+              if (wasAtBottom && !userScrolledAwayRef.current) {
                 term.scrollToBottom();
               } else {
+                // Preserve scroll position
                 term.scrollToLine(scrollPosition);
               }
             }
           });
         }
       };
+
+      // Store in ref so it can be called from visibility effect and public API
+      performFitRef.current = performFit;
 
       // No eager initial fit - let ResizeObserver handle it when container has stable dimensions
       // This prevents sizing issues on app startup when layout isn't ready yet
@@ -334,6 +346,7 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
       return () => {
         window.removeEventListener('resize', handleResize);
         resizeObserver.disconnect();
+        scrollDisposable.dispose();
         if (resizeTimeoutRef.current) {
           clearTimeout(resizeTimeoutRef.current);
         }
@@ -381,31 +394,12 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
 
     // Handle visibility changes - resize when becoming visible
     useEffect(() => {
-      if (terminal && fitAddonRef.current && isVisible) {
-        // Give the layout a moment to settle, then fit
+      if (terminal && isVisible) {
+        // Give the layout a moment to settle before fitting
+        // This ensures the container has stable dimensions
         setTimeout(() => {
-          if (fitAddonRef.current && terminalRef.current && terminal) {
-            const rect = terminalRef.current.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-              // Save scroll position before resize
-              const scrollPosition = terminal.buffer.active.viewportY;
-              const baseScrollback = terminal.buffer.active.baseY;
-              const wasAtBottom =
-                scrollPosition + terminal.rows >= baseScrollback + terminal.rows;
-
-              fitAddonRef.current.fit();
-
-              // Restore scroll position after resize
-              requestAnimationFrame(() => {
-                if (terminal) {
-                  if (wasAtBottom) {
-                    terminal.scrollToBottom();
-                  } else {
-                    terminal.scrollToLine(scrollPosition);
-                  }
-                }
-              });
-            }
+          if (performFitRef.current) {
+            performFitRef.current();
           }
         }, 50);
       }

@@ -104,8 +104,7 @@ export const TabbedTerminalPanel = forwardRef<
             if (terminalRef) {
               // Focus the terminal so keyboard input goes to the right tab
               terminalRef.focus();
-              // Scroll to bottom for convenience
-              terminalRef.scrollToBottom();
+              // Don't auto-scroll - respect user's current scroll position
             }
           }, 150); // Longer delay to ensure visibility effect has completed
         });
