@@ -67,7 +67,6 @@ export class RepositoryMonitoringManager extends EventEmitter {
   private resourceHistory: ResourceSnapshot[] = [];
   private lastCpuUsage = process.cpuUsage();
   private lastCpuCheck = Date.now();
-  private metricsInterval: NodeJS.Timeout | null = null;
 
   constructor(config: Partial<RepositoryMonitoringManagerConfig> = {}) {
     super();
@@ -126,7 +125,6 @@ export class RepositoryMonitoringManager extends EventEmitter {
    */
   async stop(): Promise<void> {
     this.shutdownRequested = true;
-    this.stopMetricsCollection(); // Stop collecting metrics when stopping
     if (this.worker) {
       this.log('info', 'Stopping repository monitoring server...');
       this.worker.kill();
@@ -221,7 +219,6 @@ export class RepositoryMonitoringManager extends EventEmitter {
       case 'ready':
         this.isReady = true;
         this.log('info', 'Repository monitoring server is ready');
-        this.startMetricsCollection(); // Start collecting metrics when ready
         this.emit('ready');
         if (this.readyResolve) {
           this.readyResolve();
@@ -610,33 +607,6 @@ export class RepositoryMonitoringManager extends EventEmitter {
     };
   }
 
-  /**
-   * Start collecting resource metrics periodically
-   */
-  private startMetricsCollection(): void {
-    if (this.metricsInterval) {
-      clearInterval(this.metricsInterval);
-    }
-
-    // Collect metrics every 2 seconds
-    this.metricsInterval = setInterval(() => {
-      if (this.isReady && this.worker) {
-        this.getMonitoringStatus().catch((error) => {
-          this.log('debug', `Failed to collect metrics: ${error}`);
-        });
-      }
-    }, 2000);
-  }
-
-  /**
-   * Stop collecting resource metrics
-   */
-  private stopMetricsCollection(): void {
-    if (this.metricsInterval) {
-      clearInterval(this.metricsInterval);
-      this.metricsInterval = null;
-    }
-  }
 
   /**
    * Get server status
