@@ -25,9 +25,7 @@ import {
   BlockTypeSelect,
   DiffSourceToggleWrapper,
 } from '@mdxeditor/editor';
-import '@mdxeditor/editor/style.css';
 import { ThemedMDXEditorWithProvider } from '@principal-ade/industry-themed-mdx-editor';
-import '@principal-ade/industry-themed-mdx-editor/styles.css';
 import { useTheme } from '@a24z/industry-theme';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';
 import { FileSystemService } from '../../main-process-api/FileSystemService';

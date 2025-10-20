@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import mermaid from 'mermaid';
 
 import { ThemeProvider } from '@a24z/industry-theme';
+import './styles/mdx-editor';
 import 'themed-markdown/dist/index.css';
 
 import App from './App';

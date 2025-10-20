@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { useEffect, useState } from 'react';
 import { ThemeProvider } from '@a24z/industry-theme';
 import { MDXEditorPanel } from './MDXEditorPanel';
+import '../../styles/mdx-editor';
 import { RepositoryPanelProvider } from '../RepositoryPanelProvider';
 
 // Mock data for Storybook
