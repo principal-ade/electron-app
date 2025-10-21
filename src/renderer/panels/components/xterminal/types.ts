@@ -43,6 +43,9 @@ export interface XTerminalPanelProps {
   /** Callback when a link is clicked in the terminal */
   onLinkClick?: (url: string, isLocalhost: boolean) => void;
 
+  /** Optional session ID for recording purposes */
+  sessionId?: string;
+
   // === Display ===
   /** Optional class name for container styling */
   className?: string;

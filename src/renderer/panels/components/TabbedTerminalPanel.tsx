@@ -12,12 +12,15 @@ import {
   Bug,
   Monitor,
   Grid3x3,
+  Circle,
+  Square,
 } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { useTheme } from '@a24z/industry-theme';
 import TerminalPanelV2, { TerminalPanelV2Ref } from '../TerminalPanelV2';
 import { TerminalService } from '../../main-process-api/TerminalService';
 import { TerminalDebugModal } from './TerminalDebugModal';
+import { terminalRecorder } from '../../utils/terminalRecorder';
 
 export interface TerminalTab {
   id: string;
@@ -69,6 +72,8 @@ export const TabbedTerminalPanel = forwardRef<
     );
     const [showDebugModal, setShowDebugModal] = useState(false);
     const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingDirectory, setRecordingDirectory] = useState<string | null>(null);
 
     // Store refs to terminal panels for each tab
     const terminalRefs = useRef<Map<string, TerminalPanelV2Ref>>(new Map());
@@ -327,6 +332,31 @@ export const TabbedTerminalPanel = forwardRef<
       },
       [],
     );
+
+    // Handle recording toggle
+    const handleToggleRecording = useCallback(async () => {
+      if (isRecording) {
+        // Stop recording
+        const result = await terminalRecorder.stopRecording();
+        if (result.success) {
+          setIsRecording(false);
+          setRecordingDirectory(null);
+          console.log('[TabbedTerminalPanel] Recording stopped, saved files:', result.files);
+        } else {
+          console.error('[TabbedTerminalPanel] Failed to stop recording:', result.error);
+        }
+      } else {
+        // Start recording
+        const result = await terminalRecorder.startRecording();
+        if (result.success) {
+          setIsRecording(true);
+          setRecordingDirectory(result.directory || null);
+          console.log('[TabbedTerminalPanel] Recording started to:', result.directory);
+        } else {
+          console.error('[TabbedTerminalPanel] Failed to start recording:', result.error);
+        }
+      }
+    }, [isRecording]);
 
     // Keep callback refs up to date
     useEffect(() => {
@@ -657,6 +687,44 @@ export const TabbedTerminalPanel = forwardRef<
                 title="New terminal"
               >
                 <Plus size={14} />
+              </button>
+
+              {/* Recording button */}
+              <button
+                onClick={handleToggleRecording}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '36px',
+                  height: '100%',
+                  border: 'none',
+                  backgroundColor: isRecording
+                    ? '#ff4444'
+                    : 'transparent',
+                  cursor: 'pointer',
+                  color: isRecording ? '#fff' : theme.colors.textSecondary,
+                  paddingLeft: '4px',
+                  paddingRight: '4px',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isRecording) {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isRecording) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+                title={
+                  isRecording
+                    ? `Recording to: ${recordingDirectory || 'unknown'}\nClick to stop`
+                    : 'Start recording terminal data'
+                }
+              >
+                {isRecording ? <Square size={14} /> : <Circle size={14} />}
               </button>
 
               {/* Debug button */}

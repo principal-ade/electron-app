@@ -12,6 +12,7 @@ import { AgentSessionService } from '../main-process-api/AgentSessionService';
 import { TerminalService } from '../main-process-api/TerminalService';
 import { ShellService } from '../main-process-api/ShellService';
 import { DevSidecarService } from '../main-process-api/DevSidecarService';
+import { terminalRecorder } from '../utils/terminalRecorder';
 
 import { XTerminalPanel } from './components/xterminal';
 import type {
@@ -386,6 +387,9 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
       const unsubscribe = TerminalService.onData(
         async (data: { sessionId: string; data: string }) => {
           if (data.sessionId === sessionId && terminalRef.current) {
+            // Record data received from backend (before writing to terminal)
+            terminalRecorder.recordDataReceived(sessionId, data.data);
+
             terminalRef.current.write(data.data);
           }
         },
@@ -574,6 +578,7 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
       <XTerminalPanel
         ref={terminalRef}
         className={className}
+        sessionId={sessionId || undefined}
         hideHeader={hideHeader}
         headerTitle="Terminal"
         headerSubtitle={headerSubtitle}

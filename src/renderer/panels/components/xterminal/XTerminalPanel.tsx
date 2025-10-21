@@ -23,6 +23,7 @@ import '@xterm/xterm/css/xterm.css';
 import './XTerminalPanel.css';
 
 import { useTheme } from '@a24z/industry-theme';
+import { terminalRecorder } from '../../../utils/terminalRecorder';
 
 import type { XTerminalPanelProps, XTerminalPanelRef } from './types';
 import type { ISearchOptions } from '@xterm/addon-search';
@@ -53,6 +54,7 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
       onData,
       onResize,
       onLinkClick,
+      sessionId,
       className = '',
       hideHeader = false,
       headerTitle = 'Terminal',
@@ -93,6 +95,11 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
       () => ({
         write: (data: string) => {
           if (terminal) {
+            // Record data being written to xterm
+            if (sessionId) {
+              terminalRecorder.recordDataWritten(sessionId, data);
+            }
+
             terminal.write(data);
           }
         },

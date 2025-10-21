@@ -7,7 +7,7 @@ import { BrowserWindow, screen, ipcMain, app } from 'electron';
 import path from 'path';
 import log from 'electron-log';
 import { resolveHtmlPath } from '../util';
-import { applicationWindows } from './types';
+import { applicationWindows, mainWindowId } from './types';
 
 class WindowSwitcher {
   private switcherWindow: BrowserWindow | null = null;
@@ -19,6 +19,15 @@ class WindowSwitcher {
    * Show the window switcher overlay
    */
   public show(): void {
+    // Only show if one of our app windows is currently focused
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    const isOurAppFocused = focusedWindow && applicationWindows.has(focusedWindow.id);
+
+    if (!isOurAppFocused) {
+      log.info('[Window Switcher] Not showing - app is not currently focused');
+      return;
+    }
+
     this.updateWindowList();
 
     if (this.windowList.length === 0) {
@@ -113,8 +122,34 @@ class WindowSwitcher {
     // Get all application windows except the switcher itself
     for (const [id, appWindow] of applicationWindows.entries()) {
       if (appWindow.window && !appWindow.window.isDestroyed()) {
-        // Skip minimized windows optionally (you can change this behavior)
-        const title = appWindow.window.getTitle() || 'Untitled Window';
+        // Generate meaningful title
+        let title = 'Untitled Window';
+
+        // Check if this is the main window
+        if (id === mainWindowId) {
+          title = 'Main';
+        } else {
+          // Try to get directory name from file system adapter
+          if (appWindow.fileSystemAdapter) {
+            const rootPath = (appWindow.fileSystemAdapter as any).rootPath;
+            log.info(`[Window Switcher] Window ${id} rootPath:`, rootPath);
+            if (rootPath) {
+              // Extract just the directory name from the path
+              title = path.basename(rootPath);
+            }
+          } else {
+            log.info(`[Window Switcher] Window ${id} has no fileSystemAdapter`);
+          }
+
+          // Fallback to window title if we still don't have a good title
+          if (title === 'Untitled Window') {
+            const windowTitle = appWindow.window.getTitle();
+            if (windowTitle && windowTitle !== 'Principal ADE') {
+              title = windowTitle;
+            }
+          }
+        }
+
         this.windowList.push({ id, title });
       }
     }
@@ -172,9 +207,20 @@ class WindowSwitcher {
       log.error('[Window Switcher] Attempted path:', htmlPath);
     });
 
+    // Open DevTools in development to debug
+    if (process.env.NODE_ENV === 'development') {
+      this.switcherWindow.webContents.openDevTools({ mode: 'detach' });
+    }
+
     // Send window list once the page is ready
     this.switcherWindow.webContents.on('did-finish-load', () => {
+      log.info('[Window Switcher] HTML loaded successfully');
       this.sendWindowList();
+    });
+
+    // Log any console messages from the renderer
+    this.switcherWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+      log.info(`[Window Switcher Renderer] ${message} (line ${line})`);
     });
 
     // Handle window closed

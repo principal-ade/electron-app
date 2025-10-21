@@ -200,6 +200,20 @@ app.on('browser-window-created', (_, window) => {
       windowSwitcher.show();
       event.preventDefault();
     }
+
+    // Hide switcher when Command/Control is released
+    if (
+      input.type === 'keyUp' &&
+      windowSwitcher.isShowing() &&
+      ((process.platform === 'darwin' && input.code === 'MetaLeft') ||
+        (process.platform === 'darwin' && input.code === 'MetaRight') ||
+        (process.platform !== 'darwin' && input.code === 'ControlLeft') ||
+        (process.platform !== 'darwin' && input.code === 'ControlRight'))
+    ) {
+      log.info('[Window Switcher] ✅ Modifier key released, hiding switcher');
+      windowSwitcher.hide();
+      event.preventDefault();
+    }
   });
 });
 
