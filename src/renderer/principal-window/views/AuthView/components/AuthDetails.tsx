@@ -490,8 +490,8 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={async () => {
-                    // Open GitHub OAuth app settings to manage granted permissions
-                    // This is the specific OAuth app ID for your application
+                    // Open GitHub settings to manage authorized applications
+                    // (WorkOS uses this GitHub OAuth app for authentication)
                     await ShellService.openExternal(
                       'https://github.com/settings/connections/applications/Ov23liw7kWJ0kctIrSs3',
                     );

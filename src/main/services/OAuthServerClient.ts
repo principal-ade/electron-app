@@ -2,7 +2,7 @@
  * OAuthServerClient - Adapted from dev-collab-cli for Electron use
  *
  * Handles OAuth authentication flow with the server using PKCE
- * Supports both GitHub OAuth and WorkOS providers
+ * Uses WorkOS authentication with GitHub as the identity provider
  */
 
 import crypto from 'crypto';

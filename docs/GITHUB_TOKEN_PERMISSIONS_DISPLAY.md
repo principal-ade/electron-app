@@ -1,5 +1,7 @@
 # GitHub Token Permissions Display Plan
 
+> **Note**: This application uses WorkOS for authentication with GitHub as the identity provider. WorkOS returns a GitHub access token that can be used with the GitHub API. This document describes how to display the permissions and capabilities of that GitHub token.
+
 ## Current State
 
 The AuthView shows:

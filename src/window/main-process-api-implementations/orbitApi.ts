@@ -11,7 +11,7 @@ import type {
 
 export const orbitAPI: OrbitAPI = {
   /**
-   * Open GitHub OAuth authentication page
+   * Open authentication page (WorkOS with GitHub provider)
    */
   openAuth: async (): Promise<{ success: boolean; error?: string }> => {
     return ipcRenderer.invoke('orbit:openAuth');

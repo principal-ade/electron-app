@@ -1,6 +1,7 @@
 /**
  * Orbit P2P Collaboration API
- * Handles GitHub OAuth and user management for P2P collaboration
+ * Handles authentication and user management for P2P collaboration
+ * Note: Uses WorkOS authentication with GitHub as the identity provider
  */
 
 export interface OrbitUser {
@@ -58,7 +59,7 @@ export interface OrbitPollResponse {
 
 export interface OrbitAPI {
   /**
-   * Open GitHub OAuth authentication page
+   * Open authentication page (WorkOS with GitHub provider)
    */
   openAuth(): Promise<{ success: boolean; error?: string }>;
 

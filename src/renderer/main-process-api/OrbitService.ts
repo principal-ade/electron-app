@@ -2,8 +2,9 @@
  * Service layer for Orbit P2P Collaboration functionality
  * ALL window.mainProcess.orbit calls MUST be encapsulated here
  *
- * This service handles GitHub OAuth and user management for P2P collaboration,
+ * This service handles authentication and user management for P2P collaboration,
  * including WebRTC signaling for real-time collaboration features.
+ * Note: Uses WorkOS authentication with GitHub as the identity provider.
  */
 
 import type {
@@ -18,7 +19,7 @@ import type {
 
 export class OrbitService {
   /**
-   * Open GitHub OAuth authentication page
+   * Open authentication page (WorkOS with GitHub provider)
    */
   static async openAuth(): Promise<{ success: boolean; error?: string }> {
     try {

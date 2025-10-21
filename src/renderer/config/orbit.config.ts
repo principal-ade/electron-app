@@ -22,8 +22,8 @@ export const OrbitConfig = {
   // WebSocket URL for signaling server
   wsUrl: useLocalServer ? LOCAL_WS : PRODUCTION_WS,
 
-  // GitHub OAuth configuration
-  // Note: OAuth is handled server-side through code-city-landing
+  // Orbit authentication configuration
+  // Note: Auth is handled server-side through WorkOS (via code-city-landing)
   // The electron app doesn't need client credentials
   oauth: {
     redirectUri: useLocalServer

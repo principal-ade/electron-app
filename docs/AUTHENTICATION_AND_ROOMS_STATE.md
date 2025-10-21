@@ -19,9 +19,9 @@ This document describes the current implementation state of authentication and P
 1. **AuthService** (`src/main/services/AuthService.ts`)
    - Core authentication service handling OAuth flow
    - Uses UnifiedSecureStorage for credential encryption
-   - Integrates with OAuthServerClient for GitHub authentication
+   - Integrates with OAuthServerClient for WorkOS authentication
    - Manages IPC handlers for auth operations
-   - Authentication flow through principle-md.com OAuth server
+   - Authentication flow through WorkOS (via principle-md.com server)
 
 2. **AuthStateManager** (`src/main/services/AuthStateManager.ts`)
    - Singleton managing global auth state
@@ -30,7 +30,7 @@ This document describes the current implementation state of authentication and P
 
 3. **UnifiedSecureStorage** (`src/main/services/UnifiedSecureStorage.ts`)
    - Secure token storage using Electron's safeStorage
-   - Manages GitHub tokens and other credentials
+   - Manages OAuth tokens (GitHub access tokens via WorkOS) and other credentials
    - Handles migration from localStorage
 
 #### Renderer Process Components
@@ -68,9 +68,9 @@ This document describes the current implementation state of authentication and P
    - AuthView component opens with login interface
    - User clicks "Sign In with GitHub" button
    - useAuthState hook calls AuthenticationService.login()
-   - Main process initiates OAuth flow with GitHub
-   - Browser opens for user authorization
-   - Token received and stored in UnifiedSecureStorage
+   - Main process initiates OAuth flow with WorkOS
+   - Browser opens for user authorization via WorkOS (GitHub provider)
+   - GitHub access token received from WorkOS and stored in UnifiedSecureStorage
    - AuthStateManager broadcasts state change
    - All windows update via useAuthState hook
    - User avatar appears in sidebar
@@ -155,7 +155,7 @@ This document describes the current implementation state of authentication and P
    - Accessible from principal window
 
 2. **Git Operations**:
-   - GitSyncConnectionManager uses auth for GitHub
+   - GitSyncConnectionManager uses GitHub access token (obtained via WorkOS)
    - Remote file viewing requires authentication
    - Issues/PR fetching needs GitHub token
 
@@ -239,7 +239,7 @@ This document describes the current implementation state of authentication and P
 - `@a24z/core-library` - Palace Room/Portal types
 - `@a24z/panels` - UI layout components
 - `electron-store` - Persistent storage
-- GitHub OAuth - Authentication provider
+- WorkOS - Authentication provider (using GitHub as identity provider)
 
 ## Recommendations for Remaining Work
 
