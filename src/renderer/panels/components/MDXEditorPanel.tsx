@@ -270,6 +270,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
         filePath={currentFilePath || undefined}
         enableSaveShortcut={!readOnly}
         hideStatusBar={variant === 'tab'}
+        documentPadding={{ left: '0.5in', right: '0.5in' }}
         onError={(error) => {
           console.error('MDXEditor error:', error);
           if (error && typeof error === 'object' && 'message' in error) {

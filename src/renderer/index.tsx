@@ -2,14 +2,14 @@ import { createRoot } from 'react-dom/client';
 import mermaid from 'mermaid';
 
 import { ThemeProvider } from '@a24z/industry-theme';
+import './styles/tailwind.css';
+import './index.css';
+import 'highlight.js/styles/atom-one-dark.css';
 import './styles/mdx-editor';
 import 'themed-markdown/dist/index.css';
 
 import App from './App';
 import { AppErrorBoundary } from './AppErrorBoundary';
-import './styles/tailwind.css';
-import './index.css';
-import 'highlight.js/styles/atom-one-dark.css';
 
 // Initialize mermaid and expose to window
 mermaid.initialize({
