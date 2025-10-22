@@ -197,29 +197,31 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
 
   // Fetch sessions from the SDK
   const fetchSessions = useCallback(async () => {
-    if (!repositoryPath) {
-      setSessions([]);
-      setIsLoading(false);
-      return;
-    }
-
     try {
       setIsLoading(true);
 
-      // Get active sessions for this directory
-      const projectSessions =
-        await AgentSessionSDKService.getActiveSessionsForDirectory(
-          repositoryPath,
-        );
+      // Get all active sessions across all projects
+      const allProjectSessions =
+        await AgentSessionSDKService.getActiveSessionsByProject();
 
-      if (!projectSessions || projectSessions.summaries.length === 0) {
+      if (!allProjectSessions || allProjectSessions.length === 0) {
+        setSessions([]);
+        return;
+      }
+
+      // Flatten all sessions from all projects
+      const allSessionSummaries = allProjectSessions.flatMap(
+        (project) => project.summaries,
+      );
+
+      if (allSessionSummaries.length === 0) {
         setSessions([]);
         return;
       }
 
       // Fetch full session data and events for each session
       const sessionsWithEvents = await Promise.all(
-        projectSessions.summaries.map(async (summary) => {
+        allSessionSummaries.map(async (summary) => {
           return fetchSingleSession(summary.sessionId, summary.repository);
         }),
       );
@@ -237,7 +239,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [repositoryPath, fetchSingleSession]);
+  }, [fetchSingleSession]);
 
   // Initial fetch
   useEffect(() => {
@@ -246,17 +248,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
 
   // Listen for real-time event updates
   useEffect(() => {
-    if (!repositoryPath) {
-      return;
-    }
-
     const unsubscribe = AgentSessionSDKService.onProcessedEvent((event) => {
-      // Check if this event belongs to the current repository
+      // Get the event's repository path
       const eventRepoPath = event.repository?.root || event.workingDirectory;
-
-      if (eventRepoPath !== repositoryPath) {
-        return;
-      }
 
       // Update the session that received this event
       setSessions((prevSessions) => {
@@ -338,7 +332,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
     return () => {
       unsubscribe();
     };
-  }, [repositoryPath, fetchSingleSession]);
+  }, [fetchSingleSession]);
 
   // Filter sessions
   const filteredSessions = useMemo(() => {
@@ -573,9 +567,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
             />
             <div style={{ fontSize: '14px' }}>
               {sessions.length === 0
-                ? repositoryPath
-                  ? 'No active sessions in this repository'
-                  : 'Select a repository to view sessions'
+                ? 'No active sessions found'
                 : 'No sessions match the current filter'}
             </div>
           </div>
@@ -593,42 +585,79 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                 latestEvent: sessionWithEvents.latestEvent,
               };
 
+              // Check if session is in current directory
+              const sessionDirectory =
+                sessionWithEvents.session.directory ||
+                sessionWithEvents.session.workingDirectory;
+              const isCurrentDirectory =
+                repositoryPath && sessionDirectory === repositoryPath;
+
               return (
-                <AgentSessionCard
+                <div
                   key={sessionWithEvents.session.sessionId}
-                  cardData={cardData}
-                  sessionColor={sessionColor}
-                  theme={theme}
-                  sources={new Map()}
-                  repositoryPath={repositoryPath || ''}
-                  isEditingName={false}
-                  editingName=""
-                  editInputRef={React.createRef()}
-                  isCopied={false}
-                  isArchiving={false}
-                  onStartEditName={() => {}}
-                  onSaveEditName={() => {}}
-                  onCancelEditName={() => {}}
-                  onEditNameChange={() => {}}
-                  onCopySessionId={() => {
-                    navigator.clipboard.writeText(
-                      sessionWithEvents.session.sessionId,
-                    );
+                  style={{
+                    position: 'relative',
+                    opacity: isCurrentDirectory ? 1 : 0.6,
+                    transition: 'opacity 0.2s',
                   }}
-                  onOpenTerminal={
-                    onOpenTerminal
-                      ? () =>
-                          onOpenTerminal(sessionWithEvents.session.sessionId)
-                      : undefined
-                  }
-                  onSessionDetailSelect={
-                    onSessionSelect
-                      ? () =>
-                          onSessionSelect(sessionWithEvents.session.sessionId)
-                      : undefined
-                  }
-                  getTimeAgo={getTimeAgo}
-                />
+                >
+                  {/* Badge for sessions from different directories */}
+                  {repositoryPath && !isCurrentDirectory && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '8px',
+                        right: '8px',
+                        padding: '3px 8px',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        backgroundColor: theme.colors.warning,
+                        color: '#fff',
+                        borderRadius: '4px',
+                        zIndex: 10,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                      }}
+                      title={`Different directory: ${sessionDirectory}`}
+                    >
+                      Other Dir
+                    </div>
+                  )}
+                  <AgentSessionCard
+                    cardData={cardData}
+                    sessionColor={sessionColor}
+                    theme={theme}
+                    sources={new Map()}
+                    repositoryPath={repositoryPath || ''}
+                    isEditingName={false}
+                    editingName=""
+                    editInputRef={React.createRef()}
+                    isCopied={false}
+                    isArchiving={false}
+                    onStartEditName={() => {}}
+                    onSaveEditName={() => {}}
+                    onCancelEditName={() => {}}
+                    onEditNameChange={() => {}}
+                    onCopySessionId={() => {
+                      navigator.clipboard.writeText(
+                        sessionWithEvents.session.sessionId,
+                      );
+                    }}
+                    onOpenTerminal={
+                      onOpenTerminal
+                        ? () =>
+                            onOpenTerminal(sessionWithEvents.session.sessionId)
+                        : undefined
+                    }
+                    onSessionDetailSelect={
+                      onSessionSelect
+                        ? () =>
+                            onSessionSelect(sessionWithEvents.session.sessionId)
+                        : undefined
+                    }
+                    getTimeAgo={getTimeAgo}
+                  />
+                </div>
               );
             })}
           </div>

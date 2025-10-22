@@ -32,7 +32,7 @@ interface EventEntry {
 
 export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
   repositoryPath,
-  maxEvents = 100,
+  maxEvents = 500,
 }) => {
   const { theme } = useTheme();
   const [events, setEvents] = useState<EventEntry[]>([]);
