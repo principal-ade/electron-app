@@ -48,6 +48,8 @@ class WindowSwitcher {
       !this.switcherWindow.isDestroyed()
     ) {
       // Already showing, just cycle to next
+      // Ensure mouse events are enabled in case they were disabled
+      this.switcherWindow.setIgnoreMouseEvents(false);
       this.selectNext();
       return;
     }
@@ -67,6 +69,11 @@ class WindowSwitcher {
     if (!this.isActive) return;
 
     this.isActive = false;
+
+    // Make window click-through immediately to prevent intercepting events
+    if (this.switcherWindow && !this.switcherWindow.isDestroyed()) {
+      this.switcherWindow.setIgnoreMouseEvents(true);
+    }
 
     // Activate the selected window
     if (
@@ -231,6 +238,11 @@ class WindowSwitcher {
 
     // Handle blur - hide switcher when it loses focus
     this.switcherWindow.on('blur', () => {
+      // Immediately make window click-through to prevent event interception
+      if (this.switcherWindow && !this.switcherWindow.isDestroyed()) {
+        this.switcherWindow.setIgnoreMouseEvents(true);
+      }
+
       // Delay hiding to allow for window switching
       setTimeout(() => {
         if (this.isActive) {
@@ -241,6 +253,9 @@ class WindowSwitcher {
 
     this.switcherWindow.show();
     this.switcherWindow.focus();
+
+    // Ensure window can receive mouse events when active
+    this.switcherWindow.setIgnoreMouseEvents(false);
   }
 
   /**
