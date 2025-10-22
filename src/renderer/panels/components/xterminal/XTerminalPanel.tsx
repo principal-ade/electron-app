@@ -108,6 +108,19 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
             terminal.scrollToBottom();
             // Reset user scroll intent when explicitly scrolled to bottom
             userScrolledAwayRef.current = false;
+            // Record the explicit scroll to bottom
+            if (sessionId) {
+              const scrollPosition = terminal.buffer.active.viewportY;
+              const baseScrollback = terminal.buffer.active.baseY;
+              terminalRecorder.recordScrollEvent(
+                sessionId,
+                scrollPosition,
+                baseScrollback,
+                terminal.rows,
+                true, // isAtBottom
+                false, // userScrolledAway was reset
+              );
+            }
           }
         },
         focus: () => {
@@ -247,6 +260,18 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
         if (scrollPosition !== lastScrollPositionRef.current) {
           userScrolledAwayRef.current = !isAtBottom;
           lastScrollPositionRef.current = scrollPosition;
+
+          // Record scroll event when recording is active
+          if (sessionId) {
+            terminalRecorder.recordScrollEvent(
+              sessionId,
+              scrollPosition,
+              baseScrollback,
+              term.rows,
+              isAtBottom,
+              userScrolledAwayRef.current,
+            );
+          }
         }
       };
 
@@ -300,9 +325,36 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
               // 2. User hasn't manually scrolled away
               if (wasAtBottom && !userScrolledAwayRef.current) {
                 term.scrollToBottom();
+                // Record the scroll event after resize
+                if (sessionId) {
+                  const newScrollPos = term.buffer.active.viewportY;
+                  const newBaseScrollback = term.buffer.active.baseY;
+                  terminalRecorder.recordScrollEvent(
+                    sessionId,
+                    newScrollPos,
+                    newBaseScrollback,
+                    term.rows,
+                    true, // isAtBottom
+                    false, // userScrolledAway was reset
+                  );
+                }
               } else {
                 // Preserve scroll position
                 term.scrollToLine(scrollPosition);
+                // Record the preserved scroll position
+                if (sessionId) {
+                  const newScrollPos = term.buffer.active.viewportY;
+                  const newBaseScrollback = term.buffer.active.baseY;
+                  const isAtBottom = newScrollPos + term.rows >= newBaseScrollback + term.rows;
+                  terminalRecorder.recordScrollEvent(
+                    sessionId,
+                    newScrollPos,
+                    newBaseScrollback,
+                    term.rows,
+                    isAtBottom,
+                    userScrolledAwayRef.current,
+                  );
+                }
               }
             }
           });

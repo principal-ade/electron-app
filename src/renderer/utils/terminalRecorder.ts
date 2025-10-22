@@ -12,10 +12,27 @@ export interface TerminalDataEvent {
   charCodes?: number[];
 }
 
+export interface TerminalScrollEvent {
+  timestamp: number;
+  sessionId: string;
+  type: 'scroll';
+  scrollPosition: number;
+  baseScrollback: number;
+  rows: number;
+  isAtBottom: boolean;
+  userScrolledAway: boolean;
+  // Calculated fields for analysis
+  totalLines: number;
+  visibleRange: {
+    start: number;
+    end: number;
+  };
+}
+
 export interface TerminalRecordingSession {
   sessionId: string;
   startTime: number;
-  events: TerminalDataEvent[];
+  events: Array<TerminalDataEvent | TerminalScrollEvent>;
 }
 
 /**
@@ -102,6 +119,59 @@ export class TerminalRecorder {
   }
 
   /**
+   * Record terminal scroll event
+   */
+  recordScrollEvent(
+    sessionId: string,
+    scrollPosition: number,
+    baseScrollback: number,
+    rows: number,
+    isAtBottom: boolean,
+    userScrolledAway: boolean,
+  ): void {
+    if (!this.isRecording) return;
+
+    if (!this.sessions.has(sessionId)) {
+      this.sessions.set(sessionId, {
+        sessionId,
+        startTime: Date.now(),
+        events: [],
+      });
+    }
+
+    const session = this.sessions.get(sessionId)!;
+
+    const totalLines = baseScrollback + rows;
+    const event: TerminalScrollEvent = {
+      timestamp: Date.now(),
+      sessionId,
+      type: 'scroll',
+      scrollPosition,
+      baseScrollback,
+      rows,
+      isAtBottom,
+      userScrolledAway,
+      totalLines,
+      visibleRange: {
+        start: scrollPosition,
+        end: scrollPosition + rows,
+      },
+    };
+
+    session.events.push(event);
+    this.eventCount++;
+
+    // Auto-save if we've accumulated too many events
+    if (this.eventCount >= this.maxEventsPerFile) {
+      this.saveAllSessions().catch(err => {
+        console.error('[TerminalRecorder] Failed to auto-save:', err);
+      });
+      this.sessions.clear();
+      this.eventCount = 0;
+    }
+  }
+
+  /**
    * Check if currently recording
    */
   isCurrentlyRecording(): boolean {
@@ -140,7 +210,7 @@ export class TerminalRecorder {
     const preview = data.substring(0, 100).replace(/\x1b/g, '\\x1b');
 
     // Optionally capture char codes for detailed analysis (only for first 50 chars to save space)
-    const charCodes = data.length <= 50 ? [...data].map(c => c.charCodeAt(0)) : undefined;
+    const charCodes = data.length <= 50 ? Array.from(data).map(c => c.charCodeAt(0)) : undefined;
 
     const event: TerminalDataEvent = {
       timestamp: Date.now(),
@@ -176,8 +246,9 @@ export class TerminalRecorder {
     const savedFiles: string[] = [];
     const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
 
-    for (const [sessionId, session] of this.sessions.entries()) {
-      if (session.events.length === 0) continue;
+    const savePromises: Promise<void>[] = [];
+    this.sessions.forEach((session, sessionId) => {
+      if (session.events.length === 0) return;
 
       // Create a safe filename
       const safeSessionId = sessionId.replace(/[^a-zA-Z0-9-]/g, '_');
@@ -198,24 +269,29 @@ export class TerminalRecorder {
         summary: {
           totalDataReceived: session.events
             .filter(e => e.type === 'received')
-            .reduce((sum, e) => sum + e.dataLength, 0),
+            .reduce((sum, e) => sum + (e as TerminalDataEvent).dataLength, 0),
           totalDataWritten: session.events
             .filter(e => e.type === 'written')
-            .reduce((sum, e) => sum + e.dataLength, 0),
+            .reduce((sum, e) => sum + (e as TerminalDataEvent).dataLength, 0),
           receivedEventCount: session.events.filter(e => e.type === 'received').length,
           writtenEventCount: session.events.filter(e => e.type === 'written').length,
+          scrollEventCount: session.events.filter(e => e.type === 'scroll').length,
         },
       };
 
-      try {
-        await FileSystemService.writeFile(filepath, JSON.stringify(recordingData, null, 2));
-        savedFiles.push(filepath);
-        console.log(`[TerminalRecorder] Saved recording to ${filepath}`);
-      } catch (error) {
-        console.error(`[TerminalRecorder] Failed to save ${filepath}:`, error);
-      }
-    }
+      const savePromise = FileSystemService.writeFile(filepath, JSON.stringify(recordingData, null, 2))
+        .then(() => {
+          savedFiles.push(filepath);
+          console.log(`[TerminalRecorder] Saved recording to ${filepath}`);
+        })
+        .catch(error => {
+          console.error(`[TerminalRecorder] Failed to save ${filepath}:`, error);
+        });
 
+      savePromises.push(savePromise);
+    });
+
+    await Promise.all(savePromises);
     return savedFiles;
   }
 }
