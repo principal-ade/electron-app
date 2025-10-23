@@ -291,10 +291,14 @@ class TerminalManager {
           const existingSessionId = this.sessionsByRepo.get(sessionKey);
           if (existingSessionId && this.sessions.has(existingSessionId)) {
             console.log(
-              `[Terminal] Reusing existing session ${existingSessionId} for ${sessionKey}`,
+              `[Terminal] REUSING existing session ${existingSessionId} for ${sessionKey}`,
             );
             return existingSessionId;
           }
+
+          console.log(
+            `[Terminal] Creating NEW session for ${sessionKey} (current sessions: ${this.sessions.size})`,
+          );
 
           // Check if we've reached the session limit
           if (this.sessions.size >= this.maxSessions) {
@@ -332,6 +336,10 @@ class TerminalManager {
               'Terminal functionality is not available in this build',
             );
           }
+
+          console.log(
+            `[Terminal] CREATE called for ${directory} with context: ${context || 'default'} (current sessions: ${this.sessions.size})`,
+          );
 
           // Check if we've reached the session limit
           if (this.sessions.size >= this.maxSessions) {

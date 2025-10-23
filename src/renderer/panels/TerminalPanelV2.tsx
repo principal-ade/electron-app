@@ -87,6 +87,9 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
       string | null
     >(null);
 
+    // Track if we're currently creating a session to prevent duplicates
+    const isCreatingSessionRef = useRef(false);
+
     // Ownership tracking state
     const [ownershipStatus, setOwnershipStatus] = useState<{
       isOwned: boolean;
@@ -231,15 +234,28 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
         return;
       }
 
-      let isMounted = true;
+      // Prevent duplicate session creation if already in progress
+      if (isCreatingSessionRef.current) {
+        console.log('[TerminalPanelV2] Session creation already in progress, skipping');
+        return;
+      }
 
+      let isMounted = true;
+      isCreatingSessionRef.current = true;
+
+      console.log('[TerminalPanelV2] Creating new terminal session...');
       createTerminalSession(directory).then((id) => {
         if (id && isMounted) {
+          console.log(`[TerminalPanelV2] Session created: ${id}`);
           setSessionId(id);
           if (onSessionCreated) {
             onSessionCreated(id);
           }
         }
+        isCreatingSessionRef.current = false;
+      }).catch((err) => {
+        console.error('[TerminalPanelV2] Failed to create session:', err);
+        isCreatingSessionRef.current = false;
       });
 
       return () => {
@@ -346,6 +362,15 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
         isMounted = false;
         if (ownershipCheckTimeoutRef.current) {
           clearTimeout(ownershipCheckTimeoutRef.current);
+        }
+        // Release ownership when component unmounts to prevent stale ownership
+        if (sessionId) {
+          TerminalService.releaseOwnership(sessionId).catch((err) => {
+            console.error(
+              '[TerminalPanelV2] Failed to release ownership on unmount:',
+              err,
+            );
+          });
         }
       };
     }, [sessionId, isVisible]);

@@ -118,6 +118,61 @@ export const CarouselTerminalPanel = forwardRef<
       [repositoryKey],
     );
 
+    // Stable callback for restoring sessions - prevents duplicate session restoration
+    const restoreSessions = useCallback(async () => {
+      try {
+        const allSessions = await TerminalService.list();
+
+        // Find sessions that belong to this terminal instance
+        const ourSessions = allSessions.filter(
+          (session) =>
+            session.context?.startsWith('terminal:') &&
+            (showAllTerminals || session.directory === directory),
+        );
+
+        // Only restore sessions if we have any and no initialTabs
+        if (ourSessions.length > 0 && initialTabs.length === 0) {
+          // Restore tabs from existing sessions
+          const restoredTabs: TerminalTab[] = [];
+          const restoredSessionIds = new Map<string, string>();
+
+          ourSessions.forEach((session, index) => {
+            // Extract tab ID from context (format: "terminal:repoKey:tab-12345")
+            const contextParts = session.context?.split(':') || [];
+            const tabId =
+              contextParts[contextParts.length - 1] ||
+              `tab-${Date.now()}-${index}`;
+
+            const tab: TerminalTab = {
+              id: tabId,
+              label: showAllTerminals
+                ? `${session.directory.split('/').pop() || session.directory}`
+                : directory.split('/').pop() || directory,
+              directory: session.directory,
+              isActive: index === 0,
+            };
+
+            restoredTabs.push(tab);
+            restoredSessionIds.set(tabId, session.id);
+          });
+
+          setTabs(restoredTabs);
+          setSessionIds(restoredSessionIds);
+          setCurrentPanelIndex(0);
+          onTabsChange?.(restoredTabs);
+
+          console.log(
+            `[CarouselTerminal] Restored ${restoredTabs.length} tabs from existing sessions`,
+          );
+        } else if (initialTabs.length > 0) {
+          const activeIndex = initialTabs.findIndex((t) => t.isActive);
+          setCurrentPanelIndex(activeIndex >= 0 ? activeIndex : 0);
+        }
+      } catch (err) {
+        console.error('[CarouselTerminal] Failed to restore sessions:', err);
+      }
+    }, [showAllTerminals, directory, initialTabs, onTabsChange]);
+
     // Switch to a panel
     const switchPanel = useCallback(
       (index: number) => {
@@ -222,7 +277,7 @@ export const CarouselTerminalPanel = forwardRef<
       [directory, onTabsChange],
     );
 
-    // Initialize - restore existing sessions or cleanup orphaned ones
+    // Initialize - restore existing sessions on mount only
     useEffect(() => {
       // Only initialize once to prevent infinite loops
       if (hasInitializedRef.current) {
@@ -230,136 +285,32 @@ export const CarouselTerminalPanel = forwardRef<
       }
 
       hasInitializedRef.current = true;
-
-      // Restore existing sessions or use initialTabs
-      const restoreOrCleanup = async () => {
-        try {
-          const allSessions = await TerminalService.list();
-
-          // Find sessions that belong to this terminal instance
-          // Use shared 'terminal:' prefix so sessions persist when switching between carousel/tabbed panels
-          const ourSessions = allSessions.filter(
-            (session) =>
-              session.context?.startsWith('terminal:') &&
-              (showAllTerminals || session.directory === directory),
-          );
-
-          // Only restore sessions if we don't have initialTabs
-          if (ourSessions.length > 0 && initialTabs.length === 0) {
-            // Restore tabs from existing sessions
-            const restoredTabs: TerminalTab[] = [];
-            const restoredSessionIds = new Map<string, string>();
-
-            ourSessions.forEach((session, index) => {
-              // Extract tab ID from context (format: "terminal:repoKey:tab-12345")
-              const contextParts = session.context?.split(':') || [];
-              const tabId =
-                contextParts[contextParts.length - 1] ||
-                `tab-${Date.now()}-${index}`;
-
-              const tab: TerminalTab = {
-                id: tabId,
-                label: showAllTerminals
-                  ? `${session.directory.split('/').pop() || session.directory}`
-                  : directory.split('/').pop() || directory,
-                directory: session.directory,
-                isActive: index === 0, // Make first tab active
-              };
-
-              restoredTabs.push(tab);
-              restoredSessionIds.set(tabId, session.id);
-            });
-
-            setTabs(restoredTabs);
-            setSessionIds(restoredSessionIds);
-            setCurrentPanelIndex(0);
-            onTabsChange?.(restoredTabs);
-          } else if (initialTabs.length > 0) {
-            // If initialTabs were provided, use those (parent is managing state)
-            const activeIndex = initialTabs.findIndex((t) => t.isActive);
-            setCurrentPanelIndex(activeIndex >= 0 ? activeIndex : 0);
-          }
-        } catch (err) {
-          console.error(
-            '[CarouselTerminal] Failed to restore sessions on mount:',
-            err,
-          );
-        }
-      };
-
-      restoreOrCleanup();
+      console.log('[CarouselTerminal] Initializing and restoring sessions...');
+      restoreSessions();
 
       return () => {
         // DON'T destroy sessions on unmount - they should persist when panel is swapped
         // Sessions are only destroyed when user explicitly closes a tab
+        console.log(
+          '[CarouselTerminal] Component unmounting, sessions will persist',
+        );
       };
+      // Only run on mount - restoreSessions is intentionally NOT in deps to prevent re-runs
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [
-      showAllTerminals,
-      directory,
-      terminalContext,
-      // NOTE: initialTabs and onTabsChange are intentionally in deps but we use
-      // hasInitializedRef to prevent re-initialization loops
-    ]);
+    }, []);
 
-    // Re-filter sessions when showAllTerminals changes (after initial mount)
+    // Re-filter sessions when showAllTerminals or directory changes (after initial mount)
     useEffect(() => {
       // Skip if we haven't initialized yet
       if (!hasInitializedRef.current) {
         return;
       }
 
-      const updateSessionsForShowAllTerminals = async () => {
-        try {
-          const allSessions = await TerminalService.list();
-
-          // Find sessions that belong to this terminal instance
-          const ourSessions = allSessions.filter(
-            (session) =>
-              session.context?.startsWith('terminal:') &&
-              (showAllTerminals || session.directory === directory),
-          );
-
-          // Restore tabs from the filtered sessions
-          const restoredTabs: TerminalTab[] = [];
-          const restoredSessionIds = new Map<string, string>();
-
-          ourSessions.forEach((session, index) => {
-            // Extract tab ID from context (format: "terminal:repoKey:tab-12345")
-            const contextParts = session.context?.split(':') || [];
-            const tabId =
-              contextParts[contextParts.length - 1] ||
-              `tab-${Date.now()}-${index}`;
-
-            const tab: TerminalTab = {
-              id: tabId,
-              label: showAllTerminals
-                ? `${session.directory.split('/').pop() || session.directory}`
-                : directory.split('/').pop() || directory,
-              directory: session.directory,
-              isActive: index === 0, // Make first tab active
-            };
-
-            restoredTabs.push(tab);
-            restoredSessionIds.set(tabId, session.id);
-          });
-
-          if (restoredTabs.length > 0) {
-            setTabs(restoredTabs);
-            setSessionIds(restoredSessionIds);
-            setCurrentPanelIndex(0);
-            onTabsChange?.(restoredTabs);
-          }
-        } catch (err) {
-          console.error(
-            '[CarouselTerminal] Failed to update sessions for showAllTerminals:',
-            err,
-          );
-        }
-      };
-
-      updateSessionsForShowAllTerminals();
-    }, [showAllTerminals, directory, terminalContext, onTabsChange]);
+      console.log(
+        '[CarouselTerminal] showAllTerminals or directory changed, re-filtering sessions',
+      );
+      restoreSessions();
+    }, [showAllTerminals, directory, restoreSessions]);
 
     // Close a tab
     const closeTab = useCallback(
