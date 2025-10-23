@@ -44,6 +44,13 @@ export const repositoryPanelCatalog = [
     surfaces: ['explorer'] as const,
   },
   {
+    id: 'githubStars',
+    label: 'GitHub Stars',
+    description:
+      'Browse your GitHub repositories alongside the projects you have starred.',
+    surfaces: ['explorer'] as const,
+  },
+  {
     id: 'gitStatus',
     label: 'Git Status',
     description:

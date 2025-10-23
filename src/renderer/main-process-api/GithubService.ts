@@ -92,6 +92,14 @@ export class GithubService {
     return result || [];
   }
 
+  static async getUserStarredRepositories(
+    options?: RepositoryFetchOptions,
+  ): Promise<GitHubRepository[]> {
+    const result =
+      await window.mainProcess.github.getUserStarredRepositories(options);
+    return result || [];
+  }
+
   static async getOrgRepositories(
     org: string,
     options?: RepositoryFetchOptions,
