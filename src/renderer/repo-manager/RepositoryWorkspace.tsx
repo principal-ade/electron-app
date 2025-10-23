@@ -1307,8 +1307,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const handleGitChangeSelect = useCallback(
       (filePath: string, status?: GitChangeSelectionStatus) => {
         setSelectedFile(filePath);
+        // Open in BOTH code viewer and diff viewer
+        setSelectedCodeFile(filePath);
         setSelectedDiffFile({ path: filePath, status });
         setRightPaneMode('document');
+        // Focus the diff viewer tab (prioritize it when both are in same panel)
         focusPanelTab('gitDiffViewer');
       },
       [focusPanelTab],
