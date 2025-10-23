@@ -83,6 +83,13 @@ export const githubAPI: GitHubAPI = {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_USER_REPOSITORIES, options);
   },
 
+  getUserStarredRepositories: async (options) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_USER_STARRED_REPOSITORIES,
+      options,
+    );
+  },
+
   getOrgRepositories: async (org, options) => {
     return ipcRenderer.invoke(
       GitHubAPIEvent.GET_ORG_REPOSITORIES,

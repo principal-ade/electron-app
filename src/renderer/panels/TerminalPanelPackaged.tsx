@@ -9,7 +9,7 @@ import React, {
 import { ArrowRight } from 'lucide-react';
 import {
   ThemedTerminalWithProvider,
-  type ThemedTerminalRef
+  type ThemedTerminalRef,
 } from '@principal-ade/industry-themed-terminal';
 import '@xterm/xterm/css/xterm.css';
 import '@principal-ade/industry-themed-terminal/styles.css';
@@ -57,7 +57,10 @@ export interface TerminalPanelPackagedRef {
   focus: () => void;
 }
 
-const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanelPackagedProps>(
+const TerminalPanelPackaged = forwardRef<
+  TerminalPanelPackagedRef,
+  TerminalPanelPackagedProps
+>(
   (
     {
       directory,
@@ -81,7 +84,9 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
       sessionId: string;
       customName?: string;
     } | null>(null);
-    const [devSidecarSessionId, setDevSidecarSessionId] = useState<string | null>(null);
+    const [devSidecarSessionId, setDevSidecarSessionId] = useState<
+      string | null
+    >(null);
     const devSidecarSessionIdRef = useRef<string | null>(null);
 
     // Ownership tracking state
@@ -126,7 +131,10 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
           if (terminalId) {
             // Re-attach to existing session
             newSessionId = terminalId;
-            console.log('[TerminalPanelPackaged] Re-attaching to session:', newSessionId);
+            console.log(
+              '[TerminalPanelPackaged] Re-attaching to session:',
+              newSessionId,
+            );
           } else if (initialCommand) {
             // Create session with initial command
             newSessionId = await TerminalService.createWithCommand(
@@ -134,11 +142,20 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
               initialCommand,
               context || 'default',
             );
-            console.log('[TerminalPanelPackaged] Created session with command:', newSessionId);
+            console.log(
+              '[TerminalPanelPackaged] Created session with command:',
+              newSessionId,
+            );
           } else {
             // Create or reuse session
-            newSessionId = await TerminalService.getOrCreate(dir, context || 'default');
-            console.log('[TerminalPanelPackaged] Created/reused session:', newSessionId);
+            newSessionId = await TerminalService.getOrCreate(
+              dir,
+              context || 'default',
+            );
+            console.log(
+              '[TerminalPanelPackaged] Created/reused session:',
+              newSessionId,
+            );
           }
 
           setSessionId(newSessionId);
@@ -148,7 +165,10 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
 
           return newSessionId;
         } catch (error) {
-          console.error('[TerminalPanelPackaged] Failed to create terminal session:', error);
+          console.error(
+            '[TerminalPanelPackaged] Failed to create terminal session:',
+            error,
+          );
           return null;
         }
       },
@@ -165,10 +185,14 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
 
         // Check ownership
         try {
-          const ownershipStatus = await TerminalService.checkOwnership(newSessionId);
+          const ownershipStatus =
+            await TerminalService.checkOwnership(newSessionId);
           if (!mounted) return;
 
-          if (ownershipStatus.ownedByWindowId && !ownershipStatus.ownedByThisWindow) {
+          if (
+            ownershipStatus.ownedByWindowId &&
+            !ownershipStatus.ownedByThisWindow
+          ) {
             setOwnershipStatus({
               isOwned: true,
               ownedByWindowId: ownershipStatus.ownedByWindowId,
@@ -181,7 +205,10 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
             setShouldRenderTerminal(true);
           }
         } catch (error) {
-          console.error('[TerminalPanelPackaged] Ownership check failed:', error);
+          console.error(
+            '[TerminalPanelPackaged] Ownership check failed:',
+            error,
+          );
         }
       };
 
@@ -192,7 +219,10 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
         if (sessionId) {
           // Release ownership when component unmounts
           TerminalService.releaseOwnership(sessionId).catch((err) =>
-            console.error('[TerminalPanelPackaged] Failed to release ownership:', err),
+            console.error(
+              '[TerminalPanelPackaged] Failed to release ownership:',
+              err,
+            ),
           );
         }
       };
@@ -242,7 +272,10 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
             });
           }
         } catch (error) {
-          console.error('[TerminalPanelPackaged] Failed to fetch AI session info:', error);
+          console.error(
+            '[TerminalPanelPackaged] Failed to fetch AI session info:',
+            error,
+          );
         }
       };
 
@@ -271,7 +304,10 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
             devSidecarSessionIdRef.current = session.devSidecarSessionId;
           }
         } catch (error) {
-          console.error('[TerminalPanelPackaged] Failed to check dev sidecar:', error);
+          console.error(
+            '[TerminalPanelPackaged] Failed to check dev sidecar:',
+            error,
+          );
         }
       };
 
@@ -287,7 +323,10 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
       (data: string) => {
         if (sessionId) {
           TerminalService.write(sessionId, data).catch((err) =>
-            console.error('[TerminalPanelPackaged] Failed to write to terminal:', err),
+            console.error(
+              '[TerminalPanelPackaged] Failed to write to terminal:',
+              err,
+            ),
           );
         }
       },
@@ -299,7 +338,10 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
       (cols: number, rows: number) => {
         if (sessionId) {
           TerminalService.resize(sessionId, cols, rows).catch((err) =>
-            console.error('[TerminalPanelPackaged] Failed to resize terminal:', err),
+            console.error(
+              '[TerminalPanelPackaged] Failed to resize terminal:',
+              err,
+            ),
           );
         }
       },
@@ -320,13 +362,19 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
       if (sessionId) {
         TerminalService.destroy(sessionId)
           .then(() => {
-            console.log('[TerminalPanelPackaged] Terminal session destroyed:', sessionId);
+            console.log(
+              '[TerminalPanelPackaged] Terminal session destroyed:',
+              sessionId,
+            );
             if (onDestroy) {
               onDestroy();
             }
           })
           .catch((err) => {
-            console.error('[TerminalPanelPackaged] Failed to destroy terminal:', err);
+            console.error(
+              '[TerminalPanelPackaged] Failed to destroy terminal:',
+              err,
+            );
           });
       }
     }, [sessionId, onDestroy]);
@@ -335,7 +383,10 @@ const TerminalPanelPackaged = forwardRef<TerminalPanelPackagedRef, TerminalPanel
     const handleSwitchToWindow = useCallback(() => {
       if (ownershipStatus.ownedByWindowId) {
         // TODO: Implement window switching
-        console.log('[TerminalPanelPackaged] Switch to window:', ownershipStatus.ownedByWindowId);
+        console.log(
+          '[TerminalPanelPackaged] Switch to window:',
+          ownershipStatus.ownedByWindowId,
+        );
       }
     }, [ownershipStatus.ownedByWindowId]);
 

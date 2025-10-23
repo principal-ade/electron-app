@@ -17,7 +17,9 @@ import {
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { useTheme } from '@a24z/industry-theme';
 import { SnapCarousel, SnapCarouselRef } from '@a24z/panels';
-import TerminalPanel, { TerminalPanelRef } from '../TerminalPanel';
+import TerminalPanelPackaged, {
+  TerminalPanelPackagedRef,
+} from '../TerminalPanelPackaged';
 import { TerminalService } from '../../main-process-api/TerminalService';
 import { TerminalDebugModal } from './TerminalDebugModal';
 
@@ -78,7 +80,9 @@ export const CarouselTerminalPanel = forwardRef<
     const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
 
     // Store refs to terminal panels for each tab
-    const terminalRefs = useRef<Map<string, TerminalPanelRef>>(new Map());
+    const terminalRefs = useRef<Map<string, TerminalPanelPackagedRef>>(
+      new Map(),
+    );
     const carouselRef = useRef<SnapCarouselRef>(null);
     const pendingPanelIndexRef = useRef<number | null>(null);
 
@@ -583,17 +587,6 @@ export const CarouselTerminalPanel = forwardRef<
             backgroundColor: theme.colors.background,
             borderRight: `1px solid ${theme.colors.border}`,
           }}
-          onKeyDown={(e) => {
-            // Prevent space and other keys from bubbling to carousel
-            // This allows normal typing in the terminal without triggering carousel navigation
-            if (
-              e.key === ' ' ||
-              e.key === 'ArrowLeft' ||
-              e.key === 'ArrowRight'
-            ) {
-              e.stopPropagation();
-            }
-          }}
         >
           {/* Panel header with tab info and close button */}
           {!hideHeader && (
@@ -656,7 +649,7 @@ export const CarouselTerminalPanel = forwardRef<
 
           {/* Terminal */}
           <div style={{ flex: 1, minHeight: 0 }}>
-            <TerminalPanel
+            <TerminalPanelPackaged
               ref={(el) => {
                 if (el) {
                   terminalRefs.current.set(tab.id, el);
@@ -917,22 +910,7 @@ export const CarouselTerminalPanel = forwardRef<
         )}
 
         {/* Carousel content */}
-        <div
-          style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}
-          onKeyDown={(e) => {
-            // Prevent space from triggering carousel navigation
-            // Space should only be used in the terminal itself
-            if (
-              e.key === ' ' &&
-              !e.metaKey &&
-              !e.ctrlKey &&
-              !e.shiftKey &&
-              !e.altKey
-            ) {
-              e.stopPropagation();
-            }
-          }}
-        >
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
           {tabs.length > 0 ? (
             <SnapCarousel
               ref={carouselRef}

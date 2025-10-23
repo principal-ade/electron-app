@@ -345,7 +345,8 @@ const XTerminalPanel = forwardRef<XTerminalPanelRef, XTerminalPanelProps>(
                 if (sessionId) {
                   const newScrollPos = term.buffer.active.viewportY;
                   const newBaseScrollback = term.buffer.active.baseY;
-                  const isAtBottom = newScrollPos + term.rows >= newBaseScrollback + term.rows;
+                  const isAtBottom =
+                    newScrollPos + term.rows >= newBaseScrollback + term.rows;
                   terminalRecorder.recordScrollEvent(
                     sessionId,
                     newScrollPos,

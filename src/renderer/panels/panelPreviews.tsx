@@ -15,6 +15,7 @@ import {
   Package,
   Pencil,
   Search,
+  Star,
   Terminal as TerminalIcon,
   Wrench,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ import { GitChangesPanelPreview } from './components/GitChangesPanel';
 import { GitCommitHistoryPanelPreview } from './components/GitCommitHistoryPanel';
 import { GitIssuesPanelPreview } from './components/GitIssuesPanel';
 import { GitPullRequestsPanelPreview } from './components/GitPullRequestsPanel';
+import { GitHubStarsPanelPreview } from './components/GitHubStarsPanel';
 import { RepoSourceArchitecturePanelPreview } from '../repo-manager/shared/RepoSourceArchitecturePanelSimple';
 import { ToolsPanelPreview } from './components/ToolsPanel';
 import { AlexandriaDocsPanelPreview } from '../repo-manager/shared/AlexandriaDocsPanel';
@@ -72,6 +74,10 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   gitPullRequests: {
     icon: <GitPullRequest size={16} />,
     preview: <GitPullRequestsPanelPreview />,
+  },
+  githubStars: {
+    icon: <Star size={16} />,
+    preview: <GitHubStarsPanelPreview />,
   },
   dependencies: {
     icon: <Layers size={16} />,

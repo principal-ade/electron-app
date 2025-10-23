@@ -589,3 +589,66 @@ function formatRelativeTimestamp(timestamp: number): string {
   const diffYears = Math.floor(diffMonths / 12);
   return `${diffYears} year${diffYears === 1 ? '' : 's'} ago`;
 }
+
+export const GitHubStarsPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontWeight: 600,
+        }}
+      >
+        <div
+          style={{
+            width: '16px',
+            height: '16px',
+            borderRadius: '2px',
+            backgroundColor: `${theme.colors.primary}40`,
+          }}
+        />
+        <span>Your Repositories</span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontWeight: 600,
+        }}
+      >
+        <div
+          style={{
+            width: '16px',
+            height: '16px',
+            borderRadius: '2px',
+            backgroundColor: `${theme.colors.warning || '#f59e0b'}40`,
+          }}
+        />
+        <span>Starred Projects</span>
+      </div>
+      <div
+        style={{
+          fontSize: '11px',
+          color: theme.colors.textSecondary,
+          marginTop: '4px',
+        }}
+      >
+        Browse and manage your GitHub repositories and starred projects
+      </div>
+    </div>
+  );
+};

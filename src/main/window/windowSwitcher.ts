@@ -21,7 +21,8 @@ class WindowSwitcher {
   public show(): void {
     // Only show if one of our app windows is currently focused
     const focusedWindow = BrowserWindow.getFocusedWindow();
-    const isOurAppFocused = focusedWindow && applicationWindows.has(focusedWindow.id);
+    const isOurAppFocused =
+      focusedWindow && applicationWindows.has(focusedWindow.id);
 
     if (!isOurAppFocused) {
       log.info('[Window Switcher] Not showing - app is not currently focused');
@@ -226,9 +227,12 @@ class WindowSwitcher {
     });
 
     // Log any console messages from the renderer
-    this.switcherWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-      log.info(`[Window Switcher Renderer] ${message} (line ${line})`);
-    });
+    this.switcherWindow.webContents.on(
+      'console-message',
+      (event, level, message, line, sourceId) => {
+        log.info(`[Window Switcher Renderer] ${message} (line ${line})`);
+      },
+    );
 
     // Handle window closed
     this.switcherWindow.on('closed', () => {

@@ -48,7 +48,11 @@ export class TerminalRecorder {
   /**
    * Start recording terminal data
    */
-  async startRecording(): Promise<{ success: boolean; directory?: string; error?: string }> {
+  async startRecording(): Promise<{
+    success: boolean;
+    directory?: string;
+    error?: string;
+  }> {
     try {
       // Open folder selector
       const result = await FileSystemService.selectDirectory({
@@ -57,7 +61,12 @@ export class TerminalRecorder {
         properties: ['openDirectory', 'createDirectory'],
       });
 
-      if (!result || result.canceled || !result.filePaths || result.filePaths.length === 0) {
+      if (
+        !result ||
+        result.canceled ||
+        !result.filePaths ||
+        result.filePaths.length === 0
+      ) {
         return { success: false, error: 'No folder selected' };
       }
 
@@ -66,7 +75,10 @@ export class TerminalRecorder {
       this.sessions.clear();
       this.eventCount = 0;
 
-      console.log('[TerminalRecorder] Recording started, output:', this.outputDirectory);
+      console.log(
+        '[TerminalRecorder] Recording started, output:',
+        this.outputDirectory,
+      );
 
       return { success: true, directory: this.outputDirectory };
     } catch (error) {
@@ -78,7 +90,11 @@ export class TerminalRecorder {
   /**
    * Stop recording and save all data
    */
-  async stopRecording(): Promise<{ success: boolean; files?: string[]; error?: string }> {
+  async stopRecording(): Promise<{
+    success: boolean;
+    files?: string[];
+    error?: string;
+  }> {
     if (!this.isRecording) {
       return { success: false, error: 'Not currently recording' };
     }
@@ -163,7 +179,7 @@ export class TerminalRecorder {
 
     // Auto-save if we've accumulated too many events
     if (this.eventCount >= this.maxEventsPerFile) {
-      this.saveAllSessions().catch(err => {
+      this.saveAllSessions().catch((err) => {
         console.error('[TerminalRecorder] Failed to auto-save:', err);
       });
       this.sessions.clear();
@@ -195,7 +211,11 @@ export class TerminalRecorder {
   /**
    * Internal method to record an event
    */
-  private recordEvent(sessionId: string, type: 'received' | 'written', data: string): void {
+  private recordEvent(
+    sessionId: string,
+    type: 'received' | 'written',
+    data: string,
+  ): void {
     if (!this.sessions.has(sessionId)) {
       this.sessions.set(sessionId, {
         sessionId,
@@ -210,7 +230,10 @@ export class TerminalRecorder {
     const preview = data.substring(0, 100).replace(/\x1b/g, '\\x1b');
 
     // Optionally capture char codes for detailed analysis (only for first 50 chars to save space)
-    const charCodes = data.length <= 50 ? Array.from(data).map(c => c.charCodeAt(0)) : undefined;
+    const charCodes =
+      data.length <= 50
+        ? Array.from(data).map((c) => c.charCodeAt(0))
+        : undefined;
 
     const event: TerminalDataEvent = {
       timestamp: Date.now(),
@@ -227,7 +250,7 @@ export class TerminalRecorder {
 
     // Auto-save if we've accumulated too many events
     if (this.eventCount >= this.maxEventsPerFile) {
-      this.saveAllSessions().catch(err => {
+      this.saveAllSessions().catch((err) => {
         console.error('[TerminalRecorder] Failed to auto-save:', err);
       });
       this.sessions.clear();
@@ -244,7 +267,10 @@ export class TerminalRecorder {
     }
 
     const savedFiles: string[] = [];
-    const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/:/g, '-')
+      .replace(/\..+/, '');
 
     const savePromises: Promise<void>[] = [];
     this.sessions.forEach((session, sessionId) => {
@@ -268,24 +294,34 @@ export class TerminalRecorder {
         events: session.events,
         summary: {
           totalDataReceived: session.events
-            .filter(e => e.type === 'received')
+            .filter((e) => e.type === 'received')
             .reduce((sum, e) => sum + (e as TerminalDataEvent).dataLength, 0),
           totalDataWritten: session.events
-            .filter(e => e.type === 'written')
+            .filter((e) => e.type === 'written')
             .reduce((sum, e) => sum + (e as TerminalDataEvent).dataLength, 0),
-          receivedEventCount: session.events.filter(e => e.type === 'received').length,
-          writtenEventCount: session.events.filter(e => e.type === 'written').length,
-          scrollEventCount: session.events.filter(e => e.type === 'scroll').length,
+          receivedEventCount: session.events.filter(
+            (e) => e.type === 'received',
+          ).length,
+          writtenEventCount: session.events.filter((e) => e.type === 'written')
+            .length,
+          scrollEventCount: session.events.filter((e) => e.type === 'scroll')
+            .length,
         },
       };
 
-      const savePromise = FileSystemService.writeFile(filepath, JSON.stringify(recordingData, null, 2))
+      const savePromise = FileSystemService.writeFile(
+        filepath,
+        JSON.stringify(recordingData, null, 2),
+      )
         .then(() => {
           savedFiles.push(filepath);
           console.log(`[TerminalRecorder] Saved recording to ${filepath}`);
         })
-        .catch(error => {
-          console.error(`[TerminalRecorder] Failed to save ${filepath}:`, error);
+        .catch((error) => {
+          console.error(
+            `[TerminalRecorder] Failed to save ${filepath}:`,
+            error,
+          );
         });
 
       savePromises.push(savePromise);

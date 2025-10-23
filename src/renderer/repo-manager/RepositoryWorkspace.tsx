@@ -20,6 +20,7 @@ import {
   Palette,
   Package,
   History,
+  Star,
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { PackageLayer } from '@principal-ai/codebase-composition';
@@ -82,6 +83,7 @@ import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 import { GitIssuesPanel } from '../panels/components/GitIssuesPanel';
 import { GitPullRequestsPanel } from '../panels/components/GitPullRequestsPanel';
+import { GitHubStarsPanel } from '../panels/components/GitHubStarsPanel';
 import { GitCommitHistoryPanel } from '../panels/components/GitCommitHistoryPanel';
 import { MarkdownRenderingPanel, ExcalidrawPanel } from './panels';
 import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
@@ -1885,6 +1887,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             }}
           />
         ),
+        githubStars: <GitHubStarsPanel />,
         dependencies: selectedSource ? (
           <RepoSourceArchitecturePanelSimple
             source={selectedSource}
@@ -2086,6 +2089,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         icon: <GitPullRequest size={14} />,
         visible: !!repoInfo,
         content: panelContentMap.gitPullRequests,
+      },
+      {
+        id: 'githubStars',
+        label: 'GitHub Stars',
+        icon: <Star size={14} />,
+        visible: true,
+        content: panelContentMap.githubStars,
       },
       {
         id: 'dependencies',

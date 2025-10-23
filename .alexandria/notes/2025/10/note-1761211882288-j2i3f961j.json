@@ -1,0 +1,18 @@
+{
+  "id": "note-1761211882288-j2i3f961j",
+  "note": "add Drag into terminal from file tree and other things instead of having to copy and paste",
+  "anchors": [
+    "."
+  ],
+  "tags": [
+    "general"
+  ],
+  "metadata": {
+    "directoryPath": "/Users/griever/Developer/electron-app",
+    "relativePath": ".",
+    "confidence": "medium",
+    "type": "explanation"
+  },
+  "timestamp": 1761211882288,
+  "codebaseViewId": "default"
+}
