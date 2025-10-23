@@ -1182,6 +1182,7 @@ export class GitHubAdapter {
         pushed_at: repo.pushed_at,
         language: repo.language,
         default_branch: repo.default_branch,
+        stargazers_count: repo.stargazers_count,
       }));
     }
 
@@ -1207,12 +1208,80 @@ export class GitHubAdapter {
           pushed_at: repo.pushed_at,
           language: repo.language,
           default_branch: repo.default_branch,
+          stargazers_count: repo.stargazers_count,
         }));
       }
 
       return [];
     } catch (error) {
       console.error('[GitHub] Error getting user repositories:', error);
+      return [];
+    }
+  }
+
+  async getUserStarredRepositories(
+    options?: RepositoryFetchOptions,
+  ): Promise<GitHubRepository[]> {
+    const params: string[] = [];
+    if (options?.sort) params.push(`sort=${options.sort}`);
+    if (options?.direction) params.push(`direction=${options.direction}`);
+    params.push(`per_page=${options?.perPage || 100}`);
+    if (options?.page) params.push(`page=${options.page}`);
+
+    const endpoint =
+      params.length > 0
+        ? `/user/starred?${params.join('&')}`
+        : '/user/starred';
+
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+    if (apiResult.success && apiResult.data) {
+      return apiResult.data.map((repo: any) => ({
+        id: repo.id,
+        name: repo.name,
+        full_name: repo.full_name,
+        owner: {
+          login: repo.owner.login,
+        },
+        private: repo.private,
+        html_url: repo.html_url,
+        description: repo.description,
+        fork: repo.fork,
+        clone_url: repo.clone_url,
+        updated_at: repo.updated_at,
+        pushed_at: repo.pushed_at,
+        language: repo.language,
+        default_branch: repo.default_branch,
+        stargazers_count: repo.stargazers_count,
+      }));
+    }
+
+    try {
+      const args = ['gh', 'api', endpoint];
+      const result = await this.executeCommand(args);
+
+      if (result.success && result.stdout) {
+        const repos = JSON.parse(result.stdout);
+        return repos.map((repo: any) => ({
+          id: repo.id,
+          name: repo.name,
+          full_name: repo.full_name,
+          owner: { login: repo.owner.login },
+          private: repo.private,
+          html_url: repo.html_url,
+          description: repo.description,
+          fork: repo.fork,
+          clone_url: repo.clone_url,
+          updated_at: repo.updated_at,
+          pushed_at: repo.pushed_at,
+          language: repo.language,
+          default_branch: repo.default_branch,
+          stargazers_count: repo.stargazers_count,
+        }));
+      }
+
+      return [];
+    } catch (error) {
+      console.error('[GitHub] Error getting starred repositories:', error);
       return [];
     }
   }
@@ -1254,6 +1323,7 @@ export class GitHubAdapter {
         pushed_at: repo.pushed_at,
         language: repo.language,
         default_branch: repo.default_branch,
+        stargazers_count: repo.stargazers_count,
       }));
     }
 
@@ -1279,6 +1349,7 @@ export class GitHubAdapter {
           pushed_at: repo.pushed_at,
           language: repo.language,
           default_branch: repo.default_branch,
+          stargazers_count: repo.stargazers_count,
         }));
       }
 
@@ -2228,6 +2299,20 @@ export function registerGitHubIpcHandlers(
         return [];
       }
       return adapter.getUserRepositories(options);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_USER_STARRED_REPOSITORIES,
+    async (event, options?: RepositoryFetchOptions) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error(
+          '[GitHub] No adapter found for GET_USER_STARRED_REPOSITORIES',
+        );
+        return [];
+      }
+      return adapter.getUserStarredRepositories(options);
     },
   );
 

@@ -12,6 +12,7 @@ export enum GitHubAPIEvent {
   GET_FILE_AGES = 'github:get-file-ages',
   GET_TREE = 'github:get-tree',
   GET_USER_REPOSITORIES = 'github:get-user-repositories',
+  GET_USER_STARRED_REPOSITORIES = 'github:get-user-starred-repositories',
   GET_ORG_REPOSITORIES = 'github:get-org-repositories',
   GET_USER_ORGANIZATIONS = 'github:get-user-organizations',
   GET_TOKEN_SCOPES = 'github:get-token-scopes',
@@ -135,6 +136,7 @@ export interface GitHubRepository {
   pushed_at: string;
   language: string | null;
   default_branch: string;
+  stargazers_count?: number;
 }
 
 export interface GitHubOrganization {
@@ -272,6 +274,9 @@ export interface GitHubAPI {
     request: GitHubConfigRequest,
   ) => Promise<ConfigFetchResponse>;
   getUserRepositories: (
+    options?: RepositoryFetchOptions,
+  ) => Promise<GitHubRepository[]>;
+  getUserStarredRepositories: (
     options?: RepositoryFetchOptions,
   ) => Promise<GitHubRepository[]>;
   getOrgRepositories: (
