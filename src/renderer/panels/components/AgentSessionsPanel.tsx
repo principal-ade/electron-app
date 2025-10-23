@@ -8,8 +8,9 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Activity, Search, RefreshCw, AlertCircle } from 'lucide-react';
+import { Activity, Search, RefreshCw, AlertCircle, FolderOpen } from 'lucide-react';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
+import type { AlexandriaEntry } from '@a24z/core-library';
 import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
 import type { EnhancedUIAgentSessionData } from '../../types/session.types';
@@ -31,6 +32,16 @@ const SESSION_COLORS: readonly string[] = [
   '#ec4899', // Pink
   '#14b8a6', // Teal
 ];
+
+const UNKNOWN_DIRECTORY_LABEL = 'Unknown Directory';
+
+interface SessionDirectoryGroup {
+  directory: string;
+  normalizedDirectory: string;
+  sessions: SessionWithEvents[];
+  lastActivity: number;
+  isCurrentDirectory: boolean;
+}
 
 const mapToolToActivityType = (toolName?: string): EventActivityType => {
   switch (toolName) {
@@ -86,6 +97,16 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [openingDirectory, setOpeningDirectory] = useState<string | null>(null);
+
+  const normalizedRepositoryPath = useMemo(() => {
+    if (!repositoryPath) {
+      return null;
+    }
+
+    const normalized = repositoryPath.replace(/\\/g, '/').replace(/\/+$/, '');
+    return normalized || repositoryPath;
+  }, [repositoryPath]);
 
   // Log when panel mounts/repositoryPath changes (commented out for less noise)
   // useEffect(() => {
@@ -365,6 +386,115 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
     return filtered;
   }, [sessions, statusFilter, searchQuery]);
 
+  const sessionColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    filteredSessions.forEach((sessionWithEvents, index) => {
+      map.set(
+        sessionWithEvents.session.sessionId,
+        getSessionColor(index),
+      );
+    });
+    return map;
+  }, [filteredSessions, getSessionColor]);
+
+  const sessionsByDirectory = useMemo<SessionDirectoryGroup[]>(() => {
+    const groups = new Map<string, SessionDirectoryGroup>();
+
+    filteredSessions.forEach((sessionWithEvents) => {
+      const rawDirectory =
+        sessionWithEvents.session.directory ||
+        sessionWithEvents.session.workingDirectory ||
+        UNKNOWN_DIRECTORY_LABEL;
+
+      const normalizedKey =
+        rawDirectory === UNKNOWN_DIRECTORY_LABEL
+          ? UNKNOWN_DIRECTORY_LABEL
+          : rawDirectory.replace(/\\/g, '/').replace(/\/+$/, '') ||
+            rawDirectory;
+
+      let group = groups.get(normalizedKey);
+      if (!group) {
+        group = {
+          directory: rawDirectory,
+          normalizedDirectory: normalizedKey,
+          sessions: [],
+          lastActivity: 0,
+          isCurrentDirectory: false,
+        };
+        groups.set(normalizedKey, group);
+      }
+
+      group.sessions.push(sessionWithEvents);
+      const lastActivity = sessionWithEvents.session.lastActivity ?? 0;
+      if (lastActivity > group.lastActivity) {
+        group.lastActivity = lastActivity;
+      }
+    });
+
+    const sortedGroups = Array.from(groups.values()).map((group) => ({
+      ...group,
+      isCurrentDirectory:
+        normalizedRepositoryPath !== null &&
+        group.normalizedDirectory === normalizedRepositoryPath,
+    }));
+
+    sortedGroups.sort((a, b) => {
+      if (a.isCurrentDirectory && !b.isCurrentDirectory) {
+        return -1;
+      }
+      if (b.isCurrentDirectory && !a.isCurrentDirectory) {
+        return 1;
+      }
+      return (b.lastActivity ?? 0) - (a.lastActivity ?? 0);
+    });
+
+    return sortedGroups;
+  }, [filteredSessions, normalizedRepositoryPath]);
+
+  const handleOpenDirectory = useCallback(
+    async (directory: string) => {
+      if (!directory || directory === UNKNOWN_DIRECTORY_LABEL) {
+        window.alert(
+          'No repository directory information is available for this session yet.',
+        );
+        return;
+      }
+
+      setOpeningDirectory(directory);
+
+      try {
+        const [{ RepositoryService }, { WindowService }] = await Promise.all([
+          import('../../main-process-api/RepositoryService'),
+          import('../../main-process-api/WindowService'),
+        ]);
+
+        const repository =
+          await RepositoryService.getRepositoryByLocalPath(directory);
+
+        if (repository) {
+          await WindowService.openRepositoryDashboard(
+            repository as unknown as AlexandriaEntry,
+          );
+        } else {
+          window.alert(
+            'Could not find a repository associated with this directory.',
+          );
+        }
+      } catch (error) {
+        console.error(
+          `[AgentSessionsPanel] Failed to open repository for directory ${directory}:`,
+          error,
+        );
+        window.alert('Failed to open repository window for this directory.');
+      } finally {
+        setOpeningDirectory((current) =>
+          current === directory ? null : current,
+        );
+      }
+    },
+    [],
+  );
+
   // Helper to get time ago
   const getTimeAgo = useCallback((timestamp: number): string => {
     const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -573,90 +703,235 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
           </div>
         ) : (
           <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+            style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
           >
-            {filteredSessions.map((sessionWithEvents, index) => {
-              const sessionColor = getSessionColor(index);
-              const cardData: SessionCardData = {
-                session: sessionWithEvents.session,
-                isExpanded: false,
-                fileOperations: sessionWithEvents.fileOperations,
-                lastTodos: sessionWithEvents.lastTodos,
-                latestEvent: sessionWithEvents.latestEvent,
-              };
-
-              // Check if session is in current directory
-              const sessionDirectory =
-                sessionWithEvents.session.directory ||
-                sessionWithEvents.session.workingDirectory;
-              const isCurrentDirectory =
-                repositoryPath && sessionDirectory === repositoryPath;
+            {sessionsByDirectory.map((group) => {
+              const canOpenDirectory =
+                group.directory !== UNKNOWN_DIRECTORY_LABEL &&
+                group.directory.trim().length > 0;
+              const baseBackgroundColor = group.isCurrentDirectory
+                ? theme.colors.backgroundSecondary
+                : theme.colors.backgroundTertiary;
+              const normalizedDisplayPath =
+                group.directory === UNKNOWN_DIRECTORY_LABEL
+                  ? group.directory
+                  : group.directory.replace(/\\/g, '/');
+              const pathSegments = normalizedDisplayPath
+                .split('/')
+                .filter(Boolean);
+              const directoryName =
+                group.directory === UNKNOWN_DIRECTORY_LABEL
+                  ? UNKNOWN_DIRECTORY_LABEL
+                  : pathSegments[pathSegments.length - 1] || group.directory;
 
               return (
                 <div
-                  key={sessionWithEvents.session.sessionId}
+                  key={group.normalizedDirectory}
                   style={{
-                    position: 'relative',
-                    opacity: isCurrentDirectory ? 1 : 0.6,
-                    transition: 'opacity 0.2s',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
                   }}
                 >
-                  {/* Badge for sessions from different directories */}
-                  {repositoryPath && !isCurrentDirectory && (
+                  <div
+                    onClick={
+                      canOpenDirectory
+                        ? () => {
+                            void handleOpenDirectory(group.directory);
+                          }
+                        : undefined
+                    }
+                    onMouseEnter={(e) => {
+                      if (!canOpenDirectory) {
+                        return;
+                      }
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.background;
+                      e.currentTarget.style.borderColor =
+                        theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        baseBackgroundColor;
+                      e.currentTarget.style.borderColor =
+                        theme.colors.border;
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: baseBackgroundColor,
+                      cursor: canOpenDirectory ? 'pointer' : 'default',
+                      transition: 'background-color 0.2s, border-color 0.2s',
+                    }}
+                    title={
+                      canOpenDirectory
+                        ? 'Open repository window for this directory'
+                        : 'Directory information not available yet'
+                    }
+                  >
                     <div
                       style={{
-                        position: 'absolute',
-                        top: '8px',
-                        right: '8px',
-                        padding: '3px 8px',
-                        fontSize: '10px',
-                        fontWeight: 600,
-                        backgroundColor: theme.colors.warning,
-                        color: '#fff',
-                        borderRadius: '4px',
-                        zIndex: 10,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                        overflow: 'hidden',
+                        flex: 1,
                       }}
-                      title={`Different directory: ${sessionDirectory}`}
                     >
-                      Other Dir
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontWeight: 600,
+                            fontSize: '12px',
+                            color: theme.colors.text,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {directoryName}
+                        </span>
+                        {group.isCurrentDirectory && (
+                          <span
+                            style={{
+                              fontSize: '10px',
+                              textTransform: 'uppercase',
+                              fontWeight: 600,
+                              letterSpacing: '0.5px',
+                              color: theme.colors.primary,
+                              backgroundColor: theme.colors.background,
+                              padding: '2px 6px',
+                              borderRadius: '10px',
+                            }}
+                          >
+                            Current
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          color: theme.colors.textSecondary,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {group.directory === UNKNOWN_DIRECTORY_LABEL
+                          ? 'Directory information not available yet'
+                          : group.directory}
+                      </span>
                     </div>
-                  )}
-                  <AgentSessionCard
-                    cardData={cardData}
-                    sessionColor={sessionColor}
-                    theme={theme}
-                    sources={new Map()}
-                    repositoryPath={repositoryPath || ''}
-                    isEditingName={false}
-                    editingName=""
-                    editInputRef={React.createRef()}
-                    isCopied={false}
-                    isArchiving={false}
-                    onStartEditName={() => {}}
-                    onSaveEditName={() => {}}
-                    onCancelEditName={() => {}}
-                    onEditNameChange={() => {}}
-                    onCopySessionId={() => {
-                      navigator.clipboard.writeText(
-                        sessionWithEvents.session.sessionId,
-                      );
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          color: theme.colors.textSecondary,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {group.sessions.length}{' '}
+                        {group.sessions.length === 1 ? 'session' : 'sessions'}
+                      </span>
+                      {openingDirectory === group.directory ? (
+                        <RefreshCw
+                          size={14}
+                          style={{
+                            color: theme.colors.primary,
+                            animation: 'spin 1s linear infinite',
+                          }}
+                        />
+                      ) : (
+                        canOpenDirectory && (
+                          <FolderOpen
+                            size={14}
+                            style={{ color: theme.colors.textSecondary }}
+                          />
+                        )
+                      )}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
                     }}
-                    onOpenTerminal={
-                      onOpenTerminal
-                        ? () =>
-                            onOpenTerminal(sessionWithEvents.session.sessionId)
-                        : undefined
-                    }
-                    onSessionDetailSelect={
-                      onSessionSelect
-                        ? () =>
-                            onSessionSelect(sessionWithEvents.session.sessionId)
-                        : undefined
-                    }
-                    getTimeAgo={getTimeAgo}
-                  />
+                  >
+                    {group.sessions.map((sessionWithEvents) => {
+                      const cardData: SessionCardData = {
+                        session: sessionWithEvents.session,
+                        isExpanded: false,
+                        fileOperations: sessionWithEvents.fileOperations,
+                        lastTodos: sessionWithEvents.lastTodos,
+                        latestEvent: sessionWithEvents.latestEvent,
+                      };
+
+                      const sessionColor =
+                        sessionColorMap.get(
+                          sessionWithEvents.session.sessionId,
+                        ) || getSessionColor(0);
+
+                      return (
+                        <AgentSessionCard
+                          key={sessionWithEvents.session.sessionId}
+                          cardData={cardData}
+                          sessionColor={sessionColor}
+                          theme={theme}
+                          sources={new Map()}
+                          repositoryPath={repositoryPath || ''}
+                          isEditingName={false}
+                          editingName=""
+                          editInputRef={React.createRef()}
+                          isCopied={false}
+                          isArchiving={false}
+                          onStartEditName={() => {}}
+                          onSaveEditName={() => {}}
+                          onCancelEditName={() => {}}
+                          onEditNameChange={() => {}}
+                          onCopySessionId={() => {
+                            navigator.clipboard.writeText(
+                              sessionWithEvents.session.sessionId,
+                            );
+                          }}
+                          onOpenTerminal={
+                            onOpenTerminal
+                              ? () =>
+                                  onOpenTerminal(
+                                    sessionWithEvents.session.sessionId,
+                                  )
+                              : undefined
+                          }
+                          onSessionDetailSelect={
+                            onSessionSelect
+                              ? () =>
+                                  onSessionSelect(
+                                    sessionWithEvents.session.sessionId,
+                                  )
+                              : undefined
+                          }
+                          getTimeAgo={getTimeAgo}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}
