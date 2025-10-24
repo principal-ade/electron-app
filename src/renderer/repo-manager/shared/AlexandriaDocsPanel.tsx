@@ -210,7 +210,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
         flexDirection: 'column',
         height: '100%',
         backgroundColor: theme.colors.backgroundSecondary,
-        borderRadius: '8px',
+        borderRadius: '0px',
         overflow: 'hidden',
       }}
     >

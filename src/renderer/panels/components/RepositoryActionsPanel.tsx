@@ -486,3 +486,59 @@ export const RepositoryActionsPanel: React.FC<RepositoryActionsPanelProps> = ({
     </div>
   );
 };
+
+export const RepositoryActionsPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '6px 8px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '4px',
+        }}
+      >
+        <Play size={14} />
+        <span>Build</span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '6px 8px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '4px',
+        }}
+      >
+        <Play size={14} />
+        <span>Test</span>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '6px 8px',
+          backgroundColor: theme.colors.backgroundTertiary,
+          borderRadius: '4px',
+        }}
+      >
+        <Play size={14} />
+        <span>Deploy</span>
+      </div>
+    </div>
+  );
+};

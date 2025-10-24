@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitBranch } from 'lucide-react';
+import { GitBranch, Info } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.types';
 
@@ -161,6 +161,54 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
             <span>{getRelativeTime(repository.github?.lastCommit)}</span>
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+export const GitStatusPanelPreview: React.FC = () => {
+  const { theme } = useTheme();
+  return (
+    <div
+      style={{
+        padding: '12px',
+        fontSize: '12px',
+        color: theme.colors.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <GitBranch size={14} />
+        <span style={{ fontWeight: 500 }}>main</span>
+      </div>
+      <div
+        style={{
+          fontSize: '11px',
+          color: theme.colors.textSecondary,
+        }}
+      >
+        feat: latest commit message
+      </div>
+      <div
+        style={{
+          fontSize: '10px',
+          color: theme.colors.textTertiary,
+          display: 'flex',
+          gap: '4px',
+          alignItems: 'center',
+        }}
+      >
+        <span>Author</span>
+        <span>•</span>
+        <span>2h ago</span>
       </div>
     </div>
   );

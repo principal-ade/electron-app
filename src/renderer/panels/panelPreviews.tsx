@@ -4,16 +4,23 @@ import {
   AlertCircle,
   Book,
   Building2,
+  Edit,
   FileCode,
+  FileEdit,
   FileText,
+  FolderOpen,
   FolderTree,
   GitBranch,
+  GitCompare,
   GitPullRequest,
   History,
+  Image,
+  Info,
   Layers,
   ListTodo,
   Package,
   Pencil,
+  Play,
   Search,
   Star,
   Terminal as TerminalIcon,
@@ -26,6 +33,8 @@ import { GitCommitHistoryPanelPreview } from './components/GitCommitHistoryPanel
 import { GitIssuesPanelPreview } from './components/GitIssuesPanel';
 import { GitPullRequestsPanelPreview } from './components/GitPullRequestsPanel';
 import { GitHubStarsPanelPreview } from './components/GitHubStarsPanel';
+import { GitStatusPanelPreview } from './components/GitStatusPanel';
+import { RepositoryActionsPanelPreview } from './components/RepositoryActionsPanel';
 import { RepoSourceArchitecturePanelPreview } from '../repo-manager/shared/RepoSourceArchitecturePanelSimple';
 import { ToolsPanelPreview } from './components/ToolsPanel';
 import { AlexandriaDocsPanelPreview } from '../repo-manager/shared/AlexandriaDocsPanel';
@@ -79,6 +88,19 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     icon: <Star size={16} />,
     preview: <GitHubStarsPanelPreview />,
   },
+  gitStatus: {
+    icon: <Info size={16} />,
+    preview: <GitStatusPanelPreview />,
+    label: 'Git Status',
+    description:
+      'Branch details, upstream alignment, and the latest commit metadata.',
+  },
+  actions: {
+    icon: <Play size={16} />,
+    preview: <RepositoryActionsPanelPreview />,
+    label: 'Repository Actions',
+    description: 'Run project-specific automations and scripts.',
+  },
   dependencies: {
     icon: <Layers size={16} />,
     preview: <RepoSourceArchitecturePanelPreview />,
@@ -105,13 +127,13 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     description: 'Live stream of agent actions with repository file context.',
   },
   agentSessions: {
-    icon: <Activity size={16} />,
+    icon: <Layers size={16} />,
     preview: <AgentSessionsPanelPreview />,
     label: 'Agent Sessions',
     description: 'Summaries of recent agent activity grouped by session.',
   },
   agentContext: {
-    icon: <Activity size={16} />,
+    icon: <FolderOpen size={16} />,
     preview: <AgentContextTreePanelPreview />,
   },
   tasks: {
@@ -140,19 +162,25 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     preview: <MarkdownRenderingPanelPreview />,
   },
   excalidrawDiagram: {
-    icon: <Pencil size={16} />,
+    icon: <Image size={16} />,
     preview: <AlexandriaDrawingPanelPreview />,
+  },
+  excalidrawEditor: {
+    icon: <Edit size={16} />,
+    preview: <AlexandriaDrawingPanelPreview />,
+    label: 'Excalidraw Editor',
+    description: 'Create and edit excalidraw drawings saved to Memory Palace.',
   },
   packageInfo: {
     icon: <Package size={16} />,
     preview: <QualityHexagonPanelPreview />,
   },
   gitDiff: {
-    icon: <GitBranch size={16} />,
+    icon: <GitCompare size={16} />,
     preview: <GitDiffPanelPreview />,
   },
   mdxEditor: {
-    icon: <FileText size={16} />,
+    icon: <FileEdit size={16} />,
     preview: <MDXEditorPanelPreview />,
     label: 'MDX Editor',
     description: 'Rich markdown editor with live preview and formatting tools.',

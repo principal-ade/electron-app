@@ -240,7 +240,8 @@ export const TabbedTerminalPanel = forwardRef<
         '[TabbedTerminal] showAllTerminals or directory changed, re-filtering sessions',
       );
       restoreSessions();
-    }, [showAllTerminals, directory, restoreSessions]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showAllTerminals, directory]);
 
     // Close a tab
     const closeTab = useCallback(
