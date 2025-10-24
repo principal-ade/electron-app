@@ -4,6 +4,7 @@
  */
 
 import { GitCore } from '../shared/repository-core/GitCore';
+import { createGitHubTokenAuthEnvForUrl } from '../shared/git/githubTokenAuth';
 import type { GitRemoteInfo } from './types';
 
 export class GitRemoteService {
@@ -293,18 +294,32 @@ export class GitRemoteService {
   private static async testGitAccess(
     url: string,
   ): Promise<{ available: boolean; reason: string }> {
+    const isGitHubHttps = url.startsWith('https://') && url.includes('github.com');
+    let credentialHelper:
+      | Awaited<ReturnType<typeof createGitHubTokenAuthEnvForUrl>>
+      | null = null;
     try {
-      const isSSH = url.startsWith('git@') || url.includes('ssh://');
-
       // Use a temporary directory for the test (no actual clone)
       const os = require('os');
       const tmpDir = os.tmpdir();
 
       const timeout = 5000; // 5 seconds
 
-      await this.execGitWithTimeout(['ls-remote', url], tmpDir, timeout);
+      credentialHelper = await createGitHubTokenAuthEnvForUrl(url);
 
-      return { available: true, reason: 'Authentication successful' };
+      await this.execGitWithTimeout(
+        ['ls-remote', url],
+        tmpDir,
+        timeout,
+        credentialHelper?.env,
+      );
+
+      return {
+        available: true,
+        reason: credentialHelper
+          ? 'Authentication successful using stored GitHub token'
+          : 'Authentication successful',
+      };
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
 
@@ -312,6 +327,28 @@ export class GitRemoteService {
         return {
           available: false,
           reason: 'Authentication required - repository is private',
+        };
+      }
+
+      if (
+        isGitHubHttps &&
+        !credentialHelper &&
+        (errorMsg.includes('Authentication') || errorMsg.includes('permission'))
+      ) {
+        return {
+          available: false,
+          reason: 'Authentication required - GitHub token not available',
+        };
+      }
+
+      if (
+        isGitHubHttps &&
+        credentialHelper &&
+        errorMsg.includes('Authentication')
+      ) {
+        return {
+          available: false,
+          reason: 'Stored GitHub token was rejected',
         };
       }
 
@@ -346,6 +383,11 @@ export class GitRemoteService {
         reason: `Connection failed: ${errorMsg.substring(0, 100)}`,
       };
     }
+    finally {
+      if (credentialHelper) {
+        await credentialHelper.cleanup();
+      }
+    }
   }
 
   /**
@@ -356,6 +398,7 @@ export class GitRemoteService {
     args: string[],
     cwd: string,
     timeoutMs: number,
+    extraEnv: NodeJS.ProcessEnv = {},
   ): Promise<string> {
     return new Promise((resolve, reject) => {
       const { spawn } = require('child_process');
@@ -365,8 +408,12 @@ export class GitRemoteService {
         stdio: 'pipe',
         env: {
           ...process.env,
-          GIT_TERMINAL_PROMPT: '0', // Don't prompt for credentials
-          GIT_ASKPASS: '/bin/echo', // Prevent password prompts
+          GIT_TERMINAL_PROMPT:
+            extraEnv.GIT_TERMINAL_PROMPT ?? '0', // Don't prompt for credentials
+          GIT_ASKPASS:
+            extraEnv.GIT_ASKPASS ?? '/bin/echo', // Prevent password prompts
+          GCM_INTERACTIVE: extraEnv.GCM_INTERACTIVE ?? 'never',
+          ...extraEnv,
         },
       });
 

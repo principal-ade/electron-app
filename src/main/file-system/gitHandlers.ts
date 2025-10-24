@@ -3,6 +3,7 @@ import { GitRepositoryService } from './gitRepositoryService';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { GitEvents } from '../../shared/main-process-api-interfaces/GitAPI';
 import { GitRemoteService } from '../../repository-monitoring-server/GitRemoteService';
+import { createGitHubTokenAuthEnvForUrl } from '../../shared/git/githubTokenAuth';
 
 // Create a single instance of the git service
 const gitService = new GitRepositoryService();
@@ -327,19 +328,38 @@ export function registerGitHandlers(): void {
           SSH_AGENT_PID: process.env.SSH_AGENT_PID,
         };
 
-        const cloneEnv = isSSH
-          ? baseEnv
-          : {
+        let cleanupAuthHelper: (() => Promise<void>) | null = null;
+        let cloneEnv: NodeJS.ProcessEnv = { ...baseEnv };
+
+        if (!isSSH) {
+          const githubAuth = await createGitHubTokenAuthEnvForUrl(normalizedUrl);
+
+          if (githubAuth) {
+            console.info(
+              `[Git] Using stored GitHub token for HTTPS clone of ${normalizedUrl}`,
+            );
+            cloneEnv = { ...baseEnv, ...githubAuth.env };
+            cleanupAuthHelper = githubAuth.cleanup;
+          } else {
+            cloneEnv = {
               ...baseEnv,
               GIT_TERMINAL_PROMPT: '0',
               GIT_ASKPASS: '/bin/echo',
               GCM_INTERACTIVE: 'never',
             };
+          }
+        }
 
-        await git.raw(['clone', normalizedUrl, targetPath], {
-          env: cloneEnv,
-          timeout: 120000, // 2 minutes for clone operation
-        });
+        try {
+          await git.raw(['clone', normalizedUrl, targetPath], {
+            env: cloneEnv,
+            timeout: 120000, // 2 minutes for clone operation
+          });
+        } finally {
+          if (cleanupAuthHelper) {
+            await cleanupAuthHelper();
+          }
+        }
 
         return true;
       } catch (error) {
