@@ -54,6 +54,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState<boolean>(false);
 
   // Handle client-side only rendering (MDXEditor doesn't support SSR)
   useEffect(() => {
@@ -74,6 +75,19 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
 
       if (filePath === currentFilePath) {
         return; // Already loaded
+      }
+
+      // Auto-save current file before loading new one
+      if (currentFilePath && isDirty) {
+        try {
+          const fullPath = currentFilePath.startsWith('/')
+            ? currentFilePath
+            : `${repositoryPath}/${currentFilePath}`;
+          await FileSystemService.writeFile(fullPath, markdown);
+          console.log('Auto-saved before loading new file:', fullPath);
+        } catch (error) {
+          console.error('Failed to auto-save before loading new file:', error);
+        }
       }
 
       setIsLoading(true);
@@ -98,6 +112,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
         setMarkdown(markdownContent);
         setCurrentFilePath(filePath);
         setParseError(null); // Clear any previous parse errors
+        setIsDirty(false); // Reset dirty state for new file
       } catch (error) {
         console.error('Error loading file:', error);
         setLoadError(`Failed to load file: ${filePath}`);
@@ -112,7 +127,28 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
     };
 
     loadFileContent();
-  }, [filePath, repositoryPath, initialContent, currentFilePath]);
+  }, [filePath, repositoryPath, initialContent, currentFilePath, isDirty, markdown]);
+
+  // Auto-save on component unmount
+  useEffect(() => {
+    return () => {
+      // Cleanup: auto-save if there are unsaved changes
+      if (currentFilePath && isDirty && repositoryPath) {
+        const fullPath = currentFilePath.startsWith('/')
+          ? currentFilePath
+          : `${repositoryPath}/${currentFilePath}`;
+
+        // Use synchronous approach since this is cleanup
+        FileSystemService.writeFile(fullPath, markdown)
+          .then(() => {
+            console.log('Auto-saved on unmount:', fullPath);
+          })
+          .catch((error) => {
+            console.error('Failed to auto-save on unmount:', error);
+          });
+      }
+    };
+  }, [currentFilePath, isDirty, markdown, repositoryPath]);
 
   const handleChange = useCallback((value: string) => {
     setMarkdown(value);
@@ -141,12 +177,16 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
           if (result && typeof result === 'object' && 'success' in result) {
             if (result.success) {
               console.log('File saved successfully:', fullPath);
+              setIsDirty(false); // Reset dirty state after successful save
             } else {
               const errorMsg =
                 'error' in result ? result.error : 'Unknown error';
               console.error('Error saving file:', errorMsg);
               alert(`Failed to save file: ${errorMsg}`);
             }
+          } else {
+            // Assume success if no explicit success field
+            setIsDirty(false);
           }
         } catch (error) {
           console.error('Error saving file:', error);
@@ -266,18 +306,23 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
           await handleSave(content);
         }}
         onChange={handleChange}
+        onDirtyChange={setIsDirty}
         readOnly={readOnly}
         filePath={currentFilePath || undefined}
         enableSaveShortcut={!readOnly}
-        hideStatusBar={variant === 'tab'}
+        hideStatusBar={false}
         documentPadding={{ left: '0.5in', right: '0.5in' }}
         onError={(error) => {
-          console.error('MDXEditor error:', error);
-          if (error && typeof error === 'object' && 'message' in error) {
-            setParseError(String(error.message));
-          } else {
-            setParseError('Markdown parsing error');
-          }
+          console.error('MDXEditor parsing error:', error);
+
+          // Defer setState to avoid "setState during render" error
+          setTimeout(() => {
+            if (error && typeof error === 'object' && 'message' in error) {
+              setParseError(String(error.message));
+            } else {
+              setParseError('Markdown parsing error');
+            }
+          }, 0);
         }}
         plugins={[
           // Core plugins
@@ -392,71 +437,9 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
     );
   }
 
-  if (variant === 'tab') {
-    return editorContent;
-  }
-
-  return (
-    <div
-      style={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        border: `1px solid ${theme.colors.border}`,
-        borderRadius: '8px',
-      }}
-    >
-      <div
-        style={{
-          padding: '12px 16px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: '14px',
-            fontWeight: 600,
-            color: theme.colors.text,
-          }}
-        >
-          MDX Editor
-          {filePath && (
-            <span
-              style={{
-                marginLeft: '8px',
-                fontSize: '12px',
-                fontWeight: 400,
-                color: theme.colors.textSecondary,
-              }}
-            >
-              {filePath}
-            </span>
-          )}
-        </h3>
-        {!readOnly && (
-          <button
-            onClick={() => handleSave()}
-            style={{
-              padding: '4px 12px',
-              fontSize: '12px',
-              backgroundColor: theme.colors.primary,
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            Save
-          </button>
-        )}
-      </div>
-      <div style={{ flex: 1 }}>{editorContent}</div>
-    </div>
-  );
+  // For both tab and panel variants, just return the editor content
+  // The library's built-in UI handles the status bar, save shortcuts, etc.
+  return editorContent;
 };
 
 // Preview component for panel configurator
