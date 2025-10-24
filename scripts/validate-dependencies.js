@@ -138,7 +138,6 @@ const releaseDeps = {
 // Known false positives and build-time only dependencies
 const allowedDevDeps = new Set([
   'typescript',     // Type definitions, not needed at runtime
-  'globby',         // Used in build scripts
   '@types/node',    // Type definitions
   '@types/react',   // Type definitions
 ]);
