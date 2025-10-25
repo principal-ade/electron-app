@@ -6,12 +6,14 @@ import {
   CheckCircle,
   AlertCircle,
   Loader,
+  Key,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { GitService } from '../../../../main-process-api/GitService';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import { AlexandriaService } from '../../../../main-process-api/AlexandriaService';
+import { SSHSetupWizard } from './SSHSetupWizard';
 import type { EnhancedAlexandriaEntry } from '../../../../../shared/types/repository.types';
 
 interface GitCloneModalProps {
@@ -61,6 +63,10 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   const [isCloning, setIsCloning] = useState(false);
   const [cloneProgress, setCloneProgress] = useState<string>('');
   const [existingRepoPath, setExistingRepoPath] = useState<string>('');
+  const [showSSHSetup, setShowSSHSetup] = useState(false);
+  const [cloneErrorType, setCloneErrorType] = useState<
+    'auth' | 'network' | 'other'
+  >('other');
 
   // Reset state when modal opens and focus the input
   useEffect(() => {
@@ -76,6 +82,8 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       setIsCloning(false);
       setCloneProgress('');
       setExistingRepoPath('');
+      setShowSSHSetup(false);
+      setCloneErrorType('other');
 
       // Focus the input field after a brief delay to ensure the modal is rendered
       setTimeout(() => {
@@ -372,9 +380,31 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       }
     } catch (err) {
       console.error('Error during cloning:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to clone repository',
-      );
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to clone repository';
+
+      // Detect authentication errors
+      const isAuthError =
+        errorMessage.toLowerCase().includes('authentication') ||
+        errorMessage.toLowerCase().includes('permission denied') ||
+        errorMessage.toLowerCase().includes('403') ||
+        errorMessage.toLowerCase().includes('could not read from remote') ||
+        errorMessage.toLowerCase().includes('repository not found') ||
+        errorMessage.toLowerCase().includes('access denied');
+
+      if (isAuthError) {
+        setCloneErrorType('auth');
+      } else if (
+        errorMessage.toLowerCase().includes('network') ||
+        errorMessage.toLowerCase().includes('timeout') ||
+        errorMessage.toLowerCase().includes('connection')
+      ) {
+        setCloneErrorType('network');
+      } else {
+        setCloneErrorType('other');
+      }
+
+      setError(errorMessage);
       setCurrentStep('error');
     } finally {
       setIsCloning(false);
@@ -386,6 +416,33 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     setCurrentStep('input');
     setError('');
     setExistingRepoPath('');
+  };
+
+  // Handle retry with SSH after SSH setup completes
+  const handleRetryWithSSH = async () => {
+    // Convert HTTPS URL to SSH format
+    const normalizedUrl = normalizeGitUrl(gitUrl);
+    let sshUrl = normalizedUrl;
+
+    if (normalizedUrl.startsWith('https://')) {
+      const match = normalizedUrl.match(
+        /https:\/\/([^/]+)\/([^/]+)\/([^/.]+)\.git$/,
+      );
+      if (match) {
+        sshUrl = `git@${match[1]}:${match[2]}/${match[3]}.git`;
+      }
+    }
+
+    // Update auth method and close SSH setup wizard
+    setSelectedAuthMethod('ssh');
+    setShowSSHSetup(false);
+
+    // Retry clone with SSH URL if we have a directory
+    if (cloneDirectory) {
+      // Update gitUrl to SSH format
+      setGitUrl(sshUrl);
+      await handleStartClone(cloneDirectory);
+    }
   };
 
   // Handle choosing a different directory
@@ -970,6 +1027,34 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                 >
                   Cancel
                 </button>
+                {cloneErrorType === 'auth' && (
+                  <button
+                    onClick={() => setShowSSHSetup(true)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: `1px solid ${theme.colors.primary}`,
+                      backgroundColor: 'transparent',
+                      color: theme.colors.primary,
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        `${theme.colors.primary}15`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <Key size={16} />
+                    Set Up SSH
+                  </button>
+                )}
                 <button
                   onClick={handleRetry}
                   style={{
@@ -996,6 +1081,14 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* SSH Setup Wizard */}
+      <SSHSetupWizard
+        isOpen={showSSHSetup}
+        onClose={() => setShowSSHSetup(false)}
+        onSuccess={handleRetryWithSSH}
+        repositoryUrl={gitUrl}
+      />
     </div>
   );
 };

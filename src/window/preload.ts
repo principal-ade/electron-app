@@ -46,6 +46,7 @@ import { appVersionManagerApi } from './main-process-api-implementations/appVers
 import { orbitAPI } from './main-process-api-implementations/orbitApi';
 import { dockerAPI } from './main-process-api-implementations/dockerApi';
 import { gitSyncAPI } from './main-process-api-implementations/gitSyncApi';
+import { sshSetupAPI } from './main-process-api-implementations/sshSetupApi';
 import { windowAPI } from './main-process-api-implementations/windowApi';
 import { principalAPI } from './main-process-api-implementations/principalApi';
 import { feedbackAPI } from './main-process-api-implementations/feedbackApi';
@@ -128,6 +129,7 @@ const mainProcessExposure: MainProcessAPI = {
   typeSchema: typeSchemaApi,
   docker: dockerAPI,
   gitSync: gitSyncAPI,
+  sshSetup: sshSetupAPI,
   window: windowAPI,
   principal: principalAPI,
   feedback: feedbackAPI,

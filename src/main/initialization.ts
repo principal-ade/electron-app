@@ -23,6 +23,7 @@ import { registerSecretHandlers } from './stores/secretHandlers';
 import { registerLinksHandlers } from './stores/linksHandlers';
 import { getTypedStorageManager } from './storage-providers';
 import { registerGitHandlers } from './file-system/gitHandlers';
+import { registerSSHSetupHandlers } from './services/ipc/git/sshSetupHandlers';
 import { setupShellHandlers } from './file-system/shellHandlers';
 import { setupTypeExtractionHandlers } from './services/ipc/typeExtractionHandlers';
 import { setupTypeSchemaHandlers } from './services/ipc/type-schema/typeSchemaHandlers';
@@ -208,6 +209,7 @@ const registerAllIpcHandlers = async () => {
 
   registerGitHubIpcHandlers(applicationWindows);
   registerGitHandlers();
+  registerSSHSetupHandlers();
   registerAgentSessionSDKHandlers(); // SDK-based handlers replace old session handlers
   // Agent installation handlers removed - we only configure hooks now
   setupAgentConfigHandlers();
