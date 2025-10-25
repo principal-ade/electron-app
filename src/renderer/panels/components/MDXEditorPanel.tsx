@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   headingsPlugin,
   listsPlugin,
@@ -55,6 +55,88 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
   const [currentFilePath, setCurrentFilePath] = useState<string | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState<boolean>(false);
+
+  // Memoize plugins array for performance
+  // IMPORTANT: This must be called before any conditional returns (Rules of Hooks)
+  const plugins = useMemo(
+    () => [
+      // Core plugins
+      headingsPlugin(),
+      listsPlugin(),
+      quotePlugin(),
+      thematicBreakPlugin(),
+      markdownShortcutPlugin(),
+
+      // Link and image plugins
+      linkPlugin(),
+      linkDialogPlugin(),
+      imagePlugin({
+        imageUploadHandler: async (file) => {
+          // TODO: Implement image upload
+          console.log('Uploading image:', file.name);
+          return '/placeholder-image.png';
+        },
+      }),
+
+      // Table plugin
+      tablePlugin(),
+
+      // Code block plugins
+      codeBlockPlugin({ defaultCodeBlockLanguage: 'javascript' }),
+      codeMirrorPlugin({
+        codeBlockLanguages: {
+          javascript: 'JavaScript',
+          typescript: 'TypeScript',
+          tsx: 'TypeScript (JSX)',
+          jsx: 'JavaScript (JSX)',
+          python: 'Python',
+          java: 'Java',
+          go: 'Go',
+          rust: 'Rust',
+          cpp: 'C++',
+          c: 'C',
+          css: 'CSS',
+          html: 'HTML',
+          json: 'JSON',
+          yaml: 'YAML',
+          markdown: 'Markdown',
+          bash: 'Bash',
+          shell: 'Shell',
+          sql: 'SQL',
+        },
+        // Note: ThemedMDXEditorWithProvider handles codeMirrorExtensions internally
+      }),
+
+      // Frontmatter plugin (for markdown files with metadata)
+      frontmatterPlugin(),
+
+      // Source diff plugin (toggle between markdown and visual)
+      // Start in source mode if there are parsing errors, otherwise rich-text
+      diffSourcePlugin({
+        viewMode: parseError ? 'source' : 'rich-text',
+      }),
+
+      // Toolbar plugin with common controls
+      toolbarPlugin({
+        toolbarContents: () => (
+          <>
+            <DiffSourceToggleWrapper>
+              <UndoRedo />
+              <BlockTypeSelect />
+              <BoldItalicUnderlineToggles />
+              <CodeToggle />
+              <CreateLink />
+              <InsertImage />
+              <InsertTable />
+              <InsertThematicBreak />
+              <ListsToggle />
+            </DiffSourceToggleWrapper>
+          </>
+        ),
+      }),
+    ],
+    [parseError],
+  );
 
   // Handle client-side only rendering (MDXEditor doesn't support SSR)
   useEffect(() => {
@@ -311,7 +393,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
         filePath={currentFilePath || undefined}
         enableSaveShortcut={!readOnly}
         hideStatusBar={false}
-        documentPadding={{ left: '0.5in', right: '0.5in' }}
+        documentPadding={{ left: 32, right: 32, top: 0, bottom: 32 }}
         onError={(error) => {
           console.error('MDXEditor parsing error:', error);
 
@@ -324,79 +406,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
             }
           }, 0);
         }}
-        plugins={[
-          // Core plugins
-          headingsPlugin(),
-          listsPlugin(),
-          quotePlugin(),
-          thematicBreakPlugin(),
-          markdownShortcutPlugin(),
-
-          // Link and image plugins
-          linkPlugin(),
-          linkDialogPlugin(),
-          imagePlugin({
-            imageUploadHandler: async (file) => {
-              // TODO: Implement image upload
-              console.log('Uploading image:', file.name);
-              return '/placeholder-image.png';
-            },
-          }),
-
-          // Table plugin
-          tablePlugin(),
-
-          // Code block plugins
-          codeBlockPlugin({ defaultCodeBlockLanguage: 'javascript' }),
-          codeMirrorPlugin({
-            codeBlockLanguages: {
-              javascript: 'JavaScript',
-              typescript: 'TypeScript',
-              python: 'Python',
-              java: 'Java',
-              go: 'Go',
-              rust: 'Rust',
-              cpp: 'C++',
-              c: 'C',
-              css: 'CSS',
-              html: 'HTML',
-              json: 'JSON',
-              yaml: 'YAML',
-              markdown: 'Markdown',
-              bash: 'Bash',
-              shell: 'Shell',
-              sql: 'SQL',
-            },
-          }),
-
-          // Frontmatter plugin (for markdown files with metadata)
-          frontmatterPlugin(),
-
-          // Source diff plugin (toggle between markdown and visual)
-          // Start in source mode if there are parsing errors, otherwise rich-text
-          diffSourcePlugin({
-            viewMode: parseError ? 'source' : 'rich-text',
-          }),
-
-          // Toolbar plugin with common controls
-          toolbarPlugin({
-            toolbarContents: () => (
-              <>
-                <DiffSourceToggleWrapper>
-                  <UndoRedo />
-                  <BlockTypeSelect />
-                  <BoldItalicUnderlineToggles />
-                  <CodeToggle />
-                  <CreateLink />
-                  <InsertImage />
-                  <InsertTable />
-                  <InsertThematicBreak />
-                  <ListsToggle />
-                </DiffSourceToggleWrapper>
-              </>
-            ),
-          }),
-        ]}
+        plugins={plugins}
       />
     </div>
   );
