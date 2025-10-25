@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Activity, Search, RefreshCw, AlertCircle, FolderOpen } from 'lucide-react';
+import { Layers, Search, RefreshCw, AlertCircle, FolderOpen } from 'lucide-react';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
@@ -527,7 +527,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Activity size={18} style={{ color: theme.colors.primary }} />
+          <Layers size={18} style={{ color: theme.colors.primary }} />
           <span style={{ fontWeight: 600, fontSize: '14px' }}>
             Agent Sessions
           </span>
@@ -677,7 +677,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
               color: theme.colors.textSecondary,
             }}
           >
-            <Activity
+            <Layers
               size={32}
               style={{ opacity: 0.3, marginBottom: '12px' }}
             />

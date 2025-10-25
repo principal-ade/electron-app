@@ -21,6 +21,7 @@ import {
   Package,
   History,
   Star,
+  FolderOpen,
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { PackageLayer } from '@principal-ai/codebase-composition';
@@ -2138,14 +2139,14 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       {
         id: 'agentSessions',
         label: 'Agent Sessions',
-        icon: <Activity size={14} />,
+        icon: <Layers size={14} />,
         visible: true,
         content: panelContentMap.agentSessions,
       },
       {
         id: 'agentContext',
         label: 'Agent Context',
-        icon: <Activity size={14} />,
+        icon: <FolderOpen size={14} />,
         visible: true,
         content: panelContentMap.agentContext,
       },

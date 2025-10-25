@@ -7,6 +7,7 @@ import {
   Shield,
   CheckCircle,
   XCircle,
+  AlertCircle,
   Key,
   Building,
   RefreshCw,
@@ -14,7 +15,10 @@ import {
 } from 'lucide-react';
 import { gitSyncConnectionManager } from '../../../../services/git-sync/GitSyncConnectionManager';
 import { GithubService } from '../../../../main-process-api/GithubService';
-import type { TokenInfo } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
+import { SSHSetupService } from '../../../../main-process-api/SSHSetupService';
+import { SSHSetupWizard } from '../../RepositoryExplorer/components/SSHSetupWizard';
+import type { TokenInfo, GitHubSSHKey } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
+import type { SSHKeyInfo } from '../../../../../shared/main-process-api-interfaces/SSHSetupAPI';
 
 // Mapping of GitHub scopes to human-readable descriptions
 export const SCOPE_DESCRIPTIONS: Record<string, string> = {
@@ -104,6 +108,16 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [loadingTokenInfo, setLoadingTokenInfo] = useState(false);
   const [tokenError, setTokenError] = useState<string | null>(null);
+  const [githubSSHKeys, setGitHubSSHKeys] = useState<GitHubSSHKey[]>([]);
+  const [loadingSSHInfo, setLoadingSSHInfo] = useState(false);
+  const [sshKeysError, setSSHKeysError] = useState<string | null>(null);
+  const [needsSSHPermission, setNeedsSSHPermission] = useState(false);
+  const [showSSHSetup, setShowSSHSetup] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionTestResult, setConnectionTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const cardBackground = theme.colors.backgroundTertiary;
   const secondaryBackground = theme.colors.backgroundSecondary;
@@ -112,8 +126,10 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
   useEffect(() => {
     if (isAuthenticated && authUser) {
       fetchTokenInfo();
+      fetchSSHKeyInfo();
     } else {
       setTokenInfo(null);
+      setGitHubSSHKeys([]);
     }
   }, [isAuthenticated, authUser]);
 
@@ -139,6 +155,58 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
 
   const formatScope = (scope: string): string => {
     return SCOPE_DESCRIPTIONS[scope] || scope.replace(/[_:]/g, ' ');
+  };
+
+  const fetchSSHKeyInfo = async () => {
+    setLoadingSSHInfo(true);
+    setSSHKeysError(null);
+    setNeedsSSHPermission(false);
+    try {
+      // Fetch SSH keys from GitHub API
+      const response = await GithubService.getUserSSHKeys();
+
+      if (response.success && response.data) {
+        setGitHubSSHKeys(response.data);
+      } else {
+        setGitHubSSHKeys([]);
+        if (response.needsPermission) {
+          setNeedsSSHPermission(true);
+          setSSHKeysError(response.error || 'Missing required GitHub permissions');
+        } else if (response.error) {
+          setSSHKeysError(response.error);
+        }
+      }
+    } catch (error) {
+      console.error('[AuthDetails] Failed to fetch SSH keys from GitHub:', error);
+      setGitHubSSHKeys([]);
+      setSSHKeysError('Failed to load SSH keys');
+    } finally {
+      setLoadingSSHInfo(false);
+    }
+  };
+
+  const handleTestSSHConnection = async () => {
+    setTestingConnection(true);
+    setConnectionTestResult(null);
+    try {
+      const result = await SSHSetupService.testConnection();
+      setConnectionTestResult(result);
+    } catch (error) {
+      console.error('[AuthDetails] Connection test failed:', error);
+      setConnectionTestResult({
+        success: false,
+        message: 'Failed to test connection',
+      });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleSSHSetupComplete = async () => {
+    setShowSSHSetup(false);
+    await fetchSSHKeyInfo();
+    // Automatically test the connection after setup
+    await handleTestSSHConnection();
   };
 
   return (
@@ -746,6 +814,373 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
           </div>
         )}
 
+        {/* SSH Key Management Card */}
+        {isAuthenticated && (
+          <div
+            style={{
+              backgroundColor: cardBackground,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '12px',
+              padding: '24px',
+              marginBottom: '24px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '20px',
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <Key size={20} />
+                SSH Key Management
+              </h2>
+              {githubSSHKeys.length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: theme.colors.success || '#10b981',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                  }}
+                >
+                  <CheckCircle size={14} />
+                  {githubSSHKeys.length} {githubSSHKeys.length === 1 ? 'Key' : 'Keys'}
+                </div>
+              )}
+            </div>
+
+            {loadingSSHInfo ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                <Loader2 size={16} className="spinning" />
+                Loading SSH keys from GitHub...
+              </div>
+            ) : githubSSHKeys.length > 0 ? (
+              <>
+                <p
+                  style={{
+                    fontSize: '14px',
+                    color: theme.colors.textSecondary,
+                    marginBottom: '16px',
+                  }}
+                >
+                  You have {githubSSHKeys.length} SSH {githubSSHKeys.length === 1 ? 'key' : 'keys'} configured on GitHub. These keys can be used to clone private repositories and access organization repositories.
+                </p>
+
+                {githubSSHKeys.map((key) => (
+                  <div
+                    key={key.id}
+                    style={{
+                      backgroundColor: secondaryBackground,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '8px',
+                      padding: '16px',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            color: theme.colors.text,
+                            marginBottom: '4px',
+                          }}
+                        >
+                          {key.title}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
+                          Added {new Date(key.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                      {key.verified && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '12px',
+                            color: theme.colors.success || '#10b981',
+                          }}
+                        >
+                          <CheckCircle size={14} />
+                          Verified
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                        wordBreak: 'break-all',
+                        lineHeight: '1.5',
+                        padding: '8px',
+                        backgroundColor: theme.colors.background,
+                        borderRadius: '4px',
+                      }}
+                    >
+                      {key.key}
+                    </div>
+                  </div>
+                ))}
+
+                {connectionTestResult && (
+                  <div
+                    style={{
+                      padding: '12px 16px',
+                      backgroundColor: connectionTestResult.success
+                        ? `${theme.colors.success || '#10b981'}15`
+                        : `${theme.colors.error || '#ef4444'}15`,
+                      border: `1px solid ${connectionTestResult.success ? theme.colors.success || '#10b981' : theme.colors.error || '#ef4444'}40`,
+                      borderRadius: '8px',
+                      marginBottom: '16px',
+                      fontSize: '13px',
+                      color: connectionTestResult.success
+                        ? theme.colors.success || '#10b981'
+                        : theme.colors.error || '#ef4444',
+                    }}
+                  >
+                    {connectionTestResult.message}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={handleTestSSHConnection}
+                    disabled={testingConnection}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      backgroundColor: theme.colors.primary,
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: theme.colors.background,
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: testingConnection ? 'wait' : 'pointer',
+                      transition: 'all 0.2s',
+                      opacity: testingConnection ? 0.7 : 1,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!testingConnection) e.currentTarget.style.opacity = '0.9';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!testingConnection) e.currentTarget.style.opacity = '1';
+                    }}
+                  >
+                    {testingConnection ? (
+                      <>
+                        <Loader2 size={14} className="spinning" />
+                        Testing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle size={14} />
+                        Test Connection
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowSSHSetup(true)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '6px',
+                      color: theme.colors.textSecondary,
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <Key size={14} />
+                    Add New Key
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {sshKeysError && needsSSHPermission ? (
+                  <>
+                    <div
+                      style={{
+                        padding: '16px',
+                        backgroundColor: `${theme.colors.error || '#ef4444'}15`,
+                        border: `1px solid ${theme.colors.error || '#ef4444'}40`,
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'start',
+                          gap: '12px',
+                        }}
+                      >
+                        <AlertCircle
+                          size={20}
+                          style={{ color: theme.colors.error || '#ef4444', flexShrink: 0, marginTop: '2px' }}
+                        />
+                        <div>
+                          <div
+                            style={{
+                              fontSize: '14px',
+                              fontWeight: 600,
+                              color: theme.colors.error || '#ef4444',
+                              marginBottom: '8px',
+                            }}
+                          >
+                            Additional GitHub Permissions Required
+                          </div>
+                          <p
+                            style={{
+                              fontSize: '13px',
+                              color: theme.colors.text,
+                              marginBottom: '12px',
+                              lineHeight: '1.5',
+                            }}
+                          >
+                            {sshKeysError}
+                          </p>
+                          <p
+                            style={{
+                              fontSize: '13px',
+                              color: theme.colors.textSecondary,
+                              marginBottom: '12px',
+                              lineHeight: '1.5',
+                            }}
+                          >
+                            To view and manage your SSH keys, you need to re-authenticate with additional permissions. Click "Manage Permissions" above to grant the <code style={{ padding: '2px 6px', backgroundColor: theme.colors.background, borderRadius: '4px', fontFamily: 'monospace' }}>read:public_key</code> scope.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <p
+                      style={{
+                        fontSize: '14px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: '16px',
+                      }}
+                    >
+                      You can still set up SSH keys manually. The wizard will help you generate and configure a new SSH key for Git operations.
+                    </p>
+                    <button
+                      onClick={() => setShowSSHSetup(true)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 20px',
+                        backgroundColor: theme.colors.primary,
+                        color: theme.colors.background,
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '0.9';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                    >
+                      <Key size={16} />
+                      Set Up SSH Key
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p
+                      style={{
+                        fontSize: '14px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: '16px',
+                      }}
+                    >
+                      {sshKeysError ||'SSH keys are not configured. Set up SSH authentication to clone private repositories and access organization repositories without token limitations.'}
+                    </p>
+                    <button
+                      onClick={() => setShowSSHSetup(true)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '10px 20px',
+                        backgroundColor: theme.colors.primary,
+                        color: theme.colors.background,
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '0.9';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                    >
+                      <Key size={16} />
+                      Set Up SSH Key
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Connected Services Card */}
         {isAuthenticated && (
           <div
@@ -851,6 +1286,13 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
           </div>
         )}
       </div>
+
+      {/* SSH Setup Wizard */}
+      <SSHSetupWizard
+        isOpen={showSSHSetup}
+        onClose={() => setShowSSHSetup(false)}
+        onSuccess={handleSSHSetupComplete}
+      />
     </div>
   );
 };

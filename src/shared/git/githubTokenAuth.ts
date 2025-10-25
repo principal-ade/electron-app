@@ -2,8 +2,6 @@ import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
-import { UnifiedSecureStorage, TOKEN_KEYS } from '../../main/services/UnifiedSecureStorage';
-import { authService } from '../../main/services/AuthService';
 
 export interface GitAuthEnv {
   env: NodeJS.ProcessEnv;
@@ -12,6 +10,29 @@ export interface GitAuthEnv {
 }
 
 const TOKEN_ENV_VAR = 'PRINCIPLE_GITHUB_TOKEN';
+
+/**
+ * Lazy-load authService only when needed and only in main process context
+ * This allows the module to be imported in worker threads without errors
+ */
+let authService: any = null;
+function getAuthService() {
+  if (authService !== null) {
+    return authService;
+  }
+
+  try {
+    // Try to import - this will only work in main process context
+    const { authService: service } = require('../../main/services/AuthService');
+    authService = service;
+    return authService;
+  } catch (error) {
+    // In worker context or if import fails, return null
+    console.warn('[GitHubTokenAuth] AuthService not available in this context');
+    authService = false; // Mark as attempted and failed
+    return null;
+  }
+}
 
 function isGitHubHttpsUrl(url: string): boolean {
   return url.startsWith('https://') && /github\.com[:/]/i.test(url);
@@ -25,8 +46,16 @@ export async function createGitHubTokenAuthEnvForUrl(
   }
 
   try {
+    // Lazy-load AuthService - may not be available in worker context
+    const service = getAuthService();
+    if (!service) {
+      // Auth service not available (e.g., running in worker thread)
+      // Return null to let git use default credentials (SSH keys, credential helpers, etc.)
+      return null;
+    }
+
     // Use AuthService to get a valid token with automatic refresh
-    const token = await authService.getValidToken();
+    const token = await service.getValidToken();
 
     if (!token) {
       return null;

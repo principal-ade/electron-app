@@ -120,33 +120,6 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
     const createTerminalSession = useCallback(
       async (dir: string): Promise<string | null> => {
         try {
-          // Check if we're hitting the session limit
-          const sessions = await TerminalService.list();
-          if (sessions && sessions.length >= 10) {
-            console.warn(
-              '[TerminalPanelV2] At terminal session limit, attempting cleanup...',
-            );
-            // Try to clean up orphaned sessions
-            const orphanedSessions = sessions.filter(
-              (s) =>
-                s.status === 'disconnected' ||
-                !s.lastActivity ||
-                (s.lastActivity &&
-                  Date.now() - new Date(s.lastActivity).getTime() > 300000),
-            );
-
-            for (const orphan of orphanedSessions) {
-              try {
-                await TerminalService.destroy(orphan.id);
-              } catch (err) {
-                console.error(
-                  '[TerminalPanelV2] Failed to destroy orphaned session:',
-                  err,
-                );
-              }
-            }
-          }
-
           // If there's an initial command, create a new terminal with that command
           if (initialCommand) {
             const id = await TerminalService.createWithCommand(

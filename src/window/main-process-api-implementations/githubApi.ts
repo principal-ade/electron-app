@@ -113,4 +113,8 @@ export const githubAPI: GitHubAPI = {
   getTokenInfo: async () => {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_TOKEN_INFO);
   },
+
+  getUserSSHKeys: async () => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_USER_SSH_KEYS);
+  },
 };

@@ -88,6 +88,7 @@ const TerminalPanelPackaged = forwardRef<
       string | null
     >(null);
     const devSidecarSessionIdRef = useRef<string | null>(null);
+    const hasInitializedRef = useRef(false);
 
     // Ownership tracking state
     const [ownershipStatus, setOwnershipStatus] = useState<{
@@ -118,13 +119,7 @@ const TerminalPanelPackaged = forwardRef<
     const createTerminalSession = useCallback(
       async (dir: string): Promise<string | null> => {
         try {
-          // Check if we're hitting the session limit
-          const sessions = await TerminalService.list();
-          if (sessions && sessions.length >= 10) {
-            console.warn(
-              '[TerminalPanelPackaged] At terminal session limit, attempting cleanup...',
-            );
-          }
+          // Note: Session limit is now 20 (no auto cleanup)
 
           // Create or get existing session
           let newSessionId: string;
@@ -175,8 +170,14 @@ const TerminalPanelPackaged = forwardRef<
       [context, terminalId, initialCommand, onSessionCreated],
     );
 
-    // Create terminal session
+    // Create terminal session - only run once on mount
     useEffect(() => {
+      // Only initialize once per component instance
+      if (hasInitializedRef.current) {
+        return;
+      }
+      hasInitializedRef.current = true;
+
       let mounted = true;
 
       const initialize = async () => {
@@ -226,7 +227,9 @@ const TerminalPanelPackaged = forwardRef<
           );
         }
       };
-    }, [directory, createTerminalSession]);
+      // Only run on mount - intentionally minimal dependencies
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Listen for terminal data from backend
     useEffect(() => {

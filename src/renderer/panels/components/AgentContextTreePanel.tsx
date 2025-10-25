@@ -14,7 +14,7 @@ import type {
   FileTreeSource,
 } from '@principal-ai/repository-abstraction';
 import { AgentContextTrackingService } from '../../services/AgentContextTrackingService';
-import { Activity, Trash2, RefreshCw } from 'lucide-react';
+import { FolderOpen, Trash2, RefreshCw } from 'lucide-react';
 
 export interface AgentContextTreePanelProps {
   repositoryPath?: string | null;
@@ -111,7 +111,7 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
         }}
       >
         <div style={{ textAlign: 'center' }}>
-          <Activity size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
+          <FolderOpen size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
           <div style={{ fontSize: '14px' }}>Loading agent context...</div>
         </div>
       </div>
@@ -141,7 +141,7 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Activity size={16} style={{ color: theme.colors.primary }} />
+            <FolderOpen size={16} style={{ color: theme.colors.primary }} />
             <span style={{ fontWeight: 600, fontSize: '14px' }}>
               Agent Context
             </span>
@@ -192,7 +192,7 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
           }}
         >
           <div>
-            <Activity
+            <FolderOpen
               size={48}
               style={{ opacity: 0.3, marginBottom: '16px' }}
             />
@@ -232,7 +232,7 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Activity size={16} style={{ color: theme.colors.primary }} />
+          <FolderOpen size={16} style={{ color: theme.colors.primary }} />
           <span style={{ fontWeight: 600, fontSize: '14px' }}>
             Agent Context
           </span>
@@ -359,7 +359,7 @@ export const AgentContextTreePanelPreview: React.FC = () => {
             gap: '6px',
           }}
         >
-          <Activity size={12} style={{ color: theme.colors.primary }} />
+          <FolderOpen size={12} style={{ color: theme.colors.primary }} />
           <span style={{ fontSize: '11px' }}>Session 1</span>
         </div>
         <div
@@ -369,7 +369,7 @@ export const AgentContextTreePanelPreview: React.FC = () => {
             gap: '6px',
           }}
         >
-          <Activity size={12} style={{ color: theme.colors.primary }} />
+          <FolderOpen size={12} style={{ color: theme.colors.primary }} />
           <span style={{ fontSize: '11px' }}>Session 2</span>
         </div>
       </div>

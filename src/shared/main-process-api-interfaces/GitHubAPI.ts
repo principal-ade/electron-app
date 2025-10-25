@@ -18,6 +18,7 @@ export enum GitHubAPIEvent {
   GET_TOKEN_SCOPES = 'github:get-token-scopes',
   GET_CURRENT_USER = 'github:get-current-user',
   GET_TOKEN_INFO = 'github:get-token-info',
+  GET_USER_SSH_KEYS = 'github:get-user-ssh-keys',
   // Config fetching events (formerly ConfigAPI)
   FETCH_REMOTE_CONFIG = 'github:fetch-remote-config',
   FETCH_GITHUB_CONFIG = 'github:fetch-github-config',
@@ -179,6 +180,22 @@ export interface TokenInfo {
   };
 }
 
+export interface GitHubSSHKey {
+  id: number;
+  key: string;
+  title: string;
+  created_at: string;
+  verified: boolean;
+  read_only: boolean;
+}
+
+export interface SSHKeysResponse {
+  success: boolean;
+  data?: GitHubSSHKey[];
+  error?: string;
+  needsPermission?: boolean;
+}
+
 export interface RepositoryFetchOptions {
   type?: 'all' | 'owner' | 'public' | 'private' | 'member';
   sort?: 'created' | 'updated' | 'pushed' | 'full_name';
@@ -287,4 +304,5 @@ export interface GitHubAPI {
   getTokenScopes: () => Promise<string[]>;
   getCurrentUser: () => Promise<GitHubUser | null>;
   getTokenInfo: () => Promise<TokenInfo | null>;
+  getUserSSHKeys: () => Promise<SSHKeysResponse>;
 }

@@ -45,7 +45,7 @@ class TerminalManager {
   // Track sessions by repository path + context for persistence
   private sessionsByRepo: Map<string, string> = new Map(); // "repoPath:context" -> sessionId
 
-  private maxSessions = 10; // Limit number of concurrent sessions
+  private maxSessions = 20; // Limit number of concurrent sessions
 
   private terminalWindows: Map<string, BrowserWindow> = new Map(); // Track terminal windows
 

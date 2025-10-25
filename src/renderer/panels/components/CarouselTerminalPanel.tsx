@@ -176,12 +176,15 @@ export const CarouselTerminalPanel = forwardRef<
     // Switch to a panel
     const switchPanel = useCallback(
       (index: number) => {
+        console.log('[CarouselTerminal] switchPanel called with index:', index, 'tabs.length:', tabs.length);
         if (index >= 0 && index < tabs.length) {
           pendingPanelIndexRef.current = index;
+          console.log('[CarouselTerminal] Setting pendingPanelIndexRef to:', index);
           carouselRef.current?.scrollToPanel(index);
           if (!carouselRef.current) {
             pendingPanelIndexRef.current = null;
           }
+          console.log('[CarouselTerminal] Setting currentPanelIndex to:', index);
           setCurrentPanelIndex(index);
 
           // Update active tab
@@ -190,10 +193,11 @@ export const CarouselTerminalPanel = forwardRef<
               ...t,
               isActive: i === index,
             }));
+            console.log('[CarouselTerminal] Updated tabs, active index:', index);
             return newTabs;
           });
 
-          // Trigger resize for the newly active terminal after DOM updates
+          // Scroll to bottom for the newly active terminal after DOM updates
           requestAnimationFrame(() => {
             setTimeout(() => {
               const tab = tabs[index];
@@ -213,16 +217,19 @@ export const CarouselTerminalPanel = forwardRef<
     // Handle carousel panel change
     const handlePanelChange = useCallback(
       (index: number) => {
+        console.log('[CarouselTerminal] handlePanelChange called with index:', index, 'pendingIndex:', pendingPanelIndexRef.current);
         const pendingIndex = pendingPanelIndexRef.current;
 
         if (pendingIndex !== null) {
           if (pendingIndex !== index) {
+            console.log('[CarouselTerminal] Ignoring panel change, pendingIndex mismatch');
             return;
           }
 
           pendingPanelIndexRef.current = null;
         }
 
+        console.log('[CarouselTerminal] handlePanelChange setting currentPanelIndex to:', index);
         setCurrentPanelIndex(index);
         setTabs((prevTabs) => {
           const newTabs = prevTabs.map((t, i) => ({
@@ -239,6 +246,12 @@ export const CarouselTerminalPanel = forwardRef<
     // Create a new terminal tab
     const addNewTab = useCallback(
       (label?: string, command?: string, targetDirectory?: string) => {
+        // Prevent duplicate creation
+        if (isCreatingTabRef.current) {
+          return;
+        }
+        isCreatingTabRef.current = true;
+
         const targetDir = targetDirectory || directory;
         const directoryName = targetDir.split('/').pop() || targetDir;
         const newTab: TerminalTab = {
@@ -249,29 +262,31 @@ export const CarouselTerminalPanel = forwardRef<
           isActive: true,
         };
 
-        let newTabIndex = 0;
         setTabs((prevTabs) => {
           const updatedTabs = prevTabs.map((t) => ({ ...t, isActive: false }));
           const newTabs = [...updatedTabs, newTab];
-          newTabIndex = newTabs.length - 1;
+          const newTabIndex = newTabs.length - 1;
+
+          // Set pending index IMMEDIATELY before any carousel updates
+          pendingPanelIndexRef.current = newTabIndex;
+          setCurrentPanelIndex(newTabIndex);
           onTabsChange?.(newTabs);
+
+          // Scroll to the new tab after DOM updates
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              carouselRef.current?.scrollToPanel(newTabIndex);
+              if (!carouselRef.current) {
+                pendingPanelIndexRef.current = null;
+              }
+              // Reset the creation lock after scrolling completes
+              setTimeout(() => {
+                isCreatingTabRef.current = false;
+              }, 100);
+            }, 150);
+          });
+
           return newTabs;
-        });
-
-        // Set pending index IMMEDIATELY before any carousel updates
-        pendingPanelIndexRef.current = newTabIndex;
-
-        // Update current panel index immediately
-        setCurrentPanelIndex(newTabIndex);
-
-        // Scroll to the new tab after DOM updates
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            carouselRef.current?.scrollToPanel(newTabIndex);
-            if (!carouselRef.current) {
-              pendingPanelIndexRef.current = null;
-            }
-          }, 150);
         });
       },
       [directory, onTabsChange],
@@ -310,7 +325,9 @@ export const CarouselTerminalPanel = forwardRef<
         '[CarouselTerminal] showAllTerminals or directory changed, re-filtering sessions',
       );
       restoreSessions();
-    }, [showAllTerminals, directory, restoreSessions]);
+      // restoreSessions is intentionally NOT in deps to prevent infinite loop
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showAllTerminals, directory]);
 
     // Close a tab
     const closeTab = useCallback(
@@ -385,6 +402,31 @@ export const CarouselTerminalPanel = forwardRef<
       currentPanelIndexRef.current = currentPanelIndex;
     }, [tabs, currentPanelIndex]);
 
+    // Focus management: focus the active terminal when panel changes or becomes visible
+    useEffect(() => {
+      if (!isVisible || tabs.length === 0) {
+        return;
+      }
+
+      const activeTab = tabs[currentPanelIndex];
+      if (!activeTab) {
+        return;
+      }
+
+      // Wait for the terminal to be ready and visible
+      const focusTimer = setTimeout(() => {
+        const terminalRef = terminalRefs.current.get(activeTab.id);
+        if (terminalRef) {
+          console.log('[CarouselTerminal] Focusing terminal:', activeTab.id);
+          terminalRef.focus();
+        } else {
+          console.log('[CarouselTerminal] Terminal ref not found:', activeTab.id);
+        }
+      }, 250);
+
+      return () => clearTimeout(focusTimer);
+    }, [currentPanelIndex, isVisible]);
+
     // Keyboard shortcuts for carousel navigation
     useEffect(() => {
       const handleKeyDown = async (e: KeyboardEvent) => {
@@ -398,17 +440,7 @@ export const CarouselTerminalPanel = forwardRef<
 
           e.preventDefault();
           e.stopPropagation();
-
-          if (isCreatingTabRef.current) {
-            return;
-          }
-
-          isCreatingTabRef.current = true;
           addNewTabRef.current?.();
-
-          setTimeout(() => {
-            isCreatingTabRef.current = false;
-          }, 500);
           return;
         }
 

@@ -39,6 +39,7 @@ class AuthService {
     // Use electron-store for persistent storage
     this.store = new Store({
       name: 'dev-collab-auth',
+      projectName: 'principal-ade', // Required for worker contexts
       // Don't use encryption key here - we'll use UnifiedSecureStorage for encryption
     });
 

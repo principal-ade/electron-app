@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { FilePreviewPanel } from '../../../../panels/components/FilePreviewPanel';
 import { MarkdownRenderingPanel } from '../../../../panels/components/MarkdownRenderingPanel';
-import TerminalPanel from '../../../../panels/TerminalPanel';
+import TerminalPanel from '../../../../panels/TerminalPanelPackaged';
 import { createFileTreeSource } from '../../../../types/file-tree-source';
 import { GitDiffPanel } from '../../../../panels/components/GitDiffPanel';
 import type { GitChangeSelectionStatus } from '../../../../../shared/types/repository.types';

@@ -6,6 +6,8 @@ import type {
   TokenInfo,
   GitHubPullRequest,
   CreateIssueRequest,
+  GitHubSSHKey,
+  SSHKeysResponse,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export class GithubService {
@@ -128,6 +130,11 @@ export class GithubService {
 
   static async getTokenInfo(): Promise<TokenInfo | null> {
     const result = await window.mainProcess.github.getTokenInfo();
+    return result;
+  }
+
+  static async getUserSSHKeys(): Promise<SSHKeysResponse> {
+    const result = await window.mainProcess.github.getUserSSHKeys();
     return result;
   }
 }

@@ -104,11 +104,24 @@ export class GitHubAdapter {
       return { success: false, error: 'No GitHub token available' };
     }
 
+    // Debug: Check token format (mask most of it for security)
+    console.log('[GitHub] Token info:', {
+      length: token.length,
+      prefix: token.substring(0, 4),
+      hasGho: token.startsWith('gho_'),
+      hasGhp: token.startsWith('ghp_'),
+    });
+
+    // GitHub OAuth tokens (gho_) use "token" auth, not "Bearer"
+    const authHeader = token.startsWith('gho_')
+      ? `token ${token}`
+      : `Bearer ${token}`;
+
     try {
       const response = await fetch(`https://api.github.com${endpoint}`, {
         method: options.method || 'GET',
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: authHeader,
           Accept: 'application/vnd.github.v3+json',
           ...options.headers,
         },
@@ -1461,6 +1474,66 @@ export class GitHubAdapter {
   }
 
   /**
+   * Get user's SSH keys from GitHub
+   * Requires 'read:public_key' or 'admin:public_key' scope
+   */
+  async getUserSSHKeys(): Promise<{
+    success: boolean;
+    data?: any[];
+    error?: string;
+    needsPermission?: boolean;
+  }> {
+    // Try with token-based API first
+    console.log('[GitHub] Attempting to fetch SSH keys from /user/keys...');
+    const apiResult = await this.makeGitHubAPICall('/user/keys');
+
+    console.log('[GitHub] API result:', {
+      success: apiResult.success,
+      status: apiResult.status,
+      statusText: apiResult.statusText,
+      hasData: !!apiResult.data,
+      error: apiResult.error,
+    });
+
+    if (apiResult.success && apiResult.data) {
+      console.log('[GitHub] Successfully fetched SSH keys, count:', apiResult.data.length);
+      return { success: true, data: apiResult.data };
+    }
+
+    // Check if it's a permission error (403 or scope issue)
+    if (apiResult.status === 403 || apiResult.status === 401) {
+      console.warn('[GitHub] Insufficient permissions to read SSH keys (status: ' + apiResult.status + '). Requires read:public_key scope.');
+      return {
+        success: false,
+        error: 'Insufficient permissions. The GitHub token needs "read:public_key" or "admin:public_key" scope to view SSH keys.',
+        needsPermission: true,
+      };
+    }
+
+    // Fallback to CLI
+    console.log('[GitHub] Trying CLI fallback for SSH keys...');
+    try {
+      const result = await this.executeCommand(['gh', 'api', '/user/keys']);
+      if (result.success && result.stdout) {
+        const keys = JSON.parse(result.stdout);
+        console.log('[GitHub] Successfully fetched SSH keys via CLI, count:', keys.length);
+        return { success: true, data: keys };
+      }
+      console.log('[GitHub] CLI command failed:', result.stderr);
+    } catch (error) {
+      console.error('[GitHub] Error getting SSH keys via CLI:', error);
+    }
+
+    console.error('[GitHub] All methods failed to fetch SSH keys. API status:', apiResult.status, 'API error:', apiResult.error);
+    return {
+      success: false,
+      error: apiResult.error || 'Failed to fetch SSH keys',
+      data: [],
+      needsPermission: apiResult.status === 403 || apiResult.status === 401,
+    };
+  }
+
+  /**
    * Get complete token information including scopes, user, and organizations
    */
   async getTokenInfo(): Promise<{
@@ -2363,6 +2436,15 @@ export function registerGitHubIpcHandlers(
       return null;
     }
     return adapter.getTokenInfo();
+  });
+
+  ipcMain.handle(GitHubAPIEvent.GET_USER_SSH_KEYS, async (event) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for GET_USER_SSH_KEYS');
+      return [];
+    }
+    return adapter.getUserSSHKeys();
   });
 
   console.log('[GitHub] IPC handlers registered');
