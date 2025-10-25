@@ -114,7 +114,7 @@ this.codeChallenge = crypto
 │  Auth       │
 │  Server     │
 └──────┬──────┘
-       │ 5. Exchange code for GitHub token
+       │ 5. Exchange code for GitHub token + refresh token
        ▼
 ┌─────────────┐
 │   Electron  │
@@ -122,6 +122,79 @@ this.codeChallenge = crypto
 │ (GitHub API)│
 └─────────────┘
 ```
+
+## Token Refresh
+
+The application supports automatic token refresh to maintain continuous authentication without requiring users to re-login.
+
+### How Token Refresh Works
+
+1. **Initial Authentication**: When a user logs in, the server returns:
+   - `access_token`: GitHub access token for API calls
+   - `refresh_token`: Long-lived token for obtaining new access tokens
+   - `expires_in`: Token lifetime in seconds (typically 3600 for 1 hour)
+
+2. **Token Storage**: All token information is stored securely:
+   - Access token is encrypted and stored in the system keychain
+   - Refresh token is stored in metadata alongside the access token
+   - Expiry timestamp is calculated and stored for automatic refresh
+
+3. **Automatic Refresh**: The AuthService automatically refreshes tokens:
+   - Tokens are checked for expiry whenever accessed
+   - Refresh is triggered if token expires within 5 minutes
+   - New tokens are automatically stored and state is updated
+   - If refresh fails, user is logged out and must re-authenticate
+
+4. **Refresh Flow**:
+   ```
+   ┌─────────────┐
+   │  AuthService│
+   │  (checks    │
+   │   expiry)   │
+   └──────┬──────┘
+          │ Token expiring soon?
+          ▼
+   ┌─────────────┐
+   │ POST /api/  │
+   │ auth/workos/│
+   │   refresh   │
+   └──────┬──────┘
+          │ refresh_token
+          ▼
+   ┌─────────────┐
+   │  WorkOS     │
+   │  Server     │
+   └──────┬──────┘
+          │ New access_token + refresh_token
+          ▼
+   ┌─────────────┐
+   │  Store new  │
+   │   tokens    │
+   └─────────────┘
+   ```
+
+### Implementation Details
+
+**OAuthServerClient** (`src/main/services/OAuthServerClient.ts`):
+- `authenticate()`: Returns `AuthResult` with access token, refresh token, and expiry
+- `refreshAccessToken(refreshToken)`: Exchanges refresh token for new access token
+
+**AuthService** (`src/main/services/AuthService.ts`):
+- Stores refresh token and expiry in secure storage metadata
+- Automatically checks token expiry on every access
+- Triggers refresh if token expires within 5 minutes
+- Clears auth if refresh fails
+
+**UnifiedSecureStorage** (`src/main/services/UnifiedSecureStorage.ts`):
+- Encrypts and stores tokens with metadata
+- Metadata includes: user info, refresh token, expiry timestamp
+
+### Server Requirements
+
+The authentication server must provide:
+- `POST /api/auth/workos/refresh` endpoint
+- Accept `refresh_token` in request body
+- Return new `access_token`, `refresh_token`, and `expires_in`
 
 ## Security Considerations
 

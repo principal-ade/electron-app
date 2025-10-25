@@ -11,6 +11,7 @@ import { avatarStorageService } from '../version-control-providers/avatarStorage
 
 import { StaticNamespaces } from '../storage-providers/types';
 import { getTypedStorageManagerInstance } from './initialization';
+import type { BranchInfo } from '../version-control-providers/gitBranchService';
 
 // GitHub API Response Types
 interface GitHubApiResponse {
@@ -48,6 +49,12 @@ interface GitHubApiResponse {
   html_url?: string;
 }
 
+// Type for repository event data
+type RepositoryEventData =
+  | Repository
+  | { remoteUrl: string }
+  | { repository: Repository; clonePath: string };
+
 // Repository Management Methods
 export class RepositoryApiEventHandler implements RepositoryAPI {
   private branchService = new GitBranchService();
@@ -62,7 +69,7 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
       | 'repository-removed'
       | 'clone-added'
       | 'clone-removed',
-    data: any,
+    data: RepositoryEventData,
   ): void {
     const windows = BrowserWindow.getAllWindows();
     windows.forEach((window) => {
@@ -368,16 +375,16 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
     metadata?: Repository['metadata'];
   }): Promise<Repository> {
     const vcsType = params.vcsType || this.detectVCSType(params.remoteUrl);
-    const normalizedUrl = this.normalizeRepoUrl(params.remoteUrl, vcsType);
 
     // Fetch GitHub metadata if it's a GitHub repo and we don't have avatar/description
-    let githubMetadata: any = null;
+    let githubMetadata: Awaited<ReturnType<typeof this.fetchGitHubMetadata>> =
+      null;
     if (vcsType === 'github' && (!params.avatarUrl || !params.description)) {
       githubMetadata = await this.fetchGitHubMetadata(params.remoteUrl);
     }
 
     // Try to get branch info from local path if provided
-    let localBranchInfo: any = null;
+    let localBranchInfo: BranchInfo | null = null;
     if (params.localPath) {
       try {
         // TODO: BLOCKING - getBranchInfo makes network calls to fetch remote branch info
@@ -540,7 +547,7 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
     const typedManager = await getTypedStorageManagerInstance();
 
     // Get branch info for the local clone
-    let branchInfo: any = null;
+    let branchInfo: BranchInfo | null = null;
     try {
       // TODO: BLOCKING - getBranchInfo makes network calls to fetch remote branch info
       // This should be replaced with local-only branch info and remote info should be
@@ -893,6 +900,14 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
   }
 
   /**
+   * Normalize a local path for comparison
+   */
+  private normalizeLocalPath(path: string): string {
+    // Normalize path separators and remove trailing slashes
+    return path.replace(/\\/g, '/').replace(/\/+$/, '') || path;
+  }
+
+  /**
    * Find repository by local path
    */
   async getRepositoryByLocalPath(
@@ -901,8 +916,14 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
     // Use getRepositories which handles both patterns
     const repositories = await this.getRepositories();
 
+    // Normalize the input path for comparison
+    const normalizedInputPath = this.normalizeLocalPath(localPath);
+
     return repositories.find((repo) =>
-      repo.localClones.some((clone) => clone.path === localPath),
+      repo.localClones.some((clone) => {
+        const normalizedClonePath = this.normalizeLocalPath(clone.path);
+        return normalizedClonePath === normalizedInputPath;
+      }),
     );
   }
 

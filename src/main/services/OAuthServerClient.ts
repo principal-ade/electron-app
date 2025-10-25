@@ -3,6 +3,12 @@
  *
  * Handles OAuth authentication flow with the server using PKCE
  * Uses WorkOS authentication with GitHub as the identity provider
+ *
+ * Token Refresh:
+ * - Supports automatic token refresh using refresh tokens
+ * - Tokens include expiry information (expires_in from server)
+ * - AuthService automatically refreshes tokens before expiry
+ * - Refresh tokens are stored securely alongside access tokens
  */
 
 import crypto from 'crypto';
@@ -18,7 +24,9 @@ interface AuthStartResponse {
 
 interface TokenResponse {
   access_token: string;
+  refresh_token?: string;
   token_type: string;
+  expires_in?: number; // Token lifetime in seconds
   scope?: string;
   user: {
     login: string;
@@ -26,6 +34,13 @@ interface TokenResponse {
     name: string;
     id: number;
   };
+}
+
+export interface AuthResult {
+  token: string;
+  refreshToken?: string;
+  expiresAt?: number; // Unix timestamp when token expires
+  user: TokenResponse['user'];
 }
 
 export class OAuthServerClient {
@@ -57,10 +72,7 @@ export class OAuthServerClient {
       .digest('base64url');
   }
 
-  async authenticate(): Promise<{
-    token: string;
-    user: TokenResponse['user'];
-  }> {
+  async authenticate(): Promise<AuthResult> {
     try {
       // 1. Start auth flow with server
       const providerName = getAuthProviderName();
@@ -104,11 +116,24 @@ export class OAuthServerClient {
       // 3. Poll for token (server will have the code after callback)
       console.log('[OAuthServerClient] Waiting for authentication...');
 
-      const token = await this.pollForToken();
+      const tokenResponse = await this.pollForToken();
+
+      // Calculate expiry timestamp if expires_in is provided
+      const expiresAt = tokenResponse.expires_in
+        ? Date.now() + tokenResponse.expires_in * 1000
+        : undefined;
+
+      console.log('[OAuthServerClient] Token received:', {
+        hasRefreshToken: !!tokenResponse.refresh_token,
+        expiresIn: tokenResponse.expires_in,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
+      });
 
       return {
-        token: token.access_token,
-        user: token.user,
+        token: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token,
+        expiresAt,
+        user: tokenResponse.user,
       };
     } catch (error: any) {
       throw new Error(`Authentication failed: ${error.message}`);
@@ -169,5 +194,54 @@ export class OAuthServerClient {
     }
 
     throw new Error('Authentication timeout - no response received');
+  }
+
+  /**
+   * Refresh an expired access token using a refresh token
+   * @param refreshToken The refresh token to use for refreshing
+   * @returns New auth result with fresh tokens
+   */
+  async refreshAccessToken(refreshToken: string): Promise<AuthResult> {
+    try {
+      console.log('[OAuthServerClient] Refreshing access token...');
+
+      const response = await fetch(`${this.serverUrl}/api/auth/workos/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          refresh_token: refreshToken,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = (await response.json()) as { error?: string };
+        throw new Error(error.error || 'Token refresh failed');
+      }
+
+      const tokenResponse = (await response.json()) as TokenResponse;
+
+      // Calculate expiry timestamp if expires_in is provided
+      const expiresAt = tokenResponse.expires_in
+        ? Date.now() + tokenResponse.expires_in * 1000
+        : undefined;
+
+      console.log('[OAuthServerClient] Token refreshed successfully:', {
+        hasRefreshToken: !!tokenResponse.refresh_token,
+        expiresIn: tokenResponse.expires_in,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
+      });
+
+      return {
+        token: tokenResponse.access_token,
+        refreshToken: tokenResponse.refresh_token || refreshToken, // Use new refresh token if provided, otherwise keep the old one
+        expiresAt,
+        user: tokenResponse.user,
+      };
+    } catch (error: any) {
+      console.error('[OAuthServerClient] Token refresh failed:', error.message);
+      throw new Error(`Token refresh failed: ${error.message}`);
+    }
   }
 }

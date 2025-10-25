@@ -39,19 +39,20 @@ alexandria hooks --check   # Check if hooks are installed
 
 ### What Alexandria Provides
 
-- **Codebase Views**: Structured representations stored in `.alexandria/views/` that contain:
-  - Documentation content organized in a grid layout
-  - File references to relevant source code files
-  - Relationships between different parts of your codebase
-- **Context Library**: Maintains important documents with explicit file references for AI understanding
-- **Quality Validation**: Ensures all views and file references are valid and properly formatted
+* **Codebase Views**: Structured representations stored in `.alexandria/views/` that contain:
+  * Documentation content organized in a grid layout
+  * File references to relevant source code files
+  * Relationships between different parts of your codebase
+* **Context Library**: Maintains important documents with explicit file references for AI understanding
+* **Quality Validation**: Ensures all views and file references are valid and properly formatted
 
 ### Understanding Codebase Views
 
 Each codebase view in `.alexandria/views/` contains:
-- **Grouped File References**: Related source files grouped together (e.g., `files: ['src/auth/login.ts', 'src/auth/session.ts']`)
-- **Documentation Links**: Connections between documentation and the code it describes
-- **Contextual Relationships**: Explicit mappings of which files work together
+
+* **Grouped File References**: Related source files grouped together (e.g., `files: ['src/auth/login.ts', 'src/auth/session.ts']`)
+* **Documentation Links**: Connections between documentation and the code it describes
+* **Contextual Relationships**: Explicit mappings of which files work together
 
 When exploring a codebase with Alexandria, these views tell you which files are related and should be considered together.
 
@@ -65,11 +66,12 @@ When exploring a codebase with Alexandria, these views tell you which files are 
 ### Pre-commit Integration
 
 If the project has a pre-commit hook configured, `alexandria lint` will run automatically to check for:
-- Orphaned references in codebase views
-- Stale context that needs updating
-- Invalid view structures
 
-For detailed information about hooks, rules, and configuration options, see [docs/HOOKS_AND_RULES.md](../docs/HOOKS_AND_RULES.md).
+* Orphaned references in codebase views
+* Stale context that needs updating
+* Invalid view structures
+
+For detailed information about hooks, rules, and configuration options, see [docs/HOOKS\_AND\_RULES.md](../docs/HOOKS_AND_RULES.md).
 
 ### Repository Views
 
@@ -78,4 +80,4 @@ For projects with GitHub integration, codebase views are automatically published
 
 ### Additional Documentation
 
-- **GitHub OAuth and PKCE**: For details on how GitHub OAuth and PKCE are configured, see [docs/OAUTH_AND_PKCE_GUIDE.md](docs/OAUTH_AND_PKCE_GUIDE.md).
+* **GitHub OAuth and PKCE**: For details on how GitHub OAuth and PKCE are configured, see [docs/OAUTH\_AND\_PKCE\_GUIDE.md](docs/OAUTH_AND_PKCE_GUIDE.md).

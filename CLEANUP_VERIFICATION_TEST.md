@@ -9,15 +9,17 @@ This file verifies that file watching and automatic UI updates are working after
 ## Expected Behavior
 
 This file should appear **instantly** in:
-- ✅ File Tree Panel
-- ✅ Git Changes Panel (as untracked file)
+
+* ✅ File Tree Panel
+* ✅ Git Changes Panel (as untracked file)
 
 ## Architecture Verification
 
 If this appears automatically, it confirms:
+
 1. ✅ Git watcher detected the change
 2. ✅ Worker rebuilt file tree
-3. ✅ CACHE_SYNC event was emitted
+3. ✅ CACHE\_SYNC event was emitted
 4. ✅ Main process forwarded to renderer
 5. ✅ RepositoryDataCache received update
 6. ✅ useRepositoryData hooks notified
@@ -25,7 +27,7 @@ If this appears automatically, it confirms:
 
 ## Event Flow
 
-```
+```markdown
 GitWatcherAdapter (detects file)
   ↓
 Worker: rebuilds file tree

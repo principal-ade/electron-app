@@ -8,7 +8,10 @@
 
 import { ipcMain, shell } from 'electron';
 import Store from 'electron-store';
-import { OAuthServerClient } from './OAuthServerClient';
+import {
+  OAuthServerClient,
+  type AuthResult as OAuthAuthResult,
+} from './OAuthServerClient';
 import AuthStateManager from './AuthStateManager';
 import { UnifiedSecureStorage, TOKEN_KEYS } from './UnifiedSecureStorage';
 import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
@@ -164,8 +167,13 @@ class AuthService {
           console.log('[AuthService] Starting OAuth flow...');
           const result = await authClient.authenticate();
 
-          // Store the credentials securely
-          await this.storeAuth(result.token, result.user);
+          // Store the credentials securely with refresh token and expiry
+          await this.storeAuth(
+            result.token,
+            result.user,
+            result.refreshToken,
+            result.expiresAt,
+          );
 
           console.log(
             '[AuthService] Authentication successful for:',
@@ -248,17 +256,85 @@ class AuthService {
         return { success: false, authenticated: false };
       }
 
-      const { token, metadata } = tokenData;
+      let { token, metadata } = tokenData;
       const user = metadata?.user;
+      const refreshToken = metadata?.refreshToken;
+      const expiresAt = metadata?.expiresAt;
 
       if (!user) {
         console.log('[AuthService] No user data found in token metadata');
         return { success: false, authenticated: false };
       }
 
+      // Check if token is expired or about to expire (within 5 minutes)
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+      const isExpired = expiresAt && expiresAt <= now;
+      const isExpiringSoon = expiresAt && expiresAt <= now + fiveMinutes;
+
+      if ((isExpired || isExpiringSoon) && refreshToken) {
+        console.log('[AuthService] Token expired or expiring soon, refreshing...', {
+          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
+          isExpired,
+          isExpiringSoon,
+        });
+
+        try {
+          // Attempt to refresh the token
+          const authClient = new OAuthServerClient({
+            serverUrl:
+              process.env.AUTH_SERVER_URL || 'https://principal-ade.com',
+          });
+
+          const refreshedAuth = await authClient.refreshAccessToken(
+            refreshToken,
+          );
+
+          // Store the new tokens
+          await this.storeAuth(
+            refreshedAuth.token,
+            refreshedAuth.user,
+            refreshedAuth.refreshToken,
+            refreshedAuth.expiresAt,
+          );
+
+          // Update AuthStateManager with new token
+          AuthStateManager.getInstance().setAuthenticated(
+            refreshedAuth.user,
+            refreshedAuth.token,
+          );
+
+          console.log('[AuthService] Token refreshed successfully');
+
+          return {
+            success: true,
+            authenticated: true,
+            token: refreshedAuth.token,
+            user: refreshedAuth.user,
+          };
+        } catch (refreshError: any) {
+          console.error(
+            '[AuthService] Token refresh failed:',
+            refreshError.message,
+          );
+          // If refresh fails, clear auth and require re-login
+          await this.clearStoredAuth();
+          AuthStateManager.getInstance().clearAuthentication();
+          return {
+            success: false,
+            authenticated: false,
+            error: 'Token expired and refresh failed. Please log in again.',
+          };
+        }
+      }
+
       console.log(
         '[AuthService] Successfully retrieved credentials for:',
         user.login,
+        {
+          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
+          hasRefreshToken: !!refreshToken,
+        },
       );
 
       return {
@@ -277,12 +353,24 @@ class AuthService {
     }
   }
 
-  private async storeAuth(token: string, user: any): Promise<void> {
+  private async storeAuth(
+    token: string,
+    user: any,
+    refreshToken?: string,
+    expiresAt?: number,
+  ): Promise<void> {
     try {
-      console.log('[AuthService] Storing credentials for:', user.login);
+      console.log('[AuthService] Storing credentials for:', user.login, {
+        hasRefreshToken: !!refreshToken,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
+      });
 
-      // Store token with user metadata in unified storage
-      await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, token, { user });
+      // Store token with user metadata, refresh token, and expiry in unified storage
+      await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, token, {
+        user,
+        refreshToken,
+        expiresAt,
+      });
 
       console.log('[AuthService] Credentials stored successfully');
     } catch (error) {

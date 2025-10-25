@@ -41,14 +41,17 @@ interface RepoNormalizedUniversalAgentSessionEvent {
 ## Event Types and File Path Extraction
 
 ### 1. `file_read`
+
 **Description**: Agent read a file
 
 **File Path Location**:
+
 ```typescript
 event.data?.path: string
 ```
 
 **Example**:
+
 ```json
 {
   "eventType": "file_read",
@@ -61,17 +64,20 @@ event.data?.path: string
 
 **Highlight Strategy**: Blue outline/fill to indicate file was read
 
----
+***
 
 ### 2. `file_write`
+
 **Description**: Agent created or overwrote a file
 
 **File Path Location**:
+
 ```typescript
 event.data?.path: string
 ```
 
 **Example**:
+
 ```json
 {
   "eventType": "file_write",
@@ -84,17 +90,20 @@ event.data?.path: string
 
 **Highlight Strategy**: Green fill to indicate new/written file
 
----
+***
 
 ### 3. `file_edit`
+
 **Description**: Agent modified an existing file
 
 **File Path Location**:
+
 ```typescript
 event.data?.path: string
 ```
 
 **Example**:
+
 ```json
 {
   "eventType": "file_edit",
@@ -109,12 +118,14 @@ event.data?.path: string
 
 **Highlight Strategy**: Amber/orange fill to indicate modification
 
----
+***
 
 ### 4. `tool_use`
+
 **Description**: Agent executed a tool (may involve multiple files)
 
 **File Path Locations** (check all):
+
 ```typescript
 event.data?.parameters?.file_path: string
 event.data?.parameters?.path: string
@@ -122,6 +133,7 @@ event.data?.parameters?.paths: string[]
 ```
 
 **Example**:
+
 ```json
 {
   "eventType": "tool_use",
@@ -140,18 +152,21 @@ event.data?.parameters?.paths: string[]
 
 **Highlight Strategy**: Purple outline to indicate tool interaction
 
----
+***
 
 ### 5. `error`
+
 **Description**: An error occurred during agent operation
 
 **File Path Location**:
+
 ```typescript
 event.data?.path?: string
 event.data?.file?: string
 ```
 
 **Example**:
+
 ```json
 {
   "eventType": "error",
@@ -164,25 +179,27 @@ event.data?.file?: string
 
 **Highlight Strategy**: Red fill/outline to indicate error location
 
----
+***
 
 ### 6. `session_start`
+
 **Description**: Agent session started
 
 **File Paths**: None (session-level event)
 
 **Highlight Strategy**: No file highlighting
 
----
+***
 
 ### 7. `session_end` / `stop`
+
 **Description**: Agent session ended
 
 **File Paths**: None (session-level event)
 
 **Highlight Strategy**: No file highlighting
 
----
+***
 
 ## Path Normalization Strategy
 
@@ -225,16 +242,16 @@ relativePath = "src/main/window.ts"
 
 ## Color Mapping Reference
 
-| Event Type | Color | Hex Code | Use Case |
-|------------|-------|----------|----------|
-| `file_read` | Blue | `#3b82f6` | File reading operations |
-| `file_write` | Green | `#22c55e` | File creation/write operations |
-| `file_edit` | Amber | `#f59e0b` | File modification operations |
-| `tool_use` | Purple | `#8b5cf6` | Tool executions |
-| `error` | Red | `#ef4444` | Error events |
-| `session_start` | Emerald | `#10b981` | Session lifecycle |
-| `session_end` | Indigo | `#6366f1` | Session lifecycle |
-| Unknown | Gray | `#6b7280` | Fallback for unknown types |
+| Event Type      | Color   | Hex Code  | Use Case                       |
+| --------------- | ------- | --------- | ------------------------------ |
+| `file_read`     | Blue    | `#3b82f6` | File reading operations        |
+| `file_write`    | Green   | `#22c55e` | File creation/write operations |
+| `file_edit`     | Amber   | `#f59e0b` | File modification operations   |
+| `tool_use`      | Purple  | `#8b5cf6` | Tool executions                |
+| `error`         | Red     | `#ef4444` | Error events                   |
+| `session_start` | Emerald | `#10b981` | Session lifecycle              |
+| `session_end`   | Indigo  | `#6366f1` | Session lifecycle              |
+| Unknown         | Gray    | `#6b7280` | Fallback for unknown types     |
 
 ## Repository Filtering
 
@@ -310,18 +327,19 @@ function extractFilePaths(
 
 When implementing event-to-highlight mapping, test with:
 
-- [ ] Single file operations (`file_read`, `file_write`, `file_edit`)
-- [ ] Multi-file tool operations (`tool_use` with multiple paths)
-- [ ] Path normalization (absolute → relative)
-- [ ] Repository filtering (only show events for current repo)
-- [ ] Unknown event types (should fall back gracefully)
-- [ ] Events with missing `repositoryInfo`
-- [ ] Events with missing `data` field
-- [ ] Edge cases: empty paths, malformed data
+* [ ] Single file operations (`file_read`, `file_write`, `file_edit`)
+* [ ] Multi-file tool operations (`tool_use` with multiple paths)
+* [ ] Path normalization (absolute → relative)
+* [ ] Repository filtering (only show events for current repo)
+* [ ] Unknown event types (should fall back gracefully)
+* [ ] Events with missing `repositoryInfo`
+* [ ] Events with missing `data` field
+* [ ] Edge cases: empty paths, malformed data
 
 ## Event Examples from Real Usage
 
 ### Claude File Edit
+
 ```json
 {
   "sessionId": "claude-1234567890",
@@ -344,6 +362,7 @@ When implementing event-to-highlight mapping, test with:
 ```
 
 ### Cline Tool Use
+
 ```json
 {
   "sessionId": "cline-0987654321",

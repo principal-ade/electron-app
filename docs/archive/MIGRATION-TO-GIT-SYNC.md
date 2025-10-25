@@ -7,23 +7,25 @@ This guide explains how to migrate from the existing P2P collaboration system to
 ## Architecture Changes
 
 ### Old P2P Architecture
-- **WebRTC-based**: Direct peer-to-peer connections
-- **Signaling Server**: Only for establishing connections
-- **Components**:
-  - `PeerManager`: Managed WebRTC connections
-  - `SignalingClient`: Connected to signaling server
-  - `GitSyncManager`: Handled git operations over P2P
-  - `CollaborationPanel`: UI for P2P collaboration
+
+* **WebRTC-based**: Direct peer-to-peer connections
+* **Signaling Server**: Only for establishing connections
+* **Components**:
+  * `PeerManager`: Managed WebRTC connections
+  * `SignalingClient`: Connected to signaling server
+  * `GitSyncManager`: Handled git operations over P2P
+  * `CollaborationPanel`: UI for P2P collaboration
 
 ### New Git-Sync Architecture
-- **Server-based**: Centralized sync server with WebSocket connections
-- **Branch-aware locking**: Prevents conflicts at the branch level
-- **JWT Authentication**: Secure token exchange with GitHub OAuth
-- **Components**:
-  - `GitSyncClient`: WebSocket client for server communication
-  - `GitSyncAuth`: Authentication with JWT tokens
-  - `GitSyncPanel`: New UI component
-  - Server at `http://34.226.213.143:3001`
+
+* **Server-based**: Centralized sync server with WebSocket connections
+* **Branch-aware locking**: Prevents conflicts at the branch level
+* **JWT Authentication**: Secure token exchange with GitHub OAuth
+* **Components**:
+  * `GitSyncClient`: WebSocket client for server communication
+  * `GitSyncAuth`: Authentication with JWT tokens
+  * `GitSyncPanel`: New UI component
+  * Server at [`http://34.226.213.143:3001`](http://34.226.213.143:3001)
 
 ## Migration Steps
 
@@ -158,17 +160,17 @@ After migration, you can remove:
 
 ## Feature Comparison
 
-| Feature | Old P2P | New Git-Sync |
-|---------|---------|--------------|
-| Connection Type | WebRTC P2P | WebSocket |
-| Authentication | GitHub token | JWT (exchanged for GitHub token) |
-| File Locking | No | Yes (branch-aware) |
-| Branch Awareness | No | Yes |
-| Merge Coordination | Manual | Automated safety checks |
-| Cross-Branch Warnings | No | Yes |
-| Scalability | Limited (P2P) | High (server-based) |
-| Offline Support | No | Queued operations |
-| Event History | No | Yes |
+| Feature               | Old P2P       | New Git-Sync                     |
+| --------------------- | ------------- | -------------------------------- |
+| Connection Type       | WebRTC P2P    | WebSocket                        |
+| Authentication        | GitHub token  | JWT (exchanged for GitHub token) |
+| File Locking          | No            | Yes (branch-aware)               |
+| Branch Awareness      | No            | Yes                              |
+| Merge Coordination    | Manual        | Automated safety checks          |
+| Cross-Branch Warnings | No            | Yes                              |
+| Scalability           | Limited (P2P) | High (server-based)              |
+| Offline Support       | No            | Queued operations                |
+| Event History         | No            | Yes                              |
 
 ## API Reference
 
@@ -218,19 +220,22 @@ class GitSyncAuth {
 ## Troubleshooting
 
 ### Connection Issues
-- Verify server is running: `curl http://34.226.213.143:3001/health`
-- Check WebSocket connection in browser dev tools
-- Ensure JWT token is valid (check localStorage)
+
+* Verify server is running: `curl `[`http://34.226.213.143:3001/health`](http://34.226.213.143:3001/health)
+* Check WebSocket connection in browser dev tools
+* Ensure JWT token is valid (check localStorage)
 
 ### Authentication Issues
-- Clear localStorage: `localStorage.removeItem('git-sync-auth')`
-- Re-authenticate with GitHub
-- Check GitHub OAuth app settings
+
+* Clear localStorage: `localStorage.removeItem('git-sync-auth')`
+* Re-authenticate with GitHub
+* Check GitHub OAuth app settings
 
 ### Lock Conflicts
-- View active locks in GitSyncPanel
-- Use `client.getStatus()` to see current locks
-- Force release with timeout (automatic after 5 minutes)
+
+* View active locks in GitSyncPanel
+* Use `client.getStatus()` to see current locks
+* Force release with timeout (automatic after 5 minutes)
 
 ## Rollback Plan
 
