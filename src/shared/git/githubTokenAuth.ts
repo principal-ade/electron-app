@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { UnifiedSecureStorage, TOKEN_KEYS } from '../../main/services/UnifiedSecureStorage';
+import { authService } from '../../main/services/AuthService';
 
 export interface GitAuthEnv {
   env: NodeJS.ProcessEnv;
@@ -24,8 +25,8 @@ export async function createGitHubTokenAuthEnvForUrl(
   }
 
   try {
-    const storage = UnifiedSecureStorage.getInstance();
-    const token = await storage.getToken(TOKEN_KEYS.GITHUB_TOKEN);
+    // Use AuthService to get a valid token with automatic refresh
+    const token = await authService.getValidToken();
 
     if (!token) {
       return null;

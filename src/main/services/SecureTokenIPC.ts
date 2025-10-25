@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 import { UnifiedSecureStorage, TOKEN_KEYS } from './UnifiedSecureStorage';
 import { SecureTokenAPIEvent } from '../../shared/main-process-api-interfaces/SecureTokenAPI';
 import AuthStateManager from './AuthStateManager';
+import { authService } from './AuthService';
 
 /**
  * IPC handlers for secure token storage
@@ -199,28 +200,36 @@ export function registerSecureTokenHandlers(): void {
   // Get GitHub auth token
   ipcMain.handle(SecureTokenAPIEvent.GET_GITHUB_AUTH, async () => {
     try {
-      // Try GITHUB_TOKEN first (current auth system)
-      let data = await getSecureTokenIPC()
-        .getStorage()
-        .getTokenWithMetadata(TOKEN_KEYS.GITHUB_TOKEN);
+      // Use AuthService to get a valid token with automatic refresh
+      const token = await authService.getValidToken();
+
+      if (token) {
+        // Get user info from AuthStateManager
+        const authState = AuthStateManager.getInstance().getFullState();
+        if (authState.isAuthenticated && authState.user) {
+          return {
+            authenticated: true,
+            token,
+            user: authState.user,
+          };
+        }
+      }
 
       // Fallback to ORBIT_AUTH for legacy/P2P
-      if (!data) {
-        data = await getSecureTokenIPC()
-          .getStorage()
-          .getTokenWithMetadata(TOKEN_KEYS.ORBIT_AUTH);
+      const orbitData = await getSecureTokenIPC()
+        .getStorage()
+        .getTokenWithMetadata(TOKEN_KEYS.ORBIT_AUTH);
+
+      if (orbitData) {
+        return {
+          authenticated: true,
+          token: orbitData.token,
+          user: orbitData.metadata.user,
+        };
       }
 
-      if (!data) {
-        // No tokens found
-        return { authenticated: false };
-      }
-
-      return {
-        authenticated: true,
-        token: data.token,
-        user: data.metadata.user,
-      };
+      // No tokens found
+      return { authenticated: false };
     } catch (error) {
       console.error('Failed to get GitHub auth:', error);
       return { authenticated: false };

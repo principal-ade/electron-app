@@ -436,6 +436,26 @@ class AuthService {
       return false;
     }
   }
+
+  /**
+   * Get a valid GitHub token with automatic refresh if expired/expiring
+   * This is the centralized method that all GitHub API calls should use
+   * @returns Valid token or null if not authenticated
+   */
+  async getValidToken(): Promise<string | null> {
+    try {
+      const auth = await this.getStoredAuth();
+
+      if (auth.success && auth.token) {
+        return auth.token;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[AuthService] Error getting valid token:', error);
+      return null;
+    }
+  }
 }
 
 // Create and export singleton instance

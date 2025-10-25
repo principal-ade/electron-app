@@ -7,6 +7,7 @@ import {
   UnifiedSecureStorage,
   TOKEN_KEYS,
 } from '../services/UnifiedSecureStorage';
+import { authService } from '../services/AuthService';
 import {
   GitHubAPIEvent,
   ConfigFetchRequest,
@@ -66,14 +67,14 @@ export class GitHubAdapter {
   }
 
   /**
-   * Get the stored GitHub token from secure storage
+   * Get a valid GitHub token with automatic refresh if expired
+   * Uses AuthService for centralized token management with auto-refresh
    */
   private async getGitHubToken(): Promise<string | null> {
     try {
-      const tokenData = await this.storage.getTokenWithMetadata(
-        TOKEN_KEYS.GITHUB_TOKEN,
-      );
-      return tokenData?.token || null;
+      // Use AuthService which handles token expiry and auto-refresh
+      const token = await authService.getValidToken();
+      return token;
     } catch (error) {
       console.error('[GitHub] Failed to get GitHub token:', error);
       return null;
