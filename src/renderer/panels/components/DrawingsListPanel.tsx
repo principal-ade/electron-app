@@ -156,7 +156,8 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           color: theme.colors.textSecondary,
-          fontSize: '14px',
+          fontSize: theme.fontSizes[1],
+          fontFamily: theme.fonts.body,
           gap: '8px',
           backgroundColor: theme.colors.background,
           padding: '20px',
@@ -164,8 +165,16 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
         }}
       >
         <Pencil size={48} style={{ opacity: 0.3 }} />
-        <div style={{ fontWeight: 500 }}>No repository selected</div>
-        <div style={{ fontSize: '12px', opacity: 0.7, maxWidth: '400px' }}>
+        <div style={{ fontWeight: theme.fontWeights.medium }}>
+          No repository selected
+        </div>
+        <div
+          style={{
+            fontSize: theme.fontSizes[0],
+            opacity: 0.7,
+            maxWidth: '400px',
+          }}
+        >
           Select a repository to view its drawings.
         </div>
       </div>
@@ -197,6 +206,7 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
         flexDirection: 'column',
         backgroundColor: theme.colors.background,
         overflow: 'hidden',
+        fontFamily: theme.fonts.body,
       }}
     >
       {/* Header */}
@@ -214,8 +224,8 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
           <Pencil size={16} color={theme.colors.primary} />
           <span
             style={{
-              fontSize: '14px',
-              fontWeight: 600,
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights.semibold,
               color: theme.colors.text,
             }}
           >
@@ -235,8 +245,9 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
               backgroundColor: theme.colors.primary,
               color: 'white',
               cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 500,
+              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts.body,
+              fontWeight: theme.fontWeights.medium,
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
@@ -269,15 +280,23 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
               justifyContent: 'center',
               height: '100%',
               color: theme.colors.textSecondary,
-              fontSize: '14px',
+              fontSize: theme.fontSizes[1],
               gap: '16px',
               padding: '20px',
               textAlign: 'center',
             }}
           >
             <Pencil size={48} style={{ opacity: 0.3 }} />
-            <div style={{ fontWeight: 500 }}>No drawings yet</div>
-            <div style={{ fontSize: '12px', opacity: 0.7, maxWidth: '300px' }}>
+            <div style={{ fontWeight: theme.fontWeights.medium }}>
+              No drawings yet
+            </div>
+            <div
+              style={{
+                fontSize: theme.fontSizes[0],
+                opacity: 0.7,
+                maxWidth: '300px',
+              }}
+            >
               Create your first drawing to get started.
             </div>
             {onCreateNew && (
@@ -293,8 +312,9 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
                   backgroundColor: theme.colors.primary,
                   color: 'white',
                   cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 500,
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts.body,
+                  fontWeight: theme.fontWeights.medium,
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
@@ -365,8 +385,8 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
                     <Pencil size={14} color={theme.colors.primary} />
                     <span
                       style={{
-                        fontSize: '13px',
-                        fontWeight: 500,
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: theme.fontWeights.medium,
                         color: theme.colors.text,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -444,7 +464,7 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
-                    fontSize: '11px',
+                    fontSize: theme.fontSizes[0],
                     color: theme.colors.textSecondary,
                   }}
                 >
@@ -467,7 +487,8 @@ export const DrawingsListPanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '12px',
+        fontSize: theme.fontSizes[0],
+        fontFamily: theme.fonts.body,
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',

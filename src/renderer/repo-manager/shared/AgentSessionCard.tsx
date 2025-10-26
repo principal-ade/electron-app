@@ -343,48 +343,6 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                       Details
                     </button>
                   )}
-                  {/* Debug Toggle Button - Shows card header */}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowDetails(!showDetails);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '2px 6px',
-                      backgroundColor: showDetails
-                        ? theme.colors.primary + '20'
-                        : 'transparent',
-                      border: `1px solid ${showDetails ? theme.colors.primary : theme.colors.border}`,
-                      borderRadius: '4px',
-                      color: showDetails
-                        ? theme.colors.primary
-                        : theme.colors.textSecondary,
-                      fontSize: '10px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      fontWeight: showDetails ? 600 : 400,
-                    }}
-                    title={showDetails ? 'Hide debug info' : 'Show debug info'}
-                  >
-                    Debug
-                  </button>
-                  {/* Expand/Collapse Caret */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      color: theme.colors.textSecondary,
-                    }}
-                  >
-                    {isTaskExpanded ? (
-                      <ChevronUp size={12} />
-                    ) : (
-                      <ChevronDown size={12} />
-                    )}
-                  </div>
                 </div>
               </div>
 

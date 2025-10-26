@@ -14,7 +14,7 @@ import type { AlexandriaEntry } from '@a24z/core-library';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { AlexandriaDocsService } from '../../main-process-api/AlexandriaDocsService';
 import { documentSearchService } from '../../services/DocumentSearchService';
-import { promises as fs } from 'fs';
+import { FileSystemService } from '../../main-process-api/FileSystemService';
 
 interface AlexandriaDocItem {
   path: string;
@@ -44,7 +44,24 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [alexandriaEntry, setAlexandriaEntry] =
     useState<AlexandriaEntry | null>(null);
-  const [sortMode, setSortMode] = useState<SortMode>('alphabetical');
+  const [sortMode, setSortMode] = useState<SortMode>('recentlyEdited');
+
+  // Format relative time (e.g., "2 hours ago", "3 days ago")
+  const formatRelativeTime = useCallback((date: Date): string => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+    return `${Math.floor(diffDays / 365)}y ago`;
+  }, []);
 
   // Fetch Alexandria entry and documents
   const fetchDocuments = useCallback(async () => {
@@ -80,8 +97,10 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
         // Get file modification time
         let mtime: Date | undefined;
         try {
-          const stats = await fs.stat(fullPath);
-          mtime = stats.mtime;
+          const stats = await FileSystemService.getFileStats(fullPath);
+          if (stats?.lastModified) {
+            mtime = new Date(stats.lastModified);
+          }
         } catch (err) {
           console.warn(`Failed to get mtime for ${fullPath}:`, err);
         }
@@ -104,8 +123,10 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
         // Get file modification time
         let mtime: Date | undefined;
         try {
-          const stats = await fs.stat(fullPath);
-          mtime = stats.mtime;
+          const stats = await FileSystemService.getFileStats(fullPath);
+          if (stats?.lastModified) {
+            mtime = new Date(stats.lastModified);
+          }
         } catch (err) {
           console.warn(`Failed to get mtime for ${fullPath}:`, err);
         }
@@ -143,7 +164,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
       // Refresh documents if a repository was updated
       if (event.type === 'updated' && event.repository) {
         // Only refresh if this is the repository we're viewing
-        if (event.repository.localPath === repositoryPath) {
+        if (event.repository.path === repositoryPath) {
           console.info(
             '[AlexandriaDocsPanel] Repository updated, refreshing documents',
           );
@@ -212,6 +233,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
         backgroundColor: theme.colors.backgroundSecondary,
         borderRadius: '0px',
         overflow: 'hidden',
+        fontFamily: theme.fonts.body,
       }}
     >
       {/* Header */}
@@ -240,24 +262,24 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
             <Book size={16} color={theme.colors.primary} />
             <span
               style={{
-                fontSize: '13px',
-                fontWeight: 600,
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.semibold,
                 color: theme.colors.text,
               }}
             >
-              Alexandria Documents
+              Documents
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {alexandriaEntry && (
               <span
                 style={{
-                  fontSize: '11px',
+                  fontSize: theme.fontSizes[0],
                   color: theme.colors.textSecondary,
                   backgroundColor: theme.colors.backgroundTertiary,
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  fontWeight: 500,
+                  fontWeight: theme.fontWeights.medium,
                 }}
               >
                 {documents.length}{' '}
@@ -269,7 +291,8 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                 value={sortMode}
                 onChange={(e) => setSortMode(e.target.value as SortMode)}
                 style={{
-                  fontSize: '11px',
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts.body,
                   color: theme.colors.text,
                   backgroundColor: theme.colors.backgroundTertiary,
                   border: `1px solid ${theme.colors.border}`,
@@ -277,7 +300,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                   padding: '2px 6px',
                   cursor: 'pointer',
                   outline: 'none',
-                  fontWeight: 500,
+                  fontWeight: theme.fontWeights.medium,
                 }}
                 title="Sort documents"
               >
@@ -306,7 +329,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
           />
           <input
             type="text"
-            placeholder="Search Alexandria documents..."
+            placeholder="Search documents..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -315,7 +338,8 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
               backgroundColor: theme.colors.background,
               border: `1px solid ${theme.colors.border}`,
               borderRadius: '6px',
-              fontSize: '12px',
+              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts.body,
               color: theme.colors.text,
               outline: 'none',
             }}
@@ -353,8 +377,8 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
               className="animate-spin"
               style={{ marginBottom: '12px' }}
             />
-            <span style={{ fontSize: '12px' }}>
-              Loading Alexandria documents...
+            <span style={{ fontSize: theme.fontSizes[0] }}>
+              Loading documents...
             </span>
           </div>
         ) : error ? (
@@ -363,16 +387,15 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
               textAlign: 'center',
               color: theme.colors.textSecondary,
               padding: '40px 20px',
-              fontSize: '12px',
+              fontSize: theme.fontSizes[0],
             }}
           >
             <div style={{ marginBottom: '8px', color: theme.colors.error }}>
               {error}
             </div>
             {error === 'Repository not registered in Alexandria' && (
-              <div style={{ fontSize: '11px', marginTop: '8px' }}>
-                This repository needs to be registered with Alexandria to view
-                its CodebaseView documents.
+              <div style={{ fontSize: theme.fontSizes[0], marginTop: '8px' }}>
+                This repository needs to be registered to view its documents.
               </div>
             )}
           </div>
@@ -382,7 +405,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
               textAlign: 'center',
               color: theme.colors.textSecondary,
               padding: '40px 20px',
-              fontSize: '12px',
+              fontSize: theme.fontSizes[0],
             }}
           >
             <div style={{ marginBottom: '8px', opacity: 0.5 }}>
@@ -392,11 +415,9 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
               <div>No documents found matching "{searchQuery}"</div>
             ) : (
               <>
-                <div style={{ marginBottom: '4px' }}>
-                  No Alexandria documents found
-                </div>
-                <div style={{ fontSize: '11px', opacity: 0.8 }}>
-                  CodebaseView documents will appear here once configured
+                <div style={{ marginBottom: '4px' }}>No documents found</div>
+                <div style={{ fontSize: theme.fontSizes[0], opacity: 0.8 }}>
+                  Documents will appear here once configured
                 </div>
               </>
             )}
@@ -486,16 +507,42 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
-                        fontSize: '13px',
-                        fontWeight: selectedDocument === doc.path ? 600 : 500,
-                        color:
-                          selectedDocument === doc.path
-                            ? theme.colors.primary
-                            : theme.colors.text,
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        justifyContent: 'space-between',
+                        gap: '8px',
                         marginBottom: '2px',
                       }}
                     >
-                      {doc.name}
+                      <div
+                        style={{
+                          fontSize: theme.fontSizes[1],
+                          fontWeight:
+                            selectedDocument === doc.path
+                              ? theme.fontWeights.semibold
+                              : theme.fontWeights.medium,
+                          color:
+                            selectedDocument === doc.path
+                              ? theme.colors.primary
+                              : theme.colors.text,
+                        }}
+                      >
+                        {doc.name}
+                      </div>
+                      {doc.mtime && (
+                        <div
+                          style={{
+                            fontSize: theme.fontSizes[0],
+                            color: theme.colors.textSecondary,
+                            opacity: 0.7,
+                            flexShrink: 0,
+                            fontWeight: theme.fontWeights.medium,
+                          }}
+                          title={doc.mtime.toLocaleString()}
+                        >
+                          {formatRelativeTime(doc.mtime)}
+                        </div>
+                      )}
                     </div>
                     <div
                       style={{
@@ -506,7 +553,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                     >
                       <div
                         style={{
-                          fontSize: '11px',
+                          fontSize: theme.fontSizes[0],
                           color: theme.colors.textSecondary,
                           opacity: 0.8,
                           overflow: 'hidden',
@@ -519,9 +566,9 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                       </div>
                       <div
                         style={{
-                          fontSize: '10px',
+                          fontSize: theme.fontSizes[0],
                           color: doc.isTracked ? '#10b981' : '#f59e0b',
-                          fontWeight: 500,
+                          fontWeight: theme.fontWeights.medium,
                           flexShrink: 0,
                         }}
                       >
@@ -543,7 +590,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
             padding: '8px 12px',
             borderTop: `1px solid ${theme.colors.border}`,
             backgroundColor: theme.colors.backgroundLight,
-            fontSize: '10px',
+            fontSize: theme.fontSizes[0],
             color: theme.colors.textSecondary,
             textAlign: 'center',
           }}
@@ -562,7 +609,8 @@ export const AlexandriaDocsPanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '12px',
+        fontSize: theme.fontSizes[0],
+        fontFamily: theme.fonts.body,
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',

@@ -2583,36 +2583,43 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     id: 'multiTerminal',
                     label: 'Multi Terminal',
                     content: multiTerminalPanel,
+                    icon: panelPreviewRegistry.multiTerminal?.icon,
                   },
                   {
                     id: 'cityVisualization',
                     label: 'City Visualization',
                     content: cityPanel,
+                    icon: panelPreviewRegistry.cityVisualization?.icon,
                   },
                   {
                     id: 'codeViewer',
                     label: 'Code Viewer',
                     content: codeViewerPanel,
+                    icon: panelPreviewRegistry.codeViewer?.icon,
                   },
                   {
                     id: 'gitDiff',
                     label: 'Git Diff',
                     content: gitDiffViewerPanel,
+                    icon: panelPreviewRegistry.gitDiff?.icon,
                   },
                   {
                     id: 'gitDiffViewer',
                     label: 'Diff Viewer',
                     content: gitDiffViewerPanel,
+                    icon: panelPreviewRegistry.gitDiff?.icon,
                   },
                   {
                     id: 'markdownViewer',
                     label: 'Markdown Viewer',
                     content: markdownViewerPanel,
+                    icon: panelPreviewRegistry.markdownViewer?.icon,
                   },
                   {
                     id: 'excalidrawDiagram',
                     label: 'Excalidraw Diagram',
                     content: excalidrawDiagramPanel,
+                    icon: panelPreviewRegistry.excalidrawDiagram?.icon,
                   },
                 ];
 

@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Layers, Search, RefreshCw, AlertCircle, FolderOpen } from 'lucide-react';
+import { Layers, AlertCircle, FolderOpen, RefreshCw } from 'lucide-react';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
@@ -96,7 +96,6 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [openingDirectory, setOpeningDirectory] = useState<string | null>(null);
 
   const normalizedRepositoryPath = useMemo(() => {
@@ -253,7 +252,6 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         .sort((a, b) => b.session.lastActivity - a.session.lastActivity);
 
       setSessions(validSessions);
-      setLastRefresh(new Date());
     } catch (err) {
       console.error('[AgentSessionsPanel] Error fetching sessions:', err);
       setSessions([]);
@@ -512,6 +510,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         flexDirection: 'column',
         backgroundColor: theme.colors.backgroundSecondary,
         color: theme.colors.text,
+        fontFamily: theme.fonts.body,
       }}
     >
       {/* Header */}
@@ -528,17 +527,22 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Layers size={18} style={{ color: theme.colors.primary }} />
-          <span style={{ fontWeight: 600, fontSize: '14px' }}>
+          <span
+            style={{
+              fontWeight: theme.fontWeights.semibold,
+              fontSize: theme.fontSizes[1],
+            }}
+          >
             Agent Sessions
           </span>
           <span
             style={{
-              fontSize: '12px',
+              fontSize: theme.fontSizes[0],
               color: theme.colors.textSecondary,
               backgroundColor: theme.colors.backgroundTertiary,
               padding: '2px 8px',
               borderRadius: '12px',
-              fontWeight: 600,
+              fontWeight: theme.fontWeights.semibold,
             }}
           >
             {filteredSessions.length}
@@ -546,118 +550,29 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Refresh button */}
-          <button
-            onClick={fetchSessions}
-            disabled={isLoading}
+          {/* Status filter dropdown */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '6px 10px',
-              fontSize: '12px',
-              backgroundColor: 'transparent',
-              color: theme.colors.textSecondary,
+              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts.body,
+              color: theme.colors.text,
+              backgroundColor: theme.colors.backgroundTertiary,
               border: `1px solid ${theme.colors.border}`,
               borderRadius: '4px',
-              cursor: isLoading ? 'not-allowed' : 'pointer',
-              opacity: isLoading ? 0.5 : 1,
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              if (!isLoading) {
-                e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundTertiary;
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-            title={`Last refreshed: ${lastRefresh.toLocaleTimeString()}`}
-          >
-            <RefreshCw
-              size={12}
-              style={{
-                animation: isLoading ? 'spin 1s linear infinite' : 'none',
-              }}
-            />
-            Refresh
-          </button>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div
-        style={{
-          padding: '12px 16px',
-          borderBottom: `1px solid ${theme.colors.border}`,
-          flexShrink: 0,
-          backgroundColor: theme.colors.background,
-        }}
-      >
-        {/* Search box */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 12px',
-            backgroundColor: theme.colors.backgroundSecondary,
-            borderRadius: '6px',
-            border: `1px solid ${theme.colors.border}`,
-            marginBottom: '12px',
-          }}
-        >
-          <Search size={14} color={theme.colors.textSecondary} />
-          <input
-            type="text"
-            placeholder="Search sessions..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              flex: 1,
-              backgroundColor: 'transparent',
-              border: 'none',
+              padding: '6px 10px',
+              cursor: 'pointer',
               outline: 'none',
-              color: theme.colors.text,
-              fontSize: '13px',
+              fontWeight: theme.fontWeights.medium,
             }}
-          />
-        </div>
-
-        {/* Status filter buttons */}
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {[
-            { value: 'all', label: 'All', color: theme.colors.textSecondary },
-            { value: 'active', label: 'Active', color: '#10b981' },
-            { value: 'idle', label: 'Idle', color: '#f59e0b' },
-            { value: 'inactive', label: 'Inactive', color: '#6b7280' },
-          ].map((filter) => (
-            <button
-              key={filter.value}
-              onClick={() => setStatusFilter(filter.value)}
-              style={{
-                padding: '4px 10px',
-                fontSize: '11px',
-                borderRadius: '4px',
-                border:
-                  statusFilter === filter.value
-                    ? 'none'
-                    : `1px solid ${theme.colors.border}`,
-                backgroundColor:
-                  statusFilter === filter.value
-                    ? filter.color
-                    : theme.colors.backgroundSecondary,
-                color:
-                  statusFilter === filter.value ? '#fff' : theme.colors.text,
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                fontWeight: statusFilter === filter.value ? 600 : 400,
-              }}
-            >
-              {filter.label}
-            </button>
-          ))}
+            title="Filter sessions by status"
+          >
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="idle">Idle</option>
+            <option value="inactive">Inactive</option>
+          </select>
         </div>
       </div>
 
@@ -681,7 +596,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
               size={32}
               style={{ opacity: 0.3, marginBottom: '12px' }}
             />
-            <div style={{ fontSize: '14px' }}>Loading sessions...</div>
+            <div style={{ fontSize: theme.fontSizes[1] }}>
+              Loading sessions...
+            </div>
           </div>
         ) : filteredSessions.length === 0 ? (
           <div
@@ -695,7 +612,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
               size={32}
               style={{ opacity: 0.3, marginBottom: '12px' }}
             />
-            <div style={{ fontSize: '14px' }}>
+            <div style={{ fontSize: theme.fontSizes[1] }}>
               {sessions.length === 0
                 ? 'No active sessions found'
                 : 'No sessions match the current filter'}
@@ -724,6 +641,10 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                   ? UNKNOWN_DIRECTORY_LABEL
                   : pathSegments[pathSegments.length - 1] || group.directory;
 
+              // Hide directory header if there's only one directory and it's the current one
+              const shouldShowDirectoryHeader =
+                sessionsByDirectory.length > 1 || !group.isCurrentDirectory;
+
               return (
                 <div
                   key={group.normalizedDirectory}
@@ -733,7 +654,8 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                     gap: '8px',
                   }}
                 >
-                  <div
+                  {shouldShowDirectoryHeader && (
+                    <div
                     onClick={
                       canOpenDirectory
                         ? () => {
@@ -791,8 +713,8 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                       >
                         <span
                           style={{
-                            fontWeight: 600,
-                            fontSize: '12px',
+                            fontWeight: theme.fontWeights.semibold,
+                            fontSize: theme.fontSizes[0],
                             color: theme.colors.text,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -804,9 +726,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                         {group.isCurrentDirectory && (
                           <span
                             style={{
-                              fontSize: '10px',
+                              fontSize: theme.fontSizes[0],
                               textTransform: 'uppercase',
-                              fontWeight: 600,
+                              fontWeight: theme.fontWeights.semibold,
                               letterSpacing: '0.5px',
                               color: theme.colors.primary,
                               backgroundColor: theme.colors.background,
@@ -820,7 +742,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                       </div>
                       <span
                         style={{
-                          fontSize: '11px',
+                          fontSize: theme.fontSizes[0],
                           color: theme.colors.textSecondary,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -841,9 +763,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                     >
                       <span
                         style={{
-                          fontSize: '11px',
+                          fontSize: theme.fontSizes[0],
                           color: theme.colors.textSecondary,
-                          fontWeight: 600,
+                          fontWeight: theme.fontWeights.semibold,
                         }}
                       >
                         {group.sessions.length}{' '}
@@ -867,6 +789,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                       )}
                     </div>
                   </div>
+                  )}
 
                   <div
                     style={{
@@ -939,7 +862,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         )}
       </div>
 
-      {/* Spin animation for refresh button */}
+      {/* Spin animation for loading indicators */}
       <style>{`
         @keyframes spin {
           from {
@@ -961,7 +884,8 @@ export const AgentSessionsPanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '11px',
+        fontSize: theme.fontSizes[0],
+        fontFamily: theme.fonts.body,
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',
@@ -976,10 +900,20 @@ export const AgentSessionsPanelPreview: React.FC = () => {
           borderLeft: `3px solid #3b82f6`,
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+        <div
+          style={{
+            fontWeight: theme.fontWeights.semibold,
+            marginBottom: '4px',
+          }}
+        >
           Session abc123
         </div>
-        <div style={{ fontSize: '10px', color: theme.colors.textSecondary }}>
+        <div
+          style={{
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textSecondary,
+          }}
+        >
           Last event: Read • src/index.ts
         </div>
       </div>
@@ -991,10 +925,20 @@ export const AgentSessionsPanelPreview: React.FC = () => {
           borderLeft: `3px solid #10b981`,
         }}
       >
-        <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+        <div
+          style={{
+            fontWeight: theme.fontWeights.semibold,
+            marginBottom: '4px',
+          }}
+        >
           Session def456
         </div>
-        <div style={{ fontSize: '10px', color: theme.colors.textSecondary }}>
+        <div
+          style={{
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textSecondary,
+          }}
+        >
           Last event: Write • src/utils.ts
         </div>
       </div>
