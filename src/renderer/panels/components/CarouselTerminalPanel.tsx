@@ -160,10 +160,6 @@ export const CarouselTerminalPanel = forwardRef<
           setSessionIds(restoredSessionIds);
           setCurrentPanelIndex(0);
           onTabsChange?.(restoredTabs);
-
-          console.log(
-            `[CarouselTerminal] Restored ${restoredTabs.length} tabs from existing sessions`,
-          );
         } else if (initialTabs.length > 0) {
           const activeIndex = initialTabs.findIndex((t) => t.isActive);
           setCurrentPanelIndex(activeIndex >= 0 ? activeIndex : 0);
@@ -176,15 +172,12 @@ export const CarouselTerminalPanel = forwardRef<
     // Switch to a panel
     const switchPanel = useCallback(
       (index: number) => {
-        console.log('[CarouselTerminal] switchPanel called with index:', index, 'tabs.length:', tabs.length);
         if (index >= 0 && index < tabs.length) {
           pendingPanelIndexRef.current = index;
-          console.log('[CarouselTerminal] Setting pendingPanelIndexRef to:', index);
           carouselRef.current?.scrollToPanel(index);
           if (!carouselRef.current) {
             pendingPanelIndexRef.current = null;
           }
-          console.log('[CarouselTerminal] Setting currentPanelIndex to:', index);
           setCurrentPanelIndex(index);
 
           // Update active tab
@@ -193,7 +186,6 @@ export const CarouselTerminalPanel = forwardRef<
               ...t,
               isActive: i === index,
             }));
-            console.log('[CarouselTerminal] Updated tabs, active index:', index);
             return newTabs;
           });
 
@@ -217,19 +209,16 @@ export const CarouselTerminalPanel = forwardRef<
     // Handle carousel panel change
     const handlePanelChange = useCallback(
       (index: number) => {
-        console.log('[CarouselTerminal] handlePanelChange called with index:', index, 'pendingIndex:', pendingPanelIndexRef.current);
         const pendingIndex = pendingPanelIndexRef.current;
 
         if (pendingIndex !== null) {
           if (pendingIndex !== index) {
-            console.log('[CarouselTerminal] Ignoring panel change, pendingIndex mismatch');
             return;
           }
 
           pendingPanelIndexRef.current = null;
         }
 
-        console.log('[CarouselTerminal] handlePanelChange setting currentPanelIndex to:', index);
         setCurrentPanelIndex(index);
         setTabs((prevTabs) => {
           const newTabs = prevTabs.map((t, i) => ({
@@ -300,15 +289,11 @@ export const CarouselTerminalPanel = forwardRef<
       }
 
       hasInitializedRef.current = true;
-      console.log('[CarouselTerminal] Initializing and restoring sessions...');
       restoreSessions();
 
       return () => {
         // DON'T destroy sessions on unmount - they should persist when panel is swapped
         // Sessions are only destroyed when user explicitly closes a tab
-        console.log(
-          '[CarouselTerminal] Component unmounting, sessions will persist',
-        );
       };
       // Only run on mount - restoreSessions is intentionally NOT in deps to prevent re-runs
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -321,9 +306,6 @@ export const CarouselTerminalPanel = forwardRef<
         return;
       }
 
-      console.log(
-        '[CarouselTerminal] showAllTerminals or directory changed, re-filtering sessions',
-      );
       restoreSessions();
       // restoreSessions is intentionally NOT in deps to prevent infinite loop
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -417,10 +399,7 @@ export const CarouselTerminalPanel = forwardRef<
       const focusTimer = setTimeout(() => {
         const terminalRef = terminalRefs.current.get(activeTab.id);
         if (terminalRef) {
-          console.log('[CarouselTerminal] Focusing terminal:', activeTab.id);
           terminalRef.focus();
-        } else {
-          console.log('[CarouselTerminal] Terminal ref not found:', activeTab.id);
         }
       }, 250);
 
