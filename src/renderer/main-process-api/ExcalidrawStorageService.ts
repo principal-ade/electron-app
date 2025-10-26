@@ -77,6 +77,15 @@ export class ExcalidrawStorageService {
     if (!result.success) {
       throw new Error(result.error || 'Failed to delete diagram');
     }
+
+    // Emit deletion event
+    const { diagramEventBus, DIAGRAM_EVENTS } = await import(
+      '../services/DiagramEventBus'
+    );
+    diagramEventBus.emit(DIAGRAM_EVENTS.DIAGRAM_DELETED, {
+      id: diagramId,
+      projectPath: undefined,
+    });
   }
 
   static async exportDiagram(

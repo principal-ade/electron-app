@@ -78,6 +78,8 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
   // Track last saved content hash to avoid unnecessary saves
   const lastSavedContentRef = useRef<string>('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  // Track if diagram has been deleted to prevent saving
+  const isDeletedRef = useRef(false);
 
   // Update refs when props change (when loading a different diagram)
   useEffect(() => {
@@ -91,6 +93,8 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
       isInitialLoadRef.current = true;
       // Reset unsaved changes when switching diagrams
       setHasUnsavedChanges(false);
+      // Reset deleted flag when switching diagrams
+      isDeletedRef.current = false;
 
       // If diagramId is null and we have the API, clear the scene for new diagram
       if (!diagramId && excalidrawAPI) {
@@ -265,6 +269,12 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
 
   // Auto-save functionality using refs to avoid re-renders
   const handleSave = useCallback(async () => {
+    // Don't save if diagram has been deleted
+    if (isDeletedRef.current) {
+      console.log('[ExcalidrawWrapper] Skipping save - diagram has been deleted');
+      return;
+    }
+
     const {
       excalidrawAPI,
       projectPath,
@@ -430,6 +440,40 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleManualSave]);
+
+  // Listen for diagram deletion events
+  useEffect(() => {
+    const handleDiagramDeleted = (event: {
+      id: string;
+      projectPath?: string;
+    }) => {
+      // Check if the deleted diagram is the current one
+      const currentId = currentDiagramIdRef.current;
+      if (!currentId) return;
+
+      // Normalize IDs for comparison (remove .excalidraw extension)
+      const normalizedCurrentId = currentId.replace('.excalidraw', '');
+      const normalizedDeletedId = event.id.replace('.excalidraw', '');
+
+      if (normalizedCurrentId === normalizedDeletedId) {
+        // This diagram has been deleted - prevent any further saves
+        isDeletedRef.current = true;
+        // Cancel any pending debounced saves
+        debouncedSave.cancel();
+        // Clear unsaved changes indicator
+        setHasUnsavedChanges(false);
+      }
+    };
+
+    const unsubscribe = diagramEventBus.on(
+      DIAGRAM_EVENTS.DIAGRAM_DELETED,
+      handleDiagramDeleted,
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [debouncedSave]);
 
   // Auto-save on unmount removed - it was causing issues where it would
   // save empty canvas after component cleanup. Instead we rely on:
@@ -660,52 +704,6 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
               gap: '8px',
             }}
           >
-            {showNameEditor && isEditingName ? (
-              <input
-                ref={nameInputRef}
-                type="text"
-                value={editingName}
-                onChange={(e) => setEditingName(e.target.value)}
-                onKeyDown={handleNameKeyDown}
-                onBlur={handleSaveName}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  backgroundColor: theme.colors.backgroundSecondary,
-                  border: `1px solid ${theme.colors.primary}`,
-                  borderRadius: '4px',
-                  outline: 'none',
-                  minWidth: '150px',
-                }}
-              />
-            ) : showNameEditor ? (
-              <span
-                onClick={handleStartEditingName}
-                style={{
-                  color: theme.colors.textSecondary,
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  transition: 'background-color 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundSecondary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-                title="Click to edit name"
-              >
-                {currentDiagramId
-                  ? currentDiagramName || 'Draft'
-                  : 'New Diagram'}
-              </span>
-            ) : null}
             {showSaveButton && hasUnsavedChanges && (
               <button
                 onClick={handleManualSave}

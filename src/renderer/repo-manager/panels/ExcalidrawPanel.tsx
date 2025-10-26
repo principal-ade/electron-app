@@ -184,27 +184,62 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
           flexDirection: 'column',
         }}
       >
-        {/* Info banner about where drawings are saved */}
-        {sourceLocation && (
-          <div
-            style={{
-              padding: '8px 12px',
-              backgroundColor: `${theme.colors.primary}15`,
-              borderBottom: `1px solid ${theme.colors.primary}30`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '12px',
-              color: theme.colors.textSecondary,
-            }}
-          >
-            <Info size={14} color={theme.colors.primary} />
-            <span>
-              Drawings are auto-saved to <strong>Memory Palace</strong> in your
-              repository
-            </span>
+        {/* Excalidraw header */}
+        <div
+          style={{
+            padding: '12px 16px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            backgroundColor: theme.colors.backgroundLight,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Pencil size={16} color={theme.colors.primary} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                }}
+              >
+                New Diagram
+              </span>
+              <span
+                style={{
+                  fontSize: '11px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {sourceLocation
+                  ? 'Auto-saved to Memory Palace'
+                  : 'Auto-saved to app data'}
+              </span>
+            </div>
           </div>
-        )}
+
+          {onClose && (
+            <button
+              onClick={handleCloseNewDrawing}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '4px 8px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                color: theme.colors.textSecondary,
+                borderRadius: '4px',
+              }}
+            >
+              Close
+            </button>
+          )}
+        </div>
+
+        {/* Excalidraw content */}
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <ExcalidrawWrapper
             onChange={() => {}}
@@ -213,7 +248,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
             useAlexandriaStorage={!!sourceLocation}
             showSaveButton={true}
             showNewDiagramButton={true}
-            showNameEditor={true}
+            showNameEditor={false}
           />
         </div>
       </div>
@@ -359,7 +394,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
             useAlexandriaStorage={!!sourceLocation}
             showSaveButton={true} // Enable save button for editing
             showNewDiagramButton={false} // Disable new diagram button in view mode
-            showNameEditor={true} // Enable name editing
+            showNameEditor={false} // Name editing handled by header
           />
         )}
       </div>

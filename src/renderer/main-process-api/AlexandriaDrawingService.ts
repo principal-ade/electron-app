@@ -97,6 +97,18 @@ export class AlexandriaDrawingService {
           repositoryPath,
         );
 
+      if (result.success) {
+        // Emit deletion event
+        const { diagramEventBus, DIAGRAM_EVENTS } = await import(
+          '../services/DiagramEventBus'
+        );
+        const diagramId = fileName.replace('.excalidraw', '');
+        diagramEventBus.emit(DIAGRAM_EVENTS.DIAGRAM_DELETED, {
+          id: diagramId,
+          projectPath: repositoryPath,
+        });
+      }
+
       return result.success;
     } catch (error) {
       console.error('Failed to delete diagram from Alexandria:', error);

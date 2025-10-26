@@ -178,7 +178,7 @@ export const AlexandriaDrawingPanel: React.FC<AlexandriaDrawingPanelProps> = ({
         onSave={handleSave}
         useAlexandriaStorage={true}
         showSaveButton={true}
-        showNameEditor={true}
+        showNameEditor={false}
         showNewDiagramButton={false}
         onClose={handleCreateNewDrawing}
       />

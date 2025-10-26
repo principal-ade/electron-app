@@ -1,36 +1,5 @@
 {
-  "elements": [
-    {
-      "id": "OzkCFuoPFhApemOkkNdNA",
-      "type": "diamond",
-      "x": 159,
-      "y": 173.7578125,
-      "width": 223.3359375,
-      "height": 118.94921875,
-      "angle": 0,
-      "strokeColor": "#1e1e1e",
-      "backgroundColor": "transparent",
-      "fillStyle": "solid",
-      "strokeWidth": 2,
-      "strokeStyle": "solid",
-      "roughness": 1,
-      "opacity": 100,
-      "groupIds": [],
-      "frameId": null,
-      "index": "a0",
-      "roundness": {
-        "type": 2
-      },
-      "seed": 116720668,
-      "version": 24,
-      "versionNonce": 1890007580,
-      "isDeleted": false,
-      "boundElements": null,
-      "updated": 1760448468768,
-      "link": null,
-      "locked": false
-    }
-  ],
+  "elements": [],
   "appState": {
     "showWelcomeScreen": true,
     "theme": "dark",
