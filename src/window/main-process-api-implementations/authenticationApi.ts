@@ -16,6 +16,7 @@ import type {
   TokenResult,
   TokenWithMetadata,
   TokenMigrationEntry,
+  TokenMetadata,
 } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 import { SecureTokenAPIEvent } from '../../shared/main-process-api-interfaces/SecureTokenAPI';
@@ -70,6 +71,15 @@ export const authenticationAPI: AuthenticationAPI = {
   isAuthenticated: async (): Promise<boolean> => {
     // Forward to existing secure-token:is-authenticated handler
     return ipcRenderer.invoke(SecureTokenAPIEvent.IS_AUTHENTICATED);
+  },
+
+  // Token metadata and refresh testing
+  getTokenMetadata: async (): Promise<TokenMetadata> => {
+    return ipcRenderer.invoke(AuthEvent.GET_TOKEN_METADATA);
+  },
+
+  testRefreshToken: async (): Promise<{ success: boolean; error?: string; newExpiresAt?: number }> => {
+    return ipcRenderer.invoke(AuthEvent.TEST_REFRESH_TOKEN);
   },
 
   // Generic token operations

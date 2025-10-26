@@ -13,6 +13,10 @@ export enum AuthEvent {
   CHECK = 'cli-auth:check',
   STATUS = 'cli-auth:status',
 
+  // Token metadata and refresh operations
+  GET_TOKEN_METADATA = 'cli-auth:get-token-metadata',
+  TEST_REFRESH_TOKEN = 'cli-auth:test-refresh-token',
+
   // Auth state management events
   STATE_GET = 'auth-state:get',
   STATE_SUBSCRIBE = 'auth-state:subscribe',

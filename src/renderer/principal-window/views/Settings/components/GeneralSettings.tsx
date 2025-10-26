@@ -27,6 +27,7 @@ export const GeneralSettings: React.FC = () => {
   const [isApplyingTheme, setIsApplyingTheme] = useState(false);
   const [showThemeButton, setShowThemeButton] = useState(true);
   const [showCustomizeButton, setShowCustomizeButton] = useState(true);
+  const [showOpenInIDE, setShowOpenInIDE] = useState(false);
 
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
@@ -48,6 +49,7 @@ export const GeneralSettings: React.FC = () => {
       setEnableVimMode(prefs.enableVimMode ?? false);
       setShowThemeButton(prefs.titlebarButtons?.theme ?? true);
       setShowCustomizeButton(prefs.titlebarButtons?.customize ?? true);
+      setShowOpenInIDE(prefs.titlebarButtons?.openInIDE ?? false);
     };
 
     UserPreferencesService.getPreferences()
@@ -370,6 +372,7 @@ export const GeneralSettings: React.FC = () => {
                     titlebarButtons: {
                       theme: enabled,
                       customize: showCustomizeButton,
+                      openInIDE: showOpenInIDE,
                     },
                   });
                 }}
@@ -397,6 +400,35 @@ export const GeneralSettings: React.FC = () => {
                     titlebarButtons: {
                       theme: showThemeButton,
                       customize: enabled,
+                      openInIDE: showOpenInIDE,
+                    },
+                  });
+                }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+            </label>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                fontSize: '14px',
+                color: theme.colors.text,
+              }}
+            >
+              <span>Show "Open in IDE" button (repo manager)</span>
+              <input
+                type="checkbox"
+                checked={showOpenInIDE}
+                onChange={async (e) => {
+                  const enabled = e.target.checked;
+                  setShowOpenInIDE(enabled);
+                  await UserPreferencesService.updatePreferences({
+                    titlebarButtons: {
+                      theme: showThemeButton,
+                      customize: showCustomizeButton,
+                      openInIDE: enabled,
                     },
                   });
                 }}

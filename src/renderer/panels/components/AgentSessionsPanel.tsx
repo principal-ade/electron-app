@@ -657,14 +657,14 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                   {shouldShowDirectoryHeader && (
                     <div
                     onClick={
-                      canOpenDirectory
+                      canOpenDirectory && !group.isCurrentDirectory
                         ? () => {
                             void handleOpenDirectory(group.directory);
                           }
                         : undefined
                     }
                     onMouseEnter={(e) => {
-                      if (!canOpenDirectory) {
+                      if (!canOpenDirectory || group.isCurrentDirectory) {
                         return;
                       }
                       e.currentTarget.style.backgroundColor =
@@ -673,6 +673,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                         theme.colors.primary;
                     }}
                     onMouseLeave={(e) => {
+                      if (group.isCurrentDirectory) {
+                        return;
+                      }
                       e.currentTarget.style.backgroundColor =
                         baseBackgroundColor;
                       e.currentTarget.style.borderColor =
@@ -684,13 +687,20 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                       justifyContent: 'space-between',
                       padding: '10px 12px',
                       borderRadius: '6px',
-                      border: `1px solid ${theme.colors.border}`,
-                      backgroundColor: baseBackgroundColor,
-                      cursor: canOpenDirectory ? 'pointer' : 'default',
+                      border: group.isCurrentDirectory
+                        ? `2px solid ${theme.colors.primary}`
+                        : `1px solid ${theme.colors.border}`,
+                      backgroundColor: group.isCurrentDirectory
+                        ? theme.colors.primary + '10'
+                        : baseBackgroundColor,
+                      cursor: canOpenDirectory && !group.isCurrentDirectory ? 'pointer' : 'default',
                       transition: 'background-color 0.2s, border-color 0.2s',
+                      opacity: group.isCurrentDirectory ? 0.8 : 1,
                     }}
                     title={
-                      canOpenDirectory
+                      group.isCurrentDirectory
+                        ? 'Current directory'
+                        : canOpenDirectory
                         ? 'Open repository window for this directory'
                         : 'Directory information not available yet'
                     }
@@ -715,7 +725,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                           style={{
                             fontWeight: theme.fontWeights.semibold,
                             fontSize: theme.fontSizes[0],
-                            color: theme.colors.text,
+                            color: group.isCurrentDirectory
+                              ? theme.colors.primary
+                              : theme.colors.text,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -723,36 +735,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                         >
                           {directoryName}
                         </span>
-                        {group.isCurrentDirectory && (
-                          <span
-                            style={{
-                              fontSize: theme.fontSizes[0],
-                              textTransform: 'uppercase',
-                              fontWeight: theme.fontWeights.semibold,
-                              letterSpacing: '0.5px',
-                              color: theme.colors.primary,
-                              backgroundColor: theme.colors.background,
-                              padding: '2px 6px',
-                              borderRadius: '10px',
-                            }}
-                          >
-                            Current
-                          </span>
-                        )}
                       </div>
-                      <span
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {group.directory === UNKNOWN_DIRECTORY_LABEL
-                          ? 'Directory information not available yet'
-                          : group.directory}
-                      </span>
                     </div>
                     <div
                       style={{
@@ -761,16 +744,6 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                         gap: '8px',
                       }}
                     >
-                      <span
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                          fontWeight: theme.fontWeights.semibold,
-                        }}
-                      >
-                        {group.sessions.length}{' '}
-                        {group.sessions.length === 1 ? 'session' : 'sessions'}
-                      </span>
                       {openingDirectory === group.directory ? (
                         <RefreshCw
                           size={14}
@@ -780,7 +753,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                           }}
                         />
                       ) : (
-                        canOpenDirectory && (
+                        canOpenDirectory && !group.isCurrentDirectory && (
                           <FolderOpen
                             size={14}
                             style={{ color: theme.colors.textSecondary }}
@@ -833,6 +806,18 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                             navigator.clipboard.writeText(
                               sessionWithEvents.session.sessionId,
                             );
+                          }}
+                          onDeleteSession={async () => {
+                            try {
+                              await AgentSessionService.deleteSession(
+                                sessionWithEvents.session.sessionId,
+                                sessionWithEvents.session.workingDirectory || '',
+                              );
+                              // Refetch sessions to update the UI
+                              void fetchSessions();
+                            } catch (error) {
+                              console.error('Failed to delete session:', error);
+                            }
                           }}
                           onOpenTerminal={
                             onOpenTerminal

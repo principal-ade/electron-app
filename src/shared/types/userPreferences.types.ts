@@ -108,6 +108,7 @@ export interface UserPreferences {
   titlebarButtons?: {
     theme?: boolean;
     customize?: boolean;
+    openInIDE?: boolean;
   };
 
   // Theme preferences

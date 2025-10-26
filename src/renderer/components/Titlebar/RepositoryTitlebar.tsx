@@ -15,11 +15,15 @@ import { WorkspaceSelector } from './WorkspaceSelector';
 import type { Repository } from '../../../shared/types/repository.types';
 import type { FileTreeSource } from '../../types/file-tree-source';
 import type { RepositoryMode } from '../../repo-manager/shared/SimpleModeSelector';
-import type { WorkspaceLayout } from '../../../shared/types/userPreferences.types';
+import type {
+  WorkspaceLayout,
+  UserPreferences,
+} from '../../../shared/types/userPreferences.types';
 import { ViewSidebarControls } from '../../principal-window/components/ViewSidebarControls/ViewSidebarControls';
 import { WindowService } from '../../main-process-api/WindowService';
 import { SaveWorkspaceModal } from '../../repo-manager/shared/SaveWorkspaceModal';
 import { DevSidecarService } from '../../main-process-api/DevSidecarService';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 
 export interface RepositoryTitlebarProps {
   repository?: Repository;
@@ -94,6 +98,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   const [devSidecarSessionId, setDevSidecarSessionId] = useState<string | null>(
     null,
   );
+  const [showOpenInIDE, setShowOpenInIDE] = useState(false);
 
   // Listen for main window minimize state changes from other repo windows
   useEffect(() => {
@@ -115,6 +120,36 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
       unsubscribeClosed();
     };
   }, [devSidecarSessionId]);
+
+  // Load user preferences for titlebar button visibility
+  useEffect(() => {
+    const loadPreferences = async () => {
+      const prefs = await UserPreferencesService.getPreferences();
+      // Default to false (hidden) if not set
+      setShowOpenInIDE(prefs?.titlebarButtons?.openInIDE ?? false);
+    };
+    loadPreferences();
+
+    // Listen for preference changes
+    const handlePreferencesUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<UserPreferences>).detail;
+      if (detail) {
+        setShowOpenInIDE(detail?.titlebarButtons?.openInIDE ?? false);
+      }
+    };
+
+    window.addEventListener(
+      'user-preferences-updated',
+      handlePreferencesUpdated as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        'user-preferences-updated',
+        handlePreferencesUpdated as EventListener,
+      );
+    };
+  }, []);
 
   // Toggle main window minimized state
   const handleToggleMainWindow = async () => {
@@ -151,7 +186,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
       <div
         style={{
           position: 'absolute',
-          left: '80px', // Position after traffic lights
+          left: '120px', // Position after traffic lights
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
@@ -161,7 +196,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
       >
         <span
           style={{
-            fontSize: '13px',
+            fontSize: '15px',
             fontWeight: 500,
             color: theme.colors.text,
           }}
@@ -170,7 +205,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
         </span>
 
         {/* Open in IDE button */}
-        <TitlebarOpenInIDE repository={repository} />
+        {showOpenInIDE && <TitlebarOpenInIDE repository={repository} />}
       </div>
 
       {/* Center: Workspace selector */}

@@ -16,6 +16,7 @@ import {
 import { gitSyncConnectionManager } from '../../../../services/git-sync/GitSyncConnectionManager';
 import { GithubService } from '../../../../main-process-api/GithubService';
 import { SSHSetupService } from '../../../../main-process-api/SSHSetupService';
+import { AuthenticationService } from '../../../../main-process-api/AuthenticationService';
 import { SSHSetupWizard } from '../../RepositoryExplorer/components/SSHSetupWizard';
 import type { TokenInfo, GitHubSSHKey } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
 import type { SSHKeyInfo } from '../../../../../shared/main-process-api-interfaces/SSHSetupAPI';
@@ -118,6 +119,13 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     success: boolean;
     message: string;
   } | null>(null);
+  const [tokenMetadata, setTokenMetadata] = useState<any>(null);
+  const [loadingTokenMetadata, setLoadingTokenMetadata] = useState(false);
+  const [testingRefresh, setTestingRefresh] = useState(false);
+  const [refreshResult, setRefreshResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
 
   const cardBackground = theme.colors.backgroundTertiary;
   const secondaryBackground = theme.colors.backgroundSecondary;
@@ -127,9 +135,11 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     if (isAuthenticated && authUser) {
       fetchTokenInfo();
       fetchSSHKeyInfo();
+      fetchTokenMetadata();
     } else {
       setTokenInfo(null);
       setGitHubSSHKeys([]);
+      setTokenMetadata(null);
     }
   }, [isAuthenticated, authUser]);
 
@@ -182,6 +192,47 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
       setSSHKeysError('Failed to load SSH keys');
     } finally {
       setLoadingSSHInfo(false);
+    }
+  };
+
+  const fetchTokenMetadata = async () => {
+    setLoadingTokenMetadata(true);
+    try {
+      const metadata = await AuthenticationService.getTokenMetadata();
+      setTokenMetadata(metadata);
+    } catch (error) {
+      console.error('[AuthDetails] Failed to fetch token metadata:', error);
+    } finally {
+      setLoadingTokenMetadata(false);
+    }
+  };
+
+  const handleTestRefresh = async () => {
+    setTestingRefresh(true);
+    setRefreshResult(null);
+    try {
+      const result = await AuthenticationService.testRefreshToken();
+      if (result.success) {
+        setRefreshResult({
+          success: true,
+          message: `Token refreshed successfully! New expiry: ${result.newExpiresAt ? new Date(result.newExpiresAt).toLocaleString() : 'Unknown'}`,
+        });
+        // Refresh metadata to show updated info
+        await fetchTokenMetadata();
+      } else {
+        setRefreshResult({
+          success: false,
+          message: result.error || 'Failed to refresh token',
+        });
+      }
+    } catch (error: any) {
+      console.error('[AuthDetails] Refresh test failed:', error);
+      setRefreshResult({
+        success: false,
+        message: error.message || 'Failed to test refresh',
+      });
+    } finally {
+      setTestingRefresh(false);
     }
   };
 
@@ -809,6 +860,412 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                     </span>
                   </div>
                 )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Token Metadata & Refresh Testing Card */}
+        {isAuthenticated && tokenMetadata && (
+          <div
+            style={{
+              backgroundColor: cardBackground,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '12px',
+              padding: '24px',
+              marginBottom: '24px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '20px',
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <RefreshCw size={20} />
+                Token Information & Refresh Testing
+              </h2>
+              <button
+                onClick={fetchTokenMetadata}
+                disabled={loadingTokenMetadata}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '6px 12px',
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '6px',
+                  color: theme.colors.textSecondary,
+                  fontSize: '13px',
+                  cursor: loadingTokenMetadata ? 'wait' : 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  if (!loadingTokenMetadata) {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundSecondary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                <RefreshCw
+                  size={14}
+                  className={loadingTokenMetadata ? 'spinning' : ''}
+                />
+                Refresh Info
+              </button>
+            </div>
+
+            {loadingTokenMetadata ? (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                <Loader2 size={16} className="spinning" />
+                Loading token metadata...
+              </div>
+            ) : (
+              <>
+                {/* Token Status */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                    gap: '16px',
+                    marginBottom: '20px',
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '16px',
+                      backgroundColor: secondaryBackground,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: '4px',
+                      }}
+                    >
+                      Token Status
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {tokenMetadata.hasToken ? (
+                        <>
+                          <CheckCircle
+                            size={16}
+                            style={{ color: theme.colors.success || '#10b981' }}
+                          />
+                          <span>Active</span>
+                        </>
+                      ) : (
+                        <>
+                          <XCircle
+                            size={16}
+                            style={{ color: theme.colors.error || '#ef4444' }}
+                          />
+                          <span>No Token</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: '16px',
+                      backgroundColor: secondaryBackground,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: '4px',
+                      }}
+                    >
+                      Refresh Token
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {tokenMetadata.hasRefreshToken ? (
+                        <>
+                          <CheckCircle
+                            size={16}
+                            style={{ color: theme.colors.success || '#10b981' }}
+                          />
+                          <span>Available</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle
+                            size={16}
+                            style={{ color: theme.colors.warning || '#f59e0b' }}
+                          />
+                          <span>Not Available</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {tokenMetadata.expiresAt && (
+                    <div
+                      style={{
+                        padding: '16px',
+                        backgroundColor: secondaryBackground,
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '8px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: '12px',
+                          color: theme.colors.textSecondary,
+                          marginBottom: '4px',
+                        }}
+                      >
+                        Expires In
+                      </div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {tokenMetadata.isExpired ? (
+                          <>
+                            <XCircle
+                              size={16}
+                              style={{ color: theme.colors.error || '#ef4444' }}
+                            />
+                            <span>Expired</span>
+                          </>
+                        ) : tokenMetadata.isExpiringSoon ? (
+                          <>
+                            <AlertCircle
+                              size={16}
+                              style={{
+                                color: theme.colors.warning || '#f59e0b',
+                              }}
+                            />
+                            <span>{tokenMetadata.timeUntilExpiry}</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle
+                              size={16}
+                              style={{ color: theme.colors.success || '#10b981' }}
+                            />
+                            <span>{tokenMetadata.timeUntilExpiry}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Expiry Details */}
+                {tokenMetadata.expiresAt && (
+                  <div
+                    style={{
+                      padding: '12px',
+                      backgroundColor: secondaryBackground,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '6px',
+                      marginBottom: '20px',
+                      fontSize: '13px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    <strong>Token Expires:</strong>{' '}
+                    {tokenMetadata.expiresAtFormatted}
+                  </div>
+                )}
+
+                {/* Refresh Token Test */}
+                <div
+                  style={{
+                    padding: '16px',
+                    backgroundColor: secondaryBackground,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '8px',
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      marginBottom: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Shield size={16} />
+                    Test Refresh Mechanism
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: '13px',
+                      color: theme.colors.textSecondary,
+                      marginBottom: '12px',
+                      lineHeight: '1.5',
+                    }}
+                  >
+                    {tokenMetadata.hasRefreshToken
+                      ? 'Test the automatic token refresh mechanism by forcing a token refresh. This will request a new access token from the server using your refresh token.'
+                      : 'No refresh token is available. You may need to re-authenticate to get a refresh token.'}
+                  </p>
+                  <button
+                    onClick={handleTestRefresh}
+                    disabled={testingRefresh || !tokenMetadata.hasRefreshToken}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 16px',
+                      backgroundColor: tokenMetadata.hasRefreshToken
+                        ? theme.colors.primary
+                        : theme.colors.backgroundSecondary,
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: tokenMetadata.hasRefreshToken
+                        ? theme.colors.background
+                        : theme.colors.textSecondary,
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: tokenMetadata.hasRefreshToken && !testingRefresh
+                        ? 'pointer'
+                        : 'not-allowed',
+                      opacity: tokenMetadata.hasRefreshToken ? 1 : 0.5,
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (tokenMetadata.hasRefreshToken && !testingRefresh) {
+                        e.currentTarget.style.opacity = '0.9';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (tokenMetadata.hasRefreshToken) {
+                        e.currentTarget.style.opacity = '1';
+                      }
+                    }}
+                  >
+                    {testingRefresh ? (
+                      <>
+                        <Loader2 size={16} className="spinning" />
+                        Testing Refresh...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw size={16} />
+                        Test Token Refresh
+                      </>
+                    )}
+                  </button>
+
+                  {/* Refresh Result */}
+                  {refreshResult && (
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        padding: '12px',
+                        backgroundColor: theme.colors.background,
+                        border: `1px solid ${
+                          refreshResult.success
+                            ? theme.colors.success || '#10b981'
+                            : theme.colors.error || '#ef4444'
+                        }`,
+                        borderRadius: '6px',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '8px',
+                        fontSize: '13px',
+                      }}
+                    >
+                      {refreshResult.success ? (
+                        <CheckCircle
+                          size={16}
+                          style={{
+                            color: theme.colors.success || '#10b981',
+                            flexShrink: 0,
+                            marginTop: '2px',
+                          }}
+                        />
+                      ) : (
+                        <XCircle
+                          size={16}
+                          style={{
+                            color: theme.colors.error || '#ef4444',
+                            flexShrink: 0,
+                            marginTop: '2px',
+                          }}
+                        />
+                      )}
+                      <span>{refreshResult.message}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Information Notice */}
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '12px',
+                    backgroundColor: secondaryBackground,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    color: theme.colors.textSecondary,
+                    fontStyle: 'italic',
+                    lineHeight: '1.6',
+                  }}
+                >
+                  <strong>Note:</strong> Tokens are automatically refreshed when
+                  they expire or are about to expire (within 5 minutes). This test
+                  allows you to manually verify the refresh mechanism is working
+                  correctly.
+                </div>
               </>
             )}
           </div>

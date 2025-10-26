@@ -39,7 +39,6 @@ class AuthService {
     // Use electron-store for persistent storage
     this.store = new Store({
       name: 'dev-collab-auth',
-      projectName: 'principal-ade', // Required for worker contexts
       // Don't use encryption key here - we'll use UnifiedSecureStorage for encryption
     });
 
@@ -230,6 +229,30 @@ class AuthService {
         return { success: true };
       } catch (error: any) {
         console.error('[AuthService] Logout error:', error);
+        return { success: false, error: error.message };
+      }
+    });
+
+    // Get token metadata handler
+    ipcMain.handle(AuthEvent.GET_TOKEN_METADATA, async () => {
+      try {
+        return await this.getTokenMetadata();
+      } catch (error: any) {
+        console.error('[AuthService] Get token metadata error:', error);
+        return {
+          hasToken: false,
+          hasRefreshToken: false,
+          error: error.message,
+        };
+      }
+    });
+
+    // Test refresh token handler
+    ipcMain.handle(AuthEvent.TEST_REFRESH_TOKEN, async () => {
+      try {
+        return await this.testRefreshToken();
+      } catch (error: any) {
+        console.error('[AuthService] Test refresh token error:', error);
         return { success: false, error: error.message };
       }
     });
@@ -455,6 +478,148 @@ class AuthService {
     } catch (error) {
       console.error('[AuthService] Error getting valid token:', error);
       return null;
+    }
+  }
+
+  /**
+   * Get token metadata including expiry and refresh token info
+   */
+  async getTokenMetadata(): Promise<{
+    hasToken: boolean;
+    hasRefreshToken: boolean;
+    expiresAt?: number;
+    expiresAtFormatted?: string;
+    isExpired?: boolean;
+    isExpiringSoon?: boolean;
+    timeUntilExpiry?: string;
+    user?: any;
+  }> {
+    try {
+      const tokenData = await this.storage.getTokenWithMetadata(
+        TOKEN_KEYS.GITHUB_TOKEN,
+      );
+
+      if (!tokenData) {
+        return {
+          hasToken: false,
+          hasRefreshToken: false,
+        };
+      }
+
+      const { metadata } = tokenData;
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+
+      const expiresAt = metadata?.expiresAt;
+      const isExpired = expiresAt ? expiresAt <= now : false;
+      const isExpiringSoon = expiresAt ? expiresAt <= now + fiveMinutes : false;
+
+      let timeUntilExpiry: string | undefined;
+      if (expiresAt && !isExpired) {
+        const diff = expiresAt - now;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+
+        if (days > 0) {
+          timeUntilExpiry = `${days} day${days !== 1 ? 's' : ''}`;
+        } else if (hours > 0) {
+          timeUntilExpiry = `${hours} hour${hours !== 1 ? 's' : ''}`;
+        } else {
+          timeUntilExpiry = `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+        }
+      }
+
+      return {
+        hasToken: true,
+        hasRefreshToken: !!metadata?.refreshToken,
+        expiresAt,
+        expiresAtFormatted: expiresAt
+          ? new Date(expiresAt).toLocaleString()
+          : undefined,
+        isExpired,
+        isExpiringSoon,
+        timeUntilExpiry,
+        user: metadata?.user,
+      };
+    } catch (error: any) {
+      console.error('[AuthService] Error getting token metadata:', error);
+      return {
+        hasToken: false,
+        hasRefreshToken: false,
+      };
+    }
+  }
+
+  /**
+   * Test the refresh token mechanism by forcing a token refresh
+   */
+  async testRefreshToken(): Promise<{
+    success: boolean;
+    error?: string;
+    newExpiresAt?: number;
+  }> {
+    try {
+      console.log('[AuthService] Testing refresh token mechanism...');
+
+      const tokenData = await this.storage.getTokenWithMetadata(
+        TOKEN_KEYS.GITHUB_TOKEN,
+      );
+
+      if (!tokenData) {
+        return {
+          success: false,
+          error: 'No token found to refresh',
+        };
+      }
+
+      const { metadata } = tokenData;
+      const refreshToken = metadata?.refreshToken;
+
+      if (!refreshToken) {
+        return {
+          success: false,
+          error: 'No refresh token available',
+        };
+      }
+
+      // Attempt to refresh the token
+      const authClient = new OAuthServerClient({
+        serverUrl: process.env.AUTH_SERVER_URL || 'https://principal-ade.com',
+      });
+
+      const refreshedAuth = await authClient.refreshAccessToken(refreshToken);
+
+      // Store the new tokens
+      await this.storeAuth(
+        refreshedAuth.token,
+        refreshedAuth.user,
+        refreshedAuth.refreshToken,
+        refreshedAuth.expiresAt,
+      );
+
+      // Update AuthStateManager with new token
+      AuthStateManager.getInstance().setAuthenticated(
+        refreshedAuth.user,
+        refreshedAuth.token,
+      );
+
+      console.log('[AuthService] Token refresh test successful:', {
+        newExpiresAt: refreshedAuth.expiresAt
+          ? new Date(refreshedAuth.expiresAt).toISOString()
+          : 'unknown',
+      });
+
+      return {
+        success: true,
+        newExpiresAt: refreshedAuth.expiresAt,
+      };
+    } catch (error: any) {
+      console.error('[AuthService] Token refresh test failed:', error);
+      return {
+        success: false,
+        error: error.message || 'Token refresh failed',
+      };
     }
   }
 }

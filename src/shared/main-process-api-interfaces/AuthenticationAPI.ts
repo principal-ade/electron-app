@@ -46,6 +46,17 @@ export interface TokenWithMetadata {
   user?: AuthUser;
 }
 
+export interface TokenMetadata {
+  hasToken: boolean;
+  hasRefreshToken: boolean;
+  expiresAt?: number;
+  expiresAtFormatted?: string;
+  isExpired?: boolean;
+  isExpiringSoon?: boolean;
+  timeUntilExpiry?: string;
+  user?: AuthUser;
+}
+
 export interface TokenMigrationEntry {
   key: string;
   value: unknown;
@@ -66,6 +77,10 @@ export interface AuthenticationAPI {
   getGitHubAuth(): Promise<TokenWithMetadata>;
   clearGitHubAuth(): Promise<{ success: boolean; error?: string }>;
   isAuthenticated(): Promise<boolean>;
+
+  // Token metadata and refresh testing
+  getTokenMetadata(): Promise<TokenMetadata>;
+  testRefreshToken(): Promise<{ success: boolean; error?: string; newExpiresAt?: number }>;
 
   // Generic token operations
   saveToken(

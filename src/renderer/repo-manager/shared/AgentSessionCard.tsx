@@ -16,6 +16,7 @@ import {
   X,
   Search,
   Sparkles,
+  Trash2,
 } from 'lucide-react';
 import type {
   FileOperation,
@@ -74,6 +75,7 @@ interface AgentSessionCardProps {
   onCancelEditName: () => void;
   onEditNameChange: (name: string) => void;
   onCopySessionId: () => void;
+  onDeleteSession?: () => void;
   onOpenTerminal?: () => void;
   onShowContext?: () => void;
   onOpenPackageCommands: (
@@ -123,6 +125,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
   onCancelEditName,
   onEditNameChange,
   onCopySessionId,
+  onDeleteSession,
   onOpenTerminal,
   onShowContext,
   onOpenPackageCommands,
@@ -219,29 +222,14 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                   >
                     {hasTodos ? 'Current Task' : 'Last Event'}
                   </div>
-                  {/* Status Badge */}
+                  {/* Relative Time */}
                   <span
                     style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                      padding: '2px 6px',
-                      borderRadius: '10px',
-                      backgroundColor: cardData.session.statusColor + '20',
-                      color: cardData.session.statusColor,
                       fontSize: '10px',
-                      fontWeight: 600,
+                      color: theme.colors.textTertiary,
                     }}
                   >
-                    <div
-                      style={{
-                        width: '5px',
-                        height: '5px',
-                        borderRadius: '2px',
-                        backgroundColor: cardData.session.statusColor,
-                      }}
-                    />
-                    {cardData.session.statusText}
+                    {getTimeAgo(cardData.session.lastActivity || Date.now())}
                   </span>
                 </div>
                 {/* Details Button and Expand/Collapse Caret */}
@@ -343,6 +331,42 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                       Details
                     </button>
                   )}
+                  {/* Delete Button - Remove session */}
+                  {onDeleteSession && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('Are you sure you want to delete this session? This cannot be undone.')) {
+                          onDeleteSession();
+                        }
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px',
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${theme.colors.border}`,
+                        borderRadius: '4px',
+                        color: theme.colors.textSecondary,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#ef4444' + '20';
+                        e.currentTarget.style.borderColor = '#ef4444';
+                        e.currentTarget.style.color = '#ef4444';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.borderColor = theme.colors.border;
+                        e.currentTarget.style.color = theme.colors.textSecondary;
+                      }}
+                      title="Delete session"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -378,24 +402,24 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                     >
                       {todoToShow.content}
                     </span>
-                    <span
-                      style={{
-                        fontSize: '10px',
-                        color: theme.colors.textSecondary,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.3px',
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        backgroundColor:
-                          todoToShow.status === 'completed'
-                            ? theme.colors.success + '20'
-                            : todoToShow.status === 'in_progress'
+                    {todoToShow.status !== 'completed' && (
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          color: theme.colors.textSecondary,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.3px',
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          backgroundColor:
+                            todoToShow.status === 'in_progress'
                               ? theme.colors.primary + '20'
                               : theme.colors.textSecondary + '20',
-                      }}
-                    >
-                      {todoToShow.status}
-                    </span>
+                        }}
+                      >
+                        {todoToShow.status}
+                      </span>
+                    )}
                   </>
                 ) : (
                   // Show last event information
@@ -542,24 +566,24 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                             >
                               {todo.content}
                             </span>
-                            <span
-                              style={{
-                                fontSize: '10px',
-                                color: theme.colors.textSecondary,
-                                textTransform: 'uppercase',
-                                letterSpacing: '0.3px',
-                                padding: '2px 6px',
-                                borderRadius: '3px',
-                                backgroundColor:
-                                  todo.status === 'completed'
-                                    ? theme.colors.success + '20'
-                                    : todo.status === 'in_progress'
+                            {todo.status !== 'completed' && (
+                              <span
+                                style={{
+                                  fontSize: '10px',
+                                  color: theme.colors.textSecondary,
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.3px',
+                                  padding: '2px 6px',
+                                  borderRadius: '3px',
+                                  backgroundColor:
+                                    todo.status === 'in_progress'
                                       ? theme.colors.primary + '20'
                                       : theme.colors.textSecondary + '20',
-                              }}
-                            >
-                              {todo.status}
-                            </span>
+                                }}
+                              >
+                                {todo.status}
+                              </span>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -964,89 +988,163 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
           </div>
         )}
 
-        {/* Card Content - show if there are file operations */}
-        {cardData.fileOperations && cardData.fileOperations.size > 0 && (
-          <div
-            style={{
-              padding: '16px',
-              backgroundColor: theme.colors.backgroundSecondary,
-            }}
-          >
-            {/* Simple Stats Summary - Show if there are any file operations */}
-            <div>
+        {/* Card Content - show if there are any stats to display */}
+        {(() => {
+          const hasTodos = cardData.lastTodos && cardData.lastTodos.length > 0;
+          const hasStats =
+            (cardData.session.fileAccessCount ?? 0) > 0 ||
+            (cardData.session.fileWriteCount ?? 0) > 0 ||
+            (cardData.session.toolCallCount ?? 0) > 0;
+          const showLastEvent = hasTodos && cardData.latestEvent;
+
+          return (
+            (hasStats || showLastEvent) && (
               <div
                 style={{
-                  display: 'flex',
-                  gap: '12px',
-                  padding: '8px 12px',
-                  backgroundColor: theme.colors.background,
-                  borderRadius: '6px',
-                  border: `1px solid ${theme.colors.border}`,
+                  padding: '16px',
+                  backgroundColor: theme.colors.backgroundSecondary,
                 }}
               >
-                {(cardData.session.fileAccessCount ?? 0) > 0 && (
+                {/* Last Event - Only show for sessions with todos */}
+                {showLastEvent && (
                   <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
+                      marginBottom: hasStats ? '12px' : '0',
                     }}
                   >
-                    <Activity size={12} color={sessionColor} />
-                    <span style={{ fontSize: '11px' }}>
-                      {cardData.session.fileAccessCount} file reads
-                    </span>
+                    <div
+                      style={{
+                        fontSize: '11px',
+                        color: theme.colors.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      Last Event
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 12px',
+                        backgroundColor: theme.colors.background,
+                        borderRadius: '6px',
+                        border: `1px solid ${theme.colors.border}`,
+                      }}
+                    >
+                      <Sparkles size={14} color={sessionColor} />
+                      <span
+                        style={{
+                          flex: 1,
+                          color: theme.colors.text,
+                          fontSize: '13px',
+                          lineHeight: '1.5',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        <span style={{ color: sessionColor, fontWeight: 500 }}>
+                          {cardData.latestEvent.toolName}
+                        </span>
+                        {cardData.latestEvent.fileName && (
+                          <>
+                            <span style={{ color: theme.colors.textSecondary }}>
+                              →
+                            </span>
+                            <span
+                              style={{
+                                fontFamily: 'monospace',
+                                fontSize: '12px',
+                                color: theme.colors.textSecondary,
+                              }}
+                            >
+                              {cardData.latestEvent.fileName}
+                            </span>
+                          </>
+                        )}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '10px',
+                          color: theme.colors.textSecondary,
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          backgroundColor: theme.colors.backgroundTertiary,
+                        }}
+                      >
+                        {new Date(
+                          cardData.latestEvent.timestamp,
+                        ).toLocaleTimeString()}
+                      </span>
+                    </div>
                   </div>
                 )}
-                {(cardData.session.fileWriteCount ?? 0) > 0 && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <Edit3 size={12} color={sessionColor} />
-                    <span style={{ fontSize: '11px' }}>
-                      {cardData.session.fileWriteCount} file writes
-                    </span>
-                  </div>
-                )}
-                {(cardData.session.toolCallCount ?? 0) > 0 && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <Sparkles size={12} color={sessionColor} />
-                    <span style={{ fontSize: '11px' }}>
-                      {cardData.session.toolCallCount} tool calls
-                    </span>
-                  </div>
-                )}
-                {cardData.session.lastActivity && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <Clock size={12} color={sessionColor} />
-                    <span style={{ fontSize: '11px' }}>
-                      Last activity at{' '}
-                      {new Date(
-                        cardData.session.lastActivity,
-                      ).toLocaleTimeString()}
-                    </span>
+
+                {/* Simple Stats Summary */}
+                {hasStats && (
+                  <div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: '12px',
+                        padding: '8px 12px',
+                        backgroundColor: theme.colors.background,
+                        borderRadius: '6px',
+                        border: `1px solid ${theme.colors.border}`,
+                      }}
+                    >
+                      {(cardData.session.fileAccessCount ?? 0) > 0 && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <Activity size={12} color={sessionColor} />
+                          <span style={{ fontSize: '11px' }}>
+                            {cardData.session.fileAccessCount} file reads
+                          </span>
+                        </div>
+                      )}
+                      {(cardData.session.fileWriteCount ?? 0) > 0 && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <Edit3 size={12} color={sessionColor} />
+                          <span style={{ fontSize: '11px' }}>
+                            {cardData.session.fileWriteCount} file writes
+                          </span>
+                        </div>
+                      )}
+                      {(cardData.session.toolCallCount ?? 0) > 0 && (
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <Sparkles size={12} color={sessionColor} />
+                          <span style={{ fontSize: '11px' }}>
+                            {cardData.session.toolCallCount} tool calls
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-        )}
+            )
+          );
+        })()}
       </div>
     </>
   );

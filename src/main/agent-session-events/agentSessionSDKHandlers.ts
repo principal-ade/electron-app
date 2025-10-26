@@ -11,6 +11,9 @@ import {
   AgentSessionSDKAPIEvents,
   ProjectSessions,
 } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
+import {
+  AgentSessionAPIEvents,
+} from '../../shared/main-process-api-interfaces/AgentSessionAPI';
 import { getEventServerManager } from './EventServerManager';
 import { getObservabilityIntegration } from '../observability/ObservabilityIntegration';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
@@ -153,6 +156,43 @@ class SessionCache {
     sessionId: string,
   ): RepoNormalizedUniversalAgentSessionEvent[] | null {
     return this.eventsBySession.get(sessionId) || null;
+  }
+
+  deleteSession(sessionId: string): boolean {
+    const deleted = this.sessions.delete(sessionId);
+    this.eventsBySession.delete(sessionId);
+    return deleted;
+  }
+
+  updateSessionMetadata(
+    sessionId: string,
+    metadata: { customName?: string },
+  ): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session) return false;
+
+    if (metadata.customName !== undefined) {
+      session.customName = metadata.customName;
+    }
+
+    return true;
+  }
+
+  clearSessionsForDirectory(directory: string): boolean {
+    let deletedCount = 0;
+
+    for (const [sessionId, session] of this.sessions) {
+      if (
+        session.workingDirectory === directory ||
+        session.repository === directory
+      ) {
+        this.sessions.delete(sessionId);
+        this.eventsBySession.delete(sessionId);
+        deletedCount++;
+      }
+    }
+
+    return deletedCount > 0;
   }
 }
 
@@ -349,6 +389,130 @@ export function registerAgentSessionSDKHandlers(): void {
           healthStatus: 'unknown' as const,
           error: error instanceof Error ? error.message : String(error),
         };
+      }
+    },
+  );
+
+  // Delete session handler (AgentSessionAPI)
+  ipcMain.handle(
+    AgentSessionAPIEvents.DELETE_SESSION,
+    async (_event, sessionId: string, _directory: string) => {
+      try {
+        const deleted = sessionCache.deleteSession(sessionId);
+        console.log(`[SDK Handlers] Deleted session ${sessionId}:`, deleted);
+        return deleted;
+      } catch (error) {
+        console.error('[SDK Handlers] Error deleting session:', error);
+        return false;
+      }
+    },
+  );
+
+  // Update session metadata handler (AgentSessionAPI)
+  ipcMain.handle(
+    AgentSessionAPIEvents.UPDATE_SESSION_METADATA,
+    async (
+      _event,
+      sessionId: string,
+      _directory: string,
+      metadata: { customName?: string },
+    ) => {
+      try {
+        const updated = sessionCache.updateSessionMetadata(sessionId, metadata);
+        console.log(
+          `[SDK Handlers] Updated metadata for session ${sessionId}:`,
+          updated,
+        );
+        return updated;
+      } catch (error) {
+        console.error('[SDK Handlers] Error updating session metadata:', error);
+        return false;
+      }
+    },
+  );
+
+  // Clear directory sessions handler (AgentSessionAPI)
+  ipcMain.handle(
+    AgentSessionAPIEvents.CLEAR_DIRECTORY_SESSIONS,
+    async (_event, directory: string) => {
+      try {
+        const cleared = sessionCache.clearSessionsForDirectory(directory);
+        console.log(
+          `[SDK Handlers] Cleared sessions for directory ${directory}:`,
+          cleared,
+        );
+        return cleared;
+      } catch (error) {
+        console.error(
+          '[SDK Handlers] Error clearing directory sessions:',
+          error,
+        );
+        return false;
+      }
+    },
+  );
+
+  // Get active sessions handler (AgentSessionAPI - aliased from SDK)
+  ipcMain.handle(AgentSessionAPIEvents.GET_ACTIVE_SESSIONS, async () => {
+    try {
+      // Use the same implementation as SDK but convert format
+      const projects = sessionCache.getSessionsByProject();
+
+      // Convert ProjectSessions[] to DirectorySessions[]
+      const directorySessions = projects.map(project => ({
+        directory: project.repository,
+        summaries: project.summaries.map(s => ({
+          sessionId: s.sessionId,
+          directory: s.repository,
+          agentCLI: s.agentCLI,
+          startTime: s.startTime,
+          lastActivity: s.lastActivity,
+          active: s.active,
+          eventCount: s.eventCount,
+          fileAccessCount: s.fileAccessCount,
+          fileWriteCount: s.fileWriteCount,
+          customName: s.customName,
+        })),
+      }));
+
+      console.log(
+        `[SDK Handlers] Returning ${directorySessions.length} directories from cache`,
+      );
+      return directorySessions;
+    } catch (error) {
+      console.error('[SDK Handlers] Error getting active sessions:', error);
+      return [];
+    }
+  });
+
+  // Get session handler (AgentSessionAPI - aliased from SDK)
+  ipcMain.handle(
+    AgentSessionAPIEvents.GET_SESSION,
+    async (_event, sessionId: string, _directory: string) => {
+      try {
+        const session = sessionCache.getSession(sessionId);
+        console.log(`[SDK Handlers] Found session ${sessionId}:`, !!session);
+        return session;
+      } catch (error) {
+        console.error('[SDK Handlers] Error getting session:', error);
+        return null;
+      }
+    },
+  );
+
+  // Get session events handler (AgentSessionAPI - aliased from SDK)
+  ipcMain.handle(
+    AgentSessionAPIEvents.GET_SESSION_EVENTS,
+    async (_event, sessionId: string) => {
+      try {
+        const events = sessionCache.getSessionEvents(sessionId);
+        console.log(
+          `[SDK Handlers] Found ${events?.length || 0} events for session ${sessionId}`,
+        );
+        return events;
+      } catch (error) {
+        console.error('[SDK Handlers] Error getting session events:', error);
+        return null;
       }
     },
   );

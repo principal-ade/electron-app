@@ -101,6 +101,19 @@ export class AgentSessionService {
   }
 
   /**
+   * Delete a session
+   * @param sessionId - The session ID to delete
+   * @param directory - The directory where the session is located
+   * @returns Promise indicating success
+   */
+  static async deleteSession(
+    sessionId: string,
+    directory: string,
+  ): Promise<boolean> {
+    return window.mainProcess.agentSession.deleteSession(sessionId, directory);
+  }
+
+  /**
    * Extract file path information from a normalized event
    * Centralizes the logic for extracting paths from events
    * @param event - The normalized event to extract paths from

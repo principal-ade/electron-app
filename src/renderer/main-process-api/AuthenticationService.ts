@@ -11,6 +11,7 @@ import {
   TokenResult,
   TokenWithMetadata,
   TokenMigrationEntry,
+  TokenMetadata,
 } from '../../shared/main-process-api-interfaces/AuthenticationAPI';
 
 export class AuthenticationService {
@@ -74,6 +75,20 @@ export class AuthenticationService {
    */
   static async isAuthenticated(): Promise<boolean> {
     return window.mainProcess.authentication.isAuthenticated();
+  }
+
+  /**
+   * Get token metadata including expiry and refresh token info
+   */
+  static async getTokenMetadata(): Promise<TokenMetadata> {
+    return window.mainProcess.authentication.getTokenMetadata();
+  }
+
+  /**
+   * Test refresh token mechanism by forcing a token refresh
+   */
+  static async testRefreshToken(): Promise<{ success: boolean; error?: string; newExpiresAt?: number }> {
+    return window.mainProcess.authentication.testRefreshToken();
   }
 
   /**
