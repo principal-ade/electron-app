@@ -19,11 +19,13 @@ import { FolderOpen, Trash2, RefreshCw } from 'lucide-react';
 export interface AgentContextTreePanelProps {
   repositoryPath?: string | null;
   onFileSelect?: (filePath: string) => void;
+  selectedFile?: string;
 }
 
 export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
   repositoryPath,
   onFileSelect,
+  selectedFile,
 }) => {
   const { theme } = useTheme();
   const [sources, setSources] = useState<LoadedFileTreeSource[]>([]);
@@ -316,6 +318,7 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
           sources={sources}
           theme={theme}
           onFileSelect={handleFileSelect}
+          selectedFile={selectedFile}
           showHeader={false}
           showFilters={true}
           showViewModeToggle={true}

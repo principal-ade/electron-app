@@ -12,6 +12,7 @@ interface FileTreeTabProps {
     isFolder: boolean,
   ) => void;
   loading?: boolean;
+  selectedFile?: string;
 }
 
 /**
@@ -27,6 +28,7 @@ export const FileTreeTab: React.FC<FileTreeTabProps> = ({
   onFileSelect,
   onContextMenu,
   loading = false,
+  selectedFile,
 }) => {
   const { theme } = useTheme();
 
@@ -83,6 +85,7 @@ export const FileTreeTab: React.FC<FileTreeTabProps> = ({
         theme={theme}
         onFileSelect={onFileSelect}
         onContextMenu={onContextMenu}
+        selectedFile={selectedFile}
         defaultOpen={false}
         padding="16px"
       />

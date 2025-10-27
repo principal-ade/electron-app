@@ -11,6 +11,7 @@ interface GitChangesPanelProps {
   emptyMessage?: string;
   loadingMessage?: string;
   variant?: 'panel' | 'tab'; // panel shows wrapper with border/header, tab shows just the tree
+  selectedFile?: string;
 }
 
 export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
@@ -18,6 +19,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
   emptyMessage = 'No git changes to display',
   loadingMessage = 'Loading git changes...',
   variant = 'panel',
+  selectedFile,
 }) => {
   const { theme } = useTheme();
   const {
@@ -272,6 +274,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
                 gitStatusData={gitChangesData.statusData}
                 onFileSelect={handleFileSelect}
                 onContextMenu={handleContextMenu}
+                selectedFile={selectedFile}
                 transparentBackground={true}
                 padding="16px"
               />
@@ -369,6 +372,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               gitStatusData={gitChangesData.statusData}
               onFileSelect={handleFileSelect}
               onContextMenu={handleContextMenu}
+              selectedFile={selectedFile}
               transparentBackground={true}
             />
           )
