@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Copy, Check, X, Trash2 } from 'lucide-react';
+import { FileText, Copy, Check, X, Trash2, Plus, Minus } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
+import { parseMarkdownIntoPresentation } from 'themed-markdown';
 import { MarkdownDocumentViewer } from '../../repo-manager/shared/MarkdownDocumentViewer';
 import { PanelEmptyState } from '../../repo-manager/panels/PanelEmptyState';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { FileDeleteConfirmDialog } from '../../components/FileDeleteConfirmDialog';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import type { FileTreeSource } from '../../types/file-tree-source';
 
 interface MarkdownRenderingPanelProps {
@@ -35,10 +37,27 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [copiedPath, setCopiedPath] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [fontSizeScale, setFontSizeScale] = useState<number>(1.0);
   const latestFilePathRef = useRef<string | null>(null);
 
   const isLocalFile = source?.type === 'local';
   const sourceLocation = source?.type === 'local' ? source.location : null;
+
+  // Load font size preference
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const prefs = await UserPreferencesService.getPreferences();
+        if (prefs?.markdownFontSizeScale) {
+          setFontSizeScale(prefs.markdownFontSizeScale);
+        }
+      } catch (err) {
+        console.error('Error loading font size preference:', err);
+      }
+    };
+
+    loadPreferences();
+  }, []);
 
   useEffect(() => {
     const loadFile = async () => {
@@ -158,7 +177,9 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
     );
   }
 
-  const slides = docContent.split('\n\n---\n\n');
+  // Parse markdown into structured presentation using themed-markdown utility
+  const presentation = parseMarkdownIntoPresentation(docContent);
+  const slides = presentation.slides.map(slide => slide.location.content);
   const hasSlides = slides.length > 1;
   const fileName = filePath.split('/').pop() || filePath;
 
@@ -201,6 +222,30 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
         `Failed to delete file: ${err instanceof Error ? err.message : 'Unknown error'}`,
       );
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleFontSizeIncrease = async () => {
+    const newScale = Math.min(fontSizeScale + 0.1, 3.0);
+    setFontSizeScale(newScale);
+    try {
+      await UserPreferencesService.updatePreferences({
+        markdownFontSizeScale: newScale,
+      });
+    } catch (err) {
+      console.error('Error saving font size preference:', err);
+    }
+  };
+
+  const handleFontSizeDecrease = async () => {
+    const newScale = Math.max(fontSizeScale - 0.1, 0.5);
+    setFontSizeScale(newScale);
+    try {
+      await UserPreferencesService.updatePreferences({
+        markdownFontSizeScale: newScale,
+      });
+    } catch (err) {
+      console.error('Error saving font size preference:', err);
     }
   };
 
@@ -251,6 +296,75 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
             flexShrink: 0,
           }}
         >
+          <button
+            onClick={handleCopyPath}
+            title={filePath}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '6px 8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              color: copiedPath
+                ? theme.colors.success
+                : theme.colors.textSecondary,
+              borderRadius: '4px',
+              transition: 'all 0.2s',
+              fontSize: '11px',
+            }}
+            onMouseEnter={(e) => {
+              if (!copiedPath) {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            {copiedPath ? (
+              <>
+                <Check size={14} />
+                <span>Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy size={14} />
+                <span>Copy path</span>
+              </>
+            )}
+          </button>
+
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                border: 'none',
+                background: 'none',
+                color: theme.colors.textSecondary,
+                padding: '6px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease',
+                fontSize: '11px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <X size={14} />
+              <span>Close</span>
+            </button>
+          )}
+
           {/* Delete button - only show for local files */}
           {isLocalFile && (
             <button
@@ -280,35 +394,6 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
             >
               <Trash2 size={14} />
               <span>Delete</span>
-            </button>
-          )}
-
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                border: 'none',
-                background: 'none',
-                color: theme.colors.textSecondary,
-                padding: '6px 8px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s ease',
-                fontSize: '11px',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.background;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-            >
-              <X size={14} />
-              <span>Close</span>
             </button>
           )}
 
@@ -372,44 +457,65 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
             </div>
           )}
 
+          {/* Font size controls */}
           <button
-            onClick={handleCopyPath}
-            title={filePath}
+            onClick={handleFontSizeDecrease}
+            title="Decrease Font Size"
             style={{
               background: 'none',
               border: 'none',
-              padding: '6px 8px',
+              padding: '6px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              color: copiedPath
-                ? theme.colors.success
-                : theme.colors.textSecondary,
+              color: theme.colors.textSecondary,
               borderRadius: '4px',
-              transition: 'all 0.2s',
-              fontSize: '11px',
+              transition: 'background-color 0.2s',
             }}
             onMouseEnter={(e) => {
-              if (!copiedPath) {
-                e.currentTarget.style.backgroundColor = theme.colors.background;
-              }
+              e.currentTarget.style.backgroundColor = theme.colors.background;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
-            {copiedPath ? (
-              <>
-                <Check size={14} />
-                <span>Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy size={14} />
-                <span>Copy path</span>
-              </>
-            )}
+            <Minus size={14} />
+          </button>
+
+          <span
+            style={{
+              fontSize: '11px',
+              color: theme.colors.textSecondary,
+              userSelect: 'none',
+              minWidth: '40px',
+              textAlign: 'center',
+            }}
+          >
+            {Math.round(fontSizeScale * 100)}%
+          </span>
+
+          <button
+            onClick={handleFontSizeIncrease}
+            title="Increase Font Size"
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              color: theme.colors.textSecondary,
+              borderRadius: '4px',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.background;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <Plus size={14} />
           </button>
         </div>
       </div>
@@ -424,6 +530,7 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
           currentSlide={currentSlide}
           theme={theme}
           showSegmented={true}
+          fontSizeScale={fontSizeScale}
           bookViewMode="single"
           onContentChange={() => {}}
           onSlideNavigate={setCurrentSlide}
