@@ -1047,9 +1047,9 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                         }}
                       >
                         <span style={{ color: sessionColor, fontWeight: 500 }}>
-                          {cardData.latestEvent.toolName}
+                          {cardData.latestEvent?.toolName}
                         </span>
-                        {cardData.latestEvent.fileName && (
+                        {cardData.latestEvent?.fileName && (
                           <>
                             <span style={{ color: theme.colors.textSecondary }}>
                               →
@@ -1075,9 +1075,10 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                           backgroundColor: theme.colors.backgroundTertiary,
                         }}
                       >
-                        {new Date(
-                          cardData.latestEvent.timestamp,
-                        ).toLocaleTimeString()}
+                        {cardData.latestEvent?.timestamp &&
+                          new Date(
+                            cardData.latestEvent.timestamp,
+                          ).toLocaleTimeString()}
                       </span>
                     </div>
                   </div>

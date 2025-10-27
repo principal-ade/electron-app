@@ -132,6 +132,14 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
           repository,
         );
 
+        // Check if session was found
+        if (!fullSession) {
+          console.warn(
+            `[AgentSessionsPanel] Session ${sessionId} not found in repository ${repository}`,
+          );
+          return null;
+        }
+
         // Get events for this session
         const events =
           await AgentSessionSDKService.getSDKSessionEvents(sessionId);
@@ -160,7 +168,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
 
         // Create enhanced session with status
         const enhancedSession: EnhancedUIAgentSessionData = {
-          ...fullSession,
+          ...(fullSession as Partial<EnhancedUIAgentSessionData>),
           sessionId,
           directory: repository,
           workingDirectory: repository,
@@ -461,13 +469,61 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
       setOpeningDirectory(directory);
 
       try {
-        const [{ RepositoryService }, { WindowService }] = await Promise.all([
-          import('../../main-process-api/RepositoryService'),
-          import('../../main-process-api/WindowService'),
-        ]);
+        const [{ RepositoryService }, { WindowService }, { GitService }] =
+          await Promise.all([
+            import('../../main-process-api/RepositoryService'),
+            import('../../main-process-api/WindowService'),
+            import('../../main-process-api/GitService'),
+          ]);
 
-        const repository =
+        // First, try to get the repository from registered repositories
+        let repository =
           await RepositoryService.getRepositoryByLocalPath(directory);
+
+        // If not found, try to detect git info from the directory
+        if (!repository) {
+          console.log(
+            `[AgentSessionsPanel] Repository not found in registry, attempting to detect git info from directory: ${directory}`,
+          );
+
+          const gitInfo = await GitService.getRepositoryInfo(directory);
+
+          if (gitInfo?.isRepository && gitInfo.remotes && gitInfo.remotes.length > 0) {
+            // Find the origin remote or use the first remote
+            const originRemote =
+              gitInfo.remotes.find((r) => r.name === 'origin') ||
+              gitInfo.remotes[0];
+
+            if (originRemote) {
+              console.log(
+                `[AgentSessionsPanel] Detected git remote: ${originRemote.url}`,
+              );
+
+              // Create a minimal repository object from git info
+              repository = {
+                remoteUrl: originRemote.url,
+                owner: originRemote.owner || 'unknown',
+                name: originRemote.repo || directory.split('/').pop() || 'unknown',
+                localClones: [
+                  {
+                    path: directory,
+                    addedAt: Date.now(),
+                    lastAccessed: Date.now(),
+                  },
+                ],
+                addedAt: Date.now(),
+                lastAccessed: Date.now(),
+                vcsType: 'github',
+                tags: [],
+              };
+
+              console.log(
+                `[AgentSessionsPanel] Created minimal repository object:`,
+                repository,
+              );
+            }
+          }
+        }
 
         if (repository) {
           await WindowService.openRepositoryDashboard(
@@ -475,7 +531,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
           );
         } else {
           window.alert(
-            'Could not find a repository associated with this directory.',
+            'Could not find a repository associated with this directory. Make sure this is a git repository with a remote configured.',
           );
         }
       } catch (error) {
@@ -795,7 +851,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                           repositoryPath={repositoryPath || ''}
                           isEditingName={false}
                           editingName=""
-                          editInputRef={React.createRef()}
+                          editInputRef={
+                            React.createRef<HTMLInputElement>() as React.RefObject<HTMLInputElement>
+                          }
                           isCopied={false}
                           isArchiving={false}
                           onStartEditName={() => {}}
@@ -835,6 +893,9 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                                   )
                               : undefined
                           }
+                          onOpenPackageCommands={async () => {
+                            // Not implemented in panel view
+                          }}
                           getTimeAgo={getTimeAgo}
                         />
                       );

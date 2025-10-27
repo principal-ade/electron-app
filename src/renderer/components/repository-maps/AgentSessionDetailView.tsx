@@ -100,9 +100,9 @@ export const AgentSessionDetailView: React.FC<AgentSessionDetailViewProps> = ({
   const gitChanges = gitSource?.gitChanges;
   const filesWithGitChanges = new Set<string>();
   if (gitChanges) {
-    gitChanges.created?.forEach((f) => filesWithGitChanges.add(f));
-    gitChanges.modified?.forEach((f) => filesWithGitChanges.add(f));
-    gitChanges.deleted?.forEach((f) => filesWithGitChanges.add(f));
+    gitChanges.created?.forEach((f: string) => filesWithGitChanges.add(f));
+    gitChanges.modified?.forEach((f: string) => filesWithGitChanges.add(f));
+    gitChanges.deleted?.forEach((f: string) => filesWithGitChanges.add(f));
   }
 
   // Separate files by operation type
@@ -343,7 +343,7 @@ export const AgentSessionDetailView: React.FC<AgentSessionDetailViewProps> = ({
                   style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                 >
                   <Clock size={12} />
-                  {getTimeAgo(session.lastActivity || session.startTime)}
+                  {getTimeAgo(session.lastActivity || session.firstAccess)}
                 </div>
               </div>
             </div>

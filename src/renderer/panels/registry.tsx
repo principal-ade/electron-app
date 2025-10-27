@@ -21,6 +21,8 @@ import { AgentContextTreePanel } from './components/AgentContextTreePanel';
 import { GitCommitHistoryPanel } from './components/GitCommitHistoryPanel';
 import { MDXEditorPanel } from './components/MDXEditorPanel';
 import { GitHubStarsPanel } from './components/GitHubStarsPanel';
+import { GraphsListPanel } from './components/GraphsListPanel';
+import { GraphDetailPanel } from './components/GraphDetailPanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -74,6 +76,21 @@ const panelRenderers: Partial<
       onSave={(content) => {
         console.log('Markdown saved:', content);
       }}
+    />
+  ),
+  graphsList: () => (
+    <GraphsListPanel
+      graphs={[]}
+      loading={false}
+      selectedGraphId={null}
+      onGraphSelect={() => {}}
+    />
+  ),
+  graphDetail: () => (
+    <GraphDetailPanel
+      graph={null}
+      selectedTopLevelNodes={[]}
+      onTopLevelNodesChange={() => {}}
     />
   ),
 };

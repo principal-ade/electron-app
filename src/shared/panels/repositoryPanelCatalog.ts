@@ -3,14 +3,16 @@ export type RepositoryPanelSurface =
   | 'manager'
   | 'viewer'
   | 'excalidraw'
-  | 'agent';
+  | 'agent'
+  | 'principal';
 
 export type RepositoryPanelSlice =
   | 'git'
   | 'markdown'
   | 'fileTree'
   | 'packages'
-  | 'quality';
+  | 'quality'
+  | 'graphs';
 
 export interface RepositoryPanelDefinitionBase {
   id: string;
@@ -27,7 +29,7 @@ export const repositoryPanelCatalog = [
     description:
       'Review staged, unstaged, and untracked changes for the repository.',
     slices: ['git'] as const,
-    surfaces: ['manager', 'agent'] as const,
+    surfaces: ['manager', 'agent', 'principal'] as const,
   },
   {
     id: 'gitIssues',
@@ -56,21 +58,21 @@ export const repositoryPanelCatalog = [
     description:
       'Branch details, upstream alignment, and the latest commit metadata.',
     slices: ['git'] as const,
-    surfaces: ['explorer'] as const,
+    surfaces: ['explorer', 'principal'] as const,
   },
   {
     id: 'gitHistory',
     label: 'Commit History',
     description: 'Review recent commits from the current repository.',
     slices: ['git'] as const,
-    surfaces: ['manager', 'agent'] as const,
+    surfaces: ['manager', 'agent', 'principal'] as const,
   },
   {
     id: 'gitDiff',
     label: 'Git Diff',
     description: 'View side-by-side diffs of file changes with Monaco editor.',
     slices: ['git'] as const,
-    surfaces: ['manager', 'agent'] as const,
+    surfaces: ['manager', 'agent', 'principal'] as const,
   },
   {
     id: 'tasks',
@@ -209,6 +211,22 @@ export const repositoryPanelCatalog = [
     description: 'Rich markdown editor with live preview and formatting tools.',
     slices: ['markdown', 'fileTree'] as const,
     surfaces: ['manager', 'viewer', 'agent'] as const,
+  },
+  {
+    id: 'graphsList',
+    label: 'Dependency Graphs',
+    description:
+      'Browse dependency clusters discovered across your repositories.',
+    slices: ['graphs'] as const,
+    surfaces: ['principal'] as const,
+  },
+  {
+    id: 'graphDetail',
+    label: 'Graph Visualization',
+    description:
+      'Interactive graph visualization with filtering and cluster analysis.',
+    slices: ['graphs'] as const,
+    surfaces: ['principal'] as const,
   },
 ] as const satisfies readonly RepositoryPanelDefinitionBase[];
 

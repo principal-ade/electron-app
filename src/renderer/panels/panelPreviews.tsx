@@ -18,6 +18,7 @@ import {
   Info,
   Layers,
   ListTodo,
+  Network,
   Package,
   Pencil,
   Play,
@@ -184,6 +185,20 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     preview: <MDXEditorPanelPreview />,
     label: 'MDX Editor',
     description: 'Rich markdown editor with live preview and formatting tools.',
+  },
+  graphsList: {
+    icon: <Network size={16} />,
+    preview: <div style={{ padding: '16px', textAlign: 'center' }}>Graphs List</div>,
+    label: 'Dependency Graphs',
+    description:
+      'Browse dependency clusters discovered across your repositories.',
+  },
+  graphDetail: {
+    icon: <Network size={16} />,
+    preview: <div style={{ padding: '16px', textAlign: 'center' }}>Graph Visualization</div>,
+    label: 'Graph Visualization',
+    description:
+      'Interactive graph visualization with filtering and cluster analysis.',
   },
 };
 
