@@ -8,24 +8,32 @@ import type { DiagramListItem } from './ExcalidrawStorageService';
 export class AlexandriaDrawingService {
   /**
    * Save an Excalidraw diagram to Alexandria storage
+   * @param name - Display name for the diagram (stored in metadata)
+   * @param data - Excalidraw diagram data
+   * @param repositoryPath - Repository path
+   * @param diagramId - Optional diagram ID (UUID). If not provided, a new UUID will be generated
+   * @returns The diagram ID (UUID)
    */
   static async saveDiagram(
     name: string,
     data: ExcalidrawDiagramData,
     repositoryPath: string,
+    diagramId?: string,
   ): Promise<string> {
     try {
       const result = await window.mainProcess.excalidraw.saveAlexandriaDiagram(
         name,
         data,
         repositoryPath,
+        diagramId,
       );
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to save diagram');
       }
 
-      return result.fileName || name;
+      // Return the diagram ID (UUID), not the filename
+      return result.diagramId || result.fileName?.replace('.excalidraw', '') || name;
     } catch (error) {
       console.error('Failed to save diagram to Alexandria:', error);
       throw new Error(

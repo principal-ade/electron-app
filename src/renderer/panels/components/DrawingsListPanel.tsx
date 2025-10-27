@@ -57,8 +57,13 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
 
   // Listen to diagram events to refresh the list
   useEffect(() => {
-    const handleDiagramCreated = () => {
+    const handleDiagramCreated = (event: { id: string; name: string; projectPath?: string }) => {
       void loadDrawings();
+      // Select the newly created diagram
+      setSelectedDrawingId(event.id);
+      if (onDrawingSelect) {
+        onDrawingSelect(event.id, event.name);
+      }
     };
 
     const handleDiagramSaved = () => {
@@ -72,7 +77,7 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
       diagramEventBus.off(DIAGRAM_EVENTS.DIAGRAM_CREATED, handleDiagramCreated);
       diagramEventBus.off(DIAGRAM_EVENTS.DIAGRAM_SAVED, handleDiagramSaved);
     };
-  }, [loadDrawings]);
+  }, [loadDrawings, onDrawingSelect]);
 
   const handleDrawingClick = (drawing: DiagramListItem) => {
     setSelectedDrawingId(drawing.id);

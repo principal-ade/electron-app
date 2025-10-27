@@ -34,12 +34,14 @@ export const excalidrawAPI: ExcalidrawAPI = {
     name: string,
     data: ExcalidrawDiagramData,
     repositoryPath: string,
+    diagramId?: string,
   ) =>
     ipcRenderer.invoke(
       ExcalidrawAPIEvents.SAVE_ALEXANDRIA_DIAGRAM,
       name,
       data,
       repositoryPath,
+      diagramId,
     ),
   loadAlexandriaDiagram: (fileName: string, repositoryPath: string) =>
     ipcRenderer.invoke(

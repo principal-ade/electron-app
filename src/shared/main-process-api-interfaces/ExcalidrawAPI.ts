@@ -54,7 +54,8 @@ export interface ExcalidrawAPI {
     name: string,
     data: ExcalidrawDiagramData,
     repositoryPath: string,
-  ) => Promise<{ success: boolean; fileName?: string; error?: string }>;
+    diagramId?: string,
+  ) => Promise<{ success: boolean; fileName?: string; diagramId?: string; error?: string }>;
   loadAlexandriaDiagram: (
     fileName: string,
     repositoryPath: string,

@@ -2347,6 +2347,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             setSelectedDocPath(null);
             setSelectedDocType('markdown');
           }}
+          onDiagramCreated={(diagramId) => {
+            // Update selection to show the newly created diagram
+            setSelectedDocPath(diagramId);
+            setSelectedDocType('excalidraw');
+          }}
         />
       ),
       [

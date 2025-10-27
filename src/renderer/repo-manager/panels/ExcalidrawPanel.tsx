@@ -23,6 +23,9 @@ interface ExcalidrawPanelProps {
 
   // Close handler
   onClose?: () => void;
+
+  // Called when a new diagram is created/saved with its ID
+  onDiagramCreated?: (diagramId: string) => void;
 }
 
 export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
@@ -31,6 +34,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
   source,
   contentProvider,
   onClose,
+  onDiagramCreated,
 }) => {
   const { theme } = useTheme();
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -41,6 +45,17 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const latestFilePathRef = useRef<string | null>(null);
   const lastCreateNewTriggerRef = useRef<number | undefined>(undefined);
+  const [newDiagramName, setNewDiagramName] = useState<string>('New Diagram');
+  // Track the actual diagram name from metadata
+  const [loadedDiagramName, setLoadedDiagramName] = useState<string | null>(null);
+  // Counter to force remount when creating multiple new diagrams
+  const [newDiagramKey, setNewDiagramKey] = useState(0);
+  // Name editing state for existing diagrams
+  const [isEditingLoadedName, setIsEditingLoadedName] = useState(false);
+  const [editingLoadedName, setEditingLoadedName] = useState<string>('');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  // Ref to trigger save in ExcalidrawWrapper
+  const wrapperSaveRef = useRef<(() => Promise<void>) | null>(null);
 
   const isLocalFile = source?.type === 'local';
   const sourceLocation = source?.type === 'local' ? source.location : null;
@@ -52,6 +67,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
         latestFilePathRef.current = null;
         setDocContent(null);
         setError(null);
+        setLoadedDiagramName(null);
         return;
       }
 
@@ -124,6 +140,12 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
         if (data !== null) {
           setDocContent(data);
           setError(null);
+
+          // Extract the diagram name from metadata, fallback to filename
+          const diagramName = data.appState?.name ||
+                             filePath.split('/').pop()?.replace('.excalidraw', '') ||
+                             'Untitled Diagram';
+          setLoadedDiagramName(diagramName);
         } else {
           throw new Error('Failed to load diagram');
         }
@@ -132,6 +154,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
         if (latestFilePathRef.current === absolutePath) {
           setError(err instanceof Error ? err.message : 'Failed to load file');
           setDocContent(null);
+          setLoadedDiagramName(null);
         }
       } finally {
         if (latestFilePathRef.current === absolutePath) {
@@ -145,10 +168,60 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
 
   const handleCreateNew = () => {
     setIsCreatingNew(true);
+    setNewDiagramName('New Diagram'); // Reset name when creating new
+    setNewDiagramKey(prev => prev + 1); // Increment key to force remount
   };
 
   const handleCloseNewDrawing = () => {
     setIsCreatingNew(false);
+    setNewDiagramName('New Diagram'); // Reset name when closing
+  };
+
+  const handleDiagramSaved = (diagramId: string) => {
+    // Notify parent component about the newly created diagram
+    if (onDiagramCreated) {
+      onDiagramCreated(diagramId);
+    }
+  };
+
+  const handleStartEditingLoadedName = () => {
+    if (loadedDiagramName) {
+      setEditingLoadedName(loadedDiagramName);
+      setIsEditingLoadedName(true);
+      // Focus input after state update
+      setTimeout(() => {
+        nameInputRef.current?.select();
+      }, 0);
+    }
+  };
+
+  const handleSaveLoadedName = async () => {
+    const newName = editingLoadedName.trim() || loadedDiagramName || 'Untitled Diagram';
+    setLoadedDiagramName(newName);
+    setIsEditingLoadedName(false);
+
+    // Wait a moment for the state to propagate to ExcalidrawWrapper
+    // then trigger a save to persist the new name
+    setTimeout(async () => {
+      if (wrapperSaveRef.current) {
+        await wrapperSaveRef.current();
+      }
+    }, 100);
+  };
+
+  const handleCancelEditLoadedName = () => {
+    setIsEditingLoadedName(false);
+    setEditingLoadedName(loadedDiagramName || '');
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSaveLoadedName();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelEditLoadedName();
+    }
   };
 
   useEffect(() => {
@@ -161,6 +234,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
 
       if (createNewTrigger > 0) {
         setIsCreatingNew(true);
+        setNewDiagramKey(prev => prev + 1); // Increment key to force remount
       }
     }
   }, [createNewTrigger]);
@@ -206,7 +280,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
                   color: theme.colors.text,
                 }}
               >
-                New Diagram
+                {newDiagramName}
               </span>
               <span
                 style={{
@@ -242,13 +316,16 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
         {/* Excalidraw content */}
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <ExcalidrawWrapper
+            key={`new-diagram-${newDiagramKey}`} // Force remount for each new diagram
             onChange={() => {}}
             onClose={handleCloseNewDrawing}
+            onSave={handleDiagramSaved}
             projectPath={sourceLocation ?? undefined}
             useAlexandriaStorage={!!sourceLocation}
             showSaveButton={true}
             showNewDiagramButton={true}
             showNameEditor={false}
+            onDiagramNameChange={setNewDiagramName}
           />
         </div>
       </div>
@@ -327,15 +404,49 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Pencil size={16} color={theme.colors.primary} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <span
-              style={{
-                fontSize: '13px',
-                fontWeight: 600,
-                color: theme.colors.text,
-              }}
-            >
-              {filePath.split('/').pop()}
-            </span>
+            {isEditingLoadedName ? (
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={editingLoadedName}
+                onChange={(e) => setEditingLoadedName(e.target.value)}
+                onBlur={handleSaveLoadedName}
+                onKeyDown={handleNameKeyDown}
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  background: theme.colors.background,
+                  border: `1px solid ${theme.colors.primary}`,
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  outline: 'none',
+                  minWidth: '200px',
+                }}
+              />
+            ) : (
+              <span
+                onClick={handleStartEditingLoadedName}
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = theme.colors.backgroundSecondary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+                title="Click to edit name"
+              >
+                {loadedDiagramName || filePath.split('/').pop()}
+              </span>
+            )}
             <span
               style={{
                 fontSize: '11px',
@@ -383,11 +494,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
           <ExcalidrawWrapper
             key={filePath} // Force remount when switching drawings
             diagramId={filePath ?? undefined} // Pass the drawing ID/path
-            diagramName={
-              filePath
-                ? filePath.split('/').pop()?.replace('.excalidraw', '')
-                : undefined
-            }
+            diagramName={loadedDiagramName || 'Untitled Diagram'}
             initialData={docContent}
             onChange={() => {}}
             projectPath={sourceLocation ?? undefined}
@@ -395,6 +502,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
             showSaveButton={true} // Enable save button for editing
             showNewDiagramButton={false} // Disable new diagram button in view mode
             showNameEditor={false} // Name editing handled by header
+            saveRef={wrapperSaveRef} // Allow triggering save from panel
           />
         )}
       </div>
