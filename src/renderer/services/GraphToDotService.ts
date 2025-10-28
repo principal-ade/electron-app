@@ -2,7 +2,7 @@
  * Convert DependencyGraph to GraphViz DOT format
  */
 
-import type { DependencyGraph } from './graphDataBuilder';
+import type { DependencyGraph } from './DependencyGraphService';
 
 export interface DotOptions {
   // Layout direction

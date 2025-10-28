@@ -3,7 +3,7 @@
  */
 
 import type { PackageLayer } from '@principal-ai/codebase-composition';
-import type { RepositoryCacheData } from '../../../services/RepositoryDataCache';
+import type { RepositoryCacheData } from './RepositoryDataCache';
 
 /**
  * Graph node representing a repository or external dependency

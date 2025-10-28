@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { Package } from 'lucide-react';
-import type { DependencyGraph } from '../../principal-window/views/GraphsView/graphDataBuilder';
+import type { DependencyGraph } from '../../services/DependencyGraphService';
 
 export interface GraphsListPanelProps {
   graphs: DependencyGraph[];

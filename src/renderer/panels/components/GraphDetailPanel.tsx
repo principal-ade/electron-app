@@ -2,8 +2,8 @@ import React, { useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { Network } from 'lucide-react';
 import { GraphVizPanel } from './GraphVizPanel';
-import { graphToDot } from '../../principal-window/views/GraphsView/graphToDot';
-import type { DependencyGraph } from '../../principal-window/views/GraphsView/graphDataBuilder';
+import { graphToDot } from '../../services/GraphToDotService';
+import type { DependencyGraph } from '../../services/DependencyGraphService';
 
 export interface GraphDetailPanelProps {
   graph: DependencyGraph | null;

@@ -30,7 +30,7 @@ export type InteractiveShellNavigationView =
   | 'settings'
   | 'monitoring'
   | 'auth'
-  | 'graphs';
+  | 'feed';
 
 // Repository view right pane modes
 export type RightPaneMode = 'city' | 'terminal' | 'session-detail' | 'document';

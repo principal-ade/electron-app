@@ -137,4 +137,17 @@ export class GithubService {
     const result = await window.mainProcess.github.getUserSSHKeys();
     return result;
   }
+
+  static async getRepositoryCommits(
+    owner: string,
+    repo: string,
+    options?: { perPage?: number; page?: number },
+  ): Promise<any[]> {
+    const result = await window.mainProcess.github.getRepositoryCommits(
+      owner,
+      repo,
+      options,
+    );
+    return result || [];
+  }
 }

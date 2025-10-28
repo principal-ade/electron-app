@@ -42,8 +42,6 @@ export const GitHubStarsPanel: React.FC = () => {
     flexDirection: 'column',
     height: '100%',
     backgroundColor: theme.colors.backgroundSecondary,
-    borderRadius: '8px',
-    border: `1px solid ${theme.colors.border}`,
   };
 
   const renderState = (
@@ -285,29 +283,9 @@ export const GitHubStarsPanel: React.FC = () => {
           flexWrap: 'wrap',
           gap: '16px',
           justifyContent: 'space-between',
+          alignItems: 'center',
         }}
       >
-        <div style={{ minWidth: '200px' }}>
-          <h2
-            style={{
-              margin: 0,
-              color: theme.colors.text,
-              fontSize: '20px',
-              fontWeight: 600,
-            }}
-          >
-            GitHub Projects & Stars
-          </h2>
-          <p
-            style={{
-              margin: '4px 0 0 0',
-              color: theme.colors.textSecondary,
-              fontSize: '13px',
-            }}
-          >
-            Browse the repositories you own and the projects you have starred.
-          </p>
-        </div>
         <div
           style={{
             display: 'flex',
@@ -315,9 +293,10 @@ export const GitHubStarsPanel: React.FC = () => {
             alignItems: 'center',
             gap: '12px',
             justifyContent: 'flex-end',
+            width: '100%',
           }}
         >
-          <div style={{ position: 'relative', minWidth: '220px' }}>
+          <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
             <Search
               size={16}
               style={{
@@ -344,42 +323,6 @@ export const GitHubStarsPanel: React.FC = () => {
               }}
             />
           </div>
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={isFetching}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '8px 14px',
-              borderRadius: '6px',
-              border: 'none',
-              backgroundColor: theme.colors.primary,
-              color: theme.colors.background,
-              fontWeight: 600,
-              fontSize: '13px',
-              cursor: isFetching ? 'not-allowed' : 'pointer',
-              opacity: isFetching ? 0.75 : 1,
-            }}
-          >
-            <RotateCcw
-              size={16}
-              style={{
-                opacity: isFetching ? 0.85 : 1,
-              }}
-            />
-            {isFetching ? 'Refreshing…' : 'Refresh'}
-          </button>
-          <span
-            style={{
-              fontSize: '12px',
-              color: theme.colors.textSecondary,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {lastUpdatedLabel}
-          </span>
         </div>
       </div>
 

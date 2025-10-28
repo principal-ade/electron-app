@@ -62,6 +62,19 @@ export const githubAPI: GitHubAPI = {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_PULL_REQUESTS, owner, repo);
   },
 
+  getRepositoryCommits: async (
+    owner: string,
+    repo: string,
+    options?: { perPage?: number; page?: number },
+  ) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.GET_REPOSITORY_COMMITS,
+      owner,
+      repo,
+      options,
+    );
+  },
+
   createIssue: async (
     owner: string,
     repo: string,

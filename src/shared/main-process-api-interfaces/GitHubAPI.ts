@@ -3,6 +3,7 @@ export enum GitHubAPIEvent {
   GET_ISSUES = 'github:get-issues',
   CREATE_ISSUE = 'github:create-issue',
   GET_PULL_REQUESTS = 'github:get-pull-requests',
+  GET_REPOSITORY_COMMITS = 'github:get-repository-commits',
   //GET_THREAD = 'github:get-thread',
   REFRESH_DATA = 'github:refresh-data',
   CHECK_AUTH_STATUS = 'github:check-auth-status',
@@ -222,6 +223,11 @@ export interface GitHubAPI {
     owner: string,
     repo: string,
   ) => Promise<GitHubPullRequest[]>;
+  getRepositoryCommits: (
+    owner: string,
+    repo: string,
+    options?: { perPage?: number; page?: number },
+  ) => Promise<any[]>;
   //getThread: (owner: string, repo: string, number: number) => Promise<any>;
   refreshData: (owner: string, repo: string) => Promise<void>;
   checkAuthStatus: () => Promise<{

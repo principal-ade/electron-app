@@ -8,7 +8,7 @@ import { Settings } from '../../views/Settings';
 import { TerminalManager } from '../../views/TerminalManager';
 import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
-import { GraphsView } from '../../views/GraphsView';
+import { FeedView } from '../../views/FeedView';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import type { InteractiveShellNavigationView } from '../../../../shared/types/userPreferences.types';
 import './IntegratedShell.css';
@@ -62,7 +62,7 @@ export const IntegratedShell: React.FC = () => {
     monitoring: { left: false, right: false },
     search: { left: false, right: false },
     settings: { left: false, right: false },
-    graphs: { left: false, right: false },
+    feed: { left: false, right: false },
   });
 
   // Get current view's collapsed states
@@ -376,7 +376,7 @@ export const IntegratedShell: React.FC = () => {
             )}
             {activeView === 'settings' && <Settings />}
             {activeView === 'auth' && <AuthView />}
-            {activeView === 'graphs' && <GraphsView />}
+            {activeView === 'feed' && <FeedView />}
           </div>
         </div>
       </div>

@@ -1907,6 +1907,124 @@ export class GitHubAdapter {
       req.end();
     });
   }
+
+  async getRepositoryCommits(
+    owner: string,
+    repo: string,
+    options?: { perPage?: number; page?: number },
+  ): Promise<any[]> {
+    const perPage = options?.perPage || 30;
+    const page = options?.page || 1;
+    console.log(
+      `[GitHub] Fetching commits for ${owner}/${repo} (perPage: ${perPage}, page: ${page})`,
+    );
+
+    // Try using gh CLI first
+    try {
+      const ghResult = await this.executeCommand([
+        'gh',
+        'api',
+        `/repos/${owner}/${repo}/commits`,
+        '--method',
+        'GET',
+        '--field',
+        `per_page=${perPage}`,
+        '--field',
+        `page=${page}`,
+      ]);
+
+      if (ghResult.success && ghResult.stdout.trim()) {
+        try {
+          const commits = JSON.parse(ghResult.stdout);
+          if (Array.isArray(commits)) {
+            console.log(
+              `[GitHub] Successfully fetched ${commits.length} commits via gh CLI`,
+            );
+            return commits;
+          }
+        } catch (error) {
+          console.warn('[GitHub] Failed to parse gh CLI commits output', {
+            error,
+            stdoutSample: ghResult.stdout.slice(0, 200),
+          });
+        }
+      } else if (
+        ghResult.stderr?.includes('authentication') ||
+        ghResult.stderr?.includes('401')
+      ) {
+        console.log(
+          '[GitHub] gh CLI not authenticated for commits, falling back to API',
+        );
+      } else {
+        console.warn('[GitHub] gh CLI commits fetch failed, falling back', {
+          stderr: ghResult.stderr,
+        });
+      }
+    } catch (error) {
+      console.warn('[GitHub] gh CLI error when fetching commits:', error);
+    }
+
+    // Fallback to HTTPS API
+    console.log(
+      '[GitHub] Attempting to fetch commits via HTTPS API (public repos only)',
+    );
+    const https = require('https');
+
+    return new Promise((resolve) => {
+      const options = {
+        hostname: 'api.github.com',
+        path: `/repos/${owner}/${repo}/commits?per_page=${perPage}&page=${page}`,
+        method: 'GET',
+        headers: {
+          Accept: 'application/vnd.github.v3+json',
+          'User-Agent': 'Principal-AI',
+        },
+      };
+
+      const req = https.request(options, (res: any) => {
+        let data = '';
+
+        res.on('data', (chunk: any) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            try {
+              const commits = JSON.parse(data);
+              console.log(
+                `[GitHub] Successfully fetched ${commits.length} commits via HTTPS API`,
+              );
+              resolve(commits);
+            } catch (error) {
+              console.error('[GitHub] Failed to parse commits response:', error);
+              resolve([]);
+            }
+          } else if (res.statusCode === 404) {
+            console.log(
+              '[GitHub] Repository commits not found or private (404)',
+            );
+            resolve([]);
+          } else if (res.statusCode === 403) {
+            console.log('[GitHub] API rate limit exceeded');
+            resolve([]);
+          } else {
+            console.error(
+              `[GitHub] Failed to fetch commits: ${res.statusCode}`,
+            );
+            resolve([]);
+          }
+        });
+      });
+
+      req.on('error', (error: any) => {
+        console.error('[GitHub] Error fetching commits:', error);
+        resolve([]);
+      });
+
+      req.end();
+    });
+  }
 }
 
 // Register IPC handlers
@@ -2349,6 +2467,23 @@ export function registerGitHubIpcHandlers(
         return [];
       }
       return adapter.getPullRequests(owner, repo);
+    },
+  );
+
+  ipcMain.handle(
+    GitHubAPIEvent.GET_REPOSITORY_COMMITS,
+    async (
+      event,
+      owner: string,
+      repo: string,
+      options?: { perPage?: number; page?: number },
+    ) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for GET_REPOSITORY_COMMITS');
+        return [];
+      }
+      return adapter.getRepositoryCommits(owner, repo, options);
     },
   );
 

@@ -6,9 +6,11 @@ import {
   GitBranch,
   GitFork,
   Star,
+  Check,
 } from 'lucide-react';
 
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
+import { useVisibleProjects } from '../../contexts/VisibleProjectsContext';
 
 interface GitHubRepositoryCardProps {
   repository: GitHubRepository;
@@ -20,24 +22,36 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
   variant,
 }) => {
   const { theme } = useTheme();
+  const { toggleVisibleProject, isProjectVisible } = useVisibleProjects();
   const isStarred = variant === 'starred';
+  const isSelected = isProjectVisible(repository.full_name);
 
   const badgeColor = isStarred
     ? theme.colors.warning || '#f59e0b'
     : theme.colors.primary;
   const badgeBackground = `${badgeColor}30`;
 
-  const handleOpenInGitHub = () => {
+  const handleOpenInGitHub = (e: React.MouseEvent) => {
+    e.stopPropagation();
     window.open(repository.html_url, '_blank');
+  };
+
+  const handleToggleSelection = () => {
+    toggleVisibleProject({
+      fullName: repository.full_name,
+      name: repository.name,
+      owner: repository.owner?.login || 'unknown',
+    });
   };
 
   const starCount = repository.stargazers_count ?? 0;
 
   return (
     <div
+      onClick={handleToggleSelection}
       style={{
         backgroundColor: theme.colors.background,
-        border: `1px solid ${theme.colors.border}`,
+        border: `2px solid ${isSelected ? badgeColor : theme.colors.border}`,
         borderRadius: '10px',
         padding: '16px',
         display: 'flex',
@@ -46,6 +60,10 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
         minHeight: '200px',
         position: 'relative',
         transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        ...(isSelected && {
+          backgroundColor: `${badgeColor}10`,
+        }),
       }}
       onMouseEnter={(event) => {
         event.currentTarget.style.borderColor = badgeColor;
@@ -53,11 +71,32 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
         event.currentTarget.style.boxShadow = '0 10px 24px rgba(0, 0, 0, 0.35)';
       }}
       onMouseLeave={(event) => {
-        event.currentTarget.style.borderColor = theme.colors.border;
+        event.currentTarget.style.borderColor = isSelected
+          ? badgeColor
+          : theme.colors.border;
         event.currentTarget.style.transform = 'translateY(0)';
         event.currentTarget.style.boxShadow = 'none';
       }}
     >
+      {isSelected && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            backgroundColor: badgeColor,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: theme.colors.background,
+          }}
+        >
+          <Check size={16} />
+        </div>
+      )}
       <div
         style={{
           display: 'flex',
