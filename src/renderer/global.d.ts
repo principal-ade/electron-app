@@ -14,6 +14,19 @@ declare global {
       isMaximized: () => Promise<boolean>;
       onMaximizeChange: (callback: (isMaximized: boolean) => void) => void;
     };
+    electronAPI?: {
+      getWindowList?: () => void;
+      selectWindow?: (windowId: number) => void;
+      onWindowListUpdate?: (
+        callback: (data: {
+          windows?: Array<{ id: number; title: string; thumbnail?: string }>;
+          selectedIndex?: number;
+        }) => void,
+      ) => void | (() => void);
+      onSelectNext?: (callback: () => void) => void | (() => void);
+      onSelectPrevious?: (callback: () => void) => void | (() => void);
+      cycleSelection?: (direction: 'next' | 'previous') => void;
+    };
     // Window init data for routing
     windowInitData?: unknown;
   }

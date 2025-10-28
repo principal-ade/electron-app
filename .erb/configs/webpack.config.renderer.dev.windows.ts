@@ -65,6 +65,11 @@ const devSidecarLogsEntryPath = path.join(
   'dev-sidecar-logs',
   'index.tsx',
 );
+const windowSwitcherEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'window-switcher',
+  'index.tsx',
+);
 
 // Define entry points - use object format for multiple named entries
 const entryPoints: { [key: string]: string } = {};
@@ -147,6 +152,24 @@ if (fs.existsSync(devSidecarLogsEntryPath)) {
       filename: 'dev-sidecar-logs.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['dev-sidecar-logs'],
+      isBrowser: false,
+      isDevelopment: true,
+    }),
+  );
+}
+
+if (fs.existsSync(windowSwitcherEntryPath)) {
+  entryPoints['window-switcher'] = windowSwitcherEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'window-switcher.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['window-switcher'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
       isBrowser: false,
       isDevelopment: true,
     }),
@@ -425,6 +448,10 @@ const configuration: webpack.Configuration = {
         {
           from: /^\/dev-sidecar-logs.html/,
           to: '/dev-sidecar-logs.html',
+        },
+        {
+          from: /^\/window-switcher.html/,
+          to: '/window-switcher.html',
         },
         { from: /^\/index.html/, to: '/index.html' },
         { from: /./, to: '/index.html' }

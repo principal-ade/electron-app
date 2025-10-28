@@ -3,7 +3,7 @@
  * Provides a visual overlay to cycle through open windows
  */
 
-import { BrowserWindow, screen, ipcMain, app } from 'electron';
+import { BrowserWindow, screen, ipcMain } from 'electron';
 import path from 'path';
 import log from 'electron-log';
 import { resolveHtmlPath } from '../util';
@@ -186,34 +186,24 @@ class WindowSwitcher {
       fullscreenable: false,
       hasShadow: false,
       focusable: true,
+      backgroundColor: '#00000000',
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        // This is safe since we control the content and it's not loading external URLs
+        preload: path.join(__dirname, '../preload.js'),
+        nodeIntegration: false,
+        contextIsolation: true,
       },
     });
 
-    // Load the switcher HTML directly from file (not through dev server)
-    const appPath = app.getAppPath();
-    let htmlPath: string;
+    const targetUrl = resolveHtmlPath('window-switcher.html');
 
-    if (process.env.NODE_ENV === 'development') {
-      // In development, app path is in .erb/dll/, so go up to project root
-      // appPath is like: /Users/griever/Developer/electron-app/.erb/dll
-      const projectRoot = path.join(appPath, '../../');
-      htmlPath = path.join(projectRoot, 'src/renderer/window-switcher.html');
-    } else {
-      // In production, it's in the dist/renderer folder
-      htmlPath = path.join(appPath, 'dist/renderer/window-switcher.html');
-    }
+    log.info(`[Window Switcher] Loading URL: ${targetUrl}`);
 
-    log.info(`[Window Switcher] App path: ${appPath}`);
-    log.info(`[Window Switcher] Loading HTML from: ${htmlPath}`);
-
-    this.switcherWindow.loadFile(htmlPath).catch((err) => {
-      log.error('[Window Switcher] Failed to load HTML:', err);
-      log.error('[Window Switcher] Attempted path:', htmlPath);
-    });
+    this.switcherWindow
+      .loadURL(targetUrl)
+      .catch((err) => {
+        log.error('[Window Switcher] Failed to load renderer:', err);
+        log.error('[Window Switcher] Attempted URL:', targetUrl);
+      });
 
     // Open DevTools in development to debug
     if (process.env.NODE_ENV === 'development') {
@@ -275,6 +265,13 @@ class WindowSwitcher {
   }
 
   /**
+   * Allow external callers to request the current list be sent again
+   */
+  public resendWindowList(): void {
+    this.sendWindowList();
+  }
+
+  /**
    * Send update to renderer (selected index changed)
    */
   private sendUpdate(): void {
@@ -285,6 +282,17 @@ class WindowSwitcher {
       windows: this.windowList,
       selectedIndex: this.selectedIndex,
     });
+  }
+
+  /**
+   * Update the selected index by window id
+   */
+  public setSelectedWindow(windowId: number): void {
+    const index = this.windowList.findIndex((win) => win.id === windowId);
+    if (index >= 0) {
+      this.selectedIndex = index;
+      this.sendUpdate();
+    }
   }
 
   /**
@@ -323,13 +331,22 @@ export const windowSwitcher = new WindowSwitcher();
 export function setupWindowSwitcherHandlers(): void {
   // Handle window selection from renderer
   ipcMain.on('window-switcher:select', (_event, windowId: number) => {
+    windowSwitcher.setSelectedWindow(windowId);
     windowSwitcher.hide();
     // The hide() method will activate the selected window
   });
 
   // Handle get window list request
-  ipcMain.on('window-switcher:get-list', (event) => {
-    // This is handled by the show() method sending the initial list
+  ipcMain.on('window-switcher:get-list', (_event) => {
+    windowSwitcher.resendWindowList();
+  });
+
+  ipcMain.on('window-switcher:cycle', (_event, direction: 'next' | 'previous') => {
+    if (direction === 'next') {
+      windowSwitcher.selectNext();
+    } else if (direction === 'previous') {
+      windowSwitcher.selectPrevious();
+    }
   });
 
   log.info('Window switcher IPC handlers registered');

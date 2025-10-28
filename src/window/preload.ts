@@ -183,16 +183,29 @@ try {
     selectWindow: (windowId: number) =>
       ipcRenderer.send('window-switcher:select', windowId),
     onWindowListUpdate: (callback: (data: any) => void) => {
-      ipcRenderer.on('window-switcher:update-list', (_, data) =>
-        callback(data),
-      );
+      const listener = (_: Electron.IpcRendererEvent, data: any) =>
+        callback(data);
+      ipcRenderer.on('window-switcher:update-list', listener);
+      return () => {
+        ipcRenderer.removeListener('window-switcher:update-list', listener);
+      };
     },
     onSelectNext: (callback: () => void) => {
-      ipcRenderer.on('window-switcher:select-next', () => callback());
+      const listener = () => callback();
+      ipcRenderer.on('window-switcher:select-next', listener);
+      return () => {
+        ipcRenderer.removeListener('window-switcher:select-next', listener);
+      };
     },
     onSelectPrevious: (callback: () => void) => {
-      ipcRenderer.on('window-switcher:select-previous', () => callback());
+      const listener = () => callback();
+      ipcRenderer.on('window-switcher:select-previous', listener);
+      return () => {
+        ipcRenderer.removeListener('window-switcher:select-previous', listener);
+      };
     },
+    cycleSelection: (direction: 'next' | 'previous') =>
+      ipcRenderer.send('window-switcher:cycle', direction),
   });
   console.info('[Preload] ✅ Window Switcher API exposed');
 } catch (error) {
