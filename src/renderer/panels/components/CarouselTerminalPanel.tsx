@@ -84,6 +84,7 @@ export const CarouselTerminalPanel = forwardRef<
       new Map(),
     );
     const carouselRef = useRef<SnapCarouselRef>(null);
+    const carouselWrapperRef = useRef<HTMLDivElement>(null);
     const pendingPanelIndexRef = useRef<number | null>(null);
 
     // Store refs to callbacks to avoid recreating event listeners
@@ -384,6 +385,76 @@ export const CarouselTerminalPanel = forwardRef<
       currentPanelIndexRef.current = currentPanelIndex;
     }, [tabs, currentPanelIndex]);
 
+    // Prevent space key from scrolling the carousel container
+    useEffect(() => {
+      const wrapper = carouselWrapperRef.current;
+      if (!wrapper) return;
+
+      let isTyping = false;
+      let typingTimeout: NodeJS.Timeout;
+      let savedScrollLeft = 0;
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        const target = e.target as HTMLElement;
+        const isFromTerminal = target.closest('.xterm') !== null;
+
+        if (isFromTerminal && e.key === ' ') {
+          // Mark that we're typing
+          isTyping = true;
+
+          const scrollContainer = findScrollContainer();
+          if (scrollContainer) {
+            savedScrollLeft = scrollContainer.scrollLeft;
+          }
+
+          clearTimeout(typingTimeout);
+          typingTimeout = setTimeout(() => {
+            isTyping = false;
+          }, 100);
+        }
+      };
+
+      const handleScroll = (e: Event) => {
+        // If we're typing in terminal, restore scroll position
+        if (isTyping) {
+          const scrollContainer = e.target as HTMLElement;
+          // Restore the scroll position immediately
+          scrollContainer.scrollLeft = savedScrollLeft;
+        }
+      };
+
+      // Find the actual scroll container (snap-carousel-container)
+      const findScrollContainer = () => {
+        const scrollContainer = wrapper.querySelector('.snap-carousel-container');
+        return scrollContainer as HTMLElement;
+      };
+
+      // Wait for SnapCarousel to render
+      const timer = setTimeout(() => {
+        const scrollContainer = findScrollContainer();
+        if (scrollContainer) {
+          // Make the scroll container non-focusable to prevent keyboard scroll
+          scrollContainer.setAttribute('tabindex', '-1');
+
+          // Listen for keydown to track typing
+          scrollContainer.addEventListener('keydown', handleKeyDown, true);
+
+          // Listen for scroll events to restore position during typing
+          scrollContainer.addEventListener('scroll', handleScroll, { capture: true });
+        }
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(typingTimeout);
+        const scrollContainer = findScrollContainer();
+        if (scrollContainer) {
+          scrollContainer.removeEventListener('keydown', handleKeyDown, true);
+          scrollContainer.removeEventListener('scroll', handleScroll);
+        }
+      };
+    }, [tabs.length]);
+
     // Focus management: focus the active terminal when panel changes or becomes visible
     useEffect(() => {
       if (!isVisible || tabs.length === 0) {
@@ -409,6 +480,21 @@ export const CarouselTerminalPanel = forwardRef<
     // Keyboard shortcuts for carousel navigation
     useEffect(() => {
       const handleKeyDown = async (e: KeyboardEvent) => {
+        // Ignore keyboard events when focus is on an input element or terminal
+        // This prevents shortcuts from interfering with typing
+        const target = e.target as HTMLElement;
+        const isInputElement =
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable ||
+          target.closest('.xterm') !== null || // xterm terminal
+          target.closest('[role="textbox"]') !== null;
+
+        // For non-modifier shortcuts, ignore if focus is on input
+        if (isInputElement && !e.metaKey && !e.ctrlKey) {
+          return;
+        }
+
         // Command/Ctrl + T to open new tab
         if ((e.metaKey || e.ctrlKey) && e.key === 't') {
           if (e.repeat) {
@@ -874,16 +960,22 @@ export const CarouselTerminalPanel = forwardRef<
         {/* Carousel content */}
         <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
           {tabs.length > 0 ? (
-            <SnapCarousel
-              ref={carouselRef}
-              panels={carouselPanels}
-              theme={theme}
-              minPanelWidth={minPanelWidth}
-              idealPanelWidth={idealPanelWidth}
-              gap={1}
-              onPanelChange={handlePanelChange}
-              style={{ height: '100%' }}
-            />
+            <div
+              ref={carouselWrapperRef}
+              style={{ height: '100%', width: '100%' }}
+            >
+              <SnapCarousel
+                ref={carouselRef}
+                panels={carouselPanels}
+                theme={theme}
+                minPanelWidth={minPanelWidth}
+                idealPanelWidth={idealPanelWidth}
+                gap={1}
+                onPanelChange={handlePanelChange}
+                preventKeyboardScroll={false}
+                style={{ height: '100%' }}
+              />
+            </div>
           ) : (
             <div
               style={{
