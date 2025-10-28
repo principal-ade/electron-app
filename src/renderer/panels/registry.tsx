@@ -21,6 +21,7 @@ import { AgentContextTreePanel } from './components/AgentContextTreePanel';
 import { GitCommitHistoryPanel } from './components/GitCommitHistoryPanel';
 import { MDXEditorPanel } from './components/MDXEditorPanel';
 import { GitHubStarsPanel } from './components/GitHubStarsPanel';
+import { GitHubSocialPanel } from './components/GitHubSocialPanel';
 import { GraphsListPanel } from './components/GraphsListPanel';
 import { GraphDetailPanel } from './components/GraphDetailPanel';
 
@@ -50,6 +51,7 @@ const panelRenderers: Partial<
     <GitPullRequestsPanel repository={context.repository ?? undefined} />
   ),
   githubStars: () => <GitHubStarsPanel />,
+  githubSocial: () => <GitHubSocialPanel />,
   gitHistory: ({ context }) => (
     <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />
   ),

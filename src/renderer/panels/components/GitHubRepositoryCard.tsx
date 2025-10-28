@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import {
   ExternalLink,
@@ -7,10 +7,17 @@ import {
   GitFork,
   Star,
   Check,
+  FolderOpen,
+  Download,
 } from 'lucide-react';
 
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { useVisibleProjects } from '../../contexts/VisibleProjectsContext';
+import { AlexandriaService } from '../../main-process-api/AlexandriaService';
+import { WindowService } from '../../main-process-api/WindowService';
+import type { AlexandriaEntry } from '@a24z/core-library';
+import { GitCloneModal } from '../../principal-window/views/RepositoryExplorer/components/GitCloneModal';
+import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.types';
 
 interface GitHubRepositoryCardProps {
   repository: GitHubRepository;
@@ -25,11 +32,57 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
   const { toggleVisibleProject, isProjectVisible } = useVisibleProjects();
   const isStarred = variant === 'starred';
   const isSelected = isProjectVisible(repository.full_name);
+  const [localRepo, setLocalRepo] = useState<AlexandriaEntry | null>(null);
+  const [isCheckingLocal, setIsCheckingLocal] = useState(true);
+  const [showCloneModal, setShowCloneModal] = useState(false);
 
   const badgeColor = isStarred
     ? theme.colors.warning || '#f59e0b'
     : theme.colors.primary;
   const badgeBackground = `${badgeColor}30`;
+
+  // Check if repository exists locally
+  useEffect(() => {
+    const checkLocalRepository = async () => {
+      setIsCheckingLocal(true);
+      try {
+        // Get all repositories and search for a match
+        const allRepos = await AlexandriaService.getRepositories();
+
+        // Try to find a match by GitHub metadata
+        const matchedRepo = allRepos.find((repo) => {
+          // First try matching by github.id (which is in owner/repo format)
+          if (repo.github?.id === repository.full_name) {
+            return true;
+          }
+
+          // Also try matching by owner/name combination
+          if (
+            repo.github?.owner === repository.owner.login &&
+            repo.github?.name === repository.name
+          ) {
+            return true;
+          }
+
+          // Fallback: match just by repository name (less reliable)
+          if (repo.name === repository.name) {
+            return true;
+          }
+
+          return false;
+        });
+
+        setLocalRepo(matchedRepo || null);
+      } catch (error) {
+        console.error('Error checking local repository:', error);
+        setLocalRepo(null);
+      } finally {
+        setIsCheckingLocal(false);
+      }
+    };
+
+    checkLocalRepository();
+  }, [repository.full_name, repository.name, repository.owner.login]);
 
   const handleOpenInGitHub = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -42,6 +95,37 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
       name: repository.name,
       owner: repository.owner?.login || 'unknown',
     });
+  };
+
+  const handleOpenOrClone = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (localRepo) {
+      // Repository exists locally - open dashboard
+      try {
+        await WindowService.openRepositoryDashboard(localRepo);
+      } catch (error) {
+        console.error('Error opening repository dashboard:', error);
+      }
+    } else {
+      // Repository not cloned - trigger clone
+      setShowCloneModal(true);
+    }
+  };
+
+  const handleRepositoryCloned = async (
+    repo: EnhancedAlexandriaEntry,
+  ): Promise<void> => {
+    // Update local repo state
+    setLocalRepo(repo);
+    setShowCloneModal(false);
+
+    // Automatically open the newly cloned repository
+    try {
+      await WindowService.openRepositoryDashboard(repo);
+    } catch (error) {
+      console.error('Error opening cloned repository dashboard:', error);
+    }
   };
 
   const starCount = repository.stargazers_count ?? 0;
@@ -217,12 +301,60 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
         </div>
       </div>
 
-      <div style={{ marginTop: 'auto' }}>
+      <div style={{ marginTop: 'auto', display: 'flex', gap: '8px' }}>
+        <button
+          type="button"
+          onClick={handleOpenOrClone}
+          disabled={isCheckingLocal}
+          style={{
+            flex: 1,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            padding: '10px',
+            borderRadius: '6px',
+            border: `1px solid ${localRepo ? badgeColor : theme.colors.border}`,
+            backgroundColor: localRepo
+              ? `${badgeColor}20`
+              : theme.colors.backgroundSecondary,
+            color: localRepo ? badgeColor : theme.colors.text,
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: isCheckingLocal ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s ease',
+            opacity: isCheckingLocal ? 0.6 : 1,
+          }}
+          onMouseEnter={(event) => {
+            if (!isCheckingLocal) {
+              event.currentTarget.style.backgroundColor = localRepo
+                ? `${badgeColor}30`
+                : theme.colors.backgroundTertiary ||
+                  theme.colors.backgroundSecondary;
+            }
+          }}
+          onMouseLeave={(event) => {
+            event.currentTarget.style.backgroundColor = localRepo
+              ? `${badgeColor}20`
+              : theme.colors.backgroundSecondary;
+          }}
+        >
+          {localRepo ? (
+            <>
+              <FolderOpen size={14} />
+              Open Locally
+            </>
+          ) : (
+            <>
+              <Download size={14} />
+              Clone
+            </>
+          )}
+        </button>
         <button
           type="button"
           onClick={handleOpenInGitHub}
           style={{
-            width: '100%',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -247,9 +379,18 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
           }}
         >
           <ExternalLink size={14} />
-          Open on GitHub
         </button>
       </div>
+
+      {/* Clone Modal */}
+      {showCloneModal && (
+        <GitCloneModal
+          isOpen={showCloneModal}
+          onClose={() => setShowCloneModal(false)}
+          onRepositoryAdded={handleRepositoryCloned}
+          initialUrl={repository.clone_url}
+        />
+      )}
     </div>
   );
 };

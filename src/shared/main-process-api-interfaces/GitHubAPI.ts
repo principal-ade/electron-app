@@ -20,6 +20,9 @@ export enum GitHubAPIEvent {
   GET_CURRENT_USER = 'github:get-current-user',
   GET_TOKEN_INFO = 'github:get-token-info',
   GET_USER_SSH_KEYS = 'github:get-user-ssh-keys',
+  GET_USER_FOLLOWERS = 'github:get-user-followers',
+  GET_USER_FOLLOWING = 'github:get-user-following',
+  GET_ORG_MEMBERS = 'github:get-org-members',
   // Config fetching events (formerly ConfigAPI)
   FETCH_REMOTE_CONFIG = 'github:fetch-remote-config',
   FETCH_GITHUB_CONFIG = 'github:fetch-github-config',
@@ -170,6 +173,14 @@ export interface GitHubUser {
   two_factor_authentication?: boolean;
 }
 
+export interface GitHubOrgMember {
+  login: string;
+  id: number;
+  avatar_url: string;
+  type: 'User' | 'Bot';
+  site_admin: boolean;
+}
+
 export interface TokenInfo {
   scopes: string[];
   organizations: GitHubOrganization[];
@@ -311,4 +322,7 @@ export interface GitHubAPI {
   getCurrentUser: () => Promise<GitHubUser | null>;
   getTokenInfo: () => Promise<TokenInfo | null>;
   getUserSSHKeys: () => Promise<SSHKeysResponse>;
+  getUserFollowers: (username?: string) => Promise<GitHubUser[]>;
+  getUserFollowing: (username?: string) => Promise<GitHubUser[]>;
+  getOrgMembers: (org: string) => Promise<GitHubOrgMember[]>;
 }

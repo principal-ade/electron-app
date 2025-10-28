@@ -25,6 +25,7 @@ import {
   Search,
   Star,
   Terminal as TerminalIcon,
+  Users,
   Wrench,
 } from 'lucide-react';
 import { FileTreePanelPreview } from './components/FileTreePanelContent';
@@ -34,6 +35,7 @@ import { GitCommitHistoryPanelPreview } from './components/GitCommitHistoryPanel
 import { GitIssuesPanelPreview } from './components/GitIssuesPanel';
 import { GitPullRequestsPanelPreview } from './components/GitPullRequestsPanel';
 import { GitHubStarsPanelPreview } from './components/GitHubStarsPanel';
+import { GitHubSocialPanelPreview } from './components/GitHubSocialPanel';
 import { GitStatusPanelPreview } from './components/GitStatusPanel';
 import { RepositoryActionsPanelPreview } from './components/RepositoryActionsPanel';
 import { RepoSourceArchitecturePanelPreview } from '../repo-manager/shared/RepoSourceArchitecturePanelSimple';
@@ -88,6 +90,12 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   githubStars: {
     icon: <Star size={16} />,
     preview: <GitHubStarsPanelPreview />,
+  },
+  githubSocial: {
+    icon: <Users size={16} />,
+    preview: <GitHubSocialPanelPreview />,
+    label: 'GitHub Network',
+    description: 'View coworkers from your organizations and people you follow.',
   },
   gitStatus: {
     icon: <Info size={16} />,

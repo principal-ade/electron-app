@@ -53,6 +53,13 @@ export const repositoryPanelCatalog = [
     surfaces: ['explorer'] as const,
   },
   {
+    id: 'githubSocial',
+    label: 'GitHub Network',
+    description:
+      'View coworkers from your organizations and people you follow on GitHub.',
+    surfaces: ['explorer', 'principal'] as const,
+  },
+  {
     id: 'gitStatus',
     label: 'Git Status',
     description:

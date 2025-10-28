@@ -141,6 +141,85 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
   const cardBackground = theme.colors.backgroundTertiary;
   const secondaryBackground = theme.colors.backgroundSecondary;
 
+  // Define fetch functions with useCallback to prevent unnecessary re-renders
+  const fetchTokenInfo = useCallback(async () => {
+    setLoadingTokenInfo(true);
+    setTokenError(null);
+    try {
+      // Get token info directly from the GithubService
+      const info = await GithubService.getTokenInfo();
+      if (info) {
+        setTokenInfo(info);
+      } else {
+        console.warn('[AuthDetails] Failed to get token info');
+        setTokenError('Failed to fetch token information');
+      }
+    } catch (error) {
+      console.error('[AuthDetails] Failed to fetch token info:', error);
+      setTokenError('Failed to fetch token permissions');
+    } finally {
+      setLoadingTokenInfo(false);
+    }
+  }, []);
+
+  const fetchSSHKeyInfo = useCallback(async () => {
+    setLoadingSSHInfo(true);
+    setSSHKeysError(null);
+    setNeedsSSHPermission(false);
+    try {
+      // Fetch SSH keys from GitHub API
+      const response = await GithubService.getUserSSHKeys();
+
+      if (response.success && response.data) {
+        setGitHubSSHKeys(response.data);
+      } else {
+        setGitHubSSHKeys([]);
+        if (response.needsPermission) {
+          setNeedsSSHPermission(true);
+          setSSHKeysError(response.error || 'Missing required GitHub permissions');
+        } else if (response.error) {
+          setSSHKeysError(response.error);
+        }
+      }
+    } catch (error) {
+      console.error('[AuthDetails] Failed to fetch SSH keys from GitHub:', error);
+      setGitHubSSHKeys([]);
+      setSSHKeysError('Failed to load SSH keys');
+    } finally {
+      setLoadingSSHInfo(false);
+    }
+  }, []);
+
+  const fetchTokenMetadata = useCallback(async () => {
+    setLoadingTokenMetadata(true);
+    try {
+      const metadata = await AuthenticationService.getTokenMetadata();
+      setTokenMetadata(metadata);
+    } catch (error) {
+      console.error('[AuthDetails] Failed to fetch token metadata:', error);
+    } finally {
+      setLoadingTokenMetadata(false);
+    }
+  }, []);
+
+  const fetchKeychainStatus = useCallback(async () => {
+    setLoadingKeychainStatus(true);
+    try {
+      const status = await AuthenticationService.checkKeychainStatus();
+      setKeychainStatus(status);
+    } catch (error) {
+      console.error('[AuthDetails] Failed to fetch keychain status:', error);
+      setKeychainStatus({
+        available: false,
+        initialized: false,
+        error: 'Failed to check keychain status',
+        errorType: 'unknown',
+      });
+    } finally {
+      setLoadingKeychainStatus(false);
+    }
+  }, []);
+
   // Detect keychain-related errors
   useEffect(() => {
     if (loginError) {
@@ -185,70 +264,10 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     }
     // Always fetch keychain status (regardless of auth state)
     fetchKeychainStatus();
-  }, [isAuthenticated, authUser]);
-
-  const fetchTokenInfo = async () => {
-    setLoadingTokenInfo(true);
-    setTokenError(null);
-    try {
-      // Get token info directly from the GithubService
-      const info = await GithubService.getTokenInfo();
-      if (info) {
-        setTokenInfo(info);
-      } else {
-        console.warn('[AuthDetails] Failed to get token info');
-        setTokenError('Failed to fetch token information');
-      }
-    } catch (error) {
-      console.error('[AuthDetails] Failed to fetch token info:', error);
-      setTokenError('Failed to fetch token permissions');
-    } finally {
-      setLoadingTokenInfo(false);
-    }
-  };
+  }, [isAuthenticated, authUser, fetchTokenInfo, fetchSSHKeyInfo, fetchTokenMetadata, fetchKeychainStatus]);
 
   const formatScope = (scope: string): string => {
     return SCOPE_DESCRIPTIONS[scope] || scope.replace(/[_:]/g, ' ');
-  };
-
-  const fetchSSHKeyInfo = async () => {
-    setLoadingSSHInfo(true);
-    setSSHKeysError(null);
-    setNeedsSSHPermission(false);
-    try {
-      // Fetch SSH keys from GitHub API
-      const response = await GithubService.getUserSSHKeys();
-
-      if (response.success && response.data) {
-        setGitHubSSHKeys(response.data);
-      } else {
-        setGitHubSSHKeys([]);
-        if (response.needsPermission) {
-          setNeedsSSHPermission(true);
-          setSSHKeysError(response.error || 'Missing required GitHub permissions');
-        } else if (response.error) {
-          setSSHKeysError(response.error);
-        }
-      }
-    } catch (error) {
-      console.error('[AuthDetails] Failed to fetch SSH keys from GitHub:', error);
-      setGitHubSSHKeys([]);
-      setSSHKeysError('Failed to load SSH keys');
-    } finally {
-      setLoadingSSHInfo(false);
-    }
-  };
-
-  const fetchTokenMetadata = async () => {
-    setLoadingTokenMetadata(true);
-    try {
-      const metadata = await AuthenticationService.getTokenMetadata();
-      setTokenMetadata(metadata);
-    } catch (error) {
-      console.error('[AuthDetails] Failed to fetch token metadata:', error);
-    } finally {
-      setLoadingTokenMetadata(false);
-    }
   };
 
   const handleTestRefresh = async () => {
@@ -315,24 +334,6 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
       await login(true); // Force retry
     } catch (error) {
       console.error('[AuthDetails] Retry login failed:', error);
-    }
-  };
-
-  const fetchKeychainStatus = async () => {
-    setLoadingKeychainStatus(true);
-    try {
-      const status = await AuthenticationService.checkKeychainStatus();
-      setKeychainStatus(status);
-    } catch (error) {
-      console.error('[AuthDetails] Failed to fetch keychain status:', error);
-      setKeychainStatus({
-        available: false,
-        initialized: false,
-        error: 'Failed to check keychain status',
-        errorType: 'unknown',
-      });
-    } finally {
-      setLoadingKeychainStatus(false);
     }
   };
 

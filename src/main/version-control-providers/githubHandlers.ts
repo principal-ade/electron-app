@@ -2025,6 +2025,78 @@ export class GitHubAdapter {
       req.end();
     });
   }
+
+  /**
+   * Get followers for a user (defaults to authenticated user)
+   */
+  async getUserFollowers(username?: string): Promise<any[]> {
+    const endpoint = username ? `/users/${username}/followers` : '/user/followers';
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      return apiResult.data;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', endpoint]);
+      if (result.success && result.stdout) {
+        return JSON.parse(result.stdout);
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting followers:', error);
+    }
+
+    return [];
+  }
+
+  /**
+   * Get users that a user is following (defaults to authenticated user)
+   */
+  async getUserFollowing(username?: string): Promise<any[]> {
+    const endpoint = username ? `/users/${username}/following` : '/user/following';
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      return apiResult.data;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', endpoint]);
+      if (result.success && result.stdout) {
+        return JSON.parse(result.stdout);
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting following:', error);
+    }
+
+    return [];
+  }
+
+  /**
+   * Get members of an organization
+   */
+  async getOrgMembers(org: string): Promise<any[]> {
+    const endpoint = `/orgs/${org}/members`;
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && apiResult.data) {
+      return apiResult.data;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', endpoint]);
+      if (result.success && result.stdout) {
+        return JSON.parse(result.stdout);
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting org members:', error);
+    }
+
+    return [];
+  }
 }
 
 // Register IPC handlers
@@ -2580,6 +2652,33 @@ export function registerGitHubIpcHandlers(
       return [];
     }
     return adapter.getUserSSHKeys();
+  });
+
+  ipcMain.handle(GitHubAPIEvent.GET_USER_FOLLOWERS, async (event, username) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for GET_USER_FOLLOWERS');
+      return [];
+    }
+    return adapter.getUserFollowers(username);
+  });
+
+  ipcMain.handle(GitHubAPIEvent.GET_USER_FOLLOWING, async (event, username) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for GET_USER_FOLLOWING');
+      return [];
+    }
+    return adapter.getUserFollowing(username);
+  });
+
+  ipcMain.handle(GitHubAPIEvent.GET_ORG_MEMBERS, async (event, org) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for GET_ORG_MEMBERS');
+      return [];
+    }
+    return adapter.getOrgMembers(org);
   });
 
   console.log('[GitHub] IPC handlers registered');

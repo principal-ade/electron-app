@@ -8,6 +8,7 @@ import type {
   CreateIssueRequest,
   GitHubSSHKey,
   SSHKeysResponse,
+  GitHubOrgMember,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export class GithubService {
@@ -148,6 +149,21 @@ export class GithubService {
       repo,
       options,
     );
+    return result || [];
+  }
+
+  static async getUserFollowers(username?: string): Promise<GitHubUser[]> {
+    const result = await window.mainProcess.github.getUserFollowers(username);
+    return result || [];
+  }
+
+  static async getUserFollowing(username?: string): Promise<GitHubUser[]> {
+    const result = await window.mainProcess.github.getUserFollowing(username);
+    return result || [];
+  }
+
+  static async getOrgMembers(org: string): Promise<GitHubOrgMember[]> {
+    const result = await window.mainProcess.github.getOrgMembers(org);
     return result || [];
   }
 }

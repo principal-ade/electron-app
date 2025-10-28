@@ -9,6 +9,7 @@ import { buildDependencyGraphs } from '../../../services/DependencyGraphService'
 import { GraphsListPanel } from '../../../panels/components/GraphsListPanel';
 import { GraphDetailPanel } from '../../../panels/components/GraphDetailPanel';
 import { GitHubStarsPanel } from '../../../panels/components/GitHubStarsPanel';
+import { GitHubSocialPanel } from '../../../panels/components/GitHubSocialPanel';
 import { RecentCommitsPanel } from '../../../panels/components/RecentCommitsPanel';
 import { VisibleProjectsProvider } from '../../../contexts/VisibleProjectsContext';
 
@@ -77,6 +78,11 @@ export const FeedView: React.FC = () => {
               content: <GitHubStarsPanel />,
             },
             {
+              id: 'github-social',
+              label: 'GitHub Network',
+              content: <GitHubSocialPanel />,
+            },
+            {
               id: 'recent-commits',
               label: 'Recent Commits',
               content: <RecentCommitsPanel />,
@@ -106,7 +112,14 @@ export const FeedView: React.FC = () => {
             },
           ]}
           layout={{
-            left: 'github-stars',
+            left: {
+              type: 'tabs',
+              panels: ['github-social', 'github-stars', 'graphs-list'],
+              config: {
+                defaultActiveTab: 0,
+                tabPosition: 'top',
+              },
+            },
             middle: 'recent-commits',
             right: null,
           }}
