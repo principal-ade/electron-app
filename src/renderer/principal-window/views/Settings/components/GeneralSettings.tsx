@@ -22,6 +22,8 @@ export const GeneralSettings: React.FC = () => {
   const [defaultCloneDirectory, setDefaultCloneDirectory] =
     useState<string>('');
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
+  const [enableGitWatchingOnStartup, setEnableGitWatchingOnStartup] =
+    useState<boolean>(false);
   const [selectedTheme, setSelectedTheme] = useState<string>('default');
   const [pendingTheme, setPendingTheme] = useState<string | null>(null);
   const [isApplyingTheme, setIsApplyingTheme] = useState(false);
@@ -47,6 +49,7 @@ export const GeneralSettings: React.FC = () => {
       setDefaultEditor(editor);
       setDefaultCloneDirectory(prefs.defaultCloneDirectory || '');
       setEnableVimMode(prefs.enableVimMode ?? false);
+      setEnableGitWatchingOnStartup(prefs.enableGitWatchingOnStartup ?? false);
       setShowThemeButton(prefs.titlebarButtons?.theme ?? true);
       setShowCustomizeButton(prefs.titlebarButtons?.customize ?? true);
       setShowOpenInIDE(prefs.titlebarButtons?.openInIDE ?? false);
@@ -568,6 +571,121 @@ export const GeneralSettings: React.FC = () => {
             >
               Save
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Git Watching on Startup */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Repository Monitoring
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '16px',
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <label
+                htmlFor="enableGitWatchingOnStartup"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  display: 'block',
+                  marginBottom: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Enable Git Watching on Startup
+              </label>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  lineHeight: '1.5',
+                }}
+              >
+                When enabled, all repositories will be monitored for changes on
+                app startup. When disabled (recommended), git watching will only
+                be enabled when you open a repository window, reducing resource
+                usage.
+              </p>
+            </div>
+            <label
+              style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '48px',
+                height: '24px',
+                flexShrink: 0,
+              }}
+            >
+              <input
+                id="enableGitWatchingOnStartup"
+                type="checkbox"
+                checked={enableGitWatchingOnStartup}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  setEnableGitWatchingOnStartup(newValue);
+                  await UserPreferencesService.updatePreferences({
+                    enableGitWatchingOnStartup: newValue,
+                  });
+                }}
+                style={{
+                  opacity: 0,
+                  width: 0,
+                  height: 0,
+                }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: enableGitWatchingOnStartup
+                    ? theme.colors.primary
+                    : theme.colors.border,
+                  transition: '0.3s',
+                  borderRadius: '24px',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    content: '',
+                    height: '18px',
+                    width: '18px',
+                    left: enableGitWatchingOnStartup ? '27px' : '3px',
+                    bottom: '3px',
+                    backgroundColor: 'white',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                  }}
+                />
+              </span>
+            </label>
           </div>
         </div>
       </div>

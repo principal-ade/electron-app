@@ -6,6 +6,7 @@
 import { app } from 'electron';
 import { RepositoryMonitoringManager } from './RepositoryMonitoringManager';
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import { UserPreferencesHandler } from '../stores/userPreferencesHandler';
 import type { AlexandriaEntry } from '@a24z/core-library';
 
 export class RepositoryRegistrationManager {
@@ -55,8 +56,22 @@ export class RepositoryRegistrationManager {
       // Register all repositories with monitoring server
       await this.registerAllRepositories(repositories);
 
-      // Enable git watching for ALL repositories (resource usage is minimal with shallow watching)
-      await this.enableGitWatchingForAll(repositories);
+      // Check user preference for enabling git watching on startup
+      const preferencesHandler = UserPreferencesHandler.getInstance();
+      const preferences = await preferencesHandler.getUserPreferences();
+      const enableWatchingOnStartup =
+        preferences.enableGitWatchingOnStartup ?? false;
+
+      if (enableWatchingOnStartup) {
+        console.log(
+          '[RepositoryRegistrationManager] Enabling git watching for all repositories (user preference)',
+        );
+        await this.enableGitWatchingForAll(repositories);
+      } else {
+        console.log(
+          '[RepositoryRegistrationManager] Skipping automatic git watching (disabled by user preference). Watching will be enabled when repository windows are opened.',
+        );
+      }
 
       // Listen for repository lifecycle events
       this.setupRepositoryLifecycleListeners();
@@ -190,8 +205,24 @@ export class RepositoryRegistrationManager {
         `[RepositoryRegistrationManager] Registering new repository: ${repo.name}`,
       );
       await this.monitoringManager.registerRepository(pathString);
-      await this.monitoringManager.enableGitWatching(pathString);
       this.registeredPaths.add(pathString);
+
+      // Check user preference for enabling git watching on new repositories
+      const preferencesHandler = UserPreferencesHandler.getInstance();
+      const preferences = await preferencesHandler.getUserPreferences();
+      const enableWatchingOnStartup =
+        preferences.enableGitWatchingOnStartup ?? false;
+
+      if (enableWatchingOnStartup) {
+        console.log(
+          `[RepositoryRegistrationManager] Enabling git watching for new repository: ${repo.name}`,
+        );
+        await this.monitoringManager.enableGitWatching(pathString);
+      } else {
+        console.log(
+          `[RepositoryRegistrationManager] Skipping git watching for new repository (disabled by user preference): ${repo.name}`,
+        );
+      }
     } catch (error) {
       console.error(
         `[RepositoryRegistrationManager] Failed to register new repository ${repo.name}:`,

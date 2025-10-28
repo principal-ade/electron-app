@@ -89,6 +89,8 @@ export interface UserPreferences {
   // Repository management
   /** Default directory for cloning repositories */
   defaultCloneDirectory?: string;
+  /** Enable git watching for all repositories on startup (default: false) */
+  enableGitWatchingOnStartup?: boolean;
 
   // Agent session preferences
   /** Automatically commit changes when stopping agent sessions */

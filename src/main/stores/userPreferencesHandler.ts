@@ -7,7 +7,25 @@ import { ipcMain } from 'electron';
 const USER_PREFERENCES_KEY = 'preferences';
 
 export class UserPreferencesHandler {
-  constructor(private typedStore: TypedMultiStoreWrapper) {}
+  private static instance: UserPreferencesHandler | null = null;
+
+  constructor(private typedStore: TypedMultiStoreWrapper) {
+    // Store singleton instance
+    UserPreferencesHandler.instance = this;
+  }
+
+  /**
+   * Get the singleton instance of UserPreferencesHandler
+   * Must be called after initialization
+   */
+  static getInstance(): UserPreferencesHandler {
+    if (!UserPreferencesHandler.instance) {
+      throw new Error(
+        'UserPreferencesHandler not initialized. Call constructor first.',
+      );
+    }
+    return UserPreferencesHandler.instance;
+  }
 
   private async getOrCreatePreferences(): Promise<UserPreferences> {
     const result = await this.typedStore.get(
