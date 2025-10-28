@@ -55,6 +55,11 @@ const devSidecarLogsEntryPath = path.join(
   'dev-sidecar-logs',
   'index.tsx',
 );
+const windowSwitcherEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'window-switcher',
+  'index.tsx',
+);
 
 // Use principal entry if it exists, otherwise fall back to legacy
 if (fs.existsSync(principalEntryPath)) {
@@ -156,6 +161,24 @@ if (fs.existsSync(devSidecarLogsEntryPath)) {
       filename: 'dev-sidecar-logs.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['dev-sidecar-logs'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    }),
+  );
+}
+
+if (fs.existsSync(windowSwitcherEntryPath)) {
+  entryPoints['window-switcher'] = windowSwitcherEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'window-switcher.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['window-switcher'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
