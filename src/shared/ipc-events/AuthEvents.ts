@@ -17,6 +17,10 @@ export enum AuthEvent {
   GET_TOKEN_METADATA = 'cli-auth:get-token-metadata',
   TEST_REFRESH_TOKEN = 'cli-auth:test-refresh-token',
 
+  // Keychain permission and status events
+  CHECK_KEYCHAIN_STATUS = 'cli-auth:check-keychain-status',
+  TEST_KEYCHAIN_ACCESS = 'cli-auth:test-keychain-access',
+
   // Auth state management events
   STATE_GET = 'auth-state:get',
   STATE_SUBSCRIBE = 'auth-state:subscribe',

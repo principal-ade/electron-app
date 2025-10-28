@@ -141,4 +141,27 @@ export class AuthenticationService {
   static onAuthStateChanged(callback: (state: AuthState) => void): () => void {
     return window.mainProcess.authentication.onAuthStateChanged(callback);
   }
+
+  /**
+   * Check keychain status
+   */
+  static async checkKeychainStatus(): Promise<{
+    available: boolean;
+    initialized: boolean;
+    error?: string;
+    errorType?: string;
+  }> {
+    return window.mainProcess.authentication.checkKeychainStatus();
+  }
+
+  /**
+   * Test keychain access
+   */
+  static async testKeychainAccess(): Promise<{
+    success: boolean;
+    error?: string;
+    errorType?: string;
+  }> {
+    return window.mainProcess.authentication.testKeychainAccess();
+  }
 }

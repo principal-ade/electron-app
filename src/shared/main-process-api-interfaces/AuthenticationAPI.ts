@@ -97,4 +97,17 @@ export interface AuthenticationAPI {
   // State management
   getAuthState(): Promise<AuthState>;
   onAuthStateChanged(callback: (state: AuthState) => void): () => void;
+
+  // Keychain operations
+  checkKeychainStatus(): Promise<{
+    available: boolean;
+    initialized: boolean;
+    error?: string;
+    errorType?: string;
+  }>;
+  testKeychainAccess(): Promise<{
+    success: boolean;
+    error?: string;
+    errorType?: string;
+  }>;
 }

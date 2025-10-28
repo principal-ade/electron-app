@@ -18,8 +18,8 @@ import { GithubService } from '../../../../main-process-api/GithubService';
 import { SSHSetupService } from '../../../../main-process-api/SSHSetupService';
 import { AuthenticationService } from '../../../../main-process-api/AuthenticationService';
 import { SSHSetupWizard } from '../../RepositoryExplorer/components/SSHSetupWizard';
+import { KeychainPermissionModal } from '../../../../components/KeychainPermissionModal';
 import type { TokenInfo, GitHubSSHKey } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
-import type { SSHKeyInfo } from '../../../../../shared/main-process-api-interfaces/SSHSetupAPI';
 
 // Mapping of GitHub scopes to human-readable descriptions
 export const SCOPE_DESCRIPTIONS: Record<string, string> = {
@@ -119,16 +119,58 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     success: boolean;
     message: string;
   } | null>(null);
-  const [tokenMetadata, setTokenMetadata] = useState<any>(null);
+  const [tokenMetadata, setTokenMetadata] = useState<Record<string, unknown> | null>(null);
   const [loadingTokenMetadata, setLoadingTokenMetadata] = useState(false);
   const [testingRefresh, setTestingRefresh] = useState(false);
   const [refreshResult, setRefreshResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
+  const [showKeychainModal, setShowKeychainModal] = useState(false);
+  const [keychainErrorType, setKeychainErrorType] = useState<
+    'timeout' | 'permission_denied' | 'not_available' | 'unknown' | null
+  >(null);
+  const [keychainStatus, setKeychainStatus] = useState<{
+    available: boolean;
+    initialized: boolean;
+    error?: string;
+    errorType?: string;
+  } | null>(null);
+  const [loadingKeychainStatus, setLoadingKeychainStatus] = useState(false);
 
   const cardBackground = theme.colors.backgroundTertiary;
   const secondaryBackground = theme.colors.backgroundSecondary;
+
+  // Detect keychain-related errors
+  useEffect(() => {
+    if (loginError) {
+      const errorLower = loginError.toLowerCase();
+      if (
+        errorLower.includes('keychain') ||
+        errorLower.includes('timeout') ||
+        errorLower.includes('permission') ||
+        errorLower.includes('encryption')
+      ) {
+        // Determine error type from message
+        if (errorLower.includes('timeout') || errorLower.includes('timed out')) {
+          setKeychainErrorType('timeout');
+        } else if (
+          errorLower.includes('denied') ||
+          errorLower.includes('permission')
+        ) {
+          setKeychainErrorType('permission_denied');
+        } else if (
+          errorLower.includes('not available') ||
+          errorLower.includes('unavailable')
+        ) {
+          setKeychainErrorType('not_available');
+        } else {
+          setKeychainErrorType('unknown');
+        }
+        setShowKeychainModal(true);
+      }
+    }
+  }, [loginError]);
 
   // Fetch token info when authenticated
   useEffect(() => {
@@ -141,6 +183,8 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
       setGitHubSSHKeys([]);
       setTokenMetadata(null);
     }
+    // Always fetch keychain status (regardless of auth state)
+    fetchKeychainStatus();
   }, [isAuthenticated, authUser]);
 
   const fetchTokenInfo = async () => {
@@ -225,11 +269,12 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
           message: result.error || 'Failed to refresh token',
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('[AuthDetails] Refresh test failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to test refresh';
       setRefreshResult({
         success: false,
-        message: error.message || 'Failed to test refresh',
+        message: errorMessage,
       });
     } finally {
       setTestingRefresh(false);
@@ -258,6 +303,67 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     await fetchSSHKeyInfo();
     // Automatically test the connection after setup
     await handleTestSSHConnection();
+  };
+
+  const handleKeychainModalClose = () => {
+    setShowKeychainModal(false);
+    clearLoginError();
+  };
+
+  const handleKeychainRetry = async () => {
+    try {
+      await login(true); // Force retry
+    } catch (error) {
+      console.error('[AuthDetails] Retry login failed:', error);
+    }
+  };
+
+  const fetchKeychainStatus = async () => {
+    setLoadingKeychainStatus(true);
+    try {
+      const status = await AuthenticationService.checkKeychainStatus();
+      setKeychainStatus(status);
+    } catch (error) {
+      console.error('[AuthDetails] Failed to fetch keychain status:', error);
+      setKeychainStatus({
+        available: false,
+        initialized: false,
+        error: 'Failed to check keychain status',
+        errorType: 'unknown',
+      });
+    } finally {
+      setLoadingKeychainStatus(false);
+    }
+  };
+
+  const handleTestKeychainAccess = async () => {
+    setLoadingKeychainStatus(true);
+    try {
+      const result = await AuthenticationService.testKeychainAccess();
+
+      if (result.success) {
+        // Refresh status after successful test
+        await fetchKeychainStatus();
+        setConnectionTestResult({
+          success: true,
+          message: 'Keychain access test passed! Credentials can be stored securely.',
+        });
+      } else {
+        setConnectionTestResult({
+          success: false,
+          message: `Keychain test failed: ${result.error || 'Unknown error'}`,
+        });
+      }
+    } catch (error) {
+      console.error('[AuthDetails] Keychain test failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setConnectionTestResult({
+        success: false,
+        message: `Failed to test keychain: ${errorMessage}`,
+      });
+    } finally {
+      setLoadingKeychainStatus(false);
+    }
   };
 
   return (
@@ -1638,6 +1744,364 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
           </div>
         )}
 
+        {/* System Permissions Card */}
+        <div
+          style={{
+            backgroundColor: cardBackground,
+            border: `1px solid ${theme.colors.border}`,
+            borderRadius: '12px',
+            padding: '24px',
+            marginBottom: '24px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '20px',
+            }}
+          >
+            <h2
+              style={{
+                fontSize: '18px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Shield size={20} />
+              System Permissions
+            </h2>
+            <button
+              onClick={fetchKeychainStatus}
+              disabled={loadingKeychainStatus}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '6px 12px',
+                backgroundColor: 'transparent',
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: '6px',
+                color: theme.colors.textSecondary,
+                fontSize: '13px',
+                cursor: loadingKeychainStatus ? 'wait' : 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                if (!loadingKeychainStatus) {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundSecondary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              <RefreshCw
+                size={14}
+                className={loadingKeychainStatus ? 'spinning' : ''}
+              />
+              Refresh
+            </button>
+          </div>
+
+          <p
+            style={{
+              fontSize: '14px',
+              color: theme.colors.textSecondary,
+              marginBottom: '20px',
+            }}
+          >
+            View and manage system permissions required for secure credential
+            storage and authentication.
+          </p>
+
+          {loadingKeychainStatus ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: theme.colors.textSecondary,
+                padding: '20px',
+              }}
+            >
+              <Loader2 size={16} className="spinning" />
+              Checking permissions...
+            </div>
+          ) : (
+            <>
+              {/* Keychain Access Status */}
+              <div
+                style={{
+                  backgroundColor: secondaryBackground,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '8px',
+                  padding: '16px',
+                  marginBottom: '16px',
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    marginTop: 0,
+                    marginBottom: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <Key size={16} />
+                  Keychain Access
+                </h3>
+
+                {keychainStatus ? (
+                  <>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gap: '12px',
+                        marginBottom: '16px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          padding: '12px',
+                          backgroundColor: theme.colors.background,
+                          borderRadius: '6px',
+                          border: `1px solid ${theme.colors.border}`,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            color: theme.colors.textSecondary,
+                            marginBottom: '4px',
+                          }}
+                        >
+                          Keychain Available
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            color: keychainStatus.available
+                              ? theme.colors.success
+                              : theme.colors.error,
+                          }}
+                        >
+                          {keychainStatus.available ? (
+                            <>
+                              <CheckCircle size={16} />
+                              Available
+                            </>
+                          ) : (
+                            <>
+                              <XCircle size={16} />
+                              Not Available
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          padding: '12px',
+                          backgroundColor: theme.colors.background,
+                          borderRadius: '6px',
+                          border: `1px solid ${theme.colors.border}`,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '12px',
+                            color: theme.colors.textSecondary,
+                            marginBottom: '4px',
+                          }}
+                        >
+                          Encryption Status
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            color: keychainStatus.initialized
+                              ? theme.colors.success
+                              : theme.colors.warning,
+                          }}
+                        >
+                          {keychainStatus.initialized ? (
+                            <>
+                              <CheckCircle size={16} />
+                              Initialized
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle size={16} />
+                              Not Initialized
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {keychainStatus.error && (
+                      <div
+                        style={{
+                          padding: '12px',
+                          backgroundColor: `${theme.colors.error}15`,
+                          border: `1px solid ${theme.colors.error}40`,
+                          borderRadius: '6px',
+                          marginBottom: '16px',
+                          fontSize: '13px',
+                          color: theme.colors.error,
+                        }}
+                      >
+                        <AlertCircle
+                          size={14}
+                          style={{ display: 'inline', marginRight: '6px' }}
+                        />
+                        {keychainStatus.error}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleTestKeychainAccess}
+                      disabled={loadingKeychainStatus}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 16px',
+                        backgroundColor: theme.colors.primary,
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: theme.colors.background,
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        cursor: loadingKeychainStatus ? 'wait' : 'pointer',
+                        transition: 'all 0.2s',
+                        opacity: loadingKeychainStatus ? 0.7 : 1,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!loadingKeychainStatus)
+                          e.currentTarget.style.opacity = '0.9';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!loadingKeychainStatus)
+                          e.currentTarget.style.opacity = '1';
+                      }}
+                    >
+                      {loadingKeychainStatus ? (
+                        <>
+                          <Loader2 size={14} className="spinning" />
+                          Testing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle size={14} />
+                          Test Keychain Access
+                        </>
+                      )}
+                    </button>
+                  </>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: '14px',
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    Unable to check keychain status
+                  </div>
+                )}
+              </div>
+
+              {/* macOS System Permissions Info */}
+              <div
+                style={{
+                  backgroundColor: secondaryBackground,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '8px',
+                  padding: '16px',
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    marginTop: 0,
+                    marginBottom: '12px',
+                  }}
+                >
+                  Required Permissions
+                </h3>
+                <ul
+                  style={{
+                    margin: 0,
+                    paddingLeft: '20px',
+                    fontSize: '13px',
+                    color: theme.colors.textSecondary,
+                    lineHeight: '1.8',
+                  }}
+                >
+                  <li>
+                    <strong style={{ color: theme.colors.text }}>
+                      Keychain Access:
+                    </strong>{' '}
+                    Required to securely store authentication credentials
+                  </li>
+                  <li>
+                    <strong style={{ color: theme.colors.text }}>
+                      System Keychain:
+                    </strong>{' '}
+                    Must be unlocked for encryption/decryption operations
+                  </li>
+                </ul>
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '12px',
+                    backgroundColor: theme.colors.background,
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  <strong style={{ color: theme.colors.text }}>
+                    To manage permissions:
+                  </strong>
+                  <br />
+                  <span
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: '11px',
+                      display: 'block',
+                      marginTop: '8px',
+                      padding: '8px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '4px',
+                    }}
+                  >
+                    System Preferences → Security & Privacy → Privacy
+                  </span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
         {/* Connected Services Card */}
         {isAuthenticated && (
           <div
@@ -1749,6 +2213,15 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
         isOpen={showSSHSetup}
         onClose={() => setShowSSHSetup(false)}
         onSuccess={handleSSHSetupComplete}
+      />
+
+      {/* Keychain Permission Modal */}
+      <KeychainPermissionModal
+        isOpen={showKeychainModal}
+        onClose={handleKeychainModalClose}
+        onRetry={handleKeychainRetry}
+        error={loginError}
+        errorType={keychainErrorType}
       />
     </div>
   );

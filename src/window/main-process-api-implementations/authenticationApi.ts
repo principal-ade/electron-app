@@ -138,4 +138,23 @@ export const authenticationAPI: AuthenticationAPI = {
       ipcRenderer.removeListener(AuthEvent.STATE_CHANGED, listener);
     };
   },
+
+  // ===== Keychain Operations =====
+
+  checkKeychainStatus: async (): Promise<{
+    available: boolean;
+    initialized: boolean;
+    error?: string;
+    errorType?: string;
+  }> => {
+    return ipcRenderer.invoke(AuthEvent.CHECK_KEYCHAIN_STATUS);
+  },
+
+  testKeychainAccess: async (): Promise<{
+    success: boolean;
+    error?: string;
+    errorType?: string;
+  }> => {
+    return ipcRenderer.invoke(AuthEvent.TEST_KEYCHAIN_ACCESS);
+  },
 };

@@ -1,15 +1,19 @@
 import type { UnifiedSecureStorage } from '../UnifiedSecureStorage';
 
+export interface TokenMetadata {
+  [key: string]: unknown;
+}
+
 export interface TokenData {
   token: string;
-  metadata?: any;
+  metadata?: TokenMetadata;
   savedAt: number;
 }
 
 export class TokenDomain {
   constructor(private storage: UnifiedSecureStorage) {}
 
-  async setToken(key: string, token: string, metadata?: any): Promise<void> {
+  async setToken(key: string, token: string, metadata?: TokenMetadata): Promise<void> {
     await this.storage.updateData((data) => {
       data.tokens[key] = {
         token,
@@ -34,7 +38,7 @@ export class TokenDomain {
 
   async getTokenWithMetadata(
     key: string,
-  ): Promise<{ token: string; metadata: any } | null> {
+  ): Promise<{ token: string; metadata?: TokenMetadata } | null> {
     const data = await this.storage.getData();
     const tokenData = data.tokens[key] as TokenData | undefined;
 

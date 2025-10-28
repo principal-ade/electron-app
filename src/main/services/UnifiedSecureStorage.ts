@@ -2,7 +2,7 @@ import { safeStorage, app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
-import { TokenDomain } from './storage-domains/TokenDomain';
+import { TokenDomain, type TokenMetadata } from './storage-domains/TokenDomain';
 import { SecretsDomain } from './storage-domains/SecretsDomain';
 
 const fsPromises = {
@@ -11,6 +11,55 @@ const fsPromises = {
   unlink: promisify(fs.unlink),
   access: promisify(fs.access),
 };
+
+// Keychain operation timeout (30 seconds)
+const KEYCHAIN_TIMEOUT_MS = 30000;
+
+/**
+ * Custom error types for better error handling
+ */
+export class KeychainTimeoutError extends Error {
+  constructor(operation: string) {
+    super(
+      `Keychain operation timed out after ${KEYCHAIN_TIMEOUT_MS / 1000} seconds during ${operation}. Please check System Preferences → Security & Privacy → Privacy → Keychain Access.`,
+    );
+    this.name = 'KeychainTimeoutError';
+  }
+}
+
+export class KeychainPermissionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'KeychainPermissionError';
+  }
+}
+
+export class KeychainNotAvailableError extends Error {
+  constructor() {
+    super(
+      'Keychain encryption is not available on this system. Please ensure your system keychain is unlocked.',
+    );
+    this.name = 'KeychainNotAvailableError';
+  }
+}
+
+/**
+ * Wraps a keychain operation with a timeout
+ */
+async function withKeychainTimeout<T>(
+  operation: () => Promise<T> | T,
+  operationName: string,
+): Promise<T> {
+  return Promise.race([
+    Promise.resolve(operation()),
+    new Promise<T>((_, reject) =>
+      setTimeout(
+        () => reject(new KeychainTimeoutError(operationName)),
+        KEYCHAIN_TIMEOUT_MS,
+      ),
+    ),
+  ]);
+}
 
 export interface UnifiedStorageData {
   version: string;
@@ -23,8 +72,9 @@ export interface UnifiedStorageData {
 }
 
 interface DecryptedData {
-  tokens: Record<string, any>;
-  secrets: Record<string, any>;
+  tokens: Record<string, string>;
+  secrets: Record<string, string>;
+  tokenMetadata?: Record<string, TokenMetadata>;
 }
 
 export class UnifiedSecureStorage {
@@ -57,12 +107,43 @@ export class UnifiedSecureStorage {
   private async ensureEncryptionAvailable(): Promise<void> {
     if (this.encryptionInitialized) return;
 
-    if (!safeStorage.isEncryptionAvailable()) {
-      throw new Error('Encryption is not available on this system');
-    }
+    try {
+      console.log(
+        '[UnifiedSecureStorage] Checking keychain encryption availability...',
+      );
 
-    this.encryptionInitialized = true;
-    console.log('[UnifiedSecureStorage] Encryption initialized');
+      // Wrap the encryption check in a timeout
+      const isAvailable = await withKeychainTimeout(
+        () => safeStorage.isEncryptionAvailable(),
+        'checking encryption availability',
+      );
+
+      if (!isAvailable) {
+        throw new KeychainNotAvailableError();
+      }
+
+      this.encryptionInitialized = true;
+      console.log('[UnifiedSecureStorage] Encryption initialized successfully');
+    } catch (error: unknown) {
+      // Re-throw custom errors as-is
+      if (
+        error instanceof KeychainTimeoutError ||
+        error instanceof KeychainNotAvailableError
+      ) {
+        throw error;
+      }
+
+      // Wrap other errors in KeychainPermissionError
+      console.error(
+        '[UnifiedSecureStorage] Failed to initialize encryption:',
+        error,
+      );
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      throw new KeychainPermissionError(
+        `Failed to access keychain: ${errorMessage}. Please grant keychain access in System Preferences.`,
+      );
+    }
   }
 
   private async loadFromDisk(): Promise<DecryptedData> {
@@ -87,7 +168,10 @@ export class UnifiedSecureStorage {
       await this.ensureEncryptionAvailable();
 
       const encryptedBuffer = Buffer.from(stored.encrypted, 'base64');
-      const decrypted = safeStorage.decryptString(encryptedBuffer);
+      const decrypted = await withKeychainTimeout(
+        () => safeStorage.decryptString(encryptedBuffer),
+        'decrypting stored data',
+      );
       const data: DecryptedData = JSON.parse(decrypted);
 
       this.memoryCache = data;
@@ -110,7 +194,10 @@ export class UnifiedSecureStorage {
     await this.ensureEncryptionAvailable();
 
     const dataJson = JSON.stringify(data);
-    const encrypted = safeStorage.encryptString(dataJson);
+    const encrypted = await withKeychainTimeout(
+      () => safeStorage.encryptString(dataJson),
+      'encrypting data for storage',
+    );
 
     const storageData: UnifiedStorageData = {
       version: this.STORAGE_VERSION,
@@ -150,7 +237,11 @@ export class UnifiedSecureStorage {
     await this.saveToDisk(updated);
   }
 
-  async setToken(key: string, token: string, metadata?: any): Promise<void> {
+  async setToken(
+    key: string,
+    token: string,
+    metadata?: TokenMetadata,
+  ): Promise<void> {
     return this.tokenDomain.setToken(key, token, metadata);
   }
 
@@ -220,11 +311,122 @@ export class UnifiedSecureStorage {
     await this.ensureEncryptionAvailable();
 
     const encryptedBuffer = Buffer.from(data.encrypted, 'base64');
-    const decrypted = safeStorage.decryptString(encryptedBuffer);
+    const decrypted = await withKeychainTimeout(
+      () => safeStorage.decryptString(encryptedBuffer),
+      'decrypting imported data',
+    );
     const decryptedData: DecryptedData = JSON.parse(decrypted);
 
     await this.saveToDisk(decryptedData);
     console.log('[UnifiedSecureStorage] Data imported successfully');
+  }
+
+  /**
+   * Check keychain access status without triggering permission prompts
+   * Returns information about encryption availability and initialization state
+   */
+  async checkKeychainStatus(): Promise<{
+    available: boolean;
+    initialized: boolean;
+    error?: string;
+    errorType?: string;
+  }> {
+    try {
+      // First check if already initialized (no keychain access needed)
+      if (this.encryptionInitialized) {
+        return {
+          available: true,
+          initialized: true,
+        };
+      }
+
+      // Try to check availability with timeout
+      const isAvailable = await withKeychainTimeout(
+        () => safeStorage.isEncryptionAvailable(),
+        'checking keychain status',
+      );
+
+      return {
+        available: isAvailable,
+        initialized: false,
+      };
+    } catch (error: unknown) {
+      let errorType = 'unknown';
+      let errorMessage = 'Unknown error';
+
+      if (error instanceof KeychainTimeoutError) {
+        errorType = 'timeout';
+        errorMessage = error.message;
+      } else if (error instanceof KeychainNotAvailableError) {
+        errorType = 'not_available';
+        errorMessage = error.message;
+      } else if (error instanceof KeychainPermissionError) {
+        errorType = 'permission_denied';
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      return {
+        available: false,
+        initialized: false,
+        error: errorMessage,
+        errorType,
+      };
+    }
+  }
+
+  /**
+   * Test keychain access by attempting a simple encrypt/decrypt operation
+   */
+  async testKeychainAccess(): Promise<{
+    success: boolean;
+    error?: string;
+    errorType?: string;
+  }> {
+    try {
+      await this.ensureEncryptionAvailable();
+
+      // Test encrypt/decrypt
+      const testData = 'test';
+      const encrypted = await withKeychainTimeout(
+        () => safeStorage.encryptString(testData),
+        'testing keychain access (encrypt)',
+      );
+
+      const decrypted = await withKeychainTimeout(
+        () => safeStorage.decryptString(encrypted),
+        'testing keychain access (decrypt)',
+      );
+
+      if (decrypted !== testData) {
+        throw new Error('Encryption test failed: decrypted data does not match');
+      }
+
+      return { success: true };
+    } catch (error: unknown) {
+      let errorType = 'unknown';
+      let errorMessage = 'Unknown error';
+
+      if (error instanceof KeychainTimeoutError) {
+        errorType = 'timeout';
+        errorMessage = error.message;
+      } else if (error instanceof KeychainNotAvailableError) {
+        errorType = 'not_available';
+        errorMessage = error.message;
+      } else if (error instanceof KeychainPermissionError) {
+        errorType = 'permission_denied';
+        errorMessage = error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+        errorType,
+      };
+    }
   }
 }
 

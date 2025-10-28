@@ -8,12 +8,15 @@
 
 import { ipcMain, shell } from 'electron';
 import Store from 'electron-store';
-import {
-  OAuthServerClient,
-  type AuthResult as OAuthAuthResult,
-} from './OAuthServerClient';
+import { OAuthServerClient } from './OAuthServerClient';
 import AuthStateManager from './AuthStateManager';
-import { UnifiedSecureStorage, TOKEN_KEYS } from './UnifiedSecureStorage';
+import {
+  UnifiedSecureStorage,
+  TOKEN_KEYS,
+  KeychainTimeoutError,
+  KeychainPermissionError,
+  KeychainNotAvailableError,
+} from './UnifiedSecureStorage';
 import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 
 interface AuthResult {
@@ -96,9 +99,10 @@ class AuthService {
         }
 
         return result;
-      } catch (error: any) {
+      } catch (error) {
         console.error('[AuthService] CHECK ERROR:', error);
-        return { success: false, authenticated: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, authenticated: false, error: errorMessage };
       }
     });
 
@@ -114,8 +118,9 @@ class AuthService {
           };
         }
         return { authenticated: false };
-      } catch (error: any) {
-        return { authenticated: false, error: error.message };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { authenticated: false, error: errorMessage };
       }
     });
 
@@ -251,9 +256,41 @@ class AuthService {
     ipcMain.handle(AuthEvent.TEST_REFRESH_TOKEN, async () => {
       try {
         return await this.testRefreshToken();
-      } catch (error: any) {
+      } catch (error) {
         console.error('[AuthService] Test refresh token error:', error);
-        return { success: false, error: error.message };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { success: false, error: errorMessage };
+      }
+    });
+
+    // Check keychain status handler
+    ipcMain.handle(AuthEvent.CHECK_KEYCHAIN_STATUS, async () => {
+      try {
+        return await this.storage.checkKeychainStatus();
+      } catch (error) {
+        console.error('[AuthService] Check keychain status error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return {
+          available: false,
+          initialized: false,
+          error: errorMessage,
+          errorType: 'unknown',
+        };
+      }
+    });
+
+    // Test keychain access handler
+    ipcMain.handle(AuthEvent.TEST_KEYCHAIN_ACCESS, async () => {
+      try {
+        return await this.storage.testKeychainAccess();
+      } catch (error) {
+        console.error('[AuthService] Test keychain access error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return {
+          success: false,
+          error: errorMessage,
+          errorType: 'unknown',
+        };
       }
     });
   }
@@ -367,12 +404,13 @@ class AuthService {
         token,
         user,
       };
-    } catch (error: any) {
+    } catch (error) {
       console.error('[AuthService] Failed to get stored auth:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
         authenticated: false,
-        error: error.message,
+        error: errorMessage,
       };
     }
   }
@@ -399,7 +437,24 @@ class AuthService {
       console.log('[AuthService] Credentials stored successfully');
     } catch (error) {
       console.error('[AuthService] Failed to store credentials:', error);
-      throw error;
+
+      // Provide user-friendly error messages for keychain issues
+      if (error instanceof KeychainTimeoutError) {
+        throw new Error(
+          'Keychain access timed out. Please unlock your system keychain and try again.',
+        );
+      } else if (error instanceof KeychainPermissionError) {
+        throw new Error(
+          'Keychain access was denied. Please grant permission in System Preferences → Security & Privacy and try again.',
+        );
+      } else if (error instanceof KeychainNotAvailableError) {
+        throw new Error(
+          'Keychain is not available. Please ensure your system keychain is unlocked and try again.',
+        );
+      }
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to save credentials: ${errorMessage}`);
     }
   }
 
