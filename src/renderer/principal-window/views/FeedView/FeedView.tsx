@@ -1,6 +1,14 @@
 import React, { useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Rss, FolderGit2, Users, History, Network, FileText } from 'lucide-react';
+import {
+  Rss,
+  FolderGit2,
+  Users,
+  History,
+  Network,
+  FileText,
+  UserCheck,
+} from 'lucide-react';
 import { ConfigurablePanelLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
@@ -12,6 +20,7 @@ import { GitHubProjectsPanel } from '../../../panels/components/GitHubProjectsPa
 import { GitHubSocialPanel } from '../../../panels/components/GitHubSocialPanel';
 import { RecentCommitsPanel } from '../../../panels/components/RecentCommitsPanel';
 import { GitHubReadmePanel } from '../../../panels/components/GitHubReadmePanel';
+import { GitHubUserSignalsPanel } from '../../../panels/components/GitHubUserSignalsPanel';
 import { SelectedRepositoryProvider, useSelectedRepository } from '../../../contexts/SelectedRepositoryContext';
 
 const FeedViewInner: React.FC = () => {
@@ -98,6 +107,12 @@ const FeedViewInner: React.FC = () => {
             content: <GitHubReadmePanel repository={selectedRepository} />,
           },
           {
+            id: 'github-user-signals',
+            label: 'User Signals',
+            icon: <UserCheck size={16} />,
+            content: <GitHubUserSignalsPanel />,
+          },
+          {
             id: 'graphs-list',
             label: 'Graphs',
             icon: <Network size={16} />,
@@ -134,7 +149,7 @@ const FeedViewInner: React.FC = () => {
           },
           middle: {
             type: 'tabs',
-            panels: ['recent-commits', 'readme-viewer'],
+            panels: ['recent-commits', 'readme-viewer', 'github-user-signals'],
             config: {
               defaultActiveTab: 0,
               tabPosition: 'top',
