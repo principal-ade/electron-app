@@ -8,6 +8,7 @@ import {
   FileCode,
   FileEdit,
   FileText,
+  FolderGit2,
   FolderOpen,
   FolderTree,
   GitBranch,
@@ -23,7 +24,6 @@ import {
   Pencil,
   Play,
   Search,
-  Star,
   Terminal as TerminalIcon,
   Users,
   Wrench,
@@ -34,7 +34,7 @@ import { GitChangesPanelPreview } from './components/GitChangesPanel';
 import { GitCommitHistoryPanelPreview } from './components/GitCommitHistoryPanel';
 import { GitIssuesPanelPreview } from './components/GitIssuesPanel';
 import { GitPullRequestsPanelPreview } from './components/GitPullRequestsPanel';
-import { GitHubStarsPanelPreview } from './components/GitHubStarsPanel';
+import { GitHubProjectsPanelPreview } from './components/GitHubProjectsPanel';
 import { GitHubSocialPanelPreview } from './components/GitHubSocialPanel';
 import { GitStatusPanelPreview } from './components/GitStatusPanel';
 import { RepositoryActionsPanelPreview } from './components/RepositoryActionsPanel';
@@ -54,6 +54,7 @@ import { AlexandriaDrawingPanelPreview } from './components/AlexandriaDrawingPan
 import { QualityHexagonPanelPreview } from './components/QualityHexagonPanel';
 import { GitDiffPanelPreview } from './components/GitDiffPanel';
 import { MDXEditorPanelPreview } from './components/MDXEditorPanel';
+import { GitHubReadmePanel } from './components/GitHubReadmePanel';
 
 export interface PanelPreviewMetadata {
   icon: React.ReactNode;
@@ -87,9 +88,9 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     icon: <GitPullRequest size={16} />,
     preview: <GitPullRequestsPanelPreview />,
   },
-  githubStars: {
-    icon: <Star size={16} />,
-    preview: <GitHubStarsPanelPreview />,
+  githubProjects: {
+    icon: <FolderGit2 size={16} />,
+    preview: <GitHubProjectsPanelPreview />,
   },
   githubSocial: {
     icon: <Users size={16} />,
@@ -193,6 +194,12 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     preview: <MDXEditorPanelPreview />,
     label: 'MDX Editor',
     description: 'Rich markdown editor with live preview and formatting tools.',
+  },
+  githubReadme: {
+    icon: <FileText size={16} />,
+    preview: <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: '#888' }}>GitHub README Viewer</div>,
+    label: 'GitHub README',
+    description: 'View README files from GitHub repositories in the Feed.',
   },
   graphsList: {
     icon: <Network size={16} />,

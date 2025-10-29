@@ -8,6 +8,7 @@ export interface AuthEndpoints {
   start: string;
   callback: string;
   token: string;
+  refresh: string;
 }
 
 /**
@@ -18,6 +19,7 @@ export function getAuthEndpoints(baseUrl: string): AuthEndpoints {
     start: `${baseUrl}/api/auth/workos/start`,
     callback: `${baseUrl}/api/auth/workos/callback`,
     token: `${baseUrl}/api/auth/workos/token`,
+    refresh: `${baseUrl}/api/auth/workos/refresh`,
   };
 }
 

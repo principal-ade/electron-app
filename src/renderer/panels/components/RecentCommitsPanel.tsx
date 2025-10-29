@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { GitCommit, Calendar, User, AlertCircle, Loader2 } from 'lucide-react';
-import { useVisibleProjects } from '../../contexts/VisibleProjectsContext';
 import { GithubService } from '../../main-process-api/GithubService';
+import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 
 interface GitHubCommit {
   sha: string;
@@ -21,21 +21,21 @@ interface GitHubCommit {
   html_url: string;
 }
 
-interface CommitWithRepo extends GitHubCommit {
-  repoFullName: string;
-  repoName: string;
+interface RecentCommitsPanelProps {
+  repository: GitHubRepository | null;
 }
 
-export const RecentCommitsPanel: React.FC = () => {
+export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
+  repository,
+}) => {
   const { theme } = useTheme();
-  const { visibleProjects } = useVisibleProjects();
-  const [commits, setCommits] = useState<CommitWithRepo[]>([]);
+  const [commits, setCommits] = useState<GitHubCommit[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCommits = async () => {
-      if (visibleProjects.length === 0) {
+      if (!repository) {
         setCommits([]);
         return;
       }
@@ -44,39 +44,16 @@ export const RecentCommitsPanel: React.FC = () => {
       setError(null);
 
       try {
-        // Fetch commits from all visible projects
-        const commitPromises = visibleProjects.map(async (project) => {
-          try {
-            const repoCommits = await GithubService.getRepositoryCommits(
-              project.owner,
-              project.name,
-              { perPage: 5 },
-            );
-            return repoCommits.map((commit) => ({
-              ...commit,
-              repoFullName: project.fullName,
-              repoName: project.name,
-            }));
-          } catch (err) {
-            console.error(
-              `Failed to fetch commits for ${project.fullName}:`,
-              err,
-            );
-            return [];
-          }
-        });
+        const owner = repository.owner?.login || '';
+        const repo = repository.name;
 
-        const allCommits = (await Promise.all(commitPromises)).flat();
+        const repoCommits = await GithubService.getRepositoryCommits(
+          owner,
+          repo,
+          { perPage: 10 },
+        );
 
-        // Sort by date (most recent first)
-        allCommits.sort((a, b) => {
-          const dateA = new Date(a.commit.author.date).getTime();
-          const dateB = new Date(b.commit.author.date).getTime();
-          return dateB - dateA;
-        });
-
-        // Take only the 5 most recent across all repos
-        setCommits(allCommits.slice(0, 5));
+        setCommits(repoCommits);
       } catch (err) {
         console.error('Failed to fetch commits:', err);
         setError(
@@ -88,7 +65,7 @@ export const RecentCommitsPanel: React.FC = () => {
     };
 
     void fetchCommits();
-  }, [visibleProjects]);
+  }, [repository]);
 
   const formatRelativeTime = (dateString: string): string => {
     const date = new Date(dateString);
@@ -127,7 +104,7 @@ export const RecentCommitsPanel: React.FC = () => {
     gap: '16px',
   };
 
-  if (visibleProjects.length === 0) {
+  if (!repository) {
     return (
       <div style={containerStyle}>
         <div
@@ -163,7 +140,7 @@ export const RecentCommitsPanel: React.FC = () => {
                   fontWeight: 600,
                 }}
               >
-                No projects selected
+                No repository selected
               </h3>
               <p
                 style={{
@@ -172,8 +149,7 @@ export const RecentCommitsPanel: React.FC = () => {
                   lineHeight: 1.5,
                 }}
               >
-                Select repositories from the left panel to see their recent
-                commits here.
+                Click on a repository to view its recent commits
               </p>
             </div>
           </div>
@@ -249,8 +225,7 @@ export const RecentCommitsPanel: React.FC = () => {
             fontSize: '13px',
           }}
         >
-          Latest 5 commits from {visibleProjects.length} selected{' '}
-          {visibleProjects.length === 1 ? 'repository' : 'repositories'}
+          Latest commits from {repository.full_name}
         </p>
       </div>
 
@@ -271,12 +246,12 @@ export const RecentCommitsPanel: React.FC = () => {
               color: theme.colors.textSecondary,
             }}
           >
-            No commits found in selected repositories
+            No commits found in this repository
           </div>
         ) : (
           commits.map((commit) => (
             <a
-              key={`${commit.repoFullName}-${commit.sha}`}
+              key={commit.sha}
               href={commit.html_url}
               target="_blank"
               rel="noopener noreferrer"
@@ -310,17 +285,6 @@ export const RecentCommitsPanel: React.FC = () => {
                   color: theme.colors.textSecondary,
                 }}
               >
-                <span
-                  style={{
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    backgroundColor: `${theme.colors.primary}20`,
-                    color: theme.colors.primary,
-                    fontWeight: 600,
-                  }}
-                >
-                  {commit.repoName}
-                </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Calendar size={12} />
                   {formatRelativeTime(commit.commit.author.date)}

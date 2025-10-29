@@ -17,7 +17,9 @@ import {
 } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { useTheme } from '@a24z/industry-theme';
-import TerminalPanelV2, { TerminalPanelV2Ref } from '../TerminalPanelV2';
+import TerminalPanelPackaged, {
+  TerminalPanelPackagedRef,
+} from '../TerminalPanelPackaged';
 import { TerminalService } from '../../main-process-api/TerminalService';
 import { TerminalDebugModal } from './TerminalDebugModal';
 import { terminalRecorder } from '../../utils/terminalRecorder';
@@ -78,7 +80,9 @@ export const TabbedTerminalPanel = forwardRef<
     );
 
     // Store refs to terminal panels for each tab
-    const terminalRefs = useRef<Map<string, TerminalPanelV2Ref>>(new Map());
+    const terminalRefs = useRef<Map<string, TerminalPanelPackagedRef>>(
+      new Map(),
+    );
 
     // Store refs to callbacks to avoid recreating event listeners
     const addNewTabRef = useRef<typeof addNewTab | null>(null);
@@ -470,7 +474,7 @@ export const TabbedTerminalPanel = forwardRef<
             style={{
               display: 'flex',
               alignItems: 'stretch',
-              height: '41px',
+              height: '40px',
               flexShrink: 0,
             }}
           >
@@ -747,7 +751,7 @@ export const TabbedTerminalPanel = forwardRef<
                   position: 'relative',
                 }}
               >
-                <TerminalPanelV2
+                <TerminalPanelPackaged
                   ref={(el) => {
                     if (el) {
                       terminalRefs.current.set(tab.id, el);

@@ -20,7 +20,7 @@ import { ToolsPanel } from './components/ToolsPanel';
 import { AgentContextTreePanel } from './components/AgentContextTreePanel';
 import { GitCommitHistoryPanel } from './components/GitCommitHistoryPanel';
 import { MDXEditorPanel } from './components/MDXEditorPanel';
-import { GitHubStarsPanel } from './components/GitHubStarsPanel';
+import { GitHubProjectsPanel } from './components/GitHubProjectsPanel';
 import { GitHubSocialPanel } from './components/GitHubSocialPanel';
 import { GraphsListPanel } from './components/GraphsListPanel';
 import { GraphDetailPanel } from './components/GraphDetailPanel';
@@ -50,7 +50,7 @@ const panelRenderers: Partial<
   gitPullRequests: ({ context }) => (
     <GitPullRequestsPanel repository={context.repository ?? undefined} />
   ),
-  githubStars: () => <GitHubStarsPanel />,
+  githubProjects: () => <GitHubProjectsPanel />,
   githubSocial: () => <GitHubSocialPanel />,
   gitHistory: ({ context }) => (
     <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />

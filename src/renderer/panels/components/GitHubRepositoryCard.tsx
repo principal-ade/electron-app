@@ -1,39 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import {
   ExternalLink,
-  FolderGit2,
-  GitBranch,
-  GitFork,
   Star,
-  Check,
   FolderOpen,
   Download,
 } from 'lucide-react';
 
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
-import { useVisibleProjects } from '../../contexts/VisibleProjectsContext';
-import { AlexandriaService } from '../../main-process-api/AlexandriaService';
+import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';
 import { WindowService } from '../../main-process-api/WindowService';
-import type { AlexandriaEntry } from '@a24z/core-library';
 import { GitCloneModal } from '../../principal-window/views/RepositoryExplorer/components/GitCloneModal';
 import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.types';
+import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 
 interface GitHubRepositoryCardProps {
   repository: GitHubRepository;
   variant: 'owned' | 'starred';
+  localRepo?: RepositoryCacheData;
 }
 
 export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
   repository,
   variant,
+  localRepo,
 }) => {
   const { theme } = useTheme();
-  const { toggleVisibleProject, isProjectVisible } = useVisibleProjects();
+  const { selectedRepository, setSelectedRepository } = useSelectedRepository();
   const isStarred = variant === 'starred';
-  const isSelected = isProjectVisible(repository.full_name);
-  const [localRepo, setLocalRepo] = useState<AlexandriaEntry | null>(null);
-  const [isCheckingLocal, setIsCheckingLocal] = useState(true);
+  const isReadmeSelected = selectedRepository?.id === repository.id;
   const [showCloneModal, setShowCloneModal] = useState(false);
 
   const badgeColor = isStarred
@@ -41,60 +36,14 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
     : theme.colors.primary;
   const badgeBackground = `${badgeColor}30`;
 
-  // Check if repository exists locally
-  useEffect(() => {
-    const checkLocalRepository = async () => {
-      setIsCheckingLocal(true);
-      try {
-        // Get all repositories and search for a match
-        const allRepos = await AlexandriaService.getRepositories();
-
-        // Try to find a match by GitHub metadata
-        const matchedRepo = allRepos.find((repo) => {
-          // First try matching by github.id (which is in owner/repo format)
-          if (repo.github?.id === repository.full_name) {
-            return true;
-          }
-
-          // Also try matching by owner/name combination
-          if (
-            repo.github?.owner === repository.owner.login &&
-            repo.github?.name === repository.name
-          ) {
-            return true;
-          }
-
-          // Fallback: match just by repository name (less reliable)
-          if (repo.name === repository.name) {
-            return true;
-          }
-
-          return false;
-        });
-
-        setLocalRepo(matchedRepo || null);
-      } catch (error) {
-        console.error('Error checking local repository:', error);
-        setLocalRepo(null);
-      } finally {
-        setIsCheckingLocal(false);
-      }
-    };
-
-    checkLocalRepository();
-  }, [repository.full_name, repository.name, repository.owner.login]);
-
   const handleOpenInGitHub = (e: React.MouseEvent) => {
     e.stopPropagation();
     window.open(repository.html_url, '_blank');
   };
 
   const handleToggleSelection = () => {
-    toggleVisibleProject({
-      fullName: repository.full_name,
-      name: repository.name,
-      owner: repository.owner?.login || 'unknown',
-    });
+    // Set as selected repository to show README
+    setSelectedRepository(repository);
   };
 
   const handleOpenOrClone = async (e: React.MouseEvent) => {
@@ -103,7 +52,7 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
     if (localRepo) {
       // Repository exists locally - open dashboard
       try {
-        await WindowService.openRepositoryDashboard(localRepo);
+        await WindowService.openRepositoryDashboard(localRepo.repository);
       } catch (error) {
         console.error('Error opening repository dashboard:', error);
       }
@@ -116,11 +65,11 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
   const handleRepositoryCloned = async (
     repo: EnhancedAlexandriaEntry,
   ): Promise<void> => {
-    // Update local repo state
-    setLocalRepo(repo);
+    // Close the modal
     setShowCloneModal(false);
 
     // Automatically open the newly cloned repository
+    // Note: The localRepo will be updated automatically via useAllRepositories cache subscription
     try {
       await WindowService.openRepositoryDashboard(repo);
     } catch (error) {
@@ -130,255 +79,181 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
 
   const starCount = repository.stargazers_count ?? 0;
 
+  const isHighlighted = isReadmeSelected;
+  const highlightColor = theme.colors.primary;
+
   return (
     <div
-      onClick={handleToggleSelection}
       style={{
-        backgroundColor: theme.colors.background,
-        border: `2px solid ${isSelected ? badgeColor : theme.colors.border}`,
-        borderRadius: '10px',
-        padding: '16px',
         display: 'flex',
-        flexDirection: 'column',
+        alignItems: 'center',
         gap: '12px',
-        minHeight: '200px',
-        position: 'relative',
-        transition: 'all 0.2s ease',
+        padding: '8px 12px',
+        borderRadius: '4px',
+        backgroundColor: isHighlighted ? `${highlightColor}15` : 'transparent',
+        border: isHighlighted ? `1px solid ${highlightColor}40` : '1px solid transparent',
         cursor: 'pointer',
-        ...(isSelected && {
-          backgroundColor: `${badgeColor}10`,
-        }),
+        transition: 'background-color 0.15s',
       }}
+      onClick={handleToggleSelection}
       onMouseEnter={(event) => {
-        event.currentTarget.style.borderColor = badgeColor;
-        event.currentTarget.style.transform = 'translateY(-2px)';
-        event.currentTarget.style.boxShadow = '0 10px 24px rgba(0, 0, 0, 0.35)';
+        event.currentTarget.style.backgroundColor = isHighlighted
+          ? `${highlightColor}20`
+          : theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
       }}
       onMouseLeave={(event) => {
-        event.currentTarget.style.borderColor = isSelected
-          ? badgeColor
-          : theme.colors.border;
-        event.currentTarget.style.transform = 'translateY(0)';
-        event.currentTarget.style.boxShadow = 'none';
+        event.currentTarget.style.backgroundColor = isHighlighted
+          ? `${highlightColor}15`
+          : 'transparent';
       }}
     >
-      {isSelected && (
+      {/* Status indicator */}
+      <div
+        style={{
+          width: '6px',
+          height: '6px',
+          borderRadius: '50%',
+          backgroundColor: localRepo
+            ? theme.colors.success || '#10b981'
+            : isReadmeSelected
+              ? theme.colors.primary
+              : theme.colors.textSecondary,
+          flexShrink: 0,
+        }}
+      />
+
+      {/* Main content */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
+            style={{
+              fontSize: '14px',
+              fontWeight: 500,
+              color: theme.colors.text,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {repository.owner?.login ?? 'unknown'}/{repository.name}
+          </span>
+          {isStarred && (
+            <Star
+              size={12}
+              fill={theme.colors.warning || '#f59e0b'}
+              color={theme.colors.warning || '#f59e0b'}
+            />
+          )}
+          {localRepo && (
+            <FolderOpen
+              size={12}
+              color={theme.colors.success || '#10b981'}
+            />
+          )}
+        </div>
         <div
           style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            width: '24px',
-            height: '24px',
-            borderRadius: '50%',
-            backgroundColor: badgeColor,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            color: theme.colors.background,
-          }}
-        >
-          <Check size={16} />
-        </div>
-      )}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          gap: '12px',
-          alignItems: 'flex-start',
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: '12px',
-              color: theme.colors.textSecondary,
-              marginBottom: '4px',
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}
-          >
-            {repository.owner?.login ?? 'unknown-owner'}
-          </div>
-          <h3
-            style={{
-              fontSize: '18px',
-              fontWeight: 600,
-              color: theme.colors.text,
-              margin: 0,
-              lineHeight: 1.2,
-              wordBreak: 'break-word',
-            }}
-          >
-            {repository.name}
-          </h3>
-        </div>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 10px',
-            borderRadius: '999px',
-            backgroundColor: badgeBackground,
-            color: badgeColor,
+            gap: '12px',
             fontSize: '11px',
-            fontWeight: 600,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {isStarred ? (
-            <Star size={12} fill={badgeColor} color={badgeColor} />
-          ) : (
-            <FolderGit2 size={12} />
-          )}
-          {isStarred ? 'Starred' : 'Your Repo'}
-        </div>
-      </div>
-
-      {repository.description && (
-        <p
-          style={{
-            margin: 0,
-            fontSize: '13px',
             color: theme.colors.textSecondary,
-            lineHeight: 1.5,
-            maxHeight: '60px',
-            overflow: 'hidden',
-            display: '-webkit-box',
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical',
           }}
         >
-          {repository.description}
-        </p>
-      )}
-
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '10px 16px',
-          fontSize: '12px',
-          color: theme.colors.textSecondary,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <Star
-            size={12}
-            color={isStarred ? badgeColor : theme.colors.textSecondary}
-            fill={isStarred ? badgeColor : 'none'}
-          />
-          {starCount.toLocaleString()}
-        </div>
-        {repository.language && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {repository.language && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: getLanguageColor(repository.language),
+                }}
+              />
+              {repository.language}
+            </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Star size={10} />
+            {starCount.toLocaleString()}
+          </div>
+          {repository.description && (
             <span
               style={{
-                display: 'inline-block',
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: getLanguageColor(repository.language),
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
-            />
-            {repository.language}
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <GitBranch size={12} />
-          {repository.default_branch}
-        </div>
-        {repository.fork && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <GitFork size={12} />
-            Forked
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          Updated {formatRelativeTime(repository.pushed_at || repository.updated_at)}
+            >
+              {repository.description}
+            </span>
+          )}
         </div>
       </div>
 
-      <div style={{ marginTop: 'auto', display: 'flex', gap: '8px' }}>
+      {/* Action buttons */}
+      <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
         <button
           type="button"
           onClick={handleOpenOrClone}
-          disabled={isCheckingLocal}
+          title={localRepo ? 'Open locally' : 'Clone repository'}
           style={{
-            flex: 1,
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
-            padding: '10px',
-            borderRadius: '6px',
+            padding: '6px 10px',
+            gap: '4px',
+            borderRadius: '4px',
             border: `1px solid ${localRepo ? badgeColor : theme.colors.border}`,
-            backgroundColor: localRepo
-              ? `${badgeColor}20`
-              : theme.colors.backgroundSecondary,
+            backgroundColor: localRepo ? `${badgeColor}15` : theme.colors.background,
             color: localRepo ? badgeColor : theme.colors.text,
-            fontSize: '13px',
+            fontSize: '11px',
             fontWeight: 500,
-            cursor: isCheckingLocal ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s ease',
-            opacity: isCheckingLocal ? 0.6 : 1,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
           }}
           onMouseEnter={(event) => {
-            if (!isCheckingLocal) {
-              event.currentTarget.style.backgroundColor = localRepo
-                ? `${badgeColor}30`
-                : theme.colors.backgroundTertiary ||
-                  theme.colors.backgroundSecondary;
-            }
+            event.currentTarget.style.backgroundColor = localRepo
+              ? `${badgeColor}25`
+              : theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
           }}
           onMouseLeave={(event) => {
             event.currentTarget.style.backgroundColor = localRepo
-              ? `${badgeColor}20`
-              : theme.colors.backgroundSecondary;
+              ? `${badgeColor}15`
+              : theme.colors.background;
           }}
         >
-          {localRepo ? (
-            <>
-              <FolderOpen size={14} />
-              Open Locally
-            </>
-          ) : (
-            <>
-              <Download size={14} />
-              Clone
-            </>
-          )}
+          {localRepo ? <FolderOpen size={12} /> : <Download size={12} />}
+          {localRepo ? 'Open' : 'Clone'}
         </button>
         <button
           type="button"
           onClick={handleOpenInGitHub}
+          title="View on GitHub"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '8px',
-            padding: '10px',
-            borderRadius: '6px',
+            padding: '6px',
+            borderRadius: '4px',
             border: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.backgroundSecondary,
-            color: theme.colors.text,
-            fontSize: '13px',
-            fontWeight: 500,
+            backgroundColor: theme.colors.background,
+            color: theme.colors.textSecondary,
             cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            transition: 'all 0.15s ease',
           }}
           onMouseEnter={(event) => {
             event.currentTarget.style.backgroundColor =
               theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
+            event.currentTarget.style.color = theme.colors.text;
           }}
           onMouseLeave={(event) => {
-            event.currentTarget.style.backgroundColor =
-              theme.colors.backgroundSecondary;
+            event.currentTarget.style.backgroundColor = theme.colors.background;
+            event.currentTarget.style.color = theme.colors.textSecondary;
           }}
         >
-          <ExternalLink size={14} />
+          <ExternalLink size={12} />
         </button>
       </div>
 

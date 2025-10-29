@@ -20,7 +20,7 @@ import {
   Palette,
   Package,
   History,
-  Star,
+  FolderGit2,
   FolderOpen,
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
@@ -84,7 +84,7 @@ import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
 import { GitIssuesPanel } from '../panels/components/GitIssuesPanel';
 import { GitPullRequestsPanel } from '../panels/components/GitPullRequestsPanel';
-import { GitHubStarsPanel } from '../panels/components/GitHubStarsPanel';
+import { GitHubProjectsPanel } from '../panels/components/GitHubProjectsPanel';
 import { GitCommitHistoryPanel } from '../panels/components/GitCommitHistoryPanel';
 import { MarkdownRenderingPanel, ExcalidrawPanel } from './panels';
 import { FilePreviewPanel } from '../panels/components/FilePreviewPanel';
@@ -1891,7 +1891,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             }}
           />
         ),
-        githubStars: <GitHubStarsPanel />,
+        githubProjects: <GitHubProjectsPanel />,
         dependencies: selectedSource ? (
           <RepoSourceArchitecturePanelSimple
             source={selectedSource}
@@ -2095,11 +2095,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         content: panelContentMap.gitPullRequests,
       },
       {
-        id: 'githubStars',
-        label: 'GitHub Stars',
-        icon: <Star size={14} />,
+        id: 'githubProjects',
+        label: 'GitHub Projects',
+        icon: <FolderGit2 size={14} />,
         visible: true,
-        content: panelContentMap.githubStars,
+        content: panelContentMap.githubProjects,
       },
       {
         id: 'dependencies',

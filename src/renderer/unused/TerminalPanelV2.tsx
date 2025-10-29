@@ -14,11 +14,11 @@ import { ShellService } from '../main-process-api/ShellService';
 import { DevSidecarService } from '../main-process-api/DevSidecarService';
 import { terminalRecorder } from '../utils/terminalRecorder';
 
-import { XTerminalPanel } from './components/xterminal';
+import { XTerminalPanel } from './xterminal';
 import type {
   XTerminalPanelRef,
   TerminalOverlayState,
-} from './components/xterminal';
+} from './xterminal';
 
 /* eslint-disable no-console */
 

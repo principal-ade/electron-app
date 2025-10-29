@@ -256,6 +256,28 @@ const TerminalPanelPackaged = forwardRef<
       };
     }, [sessionId, shouldRenderTerminal]);
 
+    // Handle connecting to existing session - trigger refresh to show buffer
+    useEffect(() => {
+      if (!sessionId || !terminalId) {
+        return;
+      }
+
+      // When reconnecting to an existing session, refresh the backend PTY to send buffer contents
+      const refreshSession = async () => {
+        try {
+          await TerminalService.refresh(sessionId);
+        } catch (error) {
+          console.error(
+            '[TerminalPanelPackaged] Failed to refresh terminal:',
+            error,
+          );
+        }
+      };
+
+      // Wait for terminal to be fully initialized before refreshing
+      setTimeout(refreshSession, 200);
+    }, [sessionId, terminalId]);
+
     // Track AI session info
     useEffect(() => {
       if (!agentSessionId) {

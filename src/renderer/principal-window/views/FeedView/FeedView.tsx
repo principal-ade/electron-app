@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Rss } from 'lucide-react';
+import { Rss, FolderGit2, Users, History, Network, FileText } from 'lucide-react';
 import { ConfigurablePanelLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
@@ -8,14 +8,16 @@ import { useAllRepositories } from '../../../hooks/useRepositoryData';
 import { buildDependencyGraphs } from '../../../services/DependencyGraphService';
 import { GraphsListPanel } from '../../../panels/components/GraphsListPanel';
 import { GraphDetailPanel } from '../../../panels/components/GraphDetailPanel';
-import { GitHubStarsPanel } from '../../../panels/components/GitHubStarsPanel';
+import { GitHubProjectsPanel } from '../../../panels/components/GitHubProjectsPanel';
 import { GitHubSocialPanel } from '../../../panels/components/GitHubSocialPanel';
 import { RecentCommitsPanel } from '../../../panels/components/RecentCommitsPanel';
-import { VisibleProjectsProvider } from '../../../contexts/VisibleProjectsContext';
+import { GitHubReadmePanel } from '../../../panels/components/GitHubReadmePanel';
+import { SelectedRepositoryProvider, useSelectedRepository } from '../../../contexts/SelectedRepositoryContext';
 
-export const FeedView: React.FC = () => {
+const FeedViewInner: React.FC = () => {
   const { theme } = useTheme();
   const { repositories, loading } = useAllRepositories();
+  const { selectedRepository } = useSelectedRepository();
   const [selectedGraphId, setSelectedGraphId] = useState<string | null>(null);
   const [selectedTopLevelNodes, setSelectedTopLevelNodes] = useState<string[]>(
     [],
@@ -50,113 +52,137 @@ export const FeedView: React.FC = () => {
   });
 
   return (
-    <VisibleProjectsProvider>
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {/* Header */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '20px 24px',
-            borderBottom: `1px solid ${theme.colors.border}`,
-            flexShrink: 0,
-          }}
-        >
-          <Rss size={20} color={theme.colors.text} />
-          <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>
-            Feed
-          </h2>
-        </div>
-
-        {/* Panel Layout */}
-        <ConfigurablePanelLayout
-          panels={[
-            {
-              id: 'github-stars',
-              label: 'GitHub Stars',
-              content: <GitHubStarsPanel />,
-            },
-            {
-              id: 'github-social',
-              label: 'GitHub Network',
-              content: <GitHubSocialPanel />,
-            },
-            {
-              id: 'recent-commits',
-              label: 'Recent Commits',
-              content: <RecentCommitsPanel />,
-            },
-            {
-              id: 'graphs-list',
-              label: 'Graphs',
-              content: (
-                <GraphsListPanel
-                  graphs={graphs}
-                  loading={loading}
-                  selectedGraphId={selectedGraphId}
-                  onGraphSelect={setSelectedGraphId}
-                />
-              ),
-            },
-            {
-              id: 'graph-view',
-              label: 'Graph',
-              content: (
-                <GraphDetailPanel
-                  graph={selectedGraph}
-                  selectedTopLevelNodes={selectedTopLevelNodes}
-                  onTopLevelNodesChange={setSelectedTopLevelNodes}
-                />
-              ),
-            },
-          ]}
-          layout={{
-            left: {
-              type: 'tabs',
-              panels: ['github-social', 'github-stars', 'graphs-list'],
-              config: {
-                defaultActiveTab: 0,
-                tabPosition: 'top',
-              },
-            },
-            middle: 'recent-commits',
-            right: null,
-          }}
-          collapsiblePanels={{ left: true, right: false }}
-          defaultSizes={
-            panelState.type === 'three-panel'
-              ? panelState.sizes
-              : { left: 20, middle: 80, right: 0 }
-          }
-          minSizes={{ left: 15, middle: 30, right: 20 }}
-          collapsed={
-            panelState.type === 'three-panel'
-              ? panelState.collapsed
-              : { left: false, right: false }
-          }
-          style={{ flex: 1, width: '100%' }}
-          theme={theme}
-          showCollapseButtons={true}
-          onPanelResize={
-            panelState.type === 'three-panel'
-              ? panelState.handlePanelResize
-              : undefined
-          }
-          onLeftCollapseComplete={panelState.handleLeftCollapseComplete}
-          onLeftExpandComplete={panelState.handleLeftExpandComplete}
-          onRightCollapseComplete={
-            panelState.type === 'three-panel'
-              ? panelState.handleRightCollapseComplete
-              : undefined
-          }
-          onRightExpandComplete={
-            panelState.type === 'three-panel'
-              ? panelState.handleRightExpandComplete
-              : undefined
-          }
-        />
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '20px 24px',
+          borderBottom: `1px solid ${theme.colors.border}`,
+          flexShrink: 0,
+        }}
+      >
+        <Rss size={20} color={theme.colors.text} />
+        <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>
+          Feed
+        </h2>
       </div>
-    </VisibleProjectsProvider>
+
+      {/* Panel Layout */}
+      <ConfigurablePanelLayout
+        panels={[
+          {
+            id: 'github-projects',
+            label: 'GitHub Projects',
+            icon: <FolderGit2 size={16} />,
+            content: <GitHubProjectsPanel />,
+          },
+          {
+            id: 'github-social',
+            label: 'GitHub Network',
+            icon: <Users size={16} />,
+            content: <GitHubSocialPanel />,
+          },
+          {
+            id: 'recent-commits',
+            label: 'Recent Commits',
+            icon: <History size={16} />,
+            content: <RecentCommitsPanel repository={selectedRepository} />,
+          },
+          {
+            id: 'readme-viewer',
+            label: 'README',
+            icon: <FileText size={16} />,
+            content: <GitHubReadmePanel repository={selectedRepository} />,
+          },
+          {
+            id: 'graphs-list',
+            label: 'Graphs',
+            icon: <Network size={16} />,
+            content: (
+              <GraphsListPanel
+                graphs={graphs}
+                loading={loading}
+                selectedGraphId={selectedGraphId}
+                onGraphSelect={setSelectedGraphId}
+              />
+            ),
+          },
+          {
+            id: 'graph-view',
+            label: 'Graph',
+            icon: <Network size={16} />,
+            content: (
+              <GraphDetailPanel
+                graph={selectedGraph}
+                selectedTopLevelNodes={selectedTopLevelNodes}
+                onTopLevelNodesChange={setSelectedTopLevelNodes}
+              />
+            ),
+          },
+        ]}
+        layout={{
+          left: {
+            type: 'tabs',
+            panels: ['github-social', 'github-projects', 'graphs-list'],
+            config: {
+              defaultActiveTab: 0,
+              tabPosition: 'top',
+            },
+          },
+          middle: {
+            type: 'tabs',
+            panels: ['recent-commits', 'readme-viewer'],
+            config: {
+              defaultActiveTab: 0,
+              tabPosition: 'top',
+            },
+          },
+          right: null,
+        }}
+        collapsiblePanels={{ left: true, right: false }}
+        defaultSizes={
+          panelState.type === 'three-panel'
+            ? panelState.sizes
+            : { left: 20, middle: 80, right: 0 }
+        }
+        minSizes={{ left: 15, middle: 30, right: 20 }}
+        collapsed={
+          panelState.type === 'three-panel'
+            ? panelState.collapsed
+            : { left: false, right: false }
+        }
+        style={{ flex: 1, width: '100%' }}
+        theme={theme}
+        showCollapseButtons={true}
+        onPanelResize={
+          panelState.type === 'three-panel'
+            ? panelState.handlePanelResize
+            : undefined
+        }
+        onLeftCollapseComplete={panelState.handleLeftCollapseComplete}
+        onLeftExpandComplete={panelState.handleLeftExpandComplete}
+        onRightCollapseComplete={
+          panelState.type === 'three-panel'
+            ? panelState.handleRightCollapseComplete
+            : undefined
+        }
+        onRightExpandComplete={
+          panelState.type === 'three-panel'
+            ? panelState.handleRightExpandComplete
+            : undefined
+        }
+      />
+    </div>
+  );
+};
+
+export const FeedView: React.FC = () => {
+  return (
+    <SelectedRepositoryProvider>
+      <FeedViewInner />
+    </SelectedRepositoryProvider>
   );
 };

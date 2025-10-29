@@ -99,8 +99,11 @@ export class GitHubAdapter {
     statusText?: string;
     error?: string;
   }> {
+    console.log('[GitHub] makeGitHubAPICall: Requesting endpoint:', endpoint);
+
     const token = await this.getGitHubToken();
     if (!token) {
+      console.error('[GitHub] makeGitHubAPICall: No GitHub token available');
       return { success: false, error: 'No GitHub token available' };
     }
 
@@ -129,15 +132,27 @@ export class GitHubAdapter {
       });
 
       if (!response.ok) {
-        return {
+        const errorDetail = {
           success: false,
           status: response.status,
           statusText: response.statusText,
           error: `GitHub API error: ${response.status} ${response.statusText}`,
         };
+
+        // Log specific status codes that indicate token issues
+        if (response.status === 401) {
+          console.error('[GitHub] makeGitHubAPICall: Authentication failed (401) - token may be expired or invalid');
+        } else if (response.status === 403) {
+          console.error('[GitHub] makeGitHubAPICall: Forbidden (403) - token may lack required permissions');
+        } else {
+          console.error('[GitHub] makeGitHubAPICall: Request failed', errorDetail);
+        }
+
+        return errorDetail;
       }
 
       const data = await response.json();
+      console.log('[GitHub] makeGitHubAPICall: Request successful for endpoint:', endpoint);
       return {
         success: true,
         data,
@@ -1454,22 +1469,46 @@ export class GitHubAdapter {
    * Get current user information
    */
   async getCurrentUser(): Promise<any | null> {
+    console.log('[GitHub] getCurrentUser: Fetching user info...');
+
     // First try with token-based API
     const apiResult = await this.makeGitHubAPICall('/user');
+
+    console.log('[GitHub] getCurrentUser: API result', {
+      success: apiResult.success,
+      status: apiResult.status,
+      hasData: !!apiResult.data,
+      error: apiResult.error,
+    });
+
     if (apiResult.success && apiResult.data) {
+      console.log('[GitHub] getCurrentUser: Successfully fetched user via API');
       return apiResult.data;
     }
 
+    // Log why API failed
+    if (!apiResult.success) {
+      console.warn('[GitHub] getCurrentUser: API call failed', {
+        status: apiResult.status,
+        statusText: apiResult.statusText,
+        error: apiResult.error,
+      });
+    }
+
     // Fallback to CLI
+    console.log('[GitHub] getCurrentUser: Attempting CLI fallback...');
     try {
       const result = await this.executeCommand(['gh', 'api', '/user']);
       if (result.success && result.stdout) {
+        console.log('[GitHub] getCurrentUser: Successfully fetched user via CLI');
         return JSON.parse(result.stdout);
       }
+      console.warn('[GitHub] getCurrentUser: CLI fallback failed');
     } catch (error) {
-      console.error('[GitHub] Error getting current user:', error);
+      console.error('[GitHub] Error getting current user via CLI:', error);
     }
 
+    console.error('[GitHub] getCurrentUser: All methods failed');
     return null;
   }
 
@@ -1547,6 +1586,8 @@ export class GitHubAdapter {
     };
   } | null> {
     try {
+      console.log('[GitHub] getTokenInfo: Starting token info fetch...');
+
       // Make parallel requests for better performance
       const [user, scopes, organizations] = await Promise.all([
         this.getCurrentUser(),
@@ -1554,7 +1595,14 @@ export class GitHubAdapter {
         this.getUserOrganizations(),
       ]);
 
+      console.log('[GitHub] getTokenInfo: Results received', {
+        hasUser: !!user,
+        scopesCount: scopes.length,
+        orgsCount: organizations.length,
+      });
+
       if (!user) {
+        console.warn('[GitHub] getTokenInfo: getCurrentUser returned null - token may be expired or invalid');
         return null;
       }
 
@@ -1565,6 +1613,7 @@ export class GitHubAdapter {
         reset: new Date(),
       };
 
+      console.log('[GitHub] getTokenInfo: Successfully fetched token info for user:', user.login);
       return {
         scopes,
         organizations,

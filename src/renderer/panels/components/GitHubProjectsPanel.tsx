@@ -11,14 +11,18 @@ import {
   LogIn,
   RotateCcw,
   Search,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 
 import { useAuthState } from '../../hooks/useAuthState';
 import { GithubService } from '../../main-process-api/GithubService';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { GitHubRepositoryCard } from './GitHubRepositoryCard';
+import { useAllRepositories } from '../../hooks/useRepositoryData';
+import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 
-export const GitHubStarsPanel: React.FC = () => {
+export const GitHubProjectsPanel: React.FC = () => {
   const { theme } = useTheme();
   const {
     isAuthenticated,
@@ -36,6 +40,12 @@ export const GitHubStarsPanel: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
+    new Set(),
+  );
+
+  // Load all local repositories with caching
+  const { repositories: localRepos } = useAllRepositories();
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
@@ -164,6 +174,18 @@ export const GitHubStarsPanel: React.FC = () => {
     }
   }, [fetchRepositories, isFetching]);
 
+  const toggleSection = useCallback((sectionId: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) {
+        next.delete(sectionId);
+      } else {
+        next.add(sectionId);
+      }
+      return next;
+    });
+  }, []);
+
   const normalizedFilter = filter.trim().toLowerCase();
   const filteredOwned = useMemo(
     () => filterRepositories(ownedRepositories, normalizedFilter),
@@ -173,6 +195,30 @@ export const GitHubStarsPanel: React.FC = () => {
     () => filterRepositories(starredRepositories, normalizedFilter),
     [normalizedFilter, starredRepositories],
   );
+
+  // Create lookup map for local repositories
+  const localRepoMap = useMemo(() => {
+    const map = new Map<string, RepositoryCacheData>();
+
+    localRepos.forEach((repoData) => {
+      const entry = repoData.repository;
+
+      // Index by GitHub full_name (owner/repo format)
+      if (entry.github?.id) {
+        map.set(entry.github.id, repoData);
+      }
+
+      // Index by owner/name combination
+      if (entry.github?.owner && entry.github?.name) {
+        map.set(`${entry.github.owner}/${entry.github.name}`, repoData);
+      }
+
+      // Index by repository name (fallback)
+      map.set(entry.name, repoData);
+    });
+
+    return map;
+  }, [localRepos]);
 
   const hasData = ownedRepositories.length > 0 || starredRepositories.length > 0;
   const isInitialLoading = isFetching && !hasData;
@@ -267,63 +313,41 @@ export const GitHubStarsPanel: React.FC = () => {
 
   const contentContainerStyle: React.CSSProperties = {
     ...baseContainerStyle,
-    padding: '20px',
-    gap: '16px',
+    padding: '16px',
+    gap: '12px',
   };
-
-  const lastUpdatedLabel = lastUpdated
-    ? `Last refreshed ${formatRelativeTimestamp(lastUpdated)}`
-    : 'Data not refreshed yet';
 
   return (
     <div style={contentContainerStyle}>
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '16px',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <div
+      {/* Search bar */}
+      <div style={{ position: 'relative' }}>
+        <Search
+          size={16}
           style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: '12px',
-            justifyContent: 'flex-end',
-            width: '100%',
+            position: 'absolute',
+            top: '50%',
+            left: '12px',
+            transform: 'translateY(-50%)',
+            color: theme.colors.textSecondary,
+            pointerEvents: 'none',
           }}
-        >
-          <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
-            <Search
-              size={16}
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: '12px',
-                transform: 'translateY(-50%)',
-                color: theme.colors.textSecondary,
-              }}
-            />
-            <input
-              type="text"
-              value={filter}
-              placeholder="Filter by name, owner, or language"
-              onChange={(event) => setFilter(event.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 12px 8px 36px',
-                borderRadius: '6px',
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.background,
-                color: theme.colors.text,
-                fontSize: '13px',
-              }}
-            />
-          </div>
-        </div>
+        />
+        <input
+          type="text"
+          value={filter}
+          placeholder="Filter repositories..."
+          onChange={(event) => setFilter(event.target.value)}
+          style={{
+            width: '100%',
+            padding: '8px 12px 8px 36px',
+            borderRadius: '6px',
+            border: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.background,
+            color: theme.colors.text,
+            fontSize: '13px',
+            outline: 'none',
+          }}
+        />
       </div>
 
       {error && hasData && (
@@ -344,139 +368,153 @@ export const GitHubStarsPanel: React.FC = () => {
         </div>
       )}
 
+      {/* Scrollable content */}
       <div
         style={{
           flex: 1,
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: '24px',
-          paddingRight: '4px',
+          gap: '8px',
         }}
       >
-        <Section
-          title="Your repositories"
-          totalCount={ownedRepositories.length}
-          filteredCount={filteredOwned.length}
-          emptyMessage={
-            filter
-              ? 'No repositories match your filter.'
-              : 'We did not find any repositories for your account yet.'
-          }
-        >
-          {filteredOwned.length > 0 && (
-            <div style={gridStyle}>
-              {filteredOwned.map((repo) => (
-                <GitHubRepositoryCard
-                  key={repo.id}
-                  repository={repo}
-                  variant="owned"
-                />
-              ))}
-            </div>
-          )}
-        </Section>
+        {/* Your Repositories Section */}
+        {filteredOwned.length > 0 && (
+          <div>
+            <button
+              onClick={() => toggleSection('owned')}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                backgroundColor: theme.colors.background,
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {collapsedSections.has('owned') ? (
+                  <ChevronRight size={16} color={theme.colors.textSecondary} />
+                ) : (
+                  <ChevronDown size={16} color={theme.colors.textSecondary} />
+                )}
+                <span
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                  }}
+                >
+                  Your Repositories
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: '12px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {filter
+                  ? `${filteredOwned.length} / ${ownedRepositories.length}`
+                  : filteredOwned.length}
+              </span>
+            </button>
 
-        <Section
-          title="Starred projects"
-          totalCount={starredRepositories.length}
-          filteredCount={filteredStarred.length}
-          emptyMessage={
-            filter
-              ? 'No starred repositories match your filter.'
-              : "You haven't starred any repositories yet."
-          }
-        >
-          {filteredStarred.length > 0 && (
-            <div style={gridStyle}>
-              {filteredStarred.map((repo) => (
-                <GitHubRepositoryCard
-                  key={repo.id}
-                  repository={repo}
-                  variant="starred"
-                />
-              ))}
-            </div>
-          )}
-        </Section>
+            {!collapsedSections.has('owned') && (
+              <div style={{ paddingLeft: '12px', marginTop: '4px' }}>
+                {filteredOwned.map((repo) => (
+                  <GitHubRepositoryCard
+                    key={repo.id}
+                    repository={repo}
+                    variant="owned"
+                    localRepo={localRepoMap.get(repo.full_name)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Starred Projects Section */}
+        {filteredStarred.length > 0 && (
+          <div>
+            <button
+              onClick={() => toggleSection('starred')}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                backgroundColor: theme.colors.background,
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {collapsedSections.has('starred') ? (
+                  <ChevronRight size={16} color={theme.colors.textSecondary} />
+                ) : (
+                  <ChevronDown size={16} color={theme.colors.textSecondary} />
+                )}
+                <span
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: theme.colors.text,
+                  }}
+                >
+                  Starred Projects
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: '12px',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {filter
+                  ? `${filteredStarred.length} / ${starredRepositories.length}`
+                  : filteredStarred.length}
+              </span>
+            </button>
+
+            {!collapsedSections.has('starred') && (
+              <div style={{ paddingLeft: '12px', marginTop: '4px' }}>
+                {filteredStarred.map((repo) => (
+                  <GitHubRepositoryCard
+                    key={repo.id}
+                    repository={repo}
+                    variant="starred"
+                    localRepo={localRepoMap.get(repo.full_name)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
-  );
-};
-
-const gridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-  gap: '16px',
-};
-
-interface SectionProps {
-  title: string;
-  totalCount: number;
-  filteredCount: number;
-  emptyMessage: string;
-  children: React.ReactNode;
-}
-
-const Section: React.FC<SectionProps> = ({
-  title,
-  totalCount,
-  filteredCount,
-  emptyMessage,
-  children,
-}) => {
-  const { theme } = useTheme();
-  const isFiltered = filteredCount !== totalCount;
-
-  return (
-    <section style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '12px',
-        }}
-      >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: '16px',
-            fontWeight: 600,
-            color: theme.colors.text,
-          }}
-        >
-          {title}
-        </h3>
-        <span
-          style={{
-            fontSize: '12px',
-            color: theme.colors.textSecondary,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {isFiltered
-            ? `${filteredCount} of ${totalCount}`
-            : `${totalCount}`}{' '}
-          repos
-        </span>
-      </div>
-      {filteredCount === 0 ? (
-        <div
-          style={{
-            padding: '16px',
-            borderRadius: '8px',
-            backgroundColor: `${theme.colors.border}20`,
-            color: theme.colors.textSecondary,
-            fontSize: '13px',
-          }}
-        >
-          {emptyMessage}
-        </div>
-      ) : (
-        children
-      )}
-    </section>
   );
 };
 
@@ -503,37 +541,7 @@ function filterRepositories(
   });
 }
 
-function formatRelativeTimestamp(timestamp: number): string {
-  const diffMs = Date.now() - timestamp;
-  if (diffMs < 60 * 1000) {
-    return 'just now';
-  }
-
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  if (diffMinutes < 60) {
-    return `${diffMinutes} minute${diffMinutes === 1 ? '' : 's'} ago`;
-  }
-
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`;
-  }
-
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 30) {
-    return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
-  }
-
-  const diffMonths = Math.floor(diffDays / 30);
-  if (diffMonths < 12) {
-    return `${diffMonths} month${diffMonths === 1 ? '' : 's'} ago`;
-  }
-
-  const diffYears = Math.floor(diffMonths / 12);
-  return `${diffYears} year${diffYears === 1 ? '' : 's'} ago`;
-}
-
-export const GitHubStarsPanelPreview: React.FC = () => {
+export const GitHubProjectsPanelPreview: React.FC = () => {
   const { theme } = useTheme();
 
   return (

@@ -46,8 +46,8 @@ export const repositoryPanelCatalog = [
     surfaces: ['explorer'] as const,
   },
   {
-    id: 'githubStars',
-    label: 'GitHub Stars',
+    id: 'githubProjects',
+    label: 'GitHub Projects',
     description:
       'Browse your GitHub repositories alongside the projects you have starred.',
     surfaces: ['explorer'] as const,
@@ -218,6 +218,13 @@ export const repositoryPanelCatalog = [
     description: 'Rich markdown editor with live preview and formatting tools.',
     slices: ['markdown', 'fileTree'] as const,
     surfaces: ['manager', 'viewer', 'agent'] as const,
+  },
+  {
+    id: 'githubReadme',
+    label: 'GitHub README',
+    description: 'View README files from GitHub repositories in the Feed.',
+    slices: ['markdown'] as const,
+    surfaces: ['principal'] as const,
   },
   {
     id: 'graphsList',

@@ -204,8 +204,9 @@ export class OAuthServerClient {
   async refreshAccessToken(refreshToken: string): Promise<AuthResult> {
     try {
       console.log('[OAuthServerClient] Refreshing access token...');
+      console.log(`[OAuthServerClient] Using refresh endpoint: ${this.endpoints.refresh}`);
 
-      const response = await fetch(`${this.serverUrl}/api/auth/workos/refresh`, {
+      const response = await fetch(this.endpoints.refresh, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -233,9 +234,20 @@ export class OAuthServerClient {
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
       });
 
+      // Important: Always use the new refresh token if provided by the server
+      // Many OAuth providers implement refresh token rotation for security
+      const newRefreshToken = tokenResponse.refresh_token || refreshToken;
+
+      console.log('[OAuthServerClient] Refresh token rotation:', {
+        rotated: !!tokenResponse.refresh_token,
+        message: tokenResponse.refresh_token
+          ? 'Using new refresh token from server'
+          : 'Server did not provide new refresh token, keeping existing one',
+      });
+
       return {
         token: tokenResponse.access_token,
-        refreshToken: tokenResponse.refresh_token || refreshToken, // Use new refresh token if provided, otherwise keep the old one
+        refreshToken: newRefreshToken,
         expiresAt,
         user: tokenResponse.user,
       };
