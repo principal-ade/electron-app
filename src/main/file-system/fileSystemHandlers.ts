@@ -41,6 +41,10 @@ export class ElectronFileSystemAdapter {
     console.log(`[File System] GitHub adapter reference set`);
   }
 
+  getRootPath(): string | null {
+    return this.rootPath;
+  }
+
   // Instance methods - these will be called by the global handlers
   async readFile(filePath: string) {
     if (!this.mainWindow) {

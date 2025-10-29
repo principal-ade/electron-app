@@ -1,10 +1,17 @@
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-webpack5';
 import { useState } from 'react';
 import { WindowSwitcherApp } from './WindowSwitcherApp';
 import './window-switcher.css';
 
+type WindowListItem = { id: number; title: string };
+type WindowListUpdatePayload = {
+  windows: WindowListItem[];
+  selectedIndex: number;
+};
+type WindowListUpdateListener = (data: WindowListUpdatePayload) => void;
+
 // Mock window list data
-const mockWindows = [
+const mockWindows: WindowListItem[] = [
   { id: 1, title: 'Main' },
   { id: 2, title: 'electron-app' },
   { id: 3, title: 'code-city-react' },
@@ -13,26 +20,19 @@ const mockWindows = [
 
 // Mock electronAPI for Storybook
 class MockElectronAPI {
-  private listeners: {
-    windowListUpdate: Array<(data: any) => void>;
-    selectNext: Array<() => void>;
-    selectPrevious: Array<() => void>;
-  } = {
-    windowListUpdate: [],
-    selectNext: [],
-    selectPrevious: [],
+  private listeners = {
+    windowListUpdate: [] as WindowListUpdateListener[],
+    selectNext: [] as Array<() => void>,
+    selectPrevious: [] as Array<() => void>,
   };
 
   private selectedIndex = 0;
-  private windows = mockWindows;
+  private windows: WindowListItem[] = mockWindows;
 
-  onWindowListUpdate(callback: (data: any) => void) {
+  onWindowListUpdate(callback: WindowListUpdateListener) {
     this.listeners.windowListUpdate.push(callback);
     // Immediately send current state
-    callback({
-      windows: this.windows,
-      selectedIndex: this.selectedIndex,
-    });
+    callback(this.getWindowListSnapshot());
     // Return cleanup function
     return () => {
       const index = this.listeners.windowListUpdate.indexOf(callback);
@@ -64,12 +64,7 @@ class MockElectronAPI {
 
   getWindowList() {
     // Send current list to all listeners
-    this.listeners.windowListUpdate.forEach((listener) => {
-      listener({
-        windows: this.windows,
-        selectedIndex: this.selectedIndex,
-      });
-    });
+    this.emitWindowListUpdate();
   }
 
   cycleSelection(direction: 'next' | 'previous') {
@@ -83,32 +78,46 @@ class MockElectronAPI {
     }
 
     // Update all window list listeners
-    this.listeners.windowListUpdate.forEach((listener) => {
-      listener({
-        windows: this.windows,
-        selectedIndex: this.selectedIndex,
-      });
-    });
+    this.emitWindowListUpdate();
   }
 
   selectWindow(windowId: number) {
-    console.log(`Selected window: ${windowId}`);
+    console.info(`Selected window: ${windowId}`);
     const window = this.windows.find((w) => w.id === windowId);
     if (window) {
-      console.log(`Switching to: ${window.title}`);
+      console.info(`Switching to: ${window.title}`);
     }
   }
 
-  setWindows(windows: typeof mockWindows) {
+  setWindows(windows: WindowListItem[]) {
     this.windows = windows;
     this.selectedIndex = 0;
-    this.getWindowList();
+    this.emitWindowListUpdate();
+  }
+
+  private getWindowListSnapshot(): WindowListUpdatePayload {
+    return {
+      windows: this.windows,
+      selectedIndex: this.selectedIndex,
+    };
+  }
+
+  private emitWindowListUpdate(): void {
+    const payload = this.getWindowListSnapshot();
+    this.listeners.windowListUpdate.forEach((listener) => {
+      listener(payload);
+    });
   }
 }
 
+type ElectronAPI = NonNullable<Window['electronAPI']>;
+
+let storybookElectronAPI: MockElectronAPI | undefined;
+
 // Install mock electronAPI
 if (typeof window !== 'undefined') {
-  (window as any).electronAPI = new MockElectronAPI();
+  storybookElectronAPI = new MockElectronAPI();
+  window.electronAPI = storybookElectronAPI as unknown as ElectronAPI;
 }
 
 const meta = {
@@ -161,12 +170,10 @@ export const Default: Story = {
  */
 export const TwoWindows: Story = {
   render: () => {
-    if (typeof window !== 'undefined' && (window as any).electronAPI) {
-      (window as any).electronAPI.setWindows([
-        { id: 1, title: 'Main' },
-        { id: 2, title: 'electron-app' },
-      ]);
-    }
+    storybookElectronAPI?.setWindows([
+      { id: 1, title: 'Main' },
+      { id: 2, title: 'electron-app' },
+    ]);
     return <WindowSwitcherApp />;
   },
 };
@@ -176,18 +183,16 @@ export const TwoWindows: Story = {
  */
 export const ManyWindows: Story = {
   render: () => {
-    if (typeof window !== 'undefined' && (window as any).electronAPI) {
-      (window as any).electronAPI.setWindows([
-        { id: 1, title: 'Main' },
-        { id: 2, title: 'electron-app' },
-        { id: 3, title: 'code-city-react' },
-        { id: 4, title: 'agent-monitoring-ui' },
-        { id: 5, title: 'dynamic-file-tree' },
-        { id: 6, title: 'principal-ai-mcp' },
-        { id: 7, title: 'storybook' },
-        { id: 8, title: 'documentation' },
-      ]);
-    }
+    storybookElectronAPI?.setWindows([
+      { id: 1, title: 'Main' },
+      { id: 2, title: 'electron-app' },
+      { id: 3, title: 'code-city-react' },
+      { id: 4, title: 'agent-monitoring-ui' },
+      { id: 5, title: 'dynamic-file-tree' },
+      { id: 6, title: 'principal-ai-mcp' },
+      { id: 7, title: 'storybook' },
+      { id: 8, title: 'documentation' },
+    ]);
     return <WindowSwitcherApp />;
   },
 };
@@ -197,17 +202,15 @@ export const ManyWindows: Story = {
  */
 export const LongTitles: Story = {
   render: () => {
-    if (typeof window !== 'undefined' && (window as any).electronAPI) {
-      (window as any).electronAPI.setWindows([
-        { id: 1, title: 'Main Application Window' },
-        {
-          id: 2,
-          title: 'electron-app-with-very-long-repository-name',
-        },
-        { id: 3, title: 'another-extremely-long-window-title-example' },
-        { id: 4, title: 'Short' },
-      ]);
-    }
+    storybookElectronAPI?.setWindows([
+      { id: 1, title: 'Main Application Window' },
+      {
+        id: 2,
+        title: 'electron-app-with-very-long-repository-name',
+      },
+      { id: 3, title: 'another-extremely-long-window-title-example' },
+      { id: 4, title: 'Short' },
+    ]);
     return <WindowSwitcherApp />;
   },
 };
@@ -220,19 +223,13 @@ export const InteractiveDemo: Story = {
     const [selectedIndex, setSelectedIndex] = useState(0);
 
     const handleNext = () => {
-      if (typeof window !== 'undefined' && (window as any).electronAPI) {
-        (window as any).electronAPI.cycleSelection('next');
-        setSelectedIndex((prev) => (prev + 1) % mockWindows.length);
-      }
+      storybookElectronAPI?.cycleSelection('next');
+      setSelectedIndex((prev) => (prev + 1) % mockWindows.length);
     };
 
     const handlePrevious = () => {
-      if (typeof window !== 'undefined' && (window as any).electronAPI) {
-        (window as any).electronAPI.cycleSelection('previous');
-        setSelectedIndex(
-          (prev) => (prev - 1 + mockWindows.length) % mockWindows.length,
-        );
-      }
+      storybookElectronAPI?.cycleSelection('previous');
+      setSelectedIndex((prev) => (prev - 1 + mockWindows.length) % mockWindows.length);
     };
 
     return (
@@ -345,9 +342,7 @@ export const InteractiveDemo: Story = {
  */
 export const EmptyState: Story = {
   render: () => {
-    if (typeof window !== 'undefined' && (window as any).electronAPI) {
-      (window as any).electronAPI.setWindows([]);
-    }
+    storybookElectronAPI?.setWindows([]);
     return <WindowSwitcherApp />;
   },
 };
@@ -358,9 +353,7 @@ export const EmptyState: Story = {
  */
 export const SingleWindow: Story = {
   render: () => {
-    if (typeof window !== 'undefined' && (window as any).electronAPI) {
-      (window as any).electronAPI.setWindows([{ id: 1, title: 'Main' }]);
-    }
+    storybookElectronAPI?.setWindows([{ id: 1, title: 'Main' }]);
     return <WindowSwitcherApp />;
   },
 };

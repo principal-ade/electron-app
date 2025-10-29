@@ -7,7 +7,21 @@ import { BrowserWindow, screen, ipcMain } from 'electron';
 import path from 'path';
 import log from 'electron-log';
 import { resolveHtmlPath } from '../util';
+import { ElectronFileSystemAdapter } from '../file-system/fileSystemHandlers';
 import { applicationWindows, mainWindowId } from './types';
+
+type RootPathProvider = {
+  getRootPath: () => string | null;
+};
+
+const hasRootPathProvider = (adapter: unknown): adapter is RootPathProvider => {
+  return (
+    typeof adapter === 'object' &&
+    adapter !== null &&
+    'getRootPath' in adapter &&
+    typeof (adapter as { getRootPath?: unknown }).getRootPath === 'function'
+  );
+};
 
 class WindowSwitcher {
   private switcherWindow: BrowserWindow | null = null;
@@ -139,9 +153,17 @@ class WindowSwitcher {
         } else {
           // Try to get directory name from file system adapter
           if (appWindow.fileSystemAdapter) {
-            const rootPath = (appWindow.fileSystemAdapter as any).rootPath;
-            log.info(`[Window Switcher] Window ${id} rootPath:`, rootPath);
+            const adapter = appWindow.fileSystemAdapter;
+            let rootPath: string | null = null;
+
+            if (adapter instanceof ElectronFileSystemAdapter) {
+              rootPath = adapter.getRootPath();
+            } else if (hasRootPathProvider(adapter)) {
+              rootPath = adapter.getRootPath();
+            }
+
             if (rootPath) {
+              log.info(`[Window Switcher] Window ${id} rootPath:`, rootPath);
               // Extract just the directory name from the path
               title = path.basename(rootPath);
             }
@@ -219,7 +241,7 @@ class WindowSwitcher {
     // Log any console messages from the renderer
     this.switcherWindow.webContents.on(
       'console-message',
-      (event, level, message, line, sourceId) => {
+      (event, level, message, line, _sourceId) => {
         log.info(`[Window Switcher Renderer] ${message} (line ${line})`);
       },
     );
