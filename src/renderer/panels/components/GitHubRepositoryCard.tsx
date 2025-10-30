@@ -135,7 +135,7 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
               whiteSpace: 'nowrap',
             }}
           >
-            {repository.owner?.login ?? 'unknown'}/{repository.name}
+            {repository.name}
           </span>
           {isStarred && (
             <Star

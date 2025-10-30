@@ -8,6 +8,7 @@ import {
   Network,
   FileText,
   UserCheck,
+  Star,
 } from 'lucide-react';
 import { ConfigurablePanelLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
@@ -17,6 +18,7 @@ import { buildDependencyGraphs } from '../../../services/DependencyGraphService'
 import { GraphsListPanel } from '../../../panels/components/GraphsListPanel';
 import { GraphDetailPanel } from '../../../panels/components/GraphDetailPanel';
 import { GitHubProjectsPanel } from '../../../panels/components/GitHubProjectsPanel';
+import { GitHubStarredPanel } from '../../../panels/components/GitHubStarredPanel';
 import { GitHubSocialPanel } from '../../../panels/components/GitHubSocialPanel';
 import { RecentCommitsPanel } from '../../../panels/components/RecentCommitsPanel';
 import { GitHubReadmePanel } from '../../../panels/components/GitHubReadmePanel';
@@ -89,6 +91,12 @@ const FeedViewInner: React.FC = () => {
             content: <GitHubProjectsPanel />,
           },
           {
+            id: 'github-starred',
+            label: 'Starred',
+            icon: <Star size={16} />,
+            content: <GitHubStarredPanel />,
+          },
+          {
             id: 'github-social',
             label: 'GitHub Network',
             icon: <Users size={16} />,
@@ -141,7 +149,7 @@ const FeedViewInner: React.FC = () => {
         layout={{
           left: {
             type: 'tabs',
-            panels: ['github-social', 'github-projects', 'graphs-list'],
+            panels: ['github-projects', 'github-starred', 'github-social', 'graphs-list'],
             config: {
               defaultActiveTab: 0,
               tabPosition: 'top',

@@ -22,7 +22,7 @@ import { GitHubRepositoryCard } from './GitHubRepositoryCard';
 import { useAllRepositories } from '../../hooks/useRepositoryData';
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 
-export const GitHubProjectsPanel: React.FC = () => {
+export const GitHubStarredPanel: React.FC = () => {
   const { theme } = useTheme();
   const {
     isAuthenticated,
@@ -31,9 +31,8 @@ export const GitHubProjectsPanel: React.FC = () => {
     login,
     loginError,
   } = useAuthState();
-  const [ownedRepositories, setOwnedRepositories] = useState<GitHubRepository[]>(
-    [],
-  );
+  const [starredRepositories, setStarredRepositories] =
+    useState<GitHubRepository[]>([]);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
@@ -119,20 +118,20 @@ export const GitHubProjectsPanel: React.FC = () => {
     setIsFetching(true);
     setError(null);
     try {
-      const owned = await GithubService.getUserRepositories({
+      const starred = await GithubService.getUserStarredRepositories({
         perPage: 100,
         sort: 'updated',
         direction: 'desc',
       });
 
-      setOwnedRepositories(owned);
+      setStarredRepositories(starred);
       setLastUpdated(Date.now());
     } catch (err) {
-      console.error('Failed to load GitHub repositories', err);
+      console.error('Failed to load GitHub starred repositories', err);
       setError(
         err instanceof Error
           ? err.message
-          : 'Failed to load repositories from GitHub.',
+          : 'Failed to load starred repositories from GitHub.',
       );
     } finally {
       setIsFetching(false);
@@ -143,7 +142,7 @@ export const GitHubProjectsPanel: React.FC = () => {
     if (isAuthenticated) {
       void fetchRepositories();
     } else {
-      setOwnedRepositories([]);
+      setStarredRepositories([]);
       setLastUpdated(null);
       setError(null);
     }
@@ -177,9 +176,9 @@ export const GitHubProjectsPanel: React.FC = () => {
 
   const normalizedFilter = filter.trim().toLowerCase();
 
-  // Group owned repositories by organization
+  // Group starred repositories by organization
   const repositoriesByOrg = useMemo(() => {
-    const filtered = filterRepositories(ownedRepositories, normalizedFilter);
+    const filtered = filterRepositories(starredRepositories, normalizedFilter);
 
     // Group by organization/owner
     const grouped = new Map<string, GitHubRepository[]>();
@@ -200,7 +199,7 @@ export const GitHubProjectsPanel: React.FC = () => {
           a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
         ),
       }));
-  }, [ownedRepositories, normalizedFilter]);
+  }, [starredRepositories, normalizedFilter]);
 
   // Create lookup map for local repositories
   const localRepoMap = useMemo(() => {
@@ -226,14 +225,14 @@ export const GitHubProjectsPanel: React.FC = () => {
     return map;
   }, [localRepos]);
 
-  const hasData = ownedRepositories.length > 0;
+  const hasData = starredRepositories.length > 0;
   const isInitialLoading = isFetching && !hasData;
 
   if (isAuthLoading && !isAuthenticated) {
     return renderState(
       <Loader2 size={32} style={{ color: theme.colors.textSecondary }} />,
       'Checking authentication status…',
-      'Confirming your GitHub session so we can load your projects.',
+      'Confirming your GitHub session so we can load your starred projects.',
     );
   }
 
@@ -244,7 +243,7 @@ export const GitHubProjectsPanel: React.FC = () => {
         style={{ color: theme.colors.warning || '#f59e0b' }}
       />,
       'Connect your GitHub account',
-      'Sign in with GitHub to explore your repositories.',
+      'Sign in with GitHub to explore your starred repositories.',
       <button
         type="button"
         onClick={handleLogin}
@@ -284,8 +283,8 @@ export const GitHubProjectsPanel: React.FC = () => {
   if (isInitialLoading) {
     return renderState(
       <Loader2 size={32} style={{ color: theme.colors.textSecondary }} />,
-      'Loading your GitHub repositories…',
-      'Fetching your personal repositories from GitHub.',
+      'Loading your starred repositories…',
+      'Fetching your starred repositories from GitHub.',
     );
   }
 
@@ -341,7 +340,7 @@ export const GitHubProjectsPanel: React.FC = () => {
         <input
           type="text"
           value={filter}
-          placeholder="Filter repositories..."
+          placeholder="Filter starred repositories..."
           onChange={(event) => setFilter(event.target.value)}
           style={{
             width: '100%',
@@ -445,7 +444,7 @@ export const GitHubProjectsPanel: React.FC = () => {
                     <GitHubRepositoryCard
                       key={repo.id}
                       repository={repo}
-                      variant="owned"
+                      variant="starred"
                       localRepo={localRepoMap.get(repo.full_name)}
                     />
                   ))}
@@ -497,7 +496,7 @@ function filterRepositories(
   });
 }
 
-export const GitHubProjectsPanelPreview: React.FC = () => {
+export const GitHubStarredPanelPreview: React.FC = () => {
   const { theme } = useTheme();
 
   return (
@@ -524,10 +523,10 @@ export const GitHubProjectsPanelPreview: React.FC = () => {
             width: '16px',
             height: '16px',
             borderRadius: '2px',
-            backgroundColor: `${theme.colors.primary}40`,
+            backgroundColor: `${theme.colors.warning || '#f59e0b'}40`,
           }}
         />
-        <span>Your Repositories</span>
+        <span>Starred Repositories</span>
       </div>
       <div
         style={{
@@ -536,7 +535,7 @@ export const GitHubProjectsPanelPreview: React.FC = () => {
           marginTop: '4px',
         }}
       >
-        Browse your personal GitHub repositories grouped by organization
+        Browse your starred GitHub repositories grouped by organization
       </div>
     </div>
   );
