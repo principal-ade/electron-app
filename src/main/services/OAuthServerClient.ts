@@ -24,6 +24,8 @@ interface AuthStartResponse {
 
 interface TokenResponse {
   access_token: string;
+  github_access_token?: string; // GitHub token (set on initial auth, null on refresh)
+  workos_access_token?: string; // WorkOS token (if different from access_token)
   refresh_token?: string;
   token_type: string;
   expires_in?: number; // Token lifetime in seconds
@@ -37,7 +39,8 @@ interface TokenResponse {
 }
 
 export interface AuthResult {
-  token: string;
+  token: string; // GitHub token for API calls
+  workosToken?: string; // WorkOS token for session management
   refreshToken?: string;
   expiresAt?: number; // Unix timestamp when token expires
   user: TokenResponse['user'];
@@ -123,14 +126,22 @@ export class OAuthServerClient {
         ? Date.now() + tokenResponse.expires_in * 1000
         : undefined;
 
+      // Extract GitHub and WorkOS tokens from response
+      // Prefer github_access_token if available, fallback to access_token
+      const githubToken = tokenResponse.github_access_token || tokenResponse.access_token;
+      const workosToken = tokenResponse.workos_access_token || tokenResponse.access_token;
+
       console.log('[OAuthServerClient] Token received:', {
         hasRefreshToken: !!tokenResponse.refresh_token,
+        hasGithubToken: !!tokenResponse.github_access_token,
+        hasWorkosToken: !!tokenResponse.workos_access_token,
         expiresIn: tokenResponse.expires_in,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
       });
 
       return {
-        token: tokenResponse.access_token,
+        token: githubToken,
+        workosToken: workosToken !== githubToken ? workosToken : undefined,
         refreshToken: tokenResponse.refresh_token,
         expiresAt,
         user: tokenResponse.user,
@@ -245,8 +256,21 @@ export class OAuthServerClient {
           : 'Server did not provide new refresh token, keeping existing one',
       });
 
+      // Extract GitHub and WorkOS tokens from response
+      // On refresh, github_access_token is typically null, so access_token is the WorkOS token
+      const githubToken = tokenResponse.github_access_token || tokenResponse.access_token;
+      const workosToken = tokenResponse.workos_access_token || tokenResponse.access_token;
+
+      console.log('[OAuthServerClient] Token types in refresh response:', {
+        hasGithubToken: !!tokenResponse.github_access_token,
+        hasWorkosToken: !!tokenResponse.workos_access_token,
+        githubTokenPrefix: githubToken?.substring(0, 4),
+        workosTokenPrefix: workosToken?.substring(0, 4),
+      });
+
       return {
-        token: tokenResponse.access_token,
+        token: githubToken,
+        workosToken: workosToken !== githubToken ? workosToken : undefined,
         refreshToken: newRefreshToken,
         expiresAt,
         user: tokenResponse.user,

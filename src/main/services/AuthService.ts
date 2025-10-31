@@ -176,6 +176,7 @@ class AuthService {
           await this.storeAuth(
             result.token,
             result.user,
+            result.workosToken,
             result.refreshToken,
             result.expiresAt,
           );
@@ -307,34 +308,42 @@ class AuthService {
     try {
       console.log('[AuthService] Reading from UnifiedSecureStorage...');
 
-      // Get token and metadata from unified storage
-      const tokenData = await this.storage.getTokenWithMetadata(
+      // Get GitHub token (primary token for API calls)
+      const githubTokenData = await this.storage.getTokenWithMetadata(
         TOKEN_KEYS.GITHUB_TOKEN,
       );
 
-      if (!tokenData) {
+      if (!githubTokenData) {
         console.log('[AuthService] No stored credentials found');
         return { success: false, authenticated: false };
       }
 
-      let { token, metadata } = tokenData;
-      const user = metadata?.user;
-      const refreshToken = metadata?.refreshToken;
-      const expiresAt = metadata?.expiresAt;
+      const { token: githubToken, metadata: githubMetadata } = githubTokenData;
+      const user = githubMetadata?.user as { login: string; email: string; name?: string; id?: number } | undefined;
 
       if (!user) {
         console.log('[AuthService] No user data found in token metadata');
         return { success: false, authenticated: false };
       }
 
-      // Check if token is expired or about to expire (within 5 minutes)
+      // Get WorkOS token (for session management)
+      const workosTokenData = await this.storage.getTokenWithMetadata(
+        TOKEN_KEYS.WORKOS_TOKEN,
+      );
+
+      // Get refresh token and expiry info
+      // First try from WorkOS token metadata, fallback to GitHub token metadata (backward compatibility)
+      let refreshToken = (workosTokenData?.metadata?.refreshToken || githubMetadata?.refreshToken) as string | undefined;
+      let expiresAt = (workosTokenData?.metadata?.expiresAt || githubMetadata?.expiresAt) as number | undefined;
+
+      // Check if WorkOS token is expired or about to expire (within 5 minutes)
       const now = Date.now();
       const fiveMinutes = 5 * 60 * 1000;
       const isExpired = expiresAt && expiresAt <= now;
       const isExpiringSoon = expiresAt && expiresAt <= now + fiveMinutes;
 
       if ((isExpired || isExpiringSoon) && refreshToken) {
-        console.log('[AuthService] Token expired or expiring soon, refreshing...', {
+        console.log('[AuthService] WorkOS token expired or expiring soon, refreshing...', {
           expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
           isExpired,
           isExpiringSoon,
@@ -351,26 +360,34 @@ class AuthService {
             refreshToken,
           );
 
-          // Store the new tokens
+          // ✅ CRITICAL: Only update WorkOS token, preserve GitHub token
+          console.log('[AuthService] Preserving GitHub token, updating WorkOS token only');
+
+          // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
+          const newGithubToken = refreshedAuth.token.startsWith('gho_')
+            ? refreshedAuth.token
+            : githubToken;
+
           await this.storeAuth(
-            refreshedAuth.token,
+            newGithubToken,
             refreshedAuth.user,
+            refreshedAuth.workosToken,
             refreshedAuth.refreshToken,
             refreshedAuth.expiresAt,
           );
 
-          // Update AuthStateManager with new token
+          // Update AuthStateManager with GitHub token (not WorkOS token!)
           AuthStateManager.getInstance().setAuthenticated(
             refreshedAuth.user,
-            refreshedAuth.token,
+            newGithubToken,
           );
 
-          console.log('[AuthService] Token refreshed successfully');
+          console.log('[AuthService] Token refreshed successfully, GitHub token preserved');
 
           return {
             success: true,
             authenticated: true,
-            token: refreshedAuth.token,
+            token: newGithubToken, // ✅ Return GitHub token for API calls
             user: refreshedAuth.user,
           };
         } catch (refreshError: any) {
@@ -395,13 +412,14 @@ class AuthService {
         {
           expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
           hasRefreshToken: !!refreshToken,
+          hasWorkosToken: !!workosTokenData,
         },
       );
 
       return {
         success: true,
         authenticated: true,
-        token,
+        token: githubToken, // ✅ Always return GitHub token for API calls
         user,
       };
     } catch (error) {
@@ -416,23 +434,43 @@ class AuthService {
   }
 
   private async storeAuth(
-    token: string,
+    githubToken: string,
     user: any,
+    workosToken?: string,
     refreshToken?: string,
     expiresAt?: number,
   ): Promise<void> {
     try {
       console.log('[AuthService] Storing credentials for:', user.login, {
+        hasWorkosToken: !!workosToken,
         hasRefreshToken: !!refreshToken,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
       });
 
-      // Store token with user metadata, refresh token, and expiry in unified storage
-      await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, token, {
+      // Store GitHub token (never expires) with user metadata
+      await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, githubToken, {
         user,
-        refreshToken,
-        expiresAt,
       });
+
+      console.log('[AuthService] GitHub token stored successfully');
+
+      // Store WorkOS token with refresh info (expires after 1 hour)
+      if (workosToken) {
+        await this.storage.setToken(TOKEN_KEYS.WORKOS_TOKEN, workosToken, {
+          refreshToken,
+          expiresAt,
+        });
+        console.log('[AuthService] WorkOS token stored successfully');
+      } else if (refreshToken || expiresAt) {
+        // If we don't have a separate WorkOS token but have refresh info,
+        // store it with the GitHub token for backward compatibility
+        await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, githubToken, {
+          user,
+          refreshToken,
+          expiresAt,
+        });
+        console.log('[AuthService] Single token stored with refresh info');
+      }
 
       console.log('[AuthService] Credentials stored successfully');
     } catch (error) {
@@ -460,8 +498,9 @@ class AuthService {
 
   private async clearStoredAuth(): Promise<void> {
     try {
-      // Delete token from unified storage
+      // Delete both GitHub and WorkOS tokens from unified storage
       await this.storage.deleteToken(TOKEN_KEYS.GITHUB_TOKEN);
+      await this.storage.deleteToken(TOKEN_KEYS.WORKOS_TOKEN);
 
       console.log('[AuthService] Credentials cleared');
     } catch (error) {
@@ -565,7 +604,7 @@ class AuthService {
       const now = Date.now();
       const fiveMinutes = 5 * 60 * 1000;
 
-      const expiresAt = metadata?.expiresAt;
+      const expiresAt = metadata?.expiresAt as number | undefined;
       const isExpired = expiresAt ? expiresAt <= now : false;
       const isExpiringSoon = expiresAt ? expiresAt <= now + fiveMinutes : false;
 
@@ -629,7 +668,7 @@ class AuthService {
       }
 
       const { metadata } = tokenData;
-      const refreshToken = metadata?.refreshToken;
+      const refreshToken = metadata?.refreshToken as string | undefined;
 
       if (!refreshToken) {
         return {
@@ -645,18 +684,30 @@ class AuthService {
 
       const refreshedAuth = await authClient.refreshAccessToken(refreshToken);
 
+      // Get the existing GitHub token to preserve it
+      const githubTokenData = await this.storage.getTokenWithMetadata(
+        TOKEN_KEYS.GITHUB_TOKEN,
+      );
+      const existingGithubToken = githubTokenData?.token;
+
+      // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
+      const newGithubToken = refreshedAuth.token.startsWith('gho_')
+        ? refreshedAuth.token
+        : (existingGithubToken || refreshedAuth.token);
+
       // Store the new tokens
       await this.storeAuth(
-        refreshedAuth.token,
+        newGithubToken,
         refreshedAuth.user,
+        refreshedAuth.workosToken,
         refreshedAuth.refreshToken,
         refreshedAuth.expiresAt,
       );
 
-      // Update AuthStateManager with new token
+      // Update AuthStateManager with GitHub token
       AuthStateManager.getInstance().setAuthenticated(
         refreshedAuth.user,
-        refreshedAuth.token,
+        newGithubToken,
       );
 
       console.log('[AuthService] Token refresh test successful:', {

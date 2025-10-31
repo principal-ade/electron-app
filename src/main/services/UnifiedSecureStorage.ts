@@ -251,7 +251,7 @@ export class UnifiedSecureStorage {
 
   async getTokenWithMetadata(
     key: string,
-  ): Promise<{ token: string; metadata: any } | null> {
+  ): Promise<{ token: string; metadata?: TokenMetadata } | null> {
     return this.tokenDomain.getTokenWithMetadata(key);
   }
 
@@ -434,4 +434,5 @@ export const TOKEN_KEYS = {
   ORBIT_AUTH: 'orbit_auth',
   GIT_SYNC_AUTH: 'git-sync-auth',
   GITHUB_TOKEN: 'github_token',
+  WORKOS_TOKEN: 'workos_token',
 } as const;
