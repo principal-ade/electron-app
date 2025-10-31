@@ -216,6 +216,17 @@ export function registerModernWindowHandlers(): void {
 
       const windowName = `repository-maps-${remoteUrl}`;
 
+      // Check if window already exists before creating
+      const { getSpecialWindows, getApplicationWindows } =
+        require('./modernWindowManager');
+      const specialWindows = getSpecialWindows();
+      const applicationWindows = getApplicationWindows();
+      const existingWindowId = specialWindows.get(windowName);
+      const windowAlreadyExists =
+        existingWindowId &&
+        applicationWindows.get(existingWindowId) &&
+        !applicationWindows.get(existingWindowId).window.isDestroyed();
+
       const window = createSpecialWindow(
         windowName,
         {
@@ -239,19 +250,27 @@ export function registerModernWindowHandlers(): void {
 
       if (!window) return;
 
-      // Build URL with the mapped repository data
-      const payload = { repository: repoData };
-      const encodedData = encodeURIComponent(JSON.stringify(payload));
-      const url = `${resolveHtmlPath('repo-manager.html')}#repository-maps/${encodedData}`;
+      // Only load URL for newly created windows, not existing ones
+      if (!windowAlreadyExists) {
+        // Build URL with the mapped repository data
+        const payload = { repository: repoData };
+        const encodedData = encodeURIComponent(JSON.stringify(payload));
+        const url = `${resolveHtmlPath('repo-manager.html')}#repository-maps/${encodedData}`;
 
-      // Wait for adapters to initialize before loading URL
-      setTimeout(() => {
+        // Wait for adapters to initialize before loading URL
+        setTimeout(() => {
+          console.log(
+            '[ModernWindow] Loading repository dashboard URL after adapter init delay:',
+            url,
+          );
+          window.window.loadURL(url);
+        }, 200);
+      } else {
         console.log(
-          '[ModernWindow] Loading repository dashboard URL after adapter init delay:',
-          url,
+          '[ModernWindow] Window already exists, focusing without reload:',
+          windowName,
         );
-        window.window.loadURL(url);
-      }, 200);
+      }
     },
   );
 
