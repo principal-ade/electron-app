@@ -98,8 +98,9 @@ export const GitHubSocialPanel: React.FC = () => {
                 margin: 0,
                 marginBottom: '8px',
                 color: theme.colors.text,
-                fontSize: '18px',
-                fontWeight: 600,
+                fontSize: `${theme.fontSizes[3]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                fontFamily: theme.fonts.body,
               }}
             >
               {title}
@@ -109,7 +110,8 @@ export const GitHubSocialPanel: React.FC = () => {
                 style={{
                   margin: 0,
                   color: theme.colors.textSecondary,
-                  lineHeight: 1.5,
+                  lineHeight: theme.lineHeights.body,
+                  fontFamily: theme.fonts.body,
                 }}
               >
                 {description}
@@ -292,8 +294,9 @@ export const GitHubSocialPanel: React.FC = () => {
           border: 'none',
           backgroundColor: theme.colors.primary,
           color: theme.colors.background,
-          fontWeight: 600,
-          fontSize: '14px',
+          fontWeight: theme.fontWeights.semibold,
+          fontSize: `${theme.fontSizes[1]}px`,
+          fontFamily: theme.fonts.body,
           cursor: isLoggingIn ? 'not-allowed' : 'pointer',
           opacity: isLoggingIn ? 0.75 : 1,
         }}
@@ -306,7 +309,8 @@ export const GitHubSocialPanel: React.FC = () => {
           style={{
             margin: 0,
             color: theme.colors.error || '#ef4444',
-            fontSize: '13px',
+            fontSize: `${theme.fontSizes[1]}px`,
+            fontFamily: theme.fonts.body,
           }}
         >
           {loginError}
@@ -368,7 +372,8 @@ export const GitHubSocialPanel: React.FC = () => {
             border: `1px solid ${theme.colors.border}`,
             backgroundColor: theme.colors.background,
             color: theme.colors.text,
-            fontSize: '13px',
+            fontSize: `${theme.fontSizes[1]}px`,
+            fontFamily: theme.fonts.body,
             outline: 'none',
           }}
         />
@@ -384,7 +389,8 @@ export const GitHubSocialPanel: React.FC = () => {
             borderRadius: '6px',
             backgroundColor: `${theme.colors.error || '#ef4444'}20`,
             color: theme.colors.error || '#ef4444',
-            fontSize: '13px',
+            fontSize: `${theme.fontSizes[1]}px`,
+            fontFamily: theme.fonts.body,
           }}
         >
           <AlertCircle size={16} />
@@ -459,8 +465,9 @@ export const GitHubSocialPanel: React.FC = () => {
                   />
                   <span
                     style={{
-                      fontSize: '14px',
-                      fontWeight: 600,
+                      fontSize: `${theme.fontSizes[1]}px`,
+                      fontWeight: theme.fontWeights.semibold,
+                      fontFamily: theme.fonts.body,
                       color: theme.colors.text,
                     }}
                   >
@@ -469,7 +476,8 @@ export const GitHubSocialPanel: React.FC = () => {
                 </div>
                 <span
                   style={{
-                    fontSize: '12px',
+                    fontSize: `${theme.fontSizes[0]}px`,
+                    fontFamily: theme.fonts.body,
                     color: theme.colors.textSecondary,
                   }}
                 >
@@ -529,8 +537,9 @@ export const GitHubSocialPanel: React.FC = () => {
                 <Users size={16} color={theme.colors.textSecondary} />
                 <span
                   style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontWeight: theme.fontWeights.semibold,
+                    fontFamily: theme.fonts.body,
                     color: theme.colors.text,
                   }}
                 >
@@ -539,7 +548,8 @@ export const GitHubSocialPanel: React.FC = () => {
               </div>
               <span
                 style={{
-                  fontSize: '12px',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
                   color: theme.colors.textSecondary,
                 }}
               >
@@ -617,7 +627,8 @@ const PersonItem: React.FC<PersonItemProps> = ({ person, theme }) => {
       />
       <span
         style={{
-          fontSize: '13px',
+          fontSize: `${theme.fontSizes[1]}px`,
+          fontFamily: theme.fonts.body,
           color: theme.colors.text,
         }}
       >
@@ -634,7 +645,8 @@ export const GitHubSocialPanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '12px',
+        fontSize: `${theme.fontSizes[0]}px`,
+        fontFamily: theme.fonts.body,
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',
@@ -646,7 +658,7 @@ export const GitHubSocialPanelPreview: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          fontWeight: 600,
+          fontWeight: theme.fontWeights.semibold,
         }}
       >
         <Users size={16} style={{ color: theme.colors.primary }} />
@@ -654,7 +666,8 @@ export const GitHubSocialPanelPreview: React.FC = () => {
       </div>
       <div
         style={{
-          fontSize: '11px',
+          fontSize: `${theme.fontSizes[0]}px`,
+          fontFamily: theme.fonts.body,
           color: theme.colors.textSecondary,
         }}
       >

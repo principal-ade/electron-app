@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTheme } from '@a24z/industry-theme';
 import {
   ExternalLink,
   Star,
   FolderOpen,
   Download,
+  Folder,
+  Cloud,
 } from 'lucide-react';
 
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
@@ -108,19 +111,19 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
       }}
     >
       {/* Status indicator */}
-      <div
-        style={{
-          width: '6px',
-          height: '6px',
-          borderRadius: '50%',
-          backgroundColor: localRepo
-            ? theme.colors.success || '#10b981'
-            : isReadmeSelected
-              ? theme.colors.primary
-              : theme.colors.textSecondary,
-          flexShrink: 0,
-        }}
-      />
+      <div style={{ flexShrink: 0 }}>
+        {localRepo ? (
+          <Folder
+            size={16}
+            color={theme.colors.success || '#10b981'}
+          />
+        ) : (
+          <Cloud
+            size={16}
+            color={theme.colors.textSecondary}
+          />
+        )}
+      </div>
 
       {/* Main content */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -129,7 +132,7 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
             style={{
               fontSize: '14px',
               fontWeight: 500,
-              color: theme.colors.text,
+              color: localRepo ? theme.colors.success || '#10b981' : theme.colors.text,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -142,12 +145,6 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
               size={12}
               fill={theme.colors.warning || '#f59e0b'}
               color={theme.colors.warning || '#f59e0b'}
-            />
-          )}
-          {localRepo && (
-            <FolderOpen
-              size={12}
-              color={theme.colors.success || '#10b981'}
             />
           )}
         </div>
@@ -258,13 +255,14 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
       </div>
 
       {/* Clone Modal */}
-      {showCloneModal && (
+      {showCloneModal && createPortal(
         <GitCloneModal
           isOpen={showCloneModal}
           onClose={() => setShowCloneModal(false)}
           onRepositoryAdded={handleRepositoryCloned}
           initialUrl={repository.clone_url}
-        />
+        />,
+        document.body
       )}
     </div>
   );
