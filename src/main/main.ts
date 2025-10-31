@@ -177,13 +177,30 @@ if (isDebug) {
   });
 }
 
-// Window switcher keyboard shortcut (only active when app windows are focused)
+// Window switcher keyboard shortcuts (per-window listeners)
 app.on('browser-window-created', (_, window) => {
   log.info('[Window Switcher] Attaching keyboard listener to window');
 
   window.webContents.on('before-input-event', (event, input) => {
-    // Window switcher with Cmd+; (Mac) / Ctrl+; (Win/Linux)
-    // Using semicolon since backtick is captured by macOS
+    // Command+' (or Ctrl+') - Toggle mode
+    if (
+      input.type === 'keyDown' &&
+      input.code === 'Quote' &&
+      ((process.platform === 'darwin' &&
+        input.meta &&
+        !input.control &&
+        !input.shift) ||
+        (process.platform !== 'darwin' &&
+          input.control &&
+          !input.meta &&
+          !input.shift))
+    ) {
+      log.info('[Window Switcher] Toggle shortcut triggered (Command+\')');
+      windowSwitcher.toggle();
+      event.preventDefault();
+    }
+
+    // Command+; (or Ctrl+;) - Cycle mode
     if (
       input.type === 'keyDown' &&
       input.code === 'Semicolon' &&
@@ -196,22 +213,21 @@ app.on('browser-window-created', (_, window) => {
           !input.meta &&
           !input.shift))
     ) {
-      log.info('[Window Switcher] ✅ Shortcut triggered!');
-      windowSwitcher.show();
+      log.info('[Window Switcher] Cycle shortcut triggered (Command+;)');
+      windowSwitcher.showAndCycle();
       event.preventDefault();
     }
 
-    // Hide switcher when Command/Control is released
+    // Detect when Command/Ctrl is released while switcher is showing in cycle mode
     if (
       input.type === 'keyUp' &&
       windowSwitcher.isShowing() &&
-      ((process.platform === 'darwin' && input.code === 'MetaLeft') ||
-        (process.platform === 'darwin' && input.code === 'MetaRight') ||
-        (process.platform !== 'darwin' && input.code === 'ControlLeft') ||
-        (process.platform !== 'darwin' && input.code === 'ControlRight'))
+      windowSwitcher.isCycleMode() &&
+      ((process.platform === 'darwin' && (input.code === 'MetaLeft' || input.code === 'MetaRight')) ||
+        (process.platform !== 'darwin' && (input.code === 'ControlLeft' || input.code === 'ControlRight')))
     ) {
-      log.info('[Window Switcher] ✅ Modifier key released, hiding switcher');
-      windowSwitcher.hide();
+      log.info('[Window Switcher] Modifier key released, activating selected window');
+      windowSwitcher.activateSelectedAndHide();
       event.preventDefault();
     }
   });
@@ -353,6 +369,8 @@ app
     await initializeServices();
 
     // Window handlers are now registered in initializeServices() via modernWindowHandlers
+
+    // Note: Window switcher shortcuts are registered via per-window keyboard listeners below
 
     createWindow();
 

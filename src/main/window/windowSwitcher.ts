@@ -26,13 +26,54 @@ const hasRootPathProvider = (adapter: unknown): adapter is RootPathProvider => {
 class WindowSwitcher {
   private switcherWindow: BrowserWindow | null = null;
   private isActive = false;
+  private cycleMode = false; // true if opened with Command+;, false if opened with Command+'
   private selectedIndex = 0;
   private windowList: Array<{ id: number; title: string }> = [];
 
   /**
-   * Show the window switcher overlay
+   * Show the window switcher overlay (toggle mode - Command+')
    */
   public show(): void {
+    // Only show if one of our app windows is currently focused
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    const isOurAppFocused =
+      focusedWindow && applicationWindows.has(focusedWindow.id);
+
+    if (!isOurAppFocused) {
+      log.info('[Window Switcher] Not showing - app is not currently focused');
+      return;
+    }
+
+    this.updateWindowList();
+
+    if (this.windowList.length === 0) {
+      log.info('No windows to switch between');
+      return;
+    }
+
+    // If already showing, do nothing (toggle will handle hide)
+    if (
+      this.isActive &&
+      this.switcherWindow &&
+      !this.switcherWindow.isDestroyed()
+    ) {
+      log.info('[Window Switcher] Already showing, use toggle or hide to dismiss');
+      return;
+    }
+
+    this.isActive = true;
+    this.cycleMode = false;
+    this.createSwitcherWindow();
+
+    // Start with first window selected
+    this.selectedIndex = 0;
+    this.sendWindowList();
+  }
+
+  /**
+   * Show and cycle to next window (cycle mode - Command+;)
+   */
+  public showAndCycle(): void {
     // Only show if one of our app windows is currently focused
     const focusedWindow = BrowserWindow.getFocusedWindow();
     const isOurAppFocused =
@@ -57,19 +98,32 @@ class WindowSwitcher {
       return;
     }
 
+    // If already showing in cycle mode, cycle to next
     if (
       this.isActive &&
+      this.cycleMode &&
       this.switcherWindow &&
       !this.switcherWindow.isDestroyed()
     ) {
-      // Already showing, just cycle to next
-      // Ensure mouse events are enabled in case they were disabled
-      this.switcherWindow.setIgnoreMouseEvents(false);
       this.selectNext();
       return;
     }
 
+    // If showing in toggle mode, switch to cycle mode
+    if (
+      this.isActive &&
+      !this.cycleMode &&
+      this.switcherWindow &&
+      !this.switcherWindow.isDestroyed()
+    ) {
+      this.cycleMode = true;
+      this.selectNext();
+      return;
+    }
+
+    // Not showing, create and show
     this.isActive = true;
+    this.cycleMode = true;
     this.createSwitcherWindow();
 
     // Start with index 1 (second window) since user wants to switch from current
@@ -78,26 +132,24 @@ class WindowSwitcher {
   }
 
   /**
-   * Hide the switcher and activate selected window
+   * Toggle the window switcher (show if hidden, hide if shown)
+   */
+  public toggle(): void {
+    if (this.isActive && this.switcherWindow && !this.switcherWindow.isDestroyed()) {
+      this.hide();
+    } else {
+      this.show();
+    }
+  }
+
+  /**
+   * Hide the switcher (without activating a window)
    */
   public hide(): void {
     if (!this.isActive) return;
 
     this.isActive = false;
-
-    // Make window click-through immediately to prevent intercepting events
-    if (this.switcherWindow && !this.switcherWindow.isDestroyed()) {
-      this.switcherWindow.setIgnoreMouseEvents(true);
-    }
-
-    // Activate the selected window
-    if (
-      this.windowList.length > 0 &&
-      this.selectedIndex < this.windowList.length
-    ) {
-      const selectedWindowId = this.windowList[this.selectedIndex].id;
-      this.activateWindow(selectedWindowId);
-    }
+    this.cycleMode = false;
 
     // Close the switcher window
     if (this.switcherWindow && !this.switcherWindow.isDestroyed()) {
@@ -133,6 +185,38 @@ class WindowSwitcher {
    */
   public isShowing(): boolean {
     return this.isActive;
+  }
+
+  /**
+   * Check if switcher is in cycle mode (Command+;)
+   */
+  public isCycleMode(): boolean {
+    return this.cycleMode;
+  }
+
+  /**
+   * Activate the selected window and hide the switcher (used in cycle mode)
+   */
+  public activateSelectedAndHide(): void {
+    if (!this.isActive) return;
+
+    this.isActive = false;
+    this.cycleMode = false;
+
+    // Activate the selected window
+    if (
+      this.windowList.length > 0 &&
+      this.selectedIndex < this.windowList.length
+    ) {
+      const selectedWindowId = this.windowList[this.selectedIndex].id;
+      this.activateWindow(selectedWindowId);
+    }
+
+    // Close the switcher window
+    if (this.switcherWindow && !this.switcherWindow.isDestroyed()) {
+      this.switcherWindow.close();
+      this.switcherWindow = null;
+    }
   }
 
   /**
@@ -195,9 +279,10 @@ class WindowSwitcher {
     const { width, height } = primaryDisplay.workAreaSize;
 
     this.switcherWindow = new BrowserWindow({
-      width: Math.min(900, width - 100),
-      height: Math.min(500, height - 100),
-      center: true,
+      width,
+      height,
+      x: 0,
+      y: 0,
       frame: false,
       transparent: true,
       alwaysOnTop: true,
@@ -227,10 +312,10 @@ class WindowSwitcher {
         log.error('[Window Switcher] Attempted URL:', targetUrl);
       });
 
-    // Open DevTools in development to debug
-    if (process.env.NODE_ENV === 'development') {
-      this.switcherWindow.webContents.openDevTools({ mode: 'detach' });
-    }
+    // DevTools disabled for window switcher to prevent focus issues
+    // if (process.env.NODE_ENV === 'development') {
+    //   this.switcherWindow.webContents.openDevTools({ mode: 'detach' });
+    // }
 
     // Send window list once the page is ready
     this.switcherWindow.webContents.on('did-finish-load', () => {
@@ -252,26 +337,28 @@ class WindowSwitcher {
       this.isActive = false;
     });
 
-    // Handle blur - hide switcher when it loses focus
-    this.switcherWindow.on('blur', () => {
-      // Immediately make window click-through to prevent event interception
-      if (this.switcherWindow && !this.switcherWindow.isDestroyed()) {
-        this.switcherWindow.setIgnoreMouseEvents(true);
-      }
-
-      // Delay hiding to allow for window switching
-      setTimeout(() => {
-        if (this.isActive) {
-          this.hide();
-        }
-      }, 100);
-    });
-
+    // Show and focus the window
     this.switcherWindow.show();
     this.switcherWindow.focus();
 
-    // Ensure window can receive mouse events when active
-    this.switcherWindow.setIgnoreMouseEvents(false);
+    // Force focus and bring to front
+    this.switcherWindow.setAlwaysOnTop(true, 'screen-saver');
+    this.switcherWindow.moveTop();
+
+    // Add keyboard listener for modifier release in cycle mode
+    this.switcherWindow.webContents.on('before-input-event', (event, input) => {
+      // Detect when Command/Ctrl is released in cycle mode
+      if (
+        input.type === 'keyUp' &&
+        this.cycleMode &&
+        ((process.platform === 'darwin' && (input.code === 'MetaLeft' || input.code === 'MetaRight')) ||
+          (process.platform !== 'darwin' && (input.code === 'ControlLeft' || input.code === 'ControlRight')))
+      ) {
+        log.info('[Window Switcher] Modifier key released in switcher window, activating selected window');
+        this.activateSelectedAndHide();
+        event.preventDefault();
+      }
+    });
   }
 
   /**

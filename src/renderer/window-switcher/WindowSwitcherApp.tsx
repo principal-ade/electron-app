@@ -100,12 +100,32 @@ export const WindowSwitcherApp: React.FC = () => {
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === ';' || event.key === ':') {
+      // Escape key closes the switcher
+      if (event.key === 'Escape') {
         event.preventDefault();
-        if (event.shiftKey) {
-          electronAPI.cycleSelection?.('previous');
-        } else {
-          electronAPI.cycleSelection?.('next');
+        window.close();
+        return;
+      }
+
+      // Arrow keys for navigation
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        electronAPI.cycleSelection?.('next');
+        return;
+      }
+
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        electronAPI.cycleSelection?.('previous');
+        return;
+      }
+
+      // Enter key to activate selected window
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const selectedWindow = windows[selectedIndex];
+        if (selectedWindow) {
+          electronAPI.selectWindow?.(selectedWindow.id);
         }
       }
     };
@@ -115,7 +135,7 @@ export const WindowSwitcherApp: React.FC = () => {
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [electronAPI]);
+  }, [electronAPI, windows, selectedIndex]);
 
   const handleTileClick = (index: number) => {
     const target = windows[index];
@@ -146,9 +166,6 @@ export const WindowSwitcherApp: React.FC = () => {
                 className={`window-card${isSelected ? ' selected' : ''}`}
                 onClick={() => handleTileClick(index)}
               >
-                <span className="window-index" aria-hidden="true">
-                  {index + 1}
-                </span>
                 <div className="window-preview">
                   {win.thumbnail ? (
                     <img src={win.thumbnail} alt="" />
@@ -173,7 +190,7 @@ export const WindowSwitcherApp: React.FC = () => {
         )}
       </div>
       <p className="hint">
-        Press <strong>;</strong> again to cycle or release <strong>⌘</strong> to switch
+        <strong>⌘'</strong> toggle • <strong>⌘;</strong> cycle (release to activate) • <strong>↑↓</strong> navigate • <strong>Enter</strong> activate • <strong>Esc</strong> close
       </p>
     </div>
   );
