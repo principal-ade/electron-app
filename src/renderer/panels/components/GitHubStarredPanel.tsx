@@ -85,8 +85,9 @@ export const GitHubStarredPanel: React.FC = () => {
                 margin: 0,
                 marginBottom: '8px',
                 color: theme.colors.text,
-                fontSize: '18px',
-                fontWeight: 600,
+                fontSize: `${theme.fontSizes[3]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                fontFamily: theme.fonts.body,
               }}
             >
               {title}
@@ -96,7 +97,8 @@ export const GitHubStarredPanel: React.FC = () => {
                 style={{
                   margin: 0,
                   color: theme.colors.textSecondary,
-                  lineHeight: 1.5,
+                  lineHeight: theme.lineHeights.body,
+                  fontFamily: theme.fonts.body,
                 }}
               >
                 {description}
@@ -257,8 +259,9 @@ export const GitHubStarredPanel: React.FC = () => {
           border: 'none',
           backgroundColor: theme.colors.primary,
           color: theme.colors.background,
-          fontWeight: 600,
-          fontSize: '14px',
+          fontWeight: theme.fontWeights.semibold,
+          fontSize: `${theme.fontSizes[1]}px`,
+          fontFamily: theme.fonts.body,
           cursor: isLoggingIn ? 'not-allowed' : 'pointer',
           opacity: isLoggingIn ? 0.75 : 1,
         }}
@@ -271,7 +274,8 @@ export const GitHubStarredPanel: React.FC = () => {
           style={{
             margin: 0,
             color: theme.colors.error || '#ef4444',
-            fontSize: '13px',
+            fontSize: `${theme.fontSizes[1]}px`,
+            fontFamily: theme.fonts.body,
           }}
         >
           {loginError}
@@ -305,8 +309,9 @@ export const GitHubStarredPanel: React.FC = () => {
           border: 'none',
           backgroundColor: theme.colors.primary,
           color: theme.colors.background,
-          fontWeight: 600,
-          fontSize: '14px',
+          fontWeight: theme.fontWeights.semibold,
+          fontSize: `${theme.fontSizes[1]}px`,
+          fontFamily: theme.fonts.body,
           cursor: 'pointer',
         }}
       >
@@ -349,7 +354,8 @@ export const GitHubStarredPanel: React.FC = () => {
             border: `1px solid ${theme.colors.border}`,
             backgroundColor: theme.colors.background,
             color: theme.colors.text,
-            fontSize: '13px',
+            fontSize: `${theme.fontSizes[1]}px`,
+            fontFamily: theme.fonts.body,
             outline: 'none',
           }}
         />
@@ -365,7 +371,8 @@ export const GitHubStarredPanel: React.FC = () => {
             borderRadius: '6px',
             backgroundColor: `${theme.colors.error || '#ef4444'}20`,
             color: theme.colors.error || '#ef4444',
-            fontSize: '13px',
+            fontSize: `${theme.fontSizes[1]}px`,
+            fontFamily: theme.fonts.body,
           }}
         >
           <AlertCircle size={16} />
@@ -420,8 +427,9 @@ export const GitHubStarredPanel: React.FC = () => {
                   )}
                   <span
                     style={{
-                      fontSize: '14px',
-                      fontWeight: 600,
+                      fontSize: `${theme.fontSizes[1]}px`,
+                      fontWeight: theme.fontWeights.semibold,
+                      fontFamily: theme.fonts.body,
                       color: theme.colors.text,
                     }}
                   >
@@ -430,7 +438,8 @@ export const GitHubStarredPanel: React.FC = () => {
                 </div>
                 <span
                   style={{
-                    fontSize: '12px',
+                    fontSize: `${theme.fontSizes[0]}px`,
+                    fontFamily: theme.fonts.body,
                     color: theme.colors.textSecondary,
                   }}
                 >
@@ -503,7 +512,8 @@ export const GitHubStarredPanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '12px',
+        fontSize: `${theme.fontSizes[0]}px`,
+        fontFamily: theme.fonts.body,
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',
@@ -515,7 +525,7 @@ export const GitHubStarredPanelPreview: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          fontWeight: 600,
+          fontWeight: theme.fontWeights.semibold,
         }}
       >
         <div
@@ -530,7 +540,8 @@ export const GitHubStarredPanelPreview: React.FC = () => {
       </div>
       <div
         style={{
-          fontSize: '11px',
+          fontSize: `${theme.fontSizes[0]}px`,
+          fontFamily: theme.fonts.body,
           color: theme.colors.textSecondary,
           marginTop: '4px',
         }}

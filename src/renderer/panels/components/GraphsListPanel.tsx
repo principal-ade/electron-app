@@ -43,13 +43,14 @@ export const GraphsListPanel: React.FC<GraphsListPanelProps> = ({
           }}
         >
           <Package size={16} color={theme.colors.text} />
-          <h3 style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>
+          <h3 style={{ fontSize: `${theme.fontSizes[1]}px`, fontWeight: theme.fontWeights.semibold, fontFamily: theme.fonts.body, margin: 0 }}>
             Graphs
           </h3>
         </div>
         <div
           style={{
-            fontSize: '12px',
+            fontSize: `${theme.fontSizes[0]}px`,
+            fontFamily: theme.fonts.body,
             color: theme.colors.textSecondary,
           }}
         >
@@ -69,7 +70,8 @@ export const GraphsListPanel: React.FC<GraphsListPanelProps> = ({
             style={{
               textAlign: 'center',
               color: theme.colors.textSecondary,
-              fontSize: '14px',
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
               padding: '16px',
             }}
           >
@@ -80,12 +82,13 @@ export const GraphsListPanel: React.FC<GraphsListPanelProps> = ({
             style={{
               textAlign: 'center',
               color: theme.colors.textSecondary,
-              fontSize: '14px',
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
               padding: '16px',
             }}
           >
             No graphs available
-            <div style={{ fontSize: '12px', marginTop: '8px' }}>
+            <div style={{ fontSize: `${theme.fontSizes[0]}px`, fontFamily: theme.fonts.body, marginTop: '8px' }}>
               Add repositories with package.json to see dependency graphs
             </div>
           </div>
@@ -125,8 +128,9 @@ export const GraphsListPanel: React.FC<GraphsListPanelProps> = ({
             >
               <div
                 style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.semibold,
+                  fontFamily: theme.fonts.body,
                   color: theme.colors.text,
                   marginBottom: '6px',
                   overflow: 'hidden',
@@ -139,7 +143,8 @@ export const GraphsListPanel: React.FC<GraphsListPanelProps> = ({
               </div>
               <div
                 style={{
-                  fontSize: '11px',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
                   color: theme.colors.textSecondary,
                   marginBottom: '6px',
                 }}
@@ -151,7 +156,8 @@ export const GraphsListPanel: React.FC<GraphsListPanelProps> = ({
               </div>
               <div
                 style={{
-                  fontSize: '12px',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
                   color: theme.colors.textSecondary,
                   display: 'flex',
                   gap: '12px',
@@ -167,7 +173,8 @@ export const GraphsListPanel: React.FC<GraphsListPanelProps> = ({
                   <span
                     style={{
                       color: theme.colors.primary,
-                      fontWeight: 600,
+                      fontWeight: theme.fontWeights.semibold,
+                      fontFamily: theme.fonts.body,
                     }}
                   >
                     Monorepo

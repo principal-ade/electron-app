@@ -136,8 +136,9 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
                   margin: 0,
                   marginBottom: '8px',
                   color: theme.colors.text,
-                  fontSize: '18px',
-                  fontWeight: 600,
+                  fontSize: `${theme.fontSizes[3]}px`,
+                  fontWeight: theme.fontWeights.semibold,
+                  fontFamily: theme.fonts.body,
                 }}
               >
                 No repository selected
@@ -146,7 +147,8 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
                 style={{
                   margin: 0,
                   color: theme.colors.textSecondary,
-                  lineHeight: 1.5,
+                  lineHeight: theme.lineHeights.body,
+                  fontFamily: theme.fonts.body,
                 }}
               >
                 Click on a repository to view its recent commits
@@ -198,7 +200,7 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
             }}
           >
             <AlertCircle size={32} style={{ color: theme.colors.error }} />
-            <p style={{ color: theme.colors.textSecondary }}>{error}</p>
+            <p style={{ color: theme.colors.textSecondary, fontFamily: theme.fonts.body }}>{error}</p>
           </div>
         </div>
       </div>
@@ -212,8 +214,9 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
           style={{
             margin: 0,
             color: theme.colors.text,
-            fontSize: '20px',
-            fontWeight: 600,
+            fontSize: `${theme.fontSizes[4]}px`,
+            fontWeight: theme.fontWeights.semibold,
+            fontFamily: theme.fonts.body,
           }}
         >
           Recent Commits
@@ -222,7 +225,8 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
           style={{
             margin: '4px 0 0 0',
             color: theme.colors.textSecondary,
-            fontSize: '13px',
+            fontSize: `${theme.fontSizes[1]}px`,
+            fontFamily: theme.fonts.body,
           }}
         >
           Latest commits from {repository.full_name}
@@ -244,6 +248,7 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
               padding: '32px',
               textAlign: 'center',
               color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.body,
             }}
           >
             No commits found in this repository
@@ -281,7 +286,8 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  fontSize: '12px',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
                   color: theme.colors.textSecondary,
                 }}
               >
@@ -293,8 +299,9 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
 
               <div
                 style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                  fontFamily: theme.fonts.body,
                   color: theme.colors.text,
                 }}
               >
@@ -306,7 +313,8 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  fontSize: '12px',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
                   color: theme.colors.textSecondary,
                 }}
               >
@@ -327,11 +335,11 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
                 <span style={{ color: theme.colors.border }}>•</span>
                 <code
                   style={{
-                    fontSize: '11px',
+                    fontSize: `${theme.fontSizes[0]}px`,
                     padding: '2px 4px',
                     borderRadius: '3px',
                     backgroundColor: `${theme.colors.border}40`,
-                    fontFamily: 'monospace',
+                    fontFamily: theme.fonts.monospace,
                   }}
                 >
                   {commit.sha.substring(0, 7)}

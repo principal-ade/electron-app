@@ -115,8 +115,9 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
                 margin: 0,
                 marginBottom: '8px',
                 color: theme.colors.text,
-                fontSize: '18px',
-                fontWeight: 600,
+                fontSize: `${theme.fontSizes[3]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                fontFamily: theme.fonts.body,
               }}
             >
               No repository selected
@@ -125,7 +126,8 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
               style={{
                 margin: 0,
                 color: theme.colors.textSecondary,
-                lineHeight: 1.5,
+                lineHeight: theme.lineHeights.body,
+                fontFamily: theme.fonts.body,
               }}
             >
               Click on a repository to view its README
@@ -160,7 +162,7 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
             color={theme.colors.textSecondary}
             className="spin-animation"
           />
-          <p style={{ margin: 0, color: theme.colors.textSecondary }}>
+          <p style={{ margin: 0, color: theme.colors.textSecondary, fontFamily: theme.fonts.body }}>
             Loading README...
           </p>
         </div>
@@ -197,8 +199,9 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
                 margin: 0,
                 marginBottom: '8px',
                 color: theme.colors.text,
-                fontSize: '18px',
-                fontWeight: 600,
+                fontSize: `${theme.fontSizes[3]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                fontFamily: theme.fonts.body,
               }}
             >
               Unable to load README
@@ -207,7 +210,8 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
               style={{
                 margin: 0,
                 color: theme.colors.textSecondary,
-                lineHeight: 1.5,
+                lineHeight: theme.lineHeights.body,
+                fontFamily: theme.fonts.body,
               }}
             >
               {error || 'No README found for this repository'}
@@ -222,8 +226,9 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
               border: 'none',
               backgroundColor: theme.colors.primary,
               color: theme.colors.background,
-              fontWeight: 600,
-              fontSize: '14px',
+              fontWeight: theme.fontWeights.semibold,
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
               cursor: 'pointer',
             }}
           >
@@ -259,8 +264,9 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
           <FileText size={16} color={theme.colors.text} />
           <span
             style={{
-              fontSize: '14px',
-              fontWeight: 600,
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: theme.fontWeights.semibold,
+              fontFamily: theme.fonts.body,
               color: theme.colors.text,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -282,7 +288,8 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
               border: `1px solid ${theme.colors.border}`,
               backgroundColor: theme.colors.background,
               color: theme.colors.text,
-              fontSize: '12px',
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontFamily: theme.fonts.body,
               cursor: 'pointer',
             }}
           >
@@ -298,7 +305,8 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
               border: `1px solid ${theme.colors.border}`,
               backgroundColor: theme.colors.background,
               color: theme.colors.text,
-              fontSize: '12px',
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontFamily: theme.fonts.body,
               cursor: 'pointer',
             }}
           >
@@ -333,8 +341,9 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
                   border: 'none',
                   padding: '4px 12px',
                   cursor: 'pointer',
-                  fontSize: '11px',
-                  fontWeight: 500,
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                  fontFamily: theme.fonts.body,
                   transition: 'all 0.2s',
                 }}
               >
@@ -355,8 +364,9 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
                   border: 'none',
                   padding: '4px 12px',
                   cursor: 'pointer',
-                  fontSize: '11px',
-                  fontWeight: 500,
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontWeight: theme.fontWeights.medium,
+                  fontFamily: theme.fonts.body,
                   transition: 'all 0.2s',
                 }}
               >

@@ -103,7 +103,7 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
             }}
           >
             <Network size={16} color={theme.colors.text} />
-            <h3 style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>
+            <h3 style={{ fontSize: `${theme.fontSizes[1]}px`, fontWeight: theme.fontWeights.semibold, fontFamily: theme.fonts.body, margin: 0 }}>
               Graph
             </h3>
           </div>
@@ -140,8 +140,9 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
             </div>
             <h3
               style={{
-                fontSize: '18px',
-                fontWeight: 600,
+                fontSize: `${theme.fontSizes[3]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                fontFamily: theme.fonts.body,
                 color: theme.colors.text,
                 marginBottom: '12px',
               }}
@@ -150,9 +151,10 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
             </h3>
             <p
               style={{
-                fontSize: '14px',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontFamily: theme.fonts.body,
                 color: theme.colors.textSecondary,
-                lineHeight: '1.6',
+                lineHeight: theme.lineHeights.body,
               }}
             >
               Select a graph from the left panel to visualize package
@@ -208,7 +210,7 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
           }}
         >
           <Network size={16} color={theme.colors.text} />
-          <h3 style={{ fontSize: '14px', fontWeight: 600, margin: 0 }}>
+          <h3 style={{ fontSize: `${theme.fontSizes[1]}px`, fontWeight: theme.fontWeights.semibold, fontFamily: theme.fonts.body, margin: 0 }}>
             {graph.name}
           </h3>
         </div>
@@ -226,9 +228,10 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
           >
             <span
               style={{
-                fontSize: '12px',
+                fontSize: `${theme.fontSizes[0]}px`,
+                fontFamily: theme.fonts.body,
                 color: theme.colors.textSecondary,
-                fontWeight: 500,
+                fontWeight: theme.fontWeights.medium,
               }}
             >
               Filter:
@@ -241,8 +244,9 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
                   onClick={() => toggleTopLevelNode(nodeName)}
                   style={{
                     padding: '6px 12px',
-                    fontSize: '12px',
-                    fontWeight: 500,
+                    fontSize: `${theme.fontSizes[0]}px`,
+                    fontWeight: theme.fontWeights.medium,
+                    fontFamily: theme.fonts.body,
                     backgroundColor: isSelected
                       ? theme.colors.primary
                       : theme.colors.background,
@@ -274,7 +278,8 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
                 onClick={selectAllNodes}
                 style={{
                   padding: '4px 8px',
-                  fontSize: '11px',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
                   backgroundColor: theme.colors.background,
                   color: theme.colors.textSecondary,
                   border: `1px solid ${theme.colors.border}`,
@@ -288,7 +293,8 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
                 onClick={deselectAllNodes}
                 style={{
                   padding: '4px 8px',
-                  fontSize: '11px',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
                   backgroundColor: theme.colors.background,
                   color: theme.colors.textSecondary,
                   border: `1px solid ${theme.colors.border}`,
@@ -303,7 +309,8 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
         )}
         <div
           style={{
-            fontSize: '12px',
+            fontSize: `${theme.fontSizes[0]}px`,
+            fontFamily: theme.fonts.body,
             color: theme.colors.textSecondary,
           }}
         >
