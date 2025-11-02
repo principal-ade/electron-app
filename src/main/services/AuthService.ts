@@ -172,10 +172,36 @@ class AuthService {
           console.log('[AuthService] Starting OAuth flow...');
           const result = await authClient.authenticate();
 
+          // Fetch GitHub user profile to get avatar URL
+          let enrichedUser = result.user;
+          try {
+            console.log('[AuthService] Fetching GitHub user profile for avatar...');
+            const response = await fetch('https://api.github.com/user', {
+              headers: {
+                'Authorization': `Bearer ${result.token}`,
+                'Accept': 'application/vnd.github.v3+json',
+              },
+            });
+
+            if (response.ok) {
+              const githubUser = await response.json();
+              enrichedUser = {
+                ...result.user,
+                avatarUrl: githubUser.avatar_url,
+              };
+              console.log('[AuthService] Avatar URL fetched successfully');
+            } else {
+              console.warn('[AuthService] Failed to fetch GitHub profile:', response.status);
+            }
+          } catch (avatarError) {
+            console.error('[AuthService] Error fetching avatar:', avatarError);
+            // Continue without avatar - not critical
+          }
+
           // Store the credentials securely with refresh token and expiry
           await this.storeAuth(
             result.token,
-            result.user,
+            enrichedUser,
             result.workosToken,
             result.refreshToken,
             result.expiresAt,
@@ -183,12 +209,12 @@ class AuthService {
 
           console.log(
             '[AuthService] Authentication successful for:',
-            result.user.login,
+            enrichedUser.login,
           );
 
           // Update AuthStateManager
           AuthStateManager.getInstance().setAuthenticated(
-            result.user,
+            enrichedUser,
             result.token,
           );
 
@@ -196,7 +222,7 @@ class AuthService {
             success: true,
             authenticated: true,
             token: result.token,
-            user: result.user,
+            user: enrichedUser,
           };
         } finally {
           // Restore original open function
