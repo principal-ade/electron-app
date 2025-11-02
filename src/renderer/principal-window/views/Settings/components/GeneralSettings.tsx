@@ -37,6 +37,8 @@ export const GeneralSettings: React.FC = () => {
   const [showTerminalShowAllButton, setShowTerminalShowAllButton] =
     useState(true);
   const [showReposButton, setShowReposButton] = useState(false);
+  const [showMonitorButton, setShowMonitorButton] = useState(false);
+  const [showSearchButton, setShowSearchButton] = useState(false);
 
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
@@ -67,6 +69,8 @@ export const GeneralSettings: React.FC = () => {
       );
       setShowTerminalShowAllButton(prefs.showTerminalShowAllButton ?? true);
       setShowReposButton(prefs.showReposButton ?? false);
+      setShowMonitorButton(prefs.showMonitorButton ?? false);
+      setShowSearchButton(prefs.showSearchButton ?? false);
     };
 
     UserPreferencesService.getPreferences()
@@ -924,6 +928,190 @@ export const GeneralSettings: React.FC = () => {
                     height: '18px',
                     width: '18px',
                     left: showReposButton ? '27px' : '3px',
+                    bottom: '3px',
+                    backgroundColor: 'white',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                  }}
+                />
+              </span>
+            </label>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '16px',
+              marginTop: '16px',
+              paddingTop: '16px',
+              borderTop: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <label
+                htmlFor="showMonitorButton"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  display: 'block',
+                  marginBottom: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Show Monitor Button
+              </label>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  lineHeight: '1.5',
+                }}
+              >
+                When enabled, the Monitor button will appear in the side navigation. When disabled (default), the button is hidden.
+              </p>
+            </div>
+            <label
+              style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '48px',
+                height: '24px',
+                flexShrink: 0,
+              }}
+            >
+              <input
+                id="showMonitorButton"
+                type="checkbox"
+                checked={showMonitorButton}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  setShowMonitorButton(newValue);
+                  await UserPreferencesService.updatePreferences({
+                    showMonitorButton: newValue,
+                  });
+                }}
+                style={{
+                  opacity: 0,
+                  width: 0,
+                  height: 0,
+                }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: showMonitorButton
+                    ? theme.colors.primary
+                    : theme.colors.border,
+                  transition: '0.3s',
+                  borderRadius: '24px',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    content: '',
+                    height: '18px',
+                    width: '18px',
+                    left: showMonitorButton ? '27px' : '3px',
+                    bottom: '3px',
+                    backgroundColor: 'white',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                  }}
+                />
+              </span>
+            </label>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '16px',
+              marginTop: '16px',
+              paddingTop: '16px',
+              borderTop: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <label
+                htmlFor="showSearchButton"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  display: 'block',
+                  marginBottom: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Show Search Button
+              </label>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  lineHeight: '1.5',
+                }}
+              >
+                When enabled, the Search button will appear in the side navigation. When disabled (default), the button is hidden.
+              </p>
+            </div>
+            <label
+              style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '48px',
+                height: '24px',
+                flexShrink: 0,
+              }}
+            >
+              <input
+                id="showSearchButton"
+                type="checkbox"
+                checked={showSearchButton}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  setShowSearchButton(newValue);
+                  await UserPreferencesService.updatePreferences({
+                    showSearchButton: newValue,
+                  });
+                }}
+                style={{
+                  opacity: 0,
+                  width: 0,
+                  height: 0,
+                }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: showSearchButton
+                    ? theme.colors.primary
+                    : theme.colors.border,
+                  transition: '0.3s',
+                  borderRadius: '24px',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    content: '',
+                    height: '18px',
+                    width: '18px',
+                    left: showSearchButton ? '27px' : '3px',
                     bottom: '3px',
                     backgroundColor: 'white',
                     transition: '0.3s',

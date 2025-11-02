@@ -9,7 +9,9 @@ import {
   Rss,
 } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuthState';
+import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import type { NavigationView } from './IntegratedShell';
+import { useEffect, useState } from 'react';
 
 interface NavigationSidebarProps {
   activeView: NavigationView;
@@ -29,6 +31,46 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 }) => {
   const { theme, mode } = useTheme();
   const { isAuthenticated, user } = useAuth();
+  const [showReposButton, setShowReposButton] = useState(false);
+  const [showMonitorButton, setShowMonitorButton] = useState(false);
+  const [showSearchButton, setShowSearchButton] = useState(false);
+
+  useEffect(() => {
+    // Load user preferences for showing buttons
+    UserPreferencesService.getPreferences().then((prefs) => {
+      setShowReposButton(prefs.showReposButton ?? false);
+      setShowMonitorButton(prefs.showMonitorButton ?? false);
+      setShowSearchButton(prefs.showSearchButton ?? false);
+    });
+
+    // Listen for preference changes
+    const handlePreferencesUpdated = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail) {
+        if ('showReposButton' in detail) {
+          setShowReposButton(detail.showReposButton ?? false);
+        }
+        if ('showMonitorButton' in detail) {
+          setShowMonitorButton(detail.showMonitorButton ?? false);
+        }
+        if ('showSearchButton' in detail) {
+          setShowSearchButton(detail.showSearchButton ?? false);
+        }
+      }
+    };
+
+    window.addEventListener(
+      'user-preferences-updated',
+      handlePreferencesUpdated as EventListener,
+    );
+
+    return () => {
+      window.removeEventListener(
+        'user-preferences-updated',
+        handlePreferencesUpdated as EventListener,
+      );
+    };
+  }, []);
 
   const backgroundColor =
     mode === 'dark' && theme.modes?.dark?.backgroundSecondary
@@ -79,15 +121,24 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   const navItems: NavItem[] = [
     { id: 'feed', icon: <Rss size={20} />, label: 'Feed' },
-    { id: 'repository', icon: <Github size={20} />, label: 'Repos' },
+    // Only include repository button if user has enabled it in preferences
+    ...(showReposButton
+      ? [{ id: 'repository' as NavigationView, icon: <Github size={20} />, label: 'Repos' }]
+      : []),
     { id: 'terminal', icon: <Terminal size={20} />, label: 'Term' },
-    { id: 'search', icon: <Search size={20} />, label: 'Search' },
-    {
-      id: 'monitoring',
-      icon: <Activity size={20} />,
-      label: 'Monitor',
-      position: 'bottom',
-    },
+    // Only include search button if user has enabled it in preferences
+    ...(showSearchButton
+      ? [{ id: 'search' as NavigationView, icon: <Search size={20} />, label: 'Search' }]
+      : []),
+    // Only include monitoring button if user has enabled it in preferences
+    ...(showMonitorButton
+      ? [{
+          id: 'monitoring' as NavigationView,
+          icon: <Activity size={20} />,
+          label: 'Monitor',
+          position: 'bottom' as const,
+        }]
+      : []),
     {
       id: 'settings',
       icon: <Settings size={20} />,
