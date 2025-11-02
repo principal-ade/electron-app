@@ -450,14 +450,48 @@ class AuthService {
           expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
           hasRefreshToken: !!refreshToken,
           hasWorkosToken: !!workosTokenData,
+          hasAvatarUrl: !!user.avatarUrl,
         },
       );
+
+      // If avatar URL is missing, fetch it from GitHub
+      let enrichedUser = user;
+      if (!user.avatarUrl) {
+        try {
+          console.log('[AuthService] Avatar URL missing, fetching from GitHub...');
+          const response = await fetch('https://api.github.com/user', {
+            headers: {
+              'Authorization': `Bearer ${githubToken}`,
+              'Accept': 'application/vnd.github.v3+json',
+            },
+          });
+
+          if (response.ok) {
+            const githubUser = await response.json();
+            enrichedUser = {
+              ...user,
+              avatarUrl: githubUser.avatar_url,
+            };
+            console.log('[AuthService] Avatar URL fetched and cached successfully');
+
+            // Update stored user data with avatar
+            await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, githubToken, {
+              user: enrichedUser,
+            });
+          } else {
+            console.warn('[AuthService] Failed to fetch GitHub profile:', response.status);
+          }
+        } catch (avatarError) {
+          console.error('[AuthService] Error fetching avatar:', avatarError);
+          // Continue without avatar - not critical
+        }
+      }
 
       return {
         success: true,
         authenticated: true,
         token: githubToken, // ✅ Always return GitHub token for API calls
-        user,
+        user: enrichedUser,
       };
     } catch (error) {
       console.error('[AuthService] Failed to get stored auth:', error);
