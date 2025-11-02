@@ -57,32 +57,17 @@ export const agentSessionSDKApi: AgentSessionSDKAPI = {
   onProcessedEvent: (
     callback: (event: RepoNormalizedUniversalAgentSessionEvent) => void,
   ) => {
-    console.log(
-      '[agentSessionSDKApi] Setting up IPC listener for:',
-      AgentSessionSDKAPIEvents.PROCESSED_EVENT,
-    );
-
     const handler = (
       _event: IpcRendererEvent,
       data: RepoNormalizedUniversalAgentSessionEvent,
     ) => {
-      console.log(
-        '[agentSessionSDKApi] ========== IPC EVENT RECEIVED ==========',
-      );
-      console.log('[agentSessionSDKApi] Event type:', data.eventType);
-      console.log('[agentSessionSDKApi] Session ID:', data.sessionId);
-      console.log('[agentSessionSDKApi] Tool name:', data.toolName);
-      console.log('[agentSessionSDKApi] Full event:', data);
       callback(data);
     };
 
     ipcRenderer.on(AgentSessionSDKAPIEvents.PROCESSED_EVENT, handler);
 
-    console.log('[agentSessionSDKApi] IPC listener registered successfully');
-
     // Return unsubscribe function
     return () => {
-      console.log('[agentSessionSDKApi] Unsubscribing from IPC events');
       ipcRenderer.removeListener(
         AgentSessionSDKAPIEvents.PROCESSED_EVENT,
         handler,

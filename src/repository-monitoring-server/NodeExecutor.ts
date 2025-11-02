@@ -158,8 +158,8 @@ export class NodeExecutor implements Executor {
     });
 
     return {
-      stdout: child.stdout || new Readable({ read() {} }),
-      stderr: child.stderr || new Readable({ read() {} }),
+      stdout: child.stdout || new Readable({ read() { /* no-op fallback stream */ } }),
+      stderr: child.stderr || new Readable({ read() { /* no-op fallback stream */ } }),
       exitPromise,
       kill: () => {
         child.kill('SIGTERM');
@@ -177,7 +177,7 @@ export class NodeExecutor implements Executor {
         timeout: 5000,
       });
       return result.exitCode === 0;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

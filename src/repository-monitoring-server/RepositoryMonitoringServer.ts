@@ -662,7 +662,7 @@ export class RepositoryMonitoringServer {
    * This rebuilds packages with quality lenses enabled
    */
   async runQualityEnrichment(path: string): Promise<void> {
-    console.log(
+    console.info(
       `[RepositoryMonitoring] Running quality enrichment for: ${path}`,
     );
 
@@ -692,10 +692,12 @@ export class RepositoryMonitoringServer {
   }> {
     try {
       // Mark rebuild as in progress to prevent feedback loops from quality lens artifacts
-      if (!this.rebuildInProgress.has(repoPath)) {
-        this.rebuildInProgress.set(repoPath, new Set());
+      let rebuildSet = this.rebuildInProgress.get(repoPath);
+      if (!rebuildSet) {
+        rebuildSet = new Set();
+        this.rebuildInProgress.set(repoPath, rebuildSet);
       }
-      this.rebuildInProgress.get(repoPath)!.add('packages');
+      rebuildSet.add('packages');
 
       console.info(
         `[RepositoryMonitoring] Building packages slice WITH enrichment for: ${repoPath}`,

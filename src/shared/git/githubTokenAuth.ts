@@ -15,18 +15,22 @@ const TOKEN_ENV_VAR = 'PRINCIPLE_GITHUB_TOKEN';
  * Lazy-load authService only when needed and only in main process context
  * This allows the module to be imported in worker threads without errors
  */
-let authService: any = null;
-function getAuthService() {
+interface LazyAuthService {
+  getValidToken(): Promise<string | null>;
+}
+
+let authService: LazyAuthService | false | null = null;
+function getAuthService(): LazyAuthService | null {
   if (authService !== null) {
-    return authService;
+    return authService === false ? null : authService;
   }
 
   try {
     // Try to import - this will only work in main process context
     const { authService: service } = require('../../main/services/AuthService');
-    authService = service;
+    authService = service as LazyAuthService;
     return authService;
-  } catch (error) {
+  } catch {
     // In worker context or if import fails, return null
     console.warn('[GitHubTokenAuth] AuthService not available in this context');
     authService = false; // Mark as attempted and failed

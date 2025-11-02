@@ -177,13 +177,18 @@ try {
 }
 
 // Expose window switcher API
+interface WindowListData {
+  windows: Array<{ id: number; title: string }>;
+  selectedIndex: number;
+}
+
 try {
   contextBridge.exposeInMainWorld('electronAPI', {
     getWindowList: () => ipcRenderer.send('window-switcher:get-list'),
     selectWindow: (windowId: number) =>
       ipcRenderer.send('window-switcher:select', windowId),
-    onWindowListUpdate: (callback: (data: any) => void) => {
-      const listener = (_: Electron.IpcRendererEvent, data: any) =>
+    onWindowListUpdate: (callback: (data: WindowListData) => void) => {
+      const listener = (_: Electron.IpcRendererEvent, data: WindowListData) =>
         callback(data);
       ipcRenderer.on('window-switcher:update-list', listener);
       return () => {

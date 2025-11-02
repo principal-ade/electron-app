@@ -112,6 +112,32 @@ export interface GitHubPullRequest {
   };
 }
 
+export interface GitHubCommit {
+  sha: string;
+  commit: {
+    author: {
+      name: string;
+      email: string;
+      date: string;
+    };
+    committer: {
+      name: string;
+      email: string;
+      date: string;
+    };
+    message: string;
+  };
+  author?: {
+    login: string;
+    avatar_url: string;
+  };
+  committer?: {
+    login: string;
+    avatar_url: string;
+  };
+  html_url: string;
+}
+
 export interface CreateIssueRequest {
   title: string;
   body?: string;
@@ -238,7 +264,7 @@ export interface GitHubAPI {
     owner: string,
     repo: string,
     options?: { perPage?: number; page?: number },
-  ) => Promise<any[]>;
+  ) => Promise<GitHubCommit[]>;
   //getThread: (owner: string, repo: string, number: number) => Promise<any>;
   refreshData: (owner: string, repo: string) => Promise<void>;
   checkAuthStatus: () => Promise<{
