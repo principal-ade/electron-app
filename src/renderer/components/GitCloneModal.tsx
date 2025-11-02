@@ -8,6 +8,7 @@ import {
   Loader,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
+import type { AlexandriaEntry } from '@a24z/core-library';
 import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
@@ -16,7 +17,7 @@ import { AlexandriaService } from '../main-process-api/AlexandriaService';
 interface GitCloneModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRepositoryAdded?: (repo: any) => void;
+  onRepositoryAdded?: (repo: AlexandriaEntry) => void;
 }
 
 type CloneStep =
@@ -58,7 +59,6 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   const [isCloning, setIsCloning] = useState(false);
   const [cloneProgress, setCloneProgress] = useState<string>('');
   const [existingRepoPath, setExistingRepoPath] = useState<string>('');
-  const [showExistingRepoOption, setShowExistingRepoOption] = useState(false);
 
   // Reset state when modal opens and focus the input
   useEffect(() => {

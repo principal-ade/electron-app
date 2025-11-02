@@ -361,12 +361,23 @@ class AuthService {
           );
 
           // ✅ CRITICAL: Only update WorkOS token, preserve GitHub token
-          console.log('[AuthService] Preserving GitHub token, updating WorkOS token only');
+          console.log('[AuthService] Token refresh response received:', {
+            receivedNewGithubToken: !!refreshedAuth.token,
+            githubTokenPrefix: refreshedAuth.token?.substring(0, 4),
+            willPreserveExisting: !refreshedAuth.token || !refreshedAuth.token.startsWith('gh'),
+          });
 
           // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
-          const newGithubToken = refreshedAuth.token.startsWith('gho_')
+          // refreshedAuth.token may be null/undefined if server doesn't return a new GitHub token
+          const newGithubToken = refreshedAuth.token && refreshedAuth.token.startsWith('gh')
             ? refreshedAuth.token
             : githubToken;
+
+          console.log('[AuthService] Using GitHub token:', {
+            tokenPrefix: newGithubToken?.substring(0, 4),
+            isNewToken: newGithubToken === refreshedAuth.token,
+            isPreservedToken: newGithubToken === githubToken,
+          });
 
           await this.storeAuth(
             newGithubToken,

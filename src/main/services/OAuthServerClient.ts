@@ -127,8 +127,9 @@ export class OAuthServerClient {
         : undefined;
 
       // Extract GitHub and WorkOS tokens from response
-      // Prefer github_access_token if available, fallback to access_token
-      const githubToken = tokenResponse.github_access_token || tokenResponse.access_token;
+      // CRITICAL: We MUST have a separate github_access_token
+      // access_token alone is the WorkOS token, NOT a GitHub token
+      const githubToken = tokenResponse.github_access_token;
       const workosToken = tokenResponse.workos_access_token || tokenResponse.access_token;
 
       console.log('[OAuthServerClient] Token received:', {
@@ -137,7 +138,18 @@ export class OAuthServerClient {
         hasWorkosToken: !!tokenResponse.workos_access_token,
         expiresIn: tokenResponse.expires_in,
         expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
+        githubTokenPrefix: githubToken?.substring(0, 4),
       });
+
+      // Validate that we have a GitHub token
+      if (!githubToken) {
+        throw new Error('Authentication failed: No GitHub token received from server');
+      }
+
+      // Validate GitHub token format (should start with gh prefix)
+      if (!githubToken.startsWith('gh')) {
+        console.warn('[OAuthServerClient] WARNING: GitHub token does not start with "gh" prefix:', githubToken.substring(0, 10));
+      }
 
       return {
         token: githubToken,
@@ -257,8 +269,9 @@ export class OAuthServerClient {
       });
 
       // Extract GitHub and WorkOS tokens from response
-      // On refresh, github_access_token is typically null, so access_token is the WorkOS token
-      const githubToken = tokenResponse.github_access_token || tokenResponse.access_token;
+      // On refresh, github_access_token may be null - server doesn't always return a new GitHub token
+      // In that case, the caller (AuthService) should preserve the existing GitHub token
+      const githubToken = tokenResponse.github_access_token;
       const workosToken = tokenResponse.workos_access_token || tokenResponse.access_token;
 
       console.log('[OAuthServerClient] Token types in refresh response:', {
@@ -267,6 +280,9 @@ export class OAuthServerClient {
         githubTokenPrefix: githubToken?.substring(0, 4),
         workosTokenPrefix: workosToken?.substring(0, 4),
       });
+
+      // Note: It's OK for githubToken to be null/undefined on refresh
+      // The caller (AuthService) will preserve the existing GitHub token if null
 
       return {
         token: githubToken,
