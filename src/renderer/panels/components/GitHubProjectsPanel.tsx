@@ -41,6 +41,7 @@ export const GitHubProjectsPanel: React.FC = () => {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
     new Set(),
   );
+  const [viewMode, setViewMode] = useState<'local' | 'cloud'>('local');
 
   // Load all local repositories with caching
   const { repositories: localRepos } = useAllRepositories();
@@ -177,6 +178,10 @@ export const GitHubProjectsPanel: React.FC = () => {
     });
   }, []);
 
+  const toggleViewMode = useCallback(() => {
+    setViewMode((prev) => (prev === 'local' ? 'cloud' : 'local'));
+  }, []);
+
   const normalizedFilter = filter.trim().toLowerCase();
 
   // Group owned repositories by organization
@@ -203,6 +208,71 @@ export const GitHubProjectsPanel: React.FC = () => {
         ),
       }));
   }, [ownedRepositories, normalizedFilter]);
+
+  // Group local repositories by owner/organization
+  const localReposByOrg = useMemo(() => {
+    // Filter local repos by search filter
+    const filtered = localRepos.filter((repoData) => {
+      if (!normalizedFilter) return true;
+
+      const entry = repoData.repository;
+      const haystack = [
+        entry.name,
+        entry.github?.name ?? '',
+        entry.github?.owner ?? '',
+        entry.remoteUrl ?? '',
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(normalizedFilter);
+    });
+
+    // Group by organization/owner
+    const grouped = new Map<string, RepositoryCacheData[]>();
+    filtered.forEach((repoData) => {
+      const entry = repoData.repository;
+      // Use GitHub owner if available, otherwise use "Local" as default
+      const orgName = entry.github?.owner ?? 'Local';
+      if (!grouped.has(orgName)) {
+        grouped.set(orgName, []);
+      }
+      grouped.get(orgName)!.push(repoData);
+    });
+
+    // Sort organizations alphabetically and sort repos within each org by name
+    return Array.from(grouped.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([org, repos]) => ({
+        organization: org,
+        repositories: repos.sort((a, b) =>
+          a.repository.name.localeCompare(b.repository.name, undefined, { sensitivity: 'base' })
+        ),
+      }));
+  }, [localRepos, normalizedFilter]);
+
+  // Auto-expand sections when there's a filter, collapse when filter is cleared
+  useEffect(() => {
+    if (normalizedFilter) {
+      // Expand all sections when filtering
+      setCollapsedSections(new Set());
+    } else {
+      // Collapse all sections when filter is cleared
+      const allSections = new Set<string>();
+
+      if (viewMode === 'cloud') {
+        repositoriesByOrg.forEach(({ organization }) => {
+          allSections.add(`org-${organization}`);
+        });
+      } else {
+        localReposByOrg.forEach(({ organization }) => {
+          allSections.add(`local-org-${organization}`);
+        });
+      }
+
+      setCollapsedSections(allSections);
+    }
+  }, [normalizedFilter, viewMode, repositoriesByOrg, localReposByOrg]);
 
   // Create lookup map for local repositories
   const localRepoMap = useMemo(() => {
@@ -330,36 +400,65 @@ export const GitHubProjectsPanel: React.FC = () => {
 
   return (
     <div style={contentContainerStyle}>
-      {/* Search bar */}
-      <div style={{ position: 'relative' }}>
-        <Search
-          size={16}
+      {/* Search bar and view mode toggle */}
+      <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search
+            size={16}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '12px',
+              transform: 'translateY(-50%)',
+              color: theme.colors.textSecondary,
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            type="text"
+            value={filter}
+            placeholder="Filter repositories..."
+            onChange={(event) => setFilter(event.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px 12px 8px 36px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
+              outline: 'none',
+            }}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={toggleViewMode}
+          title={`Switch to ${viewMode === 'local' ? 'cloud' : 'local'} repositories`}
           style={{
-            position: 'absolute',
-            top: '50%',
-            left: '12px',
-            transform: 'translateY(-50%)',
-            color: theme.colors.textSecondary,
-            pointerEvents: 'none',
-          }}
-        />
-        <input
-          type="text"
-          value={filter}
-          placeholder="Filter repositories..."
-          onChange={(event) => setFilter(event.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px 12px 8px 36px',
+            padding: '8px 16px',
             borderRadius: '6px',
             border: `1px solid ${theme.colors.border}`,
             backgroundColor: theme.colors.background,
             color: theme.colors.text,
             fontSize: `${theme.fontSizes[1]}px`,
             fontFamily: theme.fonts.body,
-            outline: 'none',
+            fontWeight: theme.fontWeights.semibold,
+            cursor: 'pointer',
+            whiteSpace: 'nowrap',
+            textTransform: 'capitalize',
           }}
-        />
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor =
+              theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = theme.colors.background;
+          }}
+        >
+          {viewMode}
+        </button>
       </div>
 
       {error && hasData && (
@@ -391,8 +490,8 @@ export const GitHubProjectsPanel: React.FC = () => {
           gap: '8px',
         }}
       >
-        {/* Organization Sections */}
-        {repositoriesByOrg.map(({ organization, repositories }) => {
+        {/* Cloud Repositories - Organization Sections */}
+        {viewMode === 'cloud' && repositoriesByOrg.map(({ organization, repositories }) => {
           const sectionId = `org-${organization}`;
           const isCollapsed = collapsedSections.has(sectionId);
 
@@ -464,8 +563,111 @@ export const GitHubProjectsPanel: React.FC = () => {
           );
         })}
 
+        {/* Local Repositories - Organization Sections */}
+        {viewMode === 'local' && localReposByOrg.map(({ organization, repositories }) => {
+          const sectionId = `local-org-${organization}`;
+          const isCollapsed = collapsedSections.has(sectionId);
+
+          return (
+            <div key={organization}>
+              <button
+                onClick={() => toggleSection(sectionId)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  backgroundColor: theme.colors.background,
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.background;
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isCollapsed ? (
+                    <ChevronRight size={16} color={theme.colors.textSecondary} />
+                  ) : (
+                    <ChevronDown size={16} color={theme.colors.textSecondary} />
+                  )}
+                  <span
+                    style={{
+                      fontSize: `${theme.fontSizes[1]}px`,
+                      fontWeight: theme.fontWeights.semibold,
+                      fontFamily: theme.fonts.body,
+                      color: theme.colors.text,
+                    }}
+                  >
+                    {organization}
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontSize: `${theme.fontSizes[0]}px`,
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.textSecondary,
+                  }}
+                >
+                  {repositories.length}
+                </span>
+              </button>
+
+              {!isCollapsed && (
+                <div style={{ paddingLeft: '12px', marginTop: '4px' }}>
+                  {repositories.map((repoData) => {
+                    const entry = repoData.repository;
+                    // Create a mock GitHub repository object for the card
+                    // Generate a numeric ID from the path if GitHub ID is not available
+                    const numericId = entry.github?.id
+                      ? (typeof entry.github.id === 'number' ? entry.github.id : parseInt(entry.github.id, 10))
+                      : Math.abs(entry.path.split('').reduce((acc, char) => {
+                          return char.charCodeAt(0) + ((acc << 5) - acc);
+                        }, 0));
+
+                    const mockRepo: GitHubRepository = {
+                      id: numericId,
+                      name: entry.name,
+                      full_name: entry.github ? `${entry.github.owner}/${entry.github.name}` : entry.name,
+                      owner: {
+                        login: entry.github?.owner ?? 'Local',
+                      },
+                      description: entry.github?.description ?? null,
+                      language: entry.github?.primaryLanguage ?? null,
+                      stargazers_count: entry.github?.stars ?? 0,
+                      private: entry.github?.isPublic === false,
+                      html_url: entry.remoteUrl ?? '',
+                      clone_url: entry.remoteUrl ?? '',
+                      default_branch: entry.github?.defaultBranch ?? 'main',
+                      fork: false,
+                      updated_at: entry.github?.lastUpdated ?? new Date().toISOString(),
+                      pushed_at: entry.github?.lastCommit ?? new Date().toISOString(),
+                    };
+
+                    return (
+                      <GitHubRepositoryCard
+                        key={entry.path}
+                        repository={mockRepo}
+                        variant="owned"
+                        localRepo={repoData}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
         {/* No results message */}
-        {repositoriesByOrg.length === 0 && hasData && (
+        {viewMode === 'cloud' && repositoriesByOrg.length === 0 && hasData && (
           <div
             style={{
               padding: '32px',
@@ -475,6 +677,20 @@ export const GitHubProjectsPanel: React.FC = () => {
           >
             <p style={{ margin: 0 }}>
               No repositories match your filter.
+            </p>
+          </div>
+        )}
+
+        {viewMode === 'local' && localReposByOrg.length === 0 && (
+          <div
+            style={{
+              padding: '32px',
+              textAlign: 'center',
+              color: theme.colors.textSecondary,
+            }}
+          >
+            <p style={{ margin: 0 }}>
+              {normalizedFilter ? 'No local repositories match your filter.' : 'No local repositories found.'}
             </p>
           </div>
         )}
