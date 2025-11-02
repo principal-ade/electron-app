@@ -16,6 +16,7 @@ interface MarkdownDocumentViewerProps {
   showSegmented?: boolean;
   fontSizeScale?: number;
   bookViewMode?: 'single' | 'book'; // For controlling ThemedSlidePresentationBook view mode
+  initialTocOpen?: boolean; // Whether to show the table of contents by default
   onContentChange: (content: string) => void;
   onSlideNavigate: (slideNumber: number) => void;
   onCheckboxChange: (
@@ -35,6 +36,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
   showSegmented = true,
   fontSizeScale = 1.0,
   bookViewMode = 'book',
+  initialTocOpen = false,
   onContentChange,
   onSlideNavigate,
   onCheckboxChange,
@@ -115,6 +117,7 @@ export const MarkdownDocumentViewer: React.FC<MarkdownDocumentViewerProps> = ({
           slideIdPrefix="repository-book"
           enableHtmlPopout={true}
           enableKeyboardScrolling={true}
+          initialTocOpen={initialTocOpen}
         />
         {isEmpty && <MarkdownEmptyOverlay theme={theme} />}
       </div>

@@ -30,6 +30,7 @@ export const GeneralSettings: React.FC = () => {
   const [showThemeButton, setShowThemeButton] = useState(true);
   const [showCustomizeButton, setShowCustomizeButton] = useState(true);
   const [showOpenInIDE, setShowOpenInIDE] = useState(false);
+  const [showGitSyncPanel, setShowGitSyncPanel] = useState(false);
 
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
@@ -53,6 +54,7 @@ export const GeneralSettings: React.FC = () => {
       setShowThemeButton(prefs.titlebarButtons?.theme ?? true);
       setShowCustomizeButton(prefs.titlebarButtons?.customize ?? true);
       setShowOpenInIDE(prefs.titlebarButtons?.openInIDE ?? false);
+      setShowGitSyncPanel(prefs.showGitSyncPanel ?? false);
     };
 
     UserPreferencesService.getPreferences()
@@ -437,6 +439,118 @@ export const GeneralSettings: React.FC = () => {
                 }}
                 style={{ width: '18px', height: '18px', cursor: 'pointer' }}
               />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {/* Panel Visibility */}
+      <div style={{ marginBottom: '32px' }}>
+        <h4
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            marginBottom: '16px',
+            color: theme.colors.text,
+          }}
+        >
+          Panel Visibility
+        </h4>
+        <div
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderRadius: '12px',
+            padding: '20px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '16px',
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <label
+                htmlFor="showGitSyncPanel"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  display: 'block',
+                  marginBottom: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Show Git Sync Panel
+              </label>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  lineHeight: '1.5',
+                }}
+              >
+                When enabled, the Git Sync diagnostic panel will be visible in the Feed view. When disabled (default), the panel is hidden to reduce clutter.
+              </p>
+            </div>
+            <label
+              style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '48px',
+                height: '24px',
+                flexShrink: 0,
+              }}
+            >
+              <input
+                id="showGitSyncPanel"
+                type="checkbox"
+                checked={showGitSyncPanel}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  setShowGitSyncPanel(newValue);
+                  await UserPreferencesService.updatePreferences({
+                    showGitSyncPanel: newValue,
+                  });
+                }}
+                style={{
+                  opacity: 0,
+                  width: 0,
+                  height: 0,
+                }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: showGitSyncPanel
+                    ? theme.colors.primary
+                    : theme.colors.border,
+                  transition: '0.3s',
+                  borderRadius: '24px',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    content: '',
+                    height: '18px',
+                    width: '18px',
+                    left: showGitSyncPanel ? '27px' : '3px',
+                    bottom: '3px',
+                    backgroundColor: 'white',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                  }}
+                />
+              </span>
             </label>
           </div>
         </div>

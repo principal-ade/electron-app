@@ -21,7 +21,7 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [fontScale, setFontScale] = useState(1.0);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [viewMode, setViewMode] = useState<'document' | 'book'>('document');
+  const [viewMode, setViewMode] = useState<'document' | 'book'>('book');
 
   // Parse markdown into slides
   const slides = useMemo(() => {
@@ -414,6 +414,7 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
           theme={theme}
           fontSizeScale={fontScale}
           bookViewMode="single"
+          initialTocOpen={true}
           onContentChange={() => {}}
           onSlideNavigate={setCurrentSlide}
           onCheckboxChange={() => {}}

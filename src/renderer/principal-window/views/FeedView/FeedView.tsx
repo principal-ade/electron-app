@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import {
   Rss,
@@ -9,6 +9,7 @@ import {
   FileText,
   UserCheck,
   Star,
+  Activity,
 } from 'lucide-react';
 import { ConfigurablePanelLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
@@ -23,7 +24,9 @@ import { GitHubSocialPanel } from '../../../panels/components/GitHubSocialPanel'
 import { RecentCommitsPanel } from '../../../panels/components/RecentCommitsPanel';
 import { GitHubReadmePanel } from '../../../panels/components/GitHubReadmePanel';
 import { GitHubUserSignalsPanel } from '../../../panels/components/GitHubUserSignalsPanel';
+import { GitSyncDiagnosticPanel } from '../../../panels/components/GitSyncDiagnosticPanel';
 import { SelectedRepositoryProvider, useSelectedRepository } from '../../../contexts/SelectedRepositoryContext';
+import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
 const FeedViewInner: React.FC = () => {
   const { theme } = useTheme();
@@ -33,6 +36,7 @@ const FeedViewInner: React.FC = () => {
   const [selectedTopLevelNodes, setSelectedTopLevelNodes] = useState<string[]>(
     [],
   );
+  const [showGitSyncPanel, setShowGitSyncPanel] = useState(false);
 
   // Build dependency graphs using cluster detection
   const graphs = useMemo(() => {
@@ -54,13 +58,141 @@ const FeedViewInner: React.FC = () => {
     }
   }, [selectedGraph?.id]);
 
+  // Load git sync panel visibility preference
+  useEffect(() => {
+    UserPreferencesService.getPreferences()
+      .then((prefs) => {
+        setShowGitSyncPanel(prefs.showGitSyncPanel ?? false);
+      })
+      .catch(console.error);
+
+    const handlePreferencesUpdated = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.showGitSyncPanel !== undefined) {
+        setShowGitSyncPanel(detail.showGitSyncPanel);
+      }
+    };
+
+    window.addEventListener('user-preferences-updated', handlePreferencesUpdated as EventListener);
+    return () => {
+      window.removeEventListener('user-preferences-updated', handlePreferencesUpdated as EventListener);
+    };
+  }, []);
+
   // Use panel persistence hook for three-panel layout
   const panelState = usePanelPersistence({
     viewKey: 'feedView',
-    defaultSizes: { left: 20, middle: 80, right: 0 },
-    collapsed: { left: false, right: true },
+    defaultSizes: { left: 20, middle: 55, right: 25 },
+    collapsed: { left: false, right: showGitSyncPanel ? false : true },
     panelType: 'three-panel',
   });
+
+  // Memoize panels array based on git sync panel visibility
+  const panels = useMemo(() => {
+    const basePanels = [
+      {
+        id: 'github-projects',
+        label: 'GitHub Projects',
+        icon: <FolderGit2 size={16} />,
+        content: <GitHubProjectsPanel />,
+      },
+      {
+        id: 'github-starred',
+        label: 'Starred',
+        icon: <Star size={16} />,
+        content: <GitHubStarredPanel />,
+      },
+      {
+        id: 'github-social',
+        label: 'GitHub Network',
+        icon: <Users size={16} />,
+        content: <GitHubSocialPanel />,
+      },
+      {
+        id: 'recent-commits',
+        label: 'Recent Commits',
+        icon: <History size={16} />,
+        content: <RecentCommitsPanel repository={selectedRepository} />,
+      },
+      {
+        id: 'readme-viewer',
+        label: 'README',
+        icon: <FileText size={16} />,
+        content: <GitHubReadmePanel repository={selectedRepository} />,
+      },
+      {
+        id: 'github-user-signals',
+        label: 'User Signals',
+        icon: <UserCheck size={16} />,
+        content: <GitHubUserSignalsPanel />,
+      },
+      {
+        id: 'graphs-list',
+        label: 'Graphs',
+        icon: <Network size={16} />,
+        content: (
+          <GraphsListPanel
+            graphs={graphs}
+            loading={loading}
+            selectedGraphId={selectedGraphId}
+            onGraphSelect={setSelectedGraphId}
+          />
+        ),
+      },
+      {
+        id: 'graph-view',
+        label: 'Graph',
+        icon: <Network size={16} />,
+        content: (
+          <GraphDetailPanel
+            graph={selectedGraph}
+            selectedTopLevelNodes={selectedTopLevelNodes}
+            onTopLevelNodesChange={setSelectedTopLevelNodes}
+          />
+        ),
+      },
+    ];
+
+    // Conditionally add git sync panel
+    if (showGitSyncPanel) {
+      basePanels.push({
+        id: 'git-sync-diagnostic',
+        label: 'Git-Sync',
+        icon: <Activity size={16} />,
+        content: <GitSyncDiagnosticPanel />,
+      });
+    }
+
+    return basePanels;
+  }, [graphs, loading, selectedGraphId, selectedGraph, selectedTopLevelNodes, selectedRepository, showGitSyncPanel]);
+
+  // Memoize layout based on git sync panel visibility
+  const layout = useMemo(() => ({
+    left: {
+      type: 'tabs' as const,
+      panels: ['github-projects', 'github-starred', 'github-social', 'graphs-list'],
+      config: {
+        defaultActiveTab: 0,
+        tabPosition: 'top' as const,
+      },
+    },
+    middle: {
+      type: 'tabs' as const,
+      panels: ['recent-commits', 'readme-viewer', 'github-user-signals'],
+      config: {
+        defaultActiveTab: 1,
+        tabPosition: 'top' as const,
+      },
+    },
+    right: {
+      type: 'tabs' as const,
+      panels: showGitSyncPanel ? ['git-sync-diagnostic'] : [],
+      config: {
+        defaultActiveTab: 0,
+        tabPosition: 'top' as const,
+      },
+    },
+  }), [showGitSyncPanel]);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -83,93 +215,13 @@ const FeedViewInner: React.FC = () => {
 
       {/* Panel Layout */}
       <ConfigurablePanelLayout
-        panels={[
-          {
-            id: 'github-projects',
-            label: 'GitHub Projects',
-            icon: <FolderGit2 size={16} />,
-            content: <GitHubProjectsPanel />,
-          },
-          {
-            id: 'github-starred',
-            label: 'Starred',
-            icon: <Star size={16} />,
-            content: <GitHubStarredPanel />,
-          },
-          {
-            id: 'github-social',
-            label: 'GitHub Network',
-            icon: <Users size={16} />,
-            content: <GitHubSocialPanel />,
-          },
-          {
-            id: 'recent-commits',
-            label: 'Recent Commits',
-            icon: <History size={16} />,
-            content: <RecentCommitsPanel repository={selectedRepository} />,
-          },
-          {
-            id: 'readme-viewer',
-            label: 'README',
-            icon: <FileText size={16} />,
-            content: <GitHubReadmePanel repository={selectedRepository} />,
-          },
-          {
-            id: 'github-user-signals',
-            label: 'User Signals',
-            icon: <UserCheck size={16} />,
-            content: <GitHubUserSignalsPanel />,
-          },
-          {
-            id: 'graphs-list',
-            label: 'Graphs',
-            icon: <Network size={16} />,
-            content: (
-              <GraphsListPanel
-                graphs={graphs}
-                loading={loading}
-                selectedGraphId={selectedGraphId}
-                onGraphSelect={setSelectedGraphId}
-              />
-            ),
-          },
-          {
-            id: 'graph-view',
-            label: 'Graph',
-            icon: <Network size={16} />,
-            content: (
-              <GraphDetailPanel
-                graph={selectedGraph}
-                selectedTopLevelNodes={selectedTopLevelNodes}
-                onTopLevelNodesChange={setSelectedTopLevelNodes}
-              />
-            ),
-          },
-        ]}
-        layout={{
-          left: {
-            type: 'tabs',
-            panels: ['github-projects', 'github-starred', 'github-social', 'graphs-list'],
-            config: {
-              defaultActiveTab: 0,
-              tabPosition: 'top',
-            },
-          },
-          middle: {
-            type: 'tabs',
-            panels: ['recent-commits', 'readme-viewer', 'github-user-signals'],
-            config: {
-              defaultActiveTab: 0,
-              tabPosition: 'top',
-            },
-          },
-          right: null,
-        }}
-        collapsiblePanels={{ left: true, right: false }}
+        panels={panels}
+        layout={layout}
+        collapsiblePanels={{ left: true, right: true }}
         defaultSizes={
           panelState.type === 'three-panel'
             ? panelState.sizes
-            : { left: 20, middle: 80, right: 0 }
+            : { left: 20, middle: 55, right: 25 }
         }
         minSizes={{ left: 15, middle: 30, right: 20 }}
         collapsed={
@@ -177,9 +229,9 @@ const FeedViewInner: React.FC = () => {
             ? panelState.collapsed
             : { left: false, right: false }
         }
-        style={{ flex: 1, width: '100%' }}
+        style={{ flex: 1, width: '100%', minHeight: 0 }}
         theme={theme}
-        showCollapseButtons={true}
+        showCollapseButtons={false}
         onPanelResize={
           panelState.type === 'three-panel'
             ? panelState.handlePanelResize

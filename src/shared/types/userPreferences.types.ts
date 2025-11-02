@@ -99,6 +99,7 @@ export interface UserPreferences {
   // UI preferences
   defaultView?: 'projects' | 'customization';
   showRepoFilterBar?: boolean; // Show/hide the filter bar in repos view
+  showGitSyncPanel?: boolean; // Show/hide the git sync panel in Feed view (default: false)
 
   // Remote agent quick access buttons
   remoteAgentButtons?: {
