@@ -57,7 +57,7 @@ export interface SyncEvent {
     | 'branch_change';
   agentId: string;
   timestamp: number;
-  data: any;
+  data: Record<string, unknown>;
 }
 
 export interface CrossBranchWarning {
@@ -84,13 +84,18 @@ export interface SyncStatus {
   }[];
 }
 
+export interface GitSyncMessage {
+  type: string;
+  [key: string]: unknown;
+}
+
 export class GitSyncClient extends EventEmitter {
   private ws: WebSocket | null = null;
   private config: GitSyncConfig;
   private status: SyncStatus;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private pingInterval: NodeJS.Timeout | null = null;
-  private messageQueue: any[] = [];
+  private messageQueue: GitSyncMessage[] = [];
   private isReconnecting = false;
   private roomToken: RoomTokenInfo | null = null;
 
@@ -226,7 +231,7 @@ export class GitSyncClient extends EventEmitter {
       console.log(
         `Room token obtained for ${this.roomToken.repository} (${this.roomToken.permissions.canWrite ? 'write' : 'read'} access)`,
       );
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to get room token:', error);
       throw error;
     }
@@ -281,7 +286,7 @@ export class GitSyncClient extends EventEmitter {
     return new Promise((resolve) => {
       const requestId = this.generateRequestId();
 
-      const handler = (message: any) => {
+      const handler = (message: GitSyncMessage) => {
         if (
           message.type === 'lock_response' &&
           message.requestId === requestId
@@ -332,7 +337,7 @@ export class GitSyncClient extends EventEmitter {
     return new Promise((resolve) => {
       const requestId = this.generateRequestId();
 
-      const handler = (message: any) => {
+      const handler = (message: GitSyncMessage) => {
         if (
           message.type === 'lock_released' &&
           message.requestId === requestId
@@ -392,7 +397,7 @@ export class GitSyncClient extends EventEmitter {
     return new Promise((resolve) => {
       const requestId = this.generateRequestId();
 
-      const handler = (message: any) => {
+      const handler = (message: GitSyncMessage) => {
         if (
           message.type === 'merge_safety_response' &&
           message.requestId === requestId
@@ -435,7 +440,7 @@ export class GitSyncClient extends EventEmitter {
     return new Promise((resolve) => {
       const requestId = this.generateRequestId();
 
-      const handler = (message: any) => {
+      const handler = (message: GitSyncMessage) => {
         if (
           message.type === 'branch_switched' &&
           message.requestId === requestId
@@ -511,7 +516,7 @@ export class GitSyncClient extends EventEmitter {
   /**
    * Handle incoming messages
    */
-  private handleMessage(message: any): void {
+  private handleMessage(message: GitSyncMessage): void {
     switch (message.type) {
       case 'auth_response':
       case 'auth_success':
@@ -523,7 +528,8 @@ export class GitSyncClient extends EventEmitter {
             this.status.peers = message.peers;
           }
 
-          this.registerForSync();
+          // Control Tower Core automatically assigns you to a room based on JWT repoId
+          // No separate registration needed
           this.emit('authenticated');
         } else {
           this.emit(
@@ -547,7 +553,7 @@ export class GitSyncClient extends EventEmitter {
         this.emit('lock_acquired', message.lock);
         break;
 
-      case 'lock_released':
+      case 'lock_released': {
         const releasedLock = this.status.activeLocks.find(
           (l) => l.id === message.lockId,
         );
@@ -558,6 +564,7 @@ export class GitSyncClient extends EventEmitter {
           this.emit('lock_released_event', releasedLock);
         }
         break;
+      }
 
       case 'cross_branch_warning':
         this.emit('cross_branch_warning', message.warning);
@@ -604,7 +611,7 @@ export class GitSyncClient extends EventEmitter {
   /**
    * Send a message to the server
    */
-  private send(message: any): void {
+  private send(message: GitSyncMessage): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     } else {

@@ -103,6 +103,7 @@ import { MultiTerminalPanel } from '../panels/components/MultiTerminalPanel';
 import { MDXEditorPanel } from '../panels/components/MDXEditorPanel';
 import { panelPreviewRegistry } from '../panels/panelPreviews';
 import { repositoryPanelDefinitions } from '../panels/registry';
+import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
 
 type PanelTabConfig = {
   id: string;
@@ -471,6 +472,76 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         isMounted = false;
       };
     }, [repositoryKey]);
+
+    // Auto-connect to git-sync traffic controller when repository opens
+    useEffect(() => {
+      let isMounted = true;
+
+      const connectToGitSync = async () => {
+        try {
+          // Get the first local clone path
+          const clonePath = repository.localClones?.[0]?.path;
+          if (!clonePath) {
+            console.log('[RepositoryWorkspace] No local clone path available for git-sync');
+            return;
+          }
+
+          // Get branch information
+          const branch = repository.metadata?.defaultBranch ||
+                         repository.localClones?.[0]?.currentBranch ||
+                         'main';
+
+          console.log('[RepositoryWorkspace] Attempting to connect to git-sync:', {
+            owner: repository.owner,
+            name: repository.name,
+            branch,
+            path: clonePath,
+          });
+
+          // Attempt to get/create a connection
+          console.log('[RepositoryWorkspace] Attempting to connect to git-sync...');
+          const client = await gitSyncConnectionManager.getConnection(
+            clonePath,
+            branch,
+            {
+              owner: repository.owner,
+              name: repository.name,
+            }
+          );
+
+          if (isMounted && client) {
+            console.log('[RepositoryWorkspace] Successfully connected to git-sync room:',
+              `${repository.owner}/${repository.name}:${branch}`);
+          } else if (isMounted) {
+            console.warn('[RepositoryWorkspace] getConnection returned null - connection not established');
+          }
+        } catch (error) {
+          // Log the error with more context
+          if (isMounted) {
+            console.error('[RepositoryWorkspace] Failed to connect to git-sync:', {
+              error,
+              errorMessage: error instanceof Error ? error.message : String(error),
+              repository: `${repository.owner}/${repository.name}`,
+              branch,
+            });
+
+            // Note: We don't show toast notifications here to avoid disrupting the user
+            // experience. Users can check git-sync status in the diagnostic panel.
+            // Future enhancement: Add a subtle status indicator in the UI
+          }
+        }
+      };
+
+      // Delay connection slightly to allow window to fully initialize
+      const timeoutId = setTimeout(() => {
+        connectToGitSync();
+      }, 1000);
+
+      return () => {
+        isMounted = false;
+        clearTimeout(timeoutId);
+      };
+    }, [repository.owner, repository.name, repository.localClones, repository.metadata?.defaultBranch]);
 
     // Detect when layout changes and check for drift from workspace defaults
     useEffect(() => {

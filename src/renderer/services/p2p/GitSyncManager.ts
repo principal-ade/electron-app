@@ -70,10 +70,8 @@ export class GitSyncManager {
   async initializeSync(repoPath: string): Promise<void> {
     this.currentRepoPath = repoPath;
 
-    // Get current branch and commit
+    // Get current branch
     const branchInfo = await GitService.getCurrentBranch(repoPath);
-    const commitInfo = await GitService.getLatestCommit(repoPath);
-
     this.currentBranch = branchInfo.branch;
 
     // Broadcast our current state to all peers
@@ -84,7 +82,6 @@ export class GitSyncManager {
    * Broadcast current git state to all peers
    */
   async broadcastSyncState(): Promise<void> {
-    const commitInfo = await GitService.getLatestCommit(this.currentRepoPath);
     const status = await GitService.getStatus(this.currentRepoPath);
 
     // Combine staged and unstaged files as modified
@@ -213,8 +210,8 @@ export class GitSyncManager {
   /**
    * Handle sync request from peer
    */
-  private async handleSyncRequest(peerId: string) {
-    // In a real implementation, this would:
+  private async handleSyncRequest(_peerId: string) {
+    // In a real implementation, this would use peerId to:
     // 1. Push changes to a shared remote
     // 2. Or create a patch/bundle to send
     // For now, we'll signal that sync is ready
