@@ -248,36 +248,29 @@ export class JWTService {
         params: {
           githubToken: string;
           repoId: string;
+          branch?: string;
+          agentId?: string;
         },
       ) => {
         try {
-          const result = await this.createJWT(params.githubToken);
-          if (!result.success || !result.token) {
-            return result;
-          }
-
-          // Verify user has access to the specific repository
-          const { payload } = this.verifyJWT(result.token);
-          if (!payload) {
-            return {
-              success: false,
-              error: 'Failed to verify JWT',
-            };
-          }
+          // Validate GitHub token and get user info
+          const { user, repositories } =
+            await this.validateGitHubToken(params.githubToken);
 
           console.log(
             `[JWTService] Checking access for repository: ${params.repoId}`,
           );
           console.log(
             `[JWTService] Available repositories:`,
-            payload.repositories.map((r) => r.repoId),
+            repositories.map((r) => r.repoId),
           );
 
-          const hasAccess = this.hasPermission(payload, params.repoId, 'pull');
-          if (!hasAccess) {
+          // Check if user has access to this specific repository
+          const repo = repositories.find((r) => r.repoId === params.repoId);
+          if (!repo) {
             console.log(
               `[JWTService] Access denied for ${params.repoId}. User repositories:`,
-              payload.repositories.map(
+              repositories.map(
                 (r) => `${r.repoId} (${r.permissions.join(', ')})`,
               ),
             );
@@ -289,7 +282,57 @@ export class JWTService {
 
           console.log(`[JWTService] Access granted for ${params.repoId}`);
 
-          return result;
+          // Generate agentId if not provided
+          const agentId = params.agentId || `electron-${Date.now()}`;
+          const branch = params.branch || 'main';
+
+          // Map GitHub permissions to sync permissions
+          const syncPermissions: string[] = [];
+          if (repo.permissions.includes('pull')) {
+            syncPermissions.push('sync:read');
+          }
+          if (repo.permissions.includes('push')) {
+            syncPermissions.push('sync:write', 'sync:broadcast');
+          }
+
+          // Create JWT payload with Control Tower Core required fields
+          const payload = {
+            // Standard JWT fields
+            sub: user.login,
+            iss: 'dev-collab-auth-server',
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + 86400, // 24 hours
+
+            // Control Tower Core required fields
+            userId: user.login,
+            repoId: params.repoId,
+            agentId: agentId,
+            permissions: syncPermissions,
+
+            // Optional metadata fields
+            repository: params.repoId,
+            device_id: agentId,
+            branch: branch,
+            githubId: user.id.toString(),
+          };
+
+          // Sign JWT
+          const token = jwt.sign(payload, JWT_SECRET, {
+            algorithm: 'HS256',
+            issuer: 'dev-collab-auth-server',
+          } as JwtSignOptions);
+
+          return {
+            success: true,
+            token,
+            user: {
+              userId: user.login,
+              githubHandle: user.login,
+              email: user.email,
+              avatar: user.avatar_url,
+              repositories: repositories.map((r) => r.repoId),
+            },
+          };
         } catch (error) {
           console.error('Error creating sync JWT:', error);
           return {

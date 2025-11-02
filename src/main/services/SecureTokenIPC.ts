@@ -200,27 +200,41 @@ export function registerSecureTokenHandlers(): void {
   // Get GitHub auth token
   ipcMain.handle(SecureTokenAPIEvent.GET_GITHUB_AUTH, async () => {
     try {
+      console.log('[SecureTokenIPC] GET_GITHUB_AUTH called');
+
       // Use AuthService to get a valid token with automatic refresh
       const token = await authService.getValidToken();
+      console.log('[SecureTokenIPC] authService.getValidToken() returned:', !!token);
 
       if (token) {
         // Get user info from AuthStateManager
         const authState = AuthStateManager.getInstance().getFullState();
+        console.log('[SecureTokenIPC] AuthStateManager state:', {
+          isAuthenticated: authState.isAuthenticated,
+          hasUser: !!authState.user,
+          user: authState.user?.login
+        });
+
         if (authState.isAuthenticated && authState.user) {
+          console.log('[SecureTokenIPC] Returning authenticated with token from AuthService');
           return {
             authenticated: true,
             token,
             user: authState.user,
           };
+        } else {
+          console.warn('[SecureTokenIPC] Have token but AuthStateManager not authenticated');
         }
       }
 
       // Fallback to ORBIT_AUTH for legacy/P2P
+      console.log('[SecureTokenIPC] Trying ORBIT_AUTH fallback');
       const orbitData = await getSecureTokenIPC()
         .getStorage()
         .getTokenWithMetadata(TOKEN_KEYS.ORBIT_AUTH);
 
       if (orbitData) {
+        console.log('[SecureTokenIPC] Found ORBIT_AUTH token');
         return {
           authenticated: true,
           token: orbitData.token,
@@ -229,9 +243,10 @@ export function registerSecureTokenHandlers(): void {
       }
 
       // No tokens found
+      console.warn('[SecureTokenIPC] No tokens found, returning authenticated: false');
       return { authenticated: false };
     } catch (error) {
-      console.error('Failed to get GitHub auth:', error);
+      console.error('[SecureTokenIPC] Failed to get GitHub auth:', error);
       return { authenticated: false };
     }
   });
