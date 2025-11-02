@@ -11,6 +11,7 @@ import {
 import { useTheme } from '@a24z/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
+import { GitSyncStatusIndicator } from './GitSyncStatusIndicator';
 import { WorkspaceSelector } from './WorkspaceSelector';
 import type { Repository } from '../../../shared/types/repository.types';
 import type { FileTreeSource } from '../../types/file-tree-source';
@@ -206,6 +207,12 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
 
         {/* Open in IDE button */}
         {showOpenInIDE && <TitlebarOpenInIDE repository={repository} />}
+
+        {/* Git-Sync connection status indicator */}
+        <GitSyncStatusIndicator
+          repositoryPath={selectedSource?.type === 'local' ? selectedSource.location : undefined}
+          branch={selectedSource?.type === 'local' ? selectedSource.metadata?.currentBranch : undefined}
+        />
       </div>
 
       {/* Center: Workspace selector */}

@@ -49,6 +49,14 @@ export interface GitSyncStatus {
   peers: GitSyncPeer[];
 }
 
+export interface GitSyncConnectionInfo {
+  connectionId: string;
+  repoId: string;
+  repoPath: string;
+  branch: string;
+  status: GitSyncStatus;
+}
+
 export interface GitSyncMessage {
   connectionId: string;
   type: string;
@@ -116,4 +124,28 @@ export interface GitSyncAPI {
   onMessage(
     callback: (connectionKey: string, message: unknown) => void,
   ): () => void;
+
+  /**
+   * Get all active connections across all renderer processes
+   * This is the source of truth for connection state
+   */
+  getAllConnections(): Promise<GitSyncConnectionInfo[]>;
+
+  /**
+   * Subscribe to connection-added events from main process
+   * @returns Unsubscribe function
+   */
+  onConnectionAdded(callback: (connectionId: string) => void): () => void;
+
+  /**
+   * Subscribe to connection-removed events from main process
+   * @returns Unsubscribe function
+   */
+  onConnectionRemoved(callback: (connectionId: string) => void): () => void;
+
+  /**
+   * Subscribe to connection-status-changed events from main process
+   * @returns Unsubscribe function
+   */
+  onConnectionStatusChanged(callback: (connectionId: string) => void): () => void;
 }

@@ -100,7 +100,7 @@ export class GitSyncService {
       return await window.mainProcess.gitSync.getServerUrl();
     } catch (error) {
       console.error('[GitSyncService] Failed to get server URL:', error);
-      return 'wss://localhost:8080'; // Default fallback
+      return 'ws://localhost:3001'; // Default fallback
     }
   }
 
@@ -131,6 +131,58 @@ export class GitSyncService {
     } catch (error) {
       console.error('[GitSyncService] Failed to subscribe to messages:', error);
       return () => {}; // Return no-op unsubscribe function
+    }
+  }
+
+  /**
+   * Get all active connections across all renderer processes
+   * This queries the main process for the source of truth
+   */
+  static async getAllConnections() {
+    try {
+      return await window.mainProcess.gitSync.getAllConnections();
+    } catch (error) {
+      console.error('[GitSyncService] Failed to get all connections:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Subscribe to connection-added events from main process
+   * @returns Unsubscribe function
+   */
+  static onConnectionAdded(callback: (connectionId: string) => void): () => void {
+    try {
+      return window.mainProcess.gitSync.onConnectionAdded(callback);
+    } catch (error) {
+      console.error('[GitSyncService] Failed to subscribe to connection-added:', error);
+      return () => {};
+    }
+  }
+
+  /**
+   * Subscribe to connection-removed events from main process
+   * @returns Unsubscribe function
+   */
+  static onConnectionRemoved(callback: (connectionId: string) => void): () => void {
+    try {
+      return window.mainProcess.gitSync.onConnectionRemoved(callback);
+    } catch (error) {
+      console.error('[GitSyncService] Failed to subscribe to connection-removed:', error);
+      return () => {};
+    }
+  }
+
+  /**
+   * Subscribe to connection-status-changed events from main process
+   * @returns Unsubscribe function
+   */
+  static onConnectionStatusChanged(callback: (connectionId: string) => void): () => void {
+    try {
+      return window.mainProcess.gitSync.onConnectionStatusChanged(callback);
+    } catch (error) {
+      console.error('[GitSyncService] Failed to subscribe to connection-status-changed:', error);
+      return () => {};
     }
   }
 }

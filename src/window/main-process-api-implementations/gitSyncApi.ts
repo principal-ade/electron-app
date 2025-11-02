@@ -9,9 +9,13 @@ export enum GitSyncEvent {
   GET_ROOM_TOKEN = 'git-sync:get-room-token',
   GET_SERVER_URL = 'git-sync:get-server-url',
   CHECK_REPO_ACCESS = 'git-sync:check-repo-access',
+  GET_ALL_CONNECTIONS = 'git-sync:get-all-connections',
 
   // Events (from main to renderer)
   ON_MESSAGE = 'git-sync:message',
+  CONNECTION_ADDED = 'git-sync:connection-added',
+  CONNECTION_REMOVED = 'git-sync:connection-removed',
+  CONNECTION_STATUS_CHANGED = 'git-sync:connection-status-changed',
 }
 
 export const gitSyncAPI: GitSyncAPI = {
@@ -43,5 +47,32 @@ export const gitSyncAPI: GitSyncAPI = {
     ipcRenderer.on(GitSyncEvent.ON_MESSAGE, subscription);
     return () =>
       ipcRenderer.removeListener(GitSyncEvent.ON_MESSAGE, subscription);
+  },
+
+  getAllConnections: () =>
+    ipcRenderer.invoke(GitSyncEvent.GET_ALL_CONNECTIONS),
+
+  onConnectionAdded: (callback: (connectionId: string) => void) => {
+    const subscription = (_event: unknown, connectionId: string) =>
+      callback(connectionId);
+    ipcRenderer.on(GitSyncEvent.CONNECTION_ADDED, subscription);
+    return () =>
+      ipcRenderer.removeListener(GitSyncEvent.CONNECTION_ADDED, subscription);
+  },
+
+  onConnectionRemoved: (callback: (connectionId: string) => void) => {
+    const subscription = (_event: unknown, connectionId: string) =>
+      callback(connectionId);
+    ipcRenderer.on(GitSyncEvent.CONNECTION_REMOVED, subscription);
+    return () =>
+      ipcRenderer.removeListener(GitSyncEvent.CONNECTION_REMOVED, subscription);
+  },
+
+  onConnectionStatusChanged: (callback: (connectionId: string) => void) => {
+    const subscription = (_event: unknown, connectionId: string) =>
+      callback(connectionId);
+    ipcRenderer.on(GitSyncEvent.CONNECTION_STATUS_CHANGED, subscription);
+    return () =>
+      ipcRenderer.removeListener(GitSyncEvent.CONNECTION_STATUS_CHANGED, subscription);
   },
 };

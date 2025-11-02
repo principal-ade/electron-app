@@ -2,8 +2,7 @@
  * GitSyncIPC - IPC handlers for git-sync operations
  *
  * Provides IPC endpoints for git-sync operations that renderers can call.
- * This is a placeholder service that will eventually connect to the actual
- * git-sync server implementation.
+ * Connects to the traffic controller via WebSocket for real-time collaboration.
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
@@ -16,6 +15,7 @@ import {
   GitSyncRoomTokenRequest,
   GitSyncRoomTokenResponse,
 } from '../../shared/main-process-api-interfaces/GitSyncAPI';
+import { gitSyncWebSocketManager } from './GitSyncWebSocketManager';
 
 class GitSyncIPC {
   constructor() {
@@ -33,13 +33,12 @@ class GitSyncIPC {
       ): Promise<GitSyncConnectionResult> => {
         console.log('[GitSyncIPC] Connect requested with config:', config);
 
-        // For now, return a mock success response
-        // TODO: Implement actual git-sync server connection
-        return {
-          success: true,
-          connectionId: `conn-${Date.now()}`,
-          message: 'Git-sync connection established (mock)',
-        };
+        // Get the window ID from the event sender
+        const window = BrowserWindow.fromWebContents(event.sender);
+        const windowId = window?.id ?? -1;
+
+        // Connect via WebSocket manager with window tracking
+        return await gitSyncWebSocketManager.connect(config, windowId);
       },
     );
 
@@ -52,29 +51,17 @@ class GitSyncIPC {
       ): Promise<{ success: boolean; message?: string }> => {
         console.log('[GitSyncIPC] Disconnect requested for:', connectionId);
 
-        return {
-          success: true,
-          message: 'Git-sync connection closed',
-        };
+        return await gitSyncWebSocketManager.disconnect(connectionId);
       },
     );
 
     // Handler for git-sync:get-status
     ipcMain.handle(
       GitSyncEvent.GET_STATUS,
-      async (event, connectionId: string): Promise<GitSyncStatus> => {
+      async (event, connectionId: string): Promise<GitSyncStatus | null> => {
         console.log('[GitSyncIPC] Status requested for:', connectionId);
 
-        // Return mock status
-        return {
-          connected: false,
-          authenticated: false,
-          repoId: '',
-          branch: '',
-          activeLocks: [],
-          queuedLocks: 0,
-          peers: [],
-        };
+        return gitSyncWebSocketManager.getStatus(connectionId);
       },
     );
 
@@ -87,10 +74,10 @@ class GitSyncIPC {
       ): Promise<{ success: boolean; error?: string }> => {
         console.log('[GitSyncIPC] Send message:', message);
 
-        // TODO: Implement actual message sending through WebSocket
-        return {
-          success: true,
-        };
+        return await gitSyncWebSocketManager.sendMessageToConnection(
+          message.connectionId,
+          message.data
+        );
       },
     );
 
@@ -113,9 +100,7 @@ class GitSyncIPC {
 
     // Handler for git-sync:get-server-url
     ipcMain.handle(GitSyncEvent.GET_SERVER_URL, async (): Promise<string> => {
-      // Return the configured git-sync server URL
-      const serverUrl =
-        process.env.GIT_SYNC_SERVER_URL || 'wss://localhost:8080';
+      const serverUrl = gitSyncWebSocketManager.getServerUrl();
       console.log('[GitSyncIPC] Returning server URL:', serverUrl);
       return serverUrl;
     });
@@ -131,6 +116,11 @@ class GitSyncIPC {
         return !!token;
       },
     );
+
+    // Handler for git-sync:get-all-connections
+    ipcMain.handle(GitSyncEvent.GET_ALL_CONNECTIONS, async () => {
+      return gitSyncWebSocketManager.getAllConnections();
+    });
   }
 
   /**

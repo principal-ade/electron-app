@@ -1,28 +1,29 @@
 import { EventEmitter } from 'events';
 import { GitSyncClient, SyncStatus } from './GitSyncClient';
-import { GIT_SYNC_CONFIG } from '../../config/git-sync';
 import { GitSyncService } from '../../main-process-api/GitSyncService';
 import { AuthenticationService } from '../../main-process-api/AuthenticationService';
+import type { GitSyncConnectionInfo } from '../../../shared/main-process-api-interfaces/GitSyncAPI';
 
 interface ConnectionInfo {
   repoId: string;
   repoPath: string;
   branch: string;
   client: GitSyncClient;
-  status: SyncStatus;
+  // Note: status is tracked in main process, not here
+  // Use getActiveConnections() to get status from main process
 }
 
 interface GitHubUser {
   githubHandle: string;
   email?: string;
   status: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 interface ConnectionManagerEvents {
   'connection-added': (repoId: string) => void;
   'connection-removed': (repoId: string) => void;
-  'connection-status-changed': (repoId: string, status: SyncStatus) => void;
+  'connection-status-changed': (repoId: string) => void;
   'auth-changed': (authenticated: boolean, user?: GitHubUser) => void;
 }
 
@@ -36,12 +37,44 @@ export class GitSyncConnectionManager extends EventEmitter {
   private authUser: GitHubUser | null = null;
   private authToken: string | null = null;
   private isAuthenticated: boolean = false;
+  private _authReadyPromise: Promise<boolean>;
+  private _authReadyResolve!: (value: boolean) => void;
+  private _authReadyReject!: (error: Error) => void;
 
   private constructor() {
     super();
+
+    // Create a Promise that will resolve when auth is initialized
+    this._authReadyPromise = new Promise((resolve, reject) => {
+      this._authReadyResolve = resolve;
+      this._authReadyReject = reject;
+    });
+
     this.initializeAuth();
     this.setupIPCMessageForwarding();
+    this.setupConnectionEventListeners();
     this.subscribeToAuthChanges();
+  }
+
+  /**
+   * Listen for connection lifecycle events broadcast from main process
+   * This allows all renderer windows to stay in sync with connection state
+   */
+  private setupConnectionEventListeners() {
+    // Subscribe to connection-added events from main process
+    GitSyncService.onConnectionAdded((connectionId: string) => {
+      this.emit('connection-added', connectionId);
+    });
+
+    // Subscribe to connection-removed events from main process
+    GitSyncService.onConnectionRemoved((connectionId: string) => {
+      this.emit('connection-removed', connectionId);
+    });
+
+    // Subscribe to connection-status-changed events from main process
+    GitSyncService.onConnectionStatusChanged((connectionId: string) => {
+      this.emit('connection-status-changed', connectionId);
+    });
   }
 
   static getInstance(): GitSyncConnectionManager {
@@ -53,8 +86,20 @@ export class GitSyncConnectionManager extends EventEmitter {
 
   private async initializeAuth() {
     // Check for CLI auth instead of GitHubAuth
+    const startTime = Date.now();
+    console.log('[GitSyncConnectionManager] Initializing auth...');
+
     try {
       const cliAuthResult = await AuthenticationService.check();
+      const elapsed = Date.now() - startTime;
+
+      console.log('[GitSyncConnectionManager] Auth check result:', {
+        success: cliAuthResult.success,
+        hasToken: !!cliAuthResult.token,
+        hasUser: !!cliAuthResult.user,
+        user: cliAuthResult.user?.login,
+        elapsedMs: elapsed,
+      });
 
       if (cliAuthResult.success && cliAuthResult.token && cliAuthResult.user) {
         this.authUser = {
@@ -65,32 +110,46 @@ export class GitSyncConnectionManager extends EventEmitter {
         };
         this.authToken = cliAuthResult.token;
         this.isAuthenticated = true;
+        console.log(
+          `[GitSyncConnectionManager] Auth initialized successfully for: ${this.authUser.githubHandle} (took ${elapsed}ms)`
+        );
         this.emit('auth-changed', true, this.authUser);
+        this._authReadyResolve(true);
+      } else {
+        console.warn('[GitSyncConnectionManager] Auth check did not return valid credentials');
+        this._authReadyResolve(false);
       }
     } catch (error) {
+      const elapsed = Date.now() - startTime;
       console.error(
-        '[GitSyncConnectionManager] Failed to check CLI auth:',
+        `[GitSyncConnectionManager] Failed to check CLI auth (took ${elapsed}ms):`,
         error,
       );
+      this._authReadyReject(error instanceof Error ? error : new Error(String(error)));
     }
   }
+
+  private _messageUnsubscribe?: () => void;
 
   private setupIPCMessageForwarding() {
     // Listen for WebSocket messages from main process using GitSyncService
     const unsubscribe = GitSyncService.onMessage(
-      (connectionKey: string, message: any) => {
+      (connectionKey: string, message: Record<string, unknown>) => {
         const connection = this.connections.get(connectionKey);
         if (connection && connection.client) {
           // Forward message to the client's event handlers
           connection.client.emit('message', message);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (connection.client as any).handleMessage?.(message);
         }
       },
     );
 
     // Store unsubscribe function for cleanup if needed
-    (this as any)._messageUnsubscribe = unsubscribe;
+    this._messageUnsubscribe = unsubscribe;
   }
+
+  private _unsubscribeAuth?: () => void;
 
   private subscribeToAuthChanges() {
     // Subscribe to auth state changes from the main process
@@ -101,16 +160,22 @@ export class GitSyncConnectionManager extends EventEmitter {
           console.log('[GitSyncConnectionManager] Auth state changed:', {
             isAuthenticated: state.isAuthenticated,
             user: state.user?.login,
+            currentUser: this.authUser?.githubHandle,
           });
 
           if (state.isAuthenticated && state.user) {
+            // Guard: Only process if this is a NEW user (prevents infinite loop)
+            if (this.authUser?.githubHandle === state.user.login && this.isAuthenticated) {
+              console.log('[GitSyncConnectionManager] Auth state unchanged, skipping update');
+              return;
+            }
+
             // The auth state doesn't include the token, so we need to get it
-            // However, we should NOT call check() as it triggers another state change
-            // Instead, get the token directly without triggering state updates
+            // NOTE: getGitHubAuth() will trigger another state change, but our guard above prevents loops
             try {
               const tokenResult = await AuthenticationService.getGitHubAuth();
-              if (tokenResult.success && tokenResult.token) {
-                this.updateAuth(state.user, tokenResult.token);
+              if (tokenResult.authenticated && tokenResult.token) {
+                this.setAuthCredentials(state.user, tokenResult.token);
               }
             } catch (error) {
               console.error(
@@ -119,21 +184,24 @@ export class GitSyncConnectionManager extends EventEmitter {
               );
             }
           } else {
-            // Clear auth
-            this.clearAuth();
+            // User logged out - clear auth only if we had a user
+            if (this.authUser || this.isAuthenticated) {
+              console.log('[GitSyncConnectionManager] User logged out, clearing auth');
+              this.clearAuth();
+            }
           }
         },
       );
 
       // Store unsubscribe function for potential cleanup
-      (this as any).unsubscribeAuth = unsubscribe;
+      this._unsubscribeAuth = unsubscribe;
     }
   }
 
   /**
-   * Update authentication state
+   * Update authentication state with user and token
    */
-  public updateAuth(user: any, token: string) {
+  private setAuthCredentials(user: { login: string; email?: string }, token: string) {
     console.log(
       '[GitSyncConnectionManager] Updating auth for user:',
       user.login,
@@ -148,6 +216,15 @@ export class GitSyncConnectionManager extends EventEmitter {
     this.authToken = token;
     this.isAuthenticated = true;
     this.emit('auth-changed', true, this.authUser);
+  }
+
+  /**
+   * Wait for authentication to initialize
+   * Returns a promise that resolves to true if auth succeeds, false if no credentials
+   * Rejects if auth initialization fails
+   */
+  public async waitForAuth(): Promise<boolean> {
+    return this._authReadyPromise;
   }
 
   /**
@@ -174,10 +251,29 @@ export class GitSyncConnectionManager extends EventEmitter {
     branch: string = 'main',
     repository?: { owner?: string; name?: string; remoteUrl?: string },
   ): Promise<GitSyncClient | null> {
-    // Check authentication first
+    console.log('[GitSyncConnectionManager] getConnection called, auth status:', {
+      isAuthenticated: this.isAuthenticated,
+      hasToken: !!this.authToken,
+      hasUser: !!this.authUser,
+    });
+
+    // Wait for authentication to initialize if not ready
     if (!this.isAuthenticated || !this.authToken || !this.authUser) {
-      console.warn('GitSyncConnectionManager: Not authenticated');
-      return null;
+      console.log('[GitSyncConnectionManager] Auth not ready, waiting for initialization...');
+
+      try {
+        const authSuccess = await this.waitForAuth();
+
+        if (!authSuccess || !this.isAuthenticated || !this.authToken || !this.authUser) {
+          console.warn('[GitSyncConnectionManager] Authentication failed or returned no credentials');
+          throw new Error('Not authenticated. Please sign in to use git-sync.');
+        }
+
+        console.log('[GitSyncConnectionManager] Auth ready, proceeding with connection');
+      } catch (error) {
+        console.error('[GitSyncConnectionManager] Auth initialization failed:', error);
+        throw new Error('Authentication initialization failed: ' + (error instanceof Error ? error.message : String(error)));
+      }
     }
 
     // Generate a unique key for this repo/branch combination
@@ -206,17 +302,17 @@ export class GitSyncConnectionManager extends EventEmitter {
         `GitSyncConnectionManager: Creating new connection for ${connectionKey}`,
       );
 
-      // Get stored GitHub token from localStorage
-      const stored = localStorage.getItem('orbit_auth');
-      if (!stored) {
-        console.warn('No auth token available for git-sync connection');
-        return null;
-      }
-
-      const authData = JSON.parse(stored);
-      const githubToken = authData.token;
-      if (!githubToken) {
-        console.warn('No token in stored auth data');
+      // Get stored GitHub token from secure storage (not localStorage!)
+      let githubToken: string;
+      try {
+        const tokenResult = await AuthenticationService.getGitHubAuth();
+        if (!tokenResult.authenticated || !tokenResult.token) {
+          console.warn('No auth token available for git-sync connection');
+          return null;
+        }
+        githubToken = tokenResult.token;
+      } catch (error) {
+        console.error('Failed to get GitHub token from secure storage:', error);
         return null;
       }
 
@@ -261,21 +357,12 @@ export class GitSyncConnectionManager extends EventEmitter {
       // Set up event forwarding
       this.setupClientEventHandlers(client, connectionKey);
 
-      // Store connection info
+      // Store connection info (status tracked in main process)
       const connectionInfo: ConnectionInfo = {
         repoId,
         repoPath,
         branch,
         client,
-        status: {
-          connected: true,
-          authenticated: true,
-          repoId,
-          branch,
-          activeLocks: [],
-          queuedLocks: 0,
-          peers: [],
-        },
       };
 
       this.connections.set(connectionKey, connectionInfo);
@@ -301,12 +388,12 @@ export class GitSyncConnectionManager extends EventEmitter {
     branch: string,
   ) {
     // Override send method to use GitSyncService
-    const originalSend = (client as any).send;
-    (client as any).send = async (message: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (client as any).send = async (message: Record<string, unknown>) => {
       try {
         const result = await GitSyncService.sendMessage({
           connectionId: `${repoId}:${branch}`,
-          type: message.type || 'message',
+          type: (message.type as string) || 'message',
           data: message,
         });
 
@@ -369,21 +456,34 @@ export class GitSyncConnectionManager extends EventEmitter {
   }
 
   /**
-   * Update connection status
+   * Notify listeners that connection status changed
+   * Status is now tracked in main process, so this just emits the event
+   * Listeners should re-query getActiveConnections() for current state
    */
   private updateConnectionStatus(connectionKey: string) {
-    const connection = this.connections.get(connectionKey);
-    if (connection && connection.client) {
-      connection.status = connection.client.getStatus();
-      this.emit('connection-status-changed', connectionKey, connection.status);
-    }
+    // Emit event so UI can re-query main process for updated status
+    this.emit('connection-status-changed', connectionKey);
   }
 
   /**
-   * Get all active connections
+   * Get all active connections from main process (source of truth)
+   * This queries the main process WebSocket manager for connection state
    */
-  getActiveConnections(): Map<string, ConnectionInfo> {
-    return new Map(this.connections);
+  async getActiveConnections(): Promise<Map<string, GitSyncConnectionInfo>> {
+    try {
+      const connections = await GitSyncService.getAllConnections();
+
+      // Convert array to Map keyed by connectionId
+      const connectionsMap = new Map<string, GitSyncConnectionInfo>();
+      for (const conn of connections) {
+        connectionsMap.set(conn.connectionId, conn);
+      }
+
+      return connectionsMap;
+    } catch (error) {
+      console.error('[GitSyncConnectionManager] Failed to get connections from main process:', error);
+      return new Map();
+    }
   }
 
   /**
@@ -419,29 +519,13 @@ export class GitSyncConnectionManager extends EventEmitter {
   disconnectAll() {
     console.log('GitSyncConnectionManager: Disconnecting all connections');
 
-    for (const [key, connection] of this.connections) {
+    for (const connection of this.connections.values()) {
       if (connection.client) {
         connection.client.disconnect();
       }
     }
 
     this.connections.clear();
-  }
-
-  /**
-   * Update authentication status
-   */
-  async updateAuth(authenticated: boolean, user?: GitHubUser, token?: string) {
-    this.isAuthenticated = authenticated;
-    this.authUser = user || null;
-    this.authToken = token || null;
-
-    this.emit('auth-changed', authenticated, user);
-
-    // If logged out, disconnect all connections
-    if (!authenticated) {
-      this.disconnectAll();
-    }
   }
 
   /**

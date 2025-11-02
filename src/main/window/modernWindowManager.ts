@@ -19,6 +19,7 @@ import { ElectronWindowManagerAdapter } from './windowManagerHandlers';
 import { GitHubAdapter } from '../version-control-providers/githubHandlers';
 import MenuBuilder from '../menu';
 import AppVersionManager from '../AppVersionManager';
+import { gitSyncWebSocketManager } from '../services/GitSyncWebSocketManager';
 
 // Import shared types and data structures
 import {
@@ -146,6 +147,16 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
             error,
           );
         }
+      }
+
+      // Clean up git-sync connections for this window
+      try {
+        gitSyncWebSocketManager.disconnectForWindow(this.window.id);
+      } catch (error) {
+        console.error(
+          `[ModernWindow] Error disconnecting git-sync connections:`,
+          error,
+        );
       }
 
       applicationWindows.delete(this.window.id);
