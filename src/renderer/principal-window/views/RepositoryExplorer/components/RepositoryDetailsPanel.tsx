@@ -1647,7 +1647,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                             }}
                           >
                             {workflowOutput.map((line, i) => (
-                              // eslint-disable-next-line react/no-array-index-key
+                               
                               <div
                                 key={`${line}-${i}`}
                                 style={{ marginBottom: '2px' }}

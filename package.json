@@ -244,7 +244,7 @@
     "simple-peer": "^9.11.1",
     "socket.io-client": "^4.8.1",
     "stream-browserify": "^3.0.0",
-    "themed-markdown": "^0.1.63",
+    "themed-markdown": "^0.1.64",
     "ts-json-schema-generator": "^2.4.0",
     "uuid": "^11.1.0",
     "ws": "^8.18.3",
