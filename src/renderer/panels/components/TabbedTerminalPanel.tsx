@@ -48,6 +48,64 @@ export interface TabbedTerminalPanelRef {
   // Future methods can be added here
 }
 
+// Memoized wrapper to prevent unnecessary re-renders
+interface TerminalTabWrapperProps {
+  tab: TerminalTab;
+  terminalContext: string;
+  isVisible: boolean;
+  isActiveTab: boolean;
+  sessionId: string | undefined;
+  terminalRef: (el: TerminalPanelPackagedRef | null) => void;
+  onSessionCreated: (tabId: string, sessionId: string) => void;
+}
+
+const TerminalTabWrapper = React.memo<TerminalTabWrapperProps>(
+  ({
+    tab,
+    terminalContext,
+    isVisible,
+    isActiveTab,
+    sessionId,
+    terminalRef,
+    onSessionCreated,
+  }) => {
+    const handleSessionCreated = useCallback(
+      (newSessionId: string) => {
+        onSessionCreated(tab.id, newSessionId);
+      },
+      [tab.id, onSessionCreated],
+    );
+
+    return (
+      <div
+        style={{
+          display: isActiveTab ? 'flex' : 'none',
+          flexDirection: 'column',
+          height: '100%',
+          width: '100%',
+          minHeight: 0,
+          position: 'relative',
+        }}
+      >
+        <TerminalPanelPackaged
+          ref={terminalRef}
+          key={tab.id}
+          directory={tab.directory}
+          context={`${terminalContext}:${tab.id}`}
+          hideHeader={true}
+          isVisible={isVisible && isActiveTab}
+          autoFocus={isActiveTab}
+          terminalId={sessionId}
+          initialCommand={tab.command}
+          onSessionCreated={handleSessionCreated}
+        />
+      </div>
+    );
+  },
+);
+
+TerminalTabWrapper.displayName = 'TerminalTabWrapper';
+
 export const TabbedTerminalPanel = forwardRef<
   TabbedTerminalPanelRef,
   TabbedTerminalPanelProps
@@ -740,38 +798,22 @@ export const TabbedTerminalPanel = forwardRef<
           {tabs.map((tab) => {
             const isActiveTab = tab.id === activeTabId;
             return (
-              <div
+              <TerminalTabWrapper
                 key={tab.id}
-                style={{
-                  display: isActiveTab ? 'flex' : 'none',
-                  flexDirection: 'column',
-                  height: '100%',
-                  width: '100%',
-                  minHeight: 0,
-                  position: 'relative',
+                tab={tab}
+                terminalContext={terminalContext}
+                isVisible={isVisible}
+                isActiveTab={isActiveTab}
+                sessionId={sessionIds.get(tab.id)}
+                terminalRef={(el) => {
+                  if (el) {
+                    terminalRefs.current.set(tab.id, el);
+                  } else {
+                    terminalRefs.current.delete(tab.id);
+                  }
                 }}
-              >
-                <TerminalPanelPackaged
-                  ref={(el) => {
-                    if (el) {
-                      terminalRefs.current.set(tab.id, el);
-                    } else {
-                      terminalRefs.current.delete(tab.id);
-                    }
-                  }}
-                  key={tab.id}
-                  directory={tab.directory}
-                  context={`${terminalContext}:${tab.id}`}
-                  hideHeader={true}
-                  isVisible={isVisible && isActiveTab}
-                  autoFocus={isActiveTab}
-                  terminalId={sessionIds.get(tab.id)}
-                  initialCommand={tab.command}
-                  onSessionCreated={(sessionId) => {
-                    handleSessionCreated(tab.id, sessionId);
-                  }}
-                />
-              </div>
+                onSessionCreated={handleSessionCreated}
+              />
             );
           })}
 

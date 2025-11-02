@@ -50,6 +50,53 @@ export interface CarouselTerminalPanelRef {
   getCurrentPanel: () => number;
 }
 
+// Memoized wrapper to prevent unnecessary re-renders
+interface CarouselTerminalWrapperProps {
+  tab: TerminalTab;
+  terminalContext: string;
+  isVisible: boolean;
+  isActivePanel: boolean;
+  sessionId: string | undefined;
+  terminalRef: (el: TerminalPanelPackagedRef | null) => void;
+  onSessionCreated: (tabId: string, sessionId: string) => void;
+}
+
+const CarouselTerminalWrapper = React.memo<CarouselTerminalWrapperProps>(
+  ({
+    tab,
+    terminalContext,
+    isVisible,
+    isActivePanel,
+    sessionId,
+    terminalRef,
+    onSessionCreated,
+  }) => {
+    const handleSessionCreated = useCallback(
+      (newSessionId: string) => {
+        onSessionCreated(tab.id, newSessionId);
+      },
+      [tab.id, onSessionCreated],
+    );
+
+    return (
+      <TerminalPanelPackaged
+        ref={terminalRef}
+        key={tab.id}
+        directory={tab.directory}
+        context={`${terminalContext}:${tab.id}`}
+        hideHeader={true}
+        isVisible={isVisible && isActivePanel}
+        autoFocus={isActivePanel}
+        terminalId={sessionId}
+        initialCommand={tab.command}
+        onSessionCreated={handleSessionCreated}
+      />
+    );
+  },
+);
+
+CarouselTerminalWrapper.displayName = 'CarouselTerminalWrapper';
+
 export const CarouselTerminalPanel = forwardRef<
   CarouselTerminalPanelRef,
   CarouselTerminalPanelProps
@@ -697,25 +744,20 @@ export const CarouselTerminalPanel = forwardRef<
 
           {/* Terminal */}
           <div style={{ flex: 1, minHeight: 0 }}>
-            <TerminalPanelPackaged
-              ref={(el) => {
+            <CarouselTerminalWrapper
+              tab={tab}
+              terminalContext={terminalContext}
+              isVisible={isVisible}
+              isActivePanel={isActivePanel}
+              sessionId={sessionIds.get(tab.id)}
+              terminalRef={(el) => {
                 if (el) {
                   terminalRefs.current.set(tab.id, el);
                 } else {
                   terminalRefs.current.delete(tab.id);
                 }
               }}
-              key={tab.id}
-              directory={tab.directory}
-              context={`${terminalContext}:${tab.id}`}
-              hideHeader={true}
-              isVisible={isVisible && isActivePanel}
-              autoFocus={isActivePanel}
-              terminalId={sessionIds.get(tab.id)}
-              initialCommand={tab.command}
-              onSessionCreated={(sessionId) => {
-                handleSessionCreated(tab.id, sessionId);
-              }}
+              onSessionCreated={handleSessionCreated}
             />
           </div>
         </div>
