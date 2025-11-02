@@ -2498,14 +2498,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           repository={repository}
           repositoryOwner={repository.owner}
           repositoryName={repository.name}
-          hasUpdateAvailable={hasUpdateAvailable}
           selectedSource={selectedSource}
-          onSourceSelect={setSelectedSource}
           onSecretsClick={() => setShowSecretsModal(true)}
           onLinksClick={() => setShowLinksModal(true)}
           onAddNoteClick={() => setShowAddNoteModal(true)}
-          onHelpClick={() => setShowSourceHelpModal(true)}
-          onForkBadgeClick={() => setShowBadgeInfoModal(true)}
           onConfigurePanels={() => setShowPanelConfigModal(true)}
           onSwitchPanels={handleSwitchPanels}
           showSidebarControls

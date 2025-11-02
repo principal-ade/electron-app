@@ -15,7 +15,6 @@ import { GitSyncStatusIndicator } from './GitSyncStatusIndicator';
 import { WorkspaceSelector } from './WorkspaceSelector';
 import type { Repository } from '../../../shared/types/repository.types';
 import type { FileTreeSource } from '../../types/file-tree-source';
-import type { RepositoryMode } from '../../repo-manager/shared/SimpleModeSelector';
 import type {
   WorkspaceLayout,
   UserPreferences,
@@ -30,16 +29,10 @@ export interface RepositoryTitlebarProps {
   repository?: Repository;
   repositoryOwner?: string;
   repositoryName?: string;
-  hasUpdateAvailable?: boolean;
   selectedSource?: FileTreeSource | null;
-  onSourceSelect?: (source: FileTreeSource) => void;
   onSecretsClick?: () => void;
   onLinksClick?: () => void;
   onAddNoteClick?: () => void;
-  onHelpClick?: () => void;
-  onForkBadgeClick?: () => void;
-  mode?: RepositoryMode;
-  onModeChange?: (mode: RepositoryMode) => void;
   showSidebarControls?: boolean;
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
@@ -68,16 +61,10 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   repository,
   repositoryOwner,
   repositoryName,
-  hasUpdateAvailable,
   selectedSource,
-  onSourceSelect,
   onSecretsClick,
   onLinksClick,
   onAddNoteClick,
-  onHelpClick,
-  onForkBadgeClick,
-  mode,
-  onModeChange,
   showSidebarControls = false,
   sidebarCollapsed = false,
   onToggleSidebar,
@@ -179,6 +166,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   };
 
   const displayName = repositoryName || repository?.name || 'Repository';
+  const displayOwner = repositoryOwner || repository?.owner;
   const hasLocalClone = selectedSource?.type === 'local';
 
   return (
@@ -187,7 +175,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
       <div
         style={{
           position: 'absolute',
-          left: '120px', // Position after traffic lights
+          left: '80px', // Position after traffic lights
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
@@ -195,24 +183,68 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           WebkitAppRegion: 'no-drag',
         }}
       >
-        <span
-          style={{
-            fontSize: '15px',
-            fontWeight: 500,
-            color: theme.colors.text,
-          }}
-        >
-          {displayName}
-        </span>
-
-        {/* Open in IDE button */}
-        {showOpenInIDE && <TitlebarOpenInIDE repository={repository} />}
-
         {/* Git-Sync connection status indicator */}
         <GitSyncStatusIndicator
           repositoryPath={selectedSource?.type === 'local' ? selectedSource.location : undefined}
           branch={selectedSource?.type === 'local' ? selectedSource.metadata?.currentBranch : undefined}
         />
+
+        <span
+          style={{
+            fontSize: '15px',
+            fontWeight: 500,
+          }}
+        >
+          <span
+            style={{
+              color: theme.colors.accent,
+              fontWeight: 600,
+              cursor: displayOwner ? 'pointer' : 'default',
+            }}
+            onClick={() => {
+              if (displayOwner && displayName) {
+                window.open(`https://github.com/${displayOwner}/${displayName}`, '_blank');
+              }
+            }}
+            onMouseEnter={(e) => {
+              if (displayOwner) {
+                e.currentTarget.style.opacity = '0.7';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+            title={displayOwner ? `Open ${displayOwner}/${displayName} on GitHub` : undefined}
+          >
+            {displayName}
+          </span>
+          {displayOwner && (
+            <>
+              <span style={{ color: theme.colors.text }}> by </span>
+              <span
+                style={{
+                  color: theme.colors.text,
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  window.open(`https://github.com/${displayOwner}`, '_blank');
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.7';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+                title={`Open ${displayOwner}'s GitHub profile`}
+              >
+                {displayOwner}
+              </span>
+            </>
+          )}
+        </span>
+
+        {/* Open in IDE button */}
+        {showOpenInIDE && <TitlebarOpenInIDE repository={repository} />}
       </div>
 
       {/* Center: Workspace selector */}

@@ -19,9 +19,6 @@ export interface WorkspaceLayout {
   isBuiltIn?: boolean;
 }
 
-// Repository view types - unified naming
-export type RepositoryViewType = 'exploration';
-
 // Interactive shell navigation view types
 export type InteractiveShellNavigationView =
   | 'repository'
@@ -37,16 +34,6 @@ export type RightPaneMode = 'city' | 'terminal' | 'session-detail' | 'document';
 
 // Repository-specific UI state that persists across sessions
 export interface RepositoryUIState {
-  // Current active view/tab
-  activeView?: RepositoryViewType;
-
-  // Exploration view specific state
-  explorationState?: {
-    selectedFile?: string;
-    expandedFolders?: string[];
-    viewMode?: 'tree' | 'graph';
-  };
-
   // Panel layout preferences scoped to this repository
   panelLayouts?: {
     exploration?: {
@@ -100,6 +87,8 @@ export interface UserPreferences {
   defaultView?: 'projects' | 'customization';
   showRepoFilterBar?: boolean; // Show/hide the filter bar in repos view
   showReposButton?: boolean; // Show/hide the repos button in side nav (default: false - deprecated view)
+  showMonitorButton?: boolean; // Show/hide the monitor button in side nav (default: false)
+  showSearchButton?: boolean; // Show/hide the search button in side nav (default: false)
   showGitSyncPanel?: boolean; // Show/hide the git sync panel in Feed view (default: false)
   showTerminalDebugButton?: boolean; // Show/hide the debug button in terminal panels (default: false)
   showTerminalRecordingButton?: boolean; // Show/hide the recording button in terminal panels (default: false)
