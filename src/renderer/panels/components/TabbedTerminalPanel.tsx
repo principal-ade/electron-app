@@ -623,8 +623,7 @@ export const TabbedTerminalPanel = forwardRef<
                 display: 'flex',
                 alignItems: 'center',
                 borderLeft: `1px solid ${theme.colors.border}`,
-                borderBottom:
-                  tabs.length > 0 ? `1px solid ${theme.colors.border}` : 'none',
+                borderBottom: `1px solid ${theme.colors.border}`,
               }}
             >
               {/* Toggle view button - only show in multi-terminal mode */}
@@ -827,7 +826,6 @@ export const TabbedTerminalPanel = forwardRef<
                 justifyContent: 'center',
                 height: '100%',
                 color: theme.colors.textSecondary,
-                borderTop: `1px solid ${theme.colors.border}`,
               }}
             >
               <TerminalIcon
