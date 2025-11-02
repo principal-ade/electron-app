@@ -184,27 +184,32 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
         zIndex: 100,
       }}
     >
-      {/* Left spacer */}
-      <div style={{ flex: 1 }} />
-
-      {/* Centered Title */}
+      {/* Centered Title - Absolutely positioned */}
       <div
         style={{
+          position: 'fixed',
+          left: '50vw',
+          transform: 'translateX(-50%)',
+          top: '0',
+          height: '56px',
+          display: 'flex',
+          alignItems: 'center',
           fontSize: theme.fontSizes[3],
           fontWeight: 600,
           color: accentColor,
           fontFamily: theme.fonts.heading,
           WebkitAppRegion: 'no-drag' as React.CSSProperties['WebkitAppRegion'],
-          marginRight: '100px',
+          pointerEvents: 'none',
+          zIndex: 101,
         }}
       >
         Principal View
       </div>
 
-      {/* Right spacer with controls */}
+      {/* Right controls */}
       <div
         style={{
-          flex: 1,
+          marginLeft: 'auto',
           display: 'flex',
           justifyContent: 'flex-end',
           alignItems: 'center',
