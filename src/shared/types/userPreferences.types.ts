@@ -99,7 +99,11 @@ export interface UserPreferences {
   // UI preferences
   defaultView?: 'projects' | 'customization';
   showRepoFilterBar?: boolean; // Show/hide the filter bar in repos view
+  showReposButton?: boolean; // Show/hide the repos button in side nav (default: false - deprecated view)
   showGitSyncPanel?: boolean; // Show/hide the git sync panel in Feed view (default: false)
+  showTerminalDebugButton?: boolean; // Show/hide the debug button in terminal panels (default: false)
+  showTerminalRecordingButton?: boolean; // Show/hide the recording button in terminal panels (default: false)
+  showTerminalShowAllButton?: boolean; // Show/hide the show all terminals button in terminal panels (default: true)
 
   // Remote agent quick access buttons
   remoteAgentButtons?: {
