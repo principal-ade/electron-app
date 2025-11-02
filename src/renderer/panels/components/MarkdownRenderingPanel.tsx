@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FileText, Copy, Check, X, Trash2, Plus, Minus } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { parseMarkdownIntoPresentation } from 'themed-markdown';
@@ -8,6 +8,7 @@ import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { FileDeleteConfirmDialog } from '../../components/FileDeleteConfirmDialog';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import type { FileTreeSource } from '../../types/file-tree-source';
+import { useFileWatch } from '../../hooks/useFileWatch';
 
 interface MarkdownRenderingPanelProps {
   // File path
@@ -59,6 +60,54 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
     loadPreferences();
   }, []);
 
+  // Helper to construct absolute path
+  const getAbsolutePath = useCallback(
+    (path: string) => {
+      if (isLocalFile && sourceLocation) {
+        return path.startsWith('/') ? path : `${sourceLocation}/${path}`;
+      }
+      return path;
+    },
+    [isLocalFile, sourceLocation],
+  );
+
+  // Reload file content (used for file watching and initial load)
+  const reloadFile = useCallback(async () => {
+    if (!filePath) {
+      return;
+    }
+
+    const absolutePath = getAbsolutePath(filePath);
+
+    try {
+      let content: string | null = null;
+
+      // For local sources, read from filesystem
+      if (isLocalFile) {
+        const result = await FileSystemService.readFile(absolutePath);
+        content = result?.content ?? null;
+      }
+      // For remote sources, use content provider if available
+      else if (contentProvider) {
+        const relativePath = filePath.startsWith('/')
+          ? filePath.substring(1)
+          : filePath;
+        content = await contentProvider.readFileContent(relativePath);
+      }
+
+      if (content !== null && latestFilePathRef.current === absolutePath) {
+        setDocContent(content);
+        setError(null);
+      }
+    } catch (err) {
+      console.error('Error reloading markdown file:', err);
+      if (latestFilePathRef.current === absolutePath) {
+        setError(err instanceof Error ? err.message : 'Failed to reload file');
+      }
+    }
+  }, [filePath, isLocalFile, contentProvider, getAbsolutePath]);
+
+  // Initial load effect
   useEffect(() => {
     const loadFile = async () => {
       if (!filePath) {
@@ -68,14 +117,7 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
         return;
       }
 
-      // Construct absolute path inline
-      const absolutePath =
-        isLocalFile && sourceLocation
-          ? filePath.startsWith('/')
-            ? filePath
-            : `${sourceLocation}/${filePath}`
-          : filePath;
-
+      const absolutePath = getAbsolutePath(filePath);
       latestFilePathRef.current = absolutePath;
 
       setIsLoading(true);
@@ -121,7 +163,16 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
     };
 
     loadFile();
-  }, [filePath, isLocalFile, sourceLocation, contentProvider]);
+  }, [filePath, isLocalFile, sourceLocation, contentProvider, getAbsolutePath]);
+
+  // File watching - automatically reload when file changes on disk
+  useFileWatch(
+    filePath && isLocalFile ? getAbsolutePath(filePath) : null,
+    reloadFile,
+    {
+      enabled: isLocalFile,
+    },
+  );
 
   if (!filePath) {
     return (

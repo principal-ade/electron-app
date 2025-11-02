@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemedMonacoWithProvider } from '@principal-ade/industry-themed-monaco-editor';
+import type { editor } from 'monaco-editor';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
+import { useFileWatch } from '../../hooks/useFileWatch';
 
 interface HeadlessFileEditorPanelProps {
   filePath: string;
@@ -10,7 +12,7 @@ interface HeadlessFileEditorPanelProps {
   onModifiedChange?: (isModified: boolean) => void;
   onContentChange?: (content: string) => void;
   vimModeOverride?: boolean; // Override vim mode preference
-  options?: any; // Monaco editor options
+  options?: editor.IStandaloneEditorConstructionOptions; // Monaco editor options
   contentLoader?: () => Promise<string | null>; // Custom content loader for remote files
 }
 
@@ -35,7 +37,6 @@ export const HeadlessFileEditorPanel: React.FC<
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [vimModeEnabled, setVimModeEnabled] = useState(false);
-  const [isModified, setIsModified] = useState(false);
   const isSavingRef = useRef(false);
   const latestFilePathRef = useRef<string | null>(null);
 
@@ -122,7 +123,6 @@ export const HeadlessFileEditorPanel: React.FC<
       if (content !== null) {
         setFileContent(content);
         setEditorContent(content);
-        setIsModified(false);
 
         if (onContentChange) {
           onContentChange(content);
@@ -150,41 +150,11 @@ export const HeadlessFileEditorPanel: React.FC<
     loadFile();
   }, [loadFile]);
 
-  // File watching (only for local files)
-  useEffect(() => {
-    // Skip file watching if using custom content loader
-    if (contentLoader) {
-      return;
-    }
-
-    let unsubscribe: (() => void) | undefined;
-
-    const setupWatching = async () => {
-      try {
-        await FileSystemService.watchFile(filePath);
-        unsubscribe = FileSystemService.onFileChange((event) => {
-          if (event.path === filePath) {
-            if (isSavingRef.current) {
-              return; // Don't reload while saving
-            }
-            console.log('File changed externally, reloading:', filePath);
-            loadFile();
-          }
-        });
-      } catch (watchError) {
-        console.error('Error setting up file watching:', watchError);
-      }
-    };
-
-    setupWatching();
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-      FileSystemService.stopWatchingFile(filePath).catch(console.error);
-    };
-  }, [filePath, loadFile, contentLoader]);
+  // File watching (only for local files, not remote with custom content loader)
+  useFileWatch(filePath, loadFile, {
+    enabled: !contentLoader, // Skip file watching if using custom content loader
+    skipReloadWhen: () => isSavingRef.current,
+  });
 
   // Handle editor changes
   const handleEditorChange = useCallback(
@@ -193,7 +163,6 @@ export const HeadlessFileEditorPanel: React.FC<
       setEditorContent(newContent);
 
       const modified = newContent !== fileContent;
-      setIsModified(modified);
 
       if (onContentChange) {
         onContentChange(newContent);
@@ -218,7 +187,6 @@ export const HeadlessFileEditorPanel: React.FC<
         // After successful save, update our tracked content
         setFileContent(contentToSave);
         setEditorContent(contentToSave);
-        setIsModified(false);
 
         if (onModifiedChange) {
           onModifiedChange(false);

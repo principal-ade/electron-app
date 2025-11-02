@@ -9,6 +9,7 @@ import { MarkdownViewerTitlebar } from '../components/Titlebar';
 import { FileDeleteConfirmDialog } from '../components/FileDeleteConfirmDialog';
 
 import { MarkdownDocumentViewer } from '../repo-manager/shared/MarkdownDocumentViewer';
+import { useFileWatch } from '../hooks/useFileWatch';
 
 interface MarkdownViewProps {
   filePath: string;
@@ -91,153 +92,51 @@ export const MarkdownView: React.FC<MarkdownViewProps> = ({
     }
   }, []);
 
-  useEffect(() => {
-    const loadFile = async () => {
-      try {
-        setLoading(true);
-        const result = await FileSystemService.readFile(filePath);
+  // Load file content
+  const loadFile = useCallback(async () => {
+    try {
+      setLoading(true);
+      const result = await FileSystemService.readFile(filePath);
 
-        // Extract content from the result object
-        const fileContent = result?.content;
+      // Extract content from the result object
+      const fileContent = result?.content;
 
-        // Ensure content is a string
-        if (typeof fileContent !== 'string') {
-          throw new Error('File content is not a string');
-        }
-
-        // Ensure content is not empty
-        if (!fileContent || fileContent.trim().length === 0) {
-          setContent('# Empty File\n\nThis file appears to be empty.');
-        } else {
-          setContent(fileContent);
-        }
-        setError(null);
-      } catch (err) {
-        console.error('Error reading markdown file:', err);
-        setError(
-          `Failed to load file: ${err instanceof Error ? err.message : 'Unknown error'}`,
-        );
-        // Set a fallback content to prevent parseMarkdownChunks error
-        setContent(
-          '# Error Loading File\n\nAn error occurred while loading the file.',
-        );
-      } finally {
-        setLoading(false);
+      // Ensure content is a string
+      if (typeof fileContent !== 'string') {
+        throw new Error('File content is not a string');
       }
-    };
 
-    loadFile();
+      // Ensure content is not empty
+      if (!fileContent || fileContent.trim().length === 0) {
+        setContent('# Empty File\n\nThis file appears to be empty.');
+      } else {
+        setContent(fileContent);
+      }
+      setError(null);
+      setIsDirty(false); // Reset dirty flag on successful reload
+    } catch (err) {
+      console.error('Error reading markdown file:', err);
+      setError(
+        `Failed to load file: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      );
+      // Set a fallback content to prevent parseMarkdownChunks error
+      setContent(
+        '# Error Loading File\n\nAn error occurred while loading the file.',
+      );
+    } finally {
+      setLoading(false);
+    }
   }, [filePath]);
 
-  // File watching: reload when the underlying file changes externally.
+  // Load file on mount and when path changes
   useEffect(() => {
-    if (!filePath) return;
+    loadFile();
+  }, [loadFile]);
 
-    let unsubscribe: (() => void) | null = null;
-    let isWatching = false;
-    let stopped = false;
-
-    const setupWatcher = async () => {
-      try {
-        // Start watching the file in the main process
-        await FileSystemService.watchFile(filePath);
-        isWatching = true;
-
-        // Subscribe to file change events
-        unsubscribe = FileSystemService.onFileChange((event) => {
-          // Only react to events for this file path
-          try {
-            if (!event || !event.path) return;
-            if (event.path !== filePath) return;
-
-            // Avoid reloading while user has unsaved changes
-            if (isDirty) {
-              // We still mark that the file changed externally; caller can decide
-              console.info(
-                '[MarkdownView] External change detected but view is dirty; not reloading automatically.',
-              );
-              return;
-            }
-
-            // Reload file content
-            (async () => {
-              try {
-                const result = await FileSystemService.readFile(filePath);
-                const fileContent = result?.content;
-                if (typeof fileContent === 'string') {
-                  setContent(
-                    fileContent ||
-                      '# Empty File\n\nThis file appears to be empty.',
-                  );
-                  setError(null);
-                  setIsDirty(false);
-                }
-              } catch (err) {
-                console.warn(
-                  '[MarkdownView] Failed to reload file after change:',
-                  err,
-                );
-              }
-            })();
-          } catch (e) {
-            console.error(
-              '[MarkdownView] Error handling file change event:',
-              e,
-            );
-          }
-        });
-      } catch (err) {
-        console.warn('[MarkdownView] Failed to start watching file:', err);
-      }
-    };
-
-    setupWatcher();
-
-    return () => {
-      // Stop watching and cleanup subscription
-      stopped = true;
-      if (isWatching) {
-        FileSystemService.stopWatchingFile(filePath).catch((err) =>
-          console.warn('[MarkdownView] Failed to stop watching file:', err),
-        );
-      }
-      if (unsubscribe) {
-        try {
-          unsubscribe();
-        } catch (e) {
-          console.warn(
-            '[MarkdownView] Failed to unsubscribe file change listener:',
-            e,
-          );
-        }
-      }
-    };
-  }, [filePath, isDirty]);
-
-  // Handle content changes
-  const handleContentChange = useCallback((newContent: string) => {
-    setContent(newContent);
-    setIsDirty(true);
-  }, []);
-
-  // Handle saving
-  const handleSave = useCallback(
-    async (newContent: string) => {
-      try {
-        const result = await FileSystemService.writeFile(filePath, newContent);
-        if (result?.success) {
-          setIsDirty(false);
-          // Could show a toast notification here
-        } else {
-          throw new Error(result?.error || 'Failed to save file');
-        }
-      } catch (err) {
-        console.error('Error saving file:', err);
-        throw err; // Re-throw to let the component handle it
-      }
-    },
-    [filePath],
-  );
+  // File watching: reload when the underlying file changes externally
+  useFileWatch(filePath, loadFile, {
+    skipReloadWhen: () => isDirty, // Don't reload if user has unsaved changes
+  });
 
   // Handle delete
   const handleDelete = useCallback(async () => {

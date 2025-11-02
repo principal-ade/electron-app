@@ -5,6 +5,7 @@ import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { FileText, X } from 'lucide-react';
 import type { FileTreeSource } from '../../types/file-tree-source';
+import { useFileWatch } from '../../hooks/useFileWatch';
 
 interface FilePreviewPanelProps {
   filePath: string | null;
@@ -235,41 +236,10 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   );
 
   // File watching - only for local files
-  useEffect(() => {
-    if (!filePath || !isLocalFile) {
-      return;
-    }
-
-    const absolutePath = getAbsolutePath(filePath);
-    let unsubscribe: (() => void) | undefined;
-
-    const setupWatching = async () => {
-      try {
-        await FileSystemService.watchFile(absolutePath);
-        unsubscribe = FileSystemService.onFileChange((event) => {
-          if (event.path === absolutePath) {
-            if (isSavingRef.current) {
-              return;
-            }
-            loadFile();
-          }
-        });
-      } catch (watchError) {
-        console.error('Error setting up file watching:', watchError);
-      }
-    };
-
-    setupWatching();
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-      FileSystemService.stopWatchingFile(absolutePath).catch((stopError) => {
-        console.error('Error stopping file watching:', stopError);
-      });
-    };
-  }, [filePath, isLocalFile, getAbsolutePath, loadFile]);
+  useFileWatch(filePath ? getAbsolutePath(filePath) : null, loadFile, {
+    enabled: isLocalFile,
+    skipReloadWhen: () => isSavingRef.current,
+  });
 
   const fileName = filePath?.split('/').pop() || filePath || '';
   const language = filePath ? getLanguage(filePath) : 'plaintext';
