@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { WindowCard } from './WindowCard';
 
 type SwitcherWindow = {
   id: number;
@@ -160,38 +161,16 @@ export const WindowSwitcherApp: React.FC = () => {
             No windows available
           </div>
         ) : (
-          windows.map((win, index) => {
-            const isSelected = index === selectedIndex;
-            const title = win.title?.trim() || 'Untitled Window';
-
-            return (
-              <button
-                key={win.id}
-                type="button"
-                className={`window-card${isSelected ? ' selected' : ''}`}
-                onClick={() => handleTileClick(index)}
-              >
-                <div className="window-preview">
-                  {win.thumbnail ? (
-                    <img src={win.thumbnail} alt="" />
-                  ) : (
-                    <svg
-                      className="window-icon"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      aria-hidden="true"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <line x1="9" y1="3" x2="9" y2="21" />
-                    </svg>
-                  )}
-                </div>
-                <span className="window-title" title={title}>
-                  {title}
-                </span>
-              </button>
-            );
-          })
+          windows.map((win, index) => (
+            <WindowCard
+              key={win.id}
+              id={win.id}
+              title={win.title}
+              thumbnail={win.thumbnail}
+              isSelected={index === selectedIndex}
+              onClick={() => handleTileClick(index)}
+            />
+          ))
         )}
       </div>
       <p className="hint">

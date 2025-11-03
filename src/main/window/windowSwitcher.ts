@@ -285,7 +285,7 @@ class WindowSwitcher {
    */
   private createSwitcherWindow(): void {
     const primaryDisplay = screen.getPrimaryDisplay();
-    const { width, height } = primaryDisplay.bounds;
+    const { width, height } = primaryDisplay.workArea;
 
     // Use the correct preload path based on whether app is packaged or in development
     const preloadPath = app.isPackaged
