@@ -1,9 +1,6 @@
 import React from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import {
-  ExternalLink,
-  FolderOpen,
-} from 'lucide-react';
+import { ExternalLink, FolderOpen } from 'lucide-react';
 
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';
@@ -21,9 +18,15 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
   const entry = repositoryData.repository;
 
   // Check if this repo is selected for README view
-  const isReadmeSelected = selectedRepository && entry.github &&
-    (selectedRepository.id === (typeof entry.github.id === 'number' ? entry.github.id : parseInt(entry.github.id, 10)) ||
-     selectedRepository.full_name === `${entry.github.owner}/${entry.github.name}`);
+  const isReadmeSelected =
+    selectedRepository &&
+    entry.github &&
+    (selectedRepository.id ===
+      (typeof entry.github.id === 'number'
+        ? entry.github.id
+        : parseInt(entry.github.id, 10)) ||
+      selectedRepository.full_name ===
+        `${entry.github.owner}/${entry.github.name}`);
 
   const handleOpenInGitHub = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -40,9 +43,10 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
     // Create a mock GitHub repository object for README viewing
     if (entry.github) {
       const mockRepo = {
-        id: typeof entry.github.id === 'number'
-          ? entry.github.id
-          : parseInt(entry.github.id, 10) || 0,
+        id:
+          typeof entry.github.id === 'number'
+            ? entry.github.id
+            : parseInt(entry.github.id, 10) || 0,
         name: entry.github.name || entry.name,
         full_name: `${entry.github.owner}/${entry.github.name}`,
         owner: {
@@ -89,7 +93,9 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
         padding: '8px 12px',
         borderRadius: '4px',
         backgroundColor: isHighlighted ? `${highlightColor}15` : 'transparent',
-        border: isHighlighted ? `1px solid ${highlightColor}40` : '1px solid transparent',
+        border: isHighlighted
+          ? `1px solid ${highlightColor}40`
+          : '1px solid transparent',
         cursor: 'pointer',
         transition: 'background-color 0.15s',
       }}
@@ -124,7 +130,8 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
               width: '32px',
               height: '32px',
               borderRadius: '50%',
-              backgroundColor: theme.colors.backgroundTertiary || theme.colors.border,
+              backgroundColor:
+                theme.colors.backgroundTertiary || theme.colors.border,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -139,8 +146,23 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       </div>
 
       {/* Main content */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            flexWrap: 'wrap',
+          }}
+        >
           <span
             style={{
               fontSize: `${theme.fontSizes[2]}px`,
@@ -168,7 +190,9 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
                   width: '6px',
                   height: '6px',
                   borderRadius: '50%',
-                  backgroundColor: getLanguageColor(entry.github.primaryLanguage),
+                  backgroundColor: getLanguageColor(
+                    entry.github.primaryLanguage,
+                  ),
                 }}
               />
               {entry.github.primaryLanguage}
@@ -238,11 +262,13 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
             }}
             onMouseEnter={(event) => {
               event.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
+                theme.colors.backgroundTertiary ||
+                theme.colors.backgroundSecondary;
               event.currentTarget.style.color = theme.colors.text;
             }}
             onMouseLeave={(event) => {
-              event.currentTarget.style.backgroundColor = theme.colors.background;
+              event.currentTarget.style.backgroundColor =
+                theme.colors.background;
               event.currentTarget.style.color = theme.colors.textSecondary;
             }}
           >

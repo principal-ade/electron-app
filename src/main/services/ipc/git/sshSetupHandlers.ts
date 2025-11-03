@@ -21,7 +21,10 @@ export function registerSSHSetupHandlers(): void {
       console.log('[SSHSetupHandlers] Has existing key:', hasKey);
       return { success: true, hasKey };
     } catch (error) {
-      console.error('[SSHSetupHandlers] Error checking for existing key:', error);
+      console.error(
+        '[SSHSetupHandlers] Error checking for existing key:',
+        error,
+      );
       return {
         success: false,
         hasKey: false,
@@ -124,5 +127,7 @@ export function registerSSHSetupHandlers(): void {
     }
   });
 
-  console.log('[SSHSetupHandlers] SSH setup IPC handlers registered successfully');
+  console.log(
+    '[SSHSetupHandlers] SSH setup IPC handlers registered successfully',
+  );
 }

@@ -1044,8 +1044,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                       gap: '6px',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor =
-                        `${theme.colors.primary}15`;
+                      e.currentTarget.style.backgroundColor = `${theme.colors.primary}15`;
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';

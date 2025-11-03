@@ -185,8 +185,16 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
       >
         {/* Git-Sync connection status indicator */}
         <GitSyncStatusIndicator
-          repositoryPath={selectedSource?.type === 'local' ? selectedSource.location : undefined}
-          branch={selectedSource?.type === 'local' ? selectedSource.metadata?.currentBranch : undefined}
+          repositoryPath={
+            selectedSource?.type === 'local'
+              ? selectedSource.location
+              : undefined
+          }
+          branch={
+            selectedSource?.type === 'local'
+              ? selectedSource.metadata?.currentBranch
+              : undefined
+          }
         />
 
         <span
@@ -203,7 +211,10 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             }}
             onClick={() => {
               if (displayOwner && displayName) {
-                window.open(`https://github.com/${displayOwner}/${displayName}`, '_blank');
+                window.open(
+                  `https://github.com/${displayOwner}/${displayName}`,
+                  '_blank',
+                );
               }
             }}
             onMouseEnter={(e) => {
@@ -214,7 +225,11 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             onMouseLeave={(e) => {
               e.currentTarget.style.opacity = '1';
             }}
-            title={displayOwner ? `Open ${displayOwner}/${displayName} on GitHub` : undefined}
+            title={
+              displayOwner
+                ? `Open ${displayOwner}/${displayName} on GitHub`
+                : undefined
+            }
           >
             {displayName}
           </span>

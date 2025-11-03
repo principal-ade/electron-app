@@ -158,7 +158,10 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
               >
                 Set Up SSH Authentication
               </h3>
-              <p className="text-sm mb-3" style={{ color: theme.colors.textSecondary }}>
+              <p
+                className="text-sm mb-3"
+                style={{ color: theme.colors.textSecondary }}
+              >
                 {repositoryUrl
                   ? `To clone this repository, you'll need SSH authentication:`
                   : 'SSH authentication provides secure access to your repositories.'}
@@ -181,7 +184,10 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
                 >
                   This wizard will:
                 </h4>
-                <ul className="space-y-1 text-sm" style={{ color: theme.colors.textSecondary }}>
+                <ul
+                  className="space-y-1 text-sm"
+                  style={{ color: theme.colors.textSecondary }}
+                >
                   <li className="flex items-start">
                     <span className="mr-2">•</span>
                     <span>Generate a secure SSH key on your computer</span>
@@ -230,11 +236,21 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
       case 'generating':
         return (
           <div className="text-center py-8">
-            <Loader size={48} className="animate-spin mx-auto mb-4" style={{ color: theme.colors.primary }} />
-            <h3 className="text-lg font-semibold mb-2" style={{ color: theme.colors.text }}>
+            <Loader
+              size={48}
+              className="animate-spin mx-auto mb-4"
+              style={{ color: theme.colors.primary }}
+            />
+            <h3
+              className="text-lg font-semibold mb-2"
+              style={{ color: theme.colors.text }}
+            >
               Generating SSH Key
             </h3>
-            <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
+            <p
+              className="text-sm"
+              style={{ color: theme.colors.textSecondary }}
+            >
               Creating your secure SSH key pair...
             </p>
           </div>
@@ -251,12 +267,22 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
               }}
             >
               <div className="flex items-start mb-3">
-                <CheckCircle size={20} className="mr-2 mt-0.5 flex-shrink-0" style={{ color: theme.colors.primary }} />
+                <CheckCircle
+                  size={20}
+                  className="mr-2 mt-0.5 flex-shrink-0"
+                  style={{ color: theme.colors.primary }}
+                />
                 <div>
-                  <h3 className="font-semibold mb-1" style={{ color: theme.colors.text }}>
+                  <h3
+                    className="font-semibold mb-1"
+                    style={{ color: theme.colors.text }}
+                  >
                     SSH Key Generated
                   </h3>
-                  <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
+                  <p
+                    className="text-sm"
+                    style={{ color: theme.colors.textSecondary }}
+                  >
                     Your SSH key has been created and configured.
                   </p>
                 </div>
@@ -264,7 +290,10 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
             </div>
 
             <div>
-              <h4 className="font-semibold mb-2" style={{ color: theme.colors.text }}>
+              <h4
+                className="font-semibold mb-2"
+                style={{ color: theme.colors.text }}
+              >
                 Step 1: Copy your public key
               </h4>
               <div className="relative">
@@ -283,7 +312,9 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
                   onClick={handleCopyKey}
                   className="absolute top-2 right-2 px-3 py-1.5 rounded flex items-center text-sm transition-colors"
                   style={{
-                    backgroundColor: copied ? theme.colors.primary : theme.colors.backgroundSecondary,
+                    backgroundColor: copied
+                      ? theme.colors.primary
+                      : theme.colors.backgroundSecondary,
                     color: copied ? theme.colors.background : theme.colors.text,
                   }}
                 >
@@ -303,7 +334,10 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
             </div>
 
             <div>
-              <h4 className="font-semibold mb-2" style={{ color: theme.colors.text }}>
+              <h4
+                className="font-semibold mb-2"
+                style={{ color: theme.colors.text }}
+              >
                 Step 2: Add the key to GitHub
               </h4>
               <button
@@ -318,7 +352,10 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
                 <ExternalLink size={16} className="mr-2" />
                 Open GitHub SSH Settings
               </button>
-              <p className="text-xs mt-2" style={{ color: theme.colors.textSecondary }}>
+              <p
+                className="text-xs mt-2"
+                style={{ color: theme.colors.textSecondary }}
+              >
                 Paste your key in the "Key" field and click "Add SSH key"
               </p>
             </div>
@@ -354,11 +391,21 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
       case 'testing':
         return (
           <div className="text-center py-8">
-            <Loader size={48} className="animate-spin mx-auto mb-4" style={{ color: theme.colors.primary }} />
-            <h3 className="text-lg font-semibold mb-2" style={{ color: theme.colors.text }}>
+            <Loader
+              size={48}
+              className="animate-spin mx-auto mb-4"
+              style={{ color: theme.colors.primary }}
+            />
+            <h3
+              className="text-lg font-semibold mb-2"
+              style={{ color: theme.colors.text }}
+            >
               Testing Connection
             </h3>
-            <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
+            <p
+              className="text-sm"
+              style={{ color: theme.colors.textSecondary }}
+            >
               Verifying your SSH connection to GitHub...
             </p>
           </div>
@@ -367,14 +414,27 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
       case 'complete':
         return (
           <div className="text-center py-8">
-            <CheckCircle size={64} className="mx-auto mb-4" style={{ color: theme.colors.primary }} />
-            <h3 className="text-xl font-semibold mb-2" style={{ color: theme.colors.text }}>
+            <CheckCircle
+              size={64}
+              className="mx-auto mb-4"
+              style={{ color: theme.colors.primary }}
+            />
+            <h3
+              className="text-xl font-semibold mb-2"
+              style={{ color: theme.colors.text }}
+            >
               SSH Setup Complete!
             </h3>
-            <p className="text-sm" style={{ color: theme.colors.textSecondary }}>
+            <p
+              className="text-sm"
+              style={{ color: theme.colors.textSecondary }}
+            >
               Your SSH authentication is configured and working.
             </p>
-            <p className="text-sm mt-2" style={{ color: theme.colors.textSecondary }}>
+            <p
+              className="text-sm mt-2"
+              style={{ color: theme.colors.textSecondary }}
+            >
               Retrying repository clone...
             </p>
           </div>
@@ -391,9 +451,16 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
               }}
             >
               <div className="flex items-start">
-                <AlertCircle size={20} className="mr-2 mt-0.5 flex-shrink-0" style={{ color: theme.colors.error }} />
+                <AlertCircle
+                  size={20}
+                  className="mr-2 mt-0.5 flex-shrink-0"
+                  style={{ color: theme.colors.error }}
+                />
                 <div>
-                  <h3 className="font-semibold mb-1" style={{ color: theme.colors.error }}>
+                  <h3
+                    className="font-semibold mb-1"
+                    style={{ color: theme.colors.error }}
+                  >
                     Setup Failed
                   </h3>
                   <p className="text-sm" style={{ color: theme.colors.text }}>
@@ -438,7 +505,11 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
       className="fixed inset-0 flex items-center justify-center z-50"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && currentStep !== 'generating' && currentStep !== 'testing') {
+        if (
+          e.target === e.currentTarget &&
+          currentStep !== 'generating' &&
+          currentStep !== 'testing'
+        ) {
           onClose();
         }
       }}
@@ -456,8 +527,15 @@ export const SSHSetupWizard: React.FC<SSHSetupWizardProps> = ({
           style={{ borderColor: theme.colors.border }}
         >
           <div className="flex items-center">
-            <Key size={20} className="mr-2" style={{ color: theme.colors.primary }} />
-            <h2 className="text-lg font-semibold" style={{ color: theme.colors.text }}>
+            <Key
+              size={20}
+              className="mr-2"
+              style={{ color: theme.colors.primary }}
+            />
+            <h2
+              className="text-lg font-semibold"
+              style={{ color: theme.colors.text }}
+            >
               SSH Setup Wizard
             </h2>
           </div>

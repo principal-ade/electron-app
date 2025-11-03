@@ -57,7 +57,9 @@ class WindowSwitcher {
       this.switcherWindow &&
       !this.switcherWindow.isDestroyed()
     ) {
-      log.info('[Window Switcher] Already showing, use toggle or hide to dismiss');
+      log.info(
+        '[Window Switcher] Already showing, use toggle or hide to dismiss',
+      );
       return;
     }
 
@@ -135,7 +137,11 @@ class WindowSwitcher {
    * Toggle the window switcher (show if hidden, hide if shown)
    */
   public toggle(): void {
-    if (this.isActive && this.switcherWindow && !this.switcherWindow.isDestroyed()) {
+    if (
+      this.isActive &&
+      this.switcherWindow &&
+      !this.switcherWindow.isDestroyed()
+    ) {
       this.hide();
     } else {
       this.show();
@@ -305,12 +311,10 @@ class WindowSwitcher {
 
     log.info(`[Window Switcher] Loading URL: ${targetUrl}`);
 
-    this.switcherWindow
-      .loadURL(targetUrl)
-      .catch((err) => {
-        log.error('[Window Switcher] Failed to load renderer:', err);
-        log.error('[Window Switcher] Attempted URL:', targetUrl);
-      });
+    this.switcherWindow.loadURL(targetUrl).catch((err) => {
+      log.error('[Window Switcher] Failed to load renderer:', err);
+      log.error('[Window Switcher] Attempted URL:', targetUrl);
+    });
 
     // DevTools disabled for window switcher to prevent focus issues
     // if (process.env.NODE_ENV === 'development') {
@@ -351,10 +355,14 @@ class WindowSwitcher {
       if (
         input.type === 'keyUp' &&
         this.cycleMode &&
-        ((process.platform === 'darwin' && (input.code === 'MetaLeft' || input.code === 'MetaRight')) ||
-          (process.platform !== 'darwin' && (input.code === 'ControlLeft' || input.code === 'ControlRight')))
+        ((process.platform === 'darwin' &&
+          (input.code === 'MetaLeft' || input.code === 'MetaRight')) ||
+          (process.platform !== 'darwin' &&
+            (input.code === 'ControlLeft' || input.code === 'ControlRight')))
       ) {
-        log.info('[Window Switcher] Modifier key released in switcher window, activating selected window');
+        log.info(
+          '[Window Switcher] Modifier key released in switcher window, activating selected window',
+        );
         this.activateSelectedAndHide();
         event.preventDefault();
       }
@@ -450,13 +458,16 @@ export function setupWindowSwitcherHandlers(): void {
     windowSwitcher.resendWindowList();
   });
 
-  ipcMain.on('window-switcher:cycle', (_event, direction: 'next' | 'previous') => {
-    if (direction === 'next') {
-      windowSwitcher.selectNext();
-    } else if (direction === 'previous') {
-      windowSwitcher.selectPrevious();
-    }
-  });
+  ipcMain.on(
+    'window-switcher:cycle',
+    (_event, direction: 'next' | 'previous') => {
+      if (direction === 'next') {
+        windowSwitcher.selectNext();
+      } else if (direction === 'previous') {
+        windowSwitcher.selectPrevious();
+      }
+    },
+  );
 
   log.info('Window switcher IPC handlers registered');
 }

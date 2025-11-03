@@ -27,7 +27,7 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
   const slides = useMemo(() => {
     if (!readmeContent) return [];
     const presentation = parseMarkdownIntoPresentation(readmeContent);
-    return presentation.slides.map(slide => slide.location.content);
+    return presentation.slides.map((slide) => slide.location.content);
   }, [readmeContent]);
 
   const hasSlides = slides.length > 1;
@@ -70,7 +70,7 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
       setError(
         err instanceof Error
           ? err.message
-          : 'Failed to load README from GitHub'
+          : 'Failed to load README from GitHub',
       );
       setReadmeContent(null);
     } finally {
@@ -162,7 +162,13 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
             color={theme.colors.textSecondary}
             className="spin-animation"
           />
-          <p style={{ margin: 0, color: theme.colors.textSecondary, fontFamily: theme.fonts.body }}>
+          <p
+            style={{
+              margin: 0,
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.body,
+            }}
+          >
             Loading README...
           </p>
         </div>
@@ -260,7 +266,15 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
           gap: '12px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            minWidth: 0,
+            flex: 1,
+          }}
+        >
           <FileText size={16} color={theme.colors.text} />
           <span
             style={{

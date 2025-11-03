@@ -78,7 +78,11 @@ export const authenticationAPI: AuthenticationAPI = {
     return ipcRenderer.invoke(AuthEvent.GET_TOKEN_METADATA);
   },
 
-  testRefreshToken: async (): Promise<{ success: boolean; error?: string; newExpiresAt?: number }> => {
+  testRefreshToken: async (): Promise<{
+    success: boolean;
+    error?: string;
+    newExpiresAt?: number;
+  }> => {
     return ipcRenderer.invoke(AuthEvent.TEST_REFRESH_TOKEN);
   },
 

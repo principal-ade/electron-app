@@ -25,7 +25,8 @@ export const WindowSwitcherApp: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const windowsRef = useRef<SwitcherWindow[]>(windows);
-  const electronAPI = typeof window !== 'undefined' ? window.electronAPI : undefined;
+  const electronAPI =
+    typeof window !== 'undefined' ? window.electronAPI : undefined;
 
   useEffect(() => {
     windowsRef.current = windows;
@@ -38,16 +39,20 @@ export const WindowSwitcherApp: React.FC = () => {
 
     const cleanupFns: Array<() => void> = [];
 
-    const unsubscribeList = electronAPI.onWindowListUpdate?.((data: WindowListPayload) => {
-      const nextWindows = data?.windows ?? [];
-      setWindows(nextWindows);
+    const unsubscribeList = electronAPI.onWindowListUpdate?.(
+      (data: WindowListPayload) => {
+        const nextWindows = data?.windows ?? [];
+        setWindows(nextWindows);
 
-      if (typeof data?.selectedIndex === 'number') {
-        setSelectedIndex(normalizeIndex(data.selectedIndex, nextWindows.length));
-      } else if (nextWindows.length === 0) {
-        setSelectedIndex(0);
-      }
-    });
+        if (typeof data?.selectedIndex === 'number') {
+          setSelectedIndex(
+            normalizeIndex(data.selectedIndex, nextWindows.length),
+          );
+        } else if (nextWindows.length === 0) {
+          setSelectedIndex(0);
+        }
+      },
+    );
 
     if (typeof unsubscribeList === 'function') {
       cleanupFns.push(unsubscribeList);
@@ -190,7 +195,9 @@ export const WindowSwitcherApp: React.FC = () => {
         )}
       </div>
       <p className="hint">
-        <strong>⌘'</strong> toggle • <strong>⌘;</strong> cycle (release to activate) • <strong>↑↓</strong> navigate • <strong>Enter</strong> activate • <strong>Esc</strong> close
+        <strong>⌘'</strong> toggle • <strong>⌘;</strong> cycle (release to
+        activate) • <strong>↑↓</strong> navigate • <strong>Enter</strong>{' '}
+        activate • <strong>Esc</strong> close
       </p>
     </div>
   );

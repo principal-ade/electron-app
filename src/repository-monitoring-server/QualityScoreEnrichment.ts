@@ -8,7 +8,10 @@
  * 4. Returns enriched packages with real quality scores
  */
 
-import type { PackageLayer, LensOperation } from '@principal-ai/codebase-composition';
+import type {
+  PackageLayer,
+  LensOperation,
+} from '@principal-ai/codebase-composition';
 import { QualityMetricsCalculator } from '@principal-ai/codebase-composition';
 import type { LensResult, Lens } from '@principal-ai/codebase-quality-lenses';
 import {
@@ -131,7 +134,10 @@ export class QualityScoreEnrichment {
   private createDetectedLensesMap(
     availableLenses: string[],
   ): Map<string, { lensId: string; operations: Set<LensOperation> }> {
-    const map = new Map<string, { lensId: string; operations: Set<LensOperation> }>();
+    const map = new Map<
+      string,
+      { lensId: string; operations: Set<LensOperation> }
+    >();
     for (const lensId of availableLenses) {
       map.set(lensId, {
         lensId,

@@ -36,9 +36,7 @@ export const VisibleProjectsProvider: React.FC<{
   }, []);
 
   const removeVisibleProject = useCallback((fullName: string) => {
-    setVisibleProjects((prev) =>
-      prev.filter((p) => p.fullName !== fullName),
-    );
+    setVisibleProjects((prev) => prev.filter((p) => p.fullName !== fullName));
   }, []);
 
   const toggleVisibleProject = useCallback((project: VisibleProject) => {

@@ -278,7 +278,9 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
   const handleSave = useCallback(async () => {
     // Don't save if diagram has been deleted
     if (isDeletedRef.current) {
-      console.log('[ExcalidrawWrapper] Skipping save - diagram has been deleted');
+      console.log(
+        '[ExcalidrawWrapper] Skipping save - diagram has been deleted',
+      );
       return;
     }
 

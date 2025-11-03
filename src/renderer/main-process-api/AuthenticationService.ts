@@ -87,7 +87,11 @@ export class AuthenticationService {
   /**
    * Test refresh token mechanism by forcing a token refresh
    */
-  static async testRefreshToken(): Promise<{ success: boolean; error?: string; newExpiresAt?: number }> {
+  static async testRefreshToken(): Promise<{
+    success: boolean;
+    error?: string;
+    newExpiresAt?: number;
+  }> {
     return window.mainProcess.authentication.testRefreshToken();
   }
 

@@ -1647,7 +1647,6 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
                             }}
                           >
                             {workflowOutput.map((line, i) => (
-                               
                               <div
                                 key={`${line}-${i}`}
                                 style={{ marginBottom: '2px' }}

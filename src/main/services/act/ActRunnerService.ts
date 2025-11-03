@@ -45,7 +45,6 @@ type WritableWorkflowEvent = Extract<
   { type: 'start' | 'progress' | 'step' | 'error' | 'complete' }
 >;
 
- 
 const ANSI_ESCAPE_REGEX =
   /\u001b\[[0-9;]*[a-zA-Z]|\u001b\][0-9;]*;.*?(?:\u0007|\u001b\\)/g;
 

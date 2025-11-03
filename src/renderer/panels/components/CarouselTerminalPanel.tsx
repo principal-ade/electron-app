@@ -472,7 +472,9 @@ export const CarouselTerminalPanel = forwardRef<
 
       // Find the actual scroll container (snap-carousel-container)
       const findScrollContainer = () => {
-        const scrollContainer = wrapper.querySelector('.snap-carousel-container');
+        const scrollContainer = wrapper.querySelector(
+          '.snap-carousel-container',
+        );
         return scrollContainer as HTMLElement;
       };
 
@@ -487,7 +489,9 @@ export const CarouselTerminalPanel = forwardRef<
           scrollContainer.addEventListener('keydown', handleKeyDown, true);
 
           // Listen for scroll events to restore position during typing
-          scrollContainer.addEventListener('scroll', handleScroll, { capture: true });
+          scrollContainer.addEventListener('scroll', handleScroll, {
+            capture: true,
+          });
         }
       }, 100);
 

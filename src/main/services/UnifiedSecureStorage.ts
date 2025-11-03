@@ -400,7 +400,9 @@ export class UnifiedSecureStorage {
       );
 
       if (decrypted !== testData) {
-        throw new Error('Encryption test failed: decrypted data does not match');
+        throw new Error(
+          'Encryption test failed: decrypted data does not match',
+        );
       }
 
       return { success: true };

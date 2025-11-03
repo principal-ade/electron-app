@@ -101,7 +101,8 @@ class AuthService {
         return result;
       } catch (error) {
         console.error('[AuthService] CHECK ERROR:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, authenticated: false, error: errorMessage };
       }
     });
@@ -119,7 +120,8 @@ class AuthService {
         }
         return { authenticated: false };
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { authenticated: false, error: errorMessage };
       }
     });
@@ -178,8 +180,8 @@ class AuthService {
             console.log('[AuthService] Fetching GitHub user profile...');
             const response = await fetch('https://api.github.com/user', {
               headers: {
-                'Authorization': `Bearer ${result.token}`,
-                'Accept': 'application/vnd.github.v3+json',
+                Authorization: `Bearer ${result.token}`,
+                Accept: 'application/vnd.github.v3+json',
               },
             });
 
@@ -187,20 +189,33 @@ class AuthService {
               const githubUser = await response.json();
               // Use GitHub API as source of truth for all user data
               enrichedUser = {
-                login: githubUser.login,        // GitHub's canonical username
+                login: githubUser.login, // GitHub's canonical username
                 email: githubUser.email || result.user.email,
                 name: githubUser.name || result.user.name,
                 id: githubUser.id,
                 avatarUrl: githubUser.avatar_url,
               };
-              console.log('[AuthService] GitHub user profile fetched successfully:', enrichedUser.login);
+              console.log(
+                '[AuthService] GitHub user profile fetched successfully:',
+                enrichedUser.login,
+              );
             } else {
-              console.warn('[AuthService] Failed to fetch GitHub profile:', response.status);
-              console.warn('[AuthService] Falling back to OAuth server user data');
+              console.warn(
+                '[AuthService] Failed to fetch GitHub profile:',
+                response.status,
+              );
+              console.warn(
+                '[AuthService] Falling back to OAuth server user data',
+              );
             }
           } catch (avatarError) {
-            console.error('[AuthService] Error fetching GitHub profile:', avatarError);
-            console.warn('[AuthService] Falling back to OAuth server user data');
+            console.error(
+              '[AuthService] Error fetching GitHub profile:',
+              avatarError,
+            );
+            console.warn(
+              '[AuthService] Falling back to OAuth server user data',
+            );
           }
 
           // Store the credentials securely with refresh token and expiry
@@ -290,7 +305,8 @@ class AuthService {
         return await this.testRefreshToken();
       } catch (error) {
         console.error('[AuthService] Test refresh token error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return { success: false, error: errorMessage };
       }
     });
@@ -301,7 +317,8 @@ class AuthService {
         return await this.storage.checkKeychainStatus();
       } catch (error) {
         console.error('[AuthService] Check keychain status error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return {
           available: false,
           initialized: false,
@@ -317,7 +334,8 @@ class AuthService {
         return await this.storage.testKeychainAccess();
       } catch (error) {
         console.error('[AuthService] Test keychain access error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
         return {
           success: false,
           error: errorMessage,
@@ -350,7 +368,9 @@ class AuthService {
       }
 
       const { token: githubToken, metadata: githubMetadata } = githubTokenData;
-      const user = githubMetadata?.user as { login: string; email: string; name?: string; id?: number } | undefined;
+      const user = githubMetadata?.user as
+        | { login: string; email: string; name?: string; id?: number }
+        | undefined;
 
       if (!user) {
         console.log('[AuthService] No user data found in token metadata');
@@ -364,8 +384,10 @@ class AuthService {
 
       // Get refresh token and expiry info
       // First try from WorkOS token metadata, fallback to GitHub token metadata (backward compatibility)
-      let refreshToken = (workosTokenData?.metadata?.refreshToken || githubMetadata?.refreshToken) as string | undefined;
-      let expiresAt = (workosTokenData?.metadata?.expiresAt || githubMetadata?.expiresAt) as number | undefined;
+      let refreshToken = (workosTokenData?.metadata?.refreshToken ||
+        githubMetadata?.refreshToken) as string | undefined;
+      let expiresAt = (workosTokenData?.metadata?.expiresAt ||
+        githubMetadata?.expiresAt) as number | undefined;
 
       // Check if WorkOS token is expired or about to expire (within 5 minutes)
       const now = Date.now();
@@ -374,11 +396,16 @@ class AuthService {
       const isExpiringSoon = expiresAt && expiresAt <= now + fiveMinutes;
 
       if ((isExpired || isExpiringSoon) && refreshToken) {
-        console.log('[AuthService] WorkOS token expired or expiring soon, refreshing...', {
-          expiresAt: expiresAt ? new Date(expiresAt).toISOString() : 'unknown',
-          isExpired,
-          isExpiringSoon,
-        });
+        console.log(
+          '[AuthService] WorkOS token expired or expiring soon, refreshing...',
+          {
+            expiresAt: expiresAt
+              ? new Date(expiresAt).toISOString()
+              : 'unknown',
+            isExpired,
+            isExpiringSoon,
+          },
+        );
 
         try {
           // Attempt to refresh the token
@@ -387,22 +414,23 @@ class AuthService {
               process.env.AUTH_SERVER_URL || 'https://principal-ade.com',
           });
 
-          const refreshedAuth = await authClient.refreshAccessToken(
-            refreshToken,
-          );
+          const refreshedAuth =
+            await authClient.refreshAccessToken(refreshToken);
 
           // ✅ CRITICAL: Only update WorkOS token, preserve GitHub token
           console.log('[AuthService] Token refresh response received:', {
             receivedNewGithubToken: !!refreshedAuth.token,
             githubTokenPrefix: refreshedAuth.token?.substring(0, 4),
-            willPreserveExisting: !refreshedAuth.token || !refreshedAuth.token.startsWith('gh'),
+            willPreserveExisting:
+              !refreshedAuth.token || !refreshedAuth.token.startsWith('gh'),
           });
 
           // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
           // refreshedAuth.token may be null/undefined if server doesn't return a new GitHub token
-          const newGithubToken = refreshedAuth.token && refreshedAuth.token.startsWith('gh')
-            ? refreshedAuth.token
-            : githubToken;
+          const newGithubToken =
+            refreshedAuth.token && refreshedAuth.token.startsWith('gh')
+              ? refreshedAuth.token
+              : githubToken;
 
           console.log('[AuthService] Using GitHub token:', {
             tokenPrefix: newGithubToken?.substring(0, 4),
@@ -424,7 +452,9 @@ class AuthService {
             newGithubToken,
           );
 
-          console.log('[AuthService] Token refreshed successfully, GitHub token preserved');
+          console.log(
+            '[AuthService] Token refreshed successfully, GitHub token preserved',
+          );
 
           return {
             success: true,
@@ -468,8 +498,8 @@ class AuthService {
           console.log('[AuthService] Fetching canonical GitHub user data...');
           const response = await fetch('https://api.github.com/user', {
             headers: {
-              'Authorization': `Bearer ${githubToken}`,
-              'Accept': 'application/vnd.github.v3+json',
+              Authorization: `Bearer ${githubToken}`,
+              Accept: 'application/vnd.github.v3+json',
             },
           });
 
@@ -477,23 +507,32 @@ class AuthService {
             const githubUser = await response.json();
             // Use GitHub API as source of truth for all user data
             enrichedUser = {
-              login: githubUser.login,        // GitHub's canonical username
+              login: githubUser.login, // GitHub's canonical username
               email: githubUser.email || user.email,
               name: githubUser.name || user.name,
               id: githubUser.id,
               avatarUrl: githubUser.avatar_url,
             };
-            console.log('[AuthService] GitHub user data fetched and cached successfully:', enrichedUser.login);
+            console.log(
+              '[AuthService] GitHub user data fetched and cached successfully:',
+              enrichedUser.login,
+            );
 
             // Update stored user data with canonical GitHub data
             await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, githubToken, {
               user: enrichedUser,
             });
           } else {
-            console.warn('[AuthService] Failed to fetch GitHub profile:', response.status);
+            console.warn(
+              '[AuthService] Failed to fetch GitHub profile:',
+              response.status,
+            );
           }
         } catch (avatarError) {
-          console.error('[AuthService] Error fetching GitHub profile:', avatarError);
+          console.error(
+            '[AuthService] Error fetching GitHub profile:',
+            avatarError,
+          );
           // Continue with existing user data
         }
       }
@@ -506,7 +545,8 @@ class AuthService {
       };
     } catch (error) {
       console.error('[AuthService] Failed to get stored auth:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
         authenticated: false,
@@ -573,7 +613,8 @@ class AuthService {
         );
       }
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`Failed to save credentials: ${errorMessage}`);
     }
   }
@@ -775,7 +816,7 @@ class AuthService {
       // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
       const newGithubToken = refreshedAuth.token.startsWith('gho_')
         ? refreshedAuth.token
-        : (existingGithubToken || refreshedAuth.token);
+        : existingGithubToken || refreshedAuth.token;
 
       // Store the new tokens
       await this.storeAuth(

@@ -313,16 +313,15 @@ export const GitHubUserSignalsPanel: React.FC = () => {
           }
 
           const existing = collaboratorMap.get(login);
-          const base: CollaboratorSummary =
-            existing ?? {
-              login,
-              avatarUrl,
-              issueCount: 0,
-              pullRequestCount: 0,
-              assignmentCount: 0,
-              totalContributions: 0,
-              lastActivity: activityDate,
-            };
+          const base: CollaboratorSummary = existing ?? {
+            login,
+            avatarUrl,
+            issueCount: 0,
+            pullRequestCount: 0,
+            assignmentCount: 0,
+            totalContributions: 0,
+            lastActivity: activityDate,
+          };
 
           if (activityDate) {
             if (!base.lastActivity) {
@@ -389,8 +388,12 @@ export const GitHubUserSignalsPanel: React.FC = () => {
               return b.totalContributions - a.totalContributions;
             }
 
-            const aTime = a.lastActivity ? new Date(a.lastActivity).getTime() : 0;
-            const bTime = b.lastActivity ? new Date(b.lastActivity).getTime() : 0;
+            const aTime = a.lastActivity
+              ? new Date(a.lastActivity).getTime()
+              : 0;
+            const bTime = b.lastActivity
+              ? new Date(b.lastActivity).getTime()
+              : 0;
             return bTime - aTime;
           },
         );
@@ -402,7 +405,9 @@ export const GitHubUserSignalsPanel: React.FC = () => {
         const mergedPullRequests = pullRequests.filter(
           (pr) => pr.merged_at !== null,
         ).length;
-        const openIssues = issues.filter((issue) => issue.state === 'open').length;
+        const openIssues = issues.filter(
+          (issue) => issue.state === 'open',
+        ).length;
         const userIndex = Math.round(
           uniqueCollaborators * 2 + Math.sqrt(Math.max(starCount, 0)),
         );
@@ -451,7 +456,10 @@ export const GitHubUserSignalsPanel: React.FC = () => {
 
   if (!isAuthenticated) {
     return renderState(
-      <AlertCircle size={32} style={{ color: theme.colors.warning || '#f59e0b' }} />,
+      <AlertCircle
+        size={32}
+        style={{ color: theme.colors.warning || '#f59e0b' }}
+      />,
       'Sign in to see user signals',
       'Connect GitHub so we can estimate repository user engagement from issues and pull requests.',
       <button
@@ -500,7 +508,10 @@ export const GitHubUserSignalsPanel: React.FC = () => {
 
   if (authRequired) {
     return renderState(
-      <AlertCircle size={32} style={{ color: theme.colors.warning || '#f59e0b' }} />,
+      <AlertCircle
+        size={32}
+        style={{ color: theme.colors.warning || '#f59e0b' }}
+      />,
       'Additional authentication required',
       error ??
         'We need additional GitHub permissions to load engagement data for this repository.',
@@ -509,7 +520,11 @@ export const GitHubUserSignalsPanel: React.FC = () => {
 
   if (isLoading) {
     return renderState(
-      <Loader2 size={32} className="spin-animation" style={{ color: theme.colors.textSecondary }} />,
+      <Loader2
+        size={32}
+        className="spin-animation"
+        style={{ color: theme.colors.textSecondary }}
+      />,
       'Analyzing GitHub activity…',
       'Collecting recent issues, pull requests, and stars to estimate user engagement.',
     );
@@ -517,7 +532,10 @@ export const GitHubUserSignalsPanel: React.FC = () => {
 
   if (error) {
     return renderState(
-      <AlertCircle size={32} style={{ color: theme.colors.error || '#ef4444' }} />,
+      <AlertCircle
+        size={32}
+        style={{ color: theme.colors.error || '#ef4444' }}
+      />,
       'Unable to load user signals',
       error,
     );
@@ -564,7 +582,10 @@ export const GitHubUserSignalsPanel: React.FC = () => {
                     fontSize: '13px',
                   }}
                 >
-                  Updated {formatRelativeTime(new Date(metrics.lastUpdated).toISOString())}
+                  Updated{' '}
+                  {formatRelativeTime(
+                    new Date(metrics.lastUpdated).toISOString(),
+                  )}
                 </p>
               )}
             </div>
@@ -579,9 +600,7 @@ export const GitHubUserSignalsPanel: React.FC = () => {
             }}
           >
             <Sparkles size={16} />
-            <span>
-              User Index = (Unique collaborators × 2) + √Stars
-            </span>
+            <span>User Index = (Unique collaborators × 2) + √Stars</span>
           </div>
         </div>
 
@@ -600,14 +619,21 @@ export const GitHubUserSignalsPanel: React.FC = () => {
               theme={theme}
             />
             <MetricCard
-              icon={<Users size={18} color={theme.colors.accent || theme.colors.text} />}
+              icon={
+                <Users
+                  size={18}
+                  color={theme.colors.accent || theme.colors.text}
+                />
+              }
               label="Unique collaborators"
               value={metrics.uniqueCollaborators.toLocaleString()}
               theme={theme}
               helper={`${metrics.openIssues} open issues`}
             />
             <MetricCard
-              icon={<Star size={18} color={theme.colors.warning || '#f59e0b'} />}
+              icon={
+                <Star size={18} color={theme.colors.warning || '#f59e0b'} />
+              }
               label="Stargazers"
               value={metrics.starCount.toLocaleString()}
               theme={theme}
@@ -651,11 +677,14 @@ export const GitHubUserSignalsPanel: React.FC = () => {
           >
             <GitPullRequest size={24} />
             <div>
-              <p style={{ margin: 0, fontWeight: 600, color: theme.colors.text }}>
+              <p
+                style={{ margin: 0, fontWeight: 600, color: theme.colors.text }}
+              >
                 No recent collaborator activity
               </p>
               <p style={{ margin: 0 }}>
-                Create an issue or pull request to start building your user index.
+                Create an issue or pull request to start building your user
+                index.
               </p>
             </div>
           </div>
@@ -795,7 +824,11 @@ const CollaboratorRow: React.FC<CollaboratorRowProps> = ({
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <span
-            style={{ fontWeight: 600, color: theme.colors.text, fontSize: '15px' }}
+            style={{
+              fontWeight: 600,
+              color: theme.colors.text,
+              fontSize: '15px',
+            }}
           >
             {collaborator.login}
           </span>
@@ -852,4 +885,3 @@ const CollaboratorRow: React.FC<CollaboratorRowProps> = ({
     </div>
   );
 };
-

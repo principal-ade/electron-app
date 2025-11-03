@@ -51,7 +51,6 @@ function normalizeGitUrl(url: string): string {
   return url;
 }
 
-
 export function registerGitHandlers(): void {
   // Get repository info for a path
   ipcMain.handle(
@@ -212,7 +211,8 @@ export function registerGitHandlers(): void {
         let cloneEnv: NodeJS.ProcessEnv = { ...baseEnv };
 
         if (!isSSH) {
-          const githubAuth = await createGitHubTokenAuthEnvForUrl(normalizedUrl);
+          const githubAuth =
+            await createGitHubTokenAuthEnvForUrl(normalizedUrl);
 
           if (githubAuth) {
             console.info(

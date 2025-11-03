@@ -123,21 +123,35 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     { id: 'feed', icon: <GitBranch size={20} />, label: 'Projects' },
     // Only include repository button if user has enabled it in preferences
     ...(showReposButton
-      ? [{ id: 'repository' as NavigationView, icon: <Github size={20} />, label: 'Repos' }]
+      ? [
+          {
+            id: 'repository' as NavigationView,
+            icon: <Github size={20} />,
+            label: 'Repos',
+          },
+        ]
       : []),
     { id: 'terminal', icon: <Terminal size={20} />, label: 'Term' },
     // Only include search button if user has enabled it in preferences
     ...(showSearchButton
-      ? [{ id: 'search' as NavigationView, icon: <Search size={20} />, label: 'Search' }]
+      ? [
+          {
+            id: 'search' as NavigationView,
+            icon: <Search size={20} />,
+            label: 'Search',
+          },
+        ]
       : []),
     // Only include monitoring button if user has enabled it in preferences
     ...(showMonitorButton
-      ? [{
-          id: 'monitoring' as NavigationView,
-          icon: <Activity size={20} />,
-          label: 'Monitor',
-          position: 'bottom' as const,
-        }]
+      ? [
+          {
+            id: 'monitoring' as NavigationView,
+            icon: <Activity size={20} />,
+            label: 'Monitor',
+            position: 'bottom' as const,
+          },
+        ]
       : []),
     {
       id: 'settings',

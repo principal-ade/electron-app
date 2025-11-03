@@ -229,7 +229,9 @@ export const InteractiveDemo: Story = {
 
     const handlePrevious = () => {
       storybookElectronAPI?.cycleSelection('previous');
-      setSelectedIndex((prev) => (prev - 1 + mockWindows.length) % mockWindows.length);
+      setSelectedIndex(
+        (prev) => (prev - 1 + mockWindows.length) % mockWindows.length,
+      );
     };
 
     return (
@@ -324,9 +326,28 @@ export const InteractiveDemo: Story = {
         >
           <strong style={{ color: '#fff' }}>Testing Instructions:</strong>
           <div style={{ marginTop: '8px' }}>
-            Press <kbd style={{ padding: '2px 6px', background: '#555', borderRadius: '3px' }}>;</kbd> to cycle forward or{' '}
-            <kbd style={{ padding: '2px 6px', background: '#555', borderRadius: '3px' }}>Shift+;</kbd> to cycle backward.
-            Click any window card to select it. Use the buttons above to simulate keyboard shortcuts.
+            Press{' '}
+            <kbd
+              style={{
+                padding: '2px 6px',
+                background: '#555',
+                borderRadius: '3px',
+              }}
+            >
+              ;
+            </kbd>{' '}
+            to cycle forward or{' '}
+            <kbd
+              style={{
+                padding: '2px 6px',
+                background: '#555',
+                borderRadius: '3px',
+              }}
+            >
+              Shift+;
+            </kbd>{' '}
+            to cycle backward. Click any window card to select it. Use the
+            buttons above to simulate keyboard shortcuts.
           </div>
         </div>
 

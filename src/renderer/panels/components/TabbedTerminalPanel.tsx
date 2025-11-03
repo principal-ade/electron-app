@@ -714,7 +714,9 @@ export const TabbedTerminalPanel = forwardRef<
                       ? theme.colors.primary
                       : 'transparent',
                     cursor: 'pointer',
-                    color: showAllTerminals ? '#fff' : theme.colors.textSecondary,
+                    color: showAllTerminals
+                      ? '#fff'
+                      : theme.colors.textSecondary,
                   }}
                   onMouseEnter={(e) => {
                     if (!showAllTerminals) {

@@ -45,9 +45,7 @@ export const KeychainPermissionModal: React.FC<
   const { theme } = useTheme();
   const [status, setStatus] = useState<KeychainStatus | null>(null);
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<KeychainTestResult | null>(
-    null,
-  );
+  const [testResult, setTestResult] = useState<KeychainTestResult | null>(null);
 
   // Check keychain status when modal opens
   useEffect(() => {
@@ -158,9 +156,7 @@ export const KeychainPermissionModal: React.FC<
 
     if (errorType === 'timeout' || errorType === 'not_available') {
       steps.push('Unlock your system keychain if it is locked');
-      steps.push(
-        'Open "Keychain Access" app from Applications → Utilities',
-      );
+      steps.push('Open "Keychain Access" app from Applications → Utilities');
       steps.push('Ensure the "login" keychain is unlocked');
     }
 

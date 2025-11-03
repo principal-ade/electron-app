@@ -57,7 +57,11 @@ export const DrawingsListPanel: React.FC<DrawingsListPanelProps> = ({
 
   // Listen to diagram events to refresh the list
   useEffect(() => {
-    const handleDiagramCreated = (event: { id: string; name: string; projectPath?: string }) => {
+    const handleDiagramCreated = (event: {
+      id: string;
+      name: string;
+      projectPath?: string;
+    }) => {
       void loadDrawings();
       // Select the newly created diagram
       setSelectedDrawingId(event.id);

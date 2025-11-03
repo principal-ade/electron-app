@@ -230,7 +230,7 @@ export const MarkdownRenderingPanel: React.FC<MarkdownRenderingPanelProps> = ({
 
   // Parse markdown into structured presentation using themed-markdown utility
   const presentation = parseMarkdownIntoPresentation(docContent);
-  const slides = presentation.slides.map(slide => slide.location.content);
+  const slides = presentation.slides.map((slide) => slide.location.content);
   const hasSlides = slides.length > 1;
   const fileName = filePath.split('/').pop() || filePath;
 

@@ -141,18 +141,28 @@ export class GitHubAdapter {
 
         // Log specific status codes that indicate token issues
         if (response.status === 401) {
-          console.error('[GitHub] makeGitHubAPICall: Authentication failed (401) - token may be expired or invalid');
+          console.error(
+            '[GitHub] makeGitHubAPICall: Authentication failed (401) - token may be expired or invalid',
+          );
         } else if (response.status === 403) {
-          console.error('[GitHub] makeGitHubAPICall: Forbidden (403) - token may lack required permissions');
+          console.error(
+            '[GitHub] makeGitHubAPICall: Forbidden (403) - token may lack required permissions',
+          );
         } else {
-          console.error('[GitHub] makeGitHubAPICall: Request failed', errorDetail);
+          console.error(
+            '[GitHub] makeGitHubAPICall: Request failed',
+            errorDetail,
+          );
         }
 
         return errorDetail;
       }
 
       const data = await response.json();
-      console.log('[GitHub] makeGitHubAPICall: Request successful for endpoint:', endpoint);
+      console.log(
+        '[GitHub] makeGitHubAPICall: Request successful for endpoint:',
+        endpoint,
+      );
       return {
         success: true,
         data,
@@ -1258,9 +1268,7 @@ export class GitHubAdapter {
     if (options?.page) params.push(`page=${options.page}`);
 
     const endpoint =
-      params.length > 0
-        ? `/user/starred?${params.join('&')}`
-        : '/user/starred';
+      params.length > 0 ? `/user/starred?${params.join('&')}` : '/user/starred';
 
     const apiResult = await this.makeGitHubAPICall(endpoint);
     if (apiResult.success && apiResult.data) {
@@ -1500,7 +1508,9 @@ export class GitHubAdapter {
     try {
       const result = await this.executeCommand(['gh', 'api', '/user']);
       if (result.success && result.stdout) {
-        console.log('[GitHub] getCurrentUser: Successfully fetched user via CLI');
+        console.log(
+          '[GitHub] getCurrentUser: Successfully fetched user via CLI',
+        );
         return JSON.parse(result.stdout);
       }
       console.warn('[GitHub] getCurrentUser: CLI fallback failed');
@@ -1535,16 +1545,24 @@ export class GitHubAdapter {
     });
 
     if (apiResult.success && apiResult.data) {
-      console.log('[GitHub] Successfully fetched SSH keys, count:', apiResult.data.length);
+      console.log(
+        '[GitHub] Successfully fetched SSH keys, count:',
+        apiResult.data.length,
+      );
       return { success: true, data: apiResult.data };
     }
 
     // Check if it's a permission error (403 or scope issue)
     if (apiResult.status === 403 || apiResult.status === 401) {
-      console.warn('[GitHub] Insufficient permissions to read SSH keys (status: ' + apiResult.status + '). Requires read:public_key scope.');
+      console.warn(
+        '[GitHub] Insufficient permissions to read SSH keys (status: ' +
+          apiResult.status +
+          '). Requires read:public_key scope.',
+      );
       return {
         success: false,
-        error: 'Insufficient permissions. The GitHub token needs "read:public_key" or "admin:public_key" scope to view SSH keys.',
+        error:
+          'Insufficient permissions. The GitHub token needs "read:public_key" or "admin:public_key" scope to view SSH keys.',
         needsPermission: true,
       };
     }
@@ -1555,7 +1573,10 @@ export class GitHubAdapter {
       const result = await this.executeCommand(['gh', 'api', '/user/keys']);
       if (result.success && result.stdout) {
         const keys = JSON.parse(result.stdout);
-        console.log('[GitHub] Successfully fetched SSH keys via CLI, count:', keys.length);
+        console.log(
+          '[GitHub] Successfully fetched SSH keys via CLI, count:',
+          keys.length,
+        );
         return { success: true, data: keys };
       }
       console.log('[GitHub] CLI command failed:', result.stderr);
@@ -1563,7 +1584,12 @@ export class GitHubAdapter {
       console.error('[GitHub] Error getting SSH keys via CLI:', error);
     }
 
-    console.error('[GitHub] All methods failed to fetch SSH keys. API status:', apiResult.status, 'API error:', apiResult.error);
+    console.error(
+      '[GitHub] All methods failed to fetch SSH keys. API status:',
+      apiResult.status,
+      'API error:',
+      apiResult.error,
+    );
     return {
       success: false,
       error: apiResult.error || 'Failed to fetch SSH keys',
@@ -1602,7 +1628,9 @@ export class GitHubAdapter {
       });
 
       if (!user) {
-        console.warn('[GitHub] getTokenInfo: getCurrentUser returned null - token may be expired or invalid');
+        console.warn(
+          '[GitHub] getTokenInfo: getCurrentUser returned null - token may be expired or invalid',
+        );
         return null;
       }
 
@@ -1613,7 +1641,10 @@ export class GitHubAdapter {
         reset: new Date(),
       };
 
-      console.log('[GitHub] getTokenInfo: Successfully fetched token info for user:', user.login);
+      console.log(
+        '[GitHub] getTokenInfo: Successfully fetched token info for user:',
+        user.login,
+      );
       return {
         scopes,
         organizations,
@@ -2046,7 +2077,10 @@ export class GitHubAdapter {
               );
               resolve(commits);
             } catch (error) {
-              console.error('[GitHub] Failed to parse commits response:', error);
+              console.error(
+                '[GitHub] Failed to parse commits response:',
+                error,
+              );
               resolve([]);
             }
           } else if (res.statusCode === 404) {
@@ -2079,7 +2113,9 @@ export class GitHubAdapter {
    * Get followers for a user (defaults to authenticated user)
    */
   async getUserFollowers(username?: string): Promise<any[]> {
-    const endpoint = username ? `/users/${username}/followers` : '/user/followers';
+    const endpoint = username
+      ? `/users/${username}/followers`
+      : '/user/followers';
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {
@@ -2103,7 +2139,9 @@ export class GitHubAdapter {
    * Get users that a user is following (defaults to authenticated user)
    */
   async getUserFollowing(username?: string): Promise<any[]> {
-    const endpoint = username ? `/users/${username}/following` : '/user/following';
+    const endpoint = username
+      ? `/users/${username}/following`
+      : '/user/following';
     const apiResult = await this.makeGitHubAPICall(endpoint);
 
     if (apiResult.success && apiResult.data) {

@@ -151,11 +151,16 @@ export class GitSyncService {
    * Subscribe to connection-added events from main process
    * @returns Unsubscribe function
    */
-  static onConnectionAdded(callback: (connectionId: string) => void): () => void {
+  static onConnectionAdded(
+    callback: (connectionId: string) => void,
+  ): () => void {
     try {
       return window.mainProcess.gitSync.onConnectionAdded(callback);
     } catch (error) {
-      console.error('[GitSyncService] Failed to subscribe to connection-added:', error);
+      console.error(
+        '[GitSyncService] Failed to subscribe to connection-added:',
+        error,
+      );
       return () => {};
     }
   }
@@ -164,11 +169,16 @@ export class GitSyncService {
    * Subscribe to connection-removed events from main process
    * @returns Unsubscribe function
    */
-  static onConnectionRemoved(callback: (connectionId: string) => void): () => void {
+  static onConnectionRemoved(
+    callback: (connectionId: string) => void,
+  ): () => void {
     try {
       return window.mainProcess.gitSync.onConnectionRemoved(callback);
     } catch (error) {
-      console.error('[GitSyncService] Failed to subscribe to connection-removed:', error);
+      console.error(
+        '[GitSyncService] Failed to subscribe to connection-removed:',
+        error,
+      );
       return () => {};
     }
   }
@@ -177,11 +187,16 @@ export class GitSyncService {
    * Subscribe to connection-status-changed events from main process
    * @returns Unsubscribe function
    */
-  static onConnectionStatusChanged(callback: (connectionId: string) => void): () => void {
+  static onConnectionStatusChanged(
+    callback: (connectionId: string) => void,
+  ): () => void {
     try {
       return window.mainProcess.gitSync.onConnectionStatusChanged(callback);
     } catch (error) {
-      console.error('[GitSyncService] Failed to subscribe to connection-status-changed:', error);
+      console.error(
+        '[GitSyncService] Failed to subscribe to connection-status-changed:',
+        error,
+      );
       return () => {};
     }
   }

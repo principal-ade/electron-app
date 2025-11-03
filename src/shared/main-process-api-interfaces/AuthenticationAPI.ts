@@ -80,7 +80,11 @@ export interface AuthenticationAPI {
 
   // Token metadata and refresh testing
   getTokenMetadata(): Promise<TokenMetadata>;
-  testRefreshToken(): Promise<{ success: boolean; error?: string; newExpiresAt?: number }>;
+  testRefreshToken(): Promise<{
+    success: boolean;
+    error?: string;
+    newExpiresAt?: number;
+  }>;
 
   // Generic token operations
   saveToken(

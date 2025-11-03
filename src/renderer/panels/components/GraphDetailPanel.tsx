@@ -103,7 +103,14 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
             }}
           >
             <Network size={16} color={theme.colors.text} />
-            <h3 style={{ fontSize: `${theme.fontSizes[1]}px`, fontWeight: theme.fontWeights.semibold, fontFamily: theme.fonts.body, margin: 0 }}>
+            <h3
+              style={{
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                fontFamily: theme.fonts.body,
+                margin: 0,
+              }}
+            >
               Graph
             </h3>
           </div>
@@ -210,7 +217,14 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
           }}
         >
           <Network size={16} color={theme.colors.text} />
-          <h3 style={{ fontSize: `${theme.fontSizes[1]}px`, fontWeight: theme.fontWeights.semibold, fontFamily: theme.fonts.body, margin: 0 }}>
+          <h3
+            style={{
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: theme.fontWeights.semibold,
+              fontFamily: theme.fonts.body,
+              margin: 0,
+            }}
+          >
             {graph.name}
           </h3>
         </div>

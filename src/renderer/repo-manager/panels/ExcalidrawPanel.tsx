@@ -47,7 +47,9 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
   const lastCreateNewTriggerRef = useRef<number | undefined>(undefined);
   const [newDiagramName, setNewDiagramName] = useState<string>('New Diagram');
   // Track the actual diagram name from metadata
-  const [loadedDiagramName, setLoadedDiagramName] = useState<string | null>(null);
+  const [loadedDiagramName, setLoadedDiagramName] = useState<string | null>(
+    null,
+  );
   // Counter to force remount when creating multiple new diagrams
   const [newDiagramKey, setNewDiagramKey] = useState(0);
   // Name editing state for existing diagrams
@@ -142,9 +144,10 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
           setError(null);
 
           // Extract the diagram name from metadata, fallback to filename
-          const diagramName = data.appState?.name ||
-                             filePath.split('/').pop()?.replace('.excalidraw', '') ||
-                             'Untitled Diagram';
+          const diagramName =
+            data.appState?.name ||
+            filePath.split('/').pop()?.replace('.excalidraw', '') ||
+            'Untitled Diagram';
           setLoadedDiagramName(diagramName);
         } else {
           throw new Error('Failed to load diagram');
@@ -169,7 +172,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
   const handleCreateNew = () => {
     setIsCreatingNew(true);
     setNewDiagramName('New Diagram'); // Reset name when creating new
-    setNewDiagramKey(prev => prev + 1); // Increment key to force remount
+    setNewDiagramKey((prev) => prev + 1); // Increment key to force remount
   };
 
   const handleCloseNewDrawing = () => {
@@ -196,7 +199,8 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
   };
 
   const handleSaveLoadedName = async () => {
-    const newName = editingLoadedName.trim() || loadedDiagramName || 'Untitled Diagram';
+    const newName =
+      editingLoadedName.trim() || loadedDiagramName || 'Untitled Diagram';
     setLoadedDiagramName(newName);
     setIsEditingLoadedName(false);
 
@@ -234,7 +238,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
 
       if (createNewTrigger > 0) {
         setIsCreatingNew(true);
-        setNewDiagramKey(prev => prev + 1); // Increment key to force remount
+        setNewDiagramKey((prev) => prev + 1); // Increment key to force remount
       }
     }
   }, [createNewTrigger]);
@@ -272,7 +276,9 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <Pencil size={16} color={theme.colors.primary} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}
+            >
               <span
                 style={{
                   fontSize: '13px',
@@ -437,7 +443,8 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
                   transition: 'background 0.2s',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = theme.colors.backgroundSecondary;
+                  e.currentTarget.style.background =
+                    theme.colors.backgroundSecondary;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'transparent';

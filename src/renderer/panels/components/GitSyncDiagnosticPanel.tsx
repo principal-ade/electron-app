@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Activity, CheckCircle, XCircle, Users, Wifi, Server, PlayCircle } from 'lucide-react';
+import {
+  Activity,
+  CheckCircle,
+  XCircle,
+  Users,
+  Wifi,
+  Server,
+  PlayCircle,
+} from 'lucide-react';
 import { GitSyncService } from '../../main-process-api/GitSyncService';
 import { AuthenticationService } from '../../main-process-api/AuthenticationService';
 import { gitSyncConnectionManager } from '../../services/git-sync/GitSyncConnectionManager';
@@ -47,9 +55,24 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
   const [events, setEvents] = useState<EventLogEntry[]>([]);
   const [testing, setTesting] = useState(false);
   const [services, setServices] = useState<ServiceStatus[]>([
-    { name: 'Landing Page (Auth)', available: false, checking: false, url: 'http://localhost:3000' },
-    { name: 'Traffic Controller', available: false, checking: false, url: 'http://localhost:3001' },
-    { name: 'GitHub API', available: false, checking: false, url: 'https://api.github.com' },
+    {
+      name: 'Landing Page (Auth)',
+      available: false,
+      checking: false,
+      url: 'http://localhost:3000',
+    },
+    {
+      name: 'Traffic Controller',
+      available: false,
+      checking: false,
+      url: 'http://localhost:3001',
+    },
+    {
+      name: 'GitHub API',
+      available: false,
+      checking: false,
+      url: 'https://api.github.com',
+    },
   ]);
   const [checkingServices, setCheckingServices] = useState(false);
   const [selectedRepoPath, setSelectedRepoPath] = useState<string>('');
@@ -86,7 +109,7 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
       // Check if we have any active connections
       const connections = await gitSyncConnectionManager.getActiveConnections();
       const hasActiveConnection = Array.from(connections.values()).some(
-        (conn) => conn.status.connected
+        (conn) => conn.status.connected,
       );
 
       setConnectionStatus({
@@ -150,7 +173,9 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
   }, [addEvent]);
 
   // Check service availability
-  const checkServiceAvailability = async (service: ServiceStatus): Promise<boolean> => {
+  const checkServiceAvailability = async (
+    service: ServiceStatus,
+  ): Promise<boolean> => {
     try {
       if (!service.url) return false;
 
@@ -158,7 +183,7 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
       if (service.name === 'GitHub API') {
         const response = await fetch('https://api.github.com/zen', {
           method: 'GET',
-          headers: { 'Accept': 'application/json' },
+          headers: { Accept: 'application/json' },
         });
         return response.ok;
       }
@@ -184,7 +209,8 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
           return false; // Timeout
         }
         // Network error but server might be running
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         return errorMessage.includes('Failed to fetch') ? true : false;
       }
     } catch (error) {
@@ -207,7 +233,7 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
           addEvent(`${service.name}: Unavailable`, '🔴');
         }
         return { ...service, available, checking: false };
-      })
+      }),
     );
 
     setServices(updatedServices);
@@ -222,7 +248,9 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
     }
 
     setTestingRepoConnection(true);
-    const repoData = repositories.find((r) => r.repository.path === selectedRepoPath);
+    const repoData = repositories.find(
+      (r) => r.repository.path === selectedRepoPath,
+    );
 
     if (!repoData) {
       addEvent('Repository not found', '❌');
@@ -249,7 +277,7 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
         {
           owner,
           name,
-        }
+        },
       );
 
       if (client) {
@@ -264,7 +292,8 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to test repository connection:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       addEvent(`Connection failed: ${errorMessage}`, '❌');
     } finally {
       setTestingRepoConnection(false);
@@ -318,7 +347,10 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
       checkConnection();
     };
 
-    const handleAuthChanged = (authenticated: boolean, user?: { githubHandle: string }) => {
+    const handleAuthChanged = (
+      authenticated: boolean,
+      user?: { githubHandle: string },
+    ) => {
       if (authenticated && user) {
         addEvent(`Auth changed: ${user.githubHandle}`, '🔐');
       } else {
@@ -331,17 +363,20 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
     gitSyncConnectionManager.on('connection-removed', handleConnectionRemoved);
     gitSyncConnectionManager.on(
       'connection-status-changed',
-      handleConnectionStatusChanged
+      handleConnectionStatusChanged,
     );
     gitSyncConnectionManager.on('auth-changed', handleAuthChanged);
 
     // Cleanup
     return () => {
       gitSyncConnectionManager.off('connection-added', handleConnectionAdded);
-      gitSyncConnectionManager.off('connection-removed', handleConnectionRemoved);
+      gitSyncConnectionManager.off(
+        'connection-removed',
+        handleConnectionRemoved,
+      );
       gitSyncConnectionManager.off(
         'connection-status-changed',
-        handleConnectionStatusChanged
+        handleConnectionStatusChanged,
       );
       gitSyncConnectionManager.off('auth-changed', handleAuthChanged);
     };
@@ -413,7 +448,14 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
           <Server size={14} />
           Services
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            marginBottom: '12px',
+          }}
+        >
           {services.map((service, index) => (
             <div
               key={index}
@@ -434,7 +476,9 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
               >
                 {service.name}
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
                 {service.checking ? (
                   <span
                     style={{
@@ -735,7 +779,11 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
         {/* Test Button */}
         <button
           onClick={testRepositoryConnection}
-          disabled={testingRepoConnection || !selectedRepoPath || repositories.length === 0}
+          disabled={
+            testingRepoConnection ||
+            !selectedRepoPath ||
+            repositories.length === 0
+          }
           style={{
             width: '100%',
             padding: '8px 12px',
@@ -745,11 +793,17 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
             border: 'none',
             borderRadius: '4px',
             cursor:
-              testingRepoConnection || !selectedRepoPath || repositories.length === 0
+              testingRepoConnection ||
+              !selectedRepoPath ||
+              repositories.length === 0
                 ? 'not-allowed'
                 : 'pointer',
             opacity:
-              testingRepoConnection || !selectedRepoPath || repositories.length === 0 ? 0.5 : 1,
+              testingRepoConnection ||
+              !selectedRepoPath ||
+              repositories.length === 0
+                ? 0.5
+                : 1,
             fontWeight: 500,
             display: 'flex',
             alignItems: 'center',

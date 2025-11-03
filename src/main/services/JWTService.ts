@@ -254,8 +254,9 @@ export class JWTService {
       ) => {
         try {
           // Validate GitHub token and get user info
-          const { user, repositories } =
-            await this.validateGitHubToken(params.githubToken);
+          const { user, repositories } = await this.validateGitHubToken(
+            params.githubToken,
+          );
 
           console.log(
             `[JWTService] Checking access for repository: ${params.repoId}`,

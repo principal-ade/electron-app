@@ -27,7 +27,10 @@ import { GitHubReadmePanel } from '../../../panels/components/GitHubReadmePanel'
 import { GitHubUserSignalsPanel } from '../../../panels/components/GitHubUserSignalsPanel';
 import { GitSyncDiagnosticPanel } from '../../../panels/components/GitSyncDiagnosticPanel';
 import { LocalProjectsPanel } from '../../../panels/components/LocalProjectsPanel';
-import { SelectedRepositoryProvider, useSelectedRepository } from '../../../contexts/SelectedRepositoryContext';
+import {
+  SelectedRepositoryProvider,
+  useSelectedRepository,
+} from '../../../contexts/SelectedRepositoryContext';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
 const FeedViewInner: React.FC = () => {
@@ -75,9 +78,15 @@ const FeedViewInner: React.FC = () => {
       }
     };
 
-    window.addEventListener('user-preferences-updated', handlePreferencesUpdated as EventListener);
+    window.addEventListener(
+      'user-preferences-updated',
+      handlePreferencesUpdated as EventListener,
+    );
     return () => {
-      window.removeEventListener('user-preferences-updated', handlePreferencesUpdated as EventListener);
+      window.removeEventListener(
+        'user-preferences-updated',
+        handlePreferencesUpdated as EventListener,
+      );
     };
   }, []);
 
@@ -172,38 +181,62 @@ const FeedViewInner: React.FC = () => {
     }
 
     return basePanels;
-  }, [graphs, loading, selectedGraphId, selectedGraph, selectedTopLevelNodes, selectedRepository, showGitSyncPanel]);
+  }, [
+    graphs,
+    loading,
+    selectedGraphId,
+    selectedGraph,
+    selectedTopLevelNodes,
+    selectedRepository,
+    showGitSyncPanel,
+  ]);
 
   // Memoize layout based on git sync panel visibility
-  const layout = useMemo(() => ({
-    left: {
-      type: 'tabs' as const,
-      panels: ['local-projects', 'github-projects', 'github-starred', 'github-social', 'graphs-list'],
-      config: {
-        defaultActiveTab: 0,
-        tabPosition: 'top' as const,
+  const layout = useMemo(
+    () => ({
+      left: {
+        type: 'tabs' as const,
+        panels: [
+          'local-projects',
+          'github-projects',
+          'github-starred',
+          'github-social',
+          'graphs-list',
+        ],
+        config: {
+          defaultActiveTab: 0,
+          tabPosition: 'top' as const,
+        },
       },
-    },
-    middle: {
-      type: 'tabs' as const,
-      panels: ['recent-commits', 'readme-viewer', 'github-user-signals'],
-      config: {
-        defaultActiveTab: 1,
-        tabPosition: 'top' as const,
+      middle: {
+        type: 'tabs' as const,
+        panels: ['recent-commits', 'readme-viewer', 'github-user-signals'],
+        config: {
+          defaultActiveTab: 1,
+          tabPosition: 'top' as const,
+        },
       },
-    },
-    right: {
-      type: 'tabs' as const,
-      panels: showGitSyncPanel ? ['git-sync-diagnostic'] : [],
-      config: {
-        defaultActiveTab: 0,
-        tabPosition: 'top' as const,
+      right: {
+        type: 'tabs' as const,
+        panels: showGitSyncPanel ? ['git-sync-diagnostic'] : [],
+        config: {
+          defaultActiveTab: 0,
+          tabPosition: 'top' as const,
+        },
       },
-    },
-  }), [showGitSyncPanel]);
+    }),
+    [showGitSyncPanel],
+  );
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
       {/* Header */}
       <div
         style={{

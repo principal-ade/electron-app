@@ -37,10 +37,7 @@ export class SSHSetupService {
       if (response.success && response.keyInfo) {
         return response.keyInfo;
       }
-      console.error(
-        '[SSHSetupService] Key generation failed:',
-        response.error,
-      );
+      console.error('[SSHSetupService] Key generation failed:', response.error);
       return null;
     } catch (error) {
       console.error('[SSHSetupService] Failed to generate SSH key:', error);

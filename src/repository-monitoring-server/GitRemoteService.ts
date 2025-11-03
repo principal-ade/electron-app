@@ -294,10 +294,11 @@ export class GitRemoteService {
   private static async testGitAccess(
     url: string,
   ): Promise<{ available: boolean; reason: string }> {
-    const isGitHubHttps = url.startsWith('https://') && url.includes('github.com');
-    let credentialHelper:
-      | Awaited<ReturnType<typeof createGitHubTokenAuthEnvForUrl>>
-      | null = null;
+    const isGitHubHttps =
+      url.startsWith('https://') && url.includes('github.com');
+    let credentialHelper: Awaited<
+      ReturnType<typeof createGitHubTokenAuthEnvForUrl>
+    > | null = null;
     try {
       // Use a temporary directory for the test (no actual clone)
       const os = require('os');
@@ -382,8 +383,7 @@ export class GitRemoteService {
         available: false,
         reason: `Connection failed: ${errorMsg.substring(0, 100)}`,
       };
-    }
-    finally {
+    } finally {
       if (credentialHelper) {
         await credentialHelper.cleanup();
       }
@@ -408,10 +408,8 @@ export class GitRemoteService {
         stdio: 'pipe',
         env: {
           ...process.env,
-          GIT_TERMINAL_PROMPT:
-            extraEnv.GIT_TERMINAL_PROMPT ?? '0', // Don't prompt for credentials
-          GIT_ASKPASS:
-            extraEnv.GIT_ASKPASS ?? '/bin/echo', // Prevent password prompts
+          GIT_TERMINAL_PROMPT: extraEnv.GIT_TERMINAL_PROMPT ?? '0', // Don't prompt for credentials
+          GIT_ASKPASS: extraEnv.GIT_ASKPASS ?? '/bin/echo', // Prevent password prompts
           GCM_INTERACTIVE: extraEnv.GCM_INTERACTIVE ?? 'never',
           ...extraEnv,
         },

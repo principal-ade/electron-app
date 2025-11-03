@@ -1,9 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import {
   AlertCircle,
@@ -31,9 +26,9 @@ export const GitHubProjectsPanel: React.FC = () => {
     login,
     loginError,
   } = useAuthState();
-  const [ownedRepositories, setOwnedRepositories] = useState<GitHubRepository[]>(
-    [],
-  );
+  const [ownedRepositories, setOwnedRepositories] = useState<
+    GitHubRepository[]
+  >([]);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
@@ -204,7 +199,7 @@ export const GitHubProjectsPanel: React.FC = () => {
       .map(([org, repos]) => ({
         organization: org,
         repositories: repos.sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+          a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
         ),
       }));
   }, [ownedRepositories, normalizedFilter]);
@@ -246,7 +241,9 @@ export const GitHubProjectsPanel: React.FC = () => {
       .map(([org, repos]) => ({
         organization: org,
         repositories: repos.sort((a, b) =>
-          a.repository.name.localeCompare(b.repository.name, undefined, { sensitivity: 'base' })
+          a.repository.name.localeCompare(b.repository.name, undefined, {
+            sensitivity: 'base',
+          }),
         ),
       }));
   }, [localRepos, normalizedFilter]);
@@ -365,7 +362,10 @@ export const GitHubProjectsPanel: React.FC = () => {
 
   if (error && !hasData) {
     return renderState(
-      <AlertCircle size={32} style={{ color: theme.colors.error || '#ef4444' }} />,
+      <AlertCircle
+        size={32}
+        style={{ color: theme.colors.error || '#ef4444' }}
+      />,
       'Unable to load repositories',
       error,
       <button
@@ -451,7 +451,8 @@ export const GitHubProjectsPanel: React.FC = () => {
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor =
-              theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
+              theme.colors.backgroundTertiary ||
+              theme.colors.backgroundSecondary;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = theme.colors.background;
@@ -491,180 +492,218 @@ export const GitHubProjectsPanel: React.FC = () => {
         }}
       >
         {/* Cloud Repositories - Organization Sections */}
-        {viewMode === 'cloud' && repositoriesByOrg.map(({ organization, repositories }) => {
-          const sectionId = `org-${organization}`;
-          const isCollapsed = collapsedSections.has(sectionId);
+        {viewMode === 'cloud' &&
+          repositoriesByOrg.map(({ organization, repositories }) => {
+            const sectionId = `org-${organization}`;
+            const isCollapsed = collapsedSections.has(sectionId);
 
-          return (
-            <div key={organization}>
-              <button
-                onClick={() => toggleSection(sectionId)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  backgroundColor: theme.colors.background,
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.background;
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isCollapsed ? (
-                    <ChevronRight size={16} color={theme.colors.textSecondary} />
-                  ) : (
-                    <ChevronDown size={16} color={theme.colors.textSecondary} />
-                  )}
-                  <span
-                    style={{
-                      fontSize: `${theme.fontSizes[1]}px`,
-                      fontWeight: theme.fontWeights.semibold,
-                      fontFamily: theme.fonts.body,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    {organization}
-                  </span>
-                </div>
-                <span
+            return (
+              <div key={organization}>
+                <button
+                  onClick={() => toggleSection(sectionId)}
                   style={{
-                    fontSize: `${theme.fontSizes[0]}px`,
-                    fontFamily: theme.fonts.body,
-                    color: theme.colors.textSecondary,
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    backgroundColor: theme.colors.background,
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary ||
+                      theme.colors.backgroundSecondary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.background;
                   }}
                 >
-                  {repositories.length}
-                </span>
-              </button>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight
+                        size={16}
+                        color={theme.colors.textSecondary}
+                      />
+                    ) : (
+                      <ChevronDown
+                        size={16}
+                        color={theme.colors.textSecondary}
+                      />
+                    )}
+                    <span
+                      style={{
+                        fontSize: `${theme.fontSizes[1]}px`,
+                        fontWeight: theme.fontWeights.semibold,
+                        fontFamily: theme.fonts.body,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {organization}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: `${theme.fontSizes[0]}px`,
+                      fontFamily: theme.fonts.body,
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    {repositories.length}
+                  </span>
+                </button>
 
-              {!isCollapsed && (
-                <div style={{ paddingLeft: '12px', marginTop: '4px' }}>
-                  {repositories.map((repo) => (
-                    <GitHubRepositoryCard
-                      key={repo.id}
-                      repository={repo}
-                      variant="owned"
-                      localRepo={localRepoMap.get(repo.full_name)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+                {!isCollapsed && (
+                  <div style={{ paddingLeft: '12px', marginTop: '4px' }}>
+                    {repositories.map((repo) => (
+                      <GitHubRepositoryCard
+                        key={repo.id}
+                        repository={repo}
+                        variant="owned"
+                        localRepo={localRepoMap.get(repo.full_name)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
         {/* Local Repositories - Organization Sections */}
-        {viewMode === 'local' && localReposByOrg.map(({ organization, repositories }) => {
-          const sectionId = `local-org-${organization}`;
-          const isCollapsed = collapsedSections.has(sectionId);
+        {viewMode === 'local' &&
+          localReposByOrg.map(({ organization, repositories }) => {
+            const sectionId = `local-org-${organization}`;
+            const isCollapsed = collapsedSections.has(sectionId);
 
-          return (
-            <div key={organization}>
-              <button
-                onClick={() => toggleSection(sectionId)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  backgroundColor: theme.colors.background,
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.background;
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isCollapsed ? (
-                    <ChevronRight size={16} color={theme.colors.textSecondary} />
-                  ) : (
-                    <ChevronDown size={16} color={theme.colors.textSecondary} />
-                  )}
-                  <span
-                    style={{
-                      fontSize: `${theme.fontSizes[1]}px`,
-                      fontWeight: theme.fontWeights.semibold,
-                      fontFamily: theme.fonts.body,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    {organization}
-                  </span>
-                </div>
-                <span
+            return (
+              <div key={organization}>
+                <button
+                  onClick={() => toggleSection(sectionId)}
                   style={{
-                    fontSize: `${theme.fontSizes[0]}px`,
-                    fontFamily: theme.fonts.body,
-                    color: theme.colors.textSecondary,
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    backgroundColor: theme.colors.background,
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary ||
+                      theme.colors.backgroundSecondary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.background;
                   }}
                 >
-                  {repositories.length}
-                </span>
-              </button>
-
-              {!isCollapsed && (
-                <div style={{ paddingLeft: '12px', marginTop: '4px' }}>
-                  {repositories.map((repoData) => {
-                    const entry = repoData.repository;
-                    // Create a mock GitHub repository object for the card
-                    // Generate a numeric ID from the path if GitHub ID is not available
-                    const numericId = entry.github?.id
-                      ? (typeof entry.github.id === 'number' ? entry.github.id : parseInt(entry.github.id, 10))
-                      : Math.abs(entry.path.split('').reduce((acc, char) => {
-                          return char.charCodeAt(0) + ((acc << 5) - acc);
-                        }, 0));
-
-                    const mockRepo: GitHubRepository = {
-                      id: numericId,
-                      name: entry.name,
-                      full_name: entry.github ? `${entry.github.owner}/${entry.github.name}` : entry.name,
-                      owner: {
-                        login: entry.github?.owner ?? 'Local',
-                      },
-                      description: entry.github?.description ?? null,
-                      language: entry.github?.primaryLanguage ?? null,
-                      stargazers_count: entry.github?.stars ?? 0,
-                      private: entry.github?.isPublic === false,
-                      html_url: entry.remoteUrl ?? '',
-                      clone_url: entry.remoteUrl ?? '',
-                      default_branch: entry.github?.defaultBranch ?? 'main',
-                      fork: false,
-                      updated_at: entry.github?.lastUpdated ?? new Date().toISOString(),
-                      pushed_at: entry.github?.lastCommit ?? new Date().toISOString(),
-                    };
-
-                    return (
-                      <GitHubRepositoryCard
-                        key={entry.path}
-                        repository={mockRepo}
-                        variant="owned"
-                        localRepo={repoData}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight
+                        size={16}
+                        color={theme.colors.textSecondary}
                       />
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+                    ) : (
+                      <ChevronDown
+                        size={16}
+                        color={theme.colors.textSecondary}
+                      />
+                    )}
+                    <span
+                      style={{
+                        fontSize: `${theme.fontSizes[1]}px`,
+                        fontWeight: theme.fontWeights.semibold,
+                        fontFamily: theme.fonts.body,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {organization}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: `${theme.fontSizes[0]}px`,
+                      fontFamily: theme.fonts.body,
+                      color: theme.colors.textSecondary,
+                    }}
+                  >
+                    {repositories.length}
+                  </span>
+                </button>
+
+                {!isCollapsed && (
+                  <div style={{ paddingLeft: '12px', marginTop: '4px' }}>
+                    {repositories.map((repoData) => {
+                      const entry = repoData.repository;
+                      // Create a mock GitHub repository object for the card
+                      // Generate a numeric ID from the path if GitHub ID is not available
+                      const numericId = entry.github?.id
+                        ? typeof entry.github.id === 'number'
+                          ? entry.github.id
+                          : parseInt(entry.github.id, 10)
+                        : Math.abs(
+                            entry.path.split('').reduce((acc, char) => {
+                              return char.charCodeAt(0) + ((acc << 5) - acc);
+                            }, 0),
+                          );
+
+                      const mockRepo: GitHubRepository = {
+                        id: numericId,
+                        name: entry.name,
+                        full_name: entry.github
+                          ? `${entry.github.owner}/${entry.github.name}`
+                          : entry.name,
+                        owner: {
+                          login: entry.github?.owner ?? 'Local',
+                        },
+                        description: entry.github?.description ?? null,
+                        language: entry.github?.primaryLanguage ?? null,
+                        stargazers_count: entry.github?.stars ?? 0,
+                        private: entry.github?.isPublic === false,
+                        html_url: entry.remoteUrl ?? '',
+                        clone_url: entry.remoteUrl ?? '',
+                        default_branch: entry.github?.defaultBranch ?? 'main',
+                        fork: false,
+                        updated_at:
+                          entry.github?.lastUpdated ?? new Date().toISOString(),
+                        pushed_at:
+                          entry.github?.lastCommit ?? new Date().toISOString(),
+                      };
+
+                      return (
+                        <GitHubRepositoryCard
+                          key={entry.path}
+                          repository={mockRepo}
+                          variant="owned"
+                          localRepo={repoData}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
         {/* No results message */}
         {viewMode === 'cloud' && repositoriesByOrg.length === 0 && hasData && (
@@ -675,9 +714,7 @@ export const GitHubProjectsPanel: React.FC = () => {
               color: theme.colors.textSecondary,
             }}
           >
-            <p style={{ margin: 0 }}>
-              No repositories match your filter.
-            </p>
+            <p style={{ margin: 0 }}>No repositories match your filter.</p>
           </div>
         )}
 
@@ -690,7 +727,9 @@ export const GitHubProjectsPanel: React.FC = () => {
             }}
           >
             <p style={{ margin: 0 }}>
-              {normalizedFilter ? 'No local repositories match your filter.' : 'No local repositories found.'}
+              {normalizedFilter
+                ? 'No local repositories match your filter.'
+                : 'No local repositories found.'}
             </p>
           </div>
         )}

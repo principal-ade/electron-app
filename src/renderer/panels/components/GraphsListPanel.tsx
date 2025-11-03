@@ -43,7 +43,14 @@ export const GraphsListPanel: React.FC<GraphsListPanelProps> = ({
           }}
         >
           <Package size={16} color={theme.colors.text} />
-          <h3 style={{ fontSize: `${theme.fontSizes[1]}px`, fontWeight: theme.fontWeights.semibold, fontFamily: theme.fonts.body, margin: 0 }}>
+          <h3
+            style={{
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: theme.fontWeights.semibold,
+              fontFamily: theme.fonts.body,
+              margin: 0,
+            }}
+          >
             Graphs
           </h3>
         </div>
@@ -88,7 +95,13 @@ export const GraphsListPanel: React.FC<GraphsListPanelProps> = ({
             }}
           >
             No graphs available
-            <div style={{ fontSize: `${theme.fontSizes[0]}px`, fontFamily: theme.fonts.body, marginTop: '8px' }}>
+            <div
+              style={{
+                fontSize: `${theme.fontSizes[0]}px`,
+                fontFamily: theme.fonts.body,
+                marginTop: '8px',
+              }}
+            >
               Add repositories with package.json to see dependency graphs
             </div>
           </div>

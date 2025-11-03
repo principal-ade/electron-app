@@ -1,9 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import {
   AlertCircle,
@@ -333,7 +328,10 @@ export const GitHubSocialPanel: React.FC = () => {
 
   if (error && !hasData) {
     return renderState(
-      <AlertCircle size={32} style={{ color: theme.colors.error || '#ef4444' }} />,
+      <AlertCircle
+        size={32}
+        style={{ color: theme.colors.error || '#ef4444' }}
+      />,
       'Unable to load social data',
       error,
     );
@@ -448,9 +446,14 @@ export const GitHubSocialPanel: React.FC = () => {
                     theme.colors.background;
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
                   {isCollapsed ? (
-                    <ChevronRight size={16} color={theme.colors.textSecondary} />
+                    <ChevronRight
+                      size={16}
+                      color={theme.colors.textSecondary}
+                    />
                   ) : (
                     <ChevronDown size={16} color={theme.colors.textSecondary} />
                   )}
@@ -528,7 +531,9 @@ export const GitHubSocialPanel: React.FC = () => {
                 e.currentTarget.style.backgroundColor = theme.colors.background;
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
                 {collapsedSections.has('following') ? (
                   <ChevronRight size={16} color={theme.colors.textSecondary} />
                 ) : (

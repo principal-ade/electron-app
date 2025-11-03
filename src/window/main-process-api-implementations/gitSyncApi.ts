@@ -49,8 +49,7 @@ export const gitSyncAPI: GitSyncAPI = {
       ipcRenderer.removeListener(GitSyncEvent.ON_MESSAGE, subscription);
   },
 
-  getAllConnections: () =>
-    ipcRenderer.invoke(GitSyncEvent.GET_ALL_CONNECTIONS),
+  getAllConnections: () => ipcRenderer.invoke(GitSyncEvent.GET_ALL_CONNECTIONS),
 
   onConnectionAdded: (callback: (connectionId: string) => void) => {
     const subscription = (_event: unknown, connectionId: string) =>
@@ -73,6 +72,9 @@ export const gitSyncAPI: GitSyncAPI = {
       callback(connectionId);
     ipcRenderer.on(GitSyncEvent.CONNECTION_STATUS_CHANGED, subscription);
     return () =>
-      ipcRenderer.removeListener(GitSyncEvent.CONNECTION_STATUS_CHANGED, subscription);
+      ipcRenderer.removeListener(
+        GitSyncEvent.CONNECTION_STATUS_CHANGED,
+        subscription,
+      );
   },
 };

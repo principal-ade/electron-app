@@ -217,8 +217,10 @@ export function registerModernWindowHandlers(): void {
       const windowName = `repository-maps-${remoteUrl}`;
 
       // Check if window already exists before creating
-      const { getSpecialWindows, getApplicationWindows } =
-        require('./modernWindowManager');
+      const {
+        getSpecialWindows,
+        getApplicationWindows,
+      } = require('./modernWindowManager');
       const specialWindows = getSpecialWindows();
       const applicationWindows = getApplicationWindows();
       const existingWindowId = specialWindows.get(windowName);

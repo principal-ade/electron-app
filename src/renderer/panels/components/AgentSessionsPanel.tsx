@@ -395,10 +395,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
   const sessionColorMap = useMemo(() => {
     const map = new Map<string, string>();
     filteredSessions.forEach((sessionWithEvents, index) => {
-      map.set(
-        sessionWithEvents.session.sessionId,
-        getSessionColor(index),
-      );
+      map.set(sessionWithEvents.session.sessionId, getSessionColor(index));
     });
     return map;
   }, [filteredSessions, getSessionColor]);
@@ -457,97 +454,99 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
     return sortedGroups;
   }, [filteredSessions, normalizedRepositoryPath]);
 
-  const handleOpenDirectory = useCallback(
-    async (directory: string) => {
-      if (!directory || directory === UNKNOWN_DIRECTORY_LABEL) {
-        window.alert(
-          'No repository directory information is available for this session yet.',
+  const handleOpenDirectory = useCallback(async (directory: string) => {
+    if (!directory || directory === UNKNOWN_DIRECTORY_LABEL) {
+      window.alert(
+        'No repository directory information is available for this session yet.',
+      );
+      return;
+    }
+
+    setOpeningDirectory(directory);
+
+    try {
+      const [{ RepositoryService }, { WindowService }, { GitService }] =
+        await Promise.all([
+          import('../../main-process-api/RepositoryService'),
+          import('../../main-process-api/WindowService'),
+          import('../../main-process-api/GitService'),
+        ]);
+
+      // First, try to get the repository from registered repositories
+      let repository =
+        await RepositoryService.getRepositoryByLocalPath(directory);
+
+      // If not found, try to detect git info from the directory
+      if (!repository) {
+        console.log(
+          `[AgentSessionsPanel] Repository not found in registry, attempting to detect git info from directory: ${directory}`,
         );
-        return;
-      }
 
-      setOpeningDirectory(directory);
+        const gitInfo = await GitService.getRepositoryInfo(directory);
 
-      try {
-        const [{ RepositoryService }, { WindowService }, { GitService }] =
-          await Promise.all([
-            import('../../main-process-api/RepositoryService'),
-            import('../../main-process-api/WindowService'),
-            import('../../main-process-api/GitService'),
-          ]);
+        if (
+          gitInfo?.isRepository &&
+          gitInfo.remotes &&
+          gitInfo.remotes.length > 0
+        ) {
+          // Find the origin remote or use the first remote
+          const originRemote =
+            gitInfo.remotes.find((r) => r.name === 'origin') ||
+            gitInfo.remotes[0];
 
-        // First, try to get the repository from registered repositories
-        let repository =
-          await RepositoryService.getRepositoryByLocalPath(directory);
+          if (originRemote) {
+            console.log(
+              `[AgentSessionsPanel] Detected git remote: ${originRemote.url}`,
+            );
 
-        // If not found, try to detect git info from the directory
-        if (!repository) {
-          console.log(
-            `[AgentSessionsPanel] Repository not found in registry, attempting to detect git info from directory: ${directory}`,
-          );
+            // Create a minimal repository object from git info
+            repository = {
+              remoteUrl: originRemote.url,
+              owner: originRemote.owner || 'unknown',
+              name:
+                originRemote.repo || directory.split('/').pop() || 'unknown',
+              localClones: [
+                {
+                  path: directory,
+                  addedAt: Date.now(),
+                  lastAccessed: Date.now(),
+                },
+              ],
+              addedAt: Date.now(),
+              lastAccessed: Date.now(),
+              vcsType: 'github',
+              tags: [],
+            };
 
-          const gitInfo = await GitService.getRepositoryInfo(directory);
-
-          if (gitInfo?.isRepository && gitInfo.remotes && gitInfo.remotes.length > 0) {
-            // Find the origin remote or use the first remote
-            const originRemote =
-              gitInfo.remotes.find((r) => r.name === 'origin') ||
-              gitInfo.remotes[0];
-
-            if (originRemote) {
-              console.log(
-                `[AgentSessionsPanel] Detected git remote: ${originRemote.url}`,
-              );
-
-              // Create a minimal repository object from git info
-              repository = {
-                remoteUrl: originRemote.url,
-                owner: originRemote.owner || 'unknown',
-                name: originRemote.repo || directory.split('/').pop() || 'unknown',
-                localClones: [
-                  {
-                    path: directory,
-                    addedAt: Date.now(),
-                    lastAccessed: Date.now(),
-                  },
-                ],
-                addedAt: Date.now(),
-                lastAccessed: Date.now(),
-                vcsType: 'github',
-                tags: [],
-              };
-
-              console.log(
-                `[AgentSessionsPanel] Created minimal repository object:`,
-                repository,
-              );
-            }
+            console.log(
+              `[AgentSessionsPanel] Created minimal repository object:`,
+              repository,
+            );
           }
         }
+      }
 
-        if (repository) {
-          await WindowService.openRepositoryDashboard(
-            repository as unknown as AlexandriaEntry,
-          );
-        } else {
-          window.alert(
-            'Could not find a repository associated with this directory. Make sure this is a git repository with a remote configured.',
-          );
-        }
-      } catch (error) {
-        console.error(
-          `[AgentSessionsPanel] Failed to open repository for directory ${directory}:`,
-          error,
+      if (repository) {
+        await WindowService.openRepositoryDashboard(
+          repository as unknown as AlexandriaEntry,
         );
-        window.alert('Failed to open repository window for this directory.');
-      } finally {
-        setOpeningDirectory((current) =>
-          current === directory ? null : current,
+      } else {
+        window.alert(
+          'Could not find a repository associated with this directory. Make sure this is a git repository with a remote configured.',
         );
       }
-    },
-    [],
-  );
+    } catch (error) {
+      console.error(
+        `[AgentSessionsPanel] Failed to open repository for directory ${directory}:`,
+        error,
+      );
+      window.alert('Failed to open repository window for this directory.');
+    } finally {
+      setOpeningDirectory((current) =>
+        current === directory ? null : current,
+      );
+    }
+  }, []);
 
   // Helper to get time ago
   const getTimeAgo = useCallback((timestamp: number): string => {
@@ -648,10 +647,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
               color: theme.colors.textSecondary,
             }}
           >
-            <Layers
-              size={32}
-              style={{ opacity: 0.3, marginBottom: '12px' }}
-            />
+            <Layers size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
             <div style={{ fontSize: theme.fontSizes[1] }}>
               Loading sessions...
             </div>
@@ -712,64 +708,89 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                 >
                   {shouldShowDirectoryHeader && (
                     <div
-                    onClick={
-                      canOpenDirectory && !group.isCurrentDirectory
-                        ? () => {
-                            void handleOpenDirectory(group.directory);
-                          }
-                        : undefined
-                    }
-                    onMouseEnter={(e) => {
-                      if (!canOpenDirectory || group.isCurrentDirectory) {
-                        return;
+                      onClick={
+                        canOpenDirectory && !group.isCurrentDirectory
+                          ? () => {
+                              void handleOpenDirectory(group.directory);
+                            }
+                          : undefined
                       }
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.background;
-                      e.currentTarget.style.borderColor =
-                        theme.colors.primary;
-                    }}
-                    onMouseLeave={(e) => {
-                      if (group.isCurrentDirectory) {
-                        return;
-                      }
-                      e.currentTarget.style.backgroundColor =
-                        baseBackgroundColor;
-                      e.currentTarget.style.borderColor =
-                        theme.colors.border;
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '10px 12px',
-                      borderRadius: '6px',
-                      border: group.isCurrentDirectory
-                        ? `2px solid ${theme.colors.primary}`
-                        : `1px solid ${theme.colors.border}`,
-                      backgroundColor: group.isCurrentDirectory
-                        ? theme.colors.primary + '10'
-                        : baseBackgroundColor,
-                      cursor: canOpenDirectory && !group.isCurrentDirectory ? 'pointer' : 'default',
-                      transition: 'background-color 0.2s, border-color 0.2s',
-                      opacity: group.isCurrentDirectory ? 0.8 : 1,
-                    }}
-                    title={
-                      group.isCurrentDirectory
-                        ? 'Current directory'
-                        : canOpenDirectory
-                        ? 'Open repository window for this directory'
-                        : 'Directory information not available yet'
-                    }
-                  >
-                    <div
+                      onMouseEnter={(e) => {
+                        if (!canOpenDirectory || group.isCurrentDirectory) {
+                          return;
+                        }
+                        e.currentTarget.style.backgroundColor =
+                          theme.colors.background;
+                        e.currentTarget.style.borderColor =
+                          theme.colors.primary;
+                      }}
+                      onMouseLeave={(e) => {
+                        if (group.isCurrentDirectory) {
+                          return;
+                        }
+                        e.currentTarget.style.backgroundColor =
+                          baseBackgroundColor;
+                        e.currentTarget.style.borderColor = theme.colors.border;
+                      }}
                       style={{
                         display: 'flex',
-                        flexDirection: 'column',
-                        gap: '2px',
-                        overflow: 'hidden',
-                        flex: 1,
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 12px',
+                        borderRadius: '6px',
+                        border: group.isCurrentDirectory
+                          ? `2px solid ${theme.colors.primary}`
+                          : `1px solid ${theme.colors.border}`,
+                        backgroundColor: group.isCurrentDirectory
+                          ? theme.colors.primary + '10'
+                          : baseBackgroundColor,
+                        cursor:
+                          canOpenDirectory && !group.isCurrentDirectory
+                            ? 'pointer'
+                            : 'default',
+                        transition: 'background-color 0.2s, border-color 0.2s',
+                        opacity: group.isCurrentDirectory ? 0.8 : 1,
                       }}
+                      title={
+                        group.isCurrentDirectory
+                          ? 'Current directory'
+                          : canOpenDirectory
+                            ? 'Open repository window for this directory'
+                            : 'Directory information not available yet'
+                      }
                     >
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '2px',
+                          overflow: 'hidden',
+                          flex: 1,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontWeight: theme.fontWeights.semibold,
+                              fontSize: theme.fontSizes[0],
+                              color: group.isCurrentDirectory
+                                ? theme.colors.primary
+                                : theme.colors.text,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {directoryName}
+                          </span>
+                        </div>
+                      </div>
                       <div
                         style={{
                           display: 'flex',
@@ -777,47 +798,25 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                           gap: '8px',
                         }}
                       >
-                        <span
-                          style={{
-                            fontWeight: theme.fontWeights.semibold,
-                            fontSize: theme.fontSizes[0],
-                            color: group.isCurrentDirectory
-                              ? theme.colors.primary
-                              : theme.colors.text,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {directoryName}
-                        </span>
+                        {openingDirectory === group.directory ? (
+                          <RefreshCw
+                            size={14}
+                            style={{
+                              color: theme.colors.primary,
+                              animation: 'spin 1s linear infinite',
+                            }}
+                          />
+                        ) : (
+                          canOpenDirectory &&
+                          !group.isCurrentDirectory && (
+                            <FolderOpen
+                              size={14}
+                              style={{ color: theme.colors.textSecondary }}
+                            />
+                          )
+                        )}
                       </div>
                     </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                      }}
-                    >
-                      {openingDirectory === group.directory ? (
-                        <RefreshCw
-                          size={14}
-                          style={{
-                            color: theme.colors.primary,
-                            animation: 'spin 1s linear infinite',
-                          }}
-                        />
-                      ) : (
-                        canOpenDirectory && !group.isCurrentDirectory && (
-                          <FolderOpen
-                            size={14}
-                            style={{ color: theme.colors.textSecondary }}
-                          />
-                        )
-                      )}
-                    </div>
-                  </div>
                   )}
 
                   <div
@@ -869,7 +868,8 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                             try {
                               await AgentSessionService.deleteSession(
                                 sessionWithEvents.session.sessionId,
-                                sessionWithEvents.session.workingDirectory || '',
+                                sessionWithEvents.session.workingDirectory ||
+                                  '',
                               );
                               // Refetch sessions to update the UI
                               void fetchSessions();

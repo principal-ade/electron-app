@@ -130,7 +130,8 @@ export class OAuthServerClient {
       // CRITICAL: We MUST have a separate github_access_token
       // access_token alone is the WorkOS token, NOT a GitHub token
       const githubToken = tokenResponse.github_access_token;
-      const workosToken = tokenResponse.workos_access_token || tokenResponse.access_token;
+      const workosToken =
+        tokenResponse.workos_access_token || tokenResponse.access_token;
 
       console.log('[OAuthServerClient] Token received:', {
         hasRefreshToken: !!tokenResponse.refresh_token,
@@ -143,12 +144,17 @@ export class OAuthServerClient {
 
       // Validate that we have a GitHub token
       if (!githubToken) {
-        throw new Error('Authentication failed: No GitHub token received from server');
+        throw new Error(
+          'Authentication failed: No GitHub token received from server',
+        );
       }
 
       // Validate GitHub token format (should start with gh prefix)
       if (!githubToken.startsWith('gh')) {
-        console.warn('[OAuthServerClient] WARNING: GitHub token does not start with "gh" prefix:', githubToken.substring(0, 10));
+        console.warn(
+          '[OAuthServerClient] WARNING: GitHub token does not start with "gh" prefix:',
+          githubToken.substring(0, 10),
+        );
       }
 
       return {
@@ -227,7 +233,9 @@ export class OAuthServerClient {
   async refreshAccessToken(refreshToken: string): Promise<AuthResult> {
     try {
       console.log('[OAuthServerClient] Refreshing access token...');
-      console.log(`[OAuthServerClient] Using refresh endpoint: ${this.endpoints.refresh}`);
+      console.log(
+        `[OAuthServerClient] Using refresh endpoint: ${this.endpoints.refresh}`,
+      );
 
       const response = await fetch(this.endpoints.refresh, {
         method: 'POST',
@@ -272,7 +280,8 @@ export class OAuthServerClient {
       // On refresh, github_access_token may be null - server doesn't always return a new GitHub token
       // In that case, the caller (AuthService) should preserve the existing GitHub token
       const githubToken = tokenResponse.github_access_token;
-      const workosToken = tokenResponse.workos_access_token || tokenResponse.access_token;
+      const workosToken =
+        tokenResponse.workos_access_token || tokenResponse.access_token;
 
       console.log('[OAuthServerClient] Token types in refresh response:', {
         hasGithubToken: !!tokenResponse.github_access_token,

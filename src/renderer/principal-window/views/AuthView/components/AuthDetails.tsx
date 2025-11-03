@@ -19,7 +19,10 @@ import { SSHSetupService } from '../../../../main-process-api/SSHSetupService';
 import { AuthenticationService } from '../../../../main-process-api/AuthenticationService';
 import { SSHSetupWizard } from '../../RepositoryExplorer/components/SSHSetupWizard';
 import { KeychainPermissionModal } from '../../../../components/KeychainPermissionModal';
-import type { TokenInfo, GitHubSSHKey } from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
+import type {
+  TokenInfo,
+  GitHubSSHKey,
+} from '../../../../../shared/main-process-api-interfaces/GitHubAPI';
 
 // Mapping of GitHub scopes to human-readable descriptions
 export const SCOPE_DESCRIPTIONS: Record<string, string> = {
@@ -119,7 +122,10 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     success: boolean;
     message: string;
   } | null>(null);
-  const [tokenMetadata, setTokenMetadata] = useState<Record<string, unknown> | null>(null);
+  const [tokenMetadata, setTokenMetadata] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [loadingTokenMetadata, setLoadingTokenMetadata] = useState(false);
   const [testingRefresh, setTestingRefresh] = useState(false);
   const [refreshResult, setRefreshResult] = useState<{
@@ -176,13 +182,18 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
         setGitHubSSHKeys([]);
         if (response.needsPermission) {
           setNeedsSSHPermission(true);
-          setSSHKeysError(response.error || 'Missing required GitHub permissions');
+          setSSHKeysError(
+            response.error || 'Missing required GitHub permissions',
+          );
         } else if (response.error) {
           setSSHKeysError(response.error);
         }
       }
     } catch (error) {
-      console.error('[AuthDetails] Failed to fetch SSH keys from GitHub:', error);
+      console.error(
+        '[AuthDetails] Failed to fetch SSH keys from GitHub:',
+        error,
+      );
       setGitHubSSHKeys([]);
       setSSHKeysError('Failed to load SSH keys');
     } finally {
@@ -231,7 +242,10 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
         errorLower.includes('encryption')
       ) {
         // Determine error type from message
-        if (errorLower.includes('timeout') || errorLower.includes('timed out')) {
+        if (
+          errorLower.includes('timeout') ||
+          errorLower.includes('timed out')
+        ) {
           setKeychainErrorType('timeout');
         } else if (
           errorLower.includes('denied') ||
@@ -264,7 +278,14 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     }
     // Always fetch keychain status (regardless of auth state)
     fetchKeychainStatus();
-  }, [isAuthenticated, authUser, fetchTokenInfo, fetchSSHKeyInfo, fetchTokenMetadata, fetchKeychainStatus]);
+  }, [
+    isAuthenticated,
+    authUser,
+    fetchTokenInfo,
+    fetchSSHKeyInfo,
+    fetchTokenMetadata,
+    fetchKeychainStatus,
+  ]);
 
   const formatScope = (scope: string): string => {
     return SCOPE_DESCRIPTIONS[scope] || scope.replace(/[_:]/g, ' ');
@@ -290,7 +311,8 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
       }
     } catch (error) {
       console.error('[AuthDetails] Refresh test failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to test refresh';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to test refresh';
       setRefreshResult({
         success: false,
         message: errorMessage,
@@ -347,7 +369,8 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
         await fetchKeychainStatus();
         setConnectionTestResult({
           success: true,
-          message: 'Keychain access test passed! Credentials can be stored securely.',
+          message:
+            'Keychain access test passed! Credentials can be stored securely.',
         });
       } else {
         setConnectionTestResult({
@@ -357,7 +380,8 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
       }
     } catch (error) {
       console.error('[AuthDetails] Keychain test failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       setConnectionTestResult({
         success: false,
         message: `Failed to test keychain: ${errorMessage}`,
@@ -1201,7 +1225,9 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                           <>
                             <CheckCircle
                               size={16}
-                              style={{ color: theme.colors.success || '#10b981' }}
+                              style={{
+                                color: theme.colors.success || '#10b981',
+                              }}
                             />
                             <span>{tokenMetadata.timeUntilExpiry}</span>
                           </>
@@ -1281,9 +1307,10 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                         : theme.colors.textSecondary,
                       fontSize: '13px',
                       fontWeight: 500,
-                      cursor: tokenMetadata.hasRefreshToken && !testingRefresh
-                        ? 'pointer'
-                        : 'not-allowed',
+                      cursor:
+                        tokenMetadata.hasRefreshToken && !testingRefresh
+                          ? 'pointer'
+                          : 'not-allowed',
                       opacity: tokenMetadata.hasRefreshToken ? 1 : 0.5,
                       transition: 'all 0.2s',
                     }}
@@ -1369,9 +1396,9 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                   }}
                 >
                   <strong>Note:</strong> Tokens are automatically refreshed when
-                  they expire or are about to expire (within 5 minutes). This test
-                  allows you to manually verify the refresh mechanism is working
-                  correctly.
+                  they expire or are about to expire (within 5 minutes). This
+                  test allows you to manually verify the refresh mechanism is
+                  working correctly.
                 </div>
               </>
             )}
@@ -1421,7 +1448,8 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                   }}
                 >
                   <CheckCircle size={14} />
-                  {githubSSHKeys.length} {githubSSHKeys.length === 1 ? 'Key' : 'Keys'}
+                  {githubSSHKeys.length}{' '}
+                  {githubSSHKeys.length === 1 ? 'Key' : 'Keys'}
                 </div>
               )}
             </div>
@@ -1447,7 +1475,10 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                     marginBottom: '16px',
                   }}
                 >
-                  You have {githubSSHKeys.length} SSH {githubSSHKeys.length === 1 ? 'key' : 'keys'} configured on GitHub. These keys can be used to clone private repositories and access organization repositories.
+                  You have {githubSSHKeys.length} SSH{' '}
+                  {githubSSHKeys.length === 1 ? 'key' : 'keys'} configured on
+                  GitHub. These keys can be used to clone private repositories
+                  and access organization repositories.
                 </p>
 
                 {githubSSHKeys.map((key) => (
@@ -1561,10 +1592,12 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                       opacity: testingConnection ? 0.7 : 1,
                     }}
                     onMouseEnter={(e) => {
-                      if (!testingConnection) e.currentTarget.style.opacity = '0.9';
+                      if (!testingConnection)
+                        e.currentTarget.style.opacity = '0.9';
                     }}
                     onMouseLeave={(e) => {
-                      if (!testingConnection) e.currentTarget.style.opacity = '1';
+                      if (!testingConnection)
+                        e.currentTarget.style.opacity = '1';
                     }}
                   >
                     {testingConnection ? (
@@ -1629,7 +1662,11 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                       >
                         <AlertCircle
                           size={20}
-                          style={{ color: theme.colors.error || '#ef4444', flexShrink: 0, marginTop: '2px' }}
+                          style={{
+                            color: theme.colors.error || '#ef4444',
+                            flexShrink: 0,
+                            marginTop: '2px',
+                          }}
                         />
                         <div>
                           <div
@@ -1660,7 +1697,20 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                               lineHeight: '1.5',
                             }}
                           >
-                            To view and manage your SSH keys, you need to re-authenticate with additional permissions. Click "Manage Permissions" above to grant the <code style={{ padding: '2px 6px', backgroundColor: theme.colors.background, borderRadius: '4px', fontFamily: 'monospace' }}>read:public_key</code> scope.
+                            To view and manage your SSH keys, you need to
+                            re-authenticate with additional permissions. Click
+                            "Manage Permissions" above to grant the{' '}
+                            <code
+                              style={{
+                                padding: '2px 6px',
+                                backgroundColor: theme.colors.background,
+                                borderRadius: '4px',
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              read:public_key
+                            </code>{' '}
+                            scope.
                           </p>
                         </div>
                       </div>
@@ -1672,7 +1722,9 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                         marginBottom: '16px',
                       }}
                     >
-                      You can still set up SSH keys manually. The wizard will help you generate and configure a new SSH key for Git operations.
+                      You can still set up SSH keys manually. The wizard will
+                      help you generate and configure a new SSH key for Git
+                      operations.
                     </p>
                     <button
                       onClick={() => setShowSSHSetup(true)}
@@ -1710,7 +1762,8 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                         marginBottom: '16px',
                       }}
                     >
-                      {sshKeysError ||'SSH keys are not configured. Set up SSH authentication to clone private repositories and access organization repositories without token limitations.'}
+                      {sshKeysError ||
+                        'SSH keys are not configured. Set up SSH authentication to clone private repositories and access organization repositories without token limitations.'}
                     </p>
                     <button
                       onClick={() => setShowSSHSetup(true)}
@@ -1865,7 +1918,8 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                        gridTemplateColumns:
+                          'repeat(auto-fit, minmax(200px, 1fr))',
                         gap: '12px',
                         marginBottom: '16px',
                       }}

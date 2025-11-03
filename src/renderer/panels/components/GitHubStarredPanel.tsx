@@ -1,17 +1,6 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import {
-  AlertCircle,
-  Loader2,
-  LogIn,
-  RotateCcw,
-  Search,
-} from 'lucide-react';
+import { AlertCircle, Loader2, LogIn, RotateCcw, Search } from 'lucide-react';
 
 import { useAuthState } from '../../hooks/useAuthState';
 import { GithubService } from '../../main-process-api/GithubService';
@@ -29,8 +18,9 @@ export const GitHubStarredPanel: React.FC = () => {
     login,
     loginError,
   } = useAuthState();
-  const [starredRepositories, setStarredRepositories] =
-    useState<GitHubRepository[]>([]);
+  const [starredRepositories, setStarredRepositories] = useState<
+    GitHubRepository[]
+  >([]);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
@@ -164,7 +154,7 @@ export const GitHubStarredPanel: React.FC = () => {
 
     // Sort alphabetically by name
     return filtered.sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
     );
   }, [starredRepositories, normalizedFilter]);
 
@@ -259,7 +249,10 @@ export const GitHubStarredPanel: React.FC = () => {
 
   if (error && !hasData) {
     return renderState(
-      <AlertCircle size={32} style={{ color: theme.colors.error || '#ef4444' }} />,
+      <AlertCircle
+        size={32}
+        style={{ color: theme.colors.error || '#ef4444' }}
+      />,
       'Unable to load repositories',
       error,
       <button
@@ -373,9 +366,7 @@ export const GitHubStarredPanel: React.FC = () => {
               color: theme.colors.textSecondary,
             }}
           >
-            <p style={{ margin: 0 }}>
-              No repositories match your filter.
-            </p>
+            <p style={{ margin: 0 }}>No repositories match your filter.</p>
           </div>
         )}
       </div>

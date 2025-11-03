@@ -33,7 +33,9 @@ export class AlexandriaDrawingService {
       }
 
       // Return the diagram ID (UUID), not the filename
-      return result.diagramId || result.fileName?.replace('.excalidraw', '') || name;
+      return (
+        result.diagramId || result.fileName?.replace('.excalidraw', '') || name
+      );
     } catch (error) {
       console.error('Failed to save diagram to Alexandria:', error);
       throw new Error(

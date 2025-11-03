@@ -158,8 +158,20 @@ export class NodeExecutor implements Executor {
     });
 
     return {
-      stdout: child.stdout || new Readable({ read() { /* no-op fallback stream */ } }),
-      stderr: child.stderr || new Readable({ read() { /* no-op fallback stream */ } }),
+      stdout:
+        child.stdout ||
+        new Readable({
+          read() {
+            /* no-op fallback stream */
+          },
+        }),
+      stderr:
+        child.stderr ||
+        new Readable({
+          read() {
+            /* no-op fallback stream */
+          },
+        }),
       exitPromise,
       kill: () => {
         child.kill('SIGTERM');

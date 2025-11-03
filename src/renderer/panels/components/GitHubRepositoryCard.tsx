@@ -93,7 +93,9 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
         padding: '8px 12px',
         borderRadius: '4px',
         backgroundColor: isHighlighted ? `${highlightColor}15` : 'transparent',
-        border: isHighlighted ? `1px solid ${highlightColor}40` : '1px solid transparent',
+        border: isHighlighted
+          ? `1px solid ${highlightColor}40`
+          : '1px solid transparent',
         cursor: 'pointer',
         transition: 'background-color 0.15s',
       }}
@@ -112,26 +114,30 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
       {/* Status indicator */}
       <div style={{ flexShrink: 0 }}>
         {localRepo ? (
-          <Folder
-            size={16}
-            color={theme.colors.success || '#10b981'}
-          />
+          <Folder size={16} color={theme.colors.success || '#10b981'} />
         ) : (
-          <Cloud
-            size={16}
-            color={theme.colors.textSecondary}
-          />
+          <Cloud size={16} color={theme.colors.textSecondary} />
         )}
       </div>
 
       {/* Main content */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span
             style={{
               fontSize: `${theme.fontSizes[2]}px`,
               fontWeight: theme.fontWeights.medium,
-              color: localRepo ? theme.colors.success || '#10b981' : theme.colors.text,
+              color: localRepo
+                ? theme.colors.success || '#10b981'
+                : theme.colors.text,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -202,7 +208,9 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
             gap: '4px',
             borderRadius: '4px',
             border: `1px solid ${localRepo ? badgeColor : theme.colors.border}`,
-            backgroundColor: localRepo ? `${badgeColor}15` : theme.colors.background,
+            backgroundColor: localRepo
+              ? `${badgeColor}15`
+              : theme.colors.background,
             color: localRepo ? badgeColor : theme.colors.text,
             fontSize: `${theme.fontSizes[0]}px`,
             fontWeight: theme.fontWeights.medium,
@@ -212,7 +220,8 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
           onMouseEnter={(event) => {
             event.currentTarget.style.backgroundColor = localRepo
               ? `${badgeColor}25`
-              : theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
+              : theme.colors.backgroundTertiary ||
+                theme.colors.backgroundSecondary;
           }}
           onMouseLeave={(event) => {
             event.currentTarget.style.backgroundColor = localRepo
@@ -241,7 +250,8 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
           }}
           onMouseEnter={(event) => {
             event.currentTarget.style.backgroundColor =
-              theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
+              theme.colors.backgroundTertiary ||
+              theme.colors.backgroundSecondary;
             event.currentTarget.style.color = theme.colors.text;
           }}
           onMouseLeave={(event) => {
@@ -254,15 +264,16 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
       </div>
 
       {/* Clone Modal */}
-      {showCloneModal && createPortal(
-        <GitCloneModal
-          isOpen={showCloneModal}
-          onClose={() => setShowCloneModal(false)}
-          onRepositoryAdded={handleRepositoryCloned}
-          initialUrl={repository.clone_url}
-        />,
-        document.body
-      )}
+      {showCloneModal &&
+        createPortal(
+          <GitCloneModal
+            isOpen={showCloneModal}
+            onClose={() => setShowCloneModal(false)}
+            onRepositoryAdded={handleRepositoryCloned}
+            initialUrl={repository.clone_url}
+          />,
+          document.body,
+        )}
     </div>
   );
 };

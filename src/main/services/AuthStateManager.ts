@@ -148,7 +148,8 @@ class AuthStateManager extends EventEmitter {
       user: {
         ...user,
         // Preserve avatarUrl from GitHub API, or use fallback if not provided
-        avatarUrl: user.avatarUrl || `https://github.com/${user.login}.png?size=48`,
+        avatarUrl:
+          user.avatarUrl || `https://github.com/${user.login}.png?size=48`,
       },
       token,
     });

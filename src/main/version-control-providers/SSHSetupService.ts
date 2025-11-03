@@ -175,7 +175,9 @@ Host github.com
         existingConfig = await fs.readFile(configPath, 'utf-8');
       } catch {
         // File doesn't exist, that's fine
-        console.log('[SSHSetupService] No existing SSH config, creating new one');
+        console.log(
+          '[SSHSetupService] No existing SSH config, creating new one',
+        );
       }
 
       // Check if Principle AI config already exists
@@ -247,9 +249,13 @@ Host github.com
       console.log('[SSHSetupService] Testing GitHub SSH connection...');
 
       // Use spawn instead of exec to handle the interactive nature of SSH
-      const sshTest = spawn('ssh', ['-T', 'git@github.com', '-o', 'StrictHostKeyChecking=no'], {
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
+      const sshTest = spawn(
+        'ssh',
+        ['-T', 'git@github.com', '-o', 'StrictHostKeyChecking=no'],
+        {
+          stdio: ['ignore', 'pipe', 'pipe'],
+        },
+      );
 
       let stdout = '';
       let stderr = '';
@@ -268,7 +274,8 @@ Host github.com
         console.log('[SSHSetupService] Connection test timed out');
         resolve({
           success: false,
-          message: 'Connection test timed out. Please check your internet connection.',
+          message:
+            'Connection test timed out. Please check your internet connection.',
         });
       }, 15000); // 15 second timeout
 

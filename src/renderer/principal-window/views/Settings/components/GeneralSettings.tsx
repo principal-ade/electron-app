@@ -509,7 +509,9 @@ export const GeneralSettings: React.FC = () => {
                   lineHeight: '1.5',
                 }}
               >
-                When enabled, the Git Sync diagnostic panel will be visible in the Feed view. When disabled (default), the panel is hidden to reduce clutter.
+                When enabled, the Git Sync diagnostic panel will be visible in
+                the Feed view. When disabled (default), the panel is hidden to
+                reduce clutter.
               </p>
             </div>
             <label
@@ -601,7 +603,9 @@ export const GeneralSettings: React.FC = () => {
                   lineHeight: '1.5',
                 }}
               >
-                When enabled, a debug button will appear in the terminal panel header for troubleshooting terminal sessions. When disabled (default), the button is hidden to reduce clutter.
+                When enabled, a debug button will appear in the terminal panel
+                header for troubleshooting terminal sessions. When disabled
+                (default), the button is hidden to reduce clutter.
               </p>
             </div>
             <label
@@ -693,7 +697,9 @@ export const GeneralSettings: React.FC = () => {
                   lineHeight: '1.5',
                 }}
               >
-                When enabled, a recording button will appear in the terminal panel header for capturing terminal output. When disabled (default), the button is hidden to reduce clutter.
+                When enabled, a recording button will appear in the terminal
+                panel header for capturing terminal output. When disabled
+                (default), the button is hidden to reduce clutter.
               </p>
             </div>
             <label
@@ -785,7 +791,9 @@ export const GeneralSettings: React.FC = () => {
                   lineHeight: '1.5',
                 }}
               >
-                When enabled (default), a button will appear in the terminal panel header to toggle between showing all repository terminals or just the current repository's terminals.
+                When enabled (default), a button will appear in the terminal
+                panel header to toggle between showing all repository terminals
+                or just the current repository's terminals.
               </p>
             </div>
             <label
@@ -877,7 +885,9 @@ export const GeneralSettings: React.FC = () => {
                   lineHeight: '1.5',
                 }}
               >
-                When enabled, the Repos button will appear in the side navigation. When disabled (default), the button is hidden as this view is deprecated.
+                When enabled, the Repos button will appear in the side
+                navigation. When disabled (default), the button is hidden as
+                this view is deprecated.
               </p>
             </div>
             <label
@@ -969,7 +979,8 @@ export const GeneralSettings: React.FC = () => {
                   lineHeight: '1.5',
                 }}
               >
-                When enabled, the Monitor button will appear in the side navigation. When disabled (default), the button is hidden.
+                When enabled, the Monitor button will appear in the side
+                navigation. When disabled (default), the button is hidden.
               </p>
             </div>
             <label
@@ -1061,7 +1072,8 @@ export const GeneralSettings: React.FC = () => {
                   lineHeight: '1.5',
                 }}
               >
-                When enabled, the Search button will appear in the side navigation. When disabled (default), the button is hidden.
+                When enabled, the Search button will appear in the side
+                navigation. When disabled (default), the button is hidden.
               </p>
             </div>
             <label

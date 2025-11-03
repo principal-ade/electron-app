@@ -204,7 +204,10 @@ export function registerSecureTokenHandlers(): void {
 
       // Use AuthService to get a valid token with automatic refresh
       const token = await authService.getValidToken();
-      console.log('[SecureTokenIPC] authService.getValidToken() returned:', !!token);
+      console.log(
+        '[SecureTokenIPC] authService.getValidToken() returned:',
+        !!token,
+      );
 
       if (token) {
         // Get user info from AuthStateManager
@@ -212,18 +215,22 @@ export function registerSecureTokenHandlers(): void {
         console.log('[SecureTokenIPC] AuthStateManager state:', {
           isAuthenticated: authState.isAuthenticated,
           hasUser: !!authState.user,
-          user: authState.user?.login
+          user: authState.user?.login,
         });
 
         if (authState.isAuthenticated && authState.user) {
-          console.log('[SecureTokenIPC] Returning authenticated with token from AuthService');
+          console.log(
+            '[SecureTokenIPC] Returning authenticated with token from AuthService',
+          );
           return {
             authenticated: true,
             token,
             user: authState.user,
           };
         } else {
-          console.warn('[SecureTokenIPC] Have token but AuthStateManager not authenticated');
+          console.warn(
+            '[SecureTokenIPC] Have token but AuthStateManager not authenticated',
+          );
         }
       }
 
@@ -243,7 +250,9 @@ export function registerSecureTokenHandlers(): void {
       }
 
       // No tokens found
-      console.warn('[SecureTokenIPC] No tokens found, returning authenticated: false');
+      console.warn(
+        '[SecureTokenIPC] No tokens found, returning authenticated: false',
+      );
       return { authenticated: false };
     } catch (error) {
       console.error('[SecureTokenIPC] Failed to get GitHub auth:', error);

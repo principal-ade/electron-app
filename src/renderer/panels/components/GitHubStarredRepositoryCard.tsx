@@ -1,11 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@a24z/industry-theme';
-import {
-  ExternalLink,
-  FolderOpen,
-  Download,
-} from 'lucide-react';
+import { ExternalLink, FolderOpen, Download } from 'lucide-react';
 
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';
@@ -19,10 +15,9 @@ interface GitHubStarredRepositoryCardProps {
   localRepo?: RepositoryCacheData;
 }
 
-export const GitHubStarredRepositoryCard: React.FC<GitHubStarredRepositoryCardProps> = ({
-  repository,
-  localRepo,
-}) => {
+export const GitHubStarredRepositoryCard: React.FC<
+  GitHubStarredRepositoryCardProps
+> = ({ repository, localRepo }) => {
   const { theme } = useTheme();
   const { selectedRepository, setSelectedRepository } = useSelectedRepository();
   const isReadmeSelected = selectedRepository?.id === repository.id;
@@ -83,7 +78,9 @@ export const GitHubStarredRepositoryCard: React.FC<GitHubStarredRepositoryCardPr
         padding: '8px 12px',
         borderRadius: '4px',
         backgroundColor: isHighlighted ? `${highlightColor}15` : 'transparent',
-        border: isHighlighted ? `1px solid ${highlightColor}40` : '1px solid transparent',
+        border: isHighlighted
+          ? `1px solid ${highlightColor}40`
+          : '1px solid transparent',
         cursor: 'pointer',
         transition: 'background-color 0.15s',
       }}
@@ -114,13 +111,30 @@ export const GitHubStarredRepositoryCard: React.FC<GitHubStarredRepositoryCardPr
       </div>
 
       {/* Main content */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            flexWrap: 'wrap',
+          }}
+        >
           <span
             style={{
               fontSize: `${theme.fontSizes[2]}px`,
               fontWeight: theme.fontWeights.medium,
-              color: localRepo ? theme.colors.success || '#10b981' : theme.colors.text,
+              color: localRepo
+                ? theme.colors.success || '#10b981'
+                : theme.colors.text,
             }}
           >
             {repository.name}
@@ -177,7 +191,9 @@ export const GitHubStarredRepositoryCard: React.FC<GitHubStarredRepositoryCardPr
             gap: '4px',
             borderRadius: '4px',
             border: `1px solid ${localRepo ? badgeColor : theme.colors.border}`,
-            backgroundColor: localRepo ? `${badgeColor}15` : theme.colors.background,
+            backgroundColor: localRepo
+              ? `${badgeColor}15`
+              : theme.colors.background,
             color: localRepo ? badgeColor : theme.colors.text,
             fontSize: `${theme.fontSizes[0]}px`,
             fontWeight: theme.fontWeights.medium,
@@ -187,7 +203,8 @@ export const GitHubStarredRepositoryCard: React.FC<GitHubStarredRepositoryCardPr
           onMouseEnter={(event) => {
             event.currentTarget.style.backgroundColor = localRepo
               ? `${badgeColor}25`
-              : theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
+              : theme.colors.backgroundTertiary ||
+                theme.colors.backgroundSecondary;
           }}
           onMouseLeave={(event) => {
             event.currentTarget.style.backgroundColor = localRepo
@@ -216,7 +233,8 @@ export const GitHubStarredRepositoryCard: React.FC<GitHubStarredRepositoryCardPr
           }}
           onMouseEnter={(event) => {
             event.currentTarget.style.backgroundColor =
-              theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
+              theme.colors.backgroundTertiary ||
+              theme.colors.backgroundSecondary;
             event.currentTarget.style.color = theme.colors.text;
           }}
           onMouseLeave={(event) => {
@@ -229,15 +247,16 @@ export const GitHubStarredRepositoryCard: React.FC<GitHubStarredRepositoryCardPr
       </div>
 
       {/* Clone Modal */}
-      {showCloneModal && createPortal(
-        <GitCloneModal
-          isOpen={showCloneModal}
-          onClose={() => setShowCloneModal(false)}
-          onRepositoryAdded={handleRepositoryCloned}
-          initialUrl={repository.clone_url}
-        />,
-        document.body
-      )}
+      {showCloneModal &&
+        createPortal(
+          <GitCloneModal
+            isOpen={showCloneModal}
+            onClose={() => setShowCloneModal(false)}
+            onRepositoryAdded={handleRepositoryCloned}
+            initialUrl={repository.clone_url}
+          />,
+          document.body,
+        )}
     </div>
   );
 };

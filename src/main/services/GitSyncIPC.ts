@@ -76,7 +76,7 @@ class GitSyncIPC {
 
         return await gitSyncWebSocketManager.sendMessageToConnection(
           message.connectionId,
-          message.data
+          message.data,
         );
       },
     );

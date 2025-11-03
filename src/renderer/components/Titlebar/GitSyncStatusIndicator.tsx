@@ -16,10 +16,8 @@ export const GitSyncStatusIndicator: React.FC<GitSyncStatusIndicatorProps> = ({
   branch,
 }) => {
   const { theme } = useTheme();
-  const { isConnected, connectionCount, isAuthenticated } = useGitSyncConnection(
-    repositoryPath,
-    branch,
-  );
+  const { isConnected, connectionCount, isAuthenticated } =
+    useGitSyncConnection(repositoryPath, branch);
 
   // Don't show indicator if not authenticated
   if (!isAuthenticated) {

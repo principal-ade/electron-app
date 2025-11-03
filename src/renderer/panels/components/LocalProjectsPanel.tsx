@@ -1,11 +1,6 @@
-import React, {
-  useMemo,
-  useState,
-} from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import {
-  Search,
-} from 'lucide-react';
+import { Search } from 'lucide-react';
 
 import { useAllRepositories } from '../../hooks/useRepositoryData';
 import { LocalProjectCard } from './LocalProjectCard';
@@ -165,7 +160,9 @@ export const LocalProjectsPanel: React.FC = () => {
             }}
           >
             <p style={{ margin: 0 }}>
-              {normalizedFilter ? 'No local projects match your filter.' : 'No local projects found.'}
+              {normalizedFilter
+                ? 'No local projects match your filter.'
+                : 'No local projects found.'}
             </p>
           </div>
         )}

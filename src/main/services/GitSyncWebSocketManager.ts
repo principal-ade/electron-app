@@ -64,7 +64,10 @@ export class GitSyncWebSocketManager {
   private constructor() {
     // Get server URL from environment or use default
     this.serverUrl = process.env.GIT_SYNC_SERVER_URL || 'ws://localhost:3001';
-    console.log('[GitSyncWebSocketManager] Initialized with server:', this.serverUrl);
+    console.log(
+      '[GitSyncWebSocketManager] Initialized with server:',
+      this.serverUrl,
+    );
   }
 
   static getInstance(): GitSyncWebSocketManager {
@@ -84,7 +87,10 @@ export class GitSyncWebSocketManager {
   /**
    * Connect to the traffic controller for a specific repository
    */
-  async connect(config: GitSyncConfig, windowId: number): Promise<{
+  async connect(
+    config: GitSyncConfig,
+    windowId: number,
+  ): Promise<{
     success: boolean;
     connectionId?: string;
     message?: string;
@@ -191,7 +197,10 @@ export class GitSyncWebSocketManager {
             const message = JSON.parse(data.toString());
             this.handleMessage(connectionInfo, message);
           } catch (error) {
-            console.error('[GitSyncWebSocketManager] Failed to parse message:', error);
+            console.error(
+              '[GitSyncWebSocketManager] Failed to parse message:',
+              error,
+            );
           }
         });
 
@@ -216,7 +225,9 @@ export class GitSyncWebSocketManager {
 
           if (!stillExists) {
             // Connection was manually removed, don't reconnect
-            console.log('[GitSyncWebSocketManager] Connection was manually disconnected, not reconnecting');
+            console.log(
+              '[GitSyncWebSocketManager] Connection was manually disconnected, not reconnecting',
+            );
             // Broadcast connection-removed event only if manually disconnected
             this.broadcastConnectionEvent('connection-removed', connectionId);
             return;
@@ -229,7 +240,8 @@ export class GitSyncWebSocketManager {
         });
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to connect';
       console.error('[GitSyncWebSocketManager] Failed to connect:', error);
       return {
         success: false,
@@ -243,13 +255,16 @@ export class GitSyncWebSocketManager {
    */
   private async getRoomToken(config: GitSyncConfig): Promise<RoomTokenInfo> {
     try {
-      console.log('[GitSyncWebSocketManager] Requesting room token from auth server');
+      console.log(
+        '[GitSyncWebSocketManager] Requesting room token from auth server',
+      );
 
       // Generate a stable device ID
       const agentId = `electron-${Date.now()}`;
 
       // Get the auth server URL from environment
-      const authServerUrl = process.env.AUTH_SERVER_URL || 'http://localhost:3000';
+      const authServerUrl =
+        process.env.AUTH_SERVER_URL || 'http://localhost:3000';
 
       // Call landing-page's room-token endpoint
       const response = await fetch(`${authServerUrl}/api/auth/cli/room-token`, {
@@ -267,7 +282,9 @@ export class GitSyncWebSocketManager {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to get room token: ${response.status}`);
+        throw new Error(
+          errorData.error || `Failed to get room token: ${response.status}`,
+        );
       }
 
       const data = await response.json();
@@ -284,7 +301,10 @@ export class GitSyncWebSocketManager {
         expiresIn: data.expires_in || 3600,
       };
     } catch (error) {
-      console.error('[GitSyncWebSocketManager] Failed to get room token:', error);
+      console.error(
+        '[GitSyncWebSocketManager] Failed to get room token:',
+        error,
+      );
       throw error;
     }
   }
@@ -292,19 +312,25 @@ export class GitSyncWebSocketManager {
   /**
    * Authenticate with the traffic controller using JWT
    */
-  private authenticate(connectionInfo: ConnectionInfo, roomToken: RoomTokenInfo) {
+  private authenticate(
+    connectionInfo: ConnectionInfo,
+    roomToken: RoomTokenInfo,
+  ) {
     // Send JWT authentication message in Control Tower Core format
     // Control Tower Core v0.1.3 expects: { type: 'authenticate', payload: { type: 'jwt', token: '...' } }
     // The JWT contains all required fields: userId, repoId, agentId, permissions
     const authMessage = {
-      type: 'authenticate',  // Must be 'authenticate', not 'auth'
+      type: 'authenticate', // Must be 'authenticate', not 'auth'
       payload: {
         type: 'jwt',
         token: roomToken.access_token,
       },
     };
 
-    console.log('[GitSyncWebSocketManager] Sending JWT auth message for:', connectionInfo.connectionId);
+    console.log(
+      '[GitSyncWebSocketManager] Sending JWT auth message for:',
+      connectionInfo.connectionId,
+    );
     this.sendMessage(connectionInfo, authMessage);
   }
 
@@ -314,22 +340,39 @@ export class GitSyncWebSocketManager {
   private sendMessage(connectionInfo: ConnectionInfo, message: GitSyncMessage) {
     if (connectionInfo.ws?.readyState === WebSocket.OPEN) {
       const messageStr = JSON.stringify(message);
-      console.log('[GitSyncWebSocketManager] Sending message:', message.type, messageStr);
+      console.log(
+        '[GitSyncWebSocketManager] Sending message:',
+        message.type,
+        messageStr,
+      );
       connectionInfo.ws.send(messageStr);
     } else {
-      console.warn('[GitSyncWebSocketManager] Cannot send message, not connected. ReadyState:', connectionInfo.ws?.readyState);
+      console.warn(
+        '[GitSyncWebSocketManager] Cannot send message, not connected. ReadyState:',
+        connectionInfo.ws?.readyState,
+      );
     }
   }
 
   /**
    * Handle incoming messages from the traffic controller
    */
-  private handleMessage(connectionInfo: ConnectionInfo, message: GitSyncMessage) {
-    console.log('[GitSyncWebSocketManager] Received message:', message.type, message);
+  private handleMessage(
+    connectionInfo: ConnectionInfo,
+    message: GitSyncMessage,
+  ) {
+    console.log(
+      '[GitSyncWebSocketManager] Received message:',
+      message.type,
+      message,
+    );
 
     // Unwrap server_message envelope
     if (message.type === 'server_message' && message.payload) {
-      console.log('[GitSyncWebSocketManager] Unwrapping server_message:', message.payload.type);
+      console.log(
+        '[GitSyncWebSocketManager] Unwrapping server_message:',
+        message.payload.type,
+      );
       this.handleMessage(connectionInfo, message.payload);
       return;
     }
@@ -337,15 +380,29 @@ export class GitSyncWebSocketManager {
     switch (message.type) {
       case 'auth_success':
         connectionInfo.status.authenticated = true;
-        console.log('[GitSyncWebSocketManager] Authenticated:', connectionInfo.connectionId);
+        console.log(
+          '[GitSyncWebSocketManager] Authenticated:',
+          connectionInfo.connectionId,
+        );
         // Broadcast to renderers
-        this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionInfo.connectionId, message);
+        this.broadcastToRenderers(
+          GitSyncEvent.ON_MESSAGE,
+          connectionInfo.connectionId,
+          message,
+        );
         break;
 
       case 'auth_error':
       case 'error':
-        console.error('[GitSyncWebSocketManager] Error from traffic controller:', message);
-        this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionInfo.connectionId, message);
+        console.error(
+          '[GitSyncWebSocketManager] Error from traffic controller:',
+          message,
+        );
+        this.broadcastToRenderers(
+          GitSyncEvent.ON_MESSAGE,
+          connectionInfo.connectionId,
+          message,
+        );
         break;
 
       case 'peer_joined':
@@ -357,19 +414,33 @@ export class GitSyncWebSocketManager {
             branch: message.peer.branch || connectionInfo.branch,
           });
         }
-        this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionInfo.connectionId, message);
-        this.broadcastConnectionEvent('connection-status-changed', connectionInfo.connectionId);
+        this.broadcastToRenderers(
+          GitSyncEvent.ON_MESSAGE,
+          connectionInfo.connectionId,
+          message,
+        );
+        this.broadcastConnectionEvent(
+          'connection-status-changed',
+          connectionInfo.connectionId,
+        );
         break;
 
       case 'peer_left':
         // Remove peer from status
         if (message.peer) {
           connectionInfo.status.peers = connectionInfo.status.peers.filter(
-            (p) => p.agentId !== message.peer.agentId
+            (p) => p.agentId !== message.peer.agentId,
           );
         }
-        this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionInfo.connectionId, message);
-        this.broadcastConnectionEvent('connection-status-changed', connectionInfo.connectionId);
+        this.broadcastToRenderers(
+          GitSyncEvent.ON_MESSAGE,
+          connectionInfo.connectionId,
+          message,
+        );
+        this.broadcastConnectionEvent(
+          'connection-status-changed',
+          connectionInfo.connectionId,
+        );
         break;
 
       case 'pong':
@@ -378,7 +449,11 @@ export class GitSyncWebSocketManager {
 
       default:
         // Forward all other messages to renderers
-        this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionInfo.connectionId, message);
+        this.broadcastToRenderers(
+          GitSyncEvent.ON_MESSAGE,
+          connectionInfo.connectionId,
+          message,
+        );
         break;
     }
   }
@@ -407,13 +482,19 @@ export class GitSyncWebSocketManager {
   /**
    * Schedule reconnection
    */
-  private scheduleReconnect(connectionInfo: ConnectionInfo, config: GitSyncConfig) {
+  private scheduleReconnect(
+    connectionInfo: ConnectionInfo,
+    config: GitSyncConfig,
+  ) {
     if (connectionInfo.reconnectTimer) {
       clearTimeout(connectionInfo.reconnectTimer);
     }
 
     connectionInfo.reconnectTimer = setTimeout(() => {
-      console.log('[GitSyncWebSocketManager] Attempting to reconnect:', connectionInfo.connectionId);
+      console.log(
+        '[GitSyncWebSocketManager] Attempting to reconnect:',
+        connectionInfo.connectionId,
+      );
       // Use the original windowId for reconnection
       this.connect(config, connectionInfo.windowId).catch((error) => {
         console.error('[GitSyncWebSocketManager] Reconnect failed:', error);
@@ -424,7 +505,9 @@ export class GitSyncWebSocketManager {
   /**
    * Disconnect from traffic controller
    */
-  async disconnect(connectionId: string): Promise<{ success: boolean; message?: string }> {
+  async disconnect(
+    connectionId: string,
+  ): Promise<{ success: boolean; message?: string }> {
     const connectionInfo = this.connections.get(connectionId);
 
     if (!connectionInfo) {
@@ -502,7 +585,7 @@ export class GitSyncWebSocketManager {
    */
   async sendMessageToConnection(
     connectionId: string,
-    message: GitSyncMessage
+    message: GitSyncMessage,
   ): Promise<{ success: boolean; error?: string }> {
     const connectionInfo = this.connections.get(connectionId);
 
@@ -517,7 +600,8 @@ export class GitSyncWebSocketManager {
       this.sendMessage(connectionInfo, message);
       return { success: true };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to send message';
       return {
         success: false,
         error: errorMessage,
@@ -528,7 +612,11 @@ export class GitSyncWebSocketManager {
   /**
    * Broadcast message to all renderer processes
    */
-  private broadcastToRenderers(event: string, connectionKey: string, message: GitSyncMessage) {
+  private broadcastToRenderers(
+    event: string,
+    connectionKey: string,
+    message: GitSyncMessage,
+  ) {
     const allWindows = BrowserWindow.getAllWindows();
     allWindows.forEach((window) => {
       if (window.webContents && !window.webContents.isDestroyed()) {
@@ -541,7 +629,13 @@ export class GitSyncWebSocketManager {
    * Broadcast connection lifecycle events to all renderer processes
    * This ensures all windows (including diagnostic panel) stay in sync
    */
-  private broadcastConnectionEvent(eventType: 'connection-added' | 'connection-removed' | 'connection-status-changed', connectionId: string) {
+  private broadcastConnectionEvent(
+    eventType:
+      | 'connection-added'
+      | 'connection-removed'
+      | 'connection-status-changed',
+    connectionId: string,
+  ) {
     const allWindows = BrowserWindow.getAllWindows();
     const eventName = `git-sync:${eventType}`;
 
@@ -568,7 +662,9 @@ export class GitSyncWebSocketManager {
    * Called when a window is closed to clean up its connections
    */
   disconnectForWindow(windowId: number): void {
-    console.log(`[GitSyncWebSocketManager] Disconnecting all connections for window ${windowId}`);
+    console.log(
+      `[GitSyncWebSocketManager] Disconnecting all connections for window ${windowId}`,
+    );
 
     const connectionsToDisconnect: string[] = [];
 
@@ -580,7 +676,9 @@ export class GitSyncWebSocketManager {
     }
 
     // Disconnect them
-    console.log(`[GitSyncWebSocketManager] Found ${connectionsToDisconnect.length} connections to disconnect`);
+    console.log(
+      `[GitSyncWebSocketManager] Found ${connectionsToDisconnect.length} connections to disconnect`,
+    );
     connectionsToDisconnect.forEach((id) => {
       this.disconnect(id);
     });

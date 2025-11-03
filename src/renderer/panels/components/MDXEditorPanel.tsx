@@ -209,7 +209,14 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
     };
 
     loadFileContent();
-  }, [filePath, repositoryPath, initialContent, currentFilePath, isDirty, markdown]);
+  }, [
+    filePath,
+    repositoryPath,
+    initialContent,
+    currentFilePath,
+    isDirty,
+    markdown,
+  ]);
 
   // Auto-save on component unmount
   useEffect(() => {

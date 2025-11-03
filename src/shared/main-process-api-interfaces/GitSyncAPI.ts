@@ -147,5 +147,7 @@ export interface GitSyncAPI {
    * Subscribe to connection-status-changed events from main process
    * @returns Unsubscribe function
    */
-  onConnectionStatusChanged(callback: (connectionId: string) => void): () => void;
+  onConnectionStatusChanged(
+    callback: (connectionId: string) => void,
+  ): () => void;
 }

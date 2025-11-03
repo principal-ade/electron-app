@@ -391,9 +391,7 @@ class ExcalidrawHandlers {
       // Generate UUID if not provided (new diagram), otherwise use existing ID
       const { v4: uuidv4 } = await import('uuid');
       const id = diagramId || uuidv4();
-      const fileName = id.endsWith('.excalidraw')
-        ? id
-        : `${id}.excalidraw`;
+      const fileName = id.endsWith('.excalidraw') ? id : `${id}.excalidraw`;
 
       // The diagram name is stored in data.appState.name, not in the filename
       // Save the drawing using MemoryPalace public method

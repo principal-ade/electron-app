@@ -23,7 +23,8 @@ export function useGitSyncConnection(
   useEffect(() => {
     const updateStatus = async () => {
       try {
-        const connectionsMap = await gitSyncConnectionManager.getActiveConnections();
+        const connectionsMap =
+          await gitSyncConnectionManager.getActiveConnections();
         const authStatus = gitSyncConnectionManager.getAuthStatus();
 
         // Convert Map to array for easier processing
@@ -33,12 +34,13 @@ export function useGitSyncConnection(
         let isConnected = false;
         if (repositoryPath && branch) {
           isConnected = connections.some(
-            (conn) => conn.repoPath === repositoryPath && conn.status.connected
+            (conn) => conn.repoPath === repositoryPath && conn.status.connected,
           );
         }
 
         const finalStatus = {
-          isConnected: isConnected || connections.some((conn) => conn.status.connected),
+          isConnected:
+            isConnected || connections.some((conn) => conn.status.connected),
           connectionCount: connections.length,
           isAuthenticated: authStatus.isAuthenticated,
         };
@@ -60,14 +62,29 @@ export function useGitSyncConnection(
 
     gitSyncConnectionManager.on('connection-added', handleConnectionAdded);
     gitSyncConnectionManager.on('connection-removed', handleConnectionRemoved);
-    gitSyncConnectionManager.on('connection-status-changed', handleConnectionStatusChanged);
+    gitSyncConnectionManager.on(
+      'connection-status-changed',
+      handleConnectionStatusChanged,
+    );
     gitSyncConnectionManager.on('auth-changed', handleAuthChanged);
 
     return () => {
-      gitSyncConnectionManager.removeListener('connection-added', handleConnectionAdded);
-      gitSyncConnectionManager.removeListener('connection-removed', handleConnectionRemoved);
-      gitSyncConnectionManager.removeListener('connection-status-changed', handleConnectionStatusChanged);
-      gitSyncConnectionManager.removeListener('auth-changed', handleAuthChanged);
+      gitSyncConnectionManager.removeListener(
+        'connection-added',
+        handleConnectionAdded,
+      );
+      gitSyncConnectionManager.removeListener(
+        'connection-removed',
+        handleConnectionRemoved,
+      );
+      gitSyncConnectionManager.removeListener(
+        'connection-status-changed',
+        handleConnectionStatusChanged,
+      );
+      gitSyncConnectionManager.removeListener(
+        'auth-changed',
+        handleAuthChanged,
+      );
     };
   }, [repositoryPath, branch]);
 

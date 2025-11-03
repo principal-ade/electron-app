@@ -11,9 +11,7 @@ import {
   AgentSessionSDKAPIEvents,
   ProjectSessions,
 } from '../../shared/main-process-api-interfaces/AgentSessionSDKAPI';
-import {
-  AgentSessionAPIEvents,
-} from '../../shared/main-process-api-interfaces/AgentSessionAPI';
+import { AgentSessionAPIEvents } from '../../shared/main-process-api-interfaces/AgentSessionAPI';
 import { getEventServerManager } from './EventServerManager';
 import { getObservabilityIntegration } from '../observability/ObservabilityIntegration';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
@@ -459,9 +457,9 @@ export function registerAgentSessionSDKHandlers(): void {
       const projects = sessionCache.getSessionsByProject();
 
       // Convert ProjectSessions[] to DirectorySessions[]
-      const directorySessions = projects.map(project => ({
+      const directorySessions = projects.map((project) => ({
         directory: project.repository,
-        summaries: project.summaries.map(s => ({
+        summaries: project.summaries.map((s) => ({
           sessionId: s.sessionId,
           directory: s.repository,
           agentCLI: s.agentCLI,

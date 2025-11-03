@@ -336,7 +336,11 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm('Are you sure you want to delete this session? This cannot be undone.')) {
+                        if (
+                          confirm(
+                            'Are you sure you want to delete this session? This cannot be undone.',
+                          )
+                        ) {
                           onDeleteSession();
                         }
                       }}
@@ -353,14 +357,16 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                         transition: 'all 0.2s',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#ef4444' + '20';
+                        e.currentTarget.style.backgroundColor =
+                          '#ef4444' + '20';
                         e.currentTarget.style.borderColor = '#ef4444';
                         e.currentTarget.style.color = '#ef4444';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
                         e.currentTarget.style.borderColor = theme.colors.border;
-                        e.currentTarget.style.color = theme.colors.textSecondary;
+                        e.currentTarget.style.color =
+                          theme.colors.textSecondary;
                       }}
                       title="Delete session"
                     >

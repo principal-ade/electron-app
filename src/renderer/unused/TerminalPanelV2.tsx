@@ -15,10 +15,7 @@ import { DevSidecarService } from '../main-process-api/DevSidecarService';
 import { terminalRecorder } from '../utils/terminalRecorder';
 
 import { XTerminalPanel } from './xterminal';
-import type {
-  XTerminalPanelRef,
-  TerminalOverlayState,
-} from './xterminal';
+import type { XTerminalPanelRef, TerminalOverlayState } from './xterminal';
 
 /* eslint-disable no-console */
 
@@ -209,7 +206,9 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
 
       // Prevent duplicate session creation if already in progress
       if (isCreatingSessionRef.current) {
-        console.log('[TerminalPanelV2] Session creation already in progress, skipping');
+        console.log(
+          '[TerminalPanelV2] Session creation already in progress, skipping',
+        );
         return;
       }
 
@@ -217,19 +216,21 @@ const TerminalPanelV2 = forwardRef<TerminalPanelV2Ref, TerminalPanelV2Props>(
       isCreatingSessionRef.current = true;
 
       console.log('[TerminalPanelV2] Creating new terminal session...');
-      createTerminalSession(directory).then((id) => {
-        if (id && isMounted) {
-          console.log(`[TerminalPanelV2] Session created: ${id}`);
-          setSessionId(id);
-          if (onSessionCreated) {
-            onSessionCreated(id);
+      createTerminalSession(directory)
+        .then((id) => {
+          if (id && isMounted) {
+            console.log(`[TerminalPanelV2] Session created: ${id}`);
+            setSessionId(id);
+            if (onSessionCreated) {
+              onSessionCreated(id);
+            }
           }
-        }
-        isCreatingSessionRef.current = false;
-      }).catch((err) => {
-        console.error('[TerminalPanelV2] Failed to create session:', err);
-        isCreatingSessionRef.current = false;
-      });
+          isCreatingSessionRef.current = false;
+        })
+        .catch((err) => {
+          console.error('[TerminalPanelV2] Failed to create session:', err);
+          isCreatingSessionRef.current = false;
+        });
 
       return () => {
         isMounted = false;

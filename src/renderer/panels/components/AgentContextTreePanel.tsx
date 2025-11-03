@@ -113,7 +113,10 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
         }}
       >
         <div style={{ textAlign: 'center' }}>
-          <FolderOpen size={32} style={{ opacity: 0.3, marginBottom: '12px' }} />
+          <FolderOpen
+            size={32}
+            style={{ opacity: 0.3, marginBottom: '12px' }}
+          />
           <div style={{ fontSize: '14px' }}>Loading agent context...</div>
         </div>
       </div>

@@ -112,7 +112,10 @@ process.stdout.write('');
       },
     };
   } catch (error) {
-    console.error('[GitAuth] Failed to prepare GitHub token credentials:', error);
+    console.error(
+      '[GitAuth] Failed to prepare GitHub token credentials:',
+      error,
+    );
     return null;
   }
 }

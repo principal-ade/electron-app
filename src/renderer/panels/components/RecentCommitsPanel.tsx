@@ -56,9 +56,7 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
         setCommits(repoCommits);
       } catch (err) {
         console.error('Failed to fetch commits:', err);
-        setError(
-          err instanceof Error ? err.message : 'Failed to load commits',
-        );
+        setError(err instanceof Error ? err.message : 'Failed to load commits');
       } finally {
         setIsLoading(false);
       }
@@ -173,7 +171,10 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
         >
           <Loader2
             size={32}
-            style={{ color: theme.colors.textSecondary, animation: 'spin 1s linear infinite' }}
+            style={{
+              color: theme.colors.textSecondary,
+              animation: 'spin 1s linear infinite',
+            }}
           />
         </div>
       </div>
@@ -200,7 +201,14 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
             }}
           >
             <AlertCircle size={32} style={{ color: theme.colors.error }} />
-            <p style={{ color: theme.colors.textSecondary, fontFamily: theme.fonts.body }}>{error}</p>
+            <p
+              style={{
+                color: theme.colors.textSecondary,
+                fontFamily: theme.fonts.body,
+              }}
+            >
+              {error}
+            </p>
           </div>
         </div>
       </div>
@@ -291,7 +299,9 @@ export const RecentCommitsPanel: React.FC<RecentCommitsPanelProps> = ({
                   color: theme.colors.textSecondary,
                 }}
               >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
                   <Calendar size={12} />
                   {formatRelativeTime(commit.commit.author.date)}
                 </span>

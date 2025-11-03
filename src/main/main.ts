@@ -195,7 +195,7 @@ app.on('browser-window-created', (_, window) => {
           !input.meta &&
           !input.shift))
     ) {
-      log.info('[Window Switcher] Toggle shortcut triggered (Command+\')');
+      log.info("[Window Switcher] Toggle shortcut triggered (Command+')");
       windowSwitcher.toggle();
       event.preventDefault();
     }
@@ -223,10 +223,14 @@ app.on('browser-window-created', (_, window) => {
       input.type === 'keyUp' &&
       windowSwitcher.isShowing() &&
       windowSwitcher.isCycleMode() &&
-      ((process.platform === 'darwin' && (input.code === 'MetaLeft' || input.code === 'MetaRight')) ||
-        (process.platform !== 'darwin' && (input.code === 'ControlLeft' || input.code === 'ControlRight')))
+      ((process.platform === 'darwin' &&
+        (input.code === 'MetaLeft' || input.code === 'MetaRight')) ||
+        (process.platform !== 'darwin' &&
+          (input.code === 'ControlLeft' || input.code === 'ControlRight')))
     ) {
-      log.info('[Window Switcher] Modifier key released, activating selected window');
+      log.info(
+        '[Window Switcher] Modifier key released, activating selected window',
+      );
       windowSwitcher.activateSelectedAndHide();
       event.preventDefault();
     }

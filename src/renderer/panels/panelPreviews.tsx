@@ -96,7 +96,8 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     icon: <Users size={16} />,
     preview: <GitHubSocialPanelPreview />,
     label: 'GitHub Network',
-    description: 'View coworkers from your organizations and people you follow.',
+    description:
+      'View coworkers from your organizations and people you follow.',
   },
   gitStatus: {
     icon: <Info size={16} />,
@@ -197,20 +198,37 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
   },
   githubReadme: {
     icon: <FileText size={16} />,
-    preview: <div style={{ padding: '16px', textAlign: 'center', fontSize: '13px', color: '#888' }}>GitHub README Viewer</div>,
+    preview: (
+      <div
+        style={{
+          padding: '16px',
+          textAlign: 'center',
+          fontSize: '13px',
+          color: '#888',
+        }}
+      >
+        GitHub README Viewer
+      </div>
+    ),
     label: 'GitHub README',
     description: 'View README files from GitHub repositories in the Feed.',
   },
   graphsList: {
     icon: <Network size={16} />,
-    preview: <div style={{ padding: '16px', textAlign: 'center' }}>Graphs List</div>,
+    preview: (
+      <div style={{ padding: '16px', textAlign: 'center' }}>Graphs List</div>
+    ),
     label: 'Dependency Graphs',
     description:
       'Browse dependency clusters discovered across your repositories.',
   },
   graphDetail: {
     icon: <Network size={16} />,
-    preview: <div style={{ padding: '16px', textAlign: 'center' }}>Graph Visualization</div>,
+    preview: (
+      <div style={{ padding: '16px', textAlign: 'center' }}>
+        Graph Visualization
+      </div>
+    ),
     label: 'Graph Visualization',
     description:
       'Interactive graph visualization with filtering and cluster analysis.',

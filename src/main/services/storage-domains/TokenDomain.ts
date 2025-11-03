@@ -13,7 +13,11 @@ export interface TokenData {
 export class TokenDomain {
   constructor(private storage: UnifiedSecureStorage) {}
 
-  async setToken(key: string, token: string, metadata?: TokenMetadata): Promise<void> {
+  async setToken(
+    key: string,
+    token: string,
+    metadata?: TokenMetadata,
+  ): Promise<void> {
     await this.storage.updateData((data) => {
       data.tokens[key] = {
         token,
