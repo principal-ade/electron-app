@@ -3,7 +3,7 @@
  * Provides a visual overlay to cycle through open windows
  */
 
-import { BrowserWindow, screen, ipcMain } from 'electron';
+import { BrowserWindow, screen, ipcMain, app } from 'electron';
 import path from 'path';
 import log from 'electron-log';
 import { resolveHtmlPath } from '../util';
@@ -231,6 +231,9 @@ class WindowSwitcher {
   private updateWindowList(): void {
     this.windowList = [];
 
+    log.info(`[Window Switcher] applicationWindows.size: ${applicationWindows.size}`);
+    log.info(`[Window Switcher] applicationWindows keys: ${Array.from(applicationWindows.keys()).join(', ')}`);
+
     // Get all application windows except the switcher itself
     for (const [id, appWindow] of applicationWindows.entries()) {
       if (appWindow.window && !appWindow.window.isDestroyed()) {
@@ -282,7 +285,15 @@ class WindowSwitcher {
    */
   private createSwitcherWindow(): void {
     const primaryDisplay = screen.getPrimaryDisplay();
-    const { width, height } = primaryDisplay.workAreaSize;
+    const { width, height } = primaryDisplay.bounds;
+
+    // Use the correct preload path based on whether app is packaged or in development
+    const preloadPath = app.isPackaged
+      ? path.join(__dirname, 'preload.js')
+      : path.join(__dirname, '../../.erb/dll/preload.js');
+
+    log.info(`[Window Switcher] Preload path: ${preloadPath}`);
+    log.info(`[Window Switcher] Screen bounds: ${width}x${height}`);
 
     this.switcherWindow = new BrowserWindow({
       width,
@@ -301,7 +312,7 @@ class WindowSwitcher {
       focusable: true,
       backgroundColor: '#00000000',
       webPreferences: {
-        preload: path.join(__dirname, '../preload.js'),
+        preload: preloadPath,
         nodeIntegration: false,
         contextIsolation: true,
       },
