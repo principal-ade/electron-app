@@ -217,19 +217,37 @@ const TerminalPanelPackaged = forwardRef<
 
       return () => {
         mounted = false;
-        if (sessionId) {
-          // Release ownership when component unmounts
-          TerminalService.releaseOwnership(sessionId).catch((err) =>
-            console.error(
-              '[TerminalPanelPackaged] Failed to release ownership:',
-              err,
-            ),
-          );
-        }
+        // Note: We don't release ownership on unmount because this component
+        // may unmount when switching between tabbed/carousel views, but we want
+        // to maintain ownership. Ownership will be released when the session is
+        // explicitly destroyed or when another window claims it.
       };
       // Only run on mount - intentionally minimal dependencies
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Listen for ownership lost events
+    useEffect(() => {
+      if (!sessionId) return;
+
+      const unsubscribe = TerminalService.onOwnershipLost((data) => {
+        if (data.sessionId === sessionId) {
+          console.log(
+            `[TerminalPanelPackaged] Ownership lost for session ${sessionId}, new owner: ${data.newOwnerWindowId}`,
+          );
+          setOwnershipStatus({
+            isOwned: true,
+            ownedByWindowId: data.newOwnerWindowId,
+            canTakeControl: true, // User can always take control back
+          });
+          setShouldRenderTerminal(false);
+        }
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    }, [sessionId]);
 
     // Listen for terminal data from backend
     useEffect(() => {
@@ -289,7 +307,10 @@ const TerminalPanelPackaged = forwardRef<
 
       const fetchSessionInfo = async () => {
         try {
-          const session = await AgentSessionService.getSession(agentSessionId);
+          const session = await AgentSessionService.getSession(
+            agentSessionId,
+            directory,
+          );
           if (mounted && session) {
             setAiSessionInfo({
               sessionId: agentSessionId,
@@ -309,9 +330,12 @@ const TerminalPanelPackaged = forwardRef<
       return () => {
         mounted = false;
       };
+      // Only re-fetch when agentSessionId changes, not when directory changes
+      // The directory is only used as context to find the session store
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [agentSessionId]);
 
-    // Track dev sidecar session
+    // Track dev sidecar session via DevSidecarService events
     useEffect(() => {
       if (!agentSessionId) {
         setDevSidecarSessionId(null);
@@ -319,27 +343,22 @@ const TerminalPanelPackaged = forwardRef<
         return;
       }
 
-      let mounted = true;
+      // Listen for dev sidecar window creation/closure events
+      const unsubscribeCreated = DevSidecarService.onWindowCreated((info) => {
+        setDevSidecarSessionId(info.sessionId);
+        devSidecarSessionIdRef.current = info.sessionId;
+      });
 
-      const checkSidecar = async () => {
-        try {
-          const session = await AgentSessionService.getSession(agentSessionId);
-          if (mounted && session?.devSidecarSessionId) {
-            setDevSidecarSessionId(session.devSidecarSessionId);
-            devSidecarSessionIdRef.current = session.devSidecarSessionId;
-          }
-        } catch (error) {
-          console.error(
-            '[TerminalPanelPackaged] Failed to check dev sidecar:',
-            error,
-          );
+      const unsubscribeClosed = DevSidecarService.onWindowClosed((sessionId) => {
+        if (sessionId === devSidecarSessionIdRef.current) {
+          setDevSidecarSessionId(null);
+          devSidecarSessionIdRef.current = null;
         }
-      };
-
-      checkSidecar();
+      });
 
       return () => {
-        mounted = false;
+        unsubscribeCreated();
+        unsubscribeClosed();
       };
     }, [agentSessionId]);
 
@@ -427,8 +446,21 @@ const TerminalPanelPackaged = forwardRef<
         });
         setShouldRenderTerminal(true);
 
-        // Refresh terminal
-        await TerminalService.refresh(sessionId);
+        // Wait for terminal to render before refreshing
+        // This ensures the terminal ref is ready to receive data
+        setTimeout(async () => {
+          try {
+            await TerminalService.refresh(sessionId);
+            console.log(
+              `[TerminalPanelPackaged] Successfully refreshed terminal after taking control: ${sessionId}`,
+            );
+          } catch (refreshError) {
+            console.error(
+              '[TerminalPanelPackaged] Failed to refresh terminal:',
+              refreshError,
+            );
+          }
+        }, 300);
       } catch (error) {
         console.error('[TerminalPanelPackaged] Failed to take control:', error);
       }

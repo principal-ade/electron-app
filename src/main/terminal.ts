@@ -742,7 +742,7 @@ class TerminalManager {
         let ownerWindowExists = false;
         if (session.ownedByWindowId) {
           const ownerWindow = BrowserWindow.fromId(session.ownedByWindowId);
-          ownerWindowExists = ownerWindow && !ownerWindow.isDestroyed();
+          ownerWindowExists = !!ownerWindow && !ownerWindow.isDestroyed();
         }
 
         return {
