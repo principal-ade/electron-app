@@ -197,6 +197,20 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           }
         />
 
+        {/* Avatar */}
+        {repository?.avatarUrl && (
+          <img
+            src={repository.avatarUrl}
+            alt={`${displayOwner} avatar`}
+            style={{
+              width: '20px',
+              height: '20px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+            }}
+          />
+        )}
+
         <span
           style={{
             fontSize: '15px',
@@ -233,29 +247,20 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           >
             {displayName}
           </span>
-          {displayOwner && (
-            <>
-              <span style={{ color: theme.colors.text }}> by </span>
-              <span
-                style={{
-                  color: theme.colors.text,
-                  cursor: 'pointer',
-                }}
-                onClick={() => {
-                  window.open(`https://github.com/${displayOwner}`, '_blank');
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.7';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-                title={`Open ${displayOwner}'s GitHub profile`}
-              >
-                {displayOwner}
-              </span>
-            </>
-          )}
+          {selectedSource?.type === 'local' &&
+            selectedSource.metadata?.currentBranch && (
+              <>
+                <span style={{ color: theme.colors.textSecondary }}> on </span>
+                <span
+                  style={{
+                    color: theme.colors.text,
+                    fontWeight: 500,
+                  }}
+                >
+                  {selectedSource.metadata.currentBranch}
+                </span>
+              </>
+            )}
         </span>
 
         {/* Open in IDE button */}
