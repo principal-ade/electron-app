@@ -109,8 +109,10 @@ class AuthStateManager extends EventEmitter {
       lastChecked: Date.now(),
     };
 
-    // Add avatar URL if we have a user
+    // Only add fallback avatar URL if we have a user but no avatarUrl
+    // Prefer avatarUrl from GitHub API response
     if (this.state.user && !this.state.user.avatarUrl) {
+      // Fallback: construct avatar URL from login (may not work for all cases)
       this.state.user.avatarUrl = `https://github.com/${this.state.user.login}.png?size=48`;
     }
 
@@ -145,7 +147,8 @@ class AuthStateManager extends EventEmitter {
       isAuthenticated: true,
       user: {
         ...user,
-        avatarUrl: `https://github.com/${user.login}.png?size=48`,
+        // Preserve avatarUrl from GitHub API, or use fallback if not provided
+        avatarUrl: user.avatarUrl || `https://github.com/${user.login}.png?size=48`,
       },
       token,
     });

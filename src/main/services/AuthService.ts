@@ -172,10 +172,10 @@ class AuthService {
           console.log('[AuthService] Starting OAuth flow...');
           const result = await authClient.authenticate();
 
-          // Fetch GitHub user profile to get avatar URL
+          // Fetch GitHub user profile to get canonical user data
           let enrichedUser = result.user;
           try {
-            console.log('[AuthService] Fetching GitHub user profile for avatar...');
+            console.log('[AuthService] Fetching GitHub user profile...');
             const response = await fetch('https://api.github.com/user', {
               headers: {
                 'Authorization': `Bearer ${result.token}`,
@@ -185,17 +185,22 @@ class AuthService {
 
             if (response.ok) {
               const githubUser = await response.json();
+              // Use GitHub API as source of truth for all user data
               enrichedUser = {
-                ...result.user,
+                login: githubUser.login,        // GitHub's canonical username
+                email: githubUser.email || result.user.email,
+                name: githubUser.name || result.user.name,
+                id: githubUser.id,
                 avatarUrl: githubUser.avatar_url,
               };
-              console.log('[AuthService] Avatar URL fetched successfully');
+              console.log('[AuthService] GitHub user profile fetched successfully:', enrichedUser.login);
             } else {
               console.warn('[AuthService] Failed to fetch GitHub profile:', response.status);
+              console.warn('[AuthService] Falling back to OAuth server user data');
             }
           } catch (avatarError) {
-            console.error('[AuthService] Error fetching avatar:', avatarError);
-            // Continue without avatar - not critical
+            console.error('[AuthService] Error fetching GitHub profile:', avatarError);
+            console.warn('[AuthService] Falling back to OAuth server user data');
           }
 
           // Store the credentials securely with refresh token and expiry
@@ -454,11 +459,13 @@ class AuthService {
         },
       );
 
-      // If avatar URL is missing, fetch it from GitHub
+      // If avatar URL is missing or user data seems incorrect, fetch from GitHub
       let enrichedUser = user;
-      if (!user.avatarUrl) {
+      const needsGitHubFetch = !user.avatarUrl || user.login.includes('.');
+
+      if (needsGitHubFetch) {
         try {
-          console.log('[AuthService] Avatar URL missing, fetching from GitHub...');
+          console.log('[AuthService] Fetching canonical GitHub user data...');
           const response = await fetch('https://api.github.com/user', {
             headers: {
               'Authorization': `Bearer ${githubToken}`,
@@ -468,13 +475,17 @@ class AuthService {
 
           if (response.ok) {
             const githubUser = await response.json();
+            // Use GitHub API as source of truth for all user data
             enrichedUser = {
-              ...user,
+              login: githubUser.login,        // GitHub's canonical username
+              email: githubUser.email || user.email,
+              name: githubUser.name || user.name,
+              id: githubUser.id,
               avatarUrl: githubUser.avatar_url,
             };
-            console.log('[AuthService] Avatar URL fetched and cached successfully');
+            console.log('[AuthService] GitHub user data fetched and cached successfully:', enrichedUser.login);
 
-            // Update stored user data with avatar
+            // Update stored user data with canonical GitHub data
             await this.storage.setToken(TOKEN_KEYS.GITHUB_TOKEN, githubToken, {
               user: enrichedUser,
             });
@@ -482,8 +493,8 @@ class AuthService {
             console.warn('[AuthService] Failed to fetch GitHub profile:', response.status);
           }
         } catch (avatarError) {
-          console.error('[AuthService] Error fetching avatar:', avatarError);
-          // Continue without avatar - not critical
+          console.error('[AuthService] Error fetching GitHub profile:', avatarError);
+          // Continue with existing user data
         }
       }
 
