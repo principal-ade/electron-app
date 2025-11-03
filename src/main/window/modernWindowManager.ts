@@ -134,6 +134,15 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     this.window.on('closed', async () => {
       console.log(`[ModernWindow] Window ${this.window.id} closed`);
 
+      // Check if this was a repository window before cleanup
+      let wasRepositoryWindow = false;
+      for (const [purpose, windowId] of specialWindows.entries()) {
+        if (windowId === this.window.id && purpose.startsWith('repository-maps-')) {
+          wasRepositoryWindow = true;
+          break;
+        }
+      }
+
       // Clean up file system watchers before removing from map
       if (this.fileSystemAdapter) {
         console.log(
@@ -166,6 +175,18 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
         if (windowId === this.window.id) {
           specialWindows.delete(purpose);
         }
+      }
+
+      // Broadcast repository window change if this was a repository window
+      if (wasRepositoryWindow) {
+        // Import and call broadcast function from modernWindowHandlers
+        import('./modernWindowHandlers').then((module) => {
+          if (module.broadcastRepositoryWindowsChanged) {
+            module.broadcastRepositoryWindowsChanged();
+          }
+        }).catch((error) => {
+          console.error('[ModernWindow] Error broadcasting window change:', error);
+        });
       }
     });
   }

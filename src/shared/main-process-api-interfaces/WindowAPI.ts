@@ -5,6 +5,14 @@
 
 import type { AlexandriaEntry } from '@a24z/core-library';
 
+/**
+ * Repository window state
+ */
+export interface RepositoryWindowState {
+  remoteUrl: string;
+  state: 'opening' | 'ready';
+}
+
 export interface StoreViewerOptions {
   agent?: string;
   namespace?: string;
@@ -115,4 +123,19 @@ export interface WindowAPI {
    * @returns The Electron BrowserWindow ID
    */
   getWindowId(): Promise<number>;
+
+  /**
+   * Check if a repository window is already open
+   * @param repository - Alexandria repository entry to check
+   * @returns True if the repository window is open, false otherwise
+   */
+  isRepositoryWindowOpen(repository: AlexandriaEntry): Promise<boolean>;
+
+  /**
+   * Listen for repository windows state changes
+   * @param callback - Called with array of repository window states when state changes
+   */
+  onRepositoryWindowsChanged(
+    callback: (repoWindows: RepositoryWindowState[]) => void,
+  ): void;
 }

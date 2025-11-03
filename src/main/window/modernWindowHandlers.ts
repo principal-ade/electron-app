@@ -12,6 +12,58 @@ import type { AlexandriaEntry } from '@a24z/core-library';
 import type { IModernApplicationWindow } from './types';
 
 /**
+ * Repository window state
+ */
+export interface RepositoryWindowState {
+  remoteUrl: string;
+  state: 'opening' | 'ready';
+}
+
+/**
+ * Get list of open repository windows with their states
+ */
+function getOpenRepositoryWindows(): RepositoryWindowState[] {
+  const { getSpecialWindows, getApplicationWindows } = require('./modernWindowManager');
+  const specialWindows = getSpecialWindows();
+  const applicationWindows = getApplicationWindows();
+
+  const repoWindows: RepositoryWindowState[] = [];
+
+  for (const [windowName, windowId] of specialWindows.entries()) {
+    if (windowName.startsWith('repository-maps-')) {
+      const appWindow = applicationWindows.get(windowId);
+      if (appWindow && !appWindow.window.isDestroyed()) {
+        // Extract the remoteUrl from the window name
+        const remoteUrl = windowName.replace('repository-maps-', '');
+        // Check if window is ready (has been shown)
+        const state = appWindow.window.isVisible() ? 'ready' : 'opening';
+        repoWindows.push({ remoteUrl, state });
+      }
+    }
+  }
+
+  return repoWindows;
+}
+
+/**
+ * Broadcast repository windows changed event to all windows
+ */
+export function broadcastRepositoryWindowsChanged(): void {
+  const { getApplicationWindows } = require('./modernWindowManager');
+  const applicationWindows = getApplicationWindows();
+  const openRepoWindows = getOpenRepositoryWindows();
+
+  applicationWindows.forEach((appWindow: IModernApplicationWindow) => {
+    if (appWindow.window && !appWindow.window.isDestroyed()) {
+      appWindow.window.webContents.send(
+        WindowEvent.REPOSITORY_WINDOWS_CHANGED,
+        openRepoWindows,
+      );
+    }
+  });
+}
+
+/**
  * Register all modern window IPC handlers
  */
 export function registerModernWindowHandlers(): void {
@@ -254,6 +306,16 @@ export function registerModernWindowHandlers(): void {
 
       // Only load URL for newly created windows, not existing ones
       if (!windowAlreadyExists) {
+        // Broadcast immediately that window is opening
+        broadcastRepositoryWindowsChanged();
+
+        // Listen for when window is ready to show, then broadcast again
+        window.window.once('ready-to-show', () => {
+          console.log('[ModernWindow] Repository dashboard window ready to show');
+          // Broadcast that window is now ready
+          broadcastRepositoryWindowsChanged();
+        });
+
         // Build URL with the mapped repository data
         const payload = { repository: repoData };
         const encodedData = encodeURIComponent(JSON.stringify(payload));
@@ -441,4 +503,49 @@ export function registerModernWindowHandlers(): void {
     const url = resolveHtmlPath('palace-room-workspace.html');
     window.window.loadURL(url);
   });
+
+  // Check if repository window is already open
+  ipcMain.handle(
+    WindowEvent.IS_REPOSITORY_WINDOW_OPEN,
+    async (_event, repository: AlexandriaEntry) => {
+      // Extract repository info to build window name (same logic as OPEN_REPOSITORY_DASHBOARD)
+      let owner = repository.github?.owner;
+      let repoName = repository.name;
+      let remoteUrl = repository.remoteUrl;
+
+      // If still no owner, try to parse from the name (might be in format owner/repo)
+      if (!owner && repository.name.includes('/')) {
+        const parts = repository.name.split('/');
+        owner = parts[0];
+        repoName = parts[1];
+      }
+
+      // Default to 'unknown' if we still couldn't find an owner
+      if (!owner) {
+        owner = 'unknown';
+      }
+
+      // Ensure we have a remoteUrl
+      if (!remoteUrl) {
+        remoteUrl = `https://github.com/${owner}/${repoName}`;
+      }
+
+      const windowName = `repository-maps-${remoteUrl}`;
+
+      // Check if window exists and is not destroyed
+      const {
+        getSpecialWindows,
+        getApplicationWindows,
+      } = require('./modernWindowManager');
+      const specialWindows = getSpecialWindows();
+      const applicationWindows = getApplicationWindows();
+      const existingWindowId = specialWindows.get(windowName);
+      const windowExists =
+        existingWindowId &&
+        applicationWindows.get(existingWindowId) &&
+        !applicationWindows.get(existingWindowId).window.isDestroyed();
+
+      return !!windowExists;
+    },
+  );
 }

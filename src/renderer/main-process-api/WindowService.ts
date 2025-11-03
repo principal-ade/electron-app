@@ -11,8 +11,12 @@ import type {
   StoreViewerOptions,
   OpenLocalFilesRequest,
   OpenRemoteFilesRequest,
+  RepositoryWindowState,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@a24z/core-library';
+
+// Re-export for convenience
+export type { RepositoryWindowState };
 
 /**
  * Service for managing application windows
@@ -154,6 +158,42 @@ export class WindowService {
     } catch (error) {
       console.error(
         '[WindowService] Failed to register minimize state listener:',
+        error,
+      );
+    }
+  }
+
+  /**
+   * Check if a repository window is already open
+   * @param repository - Alexandria repository entry to check
+   * @returns True if the repository window is open, false otherwise
+   */
+  static async isRepositoryWindowOpen(
+    repository: AlexandriaEntry,
+  ): Promise<boolean> {
+    try {
+      return await window.mainProcess.window.isRepositoryWindowOpen(repository);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to check repository window status:',
+        error,
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Listen for repository windows state changes
+   * @param callback - Called with array of repository window states when state changes
+   */
+  static onRepositoryWindowsChanged(
+    callback: (repoWindows: RepositoryWindowState[]) => void,
+  ): void {
+    try {
+      window.mainProcess.window.onRepositoryWindowsChanged(callback);
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to register repository windows listener:',
         error,
       );
     }

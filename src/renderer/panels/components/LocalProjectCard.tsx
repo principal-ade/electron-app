@@ -1,10 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { ExternalLink, FolderOpen } from 'lucide-react';
+import { ExternalLink, FolderOpen, Focus, Loader2 } from 'lucide-react';
 
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';
 import { WindowService } from '../../main-process-api/WindowService';
+import type { RepositoryWindowState } from '../../main-process-api/WindowService';
+
+// Add spin animation styles to document if not already present
+if (typeof document !== 'undefined') {
+  const styleId = 'local-project-card-animations';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
 
 interface LocalProjectCardProps {
   repositoryData: RepositoryCacheData;
@@ -16,6 +33,7 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
   const { theme } = useTheme();
   const { selectedRepository, setSelectedRepository } = useSelectedRepository();
   const entry = repositoryData.repository;
+  const [windowState, setWindowState] = useState<'closed' | 'opening' | 'ready'>('closed');
 
   // Check if this repo is selected for README view
   const isReadmeSelected =
@@ -27,6 +45,43 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
         : parseInt(entry.github.id, 10)) ||
       selectedRepository.full_name ===
         `${entry.github.owner}/${entry.github.name}`);
+
+  // Subscribe to repository window state changes
+  useEffect(() => {
+    // Initial check
+    const checkWindowStatus = async () => {
+      const isOpen = await WindowService.isRepositoryWindowOpen(entry);
+      setWindowState(isOpen ? 'ready' : 'closed');
+    };
+
+    checkWindowStatus();
+
+    // Listen for window state changes
+    WindowService.onRepositoryWindowsChanged((repoWindows) => {
+      // Build the expected remote URL for this repository
+      let owner = entry.github?.owner;
+      let repoName = entry.name;
+      let remoteUrl = entry.remoteUrl;
+
+      if (!owner && entry.name.includes('/')) {
+        const parts = entry.name.split('/');
+        owner = parts[0];
+        repoName = parts[1];
+      }
+
+      if (!owner) {
+        owner = 'unknown';
+      }
+
+      if (!remoteUrl) {
+        remoteUrl = `https://github.com/${owner}/${repoName}`;
+      }
+
+      // Find this repository's window in the list
+      const repoWindow = repoWindows.find((w) => w.remoteUrl === remoteUrl);
+      setWindowState(repoWindow ? repoWindow.state : 'closed');
+    });
+  }, [entry]);
 
   const handleOpenInGitHub = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -217,7 +272,14 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
         <button
           type="button"
           onClick={handleOpenLocally}
-          title="Open locally"
+          title={
+            windowState === 'ready'
+              ? 'Focus window'
+              : windowState === 'opening'
+                ? 'Window is opening...'
+                : 'Open locally'
+          }
+          disabled={windowState === 'opening'}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -230,18 +292,36 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
             color: theme.colors.success || '#10b981',
             fontSize: `${theme.fontSizes[0]}px`,
             fontWeight: theme.fontWeights.medium,
-            cursor: 'pointer',
+            cursor: windowState === 'opening' ? 'wait' : 'pointer',
+            opacity: windowState === 'opening' ? 0.6 : 1,
             transition: 'all 0.15s ease',
           }}
           onMouseEnter={(event) => {
-            event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}25`;
+            if (windowState !== 'opening') {
+              event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}25`;
+            }
           }}
           onMouseLeave={(event) => {
             event.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}15`;
           }}
         >
-          <FolderOpen size={12} />
-          Open
+          {windowState === 'ready' ? (
+            <Focus size={12} />
+          ) : windowState === 'opening' ? (
+            <Loader2
+              size={12}
+              style={{
+                animation: 'spin 1s linear infinite',
+              }}
+            />
+          ) : (
+            <FolderOpen size={12} />
+          )}
+          {windowState === 'ready'
+            ? 'Focus'
+            : windowState === 'opening'
+              ? 'Opening...'
+              : 'Open'}
         </button>
         {entry.remoteUrl && (
           <button

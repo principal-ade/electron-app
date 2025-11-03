@@ -9,6 +9,7 @@ import type {
   StoreViewerOptions,
   OpenLocalFilesRequest,
   OpenRemoteFilesRequest,
+  RepositoryWindowState,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
@@ -86,4 +87,24 @@ export const windowAPI: WindowAPI = {
    * Get the unique ID of the current window
    */
   getWindowId: () => ipcRenderer.invoke(WindowEvent.GET_WINDOW_ID),
+
+  /**
+   * Check if a repository window is already open
+   */
+  isRepositoryWindowOpen: (repository: AlexandriaEntry) =>
+    ipcRenderer.invoke(WindowEvent.IS_REPOSITORY_WINDOW_OPEN, repository),
+
+  /**
+   * Listen for repository windows state changes
+   */
+  onRepositoryWindowsChanged: (
+    callback: (repoWindows: RepositoryWindowState[]) => void,
+  ) => {
+    ipcRenderer.on(
+      WindowEvent.REPOSITORY_WINDOWS_CHANGED,
+      (_event, repoWindows: RepositoryWindowState[]) => {
+        callback(repoWindows);
+      },
+    );
+  },
 };
