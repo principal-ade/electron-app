@@ -11,14 +11,12 @@ import {
   LogIn,
   RotateCcw,
   Search,
-  ChevronDown,
-  ChevronRight,
 } from 'lucide-react';
 
 import { useAuthState } from '../../hooks/useAuthState';
 import { GithubService } from '../../main-process-api/GithubService';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
-import { GitHubRepositoryCard } from './GitHubRepositoryCard';
+import { GitHubStarredRepositoryCard } from './GitHubStarredRepositoryCard';
 import { useAllRepositories } from '../../hooks/useRepositoryData';
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 
@@ -36,10 +34,6 @@ export const GitHubStarredPanel: React.FC = () => {
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState('');
-  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
-    new Set(),
-  );
 
   // Load all local repositories with caching
   const { repositories: localRepos } = useAllRepositories();
@@ -127,7 +121,6 @@ export const GitHubStarredPanel: React.FC = () => {
       });
 
       setStarredRepositories(starred);
-      setLastUpdated(Date.now());
     } catch (err) {
       console.error('Failed to load GitHub starred repositories', err);
       setError(
@@ -145,7 +138,6 @@ export const GitHubStarredPanel: React.FC = () => {
       void fetchRepositories();
     } else {
       setStarredRepositories([]);
-      setLastUpdated(null);
       setError(null);
     }
   }, [fetchRepositories, isAuthenticated]);
@@ -164,43 +156,16 @@ export const GitHubStarredPanel: React.FC = () => {
     }
   }, [fetchRepositories, isFetching]);
 
-  const toggleSection = useCallback((sectionId: string) => {
-    setCollapsedSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(sectionId)) {
-        next.delete(sectionId);
-      } else {
-        next.add(sectionId);
-      }
-      return next;
-    });
-  }, []);
-
   const normalizedFilter = filter.trim().toLowerCase();
 
-  // Group starred repositories by organization
-  const repositoriesByOrg = useMemo(() => {
+  // Filter and sort starred repositories
+  const filteredRepositories = useMemo(() => {
     const filtered = filterRepositories(starredRepositories, normalizedFilter);
 
-    // Group by organization/owner
-    const grouped = new Map<string, GitHubRepository[]>();
-    filtered.forEach((repo) => {
-      const orgName = repo.owner.login;
-      if (!grouped.has(orgName)) {
-        grouped.set(orgName, []);
-      }
-      grouped.get(orgName)!.push(repo);
-    });
-
-    // Sort organizations alphabetically and sort repos within each org by name
-    return Array.from(grouped.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([org, repos]) => ({
-        organization: org,
-        repositories: repos.sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
-        ),
-      }));
+    // Sort alphabetically by name
+    return filtered.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    );
   }, [starredRepositories, normalizedFilter]);
 
   // Create lookup map for local repositories
@@ -387,84 +352,20 @@ export const GitHubStarredPanel: React.FC = () => {
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '4px',
         }}
       >
-        {/* Organization Sections */}
-        {repositoriesByOrg.map(({ organization, repositories }) => {
-          const sectionId = `org-${organization}`;
-          const isCollapsed = collapsedSections.has(sectionId);
-
-          return (
-            <div key={organization}>
-              <button
-                onClick={() => toggleSection(sectionId)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  backgroundColor: theme.colors.background,
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary || theme.colors.backgroundSecondary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.background;
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {isCollapsed ? (
-                    <ChevronRight size={16} color={theme.colors.textSecondary} />
-                  ) : (
-                    <ChevronDown size={16} color={theme.colors.textSecondary} />
-                  )}
-                  <span
-                    style={{
-                      fontSize: `${theme.fontSizes[1]}px`,
-                      fontWeight: theme.fontWeights.semibold,
-                      fontFamily: theme.fonts.body,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    {organization}
-                  </span>
-                </div>
-                <span
-                  style={{
-                    fontSize: `${theme.fontSizes[0]}px`,
-                    fontFamily: theme.fonts.body,
-                    color: theme.colors.textSecondary,
-                  }}
-                >
-                  {repositories.length}
-                </span>
-              </button>
-
-              {!isCollapsed && (
-                <div style={{ paddingLeft: '12px', marginTop: '4px' }}>
-                  {repositories.map((repo) => (
-                    <GitHubRepositoryCard
-                      key={repo.id}
-                      repository={repo}
-                      variant="starred"
-                      localRepo={localRepoMap.get(repo.full_name)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {/* Flat list of repositories */}
+        {filteredRepositories.map((repo) => (
+          <GitHubStarredRepositoryCard
+            key={repo.id}
+            repository={repo}
+            localRepo={localRepoMap.get(repo.full_name)}
+          />
+        ))}
 
         {/* No results message */}
-        {repositoriesByOrg.length === 0 && hasData && (
+        {filteredRepositories.length === 0 && hasData && (
           <div
             style={{
               padding: '32px',

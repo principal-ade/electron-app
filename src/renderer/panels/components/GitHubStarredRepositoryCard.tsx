@@ -3,11 +3,8 @@ import { createPortal } from 'react-dom';
 import { useTheme } from '@a24z/industry-theme';
 import {
   ExternalLink,
-  Star,
   FolderOpen,
   Download,
-  Folder,
-  Cloud,
 } from 'lucide-react';
 
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
@@ -17,26 +14,21 @@ import { GitCloneModal } from '../../principal-window/views/RepositoryExplorer/c
 import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.types';
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 
-interface GitHubRepositoryCardProps {
+interface GitHubStarredRepositoryCardProps {
   repository: GitHubRepository;
-  variant: 'owned' | 'starred';
   localRepo?: RepositoryCacheData;
 }
 
-export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
+export const GitHubStarredRepositoryCard: React.FC<GitHubStarredRepositoryCardProps> = ({
   repository,
-  variant,
   localRepo,
 }) => {
   const { theme } = useTheme();
   const { selectedRepository, setSelectedRepository } = useSelectedRepository();
-  const isStarred = variant === 'starred';
   const isReadmeSelected = selectedRepository?.id === repository.id;
   const [showCloneModal, setShowCloneModal] = useState(false);
 
-  const badgeColor = isStarred
-    ? theme.colors.warning || '#f59e0b'
-    : theme.colors.primary;
+  const badgeColor = theme.colors.warning || '#f59e0b';
 
   const handleOpenInGitHub = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -79,8 +71,6 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
     }
   };
 
-  const starCount = repository.stargazers_count ?? 0;
-
   const isHighlighted = isReadmeSelected;
   const highlightColor = theme.colors.primary;
 
@@ -109,43 +99,32 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
           : 'transparent';
       }}
     >
-      {/* Status indicator */}
+      {/* Owner avatar */}
       <div style={{ flexShrink: 0 }}>
-        {localRepo ? (
-          <Folder
-            size={16}
-            color={theme.colors.success || '#10b981'}
-          />
-        ) : (
-          <Cloud
-            size={16}
-            color={theme.colors.textSecondary}
-          />
-        )}
+        <img
+          src={`https://github.com/${repository.owner.login}.png`}
+          alt={repository.owner.login}
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            objectFit: 'cover',
+          }}
+        />
       </div>
 
       {/* Main content */}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           <span
             style={{
               fontSize: `${theme.fontSizes[2]}px`,
               fontWeight: theme.fontWeights.medium,
               color: localRepo ? theme.colors.success || '#10b981' : theme.colors.text,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
             }}
           >
             {repository.name}
           </span>
-          {isStarred && (
-            <Star
-              size={12}
-              fill={theme.colors.warning || '#f59e0b'}
-              color={theme.colors.warning || '#f59e0b'}
-            />
-          )}
         </div>
         <div
           style={{
@@ -170,10 +149,6 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
               {repository.language}
             </div>
           )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <Star size={10} />
-            {starCount.toLocaleString()}
-          </div>
           {repository.description && (
             <span
               style={{

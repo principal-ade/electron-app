@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import {
-  Rss,
   FolderGit2,
   Users,
   History,
@@ -10,6 +9,8 @@ import {
   UserCheck,
   Star,
   Activity,
+  Folder,
+  GitBranch,
 } from 'lucide-react';
 import { ConfigurablePanelLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
@@ -25,6 +26,7 @@ import { RecentCommitsPanel } from '../../../panels/components/RecentCommitsPane
 import { GitHubReadmePanel } from '../../../panels/components/GitHubReadmePanel';
 import { GitHubUserSignalsPanel } from '../../../panels/components/GitHubUserSignalsPanel';
 import { GitSyncDiagnosticPanel } from '../../../panels/components/GitSyncDiagnosticPanel';
+import { LocalProjectsPanel } from '../../../panels/components/LocalProjectsPanel';
 import { SelectedRepositoryProvider, useSelectedRepository } from '../../../contexts/SelectedRepositoryContext';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 
@@ -56,7 +58,7 @@ const FeedViewInner: React.FC = () => {
     } else {
       setSelectedTopLevelNodes([]);
     }
-  }, [selectedGraph?.id]);
+  }, [selectedGraph]);
 
   // Load git sync panel visibility preference
   useEffect(() => {
@@ -90,6 +92,12 @@ const FeedViewInner: React.FC = () => {
   // Memoize panels array based on git sync panel visibility
   const panels = useMemo(() => {
     const basePanels = [
+      {
+        id: 'local-projects',
+        label: 'Local Projects',
+        icon: <Folder size={16} />,
+        content: <LocalProjectsPanel />,
+      },
       {
         id: 'github-projects',
         label: 'GitHub Projects',
@@ -170,7 +178,7 @@ const FeedViewInner: React.FC = () => {
   const layout = useMemo(() => ({
     left: {
       type: 'tabs' as const,
-      panels: ['github-projects', 'github-starred', 'github-social', 'graphs-list'],
+      panels: ['local-projects', 'github-projects', 'github-starred', 'github-social', 'graphs-list'],
       config: {
         defaultActiveTab: 0,
         tabPosition: 'top' as const,
@@ -207,9 +215,9 @@ const FeedViewInner: React.FC = () => {
           flexShrink: 0,
         }}
       >
-        <Rss size={20} color={theme.colors.text} />
+        <GitBranch size={20} color={theme.colors.text} />
         <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>
-          Feed
+          Projects
         </h2>
       </div>
 
