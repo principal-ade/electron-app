@@ -200,4 +200,45 @@ export class GitSyncService {
       return () => {};
     }
   }
+
+  /**
+   * Check if a service is available
+   */
+  static async checkService(
+    url: string,
+    serviceName: string,
+  ): Promise<{ available: boolean; status?: number; error?: string }> {
+    try {
+      return await window.mainProcess.gitSync.checkService(url, serviceName);
+    } catch (error) {
+      console.error('[GitSyncService] Failed to check service:', error);
+      return {
+        available: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Set the environment (dev or prod) for GitSync servers
+   */
+  static async setEnvironment(environment: 'development' | 'production'): Promise<void> {
+    try {
+      await window.mainProcess.gitSync.setEnvironment(environment);
+    } catch (error) {
+      console.error('[GitSyncService] Failed to set environment:', error);
+    }
+  }
+
+  /**
+   * Get the current environment
+   */
+  static async getEnvironment(): Promise<'development' | 'production'> {
+    try {
+      return await window.mainProcess.gitSync.getEnvironment();
+    } catch (error) {
+      console.error('[GitSyncService] Failed to get environment:', error);
+      return 'development';
+    }
+  }
 }

@@ -150,4 +150,19 @@ export interface GitSyncAPI {
   onConnectionStatusChanged(
     callback: (connectionId: string) => void,
   ): () => void;
+
+  /**
+   * Check if a service is available
+   */
+  checkService(url: string, serviceName: string): Promise<{ available: boolean; status?: number; error?: string }>;
+
+  /**
+   * Set the environment (dev or prod) for GitSync servers
+   */
+  setEnvironment(environment: 'development' | 'production'): Promise<void>;
+
+  /**
+   * Get the current environment
+   */
+  getEnvironment(): Promise<'development' | 'production'>;
 }

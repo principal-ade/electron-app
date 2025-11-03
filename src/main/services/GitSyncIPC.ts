@@ -105,6 +105,22 @@ class GitSyncIPC {
       return serverUrl;
     });
 
+    // Handler for git-sync:set-environment
+    ipcMain.handle(
+      GitSyncEvent.SET_ENVIRONMENT,
+      async (event, environment: 'development' | 'production'): Promise<void> => {
+        console.log('[GitSyncIPC] Setting environment to:', environment);
+        gitSyncWebSocketManager.setEnvironment(environment);
+      },
+    );
+
+    // Handler for git-sync:get-environment
+    ipcMain.handle(GitSyncEvent.GET_ENVIRONMENT, async (): Promise<'development' | 'production'> => {
+      const environment = gitSyncWebSocketManager.getCurrentEnvironment();
+      console.log('[GitSyncIPC] Returning environment:', environment);
+      return environment;
+    });
+
     // Handler for git-sync:check-repo-access
     ipcMain.handle(
       GitSyncEvent.CHECK_REPO_ACCESS,
@@ -121,6 +137,74 @@ class GitSyncIPC {
     ipcMain.handle(GitSyncEvent.GET_ALL_CONNECTIONS, async () => {
       return gitSyncWebSocketManager.getAllConnections();
     });
+
+    // Handler for git-sync:check-service
+    ipcMain.handle(
+      GitSyncEvent.CHECK_SERVICE,
+      async (event, url: string, serviceName: string): Promise<{ available: boolean; status?: number; error?: string }> => {
+        console.log(`[GitSyncIPC] Checking service: ${serviceName} at ${url}`);
+
+        try {
+          // Import fetch dynamically
+          const fetch = (await import('node-fetch')).default;
+
+          // Handle different service types
+          if (serviceName.includes('Auth Server')) {
+            // Check the room-token endpoint for auth servers
+            const response = await fetch(`${url}/api/auth/cli/room-token`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                repository: 'test/test',
+                branch: 'main',
+                github_token: 'test',
+                device_id: 'test',
+              }),
+              signal: AbortSignal.timeout(5000),
+            });
+
+            // 404 means endpoint doesn't exist
+            if (response.status === 404) {
+              return { available: false, status: 404, error: 'Endpoint not found' };
+            }
+
+            // Any other response means the endpoint exists
+            return { available: true, status: response.status };
+          } else if (serviceName === 'GitHub API') {
+            // Check GitHub API
+            const response = await fetch('https://api.github.com/zen', {
+              method: 'GET',
+              headers: { Accept: 'application/json' },
+              signal: AbortSignal.timeout(5000),
+            });
+
+            return { available: response.ok, status: response.status };
+          } else {
+            // For WebSocket servers, convert wss:// to https:// for testing
+            let testUrl = url;
+            if (url.startsWith('wss://')) {
+              testUrl = url.replace('wss://', 'https://');
+            } else if (url.startsWith('ws://')) {
+              testUrl = url.replace('ws://', 'http://');
+            }
+
+            // Try to fetch the base URL
+            const response = await fetch(testUrl, {
+              method: 'GET',
+              signal: AbortSignal.timeout(5000),
+            });
+
+            return { available: true, status: response.status };
+          }
+        } catch (error) {
+          console.error(`[GitSyncIPC] Service check failed for ${serviceName}:`, error);
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          return { available: false, error: errorMsg };
+        }
+      },
+    );
   }
 
   /**

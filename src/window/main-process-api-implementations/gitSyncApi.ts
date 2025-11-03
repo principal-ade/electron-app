@@ -10,6 +10,9 @@ export enum GitSyncEvent {
   GET_SERVER_URL = 'git-sync:get-server-url',
   CHECK_REPO_ACCESS = 'git-sync:check-repo-access',
   GET_ALL_CONNECTIONS = 'git-sync:get-all-connections',
+  CHECK_SERVICE = 'git-sync:check-service',
+  SET_ENVIRONMENT = 'git-sync:set-environment',
+  GET_ENVIRONMENT = 'git-sync:get-environment',
 
   // Events (from main to renderer)
   ON_MESSAGE = 'git-sync:message',
@@ -50,6 +53,15 @@ export const gitSyncAPI: GitSyncAPI = {
   },
 
   getAllConnections: () => ipcRenderer.invoke(GitSyncEvent.GET_ALL_CONNECTIONS),
+
+  checkService: (url: string, serviceName: string) =>
+    ipcRenderer.invoke(GitSyncEvent.CHECK_SERVICE, url, serviceName),
+
+  setEnvironment: (environment: 'development' | 'production') =>
+    ipcRenderer.invoke(GitSyncEvent.SET_ENVIRONMENT, environment),
+
+  getEnvironment: () =>
+    ipcRenderer.invoke(GitSyncEvent.GET_ENVIRONMENT),
 
   onConnectionAdded: (callback: (connectionId: string) => void) => {
     const subscription = (_event: unknown, connectionId: string) =>

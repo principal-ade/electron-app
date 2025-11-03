@@ -13,6 +13,7 @@ import { GitSyncService } from '../../main-process-api/GitSyncService';
 import { AuthenticationService } from '../../main-process-api/AuthenticationService';
 import { gitSyncConnectionManager } from '../../services/git-sync/GitSyncConnectionManager';
 import { useAllRepositories } from '../../hooks/useRepositoryData';
+import { SERVER_URLS, AUTH_SERVER_URLS } from '../../config/git-sync';
 
 interface EventLogEntry {
   time: string;
@@ -46,6 +47,7 @@ interface ServiceStatus {
 export const GitSyncDiagnosticPanel: React.FC = () => {
   const { theme } = useTheme();
   const { repositories } = useAllRepositories();
+  const [environment, setEnvironment] = useState<'development' | 'production'>('development');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     connected: false,
     serverUrl: '',
@@ -54,26 +56,7 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
   const [rooms, setRooms] = useState<RoomInfo[]>([]);
   const [events, setEvents] = useState<EventLogEntry[]>([]);
   const [testing, setTesting] = useState(false);
-  const [services, setServices] = useState<ServiceStatus[]>([
-    {
-      name: 'Landing Page (Auth)',
-      available: false,
-      checking: false,
-      url: 'http://localhost:3000',
-    },
-    {
-      name: 'Traffic Controller',
-      available: false,
-      checking: false,
-      url: 'http://localhost:3001',
-    },
-    {
-      name: 'GitHub API',
-      available: false,
-      checking: false,
-      url: 'https://api.github.com',
-    },
-  ]);
+  const [services, setServices] = useState<ServiceStatus[]>([]);
   const [checkingServices, setCheckingServices] = useState(false);
   const [selectedRepoPath, setSelectedRepoPath] = useState<string>('');
   const [testingRepoConnection, setTestingRepoConnection] = useState(false);
@@ -95,6 +78,81 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
     });
   }, []);
 
+  // Update services list when environment changes
+  useEffect(() => {
+    const getServicesForEnvironment = (): ServiceStatus[] => {
+      if (environment === 'development') {
+        return [
+          {
+            name: 'Auth Server (Dev)',
+            available: false,
+            checking: false,
+            url: AUTH_SERVER_URLS.development,
+          },
+          {
+            name: 'Traffic Controller (Dev)',
+            available: false,
+            checking: false,
+            url: SERVER_URLS.development,
+          },
+          {
+            name: 'GitHub API',
+            available: false,
+            checking: false,
+            url: 'https://api.github.com',
+          },
+        ];
+      } else {
+        return [
+          {
+            name: 'Auth Server (Prod)',
+            available: false,
+            checking: false,
+            url: AUTH_SERVER_URLS.production,
+          },
+          {
+            name: 'Traffic Controller (Prod)',
+            available: false,
+            checking: false,
+            url: SERVER_URLS.production,
+          },
+          {
+            name: 'GitHub API',
+            available: false,
+            checking: false,
+            url: 'https://api.github.com',
+          },
+        ];
+      }
+    };
+
+    setServices(getServicesForEnvironment());
+  }, [environment]);
+
+  // Refresh connection status when environment changes
+  useEffect(() => {
+    const refreshConnectionStatus = async () => {
+      try {
+        const url = SERVER_URLS[environment];
+        const connections = await gitSyncConnectionManager.getActiveConnections();
+        const hasActiveConnection = Array.from(connections.values()).some(
+          (conn) => conn.status.connected,
+        );
+
+        setConnectionStatus({
+          connected: hasActiveConnection,
+          serverUrl: url || 'Not configured',
+        });
+
+        addEvent(`Environment changed to ${environment}`, environment === 'production' ? '🚀' : '🔧');
+      } catch (error) {
+        console.error('Failed to refresh connection:', error);
+      }
+    };
+
+    refreshConnectionStatus();
+  }, [environment, addEvent]);
+
   // Auto-scroll event log
   useEffect(() => {
     if (eventLogRef.current) {
@@ -102,10 +160,15 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
     }
   }, [events]);
 
+  // Get current server URL based on environment
+  const getCurrentServerUrl = useCallback(() => {
+    return SERVER_URLS[environment];
+  }, [environment]);
+
   // Check connection status
   const checkConnection = useCallback(async () => {
     try {
-      const url = await GitSyncService.getServerUrl();
+      const url = getCurrentServerUrl();
       // Check if we have any active connections
       const connections = await gitSyncConnectionManager.getActiveConnections();
       const hasActiveConnection = Array.from(connections.values()).some(
@@ -118,16 +181,16 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
       });
 
       if (hasActiveConnection) {
-        addEvent('Connection check: Connected', '✅');
+        addEvent(`Connection check: Connected to ${environment}`, '✅');
       } else {
-        addEvent('Connection check: Not connected', '🔴');
+        addEvent(`Connection check: Not connected (${environment})`, '🔴');
       }
     } catch (error) {
       console.error('Failed to check connection:', error);
       setConnectionStatus({ connected: false, serverUrl: 'Error' });
       addEvent('Connection check failed', '❌');
     }
-  }, [addEvent]);
+  }, [addEvent, environment, getCurrentServerUrl]);
 
   // Check authentication status
   const checkAuth = useCallback(async () => {
@@ -172,49 +235,33 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
     }
   }, [addEvent]);
 
-  // Check service availability
+  // Check service availability via main process IPC
   const checkServiceAvailability = async (
     service: ServiceStatus,
   ): Promise<boolean> => {
     try {
       if (!service.url) return false;
 
-      // For GitHub API, check with a simple request
-      if (service.name === 'GitHub API') {
-        const response = await fetch('https://api.github.com/zen', {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-        });
-        return response.ok;
-      }
+      // Use IPC to check service from main process
+      const result = await GitSyncService.checkService(service.url, service.name);
 
-      // For local services, try to fetch with a timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      try {
-        await fetch(service.url, {
-          method: 'GET',
-          signal: controller.signal,
-          mode: 'no-cors', // Allow checking even if CORS is not configured
-        });
-        clearTimeout(timeoutId);
-        // For no-cors mode, we can't read the response, but if we get here, the service is reachable
-        return true;
-      } catch (error) {
-        clearTimeout(timeoutId);
-        // If it's a network error and not a timeout, the service might still be available
-        // but just blocking CORS. For our purposes, we'll consider it available if we can reach it.
-        if (error instanceof Error && error.name === 'AbortError') {
-          return false; // Timeout
+      if (result.available) {
+        if (result.status) {
+          addEvent(`${service.name}: HTTP ${result.status}`, '🔍');
         }
-        // Network error but server might be running
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        return errorMessage.includes('Failed to fetch') ? true : false;
+        return true;
+      } else {
+        if (result.status === 404) {
+          addEvent(`❌ ${service.name}: Endpoint not found (404)`, '❌');
+        } else if (result.error) {
+          addEvent(`${service.name} error: ${result.error}`, '❌');
+        }
+        return false;
       }
     } catch (error) {
       console.error(`Failed to check service ${service.name}:`, error);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      addEvent(`${service.name} check failed: ${errorMsg}`, '❌');
       return false;
     }
   };
@@ -300,10 +347,68 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
     }
   };
 
+  // Test WebSocket connection directly
+  const testWebSocketConnection = async () => {
+    const url = SERVER_URLS[environment];
+    addEvent(`Testing WebSocket connection to ${url}...`, '🔌');
+
+    try {
+      // Convert to WebSocket URL if needed
+      let wsUrl = url;
+      if (url.startsWith('https://')) {
+        wsUrl = url.replace('https://', 'wss://');
+      } else if (url.startsWith('http://')) {
+        wsUrl = url.replace('http://', 'ws://');
+      }
+
+      // Add /ws path if not already present
+      if (!wsUrl.endsWith('/ws')) {
+        wsUrl = `${wsUrl}/ws`;
+      }
+
+      addEvent(`Attempting connection to ${wsUrl}...`, '📡');
+
+      const ws = new WebSocket(wsUrl);
+
+      return new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          ws.close();
+          addEvent('Connection timeout after 10 seconds', '⏱️');
+          reject(new Error('Connection timeout'));
+        }, 10000);
+
+        ws.onopen = () => {
+          clearTimeout(timeout);
+          addEvent('✅ WebSocket connection established!', '✅');
+          ws.close();
+          resolve();
+        };
+
+        ws.onerror = (error) => {
+          clearTimeout(timeout);
+          addEvent(`❌ WebSocket connection failed: ${error}`, '❌');
+          reject(error);
+        };
+
+        ws.onclose = () => {
+          clearTimeout(timeout);
+        };
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      addEvent(`Connection test failed: ${errorMessage}`, '❌');
+    }
+  };
+
   // Test connection
   const testConnection = async () => {
     setTesting(true);
     addEvent('Testing connection...', '🔌');
+
+    // Test direct WebSocket connection
+    await testWebSocketConnection();
+
+    // Check existing connections and auth
     await checkConnection();
     await checkAuth();
     loadRooms();
@@ -407,22 +512,80 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          justifyContent: 'space-between',
           paddingBottom: '12px',
           borderBottom: `1px solid ${theme.colors.border}`,
         }}
       >
-        <Activity size={18} color={theme.colors.text} />
-        <h3
-          style={{
-            fontSize: theme.fontSizes[3],
-            fontWeight: 600,
-            margin: 0,
-            color: theme.colors.text,
-          }}
-        >
-          Git-Sync Status
-        </h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Activity size={18} color={theme.colors.text} />
+          <h3
+            style={{
+              fontSize: theme.fontSizes[3],
+              fontWeight: 600,
+              margin: 0,
+              color: theme.colors.text,
+            }}
+          >
+            Git-Sync Status
+          </h3>
+        </div>
+
+        {/* Environment Toggle */}
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <button
+            onClick={async () => {
+              setEnvironment('development');
+              await GitSyncService.setEnvironment('development');
+              addEvent('Switched to Development environment', '🔧');
+              // Refresh connection status to show new URL
+              const url = await GitSyncService.getServerUrl();
+              setConnectionStatus({
+                connected: connectionStatus.connected,
+                serverUrl: url,
+              });
+            }}
+            style={{
+              padding: '6px 12px',
+              fontSize: theme.fontSizes[1],
+              backgroundColor: environment === 'development' ? theme.colors.primary : theme.colors.backgroundSecondary,
+              color: environment === 'development' ? '#fff' : theme.colors.text,
+              border: `1px solid ${environment === 'development' ? theme.colors.primary : theme.colors.border}`,
+              borderRadius: '4px 0 0 4px',
+              cursor: 'pointer',
+              fontWeight: 500,
+              transition: 'all 0.2s',
+            }}
+          >
+            Dev
+          </button>
+          <button
+            onClick={async () => {
+              setEnvironment('production');
+              await GitSyncService.setEnvironment('production');
+              addEvent('Switched to Production environment', '🚀');
+              // Refresh connection status to show new URL
+              const url = await GitSyncService.getServerUrl();
+              setConnectionStatus({
+                connected: connectionStatus.connected,
+                serverUrl: url,
+              });
+            }}
+            style={{
+              padding: '6px 12px',
+              fontSize: theme.fontSizes[1],
+              backgroundColor: environment === 'production' ? theme.colors.primary : theme.colors.backgroundSecondary,
+              color: environment === 'production' ? '#fff' : theme.colors.text,
+              border: `1px solid ${environment === 'production' ? theme.colors.primary : theme.colors.border}`,
+              borderRadius: '0 4px 4px 0',
+              cursor: 'pointer',
+              fontWeight: 500,
+              transition: 'all 0.2s',
+            }}
+          >
+            Prod
+          </button>
+        </div>
       </div>
 
       {/* Services Status */}
@@ -585,9 +748,31 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
             fontSize: theme.fontSizes[1],
             color: theme.colors.textSecondary,
             fontFamily: theme.fonts.monospace,
+            marginBottom: '4px',
           }}
         >
-          Server: {connectionStatus.serverUrl}
+          WebSocket: {connectionStatus.serverUrl}
+        </div>
+        <div
+          style={{
+            fontSize: theme.fontSizes[1],
+            color: theme.colors.textSecondary,
+            fontFamily: theme.fonts.monospace,
+          }}
+        >
+          Auth Server: {AUTH_SERVER_URLS[environment]}
+        </div>
+        <div
+          style={{
+            fontSize: theme.fontSizes[0],
+            color: theme.colors.textTertiary,
+            marginTop: '6px',
+            fontStyle: 'italic',
+          }}
+        >
+          {environment === 'production'
+            ? 'Using production servers'
+            : 'Using local development servers'}
         </div>
       </div>
 

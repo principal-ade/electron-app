@@ -16,12 +16,24 @@ interface GitSyncConfig {
   DEBUG_MODE: boolean;
 }
 
+// Server URLs for different environments
+export const SERVER_URLS = {
+  development: 'http://localhost:3001',
+  production: 'wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com',
+};
+
+// Auth server URLs for different environments
+export const AUTH_SERVER_URLS = {
+  development: 'http://localhost:3000',
+  production: 'https://principal-ade.com',
+};
+
 // Server URLs based on environment
 export const GIT_SYNC_CONFIG: GitSyncConfig = {
   // Use local server in development, production server otherwise
   SERVER_URL:
     process.env.GIT_SYNC_SERVER_URL ||
-    (isDevelopment ? 'http://localhost:3001' : 'https://34.226.213.143'),
+    (isDevelopment ? SERVER_URLS.development : SERVER_URLS.production),
 
   // WebSocket URLs (automatically derived from SERVER_URL)
   getWebSocketUrl: (serverUrl: string = GIT_SYNC_CONFIG.SERVER_URL): string => {

@@ -58,15 +58,36 @@ export class GitSyncWebSocketManager {
   private static instance: GitSyncWebSocketManager;
   private connections: Map<string, ConnectionInfo> = new Map();
   private serverUrl: string;
+  private authServerUrl: string;
   private readonly RECONNECT_DELAY = 5000;
   private readonly PING_INTERVAL = 30000;
 
+  // Hardcoded defaults
+  private readonly DEFAULT_DEV_SERVER = 'ws://localhost:3001';
+  private readonly DEFAULT_DEV_AUTH = 'http://localhost:3000';
+  private readonly DEFAULT_PROD_SERVER = 'wss://repository-traffic-controller-production.rj36caac972nm.us-east-1.cs.amazonlightsail.com';
+  private readonly DEFAULT_PROD_AUTH = 'https://principal-ade.com';
+
   private constructor() {
-    // Get server URL from environment or use default
-    this.serverUrl = process.env.GIT_SYNC_SERVER_URL || 'ws://localhost:3001';
+    // Determine if we're in production build
+    const isProduction = process.env.NODE_ENV === 'production';
+
+    // Get server URLs from environment or use defaults based on build type
+    this.serverUrl = process.env.GIT_SYNC_SERVER_URL ||
+      (isProduction ? this.DEFAULT_PROD_SERVER : this.DEFAULT_DEV_SERVER);
+    this.authServerUrl = process.env.AUTH_SERVER_URL ||
+      (isProduction ? this.DEFAULT_PROD_AUTH : this.DEFAULT_DEV_AUTH);
+
     console.log(
       '[GitSyncWebSocketManager] Initialized with server:',
       this.serverUrl,
+    );
+    console.log(
+      '[GitSyncWebSocketManager] Initialized with auth server:',
+      this.authServerUrl,
+    );
+    console.log(
+      `[GitSyncWebSocketManager] Running in ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'} mode`,
     );
   }
 
@@ -82,6 +103,37 @@ export class GitSyncWebSocketManager {
    */
   getServerUrl(): string {
     return this.serverUrl;
+  }
+
+  /**
+   * Get auth server URL
+   */
+  getAuthServerUrl(): string {
+    return this.authServerUrl;
+  }
+
+  /**
+   * Set environment (dev or prod) - updates both server URLs
+   */
+  setEnvironment(environment: 'development' | 'production'): void {
+    if (environment === 'production') {
+      this.serverUrl = this.DEFAULT_PROD_SERVER;
+      this.authServerUrl = this.DEFAULT_PROD_AUTH;
+    } else {
+      this.serverUrl = this.DEFAULT_DEV_SERVER;
+      this.authServerUrl = this.DEFAULT_DEV_AUTH;
+    }
+    console.log(
+      `[GitSyncWebSocketManager] Environment set to ${environment}:`,
+      { serverUrl: this.serverUrl, authServerUrl: this.authServerUrl },
+    );
+  }
+
+  /**
+   * Get current environment based on server URLs
+   */
+  getCurrentEnvironment(): 'development' | 'production' {
+    return this.serverUrl === this.DEFAULT_PROD_SERVER ? 'production' : 'development';
   }
 
   /**
@@ -262,9 +314,8 @@ export class GitSyncWebSocketManager {
       // Generate a stable device ID
       const agentId = `electron-${Date.now()}`;
 
-      // Get the auth server URL from environment
-      const authServerUrl =
-        process.env.AUTH_SERVER_URL || 'http://localhost:3000';
+      // Use the configured auth server URL
+      const authServerUrl = this.authServerUrl;
 
       // Call landing-page's room-token endpoint
       const response = await fetch(`${authServerUrl}/api/auth/cli/room-token`, {
