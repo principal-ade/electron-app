@@ -32,7 +32,6 @@ import { alexandriaAPI } from './main-process-api-implementations/alexandriaApi'
 import { alexandriaDocsAPI } from './main-process-api-implementations/alexandriaDocsApi';
 import { shellAPI } from './main-process-api-implementations/shellApi';
 import { systemAPI } from './main-process-api-implementations/systemApi';
-import { userPromptAPI } from './main-process-api-implementations/userPromptApi';
 import { userPreferencesAPI } from './main-process-api-implementations/userPreferencesApi';
 import { windowManagerAPI } from './main-process-api-implementations/windowManagerApi';
 import { a24zAPI } from './main-process-api-implementations/a24zApi';
@@ -119,7 +118,6 @@ const mainProcessExposure: MainProcessAPI = {
   system: systemAPI,
   terminal: terminalAPI,
   userPreferences: userPreferencesAPI,
-  userPrompt: userPromptAPI,
   apiProxy: apiProxyApi,
   windowManager: windowManagerAPI,
   orbit: orbitAPI,

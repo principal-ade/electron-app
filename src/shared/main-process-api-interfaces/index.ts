@@ -26,7 +26,6 @@ import type { StoreAPI } from './StoreAPI';
 import type { SystemAPI } from './SystemAPI';
 import type { TerminalAPI } from './TerminalService';
 import type { UserPreferencesAPI } from './UserPreferencesAPI';
-import type { UserPromptAPI } from './UserPromptAPI';
 import type { WindowManagerAPI } from './WindowManagerAPI';
 import { AgentSessionEventsAPI } from './AgentSessionEventsAPI';
 import type { OrbitAPI } from './OrbitAPI';
@@ -109,7 +108,6 @@ export interface MainProcessAPI {
   terminal: TerminalAPI;
   userPreferences: UserPreferencesAPI;
   windowManager: WindowManagerAPI;
-  userPrompt: UserPromptAPI;
   orbit: OrbitAPI;
   apiProxy: ApiProxyAPI;
   packageManager: PackageManagerAPI;

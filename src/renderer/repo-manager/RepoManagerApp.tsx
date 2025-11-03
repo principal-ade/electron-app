@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
-import { UserPromptProvider } from '../components/mcp/UserPromptProvider';
 import { AppVersionManagerService } from '../main-process-api/AppVersionManagerService';
 import type { Repository } from '../../shared/types/repository.types';
 import { RepositoryWorkspace } from './RepositoryWorkspace';
@@ -143,7 +142,7 @@ export const RepoManagerApp: React.FC = () => {
   return (
     <CustomThemeProvider>
       <GlobalFeedbackProvider>
-        <UserPromptProvider>{content}</UserPromptProvider>
+        {content}
       </GlobalFeedbackProvider>
     </CustomThemeProvider>
   );

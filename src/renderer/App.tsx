@@ -6,7 +6,6 @@ import { useTheme } from '@a24z/industry-theme';
 // import { ElectronPlatformAdapters } from './adapters'; // No longer needed
 
 import { GlobalFeedbackProvider } from './GlobalFeedbackProvider';
-import { UserPromptProvider } from './components/mcp/UserPromptProvider';
 import { CustomThemeProvider } from './providers/CustomThemeProvider';
 // Titlebars are now integrated into each component
 
@@ -357,13 +356,11 @@ function App() {
   return (
     <CustomThemeProvider>
       <GlobalFeedbackProvider>
-        <UserPromptProvider>
-          <AppContent
-            _setHasUpdateAvailable={setHasUpdateAvailable}
-            hasUpdateAvailable={hasUpdateAvailable}
-            // onLandingPageMounted removed - add project buttons now in repository list header
-          />
-        </UserPromptProvider>
+        <AppContent
+          _setHasUpdateAvailable={setHasUpdateAvailable}
+          hasUpdateAvailable={hasUpdateAvailable}
+          // onLandingPageMounted removed - add project buttons now in repository list header
+        />
       </GlobalFeedbackProvider>
     </CustomThemeProvider>
   );

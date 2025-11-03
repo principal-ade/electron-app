@@ -70,7 +70,7 @@ export class SSHSetupService {
       // -f: Output file path
       // -N "": No passphrase (for UX, trade-off for security)
       // -C: Comment (email-like identifier)
-      const command = `ssh-keygen -t ed25519 -f "${this.keyPath}" -N "" -C "principle-ai@github.com"`;
+      const command = `ssh-keygen -t ed25519 -f "${this.keyPath}" -N "" -C "principal-ade@github.com"`;
 
       console.log('[SSHSetupService] Generating SSH key...');
       await execAsync(command);

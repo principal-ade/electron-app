@@ -32,7 +32,6 @@ import { registerSystemHandlers } from './system/systemHandlers';
 import { registerFeedbackHandlers } from './services/ipc/feedback/feedbackHandlers';
 import { getTerminalManager } from './terminalWrapper';
 import { excalidrawHandlers } from './drawings/excalidrawHandlers';
-import { registerUserPromptHandlers } from './principal-mcp/userPromptHandlers';
 
 import { setupAgentConfigHandlers } from './agent-management/agentConfigHandlers';
 import { registerFileSystemIpcHandlers } from './file-system/fileSystemHandlers';
@@ -54,7 +53,6 @@ import { A24zHandler } from './stores/a24zHandler';
 import { AppVersionManagerAPIEvent } from '../window/main-process-api-implementations/appVersionManagerApi';
 import { registerDockerHandlers } from './services/ipc/docker/dockerHandlers';
 import { registerOptimizedDockerHandlers } from './services/ipc/docker/optimizedDockerHandlers';
-import { registerPrincipalHandlers } from './principal-mcp/principalHandlers';
 import {
   registerDocumentSearchHandlers,
   shutdownDocumentSearch,
@@ -216,7 +214,6 @@ const registerAllIpcHandlers = async () => {
   setupShellHandlers();
   registerDockerHandlers();
   registerOptimizedDockerHandlers();
-  registerPrincipalHandlers();
   registerDocumentSearchHandlers();
   registerObservabilityHandlers();
 
@@ -244,7 +241,6 @@ const registerAllIpcHandlers = async () => {
   registerPackageManagerHandlers();
   registerSystemHandlers();
   registerFeedbackHandlers();
-  registerUserPromptHandlers();
 };
 
 // Setup terminal manager
