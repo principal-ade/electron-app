@@ -12,6 +12,7 @@ import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
 import { GitSyncStatusIndicator } from './GitSyncStatusIndicator';
 import { WorkspaceSelector } from './WorkspaceSelector';
+import { RepositoryAvatar } from '../repository-maps/RepositoryAvatar';
 import type { Repository } from '../../../shared/types/repository.types';
 import type { FileTreeSource } from '../../types/file-tree-source';
 import type {
@@ -156,6 +157,10 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   const displayOwner = repositoryOwner || repository?.owner;
   const hasLocalClone = selectedSource?.type === 'local';
 
+  // Get avatar URL - use stored avatarUrl or construct from owner
+  const avatarUrl = repository?.avatarUrl ||
+    (displayOwner ? `https://github.com/${displayOwner}.png` : null);
+
   return (
     <BaseTitlebar confirmBeforeClose={true}>
       {/* Left: Repository name and actions */}
@@ -170,44 +175,28 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Git-Sync connection status indicator */}
-        <GitSyncStatusIndicator
-          repositoryPath={
-            selectedSource?.type === 'local'
-              ? selectedSource.location
-              : undefined
-          }
-          branch={
-            selectedSource?.type === 'local'
-              ? selectedSource.metadata?.currentBranch
-              : undefined
-          }
-        />
-
         {/* Avatar */}
-        {repository?.avatarUrl && (
-          <img
-            src={repository.avatarUrl}
-            alt={`${displayOwner} avatar`}
-            style={{
-              width: '20px',
-              height: '20px',
-              borderRadius: '50%',
-              objectFit: 'cover',
-            }}
+        {repository && (
+          <RepositoryAvatar
+            repository={repository}
+            type="owner"
+            size={28}
+            customAvatarUrl={avatarUrl}
           />
         )}
 
         <span
           style={{
-            fontSize: '15px',
-            fontWeight: 500,
+            fontSize: `${theme.fontSizes[2]}px`,
+            fontWeight: theme.fontWeights.medium,
+            fontFamily: theme.fonts.body,
           }}
         >
           <span
             style={{
               color: theme.colors.accent,
-              fontWeight: 600,
+              fontSize: `${theme.fontSizes[3]}px`,
+              fontWeight: theme.fontWeights.medium,
               cursor: displayOwner ? 'pointer' : 'default',
             }}
             onClick={() => {
@@ -237,11 +226,11 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           {selectedSource?.type === 'local' &&
             selectedSource.metadata?.currentBranch && (
               <>
-                <span style={{ color: theme.colors.textSecondary }}> on </span>
+                <span style={{ color: theme.colors.text, fontWeight: theme.fontWeights.medium }}> on </span>
                 <span
                   style={{
                     color: theme.colors.text,
-                    fontWeight: 500,
+                    fontWeight: theme.fontWeights.medium,
                   }}
                 >
                   {selectedSource.metadata.currentBranch}
@@ -249,6 +238,20 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
               </>
             )}
         </span>
+
+        {/* Git-Sync connection status indicator */}
+        <GitSyncStatusIndicator
+          repositoryPath={
+            selectedSource?.type === 'local'
+              ? selectedSource.location
+              : undefined
+          }
+          branch={
+            selectedSource?.type === 'local'
+              ? selectedSource.metadata?.currentBranch
+              : undefined
+          }
+        />
 
         {/* Open in IDE button */}
         {showOpenInIDE && <TitlebarOpenInIDE repository={repository} />}

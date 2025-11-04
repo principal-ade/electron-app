@@ -232,20 +232,51 @@ export function registerModernWindowHandlers(): void {
         }
       }
 
+      // Try to get the full repository from the database which includes avatarUrl and vcsType
+      const { RepositoryApiEventHandler } = require('../stores/RepositoryApiEventHandler');
+      const repositoryHandler = new RepositoryApiEventHandler();
+      let existingRepo = await repositoryHandler.getRepository(remoteUrl);
+
+      // Determine VCS type from remote URL
+      let vcsType: 'github' | 'gitlab' | 'bitbucket' | 'generic' = 'generic';
+      if (remoteUrl.includes('github.com')) {
+        vcsType = 'github';
+      } else if (remoteUrl.includes('gitlab.com')) {
+        vcsType = 'gitlab';
+      } else if (remoteUrl.includes('bitbucket.org')) {
+        vcsType = 'bitbucket';
+      }
+
+      // If repository doesn't have avatar but is a GitHub repo, fetch metadata
+      if (existingRepo && !existingRepo.avatarUrl && vcsType === 'github') {
+        console.log('[modernWindowHandlers] Fetching avatar for repository:', remoteUrl);
+        try {
+          existingRepo = await repositoryHandler.refreshRepositoryMetadata(remoteUrl);
+        } catch (error) {
+          console.error('[modernWindowHandlers] Failed to refresh metadata:', error);
+        }
+      }
+
       // Create the repository object in the format expected by Repository Maps
       const repoData = {
         owner,
         name: repoName,
         remoteUrl,
+        vcsType: existingRepo?.vcsType || vcsType,
+        avatarUrl: existingRepo?.avatarUrl,
+        description: existingRepo?.description || repository.github?.description,
         localClones: repository.path
           ? [{ path: repository.path, currentBranch, addedAt: Date.now() }]
-          : [],
+          : existingRepo?.localClones || [],
+        addedAt: existingRepo?.addedAt || Date.now(),
         // Add other metadata that might be useful
         metadata: {
-          stars: repository.github?.stars,
-          description: repository.github?.description,
-          topics: repository.github?.topics,
-          license: repository.github?.license,
+          stars: repository.github?.stars || existingRepo?.metadata?.stars,
+          description: repository.github?.description || existingRepo?.metadata?.description,
+          topics: repository.github?.topics || existingRepo?.metadata?.topics,
+          license: repository.github?.license || existingRepo?.metadata?.license,
+          defaultBranch: existingRepo?.metadata?.defaultBranch,
+          isPrivate: existingRepo?.metadata?.isPrivate,
         },
       };
 

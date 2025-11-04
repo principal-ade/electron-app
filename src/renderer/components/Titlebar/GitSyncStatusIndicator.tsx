@@ -42,6 +42,8 @@ export const GitSyncStatusIndicator: React.FC<GitSyncStatusIndicatorProps> = ({
           border: 'none',
           cursor: 'pointer',
           transition: 'all 0.2s ease',
+          width: '32px',
+          height: '32px',
           WebkitAppRegion: 'no-drag' as any,
         }}
         onMouseEnter={(e) => {
@@ -58,7 +60,7 @@ export const GitSyncStatusIndicator: React.FC<GitSyncStatusIndicatorProps> = ({
         }
       >
         <Icon
-          size={14}
+          size={16}
           color={color}
           style={{
             animation: isConnected ? 'none' : 'pulse 2s ease-in-out infinite',
