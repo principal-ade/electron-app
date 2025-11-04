@@ -69,14 +69,9 @@ export class GitSyncWebSocketManager {
   private readonly DEFAULT_PROD_AUTH = 'https://principal-ade.com';
 
   private constructor() {
-    // Determine if we're in production build
-    const isProduction = process.env.NODE_ENV === 'production';
-
-    // Get server URLs from environment or use defaults based on build type
-    this.serverUrl = process.env.GIT_SYNC_SERVER_URL ||
-      (isProduction ? this.DEFAULT_PROD_SERVER : this.DEFAULT_DEV_SERVER);
-    this.authServerUrl = process.env.AUTH_SERVER_URL ||
-      (isProduction ? this.DEFAULT_PROD_AUTH : this.DEFAULT_DEV_AUTH);
+    // Default to production servers, override with environment variables if needed
+    this.serverUrl = process.env.GIT_SYNC_SERVER_URL || this.DEFAULT_PROD_SERVER;
+    this.authServerUrl = process.env.AUTH_SERVER_URL || this.DEFAULT_PROD_AUTH;
 
     console.log(
       '[GitSyncWebSocketManager] Initialized with server:',
@@ -85,9 +80,6 @@ export class GitSyncWebSocketManager {
     console.log(
       '[GitSyncWebSocketManager] Initialized with auth server:',
       this.authServerUrl,
-    );
-    console.log(
-      `[GitSyncWebSocketManager] Running in ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'} mode`,
     );
   }
 

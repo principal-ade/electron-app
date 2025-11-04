@@ -47,7 +47,7 @@ interface ServiceStatus {
 export const GitSyncDiagnosticPanel: React.FC = () => {
   const { theme } = useTheme();
   const { repositories } = useAllRepositories();
-  const [environment, setEnvironment] = useState<'development' | 'production'>('development');
+  const [environment, setEnvironment] = useState<'development' | 'production'>('production');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     connected: false,
     serverUrl: '',
@@ -425,6 +425,9 @@ export const GitSyncDiagnosticPanel: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       addEvent('Diagnostic panel opened', '📊');
+      // Sync environment state with main process
+      const currentEnv = await GitSyncService.getEnvironment();
+      setEnvironment(currentEnv);
       await checkServices();
       await checkConnection();
       await checkAuth();

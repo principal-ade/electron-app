@@ -30,10 +30,8 @@ export const AUTH_SERVER_URLS = {
 
 // Server URLs based on environment
 export const GIT_SYNC_CONFIG: GitSyncConfig = {
-  // Use local server in development, production server otherwise
-  SERVER_URL:
-    process.env.GIT_SYNC_SERVER_URL ||
-    (isDevelopment ? SERVER_URLS.development : SERVER_URLS.production),
+  // Default to production server, override with environment variable if needed
+  SERVER_URL: process.env.GIT_SYNC_SERVER_URL || SERVER_URLS.production,
 
   // WebSocket URLs (automatically derived from SERVER_URL)
   getWebSocketUrl: (serverUrl: string = GIT_SYNC_CONFIG.SERVER_URL): string => {

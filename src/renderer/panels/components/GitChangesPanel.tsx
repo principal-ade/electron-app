@@ -32,6 +32,9 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
   } = useRepositoryPanelContext();
   const { openGitDiff, openFile } = actions;
 
+  // State for toggling between full tree and changes only
+  const [showFullTree, setShowFullTree] = useState(false);
+
   // Determine file status based on git status data
   const getFileStatus = useCallback(
     (
@@ -118,7 +121,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     gitStatus.deleted.length > 0;
 
   const gitChangesData = useMemo(() => {
-    if (!repositoryPath || !hasChanges || gitStatusLoading) {
+    if (!repositoryPath || gitStatusLoading) {
       return null;
     }
 
@@ -156,19 +159,6 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
       gitStatus.untracked.map((f) => f.path),
     );
 
-    const allChangedFiles = [
-      ...gitStatus.staged.map((f) => f.path),
-      ...gitStatus.unstaged.map((f) => f.path),
-      ...expandedUntracked,
-      ...gitStatus.deleted.map((f) => f.path),
-    ].sort((a, b) => a.localeCompare(b));
-
-    const builder = new PathsFileTreeBuilder();
-    const tree = builder.build({
-      files: allChangedFiles,
-      rootPath: repository?.path ?? repositoryPath,
-    });
-
     const statusData: GitFileStatus[] = [
       ...gitStatus.staged.map((f) => ({
         filePath: f.path,
@@ -196,6 +186,29 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
       })),
     ];
 
+    // If showing full tree, use the complete fileTree
+    if (showFullTree && fileTree) {
+      return { tree: fileTree, statusData };
+    }
+
+    // Changes only mode - show only changed files
+    if (!hasChanges) {
+      return null;
+    }
+
+    const allChangedFiles = [
+      ...gitStatus.staged.map((f) => f.path),
+      ...gitStatus.unstaged.map((f) => f.path),
+      ...expandedUntracked,
+      ...gitStatus.deleted.map((f) => f.path),
+    ].sort((a, b) => a.localeCompare(b));
+
+    const builder = new PathsFileTreeBuilder();
+    const tree = builder.build({
+      files: allChangedFiles,
+      rootPath: repository?.path ?? repositoryPath,
+    });
+
     return { tree, statusData };
   }, [
     repositoryPath,
@@ -204,6 +217,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     fileTree,
     gitStatus,
     repository?.path,
+    showFullTree,
   ]);
 
   if (!repositoryPath) {
@@ -244,42 +258,112 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
   if (variant === 'tab') {
     return (
       <>
-        <div style={{ height: '100%', overflow: 'auto' }}>
-          {gitStatusLoading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Toggle switch at the top */}
+          <div
+            style={{
+              padding: '8px 16px',
+              borderBottom: `1px solid ${theme.colors.border}`,
+            }}
+          >
             <div
               style={{
-                padding: '20px',
-                textAlign: 'center',
-                color: theme.colors.textSecondary,
+                display: 'flex',
+                alignItems: 'stretch',
+                backgroundColor: theme.colors.backgroundTertiary,
+                borderRadius: '6px',
+                padding: '2px',
+                border: `1px solid ${theme.colors.border}`,
+                width: '100%',
               }}
             >
-              {loadingMessage}
+              <button
+                onClick={() => setShowFullTree(true)}
+                style={{
+                  flex: 1,
+                  padding: '6px 12px',
+                  fontSize: theme.fontSizes[1],
+                  backgroundColor: showFullTree
+                    ? theme.colors.backgroundSecondary
+                    : 'transparent',
+                  color: showFullTree
+                    ? theme.colors.text
+                    : theme.colors.textSecondary,
+                  border: showFullTree
+                    ? `1px solid ${theme.colors.border}`
+                    : '1px solid transparent',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: showFullTree ? 600 : 400,
+                  transition: 'all 0.2s',
+                }}
+              >
+                Full Tree
+              </button>
+              <button
+                onClick={() => setShowFullTree(false)}
+                style={{
+                  flex: 1,
+                  padding: '6px 12px',
+                  fontSize: theme.fontSizes[1],
+                  backgroundColor: !showFullTree
+                    ? theme.colors.backgroundSecondary
+                    : 'transparent',
+                  color: !showFullTree
+                    ? theme.colors.text
+                    : theme.colors.textSecondary,
+                  border: !showFullTree
+                    ? `1px solid ${theme.colors.border}`
+                    : '1px solid transparent',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontWeight: !showFullTree ? 600 : 400,
+                  transition: 'all 0.2s',
+                }}
+              >
+                Changes Only
+              </button>
             </div>
-          ) : !hasChanges ? (
-            <div
-              style={{
-                padding: '20px',
-                textAlign: 'center',
-                color: theme.colors.textSecondary,
-              }}
-            >
-              {emptyMessage}
-            </div>
-          ) : (
-            gitChangesData && (
-              <GitStatusFileTree
-                key={gitChangesData.statusData.length}
-                fileTree={gitChangesData.tree}
-                theme={theme}
-                gitStatusData={gitChangesData.statusData}
-                onFileSelect={handleFileSelect}
-                onContextMenu={handleContextMenu}
-                selectedFile={selectedFile}
-                transparentBackground={true}
-                padding="16px"
-              />
-            )
-          )}
+          </div>
+
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            {gitStatusLoading ? (
+              <div
+                style={{
+                  padding: '20px',
+                  textAlign: 'center',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {loadingMessage}
+              </div>
+            ) : !hasChanges ? (
+              <div
+                style={{
+                  padding: '20px',
+                  textAlign: 'center',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {emptyMessage}
+              </div>
+            ) : (
+              gitChangesData && (
+                <GitStatusFileTree
+                  key={`${showFullTree}-${gitChangesData.statusData.length}`}
+                  fileTree={gitChangesData.tree}
+                  theme={theme}
+                  gitStatusData={gitChangesData.statusData}
+                  onFileSelect={handleFileSelect}
+                  onContextMenu={handleContextMenu}
+                  selectedFile={selectedFile}
+                  transparentBackground={true}
+                  padding="16px"
+                  openByDefault={false}
+                />
+              )
+            )}
+          </div>
         </div>
         {contextMenu && repositoryPath && (
           <GitChangesContextMenu
@@ -342,6 +426,72 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
         )}
       </div>
 
+      {/* Toggle switch */}
+      <div
+        style={{
+          marginBottom: '12px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'stretch',
+            backgroundColor: theme.colors.backgroundTertiary,
+            borderRadius: '6px',
+            padding: '2px',
+            border: `1px solid ${theme.colors.border}`,
+            width: '100%',
+          }}
+        >
+          <button
+            onClick={() => setShowFullTree(true)}
+            style={{
+              flex: 1,
+              padding: '6px 12px',
+              fontSize: theme.fontSizes[1],
+              backgroundColor: showFullTree
+                ? theme.colors.backgroundSecondary
+                : 'transparent',
+              color: showFullTree
+                ? theme.colors.text
+                : theme.colors.textSecondary,
+              border: showFullTree
+                ? `1px solid ${theme.colors.border}`
+                : '1px solid transparent',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: showFullTree ? 600 : 400,
+              transition: 'all 0.2s',
+            }}
+          >
+            Full Tree
+          </button>
+          <button
+            onClick={() => setShowFullTree(false)}
+            style={{
+              flex: 1,
+              padding: '6px 12px',
+              fontSize: theme.fontSizes[1],
+              backgroundColor: !showFullTree
+                ? theme.colors.backgroundSecondary
+                : 'transparent',
+              color: !showFullTree
+                ? theme.colors.text
+                : theme.colors.textSecondary,
+              border: !showFullTree
+                ? `1px solid ${theme.colors.border}`
+                : '1px solid transparent',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontWeight: !showFullTree ? 600 : 400,
+              transition: 'all 0.2s',
+            }}
+          >
+            Changes Only
+          </button>
+        </div>
+      </div>
+
       <div style={{ flex: 1, overflow: 'auto' }}>
         {gitStatusLoading ? (
           <div
@@ -366,7 +516,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
         ) : (
           gitChangesData && (
             <GitStatusFileTree
-              key={gitChangesData.statusData.length}
+              key={`${showFullTree}-${gitChangesData.statusData.length}`}
               fileTree={gitChangesData.tree}
               theme={theme}
               gitStatusData={gitChangesData.statusData}
@@ -374,6 +524,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               onContextMenu={handleContextMenu}
               selectedFile={selectedFile}
               transparentBackground={true}
+              openByDefault={false}
             />
           )
         )}

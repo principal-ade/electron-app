@@ -55,6 +55,7 @@ export class OAuthServerClient {
   private forceReauth: boolean;
 
   constructor(config?: { serverUrl?: string; forceReauth?: boolean }) {
+    // Default to production server, override with environment variable if needed
     this.serverUrl =
       config?.serverUrl ||
       process.env.AUTH_SERVER_URL ||
