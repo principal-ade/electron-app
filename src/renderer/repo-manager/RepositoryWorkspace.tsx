@@ -7,11 +7,7 @@ import {
   Layers,
   Wrench,
   Book,
-  Building2,
-  Terminal as TerminalIcon,
-  FileCode,
   FileText,
-  Presentation,
   Pencil,
   Activity,
   ListTodo,
@@ -47,9 +43,8 @@ import {
 import '@a24z/panels/panels.css';
 import { GitChangesProvider } from '../contexts/GitChangesContext';
 import { HighlightLayersProvider } from '../contexts/HighlightLayersContext';
-import { GitService } from '../main-process-api/GitService';
+import { GitService, type GitBranchStatus } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
-import { CityDataCacheService } from '../services/CityDataCacheService';
 import { FileTreeSource, FileTreeStats } from '../types/file-tree-source';
 import { SourceSelectionService } from '../services/SourceSelectionService';
 import { CloneVisibilityService } from '../services/CloneVisibilityService';
@@ -61,7 +56,6 @@ import type { HighlightLayer } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 import { WorkspaceLayoutService } from '../services/WorkspaceLayoutService';
 import type { WorkspaceLayout } from '../../shared/types/userPreferences.types';
-import { RightPaneMode } from '../../shared/types/userPreferences.types';
 import { RepositoryNote } from '../../shared/main-process-api-interfaces/RepositoryNotesAPI';
 import { RepositoryNotesService } from '../main-process-api/RepositoryNotesService';
 import type { ToolbarItem } from './shared/RepositoryToolbar';
@@ -78,7 +72,6 @@ import { useGitChanges } from '../contexts/GitChangesContext';
 import { useRepositoryData } from '../hooks/useRepositoryData';
 import { RepositorySearchTab } from '../components/repository-maps/RepositorySearchTab';
 import { ToolsPanel } from '../panels/components/ToolsPanel';
-import { RightPaneView } from '../components/repository-maps/RightPaneContainer';
 import { FileTreePanelContent } from '../panels/components/FileTreePanelContent';
 import { RepositoryPanelProvider } from '../panels/RepositoryPanelProvider';
 import { GitChangesPanel } from '../panels/components/GitChangesPanel';
@@ -121,7 +114,7 @@ interface RepositoryWorkspaceProps {
 
 // Internal component that uses the highlight layers context
 const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
-  React.memo(({ repository, onBack, hasUpdateAvailable }) => {
+  React.memo(({ repository, onBack: _onBack, hasUpdateAvailable: _hasUpdateAvailable }) => {
     const { theme } = useTheme();
     const { registerLayer, unregisterLayer } = useHighlightLayers();
 
@@ -136,7 +129,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [showBadgeInfoModal, setShowBadgeInfoModal] = useState(false);
     const [showPanelConfigModal, setShowPanelConfigModal] = useState(false);
     const [cloneBranchStatuses, setCloneBranchStatuses] = useState<
-      Record<string, any>
+      Record<string, GitBranchStatus>
     >({});
 
     // Panel layout state - default layout ('old-school' workspace)
@@ -190,9 +183,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       string | null
     >(null);
 
-    // File tree services - shared across all views
-    const cityDataCache = useMemo(() => new CityDataCacheService(), []);
-
     // File tree state - unified around selected source
     const [selectedSource, setSelectedSource] = useState<FileTreeSource | null>(
       null,
@@ -200,10 +190,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [packageLayers, setPackageLayers] = useState<PackageLayer[] | null>(
       null,
     );
-
-    // MCP Agent configuration state
-    const [agentsWithMCP, setAgentsWithMCP] = useState<SupportedAgent[]>([]);
-    const [loadingAgentMCPStatus, setLoadingAgentMCPStatus] = useState(true);
 
     // Event highlight service - convert agent events to map highlights
     const [eventHighlightService] = useState(() => new EventHighlightService());
@@ -252,10 +238,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     // Panel content state (from DevelopmentWorkspace)
     const [activeTab, setActiveTab] = useState<string>('fileTree');
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [fileTreeSources, setFileTreeSources] = useState<FileTreeSource[]>(
-      [],
-    );
     const [treeStats, setTreeStats] = useState<FileTreeStats | null>(null);
     const [fileTree, setFileTree] = useState<FileTree | null>(null);
 
@@ -266,26 +248,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [selectedNoteIds, setSelectedNoteIds] = useState<Set<string>>(
       new Set(),
     );
-    const [noteHighlightLayers, setNoteHighlightLayers] = useState<
-      HighlightLayer[]
-    >([]);
 
     // Search state
     const [selectedFile, setSelectedFile] = useState<string | null>(null);
     const [searchResults, setSearchResults] = useState<string[]>([]);
-    const [searchHighlightLayer, setSearchHighlightLayer] =
-      useState<HighlightLayer | null>(null);
-    const [selectedFileLayer, setSelectedFileLayer] =
-      useState<HighlightLayer | null>(null);
     const [hoveredSearchResult, setHoveredSearchResult] = useState<
       string | null
     >(null);
-    const [hoveredSearchLayer, setHoveredSearchLayer] =
-      useState<HighlightLayer | null>(null);
-
-    // Folder filter state
-    const [folderFilterHighlightLayers, setFolderFilterHighlightLayers] =
-      useState<HighlightLayer[]>([]);
 
     // File viewer modal state
     const [showFileViewer, setShowFileViewer] = useState(false);
@@ -306,9 +275,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       status?: GitChangeSelectionStatus;
     } | null>(null);
 
-    // Toolbar state
-    const [toolbarExpanded, setToolbarExpanded] = useState(false);
-
     // File color state - default to showing file colors
     const [showFileColors, setShowFileColors] = useState(true);
 
@@ -316,9 +282,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [highlightedPackages, setHighlightedPackages] = useState<Set<string>>(
       new Set(),
     );
-    const [packageHighlightLayers, setPackageHighlightLayers] = useState<
-      HighlightLayer[]
-    >([]);
     const [toolsHighlightLayers, setToolsHighlightLayers] = useState<
       HighlightLayer[]
     >([]);
@@ -328,7 +291,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       string | null
     >(null);
     const [
-      dependencyAnalysisHighlightLayer,
       setDependencyAnalysisHighlightLayer,
     ] = useState<HighlightLayer[]>([]);
 
@@ -338,9 +300,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       'markdown' | 'excalidraw'
     >('markdown');
     const [createExcalidrawTrigger, setCreateExcalidrawTrigger] = useState(0);
-
-    // Right pane mode
-    const [rightPaneMode, setRightPaneMode] = useState<RightPaneMode>('city');
 
     // Git changes from context
     const {
@@ -482,7 +441,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           // Get the first local clone path
           const clonePath = repository.localClones?.[0]?.path;
           if (!clonePath) {
-            console.log(
+            console.info(
               '[RepositoryWorkspace] No local clone path available for git-sync',
             );
             return;
@@ -494,7 +453,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             repository.localClones?.[0]?.currentBranch ||
             'main';
 
-          console.log(
+          console.info(
             '[RepositoryWorkspace] Attempting to connect to git-sync:',
             {
               owner: repository.owner,
@@ -505,7 +464,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           );
 
           // Attempt to get/create a connection
-          console.log(
+          console.info(
             '[RepositoryWorkspace] Attempting to connect to git-sync...',
           );
           const client = await gitSyncConnectionManager.getConnection(
@@ -518,7 +477,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           );
 
           if (isMounted && client) {
-            console.log(
+            console.info(
               '[RepositoryWorkspace] Successfully connected to git-sync room:',
               `${repository.owner}/${repository.name}:${branch}`,
             );
@@ -2396,7 +2355,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const gitDiffViewerPanel = useMemo(() => {
       return (
         <GitDiffPanel
-          filePath={selectedDiffFile?.path ?? null}
+          relativeFilePath={selectedDiffFile?.path ?? null}
           repositoryPath={
             selectedSource?.type === 'local' ? selectedSource.location : null
           }

@@ -56,7 +56,7 @@ const panelRenderers: Partial<
     <GitCommitHistoryPanel repositoryPath={context.repositoryPath} />
   ),
   gitDiff: ({ context }) => (
-    <GitDiffPanel filePath={null} repositoryPath={context.repositoryPath} />
+    <GitDiffPanel relativeFilePath={null} repositoryPath={context.repositoryPath} />
   ),
   tools: ({ context }) => (
     <ToolsPanel
@@ -72,11 +72,11 @@ const panelRenderers: Partial<
       onFileSelect={actions.openFile}
     />
   ),
-  mdxEditor: ({ context }) => (
+  mdxEditor: () => (
     <MDXEditorPanel
       filePath={null}
       onSave={(content) => {
-        console.log('Markdown saved:', content);
+        console.warn('Markdown saved:', content);
       }}
     />
   ),

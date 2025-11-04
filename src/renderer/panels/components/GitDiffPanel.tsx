@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { ThemedMonacoDiffEditor } from '@principal-ade/industry-themed-monaco-editor';
-import * as path from 'path';
 import { GitCommit, X } from 'lucide-react';
 
 import type { GitChangeSelectionStatus } from '../../../shared/types/repository.types';
@@ -9,7 +8,7 @@ import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { GitService } from '../../main-process-api/GitService';
 
 interface GitDiffPanelProps {
-  filePath: string | null;
+  relativeFilePath: string | null;
   repositoryPath: string | null;
   status?: GitChangeSelectionStatus;
   onClose?: () => void;
@@ -37,12 +36,12 @@ const statusMeta: Record<
   },
 };
 
-const languageFromPath = (filePath: string | null): string => {
-  if (!filePath) {
+const languageFromPath = (relativeFilePath: string | null): string => {
+  if (!relativeFilePath) {
     return 'plaintext';
   }
 
-  const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+  const ext = relativeFilePath.split('.').pop()?.toLowerCase() ?? '';
   const languageMap: Record<string, string> = {
     js: 'javascript',
     jsx: 'javascript',
@@ -90,7 +89,7 @@ const normalizeGitPath = (filePath: string): string => {
 };
 
 export const GitDiffPanel: React.FC<GitDiffPanelProps> = ({
-  filePath,
+  relativeFilePath,
   repositoryPath,
   status,
   onClose,
@@ -101,13 +100,13 @@ export const GitDiffPanel: React.FC<GitDiffPanelProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const language = useMemo(() => languageFromPath(filePath), [filePath]);
+  const language = useMemo(() => languageFromPath(relativeFilePath), [relativeFilePath]);
 
   useEffect(() => {
     let isActive = true;
 
     const loadDiff = async () => {
-      if (!filePath || !repositoryPath) {
+      if (!relativeFilePath || !repositoryPath) {
         setOriginalContent('');
         setModifiedContent('');
         setIsLoading(false);
@@ -119,9 +118,8 @@ export const GitDiffPanel: React.FC<GitDiffPanelProps> = ({
       setError(null);
 
       try {
-        const absolutePath = path.isAbsolute(filePath)
-          ? filePath
-          : path.join(repositoryPath, filePath);
+        // Join repository path with relative file path to get absolute path
+        const absolutePath = `${repositoryPath}/${relativeFilePath}`.replace(/\/+/g, '/');
 
         let workingTreeContent = '';
         if (status !== 'deleted') {
@@ -142,7 +140,7 @@ export const GitDiffPanel: React.FC<GitDiffPanelProps> = ({
           baselineContent = '';
         } else {
           try {
-            const gitPath = normalizeGitPath(filePath);
+            const gitPath = normalizeGitPath(relativeFilePath);
             const showResult = await GitService.execCommand(repositoryPath, [
               'show',
               `HEAD:${gitPath}`,
@@ -188,7 +186,7 @@ export const GitDiffPanel: React.FC<GitDiffPanelProps> = ({
     return () => {
       isActive = false;
     };
-  }, [filePath, repositoryPath, status]);
+  }, [relativeFilePath, repositoryPath, status]);
 
   const statusInfo = status ? statusMeta[status] : null;
   const statusColor = useMemo(() => {
@@ -208,7 +206,7 @@ export const GitDiffPanel: React.FC<GitDiffPanelProps> = ({
     }
   }, [status, theme.colors]);
 
-  if (!filePath) {
+  if (!relativeFilePath) {
     return (
       <div
         style={{
@@ -309,9 +307,9 @@ export const GitDiffPanel: React.FC<GitDiffPanelProps> = ({
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                 }}
-                title={filePath}
+                title={relativeFilePath}
               >
-                {filePath}
+                {relativeFilePath}
               </div>
               {statusInfo && (
                 <div

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import {
   FileText,
@@ -53,15 +53,16 @@ export const RightPanel: React.FC<RightPanelProps> = ({
     );
   }, [repositoryPath]);
 
-  const handleTabChange = (
-    tab: 'preview' | 'terminal' | 'markdown' | 'diff',
-  ) => {
-    if (onTabChange) {
-      onTabChange(tab);
-    } else {
-      setInternalActiveTab(tab);
-    }
-  };
+  const handleTabChange = useCallback(
+    (tab: 'preview' | 'terminal' | 'markdown' | 'diff') => {
+      if (onTabChange) {
+        onTabChange(tab);
+      } else {
+        setInternalActiveTab(tab);
+      }
+    },
+    [onTabChange],
+  );
 
   // Switch tabs when selection mode changes
   useEffect(() => {
@@ -289,7 +290,7 @@ export const RightPanel: React.FC<RightPanelProps> = ({
           />
         ) : activeTab === 'diff' ? (
           <GitDiffPanel
-            filePath={selectionMode === 'diff' ? filePath : null}
+            relativeFilePath={selectionMode === 'diff' ? filePath : null}
             repositoryPath={repositoryPath}
             status={gitStatus}
             onClose={onClose}
