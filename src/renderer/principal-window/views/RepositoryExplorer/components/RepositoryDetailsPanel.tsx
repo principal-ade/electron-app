@@ -105,7 +105,7 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
   selectedGitStatus,
 }) => {
   const { theme } = useTheme();
-  const { registerLayer, unregisterLayer } = useHighlightLayers();
+  const { registerLayer, unregisterLayer, getAllLayers } = useHighlightLayers();
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
 
   // Track terminal windows by repository path
@@ -325,16 +325,33 @@ export const RepositoryDetailsPanel: React.FC<RepositoryDetailsPanelProps> = ({
     );
   }, [gitStatus]);
 
-  // Select which layers to show: git changes if available, otherwise file colors
+  // Check if there are any non-file-color layers from other sources (like agent activity)
+  const hasOtherLayers = useMemo(() => {
+    const allLayers = getAllLayers();
+    // Filter out our own registered layers (repo-highlight-*)
+    const otherLayers = allLayers.filter(
+      (layer) => !layer.id.startsWith('repo-highlight-'),
+    );
+    return otherLayers.length > 0;
+  }, [getAllLayers]);
+
+  // Select which layers to show:
+  // - Git changes if available
+  // - Otherwise file colors if enabled AND there are no other layers (like agent activity)
   const activeHighlightLayers = useMemo(() => {
     if (hasGitChanges) {
       return gitHighlightLayers;
     }
-    return showFileColors ? fileColorHighlightLayers : [];
+    // Show file colors only if enabled and no other layers are active
+    if (showFileColors && !hasOtherLayers) {
+      return fileColorHighlightLayers;
+    }
+    return [];
   }, [
     hasGitChanges,
     gitHighlightLayers,
     showFileColors,
+    hasOtherLayers,
     fileColorHighlightLayers,
   ]);
 
