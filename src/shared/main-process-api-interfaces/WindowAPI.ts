@@ -104,20 +104,6 @@ export interface WindowAPI {
   openCallimachusWindow(): Promise<void>;
 
   /**
-   * Toggle main window minimize/restore
-   * @param shouldMinimize - true to minimize, false to restore
-   */
-  toggleMainWindowMinimize(shouldMinimize: boolean): Promise<void>;
-
-  /**
-   * Listen for main window minimize state changes
-   * @param callback - Called when the main window minimize state changes
-   */
-  onMainWindowMinimizeStateChange(
-    callback: (isMinimized: boolean) => void,
-  ): void;
-
-  /**
    * Get the unique ID of the current window
    * Useful for isolating resources (like terminal sessions) per window
    * @returns The Electron BrowserWindow ID

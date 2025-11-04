@@ -71,45 +71,6 @@ export function registerModernWindowHandlers(): void {
   const multiFileEditorDisabledMessage =
     'The multi-file editor is temporarily unavailable while we migrate to the new Monaco experience.';
 
-  // Toggle main window minimize/restore
-  ipcMain.handle(
-    WindowEvent.TOGGLE_MAIN_WINDOW_MINIMIZE,
-    async (_event, shouldMinimize: boolean) => {
-      const { getMainWindowId } = require('./types');
-      const { applicationWindows } = require('./types');
-
-      const mainWindowId = getMainWindowId();
-      if (!mainWindowId) {
-        console.warn('[modernWindowHandlers] Main window ID not set');
-        return;
-      }
-
-      const mainAppWindow = applicationWindows.get(mainWindowId);
-      if (!mainAppWindow?.window || mainAppWindow.window.isDestroyed()) {
-        console.warn(
-          '[modernWindowHandlers] Main window not found or destroyed',
-        );
-        return;
-      }
-
-      if (shouldMinimize) {
-        mainAppWindow.window.minimize();
-      } else {
-        mainAppWindow.window.restore();
-      }
-
-      // Broadcast the state change to all windows
-      applicationWindows.forEach((appWindow: IModernApplicationWindow) => {
-        if (appWindow.window && !appWindow.window.isDestroyed()) {
-          appWindow.window.webContents.send(
-            WindowEvent.MAIN_WINDOW_MINIMIZE_STATE_CHANGED,
-            shouldMinimize,
-          );
-        }
-      });
-    },
-  );
-
   // Store Viewer Window
   ipcMain.handle(
     WindowEvent.OPEN_STORE_VIEWER,
