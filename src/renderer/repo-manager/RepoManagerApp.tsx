@@ -3,6 +3,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { CustomThemeProvider } from '../providers/CustomThemeProvider';
 import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
 import { AppVersionManagerService } from '../main-process-api/AppVersionManagerService';
+import { RepositoryService } from '../main-process-api/RepositoryService';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import type { Repository } from '../../shared/types/repository.types';
 import { RepositoryWorkspace } from './RepositoryWorkspace';
 
@@ -88,8 +90,69 @@ function useWindowData(): RepoManagerWindowData | null {
 
 export const RepoManagerApp: React.FC = () => {
   const windowData = useWindowData();
-  const repository = windowData?.repository ?? null;
+  const initialRepository = windowData?.repository ?? null;
+  const [repository, setRepository] = useState<Repository | null>(
+    initialRepository,
+  );
   const [hasUpdateAvailable, setHasUpdateAvailable] = useState(false);
+
+  // Update repository state when windowData changes
+  useEffect(() => {
+    setRepository(initialRepository);
+  }, [initialRepository]);
+
+  // Listen to git status changes to update branch info
+  useEffect(() => {
+    if (!repository?.remoteUrl || !repository.localClones?.length) return;
+
+    const localClonePath = repository.localClones[0]?.path;
+    if (!localClonePath) return;
+
+    console.log(
+      '[RepoManagerApp] Subscribing to git changes for:',
+      localClonePath,
+    );
+
+    // Subscribe to cache sync events for git status changes
+    const unsubscribe = RepositoryMonitoringService.onCacheSync((event) => {
+      // Only handle gitStatus slice changes for our repository
+      if (
+        event.slice === 'gitStatus' &&
+        event.repoPath === localClonePath &&
+        event.entry.data &&
+        'branch' in event.entry.data
+      ) {
+        const gitStatus = event.entry.data;
+        const newBranch = gitStatus.branch;
+
+        console.log(
+          '[RepoManagerApp] Git status changed, branch:',
+          newBranch,
+        );
+
+        // Update the repository's local clone branch info
+        setRepository((prevRepo) => {
+          if (!prevRepo) return prevRepo;
+
+          const updatedClones = prevRepo.localClones.map((clone) => {
+            if (clone.path === localClonePath) {
+              return { ...clone, currentBranch: newBranch };
+            }
+            return clone;
+          });
+
+          return {
+            ...prevRepo,
+            localClones: updatedClones,
+          };
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [repository?.remoteUrl, repository?.localClones]);
 
   useEffect(() => {
     const unsubscribeAvailable = AppVersionManagerService.onUpdateAvailable(

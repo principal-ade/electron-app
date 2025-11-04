@@ -837,7 +837,7 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
   }
 
   /**
-   * Update local clone last accessed time
+   * Update local clone last accessed time and refresh branch info
    */
   async updateLocalCloneAccess(
     remoteUrl: string,
@@ -861,6 +861,22 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
         if (cloneIndex !== -1) {
           repo.localClones[cloneIndex].lastAccessed = Date.now();
           repo.lastAccessed = Date.now(); // Also update repo last accessed
+
+          // Refresh the current branch information
+          try {
+            const branchInfo = await this.branchService.getBranchInfo(localPath);
+            if (branchInfo?.currentBranch) {
+              repo.localClones[cloneIndex].currentBranch =
+                branchInfo.currentBranch;
+            }
+          } catch (error) {
+            console.error(
+              '[updateLocalCloneAccess] Failed to get current branch:',
+              error,
+            );
+            // Don't fail the whole operation if branch detection fails
+          }
+
           await typedManager.set(repoKey, repo, StaticNamespaces.REPOSITORIES);
         }
       }

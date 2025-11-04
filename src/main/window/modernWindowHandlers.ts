@@ -10,6 +10,7 @@ import { resolveHtmlPath } from '../util';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import type { IModernApplicationWindow } from './types';
+import { GitBranchService } from '../version-control-providers/gitBranchService';
 
 /**
  * Repository window state
@@ -251,12 +252,33 @@ export function registerModernWindowHandlers(): void {
         remoteUrl = `https://github.com/${owner}/${repoName}`;
       }
 
+      // Get current branch if we have a local path
+      let currentBranch: string | undefined;
+      if (repository.path) {
+        try {
+          const branchService = new GitBranchService();
+          const branchInfo = await branchService.getBranchInfo(repository.path);
+          currentBranch = branchInfo?.currentBranch;
+          console.log(
+            '[modernWindowHandlers] Retrieved branch info:',
+            currentBranch,
+          );
+        } catch (error) {
+          console.error(
+            '[modernWindowHandlers] Failed to get branch info:',
+            error,
+          );
+        }
+      }
+
       // Create the repository object in the format expected by Repository Maps
       const repoData = {
         owner,
         name: repoName,
         remoteUrl,
-        localClones: repository.path ? [{ path: repository.path }] : [],
+        localClones: repository.path
+          ? [{ path: repository.path, currentBranch, addedAt: Date.now() }]
+          : [],
         // Add other metadata that might be useful
         metadata: {
           stars: repository.github?.stars,
