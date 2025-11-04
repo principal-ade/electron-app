@@ -187,6 +187,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [selectedSource, setSelectedSource] = useState<FileTreeSource | null>(
       null,
     );
+    const [fileTreeSources, setFileTreeSources] = useState<FileTreeSource[]>([]);
     const [packageLayers, setPackageLayers] = useState<PackageLayer[] | null>(
       null,
     );
@@ -241,6 +242,10 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [treeStats, setTreeStats] = useState<FileTreeStats | null>(null);
     const [fileTree, setFileTree] = useState<FileTree | null>(null);
 
+    // Agent MCP status state
+    const [loadingAgentMCPStatus, setLoadingAgentMCPStatus] = useState(false);
+    const [agentsWithMCP, setAgentsWithMCP] = useState<SupportedAgent[]>([]);
+
     // Notes state
     const [tribalKnowledgeNotes, setTribalKnowledgeNotes] = useState<
       RepositoryNote[]
@@ -255,6 +260,23 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const [hoveredSearchResult, setHoveredSearchResult] = useState<
       string | null
     >(null);
+    const [searchHighlightLayer, setSearchHighlightLayer] = useState<
+      HighlightLayer | null
+    >(null);
+    const [hoveredSearchLayer, setHoveredSearchLayer] = useState<
+      HighlightLayer | null
+    >(null);
+    const [selectedFileLayer, setSelectedFileLayer] = useState<
+      HighlightLayer | null
+    >(null);
+    const [noteHighlightLayers, setNoteHighlightLayers] = useState<
+      HighlightLayer[]
+    >([]);
+    const [packageHighlightLayers, setPackageHighlightLayers] = useState<
+      HighlightLayer[]
+    >([]);
+    const [folderFilterHighlightLayers, setFolderFilterHighlightLayers] =
+      useState<HighlightLayer[]>([]);
 
     // File viewer modal state
     const [showFileViewer, setShowFileViewer] = useState(false);
@@ -274,6 +296,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       path: string;
       status?: GitChangeSelectionStatus;
     } | null>(null);
+    const [rightPaneMode, setRightPaneMode] = useState<'document' | null>(null);
 
     // File color state - default to showing file colors
     const [showFileColors, setShowFileColors] = useState(true);
@@ -291,6 +314,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       string | null
     >(null);
     const [
+      dependencyAnalysisHighlightLayer,
       setDependencyAnalysisHighlightLayer,
     ] = useState<HighlightLayer[]>([]);
 
@@ -2414,29 +2438,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       ],
     );
 
-    // Error handling
-    if (error) {
-      return (
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '40px',
-            color: theme.colors.textSecondary,
-          }}
-        >
-          <div style={{ textAlign: 'center' }}>
-            <h3 style={{ color: theme.colors.text, marginBottom: '8px' }}>
-              Failed to Load Repository
-            </h3>
-            <p>{error}</p>
-          </div>
-        </div>
-      );
-    }
-
     const leftPanelTabs: PanelDefinitionWithContent[] = visibleTabs.map(
       ({ visible: _visible, content, ...tab }) => ({
         ...tab,
@@ -2563,7 +2564,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     emptyMessage="Select a branch to explore"
                     sourceBadges={sourceBadges}
                     toolbarItems={toolbarItems}
-                    toolbarExpanded={toolbarExpanded}
                   />
                 );
 
