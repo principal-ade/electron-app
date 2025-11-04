@@ -19,6 +19,14 @@ import {
 } from './UnifiedSecureStorage';
 import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
 
+interface GitHubUser {
+  login: string;
+  email: string;
+  name?: string;
+  id: number;
+  avatar_url?: string;
+}
+
 interface AuthResult {
   success: boolean;
   authenticated?: boolean;
@@ -28,6 +36,7 @@ interface AuthResult {
     email: string;
     name?: string;
     id?: number;
+    avatarUrl?: string;
   };
   error?: string;
 }
@@ -175,7 +184,7 @@ class AuthService {
           const result = await authClient.authenticate();
 
           // Fetch GitHub user profile to get canonical user data
-          let enrichedUser = result.user;
+          let enrichedUser: AuthResult['user'] = result.user;
           try {
             console.log('[AuthService] Fetching GitHub user profile...');
             const response = await fetch('https://api.github.com/user', {
@@ -186,7 +195,7 @@ class AuthService {
             });
 
             if (response.ok) {
-              const githubUser = await response.json();
+              const githubUser = (await response.json()) as GitHubUser;
               // Use GitHub API as source of truth for all user data
               enrichedUser = {
                 login: githubUser.login, // GitHub's canonical username
@@ -368,9 +377,7 @@ class AuthService {
       }
 
       const { token: githubToken, metadata: githubMetadata } = githubTokenData;
-      const user = githubMetadata?.user as
-        | { login: string; email: string; name?: string; id?: number }
-        | undefined;
+      const user = githubMetadata?.user as AuthResult['user'] | undefined;
 
       if (!user) {
         console.log('[AuthService] No user data found in token metadata');
@@ -504,7 +511,7 @@ class AuthService {
           });
 
           if (response.ok) {
-            const githubUser = await response.json();
+            const githubUser = (await response.json()) as GitHubUser;
             // Use GitHub API as source of truth for all user data
             enrichedUser = {
               login: githubUser.login, // GitHub's canonical username
@@ -557,7 +564,7 @@ class AuthService {
 
   private async storeAuth(
     githubToken: string,
-    user: any,
+    user: NonNullable<AuthResult['user']>,
     workosToken?: string,
     refreshToken?: string,
     expiresAt?: number,

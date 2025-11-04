@@ -110,11 +110,12 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
     // Only refresh GitHub repos
     if (repository.vcsType !== 'github') return repository;
 
-    // Fetch fresh metadata
+    // Fetch fresh metadata (which will download and cache the avatar)
     const metadata = await this.fetchGitHubMetadata(remoteUrl);
     if (!metadata) return repository;
 
     // Update the repository with new metadata
+    // The avatarUrl from metadata is now a cached data URL
     const updates: Partial<Repository> = {
       avatarUrl: metadata.avatarUrl || repository.avatarUrl,
       description: metadata.description || repository.description,
@@ -210,6 +211,54 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
   }
 
   /**
+   * Download and cache an avatar image locally
+   */
+  private async downloadAndCacheAvatar(
+    avatarUrl: string,
+    remoteUrl: string,
+  ): Promise<string | null> {
+    try {
+      console.log('[downloadAndCacheAvatar] Downloading avatar from:', avatarUrl);
+
+      // Fetch the avatar image
+      const response = await fetch(avatarUrl);
+      if (!response.ok) {
+        console.error(
+          '[downloadAndCacheAvatar] Failed to fetch avatar:',
+          response.status,
+        );
+        return null;
+      }
+
+      // Convert to base64
+      const buffer = await response.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString('base64');
+      const dataUrl = `data:image/png;base64,${base64}`;
+
+      // Save to local storage
+      const result = await avatarStorageService.saveRepositoryAvatar(
+        remoteUrl,
+        dataUrl,
+      );
+
+      if (result.success && result.avatarPath) {
+        // Get the data URL back from storage
+        const cachedUrl = await avatarStorageService.getAvatarUrl(
+          result.avatarPath,
+        );
+        console.log('[downloadAndCacheAvatar] Avatar cached successfully');
+        return cachedUrl;
+      }
+
+      console.error('[downloadAndCacheAvatar] Failed to save avatar:', result.error);
+      return null;
+    } catch (error) {
+      console.error('[downloadAndCacheAvatar] Error downloading avatar:', error);
+      return null;
+    }
+  }
+
+  /**
    * Fetch repository metadata from GitHub API
    */
   async fetchGitHubMetadata(remoteUrl: string): Promise<{
@@ -266,13 +315,21 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
       if (response.status === 404) {
         // Repository is either private or doesn't exist
         console.log('[fetchGitHubMetadata] Repository is private or not found');
+
+        // Download and cache the owner's avatar
+        const fallbackAvatarUrl = `https://github.com/${owner}.png`;
+        const cachedAvatarUrl = await this.downloadAndCacheAvatar(
+          fallbackAvatarUrl,
+          remoteUrl,
+        );
+
         return {
           // Even for private repos, return the parsed name and owner
           name: repo,
           owner: owner,
           isPrivate: true,
-          // For private repos, we can still use the owner's avatar
-          avatarUrl: `https://github.com/${owner}.png`,
+          // Use cached avatar or fallback to GitHub URL
+          avatarUrl: cachedAvatarUrl || fallbackAvatarUrl,
         };
       }
 
@@ -286,12 +343,22 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
 
       const data = (await response.json()) as GitHubApiResponse;
 
+      // Download and cache the avatar if available
+      let cachedAvatarUrl: string | null = null;
+      if (data.owner?.avatar_url) {
+        cachedAvatarUrl = await this.downloadAndCacheAvatar(
+          data.owner.avatar_url,
+          remoteUrl,
+        );
+      }
+
       return {
         // Include the actual repo name and owner from GitHub API
         name: data.name,
         owner: data.owner?.login,
         description: data.description,
-        avatarUrl: data.owner?.avatar_url,
+        // Use cached avatar or fallback to original URL
+        avatarUrl: cachedAvatarUrl || data.owner?.avatar_url,
         language: data.language,
         stars: data.stargazers_count,
         defaultBranch: data.default_branch,
@@ -324,11 +391,19 @@ export class RepositoryApiEventHandler implements RepositoryAPI {
       );
       if (match) {
         const [, owner, repo] = match;
+        const fallbackAvatarUrl = `https://github.com/${owner}.png`;
+
+        // Try to download and cache the avatar even on error
+        const cachedAvatarUrl = await this.downloadAndCacheAvatar(
+          fallbackAvatarUrl,
+          remoteUrl,
+        );
+
         return {
           // Return the parsed name and owner as fallback
           name: repo,
           owner: owner,
-          avatarUrl: `https://github.com/${owner}.png`,
+          avatarUrl: cachedAvatarUrl || fallbackAvatarUrl,
         };
       }
       return null;
