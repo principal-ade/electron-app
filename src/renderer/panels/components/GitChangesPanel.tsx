@@ -192,6 +192,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     }
 
     // Changes only mode - show only changed files
+    // If no changes, return null (unless showing full tree)
     if (!hasChanges) {
       return null;
     }
@@ -337,7 +338,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               >
                 {loadingMessage}
               </div>
-            ) : !hasChanges ? (
+            ) : !hasChanges && !showFullTree ? (
               <div
                 style={{
                   padding: '20px',
@@ -359,7 +360,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
                   selectedFile={selectedFile}
                   transparentBackground={true}
                   padding="16px"
-                  openByDefault={false}
+                  openByDefault={!showFullTree}
                 />
               )
             )}
@@ -503,7 +504,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
           >
             {loadingMessage}
           </div>
-        ) : !hasChanges ? (
+        ) : !hasChanges && !showFullTree ? (
           <div
             style={{
               padding: '20px',
@@ -524,7 +525,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               onContextMenu={handleContextMenu}
               selectedFile={selectedFile}
               transparentBackground={true}
-              openByDefault={false}
+              openByDefault={!showFullTree}
             />
           )
         )}
