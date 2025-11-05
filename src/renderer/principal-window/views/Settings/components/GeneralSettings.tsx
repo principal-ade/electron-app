@@ -39,7 +39,7 @@ export const GeneralSettings: React.FC = () => {
   const [showReposButton, setShowReposButton] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
-  const [showTerminalButton, setShowTerminalButton] = useState(true);
+  const [showTerminalButton, setShowTerminalButton] = useState(false);
 
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
@@ -72,7 +72,7 @@ export const GeneralSettings: React.FC = () => {
       setShowReposButton(prefs.showReposButton ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
-      setShowTerminalButton(prefs.showTerminalButton ?? true);
+      setShowTerminalButton(prefs.showTerminalButton ?? false);
     };
 
     UserPreferencesService.getPreferences()
@@ -981,8 +981,8 @@ export const GeneralSettings: React.FC = () => {
                   lineHeight: '1.5',
                 }}
               >
-                When enabled (default), the Terminal button will appear in the side
-                navigation. When disabled, the button is hidden.
+                When enabled, the Terminal button will appear in the side
+                navigation. When disabled (default), the button is hidden.
               </p>
             </div>
             <label

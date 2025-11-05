@@ -145,7 +145,7 @@ Browser text selections are draggable by default, but you can enhance them:
 
 **Terminal** (target):
 ```tsx
-// In XTerminalPanel
+// In TerminalPanelPackaged or terminal component
 <div
   ref={terminalRef}
   onDragOver={(e) => {
@@ -378,10 +378,10 @@ describe('Terminal Drop Handler', () => {
   it('should insert dropped path into terminal', () => {
     const mockOnData = jest.fn();
     const { container } = render(
-      <XTerminalPanel onData={mockOnData} />
+      <TerminalPanelPackaged directory="/test" onData={mockOnData} />
     );
 
-    const terminal = container.querySelector('.terminal-container-fix');
+    const terminal = container.querySelector('.terminal-container');
 
     // Simulate drop event
     const dropEvent = new DragEvent('drop', {
@@ -398,10 +398,10 @@ describe('Terminal Drop Handler', () => {
   it('should quote paths with spaces', () => {
     const mockOnData = jest.fn();
     const { container } = render(
-      <XTerminalPanel onData={mockOnData} />
+      <TerminalPanelPackaged directory="/test" onData={mockOnData} />
     );
 
-    const terminal = container.querySelector('.terminal-container-fix');
+    const terminal = container.querySelector('.terminal-container');
     const dropEvent = new DragEvent('drop', {
       bubbles: true,
       dataTransfer: new DataTransfer(),

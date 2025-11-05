@@ -1,0 +1,15 @@
+{
+  "id": "note-1762352771069-4baef2fjk",
+  "note": "Fixed terminal take control buffer loading. Added shouldRenderTerminal to refresh useEffect dependencies so buffer loads when claiming ownership from another window. Previously only sessionId/terminalId triggered refresh, which worked for tab switching but not take control.",
+  "anchors": [
+    "src/renderer/panels/TerminalPanelPackaged.tsx:296",
+    "src/renderer/panels/TerminalPanelPackaged.tsx:454"
+  ],
+  "tags": [
+    "bug-fix",
+    "terminal"
+  ],
+  "metadata": {},
+  "timestamp": 1762352771069,
+  "codebaseViewId": "default"
+}

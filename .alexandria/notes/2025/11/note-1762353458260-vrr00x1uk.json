@@ -1,0 +1,15 @@
+{
+  "id": "note-1762353458260-vrr00x1uk",
+  "note": "Removed TerminalPanelV2 and XTerminalPanel components. These were deprecated in favor of TerminalPanelPackaged which uses @principal-ade/industry-themed-terminal. Updated related documentation.",
+  "anchors": [
+    "src/renderer/unused/README.md",
+    "docs/TERMINAL_PANEL_V2_DEPRECATION_PLAN.md"
+  ],
+  "tags": [
+    "cleanup",
+    "terminal"
+  ],
+  "metadata": {},
+  "timestamp": 1762353458260,
+  "codebaseViewId": "default"
+}

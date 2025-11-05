@@ -161,7 +161,7 @@ Any panel installed runs with the same high-level privileges as the main Electro
 
 ## 6. Related Documentation
 
-- [Terminal Panel V2 Deprecation Plan](./TERMINAL_PANEL_V2_DEPRECATION_PLAN.md)
+(No related documentation at this time)
 
 ---
 

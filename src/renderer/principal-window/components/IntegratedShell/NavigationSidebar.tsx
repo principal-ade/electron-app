@@ -34,7 +34,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const [showReposButton, setShowReposButton] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
-  const [showTerminalButton, setShowTerminalButton] = useState(true);
+  const [showTerminalButton, setShowTerminalButton] = useState(false);
 
   useEffect(() => {
     // Load user preferences for showing buttons
@@ -42,7 +42,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       setShowReposButton(prefs.showReposButton ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
-      setShowTerminalButton(prefs.showTerminalButton ?? true);
+      setShowTerminalButton(prefs.showTerminalButton ?? false);
     });
 
     // Listen for preference changes
@@ -59,7 +59,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           setShowSearchButton(detail.showSearchButton ?? false);
         }
         if ('showTerminalButton' in detail) {
-          setShowTerminalButton(detail.showTerminalButton ?? true);
+          setShowTerminalButton(detail.showTerminalButton ?? false);
         }
       }
     };

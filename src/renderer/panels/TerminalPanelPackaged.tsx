@@ -293,7 +293,7 @@ const TerminalPanelPackaged = forwardRef<
 
     // Handle connecting to existing session - trigger refresh to show buffer
     useEffect(() => {
-      if (!sessionId || !terminalId) {
+      if (!sessionId || !terminalId || !shouldRenderTerminal) {
         return;
       }
 
@@ -311,7 +311,7 @@ const TerminalPanelPackaged = forwardRef<
 
       // Wait for terminal to be fully initialized before refreshing
       setTimeout(refreshSession, 200);
-    }, [sessionId, terminalId]);
+    }, [sessionId, terminalId, shouldRenderTerminal]);
 
     // Track AI session info
     useEffect(() => {
@@ -461,23 +461,9 @@ const TerminalPanelPackaged = forwardRef<
           ownedByWindowId: null,
           canTakeControl: true,
         });
+        // Setting shouldRenderTerminal to true will trigger the refresh useEffect
+        // which will properly load the buffer contents
         setShouldRenderTerminal(true);
-
-        // Wait for terminal to render before refreshing
-        // This ensures the terminal ref is ready to receive data
-        setTimeout(async () => {
-          try {
-            await TerminalService.refresh(sessionId);
-            console.log(
-              `[TerminalPanelPackaged] Successfully refreshed terminal after taking control: ${sessionId}`,
-            );
-          } catch (refreshError) {
-            console.error(
-              '[TerminalPanelPackaged] Failed to refresh terminal:',
-              refreshError,
-            );
-          }
-        }, 300);
       } catch (error) {
         console.error('[TerminalPanelPackaged] Failed to take control:', error);
       }
