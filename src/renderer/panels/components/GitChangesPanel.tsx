@@ -33,7 +33,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
   const { openGitDiff, openFile } = actions;
 
   // State for toggling between full tree and changes only
-  const [showFullTree, setShowFullTree] = useState(false);
+  const [showFullTree, setShowFullTree] = useState(true);
 
   // Determine file status based on git status data
   const getFileStatus = useCallback(

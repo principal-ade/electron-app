@@ -424,16 +424,15 @@ export class WorkspaceLayoutService {
         id: 'agent-work',
         name: 'Agent Work',
         description:
-          'Tasks, agent sessions, file tree, agent context, git changes, docs, multi terminal, city map, agent events, code viewer, and markdown slides',
+          'Git changes, tasks, agent sessions, agent context, docs, multi terminal, city map, git diff, code viewer, and markdown slides',
         layout: {
           left: {
             type: 'tabs',
             panels: [
+              'gitChanges',
               'tasks',
               'agentSessions',
-              'fileTree',
               'agentContext',
-              'gitChanges',
               'docs',
             ],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
@@ -443,7 +442,7 @@ export class WorkspaceLayoutService {
             type: 'tabs',
             panels: [
               'cityVisualization',
-              'agentEvents',
+              'gitDiff',
               'codeViewer',
               'markdownViewer',
             ],
