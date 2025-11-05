@@ -39,6 +39,7 @@ export const GeneralSettings: React.FC = () => {
   const [showReposButton, setShowReposButton] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
+  const [showTerminalButton, setShowTerminalButton] = useState(true);
 
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
@@ -71,6 +72,7 @@ export const GeneralSettings: React.FC = () => {
       setShowReposButton(prefs.showReposButton ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
+      setShowTerminalButton(prefs.showTerminalButton ?? true);
     };
 
     UserPreferencesService.getPreferences()
@@ -938,6 +940,99 @@ export const GeneralSettings: React.FC = () => {
                     height: '18px',
                     width: '18px',
                     left: showReposButton ? '27px' : '3px',
+                    bottom: '3px',
+                    backgroundColor: 'white',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                  }}
+                />
+              </span>
+            </label>
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '16px',
+              marginTop: '16px',
+              paddingTop: '16px',
+              borderTop: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <label
+                htmlFor="showTerminalButton"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  display: 'block',
+                  marginBottom: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Show Terminal Button
+              </label>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  lineHeight: '1.5',
+                }}
+              >
+                When enabled (default), the Terminal button will appear in the side
+                navigation. When disabled, the button is hidden.
+              </p>
+            </div>
+            <label
+              style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '48px',
+                height: '24px',
+                flexShrink: 0,
+              }}
+            >
+              <input
+                id="showTerminalButton"
+                type="checkbox"
+                checked={showTerminalButton}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  setShowTerminalButton(newValue);
+                  await UserPreferencesService.updatePreferences({
+                    showTerminalButton: newValue,
+                  });
+                }}
+                style={{
+                  opacity: 0,
+                  width: 0,
+                  height: 0,
+                }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: showTerminalButton
+                    ? theme.colors.primary
+                    : theme.colors.border,
+                  transition: '0.3s',
+                  borderRadius: '24px',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    content: '',
+                    height: '18px',
+                    width: '18px',
+                    left: showTerminalButton ? '27px' : '3px',
                     bottom: '3px',
                     backgroundColor: 'white',
                     transition: '0.3s',

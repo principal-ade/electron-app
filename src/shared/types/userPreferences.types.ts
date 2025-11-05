@@ -89,6 +89,7 @@ export interface UserPreferences {
   showReposButton?: boolean; // Show/hide the repos button in side nav (default: false - deprecated view)
   showMonitorButton?: boolean; // Show/hide the monitor button in side nav (default: false)
   showSearchButton?: boolean; // Show/hide the search button in side nav (default: false)
+  showTerminalButton?: boolean; // Show/hide the terminal button in side nav (default: true)
   showGitSyncPanel?: boolean; // Show/hide the git sync panel in Feed view (default: false)
   showTerminalDebugButton?: boolean; // Show/hide the debug button in terminal panels (default: false)
   showTerminalRecordingButton?: boolean; // Show/hide the recording button in terminal panels (default: false)

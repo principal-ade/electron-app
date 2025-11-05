@@ -34,6 +34,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const [showReposButton, setShowReposButton] = useState(false);
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
+  const [showTerminalButton, setShowTerminalButton] = useState(true);
 
   useEffect(() => {
     // Load user preferences for showing buttons
@@ -41,6 +42,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
       setShowReposButton(prefs.showReposButton ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
+      setShowTerminalButton(prefs.showTerminalButton ?? true);
     });
 
     // Listen for preference changes
@@ -55,6 +57,9 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         }
         if ('showSearchButton' in detail) {
           setShowSearchButton(detail.showSearchButton ?? false);
+        }
+        if ('showTerminalButton' in detail) {
+          setShowTerminalButton(detail.showTerminalButton ?? true);
         }
       }
     };
@@ -131,7 +136,16 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           },
         ]
       : []),
-    { id: 'terminal', icon: <Terminal size={20} />, label: 'Term' },
+    // Only include terminal button if user has enabled it in preferences
+    ...(showTerminalButton
+      ? [
+          {
+            id: 'terminal' as NavigationView,
+            icon: <Terminal size={20} />,
+            label: 'Term',
+          },
+        ]
+      : []),
     // Only include search button if user has enabled it in preferences
     ...(showSearchButton
       ? [
