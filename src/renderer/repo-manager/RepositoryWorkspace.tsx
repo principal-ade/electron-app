@@ -18,6 +18,7 @@ import {
   History,
   FolderGit2,
   FolderOpen,
+  RotateCcw,
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { PackageLayer } from '@principal-ai/codebase-composition';
@@ -94,6 +95,7 @@ import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { MultiTerminalPanel } from '../panels/components/MultiTerminalPanel';
 import { MDXEditorPanel } from '../panels/components/MDXEditorPanel';
+import { TerminalReplayPanel } from '../panels/components/TerminalReplayPanel';
 import { panelPreviewRegistry } from '../panels/panelPreviews';
 import { repositoryPanelDefinitions } from '../panels/registry';
 import { gitSyncConnectionManager } from '../services/git-sync/GitSyncConnectionManager';
@@ -2089,6 +2091,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             />
           </RepositoryPanelProvider>
         ),
+        terminalReplay: <TerminalReplayPanel />,
       };
       return map;
     }, [
@@ -2672,6 +2675,12 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     label: 'Excalidraw Diagram',
                     content: excalidrawDiagramPanel,
                     icon: panelPreviewRegistry.excalidrawDiagram?.icon,
+                  },
+                  {
+                    id: 'terminalReplay',
+                    label: 'Terminal Replay',
+                    content: panelContentMap.terminalReplay,
+                    icon: panelPreviewRegistry.terminalReplay?.icon,
                   },
                 ];
 
