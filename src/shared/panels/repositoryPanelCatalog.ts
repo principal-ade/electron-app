@@ -242,6 +242,22 @@ export const repositoryPanelCatalog = [
     slices: ['graphs'] as const,
     surfaces: ['principal'] as const,
   },
+  {
+    id: 'terminalReplay',
+    label: 'Terminal Replay',
+    description:
+      'Load and replay terminal recording files with synchronized playback controls.',
+    slices: [] as const,
+    surfaces: ['manager', 'agent', 'principal'] as const,
+  },
+  {
+    id: 'presence',
+    label: 'Live Presence',
+    description:
+      'See who is online and what repositories they are working on in real-time.',
+    slices: [] as const,
+    surfaces: ['principal'] as const,
+  },
 ] as const satisfies readonly RepositoryPanelDefinitionBase[];
 
 export type RepositoryPanelCatalogEntry =

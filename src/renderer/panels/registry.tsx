@@ -24,6 +24,8 @@ import { GitHubProjectsPanel } from './components/GitHubProjectsPanel';
 import { GitHubSocialPanel } from './components/GitHubSocialPanel';
 import { GraphsListPanel } from './components/GraphsListPanel';
 import { GraphDetailPanel } from './components/GraphDetailPanel';
+import { TerminalReplayPanel } from './components/TerminalReplayPanel';
+import { PresencePanel } from './components/PresencePanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -95,6 +97,8 @@ const panelRenderers: Partial<
       onTopLevelNodesChange={() => {}}
     />
   ),
+  terminalReplay: () => <TerminalReplayPanel />,
+  presence: () => <PresencePanel />,
 };
 
 export const repositoryPanelDefinitions = repositoryPanelCatalog.map(
@@ -138,7 +142,7 @@ export function createDefaultPanelVisibility({
   surfaces?: RepositoryPanelSurface[];
 } = {}): RepositoryPanelVisibility {
   const surfaceSet = surfaces ? new Set(surfaces) : null;
-  const visibility: Record<RepositoryPanelId, boolean> = {};
+  const visibility = {} as Record<RepositoryPanelId, boolean>;
   const order: RepositoryPanelId[] = [];
 
   repositoryPanelDefinitions.forEach((definition) => {

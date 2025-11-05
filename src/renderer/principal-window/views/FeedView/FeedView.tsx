@@ -27,6 +27,7 @@ import { GitHubReadmePanel } from '../../../panels/components/GitHubReadmePanel'
 import { GitHubUserSignalsPanel } from '../../../panels/components/GitHubUserSignalsPanel';
 import { GitSyncDiagnosticPanel } from '../../../panels/components/GitSyncDiagnosticPanel';
 import { LocalProjectsPanel } from '../../../panels/components/LocalProjectsPanel';
+import { PresencePanel } from '../../../panels/components/PresencePanel';
 import {
   SelectedRepositoryProvider,
   useSelectedRepository,
@@ -94,7 +95,7 @@ const FeedViewInner: React.FC = () => {
   const panelState = usePanelPersistence({
     viewKey: 'feedView',
     defaultSizes: { left: 20, middle: 55, right: 25 },
-    collapsed: { left: false, right: showGitSyncPanel ? false : true },
+    collapsed: { left: false, right: false },
     panelType: 'three-panel',
   });
 
@@ -168,6 +169,12 @@ const FeedViewInner: React.FC = () => {
           />
         ),
       },
+      {
+        id: 'presence',
+        label: 'Live Presence',
+        icon: <Users size={16} />,
+        content: <PresencePanel />,
+      },
     ];
 
     // Conditionally add git sync panel
@@ -218,7 +225,7 @@ const FeedViewInner: React.FC = () => {
       },
       right: {
         type: 'tabs' as const,
-        panels: showGitSyncPanel ? ['git-sync-diagnostic'] : [],
+        panels: showGitSyncPanel ? ['presence', 'git-sync-diagnostic'] : ['presence'],
         config: {
           defaultActiveTab: 0,
           tabPosition: 'top' as const,

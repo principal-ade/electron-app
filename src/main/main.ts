@@ -343,6 +343,7 @@ app
     const AuthStateManager = require('./services/AuthStateManager').default;
     const { authService } = require('./services/AuthService');
     const { gitSyncIPC } = require('./services/GitSyncIPC');
+    const { presenceIPC } = require('./services/PresenceIPC');
 
     // Force initialization
     const authStateManager = AuthStateManager.getInstance();
@@ -350,6 +351,7 @@ app
       authService: !!authService,
       authStateManager: !!authStateManager,
       gitSyncIPC: !!gitSyncIPC,
+      presenceIPC: !!presenceIPC,
     });
 
     // Initialize auth state from stored credentials

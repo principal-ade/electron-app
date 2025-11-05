@@ -36,6 +36,7 @@ import type { TypeExtractionAPI } from './TypeExtractionAPI';
 import type { TypeSchemaAPI } from './TypeSchemaAPI';
 import type { DockerAPI } from './DockerAPI';
 import type { GitSyncAPI } from './GitSyncAPI';
+import type { PresenceAPI } from './PresenceAPI';
 import type { SSHSetupAPI } from './SSHSetupAPI';
 import type { WindowAPI } from './WindowAPI';
 import type { PrincipalAPI } from './PrincipalAPI';
@@ -115,6 +116,7 @@ export interface MainProcessAPI {
   typeSchema: TypeSchemaAPI;
   docker: DockerAPI;
   gitSync: GitSyncAPI;
+  presence: PresenceAPI;
   sshSetup: SSHSetupAPI;
   window: WindowAPI;
   principal: PrincipalAPI;

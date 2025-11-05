@@ -23,6 +23,7 @@ import {
   Package,
   Pencil,
   Play,
+  RotateCcw,
   Search,
   Terminal as TerminalIcon,
   Users,
@@ -55,6 +56,7 @@ import { QualityHexagonPanelPreview } from './components/QualityHexagonPanel';
 import { GitDiffPanelPreview } from './components/GitDiffPanel';
 import { MDXEditorPanelPreview } from './components/MDXEditorPanel';
 import { GitHubReadmePanel } from './components/GitHubReadmePanel';
+import { PresencePanelPreview } from './components/PresencePanel';
 
 export interface PanelPreviewMetadata {
   icon: React.ReactNode;
@@ -232,6 +234,31 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     label: 'Graph Visualization',
     description:
       'Interactive graph visualization with filtering and cluster analysis.',
+  },
+  terminalReplay: {
+    icon: <RotateCcw size={16} />,
+    preview: (
+      <div
+        style={{
+          padding: '16px',
+          textAlign: 'center',
+          fontSize: '13px',
+          color: '#888',
+        }}
+      >
+        Terminal Replay
+      </div>
+    ),
+    label: 'Terminal Replay',
+    description:
+      'Load and replay terminal recording files with synchronized playback controls.',
+  },
+  presence: {
+    icon: <Users size={16} />,
+    preview: <PresencePanelPreview />,
+    label: 'Live Presence',
+    description:
+      'See who is online and what repositories they are working on in real-time.',
   },
 };
 

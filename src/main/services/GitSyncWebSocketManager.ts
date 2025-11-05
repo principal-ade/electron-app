@@ -490,6 +490,17 @@ export class GitSyncWebSocketManager {
         // Heartbeat response
         break;
 
+      case 'presence:user_online':
+      case 'presence:user_offline':
+      case 'presence:repo_opened':
+      case 'presence:repo_closed':
+      case 'presence:repo_focused':
+      case 'presence:status_changed':
+        // Forward presence events to all renderers with a special event name
+        console.log('[GitSyncWebSocketManager] Presence event received:', message.type);
+        this.broadcastPresenceEvent(message);
+        break;
+
       default:
         // Forward all other messages to renderers
         this.broadcastToRenderers(
@@ -690,6 +701,20 @@ export class GitSyncWebSocketManager {
   }
 
   /**
+   * Broadcast presence events to all renderer processes
+   */
+  private broadcastPresenceEvent(message: GitSyncMessage) {
+    const allWindows = BrowserWindow.getAllWindows();
+    const eventName = 'presence:event';
+
+    allWindows.forEach((window) => {
+      if (window.webContents && !window.webContents.isDestroyed()) {
+        window.webContents.send(eventName, message);
+      }
+    });
+  }
+
+  /**
    * Disconnect all connections
    */
   disconnectAll() {
@@ -725,6 +750,151 @@ export class GitSyncWebSocketManager {
     connectionsToDisconnect.forEach((id) => {
       this.disconnect(id);
     });
+  }
+
+  /**
+   * Subscribe to global presence events
+   * Uses any existing connection to join the __global_presence__ room
+   */
+  async subscribeToPresence(): Promise<boolean> {
+    try {
+      // Find any connected WebSocket
+      const connections = Array.from(this.connections.values());
+      const activeConnection = connections.find(
+        (conn) => conn.ws?.readyState === WebSocket.OPEN && conn.status.authenticated,
+      );
+
+      if (!activeConnection) {
+        console.warn('[GitSyncWebSocketManager] No active connection for presence subscription');
+        return false;
+      }
+
+      // Join the global presence room
+      const joinMessage = {
+        type: 'join_room',
+        roomId: '__global_presence__',
+      };
+
+      this.sendMessage(activeConnection, joinMessage);
+      console.log('[GitSyncWebSocketManager] Subscribed to global presence');
+      return true;
+    } catch (error) {
+      console.error('[GitSyncWebSocketManager] Failed to subscribe to presence:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Fetch presence data from the traffic controller (REST API)
+   */
+  async fetchPresenceData(): Promise<{
+    success: boolean;
+    data?: {
+      users: unknown[];
+      stats: { totalOnline: number; totalRepositories: number; activeCollaborations: number };
+    };
+    error?: string;
+  }> {
+    try {
+      // Convert WebSocket URL to HTTP URL for REST API calls
+      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const response = await fetch(`${httpUrl}/api/presence/users`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch presence: ${response.status}`);
+      }
+
+      const data = await response.json() as {
+        users: unknown[];
+        stats: { totalOnline: number; totalRepositories: number; activeCollaborations: number };
+      };
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch presence data';
+      console.error('[GitSyncWebSocketManager] Failed to fetch presence:', error);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * Fetch users in a specific repository
+   */
+  async fetchRepositoryPresence(
+    owner: string,
+    repo: string,
+  ): Promise<{
+    success: boolean;
+    data?: { repoId: string; users: unknown[]; totalUsers: number };
+    error?: string;
+  }> {
+    try {
+      // Convert WebSocket URL to HTTP URL for REST API calls
+      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const response = await fetch(`${httpUrl}/api/presence/repos/${owner}/${repo}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch repository presence: ${response.status}`);
+      }
+
+      const data = await response.json() as { repoId: string; users: unknown[]; totalUsers: number };
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch repository presence';
+      console.error('[GitSyncWebSocketManager] Failed to fetch repository presence:', error);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * Fetch presence for a specific user
+   */
+  async fetchUserPresence(
+    userId: string,
+  ): Promise<{
+    success: boolean;
+    data?: unknown;
+    error?: string;
+  }> {
+    try {
+      // Convert WebSocket URL to HTTP URL for REST API calls
+      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+      const response = await fetch(`${httpUrl}/api/presence/user/${userId}`);
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return {
+            success: false,
+            error: 'User not found',
+          };
+        }
+        throw new Error(`Failed to fetch user presence: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch user presence';
+      console.error('[GitSyncWebSocketManager] Failed to fetch user presence:', error);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
   }
 }
 
