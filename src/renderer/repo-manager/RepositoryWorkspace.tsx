@@ -463,6 +463,12 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       let isMounted = true;
 
       const connectToGitSync = async () => {
+        // Get branch information early so it's available in error handler
+        const branch =
+          repository.metadata?.defaultBranch ||
+          repository.localClones?.[0]?.currentBranch ||
+          'main';
+
         try {
           // Get the first local clone path
           const clonePath = repository.localClones?.[0]?.path;
@@ -472,12 +478,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             );
             return;
           }
-
-          // Get branch information
-          const branch =
-            repository.metadata?.defaultBranch ||
-            repository.localClones?.[0]?.currentBranch ||
-            'main';
 
           console.info(
             '[RepositoryWorkspace] Attempting to connect to git-sync:',

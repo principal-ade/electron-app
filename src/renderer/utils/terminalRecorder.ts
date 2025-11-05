@@ -189,11 +189,9 @@ export class TerminalRecorder {
    */
   recordDataReceived(sessionId: string, data: string): void {
     if (!this.isRecording) {
-      console.log(`[TerminalRecorder] NOT recording (isRecording=${this.isRecording}) - skipping received data`);
       return;
     }
 
-    console.log(`[TerminalRecorder] Recording received data for session ${sessionId.substring(0, 8)}: ${data.length} bytes`);
     this.recordEvent(sessionId, 'received', data);
   }
 
@@ -202,11 +200,9 @@ export class TerminalRecorder {
    */
   recordDataWritten(sessionId: string, data: string): void {
     if (!this.isRecording) {
-      console.log(`[TerminalRecorder] NOT recording (isRecording=${this.isRecording}) - skipping written data`);
       return;
     }
 
-    console.log(`[TerminalRecorder] Recording written data for session ${sessionId.substring(0, 8)}: ${data.length} bytes`);
     this.recordEvent(sessionId, 'written', data);
 
     // Notify live listeners for real-time display

@@ -218,7 +218,7 @@ export const PresencePanel: React.FC = () => {
               color: theme.colors.text,
             }}
           >
-            {stats?.totalOnline || users.length} Online
+            {Math.max(0, stats?.totalOnline ?? users.length)} Online
           </span>
         </div>
         <div
@@ -232,47 +232,6 @@ export const PresencePanel: React.FC = () => {
         />
       </div>
 
-      {/* Stats summary */}
-      {stats && (
-        <div
-          style={{
-            display: 'flex',
-            gap: '8px',
-            fontSize: `${theme.fontSizes[0]}px`,
-            fontFamily: theme.fonts.body,
-            color: theme.colors.textSecondary,
-          }}
-        >
-          <div
-            style={{
-              flex: 1,
-              padding: '8px',
-              backgroundColor: theme.colors.background,
-              borderRadius: '4px',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontWeight: theme.fontWeights.semibold }}>
-              {stats.totalRepositories}
-            </div>
-            <div>Repos</div>
-          </div>
-          <div
-            style={{
-              flex: 1,
-              padding: '8px',
-              backgroundColor: theme.colors.background,
-              borderRadius: '4px',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontWeight: theme.fontWeights.semibold }}>
-              {stats.activeCollaborations}
-            </div>
-            <div>Active</div>
-          </div>
-        </div>
-      )}
 
       {/* User list */}
       <div
@@ -290,6 +249,9 @@ export const PresencePanel: React.FC = () => {
               padding: '32px',
               textAlign: 'center',
               color: theme.colors.textSecondary,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}
           >
             <Users
@@ -403,10 +365,10 @@ export const PresencePanel: React.FC = () => {
                     >
                       <Folder size={12} />
                       <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {repo.repoId.split('/').pop() || repo.repoId}
+                        {repo.repoId?.split('/').pop() || repo.repoId || 'Unknown'}
                       </span>
                       <GitBranch size={10} />
-                      <span>{repo.branch}</span>
+                      <span>{repo.branch || 'Unknown'}</span>
                     </div>
                   ))}
                 </div>

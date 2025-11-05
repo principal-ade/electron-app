@@ -264,13 +264,6 @@ const TerminalPanelPackaged = forwardRef<
 
       const subscribe = async () => {
         unsubscribe = await TerminalService.onData((data) => {
-          console.log('[TerminalPanelPackaged] Received data event:', {
-            mounted,
-            matchesSessionId: data.sessionId === sessionId,
-            hasTerminalRef: !!terminalRef.current,
-            dataLength: data.data.length,
-          });
-
           if (mounted && data.sessionId === sessionId && terminalRef.current) {
             // Write to terminal
             terminalRef.current.write(data.data);
