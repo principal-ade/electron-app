@@ -568,9 +568,26 @@ export const CarouselTerminalPanel = forwardRef<
           const currentTabs = tabsRef.current;
           const currentIndex = currentPanelIndexRef.current;
 
-          // Get the actual current panel from the carousel to ensure we're in sync
-          const actualCurrentIndex =
-            carouselRef.current?.getCurrentPanel() ?? currentIndex;
+          // Determine which terminal has focus by checking if the event target is within a terminal
+          let focusedTabIndex = -1;
+          const target = e.target as HTMLElement;
+
+          // Check each terminal to see which one contains the focused element
+          for (let i = 0; i < currentTabs.length; i++) {
+            const terminalRef = terminalRefs.current.get(currentTabs[i].id);
+            if (terminalRef) {
+              const terminal = terminalRef.getTerminal();
+              if (terminal && terminal.element && terminal.element.contains(target)) {
+                focusedTabIndex = i;
+                break;
+              }
+            }
+          }
+
+          // If no terminal has focus, fall back to the current carousel panel
+          const actualCurrentIndex = focusedTabIndex >= 0
+            ? focusedTabIndex
+            : (carouselRef.current?.getCurrentPanel() ?? currentIndex);
           const currentActiveTab = currentTabs[actualCurrentIndex];
 
           if (currentActiveTab && currentTabs.length > 0) {
@@ -693,21 +710,29 @@ export const CarouselTerminalPanel = forwardRef<
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                justifyContent: 'center',
                 height: '41px',
                 padding: '0 12px',
-                backgroundColor: theme.colors.backgroundSecondary,
+                backgroundColor: isActivePanel
+                  ? theme.colors.background
+                  : theme.colors.backgroundSecondary,
                 borderBottom: `1px solid ${theme.colors.border}`,
                 flexShrink: 0,
+                position: 'relative',
               }}
               onMouseEnter={() => setHoveredTabId(tab.id)}
               onMouseLeave={() => setHoveredTabId(null)}
             >
               <span
                 style={{
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  color: theme.colors.text,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: isActivePanel
+                    ? theme.fontWeights.semibold
+                    : theme.fontWeights.body,
+                  color: isActivePanel
+                    ? theme.colors.text
+                    : theme.colors.textSecondary,
+                  fontFamily: theme.fonts.body,
                 }}
                 title={showAllTerminals ? tab.directory : undefined}
               >
