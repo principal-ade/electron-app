@@ -9,12 +9,16 @@ import {
   Folder,
   GitBranch,
   Monitor,
+  Wifi,
+  WifiOff,
 } from 'lucide-react';
 import { PresenceService } from '../../main-process-api/PresenceService';
 import type {
   UserPresence,
   PresenceStats,
 } from '../../../shared/main-process-api-interfaces/PresenceAPI';
+import { useGitSyncConnection } from '../../hooks/useGitSyncConnection';
+import { GitSyncService } from '../../main-process-api/GitSyncService';
 
 export const PresencePanel: React.FC = () => {
   const { theme } = useTheme();
@@ -23,6 +27,8 @@ export const PresencePanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const { isConnected, connectionCount, isAuthenticated } = useGitSyncConnection();
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
@@ -50,6 +56,30 @@ export const PresencePanel: React.FC = () => {
         setError(errorMessage || 'Failed to connect to presence server.');
       }
       setIsLoading(false);
+    }
+  }, []);
+
+  // Disconnect from all Git-Sync connections
+  const handleDisconnectAll = useCallback(async () => {
+    try {
+      setIsDisconnecting(true);
+
+      // Get all active connections from main process
+      const connections = await GitSyncService.getAllConnections();
+
+      // Disconnect each connection
+      const disconnectPromises = connections.map((conn) =>
+        GitSyncService.disconnect(conn.connectionId)
+      );
+
+      await Promise.all(disconnectPromises);
+
+      console.info('[PresencePanel] Disconnected all Git-Sync connections');
+    } catch (err) {
+      console.error('[PresencePanel] Failed to disconnect:', err);
+      setError(err instanceof Error ? err.message : 'Failed to disconnect');
+    } finally {
+      setIsDisconnecting(false);
     }
   }, []);
 
@@ -232,6 +262,114 @@ export const PresencePanel: React.FC = () => {
         />
       </div>
 
+      {/* Current User Connection Status */}
+      {isAuthenticated && (
+        <div
+          style={{
+            padding: '12px',
+            backgroundColor: theme.colors.background,
+            borderRadius: '6px',
+            border: `1px solid ${theme.colors.border}`,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Circle
+                size={8}
+                fill={isConnected ? '#10b981' : '#6b7280'}
+                color={isConnected ? '#10b981' : '#6b7280'}
+              />
+              <span
+                style={{
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontWeight: theme.fontWeights.semibold,
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.text,
+                }}
+              >
+                You
+              </span>
+            </div>
+            {isConnected ? (
+              <Wifi size={16} color="#10b981" />
+            ) : (
+              <WifiOff size={16} color="#6b7280" />
+            )}
+          </div>
+          <div
+            style={{
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontFamily: theme.fonts.body,
+              color: theme.colors.textSecondary,
+            }}
+          >
+            {isConnected ? (
+              connectionCount > 0 ? (
+                `Connected to Git-Sync (${connectionCount} ${connectionCount === 1 ? 'room' : 'rooms'})`
+              ) : (
+                'Connected to Git-Sync (no rooms joined)'
+              )
+            ) : (
+              'Not connected to Git-Sync'
+            )}
+          </div>
+          {!isConnected && (
+            <div
+              style={{
+                marginTop: '4px',
+                padding: '8px',
+                fontSize: `${theme.fontSizes[0]}px`,
+                fontFamily: theme.fonts.body,
+                color: theme.colors.textSecondary,
+                backgroundColor: theme.colors.backgroundTertiary,
+                borderRadius: '4px',
+                lineHeight: '1.4',
+              }}
+            >
+              Open a repository to connect to Git-Sync and collaborate with your team in real-time.
+            </div>
+          )}
+          {isConnected && (
+            <button
+              onClick={handleDisconnectAll}
+              disabled={isDisconnecting}
+              style={{
+                marginTop: '4px',
+                padding: '6px 12px',
+                fontSize: `${theme.fontSizes[0]}px`,
+                fontFamily: theme.fonts.body,
+                fontWeight: theme.fontWeights.medium,
+                color: theme.colors.error || '#ef4444',
+                backgroundColor: 'transparent',
+                border: `1px solid ${theme.colors.error || '#ef4444'}`,
+                borderRadius: '4px',
+                cursor: isDisconnecting ? 'not-allowed' : 'pointer',
+                opacity: isDisconnecting ? 0.6 : 1,
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!isDisconnecting) {
+                  e.currentTarget.style.backgroundColor = `${theme.colors.error || '#ef4444'}15`;
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+            >
+              {isDisconnecting ? 'Disconnecting...' : 'Disconnect All'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* User list */}
       <div
