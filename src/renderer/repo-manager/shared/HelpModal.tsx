@@ -236,9 +236,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               x="100"
               y="70"
               fill={theme.colors.textSecondary}
-              fontSize="11"
+              fontSize={theme.fontSizes[0] || 11}
               textAnchor="middle"
-              fontFamily="system-ui"
+              fontFamily={theme.fonts?.body || 'system-ui'}
             >
               src/
             </text>
@@ -246,9 +246,9 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               x="290"
               y="50"
               fill={theme.colors.textSecondary}
-              fontSize="11"
+              fontSize={theme.fontSizes[0] || 11}
               textAnchor="middle"
-              fontFamily="system-ui"
+              fontFamily={theme.fonts?.body || 'system-ui'}
             >
               components/
             </text>
@@ -266,8 +266,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({
             style={{
               color: theme.colors.text,
               margin: '0 0 16px 0',
-              fontSize: '20px',
-              fontWeight: 600,
+              fontSize: theme.fontSizes[4] || theme.fontSizes[3],
+              fontWeight: theme.fontWeights?.semibold || 600,
             }}
           >
             Welcome to Code City
@@ -276,7 +276,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
           <p
             style={{
               color: theme.colors.textSecondary,
-              fontSize: '15px',
+              fontSize: theme.fontSizes[2] || theme.fontSizes[1],
               lineHeight: 1.6,
               margin: '0 0 20px 0',
             }}
@@ -297,8 +297,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               <p
                 style={{
                   color: theme.colors.text,
-                  fontSize: '16px',
-                  fontWeight: 600,
+                  fontSize: theme.fontSizes[2] || theme.fontSizes[1],
+                  fontWeight: theme.fontWeights?.semibold || 600,
                   margin: '0 0 16px 0',
                   background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.accent})`,
                   WebkitBackgroundClip: 'text',
@@ -321,17 +321,17 @@ export const HelpModal: React.FC<HelpModalProps> = ({
                 <p
                   style={{
                     color: theme.colors.text,
-                    fontSize: '14px',
+                    fontSize: theme.fontSizes[1],
                     margin: 0,
                     lineHeight: 1.5,
                   }}
                 >
                   Track{' '}
-                  <span style={{ color: '#f97316', fontWeight: 600 }}>
+                  <span style={{ color: '#f97316', fontWeight: theme.fontWeights?.semibold || 600 }}>
                     outstanding issues
                   </span>{' '}
                   and{' '}
-                  <span style={{ color: '#ef4444', fontWeight: 600 }}>
+                  <span style={{ color: '#ef4444', fontWeight: theme.fontWeights?.semibold || 600 }}>
                     maintenance alerts
                   </span>{' '}
                   to keep dependencies and automation in sync.
@@ -353,7 +353,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               <p
                 style={{
                   color: theme.colors.text,
-                  fontSize: '14px',
+                  fontSize: theme.fontSizes[1],
                   margin: 0,
                   lineHeight: 1.5,
                 }}
@@ -372,8 +372,8 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               border: 'none',
               backgroundColor: theme.colors.primary,
               color: 'white',
-              fontSize: '14px',
-              fontWeight: 500,
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights?.medium || 500,
               cursor: 'pointer',
               transition: 'all 0.2s',
             }}

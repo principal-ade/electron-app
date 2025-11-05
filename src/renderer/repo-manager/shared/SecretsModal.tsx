@@ -248,7 +248,9 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
       // Build the complete secrets object
       // Start with existing keys that haven't been modified
       const keysToFetch = secretKeys.filter(
-        (key) => !loadedSecrets[key] && !localChanges.hasOwnProperty(key),
+        (key) =>
+          !loadedSecrets[key] &&
+          !Object.prototype.hasOwnProperty.call(localChanges, key),
       );
 
       let allSecrets: RepositorySecrets = {};
@@ -264,7 +266,10 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
 
       // Add loaded secrets
       Object.entries(loadedSecrets).forEach(([key, secretValue]) => {
-        if (secretKeys.includes(key) || localChanges.hasOwnProperty(key)) {
+        if (
+          secretKeys.includes(key) ||
+          Object.prototype.hasOwnProperty.call(localChanges, key)
+        ) {
           allSecrets[key] = secretValue.value;
         }
       });
@@ -423,8 +428,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
               <h2
                 style={{
                   margin: 0,
-                  fontSize: '18px',
-                  fontWeight: 600,
+                  fontSize: theme.fontSizes[3],
+                  fontWeight: theme.fontWeights?.semibold || 600,
                   color: theme.colors.text,
                 }}
               >
@@ -432,7 +437,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
               </h2>
               <span
                 style={{
-                  fontSize: '12px',
+                  fontSize: theme.fontSizes[0],
                   color: theme.colors.textSecondary,
                   padding: '2px 8px',
                   backgroundColor: theme.colors.backgroundSecondary,
@@ -482,7 +487,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
             />
             <div
               style={{
-                fontSize: '13px',
+                fontSize: theme.fontSizes[1],
                 color: theme.colors.text,
                 lineHeight: '1.5',
               }}
@@ -499,7 +504,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
             <div
               style={{
                 margin: '12px 24px 0',
-                fontSize: '12px',
+                fontSize: theme.fontSizes[0],
                 color: theme.colors.textSecondary,
               }}
             >
@@ -536,8 +541,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                   <div style={{ marginBottom: '24px' }}>
                     <h3
                       style={{
-                        fontSize: '14px',
-                        fontWeight: 600,
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: theme.fontWeights?.semibold || 600,
                         color: theme.colors.text,
                         marginBottom: '12px',
                       }}
@@ -573,9 +578,9 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                             <Key size={14} color={theme.colors.textSecondary} />
                             <span
                               style={{
-                                fontFamily: 'monospace',
-                                fontSize: '13px',
-                                fontWeight: 500,
+                                fontFamily: theme.fonts?.monospace || 'monospace',
+                                fontSize: theme.fontSizes[1],
+                                fontWeight: theme.fontWeights?.medium || 500,
                                 color: theme.colors.text,
                                 minWidth: '150px',
                               }}
@@ -605,8 +610,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                                     backgroundColor: theme.colors.background,
                                     border: `1px solid ${theme.colors.primary}`,
                                     borderRadius: '4px',
-                                    fontSize: '13px',
-                                    fontFamily: 'monospace',
+                                    fontSize: theme.fontSizes[1],
+                                    fontFamily: theme.fonts?.monospace || 'monospace',
                                     color: theme.colors.text,
                                     outline: 'none',
                                   }}
@@ -622,7 +627,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                                     color: theme.colors.background,
                                     border: 'none',
                                     borderRadius: '4px',
-                                    fontSize: '12px',
+                                    fontSize: theme.fontSizes[0],
                                     cursor: 'pointer',
                                   }}
                                 >
@@ -640,7 +645,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                                     color: theme.colors.text,
                                     border: `1px solid ${theme.colors.border}`,
                                     borderRadius: '4px',
-                                    fontSize: '12px',
+                                    fontSize: theme.fontSizes[0],
                                     cursor: 'pointer',
                                   }}
                                 >
@@ -652,8 +657,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                                 <div
                                   style={{
                                     flex: 1,
-                                    fontFamily: 'monospace',
-                                    fontSize: '13px',
+                                    fontFamily: theme.fonts?.monospace || 'monospace',
+                                    fontSize: theme.fontSizes[1],
                                     color: theme.colors.textSecondary,
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
@@ -747,7 +752,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                                     color: theme.colors.primary,
                                     border: `1px solid ${theme.colors.border}`,
                                     borderRadius: '4px',
-                                    fontSize: '12px',
+                                    fontSize: theme.fontSizes[0],
                                     cursor: 'pointer',
                                   }}
                                 >
@@ -785,8 +790,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                 <div>
                   <h3
                     style={{
-                      fontSize: '14px',
-                      fontWeight: 600,
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: theme.fontWeights?.semibold || 600,
                       color: theme.colors.text,
                       marginBottom: '12px',
                     }}
@@ -824,8 +829,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                         backgroundColor: theme.colors.backgroundSecondary,
                         border: `1px solid ${theme.colors.border}`,
                         borderRadius: '6px',
-                        fontSize: '13px',
-                        fontFamily: 'monospace',
+                        fontSize: theme.fontSizes[1],
+                        fontFamily: theme.fonts?.monospace || 'monospace',
                         color: theme.colors.text,
                         outline: 'none',
                       }}
@@ -847,8 +852,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                         backgroundColor: theme.colors.backgroundSecondary,
                         border: `1px solid ${theme.colors.border}`,
                         borderRadius: '6px',
-                        fontSize: '13px',
-                        fontFamily: 'monospace',
+                        fontSize: theme.fontSizes[1],
+                        fontFamily: theme.fonts?.monospace || 'monospace',
                         color: theme.colors.text,
                         outline: 'none',
                       }}
@@ -868,8 +873,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                             : theme.colors.textSecondary,
                         border: 'none',
                         borderRadius: '6px',
-                        fontSize: '13px',
-                        fontWeight: 500,
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: theme.fontWeights?.medium || 500,
                         cursor: newKey && newValue ? 'pointer' : 'not-allowed',
                         display: 'flex',
                         alignItems: 'center',
@@ -889,7 +894,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                         backgroundColor: `${theme.colors.error || '#ef4444'}10`,
                         border: `1px solid ${theme.colors.error || '#ef4444'}30`,
                         borderRadius: '6px',
-                        fontSize: '12px',
+                        fontSize: theme.fontSizes[0],
                         color: theme.colors.error || '#ef4444',
                       }}
                     >
@@ -912,7 +917,7 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
             }}
           >
             <div
-              style={{ fontSize: '12px', color: theme.colors.textSecondary }}
+              style={{ fontSize: theme.fontSizes[0], color: theme.colors.textSecondary }}
             >
               {hasChanges && '• Unsaved changes'}
             </div>
@@ -925,8 +930,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                   color: theme.colors.text,
                   border: `1px solid ${theme.colors.border}`,
                   borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 500,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: theme.fontWeights?.medium || 500,
                   cursor: 'pointer',
                 }}
               >
@@ -945,8 +950,8 @@ export const SecretsModal: React.FC<SecretsModalProps> = ({
                     : theme.colors.textSecondary,
                   border: 'none',
                   borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 500,
+                  fontSize: theme.fontSizes[1],
+                  fontWeight: theme.fontWeights?.medium || 500,
                   cursor: hasChanges ? 'pointer' : 'not-allowed',
                   display: 'flex',
                   alignItems: 'center',

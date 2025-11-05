@@ -4,13 +4,11 @@ import {
   Link2,
   Plus,
   Trash2,
-  Save,
   AlertCircle,
   ExternalLink,
   Copy,
   Check,
   Edit2,
-  X,
 } from 'lucide-react';
 import type { Repository } from '../../../shared/types/repository.types';
 import type {
@@ -30,7 +28,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
   isOpen,
   onClose,
   repository,
-  selectedSource,
+  selectedSource: _selectedSource,
 }) => {
   const { theme } = useTheme();
   const [links, setLinks] = useState<RepositoryLink[]>([]);
@@ -57,7 +55,6 @@ export const LinksModal: React.FC<LinksModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasChanges, setHasChanges] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Generate repository ID from repository data
@@ -68,17 +65,6 @@ export const LinksModal: React.FC<LinksModalProps> = ({
     return repository.name || 'unknown';
   };
 
-  // Get repository path (prefer selected local source)
-  const getRepoPath = () => {
-    if (selectedSource?.type === 'local' && selectedSource.location) {
-      return selectedSource.location;
-    }
-    if (repository.localClones?.length > 0) {
-      return repository.localClones[0].path;
-    }
-    return repository.remoteUrl || '';
-  };
-
   // Load links when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -87,7 +73,6 @@ export const LinksModal: React.FC<LinksModalProps> = ({
       // Reset form when closing
       setNewLink({ label: '', url: '', description: '', category: '' });
       setEditingId(null);
-      setHasChanges(false);
       setError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,7 +90,6 @@ export const LinksModal: React.FC<LinksModalProps> = ({
       const allMetadata = await LinksService.list();
       const repoMeta = allMetadata.find((m) => m.repoId === repoId);
       setMetadata(repoMeta || null);
-      setHasChanges(false);
     } catch (err) {
       console.error('Failed to load links:', err);
       setError('Failed to load links');
@@ -296,8 +280,8 @@ export const LinksModal: React.FC<LinksModalProps> = ({
             <h2
               style={{
                 margin: 0,
-                fontSize: '18px',
-                fontWeight: 600,
+                fontSize: theme.fontSizes[3],
+                fontWeight: theme.fontWeights?.semibold || 600,
                 color: theme.colors.text,
               }}
             >
@@ -305,7 +289,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
             </h2>
             <span
               style={{
-                fontSize: '12px',
+                fontSize: theme.fontSizes[0],
                 color: theme.colors.textSecondary,
                 padding: '2px 8px',
                 backgroundColor: theme.colors.backgroundSecondary,
@@ -355,7 +339,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
           />
           <div
             style={{
-              fontSize: '13px',
+              fontSize: theme.fontSizes[1],
               color: theme.colors.text,
               lineHeight: '1.5',
             }}
@@ -370,7 +354,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
           <div
             style={{
               margin: '12px 24px 0',
-              fontSize: '12px',
+              fontSize: theme.fontSizes[0],
               color: theme.colors.textSecondary,
             }}
           >
@@ -406,8 +390,8 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                 <div style={{ marginBottom: '24px' }}>
                   <h3
                     style={{
-                      fontSize: '14px',
-                      fontWeight: 600,
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: theme.fontWeights?.semibold || 600,
                       color: theme.colors.text,
                       marginBottom: '12px',
                     }}
@@ -458,7 +442,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                   backgroundColor: theme.colors.background,
                                   border: `1px solid ${theme.colors.border}`,
                                   borderRadius: '4px',
-                                  fontSize: '13px',
+                                  fontSize: theme.fontSizes[1],
                                   color: theme.colors.text,
                                   outline: 'none',
                                 }}
@@ -478,9 +462,9 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                   backgroundColor: theme.colors.background,
                                   border: `1px solid ${theme.colors.border}`,
                                   borderRadius: '4px',
-                                  fontSize: '13px',
+                                  fontSize: theme.fontSizes[1],
                                   color: theme.colors.text,
-                                  fontFamily: 'monospace',
+                                  fontFamily: theme.fonts?.monospace || 'monospace',
                                   outline: 'none',
                                 }}
                               />
@@ -499,7 +483,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                   backgroundColor: theme.colors.background,
                                   border: `1px solid ${theme.colors.border}`,
                                   borderRadius: '4px',
-                                  fontSize: '13px',
+                                  fontSize: theme.fontSizes[1],
                                   color: theme.colors.text,
                                   outline: 'none',
                                 }}
@@ -519,7 +503,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                   backgroundColor: theme.colors.background,
                                   border: `1px solid ${theme.colors.border}`,
                                   borderRadius: '4px',
-                                  fontSize: '13px',
+                                  fontSize: theme.fontSizes[1],
                                   color: theme.colors.text,
                                   outline: 'none',
                                 }}
@@ -540,7 +524,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                     color: theme.colors.text,
                                     border: `1px solid ${theme.colors.border}`,
                                     borderRadius: '4px',
-                                    fontSize: '12px',
+                                    fontSize: theme.fontSizes[0],
                                     cursor: 'pointer',
                                   }}
                                 >
@@ -555,7 +539,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                     color: theme.colors.background,
                                     border: 'none',
                                     borderRadius: '4px',
-                                    fontSize: '12px',
+                                    fontSize: theme.fontSizes[0],
                                     cursor: saving ? 'not-allowed' : 'pointer',
                                     opacity: saving ? 0.5 : 1,
                                   }}
@@ -585,8 +569,8 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                   >
                                     <span
                                       style={{
-                                        fontSize: '14px',
-                                        fontWeight: 600,
+                                        fontSize: theme.fontSizes[1],
+                                        fontWeight: theme.fontWeights?.semibold || 600,
                                         color: theme.colors.text,
                                       }}
                                     >
@@ -595,7 +579,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                     {link.category && (
                                       <span
                                         style={{
-                                          fontSize: '11px',
+                                          fontSize: theme.fontSizes[0],
                                           padding: '2px 6px',
                                           backgroundColor:
                                             theme.colors.backgroundTertiary,
@@ -609,8 +593,8 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                   </div>
                                   <div
                                     style={{
-                                      fontSize: '12px',
-                                      fontFamily: 'monospace',
+                                      fontSize: theme.fontSizes[0],
+                                      fontFamily: theme.fonts?.monospace || 'monospace',
                                       color: theme.colors.primary,
                                       cursor: 'pointer',
                                       wordBreak: 'break-all',
@@ -622,7 +606,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                                   {link.description && (
                                     <div
                                       style={{
-                                        fontSize: '12px',
+                                        fontSize: theme.fontSizes[0],
                                         color: theme.colors.textSecondary,
                                         marginTop: '4px',
                                       }}
@@ -721,8 +705,8 @@ export const LinksModal: React.FC<LinksModalProps> = ({
               <div>
                 <h3
                   style={{
-                    fontSize: '14px',
-                    fontWeight: 600,
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: theme.fontWeights?.semibold || 600,
                     color: theme.colors.text,
                     marginBottom: '12px',
                   }}
@@ -748,7 +732,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                       backgroundColor: theme.colors.backgroundSecondary,
                       border: `1px solid ${theme.colors.border}`,
                       borderRadius: '6px',
-                      fontSize: '13px',
+                      fontSize: theme.fontSizes[1],
                       color: theme.colors.text,
                       outline: 'none',
                     }}
@@ -765,8 +749,8 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                       backgroundColor: theme.colors.backgroundSecondary,
                       border: `1px solid ${theme.colors.border}`,
                       borderRadius: '6px',
-                      fontSize: '13px',
-                      fontFamily: 'monospace',
+                      fontSize: theme.fontSizes[1],
+                      fontFamily: theme.fonts?.monospace || 'monospace',
                       color: theme.colors.text,
                       outline: 'none',
                     }}
@@ -783,7 +767,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                       backgroundColor: theme.colors.backgroundSecondary,
                       border: `1px solid ${theme.colors.border}`,
                       borderRadius: '6px',
-                      fontSize: '13px',
+                      fontSize: theme.fontSizes[1],
                       color: theme.colors.text,
                       outline: 'none',
                     }}
@@ -807,7 +791,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                         backgroundColor: theme.colors.backgroundSecondary,
                         border: `1px solid ${theme.colors.border}`,
                         borderRadius: '6px',
-                        fontSize: '13px',
+                        fontSize: theme.fontSizes[1],
                         color: theme.colors.text,
                         outline: 'none',
                       }}
@@ -827,8 +811,8 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                             : theme.colors.textSecondary,
                         border: 'none',
                         borderRadius: '6px',
-                        fontSize: '13px',
-                        fontWeight: 500,
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: theme.fontWeights?.medium || 500,
                         cursor:
                           newLink.label && newLink.url
                             ? 'pointer'
@@ -852,7 +836,7 @@ export const LinksModal: React.FC<LinksModalProps> = ({
                       backgroundColor: `${theme.colors.error || '#ef4444'}10`,
                       border: `1px solid ${theme.colors.error || '#ef4444'}30`,
                       borderRadius: '6px',
-                      fontSize: '12px',
+                      fontSize: theme.fontSizes[0],
                       color: theme.colors.error || '#ef4444',
                     }}
                   >
@@ -881,8 +865,8 @@ export const LinksModal: React.FC<LinksModalProps> = ({
               color: theme.colors.background,
               border: 'none',
               borderRadius: '6px',
-              fontSize: '13px',
-              fontWeight: 500,
+              fontSize: theme.fontSizes[1],
+              fontWeight: theme.fontWeights?.medium || 500,
               cursor: 'pointer',
             }}
           >
