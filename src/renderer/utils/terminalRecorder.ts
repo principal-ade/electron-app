@@ -1,5 +1,3 @@
-import { FileSystemService } from '../main-process-api/FileSystemService';
-
 export interface TerminalDataEvent {
   timestamp: number;
   sessionId: string;
@@ -35,52 +33,67 @@ export interface TerminalRecordingSession {
   events: Array<TerminalDataEvent | TerminalScrollEvent>;
 }
 
+export interface RecordingMetadata {
+  sessionId: string;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  eventCount: number;
+  recordedAt: string;
+}
+
+export interface RecordingSummary {
+  totalDataReceived: number;
+  totalDataWritten: number;
+  receivedEventCount: number;
+  writtenEventCount: number;
+  scrollEventCount: number;
+}
+
+export interface RecordingData {
+  metadata: RecordingMetadata;
+  events: Array<TerminalDataEvent | TerminalScrollEvent>;
+  summary: RecordingSummary;
+}
+
+// Simple event emitter for recording updates
+type RecordingEventListener = () => void;
+type RecordingDataListener = (sessionId: string, data: string) => void;
+
 /**
  * Manages terminal data recording for debugging UI issues
  */
 export class TerminalRecorder {
   private isRecording = false;
-  private outputDirectory: string | null = null;
   private sessions = new Map<string, TerminalRecordingSession>();
   private eventCount = 0;
-  private maxEventsPerFile = 1000; // Prevent files from getting too large
+  private maxEventsInMemory = 10000; // Prevent memory issues
+  private completedRecordings: RecordingData[] = [];
+  private listeners: RecordingEventListener[] = [];
+  private dataListeners: RecordingDataListener[] = [];
 
   /**
    * Start recording terminal data
+   * @param initialBuffer - Optional initial terminal buffer to include in the recording
    */
-  async startRecording(): Promise<{
+  async startRecording(initialBuffer?: string): Promise<{
     success: boolean;
-    directory?: string;
     error?: string;
   }> {
     try {
-      // Open folder selector
-      const result = await FileSystemService.selectDirectory({
-        title: 'Select folder to save terminal recordings',
-        buttonLabel: 'Select',
-        properties: ['openDirectory', 'createDirectory'],
-      });
-
-      if (
-        !result ||
-        result.canceled ||
-        !result.filePaths ||
-        result.filePaths.length === 0
-      ) {
-        return { success: false, error: 'No folder selected' };
-      }
-
-      this.outputDirectory = result.filePaths[0];
       this.isRecording = true;
       this.sessions.clear();
       this.eventCount = 0;
 
-      console.log(
-        '[TerminalRecorder] Recording started, output:',
-        this.outputDirectory,
-      );
+      console.log('[TerminalRecorder] Recording started (in-memory mode)');
 
-      return { success: true, directory: this.outputDirectory };
+      // If initial buffer provided, send it to live listeners
+      if (initialBuffer) {
+        console.log('[TerminalRecorder] Broadcasting initial buffer to live listeners');
+        this.notifyDataListeners('initial', initialBuffer);
+      }
+
+      return { success: true };
     } catch (error) {
       console.error('[TerminalRecorder] Failed to start recording:', error);
       return { success: false, error: String(error) };
@@ -88,11 +101,11 @@ export class TerminalRecorder {
   }
 
   /**
-   * Stop recording and save all data
+   * Stop recording and finalize data
    */
   async stopRecording(): Promise<{
     success: boolean;
-    files?: string[];
+    recordingCount?: number;
     error?: string;
   }> {
     if (!this.isRecording) {
@@ -102,14 +115,15 @@ export class TerminalRecorder {
     this.isRecording = false;
 
     try {
-      const files = await this.saveAllSessions();
-      console.log('[TerminalRecorder] Recording stopped, saved files:', files);
+      // Finalize all sessions
+      this.finalizeSessions();
 
-      // Clear sessions after saving
-      this.sessions.clear();
-      this.eventCount = 0;
+      console.log('[TerminalRecorder] Recording stopped, recordings in memory:', this.completedRecordings.length);
 
-      return { success: true, files };
+      // Notify listeners that recordings have been updated
+      this.notifyListeners();
+
+      return { success: true, recordingCount: this.completedRecordings.length };
     } catch (error) {
       console.error('[TerminalRecorder] Failed to stop recording:', error);
       return { success: false, error: String(error) };
@@ -117,11 +131,69 @@ export class TerminalRecorder {
   }
 
   /**
+   * Add a listener for recording updates
+   */
+  addListener(listener: RecordingEventListener): () => void {
+    this.listeners.push(listener);
+    // Return unsubscribe function
+    return () => {
+      const index = this.listeners.indexOf(listener);
+      if (index > -1) {
+        this.listeners.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * Add a listener for live terminal data (mirrors recording in real-time)
+   */
+  addDataListener(listener: RecordingDataListener): () => void {
+    this.dataListeners.push(listener);
+    // Return unsubscribe function
+    return () => {
+      const index = this.dataListeners.indexOf(listener);
+      if (index > -1) {
+        this.dataListeners.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * Notify all listeners of recording updates
+   */
+  private notifyListeners(): void {
+    this.listeners.forEach((listener) => {
+      try {
+        listener();
+      } catch (error) {
+        console.error('[TerminalRecorder] Error in listener:', error);
+      }
+    });
+  }
+
+  /**
+   * Notify data listeners of new terminal data
+   */
+  private notifyDataListeners(sessionId: string, data: string): void {
+    this.dataListeners.forEach((listener) => {
+      try {
+        listener(sessionId, data);
+      } catch (error) {
+        console.error('[TerminalRecorder] Error in data listener:', error);
+      }
+    });
+  }
+
+  /**
    * Record terminal data reception event
    */
   recordDataReceived(sessionId: string, data: string): void {
-    if (!this.isRecording) return;
+    if (!this.isRecording) {
+      console.log(`[TerminalRecorder] NOT recording (isRecording=${this.isRecording}) - skipping received data`);
+      return;
+    }
 
+    console.log(`[TerminalRecorder] Recording received data for session ${sessionId.substring(0, 8)}: ${data.length} bytes`);
     this.recordEvent(sessionId, 'received', data);
   }
 
@@ -129,9 +201,16 @@ export class TerminalRecorder {
    * Record terminal data written to xterm
    */
   recordDataWritten(sessionId: string, data: string): void {
-    if (!this.isRecording) return;
+    if (!this.isRecording) {
+      console.log(`[TerminalRecorder] NOT recording (isRecording=${this.isRecording}) - skipping written data`);
+      return;
+    }
 
+    console.log(`[TerminalRecorder] Recording written data for session ${sessionId.substring(0, 8)}: ${data.length} bytes`);
     this.recordEvent(sessionId, 'written', data);
+
+    // Notify live listeners for real-time display
+    this.notifyDataListeners(sessionId, data);
   }
 
   /**
@@ -177,11 +256,10 @@ export class TerminalRecorder {
     session.events.push(event);
     this.eventCount++;
 
-    // Auto-save if we've accumulated too many events
-    if (this.eventCount >= this.maxEventsPerFile) {
-      this.saveAllSessions().catch((err) => {
-        console.error('[TerminalRecorder] Failed to auto-save:', err);
-      });
+    // Warn if we've accumulated too many events
+    if (this.eventCount >= this.maxEventsInMemory) {
+      console.warn('[TerminalRecorder] Event limit reached, automatically finalizing current sessions');
+      this.finalizeSessions();
       this.sessions.clear();
       this.eventCount = 0;
     }
@@ -195,17 +273,55 @@ export class TerminalRecorder {
   }
 
   /**
-   * Get current output directory
-   */
-  getOutputDirectory(): string | null {
-    return this.outputDirectory;
-  }
-
-  /**
    * Get current event count
    */
   getEventCount(): number {
     return this.eventCount;
+  }
+
+  /**
+   * Get current session count
+   */
+  getSessionCount(): number {
+    return this.sessions.size;
+  }
+
+  /**
+   * Get all completed recordings
+   */
+  getRecordings(): RecordingData[] {
+    return this.completedRecordings;
+  }
+
+  /**
+   * Get the most recent recording
+   */
+  getLatestRecording(): RecordingData | null {
+    if (this.completedRecordings.length === 0) {
+      return null;
+    }
+    return this.completedRecordings[this.completedRecordings.length - 1];
+  }
+
+  /**
+   * Clear all completed recordings from memory
+   */
+  clearRecordings(): void {
+    this.completedRecordings = [];
+    console.log('[TerminalRecorder] All recordings cleared from memory');
+  }
+
+  /**
+   * Delete a specific recording by index
+   */
+  deleteRecording(index: number): boolean {
+    if (index >= 0 && index < this.completedRecordings.length) {
+      this.completedRecordings.splice(index, 1);
+      console.log('[TerminalRecorder] Recording at index', index, 'deleted');
+      this.notifyListeners();
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -217,6 +333,7 @@ export class TerminalRecorder {
     data: string,
   ): void {
     if (!this.sessions.has(sessionId)) {
+      console.log(`[TerminalRecorder] Creating new session: ${sessionId.substring(0, 8)}`);
       this.sessions.set(sessionId, {
         sessionId,
         startTime: Date.now(),
@@ -248,41 +365,32 @@ export class TerminalRecorder {
     session.events.push(event);
     this.eventCount++;
 
-    // Auto-save if we've accumulated too many events
-    if (this.eventCount >= this.maxEventsPerFile) {
-      this.saveAllSessions().catch((err) => {
-        console.error('[TerminalRecorder] Failed to auto-save:', err);
-      });
+    if (this.eventCount % 100 === 0) {
+      console.log(`[TerminalRecorder] Event count: ${this.eventCount}, sessions: ${this.sessions.size}`);
+    }
+
+    // Warn if we've accumulated too many events
+    if (this.eventCount >= this.maxEventsInMemory) {
+      console.warn('[TerminalRecorder] Event limit reached, automatically finalizing current sessions');
+      this.finalizeSessions();
       this.sessions.clear();
       this.eventCount = 0;
     }
   }
 
   /**
-   * Save all recorded sessions to files
+   * Finalize all recorded sessions and move to completed recordings
    */
-  private async saveAllSessions(): Promise<string[]> {
-    if (!this.outputDirectory) {
-      throw new Error('No output directory set');
-    }
-
-    const savedFiles: string[] = [];
-    const timestamp = new Date()
-      .toISOString()
-      .replace(/:/g, '-')
-      .replace(/\..+/, '');
-
-    const savePromises: Promise<void>[] = [];
-    this.sessions.forEach((session, sessionId) => {
+  private finalizeSessions(): void {
+    console.log(`[TerminalRecorder] Finalizing ${this.sessions.size} sessions`);
+    this.sessions.forEach((session) => {
+      console.log(`[TerminalRecorder] Session ${session.sessionId.substring(0, 8)} has ${session.events.length} events`);
       if (session.events.length === 0) return;
 
-      // Create a safe filename
-      const safeSessionId = sessionId.replace(/[^a-zA-Z0-9-]/g, '_');
-      const filename = `terminal-recording-${safeSessionId}-${timestamp}.json`;
-      const filepath = `${this.outputDirectory}/${filename}`;
+      // Sort events by timestamp (ensure chronological order)
+      session.events.sort((a, b) => a.timestamp - b.timestamp);
 
-      // Prepare the data to save
-      const recordingData = {
+      const recordingData: RecordingData = {
         metadata: {
           sessionId: session.sessionId,
           startTime: session.startTime,
@@ -309,26 +417,9 @@ export class TerminalRecorder {
         },
       };
 
-      const savePromise = FileSystemService.writeFile(
-        filepath,
-        JSON.stringify(recordingData, null, 2),
-      )
-        .then(() => {
-          savedFiles.push(filepath);
-          console.log(`[TerminalRecorder] Saved recording to ${filepath}`);
-        })
-        .catch((error) => {
-          console.error(
-            `[TerminalRecorder] Failed to save ${filepath}:`,
-            error,
-          );
-        });
-
-      savePromises.push(savePromise);
+      this.completedRecordings.push(recordingData);
+      console.log(`[TerminalRecorder] Finalized recording for session ${session.sessionId}`);
     });
-
-    await Promise.all(savePromises);
-    return savedFiles;
   }
 }
 

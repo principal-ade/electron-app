@@ -11,6 +11,7 @@ import {
   ThemedTerminalWithProvider,
   type ThemedTerminalRef,
 } from '@principal-ade/industry-themed-terminal';
+import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import '@principal-ade/industry-themed-terminal/styles.css';
 
@@ -18,6 +19,7 @@ import { AgentSessionService } from '../main-process-api/AgentSessionService';
 import { TerminalService } from '../main-process-api/TerminalService';
 import { ShellService } from '../main-process-api/ShellService';
 import { DevSidecarService } from '../main-process-api/DevSidecarService';
+import { terminalRecorder } from '../utils/terminalRecorder';
 
 /* eslint-disable no-console */
 
@@ -55,6 +57,7 @@ interface TerminalPanelPackagedProps {
 export interface TerminalPanelPackagedRef {
   scrollToBottom: () => void;
   focus: () => void;
+  getTerminal: () => Terminal | null;
 }
 
 const TerminalPanelPackaged = forwardRef<
@@ -102,7 +105,7 @@ const TerminalPanelPackaged = forwardRef<
     });
     const [shouldRenderTerminal, setShouldRenderTerminal] = useState(true);
 
-    // Expose scrollToBottom and focus methods via ref
+    // Expose scrollToBottom, focus, and getTerminal methods via ref
     useImperativeHandle(
       ref,
       () => ({
@@ -111,6 +114,9 @@ const TerminalPanelPackaged = forwardRef<
         },
         focus: () => {
           terminalRef.current?.focus();
+        },
+        getTerminal: () => {
+          return terminalRef.current?.getTerminal() ?? null;
         },
       }),
       [],
@@ -258,8 +264,19 @@ const TerminalPanelPackaged = forwardRef<
 
       const subscribe = async () => {
         unsubscribe = await TerminalService.onData((data) => {
+          console.log('[TerminalPanelPackaged] Received data event:', {
+            mounted,
+            matchesSessionId: data.sessionId === sessionId,
+            hasTerminalRef: !!terminalRef.current,
+            dataLength: data.data.length,
+          });
+
           if (mounted && data.sessionId === sessionId && terminalRef.current) {
+            // Write to terminal
             terminalRef.current.write(data.data);
+
+            // Record data written to terminal (what the user actually sees)
+            terminalRecorder.recordDataWritten(sessionId, data.data);
           }
         });
       };

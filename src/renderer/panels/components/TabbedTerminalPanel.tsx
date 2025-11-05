@@ -398,8 +398,8 @@ export const TabbedTerminalPanel = forwardRef<
           setIsRecording(false);
           setRecordingDirectory(null);
           console.log(
-            '[TabbedTerminalPanel] Recording stopped, saved files:',
-            result.files,
+            '[TabbedTerminalPanel] Recording stopped, recordings in memory:',
+            result.recordingCount,
           );
         } else {
           console.error(
@@ -408,15 +408,44 @@ export const TabbedTerminalPanel = forwardRef<
           );
         }
       } else {
-        // Start recording
-        const result = await terminalRecorder.startRecording();
+        // Start recording - capture current terminal buffer
+        console.log('[TabbedTerminalPanel] Starting recording, activeTabId:', activeTabId);
+        console.log('[TabbedTerminalPanel] Available terminal refs:', Array.from(terminalRefs.current.keys()));
+
+        let initialBuffer = '';
+        const activeTerminalRef = terminalRefs.current.get(activeTabId);
+        console.log('[TabbedTerminalPanel] Active terminal ref:', activeTerminalRef ? 'found' : 'NOT FOUND');
+
+        if (activeTerminalRef) {
+          console.log('[TabbedTerminalPanel] Getting terminal...');
+          const terminal = activeTerminalRef.getTerminal();
+          console.log('[TabbedTerminalPanel] Terminal object:', terminal ? 'found' : 'NOT FOUND');
+
+          if (terminal && terminal.buffer) {
+            console.log('[TabbedTerminalPanel] Capturing terminal buffer...');
+            // Serialize the visible buffer
+            const buffer = terminal.buffer.active;
+            const lines: string[] = [];
+            for (let i = 0; i < buffer.length; i++) {
+              const line = buffer.getLine(i);
+              if (line) {
+                lines.push(line.translateToString(true));
+              }
+            }
+            initialBuffer = lines.join('\r\n');
+            console.log('[TabbedTerminalPanel] Captured buffer:', initialBuffer.length, 'chars');
+          } else {
+            console.log('[TabbedTerminalPanel] No terminal or buffer available');
+          }
+        } else {
+          console.log('[TabbedTerminalPanel] No active terminal ref found');
+        }
+
+        const result = await terminalRecorder.startRecording(initialBuffer);
         if (result.success) {
           setIsRecording(true);
-          setRecordingDirectory(result.directory || null);
-          console.log(
-            '[TabbedTerminalPanel] Recording started to:',
-            result.directory,
-          );
+          setRecordingDirectory('in-memory');
+          console.log('[TabbedTerminalPanel] Recording started (in-memory mode)');
         } else {
           console.error(
             '[TabbedTerminalPanel] Failed to start recording:',
@@ -424,7 +453,7 @@ export const TabbedTerminalPanel = forwardRef<
           );
         }
       }
-    }, [isRecording]);
+    }, [isRecording, activeTabId]);
 
     // Keep callback refs up to date
     useEffect(() => {
