@@ -1,6 +1,6 @@
 {
   "name": "principal-ade",
-  "version": "0.0.128",
+  "version": "0.0.129",
   "description": "Principal ADE - The future of Agentic Development Environment",
   "type": "module",
   "keywords": [
@@ -167,7 +167,7 @@
     "@a24z/industry-theme": "^0.1.2",
     "@a24z/markdown-search": "^2.0.6",
     "@a24z/observability-sdk": "^0.5.2",
-    "@a24z/panels": "^1.0.31",
+    "@a24z/panels": "^1.0.32",
     "@electron/notarize": "^3.0.0",
     "@excalidraw/excalidraw": "^0.18.0",
     "@excalidraw/math": "^0.18.0-f0063e113",
