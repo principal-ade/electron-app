@@ -6,6 +6,7 @@ import {
   Link2,
   NotebookPen,
   ArrowLeftRight,
+  FolderOpen,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
@@ -23,6 +24,7 @@ import { ViewSidebarControls } from '../../principal-window/components/ViewSideb
 import { SaveWorkspaceModal } from '../../repo-manager/shared/SaveWorkspaceModal';
 import { DevSidecarService } from '../../main-process-api/DevSidecarService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
+import { ShellService } from '../../main-process-api/ShellService';
 
 export interface RepositoryTitlebarProps {
   repository?: Repository;
@@ -39,6 +41,7 @@ export interface RepositoryTitlebarProps {
   onToggleRightSidebar?: () => void;
   onConfigurePanels?: () => void;
   onSwitchPanels?: () => void;
+  onSwitchLeftMiddlePanels?: () => void;
   // Workspace layout props
   availableWorkspaces?: Record<string, WorkspaceLayout>;
   currentWorkspaceId?: string | null;
@@ -71,6 +74,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   onToggleRightSidebar,
   onConfigurePanels,
   onSwitchPanels,
+  onSwitchLeftMiddlePanels,
   availableWorkspaces,
   currentWorkspaceId,
   onWorkspaceSelect,
@@ -147,6 +151,20 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
       } catch (error) {
         console.error(
           '[RepositoryTitlebar] Failed to create dev sidecar:',
+          error,
+        );
+      }
+    }
+  };
+
+  // Handle open in Finder/Explorer button click
+  const handleOpenInFinder = async () => {
+    if (selectedSource?.type === 'local' && selectedSource.location) {
+      try {
+        await ShellService.showItemInFolder(selectedSource.location);
+      } catch (error) {
+        console.error(
+          '[RepositoryTitlebar] Failed to open in Finder:',
           error,
         );
       }
@@ -445,43 +463,10 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           <ExternalLink size={14} />
         </button>
 
-        {onConfigurePanels && (
+        {onSwitchLeftMiddlePanels && (
           <button
-            onClick={onConfigurePanels}
-            title="Configure panel layout"
-            style={{
-              WebkitAppRegion:
-                'no-drag' as React.CSSProperties['WebkitAppRegion'],
-              background: 'transparent',
-              border: 'none',
-              color: theme.colors.textSecondary,
-              cursor: 'pointer',
-              padding: '6px',
-              borderRadius: '4px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-              width: '32px',
-              height: '32px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary;
-              e.currentTarget.style.color = theme.colors.text;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = theme.colors.textSecondary;
-            }}
-          >
-            <Layout size={14} />
-          </button>
-        )}
-        {onSwitchPanels && (
-          <button
-            onClick={onSwitchPanels}
-            title="Switch right and middle panels"
+            onClick={onSwitchLeftMiddlePanels}
+            title="Switch left and middle panels"
             style={{
               WebkitAppRegion:
                 'no-drag' as React.CSSProperties['WebkitAppRegion'],
@@ -518,6 +503,39 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             onToggle={onToggleSidebar}
           />
         )}
+        {onConfigurePanels && (
+          <button
+            onClick={onConfigurePanels}
+            title="Configure panel layout"
+            style={{
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              width: '32px',
+              height: '32px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+          >
+            <Layout size={14} />
+          </button>
+        )}
         {onToggleRightSidebar && (
           <ViewSidebarControls
             position="right"
@@ -525,6 +543,73 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             isCollapsed={rightSidebarCollapsed}
             onToggle={onToggleRightSidebar}
           />
+        )}
+        {onSwitchPanels && (
+          <button
+            onClick={onSwitchPanels}
+            title="Switch right and middle panels"
+            style={{
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              width: '32px',
+              height: '32px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+          >
+            <ArrowLeftRight size={14} />
+          </button>
+        )}
+        {/* Open in Finder button - only show for local clones */}
+        {hasLocalClone && (
+          <button
+            onClick={handleOpenInFinder}
+            style={{
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              width: '32px',
+              height: '32px',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+              e.currentTarget.style.color = theme.colors.text;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+            title="Open in Finder"
+          >
+            <FolderOpen size={14} />
+          </button>
         )}
       </div>
 

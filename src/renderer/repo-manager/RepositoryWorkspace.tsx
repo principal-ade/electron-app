@@ -897,6 +897,18 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       handlePanelLayoutChange(newLayout);
     }, [panelLayout, handlePanelLayoutChange]);
 
+    const handleSwitchLeftMiddlePanels = useCallback(() => {
+      // Swap left and middle panel configurations
+      const newLayout: PanelLayout = {
+        left: panelLayout.middle,
+        middle: panelLayout.left,
+        right: panelLayout.right,
+      };
+
+      // Update the layout
+      handlePanelLayoutChange(newLayout);
+    }, [panelLayout, handlePanelLayoutChange]);
+
     // Check which agents have MCP configured (once on mount)
     useEffect(() => {
       const checkAgentMCPStatus = async () => {
@@ -2488,6 +2500,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           onAddNoteClick={() => setShowAddNoteModal(true)}
           onConfigurePanels={() => setShowPanelConfigModal(true)}
           onSwitchPanels={handleSwitchPanels}
+          onSwitchLeftMiddlePanels={handleSwitchLeftMiddlePanels}
           showSidebarControls
           sidebarCollapsed={panelCollapsedState.left ?? false}
           onToggleSidebar={() =>
