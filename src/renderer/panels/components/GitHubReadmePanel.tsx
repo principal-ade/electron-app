@@ -5,6 +5,8 @@ import { parseMarkdownIntoPresentation } from 'themed-markdown';
 import { MarkdownDocumentViewer } from '../../repo-manager/shared/MarkdownDocumentViewer';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { GithubService } from '../../main-process-api/GithubService';
+import { RepositoryService } from '../../main-process-api/RepositoryService';
+import { LocalFileSystemProvider } from '../../services/ContentProviders';
 
 interface GitHubReadmePanelProps {
   repository: GitHubRepository | null;
@@ -44,11 +46,10 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
     try {
       const owner = repository.owner?.login || '';
       const repo = repository.name;
-
-      // Try common README filenames
       const readmeNames = ['README.md', 'readme.md', 'Readme.md', 'README.MD'];
       let content: string | null = null;
 
+      // Try to fetch from GitHub first
       for (const readmeName of readmeNames) {
         try {
           content = await GithubService.getFileContent(owner, repo, readmeName);
@@ -59,10 +60,53 @@ export const GitHubReadmePanel: React.FC<GitHubReadmePanelProps> = ({
         }
       }
 
+      // If remote fetch failed, try local clone as fallback
+      if (!content) {
+        try {
+          const repositories = await RepositoryService.getRepositories();
+          const matchingRepo = repositories.find(
+            (r) =>
+              r.owner.toLowerCase() === owner.toLowerCase() &&
+              r.name.toLowerCase() === repo.toLowerCase(),
+          );
+
+          if (matchingRepo && matchingRepo.localClones?.length > 0) {
+            const localPath = matchingRepo.localClones[0].path;
+            const localProvider = new LocalFileSystemProvider();
+
+            // Try to read README from local clone
+            for (const readmeName of readmeNames) {
+              // Join path using forward slash (cross-platform compatible)
+              const readmeFullPath = `${localPath}/${readmeName}`.replace(
+                /\/+/g,
+                '/',
+              );
+              const localContent =
+                await localProvider.readFileContent(readmeFullPath);
+              if (localContent) {
+                content = localContent;
+                console.log(
+                  `[GitHubReadmePanel] Loaded README from local clone: ${readmeFullPath}`,
+                );
+                break;
+              }
+            }
+          }
+        } catch (localErr) {
+          console.error(
+            '[GitHubReadmePanel] Failed to read from local clone:',
+            localErr,
+          );
+          // Continue - we'll show error below if no content found
+        }
+      }
+
       if (content) {
         setReadmeContent(content);
       } else {
-        setError('No README found for this repository');
+        setError(
+          'No README found (tried both GitHub and local clones if available)',
+        );
         setReadmeContent(null);
       }
     } catch (err) {
