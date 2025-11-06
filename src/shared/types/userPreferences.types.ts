@@ -19,6 +19,23 @@ export interface WorkspaceLayout {
   isBuiltIn?: boolean;
 }
 
+/**
+ * MultiRepoWorkspace - A folder workspace for organizing git repositories
+ * Note: This is distinct from WorkspaceLayout (panel arrangement presets)
+ */
+export interface MultiRepoWorkspace {
+  id: string;
+  name: string; // Display name (e.g., "Personal Projects")
+  path: string; // Absolute path to directory
+  description?: string; // Optional description
+  color?: string; // Optional color for UI
+  icon?: string; // Optional icon identifier
+  isDefault?: boolean; // Is this the default workspace for cloning?
+  createdAt: number; // Timestamp
+  updatedAt: number; // Timestamp
+  repositoryCount?: number; // Cached count of repos in this workspace
+}
+
 // Interactive shell navigation view types
 export type InteractiveShellNavigationView =
   | 'repository'
@@ -78,6 +95,12 @@ export interface UserPreferences {
   defaultCloneDirectory?: string;
   /** Enable git watching for all repositories on startup (default: false) */
   enableGitWatchingOnStartup?: boolean;
+
+  // Multi-Repo Workspaces
+  /** Workspace folders for organizing git repositories */
+  multiRepoWorkspaces?: MultiRepoWorkspace[];
+  /** ID of the default workspace for cloning */
+  defaultMultiRepoWorkspaceId?: string;
 
   // Agent session preferences
   /** Automatically commit changes when stopping agent sessions */

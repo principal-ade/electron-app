@@ -6,6 +6,7 @@ import {
   CheckCircle,
   AlertCircle,
   Loader,
+  ChevronDown,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { AlexandriaEntry } from '@a24z/core-library';
@@ -13,6 +14,7 @@ import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
+import type { MultiRepoWorkspace } from '../../shared/types/userPreferences.types';
 
 interface GitCloneModalProps {
   isOpen: boolean;
@@ -63,6 +65,10 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   const [cloneProgress, setCloneProgress] = useState<string>('');
   const [existingRepoPath, setExistingRepoPath] = useState<string>('');
 
+  // Multi-Repo Workspace state
+  const [workspaces, setWorkspaces] = useState<MultiRepoWorkspace[]>([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<MultiRepoWorkspace | null>(null);
+
   // Reset state when modal opens and focus the input
   useEffect(() => {
     if (isOpen) {
@@ -88,6 +94,20 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       }, 100);
     }
   }, [isOpen, initialUrl]);
+
+  // Load workspaces when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      UserPreferencesService.getPreferences().then((prefs) => {
+        const loadedWorkspaces = prefs.multiRepoWorkspaces ?? [];
+        setWorkspaces(loadedWorkspaces);
+
+        // Auto-select default workspace
+        const defaultWorkspace = loadedWorkspaces.find((w) => w.isDefault);
+        setSelectedWorkspace(defaultWorkspace ?? loadedWorkspaces[0] ?? null);
+      });
+    }
+  }, [isOpen]);
 
   // Normalize git URL (handle browser URLs, add .git if needed)
   const normalizeGitUrl = (url: string): string => {
@@ -224,12 +244,18 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   // Handle directory selection
   const handleSelectDirectory = async () => {
     try {
-      // First check if user has a default clone directory
-      const preferences = await UserPreferencesService.getPreferences();
-      let defaultDir = preferences.defaultCloneDirectory;
+      let baseDir: string | undefined;
 
-      if (!defaultDir) {
-        // No default set, prompt user to choose
+      // Priority: 1) Selected workspace, 2) defaultCloneDirectory (backwards compat), 3) Prompt user
+      if (selectedWorkspace) {
+        baseDir = selectedWorkspace.path;
+      } else {
+        const preferences = await UserPreferencesService.getPreferences();
+        baseDir = preferences.defaultCloneDirectory;
+      }
+
+      if (!baseDir) {
+        // No workspace or default directory set, prompt user to choose
         const result = await FileSystemService.selectDirectory({
           title: 'Select Clone Directory',
           buttonLabel: 'Select Directory',
@@ -240,10 +266,10 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
           return; // User cancelled
         }
 
-        defaultDir = result.filePaths[0];
+        baseDir = result.filePaths[0];
       }
 
-      const fullPath = `${defaultDir}/${repoName}`;
+      const fullPath = `${baseDir}/${repoName}`;
       setCloneDirectory(fullPath);
 
       // Check if directory already exists
@@ -689,12 +715,102 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                 </div>
               </div>
 
+              {/* Workspace Selector */}
+              {workspaces.length > 0 && (
+                <div>
+                  <h3
+                    className="font-medium mb-2"
+                    style={{ color: theme.colors.text }}
+                  >
+                    Clone to Workspace
+                  </h3>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                      <select
+                        value={selectedWorkspace?.id || ''}
+                        onChange={(e) => {
+                          const workspace = workspaces.find((w) => w.id === e.target.value);
+                          setSelectedWorkspace(workspace || null);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '10px 32px 10px 14px',
+                          borderRadius: '8px',
+                          border: `1px solid ${theme.colors.border}`,
+                          backgroundColor: theme.colors.background,
+                          color: theme.colors.text,
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          appearance: 'none',
+                        }}
+                      >
+                        {workspaces.map((workspace) => (
+                          <option key={workspace.id} value={workspace.id}>
+                            {workspace.name}
+                            {workspace.isDefault ? ' (Default)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        size={16}
+                        style={{
+                          position: 'absolute',
+                          right: '12px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          color: theme.colors.textSecondary,
+                          pointerEvents: 'none',
+                        }}
+                      />
+                    </div>
+                    <button
+                      onClick={async () => {
+                        const result = await FileSystemService.selectDirectory({
+                          title: 'Select Clone Directory',
+                          buttonLabel: 'Select Directory',
+                          properties: ['openDirectory', 'createDirectory'],
+                        });
+
+                        if (result && !result.canceled && result.filePaths?.[0]) {
+                          // User selected a custom directory, clear workspace selection
+                          setSelectedWorkspace(null);
+                          setCloneDirectory(`${result.filePaths[0]}/${repoName}`);
+                        }
+                      }}
+                      style={{
+                        padding: '10px 16px',
+                        borderRadius: '8px',
+                        border: `1px solid ${theme.colors.border}`,
+                        backgroundColor: theme.colors.background,
+                        color: theme.colors.text,
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = theme.colors.background;
+                      }}
+                    >
+                      <FolderOpen size={16} />
+                      Browse
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Path Preview */}
               <div>
                 <h3
                   className="font-medium mb-2"
                   style={{ color: theme.colors.text }}
                 >
-                  Clone Location
+                  Clone Path Preview
                 </h3>
                 <div
                   className="flex items-center gap-2 p-3 rounded-md"
@@ -708,7 +824,9 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                     className="text-sm font-mono"
                     style={{ color: theme.colors.text }}
                   >
-                    {cloneDirectory || 'To be determined...'}
+                    {selectedWorkspace
+                      ? `${selectedWorkspace.path}/${repoName}`
+                      : cloneDirectory || 'Click "Clone Repository" to select location...'}
                   </span>
                 </div>
               </div>
@@ -768,7 +886,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                   }}
                 >
                   <FolderOpen size={16} />
-                  Select Directory & Clone
+                  Clone Repository
                 </button>
               </div>
             </div>

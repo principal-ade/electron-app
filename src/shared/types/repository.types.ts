@@ -1,6 +1,18 @@
 import type { AlexandriaEntry } from '@a24z/core-library';
 
 /**
+ * Local clone information for a repository
+ */
+export interface LocalClone {
+  path: string; // Local directory path
+  addedAt: number; // When this local clone was added
+  lastAccessed?: number; // Last time this specific clone was accessed
+  currentBranch?: string; // Current branch (fetched dynamically when needed)
+  lastCommit?: string; // Last commit hash (fetched dynamically when needed)
+  customAvatarPath?: string; // Clone-specific custom avatar filename (stored in userData/repository-avatars/)
+}
+
+/**
  * Enhanced Alexandria repository entry with git status information
  */
 export interface EnhancedAlexandriaEntry extends AlexandriaEntry {
@@ -15,6 +27,7 @@ export interface EnhancedAlexandriaEntry extends AlexandriaEntry {
   lastCommitMessage?: string;
   lastCommitAuthor?: string;
   lastCommitHash?: string;
+  localClones?: LocalClone[]; // All local paths where this repo is cloned
 }
 
 /**
@@ -63,15 +76,6 @@ export interface RepositoryGitInfo {
   branch: string; // Current branch
   availableBranches?: string[]; // Available branches (when fetched)
   remote?: RemoteRepositoryInfo; // Remote information (if properly configured and parseable)
-}
-
-export interface LocalClone {
-  path: string; // Local directory path
-  addedAt: number; // When this local clone was added
-  lastAccessed?: number; // Last time this specific clone was accessed
-  currentBranch?: string; // Current branch (fetched dynamically when needed)
-  lastCommit?: string; // Last commit hash (fetched dynamically when needed)
-  customAvatarPath?: string; // Clone-specific custom avatar filename (stored in userData/repository-avatars/)
 }
 
 export type VCSType = 'github' | 'gitlab' | 'bitbucket' | 'generic';

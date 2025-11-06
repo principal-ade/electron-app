@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Palette, FolderOpen, RefreshCw } from 'lucide-react';
+import { Palette, FolderOpen, RefreshCw, Star, Trash2, Plus, Check } from 'lucide-react';
 import { UserPreferencesService } from '../../../../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 import { ThemeService } from '../../../../services/ThemeService';
 import type { EditorId } from '../../../../../shared/types/editor.types';
 import { EDITOR_LABELS } from '../../../../../shared/types/editor.types';
-import type { UserPreferences } from '../../../../../shared/types/userPreferences.types';
+import type { UserPreferences, MultiRepoWorkspace } from '../../../../../shared/types/userPreferences.types';
 import {
   predefinedThemes,
   getThemeNames,
@@ -19,8 +19,6 @@ export const GeneralSettings: React.FC = () => {
   const [currentVersion, setCurrentVersion] = useState('0.0.0');
   const [isDevMode, setIsDevMode] = useState(false);
   const [defaultEditor, setDefaultEditor] = useState<EditorId>('vscode');
-  const [defaultCloneDirectory, setDefaultCloneDirectory] =
-    useState<string>('');
   const [enableVimMode, setEnableVimMode] = useState<boolean>(false);
   const [enableGitWatchingOnStartup, setEnableGitWatchingOnStartup] =
     useState<boolean>(false);
@@ -41,6 +39,13 @@ export const GeneralSettings: React.FC = () => {
   const [showSearchButton, setShowSearchButton] = useState(false);
   const [showTerminalButton, setShowTerminalButton] = useState(false);
 
+  // Multi-Repo Workspace state
+  const [workspaces, setWorkspaces] = useState<MultiRepoWorkspace[]>([]);
+  const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
+  const [workspaceName, setWorkspaceName] = useState('');
+  const [workspacePath, setWorkspacePath] = useState('');
+  const [workspaceDescription, setWorkspaceDescription] = useState('');
+
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
     [],
@@ -57,7 +62,6 @@ export const GeneralSettings: React.FC = () => {
 
       const editor = (prefs.defaultEditor ?? 'vscode') as EditorId;
       setDefaultEditor(editor);
-      setDefaultCloneDirectory(prefs.defaultCloneDirectory || '');
       setEnableVimMode(prefs.enableVimMode ?? false);
       setEnableGitWatchingOnStartup(prefs.enableGitWatchingOnStartup ?? false);
       setShowThemeButton(prefs.titlebarButtons?.theme ?? true);
@@ -73,6 +77,7 @@ export const GeneralSettings: React.FC = () => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
       setShowTerminalButton(prefs.showTerminalButton ?? false);
+      setWorkspaces(prefs.multiRepoWorkspaces ?? []);
     };
 
     UserPreferencesService.getPreferences()
@@ -106,6 +111,85 @@ export const GeneralSettings: React.FC = () => {
       );
     };
   }, []);
+
+  // Workspace management functions
+  const handleCreateWorkspace = async () => {
+    if (!workspaceName.trim() || !workspacePath.trim()) {
+      return;
+    }
+
+    const newWorkspace: MultiRepoWorkspace = {
+      id: `workspace-${Date.now()}`,
+      name: workspaceName,
+      path: workspacePath,
+      description: workspaceDescription || undefined,
+      isDefault: workspaces.length === 0, // First workspace becomes default
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const updatedWorkspaces = [...workspaces, newWorkspace];
+    setWorkspaces(updatedWorkspaces);
+
+    await UserPreferencesService.updatePreferences({
+      multiRepoWorkspaces: updatedWorkspaces,
+      defaultMultiRepoWorkspaceId: newWorkspace.isDefault ? newWorkspace.id : undefined,
+    });
+
+    // Reset form
+    setIsCreatingWorkspace(false);
+    setWorkspaceName('');
+    setWorkspacePath('');
+    setWorkspaceDescription('');
+  };
+
+  const handleDeleteWorkspace = async (workspaceId: string) => {
+    const updatedWorkspaces = workspaces.filter((w) => w.id !== workspaceId);
+    setWorkspaces(updatedWorkspaces);
+
+    const preferences = await UserPreferencesService.getPreferences();
+    const updates: Partial<UserPreferences> = {
+      multiRepoWorkspaces: updatedWorkspaces,
+    };
+
+    // If deleting the default workspace, clear the default ID
+    if (preferences.defaultMultiRepoWorkspaceId === workspaceId) {
+      updates.defaultMultiRepoWorkspaceId = undefined;
+    }
+
+    await UserPreferencesService.updatePreferences(updates);
+  };
+
+  const handleSetDefaultWorkspace = async (workspaceId: string) => {
+    const updatedWorkspaces = workspaces.map((w) => ({
+      ...w,
+      isDefault: w.id === workspaceId,
+    }));
+    setWorkspaces(updatedWorkspaces);
+
+    await UserPreferencesService.updatePreferences({
+      multiRepoWorkspaces: updatedWorkspaces,
+      defaultMultiRepoWorkspaceId: workspaceId,
+    });
+  };
+
+  const handleBrowseWorkspacePath = async () => {
+    try {
+      const result = await FileSystemService.selectDirectory({
+        title: 'Select Workspace Directory',
+        buttonLabel: 'Select Directory',
+        properties: ['openDirectory', 'createDirectory'],
+      });
+
+      if (!result || result.canceled || !result.filePaths?.[0]) {
+        return;
+      }
+
+      setWorkspacePath(result.filePaths[0]);
+    } catch (error) {
+      console.error('Error selecting directory:', error);
+    }
+  };
 
   return (
     <div style={{ maxWidth: '800px' }}>
@@ -1231,7 +1315,7 @@ export const GeneralSettings: React.FC = () => {
         </div>
       </div>
 
-      {/* Default Clone Directory */}
+      {/* Multi-Repo Workspaces */}
       <div style={{ marginBottom: '32px' }}>
         <h4
           style={{
@@ -1241,7 +1325,7 @@ export const GeneralSettings: React.FC = () => {
             color: theme.colors.text,
           }}
         >
-          Default Clone Directory
+          Multi-Repo Workspaces
         </h4>
         <div
           style={{
@@ -1255,55 +1339,294 @@ export const GeneralSettings: React.FC = () => {
             style={{
               fontSize: '14px',
               color: theme.colors.textSecondary,
-              marginBottom: '12px',
+              marginBottom: '16px',
             }}
           >
-            Choose the default directory where Git repositories will be cloned
+            Organize your git repositories into workspace folders
           </p>
-          <div
-            style={{
-              display: 'flex',
-              gap: '12px',
-              alignItems: 'center',
-            }}
-          >
-            <input
-              type="text"
-              placeholder="e.g., /Users/username/Developer"
-              value={defaultCloneDirectory || ''}
-              onChange={(e) => setDefaultCloneDirectory(e.target.value)}
+
+          {/* Existing Workspaces */}
+          {workspaces.length > 0 && (
+            <div style={{ marginBottom: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {workspaces.map((workspace) => (
+                <div
+                  key={workspace.id}
+                  style={{
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: theme.colors.background,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            color: theme.colors.text,
+                          }}
+                        >
+                          {workspace.name}
+                        </span>
+                        {workspace.isDefault && (
+                          <span title="Default workspace">
+                            <Star
+                              size={14}
+                              fill={theme.colors.primary}
+                              color={theme.colors.primary}
+                            />
+                          </span>
+                        )}
+                      </div>
+                      <p
+                        style={{
+                          fontSize: '13px',
+                          color: theme.colors.textSecondary,
+                          fontFamily: 'monospace',
+                          marginBottom: workspace.description ? '4px' : '0',
+                        }}
+                      >
+                        {workspace.path}
+                      </p>
+                      {workspace.description && (
+                        <p
+                          style={{
+                            fontSize: '12px',
+                            color: theme.colors.textSecondary,
+                          }}
+                        >
+                          {workspace.description}
+                        </p>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      {!workspace.isDefault && (
+                        <button
+                          onClick={() => handleSetDefaultWorkspace(workspace.id)}
+                          style={{
+                            padding: '6px',
+                            borderRadius: '6px',
+                            border: `1px solid ${theme.colors.border}`,
+                            backgroundColor: 'transparent',
+                            color: theme.colors.textSecondary,
+                            cursor: 'pointer',
+                          }}
+                          title="Set as default"
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          <Star size={14} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteWorkspace(workspace.id)}
+                        style={{
+                          padding: '6px',
+                          borderRadius: '6px',
+                          border: `1px solid ${theme.colors.border}`,
+                          backgroundColor: 'transparent',
+                          color: theme.colors.textSecondary,
+                          cursor: 'pointer',
+                        }}
+                        title="Delete workspace"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                          e.currentTarget.style.borderColor = theme.colors.error;
+                          e.currentTarget.style.color = theme.colors.error;
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.borderColor = theme.colors.border;
+                          e.currentTarget.style.color = theme.colors.textSecondary;
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Create Workspace Form */}
+          {isCreatingWorkspace ? (
+            <div
               style={{
-                flex: 1,
-                padding: '10px 14px',
+                padding: '16px',
                 borderRadius: '8px',
                 border: `1px solid ${theme.colors.border}`,
                 backgroundColor: theme.colors.background,
-                color: theme.colors.text,
-                fontSize: '14px',
               }}
-            />
+            >
+              <div style={{ marginBottom: '12px' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: theme.colors.text,
+                    marginBottom: '6px',
+                  }}
+                >
+                  Workspace Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., Personal Projects"
+                  value={workspaceName}
+                  onChange={(e) => setWorkspaceName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    color: theme.colors.text,
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: theme.colors.text,
+                    marginBottom: '6px',
+                  }}
+                >
+                  Directory Path
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder="e.g., /Users/username/Code/Personal"
+                    value={workspacePath}
+                    onChange={(e) => setWorkspacePath(e.target.value)}
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                    }}
+                  />
+                  <button
+                    onClick={handleBrowseWorkspacePath}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: theme.colors.backgroundSecondary,
+                      color: theme.colors.text,
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+                    }}
+                  >
+                    <FolderOpen size={14} />
+                    Browse
+                  </button>
+                </div>
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: theme.colors.text,
+                    marginBottom: '6px',
+                  }}
+                >
+                  Description (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., My personal side projects"
+                  value={workspaceDescription}
+                  onChange={(e) => setWorkspaceDescription(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    color: theme.colors.text,
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setIsCreatingWorkspace(false);
+                    setWorkspaceName('');
+                    setWorkspacePath('');
+                    setWorkspaceDescription('');
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: 'transparent',
+                    color: theme.colors.text,
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateWorkspace}
+                  disabled={!workspaceName.trim() || !workspacePath.trim()}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: theme.colors.primary,
+                    color: 'white',
+                    cursor: workspaceName.trim() && workspacePath.trim() ? 'pointer' : 'not-allowed',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    opacity: workspaceName.trim() && workspacePath.trim() ? 1 : 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Check size={14} />
+                  Create Workspace
+                </button>
+              </div>
+            </div>
+          ) : (
             <button
-              onClick={async () => {
-                try {
-                  const result = await FileSystemService.selectDirectory({
-                    title: 'Select Default Clone Directory',
-                    buttonLabel: 'Select Directory',
-                    properties: ['openDirectory', 'createDirectory'],
-                  });
-
-                  if (!result || result.canceled || !result.filePaths?.[0]) {
-                    return;
-                  }
-
-                  const selectedPath = result.filePaths[0];
-                  setDefaultCloneDirectory(selectedPath);
-                  await UserPreferencesService.updatePreferences({
-                    defaultCloneDirectory: selectedPath,
-                  });
-                } catch (error) {
-                  console.error('Error selecting directory:', error);
-                }
-              }}
+              onClick={() => setIsCreatingWorkspace(true)}
               style={{
                 padding: '10px 16px',
                 borderRadius: '8px',
@@ -1312,55 +1635,24 @@ export const GeneralSettings: React.FC = () => {
                 color: theme.colors.text,
                 cursor: 'pointer',
                 fontSize: '14px',
+                fontWeight: 500,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s',
+                gap: '8px',
+                width: '100%',
+                justifyContent: 'center',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundTertiary;
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = theme.colors.background;
               }}
             >
-              <FolderOpen size={16} />
-              Browse
+              <Plus size={16} />
+              Create Workspace
             </button>
-            <button
-              onClick={async () => {
-                await UserPreferencesService.updatePreferences({
-                  defaultCloneDirectory: defaultCloneDirectory || undefined,
-                });
-              }}
-              disabled={!defaultCloneDirectory?.trim()}
-              style={{
-                padding: '10px 16px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: theme.colors.primary,
-                color: 'white',
-                cursor: defaultCloneDirectory?.trim()
-                  ? 'pointer'
-                  : 'not-allowed',
-                fontSize: '14px',
-                fontWeight: 500,
-                opacity: defaultCloneDirectory?.trim() ? 1 : 0.5,
-                transition: 'all 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                if (defaultCloneDirectory?.trim()) {
-                  e.currentTarget.style.transform = 'scale(1.02)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              Save
-            </button>
-          </div>
+          )}
         </div>
       </div>
 
