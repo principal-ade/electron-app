@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { ExternalLink, FolderOpen, Focus, Loader2 } from 'lucide-react';
+import { FolderOpen, Focus, Loader2 } from 'lucide-react';
 
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';
@@ -82,17 +82,6 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       setWindowState(repoWindow ? repoWindow.state : 'closed');
     });
   }, [entry]);
-
-  const handleOpenInGitHub = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (entry.remoteUrl) {
-      // Convert git URL to https URL if needed
-      const url = entry.remoteUrl
-        .replace(/^git@github\.com:/, 'https://github.com/')
-        .replace(/\.git$/, '');
-      window.open(url, '_blank');
-    }
-  };
 
   const handleToggleSelection = () => {
     // Create a mock GitHub repository object for README viewing
@@ -323,38 +312,6 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
               ? 'Opening...'
               : 'Open'}
         </button>
-        {entry.remoteUrl && (
-          <button
-            type="button"
-            onClick={handleOpenInGitHub}
-            title="View on GitHub"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '6px',
-              borderRadius: '4px',
-              border: `1px solid ${theme.colors.border}`,
-              backgroundColor: theme.colors.background,
-              color: theme.colors.textSecondary,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(event) => {
-              event.currentTarget.style.backgroundColor =
-                theme.colors.backgroundTertiary ||
-                theme.colors.backgroundSecondary;
-              event.currentTarget.style.color = theme.colors.text;
-            }}
-            onMouseLeave={(event) => {
-              event.currentTarget.style.backgroundColor =
-                theme.colors.background;
-              event.currentTarget.style.color = theme.colors.textSecondary;
-            }}
-          >
-            <ExternalLink size={12} />
-          </button>
-        )}
       </div>
     </div>
   );

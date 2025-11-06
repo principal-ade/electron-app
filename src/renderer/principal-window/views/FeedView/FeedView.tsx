@@ -207,7 +207,6 @@ const FeedViewInner: React.FC = () => {
           'local-projects',
           'github-projects',
           'github-starred',
-          'github-social',
           'graphs-list',
         ],
         config: {
@@ -217,15 +216,15 @@ const FeedViewInner: React.FC = () => {
       },
       middle: {
         type: 'tabs' as const,
-        panels: ['recent-commits', 'readme-viewer', 'github-user-signals'],
+        panels: ['readme-viewer', 'recent-commits'],
         config: {
-          defaultActiveTab: 1,
+          defaultActiveTab: 0,
           tabPosition: 'top' as const,
         },
       },
       right: {
         type: 'tabs' as const,
-        panels: showGitSyncPanel ? ['presence', 'git-sync-diagnostic'] : ['presence'],
+        panels: showGitSyncPanel ? ['presence', 'github-social', 'github-user-signals', 'git-sync-diagnostic'] : ['presence', 'github-social', 'github-user-signals'],
         config: {
           defaultActiveTab: 0,
           tabPosition: 'top' as const,
