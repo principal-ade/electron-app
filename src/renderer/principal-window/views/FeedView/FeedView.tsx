@@ -255,7 +255,7 @@ const FeedViewInner: React.FC = () => {
         }}
       >
         <GitBranch size={20} color={theme.colors.text} />
-        <h2 style={{ fontSize: '20px', fontWeight: 600, margin: 0 }}>
+        <h2 style={{ fontSize: theme.fontSizes[4], fontWeight: theme.fontWeights.semibold, margin: 0 }}>
           Projects
         </h2>
       </div>

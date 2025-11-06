@@ -281,8 +281,8 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
             >
               <span
                 style={{
-                  fontSize: '13px',
-                  fontWeight: 600,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: theme.fontWeights.semibold,
                   color: theme.colors.text,
                 }}
               >
@@ -290,7 +290,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
               </span>
               <span
                 style={{
-                  fontSize: '11px',
+                  fontSize: theme.fontSizes[0],
                   color: theme.colors.textSecondary,
                 }}
               >
@@ -309,7 +309,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
                 border: 'none',
                 padding: '4px 8px',
                 cursor: 'pointer',
-                fontSize: '12px',
+                fontSize: theme.fontSizes[1],
                 color: theme.colors.textSecondary,
                 borderRadius: '4px',
               }}
@@ -378,7 +378,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
           <div style={{ marginBottom: '8px', color: theme.colors.error }}>
             Failed to load diagram
           </div>
-          <div style={{ fontSize: '12px' }}>{error}</div>
+          <div style={{ fontSize: theme.fontSizes[1] }}>{error}</div>
         </div>
       </div>
     );
@@ -419,8 +419,8 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
                 onBlur={handleSaveLoadedName}
                 onKeyDown={handleNameKeyDown}
                 style={{
-                  fontSize: '13px',
-                  fontWeight: 600,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: theme.fontWeights.semibold,
                   color: theme.colors.text,
                   background: theme.colors.background,
                   border: `1px solid ${theme.colors.primary}`,
@@ -434,8 +434,8 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
               <span
                 onClick={handleStartEditingLoadedName}
                 style={{
-                  fontSize: '13px',
-                  fontWeight: 600,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: theme.fontWeights.semibold,
                   color: theme.colors.text,
                   cursor: 'pointer',
                   padding: '2px 6px',
@@ -456,7 +456,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
             )}
             <span
               style={{
-                fontSize: '11px',
+                fontSize: theme.fontSizes[0],
                 color: theme.colors.textSecondary,
               }}
             >
@@ -473,7 +473,7 @@ export const ExcalidrawPanel: React.FC<ExcalidrawPanelProps> = ({
               border: 'none',
               padding: '4px 8px',
               cursor: 'pointer',
-              fontSize: '12px',
+              fontSize: theme.fontSizes[1],
               color: theme.colors.textSecondary,
               borderRadius: '4px',
             }}

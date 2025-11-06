@@ -450,12 +450,12 @@ export const GitDiffPanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '11px',
+        fontSize: theme.fontSizes[0],
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',
         gap: '4px',
-        fontFamily: 'monospace',
+        fontFamily: theme.fonts.monospace,
       }}
     >
       <div

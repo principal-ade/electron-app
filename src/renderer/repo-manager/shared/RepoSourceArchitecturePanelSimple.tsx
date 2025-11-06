@@ -185,8 +185,8 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
 
       <h3
         style={{
-          fontSize: '15px',
-          fontWeight: 600,
+          fontSize: theme.fontSizes[3],
+          fontWeight: theme.fontWeights.semibold,
           color: theme.colors.text,
           marginBottom: '8px',
         }}
@@ -196,7 +196,7 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
 
       <p
         style={{
-          fontSize: '13px',
+          fontSize: theme.fontSizes[2],
           color: theme.colors.textSecondary,
           marginBottom: '20px',
         }}
@@ -295,7 +295,7 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
               color={theme.colors.error || '#ff6b6b'}
               style={{ marginBottom: '8px' }}
             />
-            <div style={{ fontSize: '13px', marginBottom: '12px' }}>
+            <div style={{ fontSize: theme.fontSizes[2], marginBottom: '12px' }}>
               {error || 'Failed to load architecture data'}
             </div>
             <button
@@ -306,7 +306,7 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
                 backgroundColor: theme.colors.primary,
                 color: '#fff',
                 border: 'none',
-                fontSize: '12px',
+                fontSize: theme.fontSizes[1],
                 cursor: 'pointer',
               }}
             >
@@ -349,7 +349,7 @@ export const RepoSourceArchitecturePanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '12px',
+        fontSize: theme.fontSizes[1],
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',
@@ -364,7 +364,7 @@ export const RepoSourceArchitecturePanelPreview: React.FC = () => {
         }}
       >
         <Layers size={14} style={{ color: theme.colors.primary }} />
-        <span style={{ fontWeight: 600 }}>root</span>
+        <span style={{ fontWeight: theme.fontWeights.semibold }}>root</span>
       </div>
       <div
         style={{
@@ -376,7 +376,7 @@ export const RepoSourceArchitecturePanelPreview: React.FC = () => {
       >
         <div
           style={{
-            fontSize: '11px',
+            fontSize: theme.fontSizes[0],
             color: theme.colors.textSecondary,
           }}
         >
@@ -384,7 +384,7 @@ export const RepoSourceArchitecturePanelPreview: React.FC = () => {
         </div>
         <div
           style={{
-            fontSize: '11px',
+            fontSize: theme.fontSizes[0],
             color: theme.colors.textSecondary,
           }}
         >

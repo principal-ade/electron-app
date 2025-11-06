@@ -2557,7 +2557,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                         border: `1px solid ${theme.colors.border}`,
                         backgroundColor: theme.colors.background,
                         color: theme.colors.textSecondary,
-                        fontSize: 11,
+                        fontSize: theme.fontSizes[0],
                         cursor: 'pointer',
                       }}
                     >
@@ -2630,15 +2630,15 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     >
                       <div
                         style={{
-                          fontSize: '16px',
-                          fontWeight: 600,
+                          fontSize: theme.fontSizes[3],
+                          fontWeight: theme.fontWeights.semibold,
                           marginBottom: '8px',
                           color: theme.colors.text,
                         }}
                       >
                         Terminal Unavailable
                       </div>
-                      <div style={{ fontSize: '14px' }}>
+                      <div style={{ fontSize: theme.fontSizes[2] }}>
                         Terminal is only available for local repository clones
                       </div>
                     </div>

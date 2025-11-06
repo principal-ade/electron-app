@@ -105,7 +105,7 @@ const renderMarkdownContent = (content: string): React.ReactNode => {
       // Inline code
       processedLine = processedLine.replace(
         /`([^`]+)`/g,
-        '<code style="background: #2d2d2d; padding: 2px 4px; border-radius: 3px; font-size: 12px;">$1</code>',
+        '<code style="background: #2d2d2d; padding: 2px 4px; border-radius: 3px;">$1</code>',
       );
 
       // Links (basic support)
