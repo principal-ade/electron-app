@@ -11,6 +11,8 @@ import {
   Activity,
   Folder,
   GitBranch,
+  FolderOpen,
+  FolderRoot,
 } from 'lucide-react';
 import { ConfigurablePanelLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
@@ -33,6 +35,8 @@ import {
   useSelectedRepository,
 } from '../../../contexts/SelectedRepositoryContext';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
+import { FileSystemService } from '../../../main-process-api/FileSystemService';
+import { ShellService } from '../../../main-process-api/ShellService';
 
 const FeedViewInner: React.FC = () => {
   const { theme } = useTheme();
@@ -43,6 +47,7 @@ const FeedViewInner: React.FC = () => {
     [],
   );
   const [showGitSyncPanel, setShowGitSyncPanel] = useState(false);
+  const [defaultCloneDirectory, setDefaultCloneDirectory] = useState<string>('');
 
   // Build dependency graphs using cluster detection
   const graphs = useMemo(() => {
@@ -64,11 +69,12 @@ const FeedViewInner: React.FC = () => {
     }
   }, [selectedGraph]);
 
-  // Load git sync panel visibility preference
+  // Load git sync panel visibility preference and default clone directory
   useEffect(() => {
     UserPreferencesService.getPreferences()
       .then((prefs) => {
         setShowGitSyncPanel(prefs.showGitSyncPanel ?? false);
+        setDefaultCloneDirectory(prefs.defaultCloneDirectory || '');
       })
       .catch(console.error);
 
@@ -76,6 +82,9 @@ const FeedViewInner: React.FC = () => {
       const detail = (event as CustomEvent).detail;
       if (detail?.showGitSyncPanel !== undefined) {
         setShowGitSyncPanel(detail.showGitSyncPanel);
+      }
+      if (detail?.defaultCloneDirectory !== undefined) {
+        setDefaultCloneDirectory(detail.defaultCloneDirectory || '');
       }
     };
 
@@ -90,6 +99,39 @@ const FeedViewInner: React.FC = () => {
       );
     };
   }, []);
+
+  // Handler for editing the default clone directory
+  const handleEditCloneDirectory = async () => {
+    try {
+      const result = await FileSystemService.selectDirectory({
+        title: 'Select Default Clone Directory',
+        buttonLabel: 'Select Directory',
+        properties: ['openDirectory', 'createDirectory'],
+      });
+
+      if (!result || result.canceled || !result.filePaths?.[0]) {
+        return;
+      }
+
+      const selectedPath = result.filePaths[0];
+      setDefaultCloneDirectory(selectedPath);
+      await UserPreferencesService.updatePreferences({
+        defaultCloneDirectory: selectedPath,
+      });
+    } catch (error) {
+      console.error('Error selecting directory:', error);
+    }
+  };
+
+  // Handler for opening the clone directory in Finder
+  const handleOpenInFinder = async () => {
+    if (!defaultCloneDirectory) return;
+    try {
+      await ShellService.openPath(defaultCloneDirectory);
+    } catch (error) {
+      console.error('Error opening in Finder:', error);
+    }
+  };
 
   // Use panel persistence hook for three-panel layout
   const panelState = usePanelPersistence({
@@ -248,16 +290,90 @@ const FeedViewInner: React.FC = () => {
         style={{
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           gap: '8px',
           padding: '20px 24px',
           borderBottom: `1px solid ${theme.colors.border}`,
           flexShrink: 0,
         }}
       >
-        <GitBranch size={20} color={theme.colors.text} />
-        <h2 style={{ fontSize: theme.fontSizes[4], fontWeight: theme.fontWeights.semibold, margin: 0 }}>
-          Projects
-        </h2>
+        {/* Left: Title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <GitBranch size={20} color={theme.colors.text} />
+          <h2 style={{ fontSize: theme.fontSizes[4], fontWeight: theme.fontWeights.semibold, margin: 0 }}>
+            Projects
+          </h2>
+        </div>
+
+        {/* Right: Clone Directory Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {defaultCloneDirectory ? (
+            <div
+              onClick={handleOpenInFinder}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 12px',
+                backgroundColor: theme.colors.backgroundSecondary,
+                borderRadius: '6px',
+                border: `1px solid ${theme.colors.border}`,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundSecondary;
+              }}
+              title={`${defaultCloneDirectory} (click to open in Finder)`}
+            >
+              <FolderRoot size={16} color={theme.colors.textSecondary} />
+              <span
+                style={{
+                  fontSize: theme.fontSizes[1],
+                  color: theme.colors.textSecondary,
+                  fontFamily: 'monospace',
+                  maxWidth: '300px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {defaultCloneDirectory}
+              </span>
+            </div>
+          ) : (
+            <button
+              onClick={handleEditCloneDirectory}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                backgroundColor: theme.colors.primary,
+                border: 'none',
+                borderRadius: '6px',
+                color: theme.colors.background,
+                cursor: 'pointer',
+                fontSize: theme.fontSizes[1],
+                fontWeight: theme.fontWeights.medium,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.9';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+              title="Set default clone directory"
+            >
+              <FolderRoot size={14} />
+              Set Clone Directory
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Panel Layout */}

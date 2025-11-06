@@ -317,6 +317,25 @@ export function setupShellHandlers() {
     },
   );
 
+  // Open a path in the system's default application
+  ipcMain.handle(ShellAPIEvent.OPEN_PATH, async (_, filePath: string) => {
+    try {
+      const resolvedPath = path.resolve(filePath);
+      const errorString = await shell.openPath(resolvedPath);
+
+      // openPath returns an empty string on success, or an error message on failure
+      if (errorString) {
+        console.error('Error opening path:', errorString);
+        return { success: false, error: errorString };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error opening path:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // Open a terminal in the specified directory
   ipcMain.handle(
     ShellAPIEvent.OPEN_IN_TERMINAL,

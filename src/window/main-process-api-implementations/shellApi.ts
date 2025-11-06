@@ -50,7 +50,7 @@ export const shellAPI = {
     ipcRenderer.invoke(ShellAPIEvent.SHOW_ITEM_IN_FOLDER, filePath),
 
   // Open a file or directory in the system's default application
-  openPath: async (path: string) =>
+  openPath: async (path: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(ShellAPIEvent.OPEN_PATH, path),
 
   // Open a terminal window at the specified path

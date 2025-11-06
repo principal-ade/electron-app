@@ -6,6 +6,7 @@ import {
   Link2,
   NotebookPen,
   ArrowLeftRight,
+  ArrowRightLeft,
   FolderOpen,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
@@ -462,6 +463,13 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           <ExternalLink size={14} />
         </button>
 
+        {showSidebarControls && onToggleSidebar && (
+          <ViewSidebarControls
+            position="left"
+            isCollapsed={sidebarCollapsed}
+            onToggle={onToggleSidebar}
+          />
+        )}
         {onSwitchLeftMiddlePanels && (
           <button
             onClick={onSwitchLeftMiddlePanels}
@@ -494,13 +502,6 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           >
             <ArrowLeftRight size={14} />
           </button>
-        )}
-        {showSidebarControls && onToggleSidebar && (
-          <ViewSidebarControls
-            position="left"
-            isCollapsed={sidebarCollapsed}
-            onToggle={onToggleSidebar}
-          />
         )}
         {onConfigurePanels && (
           <button
@@ -535,14 +536,6 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             <Layout size={14} />
           </button>
         )}
-        {onToggleRightSidebar && (
-          <ViewSidebarControls
-            position="right"
-            side="right"
-            isCollapsed={rightSidebarCollapsed}
-            onToggle={onToggleRightSidebar}
-          />
-        )}
         {onSwitchPanels && (
           <button
             onClick={onSwitchPanels}
@@ -573,8 +566,16 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
               e.currentTarget.style.color = theme.colors.textSecondary;
             }}
           >
-            <ArrowLeftRight size={14} />
+            <ArrowRightLeft size={14} />
           </button>
+        )}
+        {onToggleRightSidebar && (
+          <ViewSidebarControls
+            position="right"
+            side="right"
+            isCollapsed={rightSidebarCollapsed}
+            onToggle={onToggleRightSidebar}
+          />
         )}
         {/* Open in Finder button - only show for local clones */}
         {hasLocalClone && (

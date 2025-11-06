@@ -449,7 +449,7 @@ export class WorkspaceLayoutService {
             config: { defaultActiveTab: 0, tabPosition: 'top' },
           },
         },
-        defaultSizes: { left: 20, middle: 45, right: 35 },
+        defaultSizes: { left: 30, middle: 40, right: 30 },
         defaultCollapsed: { left: false, right: false },
         createdAt: now,
         updatedAt: now,

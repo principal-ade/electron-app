@@ -97,9 +97,10 @@ export class ShellService {
 
   /**
    * Open a file or directory in the system's default application.
+   * For directories, opens them in Finder/Explorer showing their contents.
    * Similar to openExternal but specifically for local paths.
    */
-  static async openPath(path: string): Promise<void> {
+  static async openPath(path: string): Promise<{ success: boolean; error?: string }> {
     console.log(`[ShellService] Opening path: ${path}`);
     return window.mainProcess.shell.openPath(path);
   }

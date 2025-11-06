@@ -61,9 +61,10 @@ export interface ShellAPI {
 
   /**
    * Open a file or directory in the system's default application.
+   * For directories, opens them in Finder/Explorer showing their contents.
    * Similar to openExternal but specifically for local paths.
    */
-  openPath: (path: string) => Promise<void>;
+  openPath: (path: string) => Promise<{ success: boolean; error?: string }>;
 
   /**
    * Open a terminal window at the specified path.
