@@ -94,7 +94,7 @@ const FeedViewInner: React.FC = () => {
   // Use panel persistence hook for three-panel layout
   const panelState = usePanelPersistence({
     viewKey: 'feedView',
-    defaultSizes: { left: 20, middle: 55, right: 25 },
+    defaultSizes: { left: 25, middle: 50, right: 25 },
     collapsed: { left: false, right: false },
     panelType: 'three-panel',
   });
@@ -268,7 +268,7 @@ const FeedViewInner: React.FC = () => {
         defaultSizes={
           panelState.type === 'three-panel'
             ? panelState.sizes
-            : { left: 20, middle: 55, right: 25 }
+            : { left: 25, middle: 50, right: 25 }
         }
         minSizes={{ left: 15, middle: 30, right: 20 }}
         collapsed={

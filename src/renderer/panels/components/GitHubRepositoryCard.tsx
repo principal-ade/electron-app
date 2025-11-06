@@ -13,7 +13,7 @@ import {
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';
 import { WindowService } from '../../main-process-api/WindowService';
-import { GitCloneModal } from '../../principal-window/views/RepositoryExplorer/components/GitCloneModal';
+import { GitCloneModal } from '../../components/GitCloneModal';
 import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.types';
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 

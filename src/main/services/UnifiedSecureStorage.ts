@@ -2,8 +2,15 @@ import { safeStorage, app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { promisify } from 'util';
-import { TokenDomain, type TokenMetadata } from './storage-domains/TokenDomain';
-import { SecretsDomain } from './storage-domains/SecretsDomain';
+import {
+  TokenDomain,
+  type TokenMetadata,
+  type TokenData,
+} from './storage-domains/TokenDomain';
+import {
+  SecretsDomain,
+  type StoredSecret,
+} from './storage-domains/SecretsDomain';
 
 const fsPromises = {
   readFile: promisify(fs.readFile),
@@ -72,8 +79,8 @@ export interface UnifiedStorageData {
 }
 
 interface DecryptedData {
-  tokens: Record<string, string>;
-  secrets: Record<string, string>;
+  tokens: Record<string, TokenData>;
+  secrets: Record<string, StoredSecret>;
   tokenMetadata?: Record<string, TokenMetadata>;
 }
 
@@ -206,8 +213,8 @@ export class UnifiedSecureStorage {
         lastModified: Date.now(),
         tokenCount: Object.keys(data.tokens).length,
         secretsCount: Object.entries(data.secrets).reduce(
-          (acc, [repoId, secrets]) => {
-            acc[repoId] = Object.keys(secrets as any).length;
+          (acc, [repoId, storedSecret]) => {
+            acc[repoId] = Object.keys(storedSecret.data).length;
             return acc;
           },
           {} as Record<string, number>,

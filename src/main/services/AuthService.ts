@@ -183,6 +183,11 @@ class AuthService {
           console.log('[AuthService] Starting OAuth flow...');
           const result = await authClient.authenticate();
 
+          // For initial authentication, token should always be present
+          if (!result.token) {
+            throw new Error('Authentication failed: no token received');
+          }
+
           // Fetch GitHub user profile to get canonical user data
           let enrichedUser: AuthResult['user'] = result.user;
           try {
@@ -821,9 +826,17 @@ class AuthService {
       const existingGithubToken = githubTokenData?.token;
 
       // If refresh gave us a new GitHub token, use it; otherwise keep the existing one
-      const newGithubToken = refreshedAuth.token.startsWith('gho_')
-        ? refreshedAuth.token
-        : existingGithubToken || refreshedAuth.token;
+      const newGithubToken =
+        refreshedAuth.token && refreshedAuth.token.startsWith('gho_')
+          ? refreshedAuth.token
+          : existingGithubToken || refreshedAuth.token;
+
+      // Ensure we have a token to store
+      if (!newGithubToken) {
+        throw new Error(
+          'Token refresh failed: no GitHub token available after refresh',
+        );
+      }
 
       // Store the new tokens
       await this.storeAuth(

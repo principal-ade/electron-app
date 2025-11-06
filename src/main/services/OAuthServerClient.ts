@@ -39,7 +39,7 @@ interface TokenResponse {
 }
 
 export interface AuthResult {
-  token: string; // GitHub token for API calls
+  token: string | undefined; // GitHub token for API calls (may be undefined on refresh)
   workosToken?: string; // WorkOS token for session management
   refreshToken?: string;
   expiresAt?: number; // Unix timestamp when token expires

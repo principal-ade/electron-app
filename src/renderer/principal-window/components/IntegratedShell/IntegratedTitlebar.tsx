@@ -164,7 +164,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
     [agentDefinitions],
   );
 
-  // Static title - Principal View
+  // Static title - Principal Workspace
 
   return (
     <div
@@ -203,7 +203,7 @@ export const IntegratedTitlebar: React.FC<IntegratedTitlebarProps> = ({
           zIndex: 101,
         }}
       >
-        Principal View
+        Principal Workspace
       </div>
 
       {/* Right controls */}

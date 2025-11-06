@@ -6,9 +6,10 @@ import { ExternalLink, FolderOpen, Download } from 'lucide-react';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';
 import { WindowService } from '../../main-process-api/WindowService';
-import { GitCloneModal } from '../../principal-window/views/RepositoryExplorer/components/GitCloneModal';
+import { GitCloneModal } from '../../components/GitCloneModal';
 import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.types';
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
+import { RepositoryAvatar } from '../../components/repository-maps/RepositoryAvatar';
 
 interface GitHubStarredRepositoryCardProps {
   repository: GitHubRepository;
@@ -97,18 +98,11 @@ export const GitHubStarredRepositoryCard: React.FC<
       }}
     >
       {/* Owner avatar */}
-      <div style={{ flexShrink: 0 }}>
-        <img
-          src={`https://github.com/${repository.owner.login}.png`}
-          alt={repository.owner.login}
-          style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            objectFit: 'cover',
-          }}
-        />
-      </div>
+      <RepositoryAvatar
+        customAvatarUrl={`https://github.com/${repository.owner.login}.png`}
+        size={32}
+        type="owner"
+      />
 
       {/* Main content */}
       <div

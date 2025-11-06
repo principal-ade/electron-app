@@ -67,7 +67,7 @@ export class SecureTokenIPC {
         return {
           authenticated: true,
           token: data.token,
-          user: data.metadata.user,
+          user: data.metadata?.user,
         };
       } catch (error) {
         console.error('Failed to get GitHub auth:', error);
@@ -245,7 +245,7 @@ export function registerSecureTokenHandlers(): void {
         return {
           authenticated: true,
           token: orbitData.token,
-          user: orbitData.metadata.user,
+          user: orbitData.metadata?.user,
         };
       }
 

@@ -40,6 +40,20 @@ interface RoomTokenInfo {
   expiresIn: number;
 }
 
+interface RoomTokenResponse {
+  access_token: string;
+  permissions?: {
+    canJoin?: boolean;
+    canEdit?: boolean;
+    canAdmin?: boolean;
+  };
+  expires_in?: number;
+}
+
+interface ErrorResponse {
+  error?: string;
+}
+
 interface GitSyncMessage {
   type: string;
   payload?: GitSyncMessage | Record<string, unknown>;
@@ -49,6 +63,20 @@ interface GitSyncMessage {
     branch?: string;
   };
   [key: string]: unknown;
+}
+
+/**
+ * Type guard to check if a value is a GitSyncMessage
+ */
+function isGitSyncMessage(
+  value: GitSyncMessage | Record<string, unknown> | undefined,
+): value is GitSyncMessage {
+  return (
+    value !== undefined &&
+    typeof value === 'object' &&
+    'type' in value &&
+    typeof value.type === 'string'
+  );
 }
 
 /**
@@ -324,13 +352,15 @@ export class GitSyncWebSocketManager {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = (await response
+          .json()
+          .catch(() => ({}))) as ErrorResponse;
         throw new Error(
           errorData.error || `Failed to get room token: ${response.status}`,
         );
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as RoomTokenResponse;
 
       return {
         access_token: data.access_token,
@@ -411,7 +441,10 @@ export class GitSyncWebSocketManager {
     );
 
     // Unwrap server_message envelope
-    if (message.type === 'server_message' && message.payload) {
+    if (
+      message.type === 'server_message' &&
+      isGitSyncMessage(message.payload)
+    ) {
       console.log(
         '[GitSyncWebSocketManager] Unwrapping server_message:',
         message.payload.type,
@@ -472,7 +505,7 @@ export class GitSyncWebSocketManager {
         // Remove peer from status
         if (message.peer) {
           connectionInfo.status.peers = connectionInfo.status.peers.filter(
-            (p) => p.agentId !== message.peer.agentId,
+            (p) => p.agentId !== message.peer!.agentId,
           );
         }
         this.broadcastToRenderers(

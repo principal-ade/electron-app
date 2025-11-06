@@ -5,7 +5,7 @@ import { FolderOpen, Focus, Loader2 } from 'lucide-react';
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';
 import { WindowService } from '../../main-process-api/WindowService';
-import type { RepositoryWindowState } from '../../main-process-api/WindowService';
+import { RepositoryAvatar } from '../../components/repository-maps/RepositoryAvatar';
 
 // Add spin animation styles to document if not already present
 if (typeof document !== 'undefined') {
@@ -156,29 +156,13 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       }}
     >
       {/* Owner avatar or placeholder */}
-      <div style={{ flexShrink: 0 }}>
-        {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt={entry.github?.owner || entry.name}
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              objectFit: 'cover',
-            }}
-          />
-        ) : (
+      <RepositoryAvatar
+        customAvatarUrl={avatarUrl}
+        size={32}
+        type="owner"
+        fallbackIcon={
           <div
             style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              backgroundColor:
-                theme.colors.backgroundTertiary || theme.colors.border,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
               color: theme.colors.textSecondary,
               fontSize: `${theme.fontSizes[1]}px`,
               fontWeight: theme.fontWeights.semibold,
@@ -186,8 +170,8 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
           >
             {entry.name[0]?.toUpperCase() || '?'}
           </div>
-        )}
-      </div>
+        }
+      />
 
       {/* Main content */}
       <div

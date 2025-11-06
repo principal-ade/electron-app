@@ -60,7 +60,6 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   const [isCloning, setIsCloning] = useState(false);
   const [cloneProgress, setCloneProgress] = useState<string>('');
   const [existingRepoPath, setExistingRepoPath] = useState<string>('');
-  const [showExistingRepoOption, setShowExistingRepoOption] = useState(false);
 
   // Reset state when modal opens and focus the input
   useEffect(() => {
@@ -77,7 +76,6 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       setIsCloning(false);
       setCloneProgress('');
       setExistingRepoPath('');
-      setShowExistingRepoOption(false);
 
       // Focus the input field after a brief delay to ensure the modal is rendered
       setTimeout(() => {
@@ -376,8 +374,12 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       console.error('Error during cloning:', err);
 
       // Extract error message and details
+      interface EnhancedError extends Error {
+        details?: string;
+      }
+
       const errorMessage = err instanceof Error ? err.message : 'Failed to clone repository';
-      const details = (err as any)?.details || '';
+      const details = (err as EnhancedError)?.details || '';
 
       setError(errorMessage);
       setErrorDetails(details);
@@ -392,7 +394,6 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     setCurrentStep('input');
     setError('');
     setErrorDetails('');
-    setShowExistingRepoOption(false);
     setExistingRepoPath('');
   };
 
@@ -948,11 +949,14 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                   }}
                 >
                   {errorDetails.split('\n').map((line, index) => {
+                    // Use a unique key based on index and content
+                    const lineKey = `error-detail-${index}-${line.substring(0, 20).replace(/\s/g, '-')}`;
+
                     // Handle markdown-style headers
                     if (line.startsWith('**') && line.endsWith('**')) {
                       return (
                         <p
-                          key={index}
+                          key={lineKey}
                           className="font-semibold mt-3 first:mt-0"
                           style={{ color: theme.colors.text }}
                         >
@@ -963,17 +967,17 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                     // Handle list items
                     if (line.startsWith('•') || /^\d+\./.test(line)) {
                       return (
-                        <p key={index} className="ml-4">
+                        <p key={lineKey} className="ml-4">
                           {line}
                         </p>
                       );
                     }
                     // Handle empty lines
                     if (line.trim() === '') {
-                      return <div key={index} className="h-2" />;
+                      return <div key={lineKey} className="h-2" />;
                     }
                     // Regular text
-                    return <p key={index}>{line}</p>;
+                    return <p key={lineKey}>{line}</p>;
                   })}
                 </div>
               )}
