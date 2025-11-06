@@ -212,8 +212,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
         >
           <span
             style={{
-              color: theme.colors.accent,
-              fontSize: `${theme.fontSizes[3]}px`,
+              color: theme.colors.text,
               fontWeight: theme.fontWeights.medium,
               cursor: displayOwner ? 'pointer' : 'default',
             }}
@@ -244,7 +243,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           {selectedSource?.type === 'local' &&
             selectedSource.metadata?.currentBranch && (
               <>
-                <span style={{ color: theme.colors.text, fontWeight: theme.fontWeights.medium }}> on </span>
+                <span style={{ color: theme.colors.accent, fontWeight: theme.fontWeights.medium, padding: '0 8px' }}>on</span>
                 <span
                   style={{
                     color: theme.colors.text,
