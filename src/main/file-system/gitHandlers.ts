@@ -185,9 +185,25 @@ export function registerGitHandlers(): void {
   ipcMain.handle(
     GitEvents.CLONE_REPOSITORY,
     async (_event, remoteUrl: string, targetPath: string) => {
+      // Track diagnostics for better error messages
+      interface CloneDiagnostics {
+        url: string;
+        timestamp: string;
+        normalizedUrl?: string;
+        authMethod?: 'SSH' | 'HTTPS';
+        tokenAvailable?: boolean;
+        sshAgent?: boolean;
+      }
+
+      const diagnostics: CloneDiagnostics = {
+        url: remoteUrl,
+        timestamp: new Date().toISOString(),
+      };
+
       try {
         // Normalize the URL first
         const normalizedUrl = normalizeGitUrl(remoteUrl);
+        diagnostics.normalizedUrl = normalizedUrl;
 
         // Use gitClientFactory to clone the repository
         const parentDir = targetPath.substring(0, targetPath.lastIndexOf('/'));
@@ -197,6 +213,7 @@ export function registerGitHandlers(): void {
         // Check if this is an SSH URL
         const isSSH =
           normalizedUrl.startsWith('git@') || normalizedUrl.includes('ssh://');
+        diagnostics.authMethod = isSSH ? 'SSH' : 'HTTPS';
 
         // Only pass serializable environment variables
         const baseEnv = {
@@ -218,9 +235,14 @@ export function registerGitHandlers(): void {
             console.info(
               `[Git] Using stored GitHub token for HTTPS clone of ${normalizedUrl}`,
             );
+            diagnostics.tokenAvailable = true;
             cloneEnv = { ...baseEnv, ...githubAuth.env };
             cleanupAuthHelper = githubAuth.cleanup;
           } else {
+            console.warn(
+              `[Git] No GitHub token available for HTTPS clone of ${normalizedUrl}`,
+            );
+            diagnostics.tokenAvailable = false;
             cloneEnv = {
               ...baseEnv,
               GIT_TERMINAL_PROMPT: '0',
@@ -228,6 +250,8 @@ export function registerGitHandlers(): void {
               GCM_INTERACTIVE: 'never',
             };
           }
+        } else {
+          diagnostics.sshAgent = !!process.env.SSH_AUTH_SOCK;
         }
 
         try {
@@ -244,7 +268,132 @@ export function registerGitHandlers(): void {
         return true;
       } catch (error) {
         console.error('[Git] Failed to clone repository:', error);
-        throw error;
+        console.error('[Git] Clone diagnostics:', diagnostics);
+
+        // Parse the error to provide helpful messages
+        const errorMsg =
+          error instanceof Error ? error.message : String(error);
+
+        // Create a detailed error response
+        let userMessage = 'Failed to clone repository.';
+        const suggestions: string[] = [];
+
+        // Parse common git error patterns
+        if (errorMsg.includes('Authentication failed') || errorMsg.includes('authentication')) {
+          if (diagnostics.authMethod === 'HTTPS') {
+            if (diagnostics.tokenAvailable === false) {
+              userMessage = 'Authentication failed - No GitHub credentials found.';
+              suggestions.push(
+                '**You need to authenticate with GitHub:**',
+                '',
+                '1. Run: gh auth login',
+                '   (Install GitHub CLI first: brew install gh)',
+                '',
+                '2. Or set up a Personal Access Token:',
+                '   • Go to GitHub → Settings → Developer Settings → Personal Access Tokens',
+                '   • Generate a token with "repo" scope',
+                '   • Configure Git to use it',
+              );
+            } else {
+              userMessage = 'Authentication failed - Your GitHub token may have expired or lacks permissions.';
+              suggestions.push(
+                '**Token authentication failed:**',
+                '',
+                '1. Re-authenticate with GitHub: gh auth login',
+                '2. Or generate a new Personal Access Token with "repo" scope',
+                '3. Ensure the token has access to this repository',
+              );
+            }
+          } else {
+            userMessage = 'SSH Authentication failed.';
+            suggestions.push(
+              '**SSH key not configured or not authorized:**',
+              '',
+              '1. Check if SSH key is added to ssh-agent: ssh-add -l',
+              '2. Add your key: ssh-add ~/.ssh/id_ed25519',
+              '3. Test connection: ssh -T git@github.com',
+              '4. Add your public key to GitHub: Settings → SSH and GPG keys',
+            );
+          }
+        } else if (errorMsg.includes('Repository not found') || errorMsg.includes('not found')) {
+          userMessage = 'Repository not found or access denied.';
+          suggestions.push(
+            '**The repository may not exist or you lack access:**',
+            '',
+            '• Verify the repository URL is correct',
+            '• Check if the repository is private and you have access',
+            '• Ensure you are authenticated (for private repos)',
+          );
+        } else if (errorMsg.includes('Permission denied') || errorMsg.includes('permission')) {
+          userMessage = 'Permission denied.';
+          if (diagnostics.authMethod === 'SSH') {
+            suggestions.push(
+              '**SSH permission denied:**',
+              '',
+              '1. Verify your SSH key is added to GitHub',
+              '2. Test: ssh -T git@github.com',
+              '3. Check if you have repository access',
+            );
+          } else {
+            suggestions.push(
+              '**Access denied:**',
+              '',
+              '• Verify you have access to this repository',
+              '• Check your authentication credentials',
+            );
+          }
+        } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+          userMessage = 'Connection timed out.';
+          suggestions.push(
+            '**Network timeout occurred:**',
+            '',
+            '• Check your internet connection',
+            '• The repository may be very large',
+            '• Try again in a few moments',
+          );
+        } else if (errorMsg.includes('Could not resolve host')) {
+          userMessage = 'Network error - Could not resolve host.';
+          suggestions.push(
+            '**DNS resolution failed:**',
+            '',
+            '• Check your internet connection',
+            '• Verify the repository URL',
+          );
+        } else {
+          // Unknown error - provide the raw message
+          userMessage = `Clone failed: ${errorMsg.substring(0, 200)}`;
+        }
+
+        // Add diagnostics to suggestions
+        suggestions.push(
+          '',
+          '**Diagnostic Information:**',
+          `• URL: ${diagnostics.normalizedUrl || diagnostics.url}`,
+          `• Auth Method: ${diagnostics.authMethod}`,
+        );
+
+        if (diagnostics.authMethod === 'HTTPS') {
+          suggestions.push(
+            `• GitHub Token Available: ${diagnostics.tokenAvailable ? 'Yes' : 'No'}`,
+          );
+        } else {
+          suggestions.push(
+            `• SSH Agent Running: ${diagnostics.sshAgent ? 'Yes' : 'No'}`,
+          );
+        }
+
+        // Throw enhanced error
+        interface EnhancedError extends Error {
+          details: string;
+          diagnostics: CloneDiagnostics;
+          originalError: string;
+        }
+
+        const enhancedError = new Error(userMessage) as EnhancedError;
+        enhancedError.details = suggestions.join('\n');
+        enhancedError.diagnostics = diagnostics;
+        enhancedError.originalError = errorMsg;
+        throw enhancedError;
       }
     },
   );

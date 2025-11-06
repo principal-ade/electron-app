@@ -10,8 +10,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
-import { SSHSetupService } from '../../../../main-process-api/SSHSetupService';
-import type { SSHKeyInfo } from '../../../../../shared/main-process-api-interfaces/SSHSetupAPI';
+import { SSHSetupService } from '../main-process-api/SSHSetupService';
+import type { SSHKeyInfo } from '../../shared/main-process-api-interfaces/SSHSetupAPI';
 
 interface SSHSetupWizardProps {
   isOpen: boolean;

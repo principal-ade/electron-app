@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { NavigationSidebar } from './NavigationSidebar';
 import { IntegratedTitlebar } from './IntegratedTitlebar';
 import { useTheme } from '@a24z/industry-theme';
-import { RepositoryExplorer } from '../../views/RepositoryExplorer';
 import { MarkdownSearch } from '../../views/MarkdownSearch';
 import { Settings } from '../../views/Settings';
 import { TerminalManager } from '../../views/TerminalManager';
@@ -18,10 +17,8 @@ export type NavigationView = InteractiveShellNavigationView;
 // Helper to map view to panel layout key
 const getViewKey = (
   view: NavigationView,
-): 'repositoryExplorer' | 'terminalManager' | 'authView' | null => {
+): 'terminalManager' | 'authView' | null => {
   switch (view) {
-    case 'repository':
-      return 'repositoryExplorer';
     case 'terminal':
       return 'terminalManager';
     case 'auth':
@@ -36,8 +33,6 @@ const getViewDefaults = (
   view: NavigationView,
 ): { left: boolean; right: boolean } => {
   switch (view) {
-    case 'repository':
-      return { left: false, right: false }; // No right panel for repository (uses nested panels instead)
     case 'terminal':
       return { left: false, right: false }; // No right panel for terminal
     case 'auth':
@@ -48,7 +43,7 @@ const getViewDefaults = (
 };
 
 export const IntegratedShell: React.FC = () => {
-  const [activeView, setActiveView] = useState<NavigationView>('repository');
+  const [activeView, setActiveView] = useState<NavigationView>('feed');
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const { theme, mode } = useTheme();
 
@@ -56,7 +51,6 @@ export const IntegratedShell: React.FC = () => {
   const [viewCollapsedStates, setViewCollapsedStates] = useState<
     Record<string, { left: boolean; right: boolean }>
   >({
-    repository: { left: false, right: false }, // No right panel for repository
     terminal: { left: false, right: false },
     auth: { left: false, right: false },
     monitoring: { left: false, right: false },
@@ -84,7 +78,7 @@ export const IntegratedShell: React.FC = () => {
         const newViewStates = { ...viewCollapsedStates };
 
         // Load each view's collapsed state
-        const views: NavigationView[] = ['repository', 'terminal', 'auth'];
+        const views: NavigationView[] = ['terminal', 'auth'];
         for (const view of views) {
           const viewKey = getViewKey(view);
           const defaults = getViewDefaults(view);
@@ -92,10 +86,7 @@ export const IntegratedShell: React.FC = () => {
           if (viewKey && prefs.panelLayouts?.[viewKey]?.collapsed) {
             const collapsed = prefs.panelLayouts[viewKey].collapsed;
             const left = collapsed.left ?? defaults.left;
-            const right =
-              viewKey === 'repositoryExplorer'
-                ? ((collapsed as { right?: boolean }).right ?? defaults.right)
-                : defaults.right;
+            const right = defaults.right;
             newViewStates[view] = {
               left,
               right,
@@ -156,12 +147,6 @@ export const IntegratedShell: React.FC = () => {
           const collapsedUpdate: { left?: boolean; right?: boolean } = {
             left: newCollapsed,
           };
-          if (viewKey === 'repositoryExplorer') {
-            const previousRight =
-              viewCollapsedStates[activeView]?.right ??
-              getViewDefaults(activeView).right;
-            collapsedUpdate.right = previousRight;
-          }
           await UserPreferencesService.updatePreferences({
             panelLayouts: {
               [viewKey]: {
@@ -194,7 +179,7 @@ export const IntegratedShell: React.FC = () => {
     if (preferencesLoaded) {
       try {
         const viewKey = getViewKey(activeView);
-        if (viewKey === 'repositoryExplorer') {
+        if (viewKey) {
           await UserPreferencesService.updatePreferences({
             panelLayouts: {
               [viewKey]: {
@@ -214,81 +199,6 @@ export const IntegratedShell: React.FC = () => {
     }
   };
 
-  const ensureRightSidebarOpen = () => {
-    if (activeView !== 'repository' || !rightSidebarCollapsed) {
-      return;
-    }
-
-    const currentLeftCollapsed =
-      viewCollapsedStates[activeView]?.left ?? getViewDefaults(activeView).left;
-
-    setViewCollapsedStates((prev) => {
-      const previousState = prev[activeView] ?? getViewDefaults(activeView);
-      return {
-        ...prev,
-        [activeView]: {
-          ...previousState,
-          right: false,
-        },
-      };
-    });
-
-    if (preferencesLoaded) {
-      const viewKey = getViewKey(activeView);
-      if (viewKey === 'repositoryExplorer') {
-        void UserPreferencesService.updatePreferences({
-          panelLayouts: {
-            [viewKey]: {
-              collapsed: {
-                left: currentLeftCollapsed,
-                right: false,
-              },
-            },
-          },
-        }).catch((error) => {
-          console.error('Failed to save right sidebar collapsed state:', error);
-        });
-      }
-    }
-  };
-
-  const collapseRightSidebar = () => {
-    if (activeView !== 'repository' || rightSidebarCollapsed) {
-      return;
-    }
-
-    const currentLeftCollapsed =
-      viewCollapsedStates[activeView]?.left ?? getViewDefaults(activeView).left;
-
-    setViewCollapsedStates((prev) => {
-      const previousState = prev[activeView] ?? getViewDefaults(activeView);
-      return {
-        ...prev,
-        [activeView]: {
-          ...previousState,
-          right: true,
-        },
-      };
-    });
-
-    if (preferencesLoaded) {
-      const viewKey = getViewKey(activeView);
-      if (viewKey === 'repositoryExplorer') {
-        void UserPreferencesService.updatePreferences({
-          panelLayouts: {
-            [viewKey]: {
-              collapsed: {
-                left: currentLeftCollapsed,
-                right: true,
-              },
-            },
-          },
-        }).catch((error) => {
-          console.error('Failed to save right sidebar collapsed state:', error);
-        });
-      }
-    }
-  };
 
   const backgroundColor =
     mode === 'dark' && theme.modes?.dark?.background
@@ -311,9 +221,7 @@ export const IntegratedShell: React.FC = () => {
 
       <div className="main-content">
         <IntegratedTitlebar
-          showSidebarControl={
-            activeView === 'repository' || activeView === 'terminal'
-          }
+          showSidebarControl={activeView === 'terminal'}
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={handleToggleSidebar}
           showRightSidebarControl={false}
@@ -359,14 +267,6 @@ export const IntegratedShell: React.FC = () => {
             }}
           >
             {/* Views will be rendered here based on activeView */}
-            {activeView === 'repository' && (
-              <RepositoryExplorer
-                sidebarCollapsed={sidebarCollapsed}
-                rightSidebarCollapsed={rightSidebarCollapsed}
-                onEnsureRightPanelOpen={ensureRightSidebarOpen}
-                onCollapseRightPanel={collapseRightSidebar}
-              />
-            )}
             {activeView === 'terminal' && (
               <TerminalManager sidebarCollapsed={sidebarCollapsed} />
             )}

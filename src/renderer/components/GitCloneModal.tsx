@@ -55,10 +55,12 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
     'https',
   );
   const [error, setError] = useState<string>('');
+  const [errorDetails, setErrorDetails] = useState<string>('');
   const [isValidating, setIsValidating] = useState(false);
   const [isCloning, setIsCloning] = useState(false);
   const [cloneProgress, setCloneProgress] = useState<string>('');
   const [existingRepoPath, setExistingRepoPath] = useState<string>('');
+  const [showExistingRepoOption, setShowExistingRepoOption] = useState(false);
 
   // Reset state when modal opens and focus the input
   useEffect(() => {
@@ -70,6 +72,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       setAuthMethods(null);
       setSelectedAuthMethod('https');
       setError('');
+      setErrorDetails('');
       setIsValidating(false);
       setIsCloning(false);
       setCloneProgress('');
@@ -371,9 +374,13 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       }
     } catch (err) {
       console.error('Error during cloning:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to clone repository',
-      );
+
+      // Extract error message and details
+      const errorMessage = err instanceof Error ? err.message : 'Failed to clone repository';
+      const details = (err as any)?.details || '';
+
+      setError(errorMessage);
+      setErrorDetails(details);
       setCurrentStep('error');
     } finally {
       setIsCloning(false);
@@ -384,6 +391,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   const handleRetry = () => {
     setCurrentStep('input');
     setError('');
+    setErrorDetails('');
     setShowExistingRepoOption(false);
     setExistingRepoPath('');
   };
@@ -910,86 +918,140 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                 style={{ color: theme.colors.error }}
               >
                 <AlertCircle size={20} />
-                <span className="font-medium">Authentication Required</span>
+                <span className="font-medium">Clone Failed</span>
               </div>
 
+              {/* Main error message */}
               <div
-                className="text-sm space-y-2 max-h-96 overflow-y-auto"
-                style={{ color: theme.colors.textSecondary }}
+                className="p-3 rounded-md"
+                style={{
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  border: `1px solid ${theme.colors.error}`,
+                }}
               >
-                {error.split('\n').map((line, index) => {
-                  // Handle markdown-style headers
-                  if (line.startsWith('**') && line.endsWith('**')) {
-                    return (
-                      <p
-                        key={index}
-                        className="font-semibold mt-3"
-                        style={{ color: theme.colors.text }}
-                      >
-                        {line.replace(/\*\*/g, '')}
-                      </p>
-                    );
-                  }
-                  // Handle list items
-                  if (line.startsWith('•') || /^\d+\./.test(line)) {
-                    return (
-                      <p key={index} className="ml-4">
-                        {line}
-                      </p>
-                    );
-                  }
-                  // Handle empty lines
-                  if (line.trim() === '') {
-                    return <div key={index} className="h-2" />;
-                  }
-                  // Regular text
-                  return <p key={index}>{line}</p>;
-                })}
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: theme.colors.text }}
+                >
+                  {error}
+                </p>
               </div>
 
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={onClose}
+              {/* Detailed error information and suggestions */}
+              {errorDetails && (
+                <div
+                  className="text-sm space-y-2 max-h-96 overflow-y-auto p-3 rounded-md"
                   style={{
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    border: `1px solid ${theme.colors.border}`,
-                    backgroundColor: 'transparent',
-                    color: theme.colors.text,
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
+                    color: theme.colors.textSecondary,
+                    backgroundColor: theme.colors.backgroundSecondary,
+                    fontFamily: 'monospace',
                   }}
                 >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleRetry}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: theme.colors.primary,
-                    color: theme.colors.background,
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.opacity = '0.9';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '1';
-                  }}
-                >
-                  Try Again
-                </button>
+                  {errorDetails.split('\n').map((line, index) => {
+                    // Handle markdown-style headers
+                    if (line.startsWith('**') && line.endsWith('**')) {
+                      return (
+                        <p
+                          key={index}
+                          className="font-semibold mt-3 first:mt-0"
+                          style={{ color: theme.colors.text }}
+                        >
+                          {line.replace(/\*\*/g, '')}
+                        </p>
+                      );
+                    }
+                    // Handle list items
+                    if (line.startsWith('•') || /^\d+\./.test(line)) {
+                      return (
+                        <p key={index} className="ml-4">
+                          {line}
+                        </p>
+                      );
+                    }
+                    // Handle empty lines
+                    if (line.trim() === '') {
+                      return <div key={index} className="h-2" />;
+                    }
+                    // Regular text
+                    return <p key={index}>{line}</p>;
+                  })}
+                </div>
+              )}
+
+              <div className="flex justify-between items-center gap-3">
+                {errorDetails && (
+                  <button
+                    onClick={() => {
+                      const fullError = `${error}\n\n${errorDetails}`;
+                      navigator.clipboard.writeText(fullError);
+                    }}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: 'transparent',
+                      color: theme.colors.textSecondary,
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundTertiary;
+                      e.currentTarget.style.color = theme.colors.text;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = theme.colors.textSecondary;
+                    }}
+                    title="Copy error details to clipboard"
+                  >
+                    Copy Details
+                  </button>
+                )}
+                <div className="flex gap-3 ml-auto">
+                  <button
+                    onClick={onClose}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: `1px solid ${theme.colors.border}`,
+                      backgroundColor: 'transparent',
+                      color: theme.colors.text,
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundTertiary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleRetry}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      backgroundColor: theme.colors.primary,
+                      color: theme.colors.background,
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '0.9';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                    }}
+                  >
+                    Try Again
+                  </button>
+                </div>
               </div>
             </div>
           )}

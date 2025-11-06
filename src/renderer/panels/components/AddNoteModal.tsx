@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
-import { RepositoryNotesService } from '../../../../main-process-api/RepositoryNotesService';
+import { RepositoryNotesService } from '../../main-process-api/RepositoryNotesService';
 
 interface AddNoteModalProps {
   isOpen: boolean;

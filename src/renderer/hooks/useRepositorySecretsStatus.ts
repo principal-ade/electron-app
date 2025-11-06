@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { SecretsService } from '../../../../main-process-api/SecretsService';
+import { SecretsService } from '../main-process-api/SecretsService';
 
 interface UseRepositorySecretsStatusOptions {
   /**

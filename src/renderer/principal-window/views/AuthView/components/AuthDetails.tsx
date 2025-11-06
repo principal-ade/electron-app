@@ -17,7 +17,7 @@ import { gitSyncConnectionManager } from '../../../../services/git-sync/GitSyncC
 import { GithubService } from '../../../../main-process-api/GithubService';
 import { SSHSetupService } from '../../../../main-process-api/SSHSetupService';
 import { AuthenticationService } from '../../../../main-process-api/AuthenticationService';
-import { SSHSetupWizard } from '../../RepositoryExplorer/components/SSHSetupWizard';
+import { SSHSetupWizard } from '../../../../components/SSHSetupWizard';
 import { KeychainPermissionModal } from '../../../../components/KeychainPermissionModal';
 import type {
   TokenInfo,

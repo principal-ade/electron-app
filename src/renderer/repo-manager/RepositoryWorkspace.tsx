@@ -33,7 +33,7 @@ import { LinksModal } from './shared/LinksModal';
 import { SourceBadgeHelpModal } from './shared/SourceBadgeHelpModal';
 import { BadgeInfoModal } from './shared/BadgeInfoModal';
 import { PanelConfiguratorModal } from './shared/PanelConfiguratorModal';
-import { AddNoteModal } from '../principal-window/views/RepositoryExplorer/components/AddNoteModal';
+import { AddNoteModal } from '../panels/components/AddNoteModal';
 import {
   ConfigurablePanelLayout,
   type PanelDefinition,
