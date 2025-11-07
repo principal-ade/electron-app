@@ -93,6 +93,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
     null,
   );
   const [showOpenInIDE, setShowOpenInIDE] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
 
   // Get local clone path for git status
   const localClonePath = selectedSource?.type === 'local'
@@ -276,47 +277,50 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
                   >
                     {gitStatus.ahead === 0 && gitStatus.behind === 0 ? (
                       <span
+                        onClick={() => setShowSyncModal(true)}
                         style={{
                           color: theme.colors.success,
                           display: 'flex',
                           alignItems: 'center',
+                          gap: '4px',
+                          cursor: 'pointer',
+                          transition: 'opacity 0.2s',
+                          WebkitAppRegion:
+                            'no-drag' as React.CSSProperties['WebkitAppRegion'],
                         }}
-                        title="In sync with remote"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.opacity = '0.7';
+                          e.currentTarget.style.textDecoration = 'underline';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.opacity = '1';
+                          e.currentTarget.style.textDecoration = 'none';
+                        }}
+                        title="In sync with remote - click for more info"
                       >
                         <Cloud size={14} />
+                        <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+                          Synced to Github
+                        </span>
                       </span>
                     ) : (
-                      <>
-                        <span
-                          style={{
-                            color: theme.colors.warning,
-                            display: 'flex',
-                            alignItems: 'center',
-                          }}
-                          title={`${gitStatus.ahead > 0 ? `${gitStatus.ahead} commit${gitStatus.ahead > 1 ? 's' : ''} ahead` : ''}${gitStatus.ahead > 0 && gitStatus.behind > 0 ? ', ' : ''}${gitStatus.behind > 0 ? `${gitStatus.behind} commit${gitStatus.behind > 1 ? 's' : ''} behind` : ''}`}
-                        >
-                          <CloudOff size={14} />
+                      <span
+                        style={{
+                          color: theme.colors.warning,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <CloudOff size={14} />
+                        <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>
+                          {gitStatus.ahead > 0 && gitStatus.behind > 0
+                            ? 'Local and Remote Diverged'
+                            : gitStatus.ahead > 0
+                              ? 'Local Version Ahead of Remote'
+                              : 'Local Version Behind Remote'}
                         </span>
-                        <span
-                          style={{
-                            fontSize: `${theme.fontSizes[1]}px`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                        >
-                          {gitStatus.ahead > 0 && (
-                            <span style={{ color: theme.colors.success }}>
-                              ↑{gitStatus.ahead}
-                            </span>
-                          )}
-                          {gitStatus.behind > 0 && (
-                            <span style={{ color: theme.colors.warning }}>
-                              ↓{gitStatus.behind}
-                            </span>
-                          )}
-                        </span>
-                      </>
+                      </span>
                     )}
                   </span>
                 )}
@@ -687,6 +691,193 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           onClose={() => setShowSaveWorkspaceModal(false)}
           onSave={onSaveWorkspace}
         />
+      )}
+
+      {/* Git Sync Status Modal */}
+      {showSyncModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            WebkitAppRegion:
+              'no-drag' as React.CSSProperties['WebkitAppRegion'],
+          }}
+          onClick={() => setShowSyncModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: theme.colors.backgroundSecondary,
+              borderRadius: '8px',
+              padding: '24px',
+              maxWidth: '500px',
+              width: '90%',
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+              border: `1px solid ${theme.colors.border}`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                marginBottom: '16px',
+              }}
+            >
+              <Cloud size={24} color={theme.colors.success} />
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: '20px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                }}
+              >
+                Git Sync Status
+              </h2>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <div
+                style={{
+                  marginBottom: '12px',
+                  padding: '12px',
+                  backgroundColor: theme.colors.backgroundTertiary,
+                  borderRadius: '6px',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '14px',
+                    color: theme.colors.textSecondary,
+                    marginBottom: '4px',
+                  }}
+                >
+                  Status
+                </div>
+                <div
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 500,
+                    color: theme.colors.success,
+                  }}
+                >
+                  In Sync with Remote
+                </div>
+              </div>
+
+              {selectedSource?.type === 'local' &&
+                selectedSource.metadata?.currentBranch && (
+                  <div
+                    style={{
+                      padding: '12px',
+                      backgroundColor: theme.colors.backgroundTertiary,
+                      borderRadius: '6px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: '4px',
+                      }}
+                    >
+                      Branch
+                    </div>
+                    <div
+                      style={{
+                        fontSize: '14px',
+                        fontFamily: 'monospace',
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {selectedSource.metadata.currentBranch}
+                    </div>
+                  </div>
+                )}
+            </div>
+
+            <div
+              style={{
+                padding: '16px',
+                backgroundColor: theme.colors.backgroundTertiary,
+                borderRadius: '6px',
+                marginBottom: '20px',
+              }}
+            >
+              <h3
+                style={{
+                  margin: '0 0 8px 0',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: theme.colors.text,
+                }}
+              >
+                What does "Synced" mean?
+              </h3>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '13px',
+                  lineHeight: '1.6',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                When your repository is synced, your local branch is up to date
+                with the remote repository on GitHub. This means:
+              </p>
+              <ul
+                style={{
+                  margin: '8px 0 0 0',
+                  paddingLeft: '20px',
+                  fontSize: '13px',
+                  lineHeight: '1.6',
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                <li>You have all the latest commits from GitHub</li>
+                <li>
+                  Your local commits have been pushed to GitHub (if any)
+                </li>
+                <li>
+                  You can safely push or pull without conflicts (in most cases)
+                </li>
+              </ul>
+            </div>
+
+            <button
+              onClick={() => setShowSyncModal(false)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                backgroundColor: theme.colors.primary,
+                color: theme.colors.background,
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'opacity 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.8';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
       )}
     </BaseTitlebar>
   );

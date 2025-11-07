@@ -8,6 +8,10 @@ import {
   AlertCircle,
   Trash2,
   Copy,
+  AlertTriangle,
+  ArrowUp,
+  ArrowDown,
+  Minus,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { PalaceTasksService } from '../../main-process-api/PalaceTasksService';
@@ -43,6 +47,8 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
         setError(null);
         const response = await PalaceTasksService.getTasks(repositoryPath, {
           status: 'pending', // Only show pending tasks by default
+          sortBy: 'receivedAt',
+          sortDirection: 'desc', // Most recent first
         });
         console.log('[TasksPanel] Loaded tasks:', response.tasks);
         if (response.tasks.length > 0) {
@@ -106,6 +112,22 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
         return theme.colors.textSecondary;
       default:
         return theme.colors.textSecondary;
+    }
+  };
+
+  const getPriorityIcon = (priority?: string) => {
+    const size = 16;
+    switch (priority) {
+      case 'critical':
+        return <AlertTriangle size={size} />;
+      case 'high':
+        return <ArrowUp size={size} />;
+      case 'normal':
+        return <Minus size={size} />;
+      case 'low':
+        return <ArrowDown size={size} />;
+      default:
+        return <Minus size={size} />;
     }
   };
 
@@ -302,7 +324,6 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
             style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '8px',
             }}
           >
             {tasks.map((task) => (
@@ -310,225 +331,228 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                 key={task.id}
                 onClick={() => handleTaskClick(task)}
                 style={{
-                  padding: '12px',
                   backgroundColor: theme.colors.background,
-                  borderRadius: '6px',
                   border: `1px solid ${theme.colors.border}`,
                   cursor: onTaskClick ? 'pointer' : 'default',
                   transition: 'all 0.2s',
                 }}
                 onMouseEnter={(e) => {
                   if (onTaskClick) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
                     e.currentTarget.style.borderColor = theme.colors.primary;
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (onTaskClick) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.background;
                     e.currentTarget.style.borderColor = theme.colors.border;
                   }
                 }}
               >
-                {/* Task Header */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '8px',
-                    marginBottom: '8px',
-                  }}
-                >
+                {/* Content Section with Padding */}
+                <div style={{ padding: '12px' }}>
+                  {/* Task Header */}
                   <div
                     style={{
-                      color: getStatusColor(task.status),
-                      marginTop: '2px',
-                    }}
-                  >
-                    {getStatusIcon(task.status)}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        fontSize: theme.fontSizes[1],
-                        color: theme.colors.text,
-                        fontWeight: theme.fontWeights.medium,
-                        fontFamily: theme.fonts.body,
-                        marginBottom: '4px',
-                      }}
-                    >
-                      {getTaskTitle(task.content)}
-                    </div>
-                    {task.senderId && (
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                          fontFamily: theme.fonts.body,
-                        }}
-                      >
-                        From: {task.senderId}
-                      </div>
-                    )}
-                  </div>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    {task.priority && (
-                      <span
-                        style={{
-                          padding: '2px 8px',
-                          backgroundColor: `${getPriorityColor(task.priority)}15`,
-                          color: getPriorityColor(task.priority),
-                          borderRadius: '10px',
-                          fontSize: theme.fontSizes[0],
-                          fontWeight: theme.fontWeights.medium,
-                          fontFamily: theme.fonts.body,
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {task.priority}
-                      </span>
-                    )}
-                    <button
-                      onClick={(e) => handleCompleteTask(task, e)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: '4px',
-                        cursor: 'pointer',
-                        color: theme.colors.textSecondary,
-                        display: 'flex',
-                        alignItems: 'center',
-                        borderRadius: '4px',
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}15`;
-                        e.currentTarget.style.color =
-                          theme.colors.success || '#10b981';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color =
-                          theme.colors.textSecondary;
-                      }}
-                      title="Mark as completed"
-                    >
-                      <CheckCircle2 size={14} />
-                    </button>
-                    <button
-                      onClick={(e) => handleCopyPath(task, e)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: '4px',
-                        cursor: 'pointer',
-                        color: theme.colors.textSecondary,
-                        display: 'flex',
-                        alignItems: 'center',
-                        borderRadius: '4px',
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = `${theme.colors.primary}15`;
-                        e.currentTarget.style.color = theme.colors.primary;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color =
-                          theme.colors.textSecondary;
-                      }}
-                      title="Copy relative path"
-                    >
-                      <Copy size={14} />
-                    </button>
-                    <button
-                      onClick={(e) => handleDeleteTask(task, e)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        padding: '4px',
-                        cursor: 'pointer',
-                        color: theme.colors.textSecondary,
-                        display: 'flex',
-                        alignItems: 'center',
-                        borderRadius: '4px',
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = `${theme.colors.error}15`;
-                        e.currentTarget.style.color =
-                          theme.colors.error || '#ef4444';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color =
-                          theme.colors.textSecondary;
-                      }}
-                      title="Delete task"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Tags */}
-                {task.tags && task.tags.length > 0 && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '4px',
                       marginBottom: '8px',
                     }}
                   >
-                    {task.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        style={{
-                          padding: '2px 8px',
-                          backgroundColor: `${theme.colors.primary}15`,
-                          color: theme.colors.primary,
-                          borderRadius: '10px',
-                          fontSize: theme.fontSizes[0],
-                          fontWeight: theme.fontWeights.medium,
-                          fontFamily: theme.fonts.body,
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* Metadata */}
-                <div
-                  style={{
-                    fontSize: theme.fontSizes[0],
-                    color: theme.colors.textSecondary,
-                    fontFamily: theme.fonts.body,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  <span
+                  {/* Priority, From and Time */}
+                  <div
                     style={{
+                      fontSize: theme.fontSizes[1],
+                      color: theme.colors.textSecondary,
+                      fontFamily: theme.fonts.body,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '3px',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      marginBottom: '4px',
                     }}
                   >
-                    <Calendar size={10} />
-                    {getRelativeTime(task.receivedAt)}
-                  </span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      {task.priority && (
+                        <span
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            color: getPriorityColor(task.priority),
+                            cursor: 'help',
+                          }}
+                          title={task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                        >
+                          {getPriorityIcon(task.priority)}
+                        </span>
+                      )}
+                      {task.senderId && (
+                        <span>From: {task.senderId}</span>
+                      )}
+                    </div>
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}
+                    >
+                      <Calendar size={10} />
+                      {getRelativeTime(task.receivedAt)}
+                    </span>
+                  </div>
+
+                  {/* Title */}
+                  <div
+                    style={{
+                      fontSize: theme.fontSizes[2],
+                      color: theme.colors.text,
+                      fontWeight: theme.fontWeights.medium,
+                      fontFamily: theme.fonts.body,
+                      marginBottom: '4px',
+                    }}
+                  >
+                    {getTaskTitle(task.content)}
+                  </div>
+                </div>
+
+                  {/* Tags */}
+                  {task.tags && task.tags.length > 0 && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '4px',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      {task.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          style={{
+                            padding: '2px 8px',
+                            backgroundColor: `${theme.colors.primary}15`,
+                            color: theme.colors.primary,
+                            borderRadius: '10px',
+                            fontSize: theme.fontSizes[1],
+                            fontWeight: theme.fontWeights.medium,
+                            fontFamily: theme.fonts.body,
+                          }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '0',
+                    borderTop: `1px solid ${theme.colors.border}`,
+                  }}
+                >
+                  <button
+                    onClick={(e) => handleCompleteTask(task, e)}
+                    style={{
+                      flex: 1,
+                      background: 'none',
+                      border: 'none',
+                      padding: '8px',
+                      cursor: 'pointer',
+                      color: theme.colors.textSecondary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      transition: 'all 0.2s',
+                      fontSize: theme.fontSizes[1],
+                      fontFamily: theme.fonts.body,
+                      borderRight: `1px solid ${theme.colors.border}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = `${theme.colors.success || '#10b981'}15`;
+                      e.currentTarget.style.color =
+                        theme.colors.success || '#10b981';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color =
+                        theme.colors.textSecondary;
+                    }}
+                    title="Mark as completed"
+                  >
+                    <CheckCircle2 size={14} />
+                    <span>Complete</span>
+                  </button>
+                  <button
+                    onClick={(e) => handleCopyPath(task, e)}
+                    style={{
+                      flex: 1,
+                      background: 'none',
+                      border: 'none',
+                      padding: '8px',
+                      cursor: 'pointer',
+                      color: theme.colors.textSecondary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      transition: 'all 0.2s',
+                      fontSize: theme.fontSizes[1],
+                      fontFamily: theme.fonts.body,
+                      borderRight: `1px solid ${theme.colors.border}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = `${theme.colors.primary}15`;
+                      e.currentTarget.style.color = theme.colors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color =
+                        theme.colors.textSecondary;
+                    }}
+                    title="Copy relative path"
+                  >
+                    <Copy size={14} />
+                    <span>Copy</span>
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteTask(task, e)}
+                    style={{
+                      flex: 1,
+                      background: 'none',
+                      border: 'none',
+                      padding: '8px',
+                      cursor: 'pointer',
+                      color: theme.colors.textSecondary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px',
+                      transition: 'all 0.2s',
+                      fontSize: theme.fontSizes[1],
+                      fontFamily: theme.fonts.body,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = `${theme.colors.error}15`;
+                      e.currentTarget.style.color =
+                        theme.colors.error || '#ef4444';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color =
+                        theme.colors.textSecondary;
+                    }}
+                    title="Delete task"
+                  >
+                    <Trash2 size={14} />
+                    <span>Delete</span>
+                  </button>
                 </div>
               </div>
             ))}
