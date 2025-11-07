@@ -37,6 +37,27 @@ declare global {
       WebkitAppRegion?: 'drag' | 'no-drag';
     }
   }
+
+  // Declare the Electron webview element for JSX
+  namespace JSX {
+    interface IntrinsicElements {
+      webview: React.DetailedHTMLProps<
+        React.HTMLAttributes<HTMLElement> & {
+          src?: string;
+          preload?: string;
+          partition?: string;
+          allowpopups?: boolean | 'true' | 'false' | '';
+          useragent?: string;
+          nodeintegration?: boolean | 'true' | 'false';
+          nodeintegrationinsubframes?: boolean | 'true' | 'false';
+          plugins?: boolean | 'true' | 'false';
+          disablewebsecurity?: boolean | 'true' | 'false';
+          webpreferences?: string;
+        },
+        HTMLElement
+      >;
+    }
+  }
 }
 
 export {};
