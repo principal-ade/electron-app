@@ -151,7 +151,6 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
         style={{
           backgroundColor: theme.colors.backgroundSecondary,
           border: `1px solid ${theme.colors.border}`,
-          borderRadius: '8px',
           overflow: 'hidden',
           transition: 'all 0.2s',
           flexShrink: 0,
@@ -214,7 +213,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                 >
                   <div
                     style={{
-                      fontSize: '11px',
+                      fontSize: theme.fontSizes[1],
                       color: theme.colors.textSecondary,
                       textTransform: 'uppercase',
                       letterSpacing: '0.5px',
@@ -225,154 +224,12 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                   {/* Relative Time */}
                   <span
                     style={{
-                      fontSize: '10px',
+                      fontSize: theme.fontSizes[1],
                       color: theme.colors.textTertiary,
                     }}
                   >
                     {getTimeAgo(cardData.session.lastActivity || Date.now())}
                   </span>
-                </div>
-                {/* Details Button and Expand/Collapse Caret */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                  }}
-                >
-                  {/* Resume Button - Opens terminal in new window */}
-                  {onOpenTerminal && (
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        console.log('[AgentSessionCard] Resume button clicked');
-                        setIsTerminalLoading(true);
-                        try {
-                          await onOpenTerminal();
-                        } finally {
-                          // Keep loading for a moment to show the window is opening
-                          setTimeout(() => setIsTerminalLoading(false), 1500);
-                        }
-                      }}
-                      disabled={isTerminalLoading}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '2px 6px',
-                        backgroundColor: isTerminalLoading
-                          ? theme.colors.backgroundTertiary
-                          : theme.colors.primary,
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: isTerminalLoading
-                          ? theme.colors.textSecondary
-                          : '#fff',
-                        fontSize: '10px',
-                        fontWeight: 600,
-                        cursor: isTerminalLoading ? 'wait' : 'pointer',
-                        transition: 'all 0.2s',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        minWidth: '55px',
-                      }}
-                      title={
-                        isTerminalLoading
-                          ? 'Opening terminal...'
-                          : 'Resume session in terminal'
-                      }
-                    >
-                      {isTerminalLoading && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: '-100%',
-                            width: '100%',
-                            height: '100%',
-                            background: `linear-gradient(90deg, 
-                          transparent 0%, 
-                          ${theme.colors.primary}40 50%, 
-                          transparent 100%)`,
-                            animation: 'shimmer 1.5s infinite',
-                          }}
-                        />
-                      )}
-                      <span style={{ position: 'relative', zIndex: 1 }}>
-                        {isTerminalLoading ? 'Opening...' : 'Resume'}
-                      </span>
-                    </button>
-                  )}
-                  {/* Details Button - Opens detail view */}
-                  {onSessionDetailSelect && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        console.log(
-                          '[AgentSessionCard] Details button clicked',
-                        );
-                        onSessionDetailSelect();
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '2px 6px',
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: '4px',
-                        color: theme.colors.textSecondary,
-                        fontSize: '10px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                      }}
-                      title="Open detail view"
-                    >
-                      Details
-                    </button>
-                  )}
-                  {/* Delete Button - Remove session */}
-                  {onDeleteSession && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (
-                          confirm(
-                            'Are you sure you want to delete this session? This cannot be undone.',
-                          )
-                        ) {
-                          onDeleteSession();
-                        }
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '4px',
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${theme.colors.border}`,
-                        borderRadius: '4px',
-                        color: theme.colors.textSecondary,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor =
-                          '#ef4444' + '20';
-                        e.currentTarget.style.borderColor = '#ef4444';
-                        e.currentTarget.style.color = '#ef4444';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.borderColor = theme.colors.border;
-                        e.currentTarget.style.color =
-                          theme.colors.textSecondary;
-                      }}
-                      title="Delete session"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  )}
                 </div>
               </div>
 
@@ -402,7 +259,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                           todoToShow.status === 'completed'
                             ? theme.colors.textSecondary
                             : theme.colors.text,
-                        fontSize: '13px',
+                        fontSize: theme.fontSizes[2],
                         lineHeight: '1.5',
                       }}
                     >
@@ -411,7 +268,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                     {todoToShow.status !== 'completed' && (
                       <span
                         style={{
-                          fontSize: '10px',
+                          fontSize: theme.fontSizes[1],
                           color: theme.colors.textSecondary,
                           textTransform: 'uppercase',
                           letterSpacing: '0.3px',
@@ -435,7 +292,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                       style={{
                         flex: 1,
                         color: theme.colors.text,
-                        fontSize: '13px',
+                        fontSize: theme.fontSizes[2],
                         lineHeight: '1.5',
                         display: 'flex',
                         alignItems: 'center',
@@ -482,7 +339,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                     {cardData.latestEvent && (
                       <span
                         style={{
-                          fontSize: '10px',
+                          fontSize: theme.fontSizes[1],
                           color: theme.colors.textSecondary,
                           padding: '2px 6px',
                           borderRadius: '3px',
@@ -519,7 +376,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                       <div
                         style={{
                           marginTop: '12px',
-                          fontSize: '11px',
+                          fontSize: theme.fontSizes[1],
                           color: theme.colors.textSecondary,
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px',
@@ -566,7 +423,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                                   todo.status === 'completed'
                                     ? theme.colors.textSecondary
                                     : theme.colors.text,
-                                fontSize: '12px',
+                                fontSize: theme.fontSizes[1],
                                 lineHeight: '1.4',
                               }}
                             >
@@ -575,7 +432,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                             {todo.status !== 'completed' && (
                               <span
                                 style={{
-                                  fontSize: '10px',
+                                  fontSize: theme.fontSizes[1],
                                   color: theme.colors.textSecondary,
                                   textTransform: 'uppercase',
                                   letterSpacing: '0.3px',
@@ -684,7 +541,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                         }}
                         onBlur={onSaveEditName}
                         style={{
-                          fontSize: '14px',
+                          fontSize: theme.fontSizes[2],
                           fontWeight: 600,
                           color: theme.colors.text,
                           backgroundColor: theme.colors.backgroundSecondary,
@@ -732,7 +589,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                     <>
                       <div
                         style={{
-                          fontSize: '14px',
+                          fontSize: theme.fontSizes[2],
                           fontWeight: 600,
                           color: theme.colors.text,
                         }}
@@ -765,7 +622,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                 </div>
                 <div
                   style={{
-                    fontSize: '12px',
+                    fontSize: theme.fontSizes[1],
                     color: theme.colors.textSecondary,
                     display: 'flex',
                     alignItems: 'center',
@@ -818,7 +675,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                 </div>
                 <div
                   style={{
-                    fontSize: '11px',
+                    fontSize: theme.fontSizes[1],
                     color: theme.colors.textTertiary,
                     display: 'flex',
                     alignItems: 'center',
@@ -836,7 +693,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                       borderRadius: '10px',
                       backgroundColor: cardData.session.statusColor + '20',
                       color: cardData.session.statusColor,
-                      fontSize: '10px',
+                      fontSize: theme.fontSizes[1],
                       fontWeight: 600,
                     }}
                   >
@@ -879,7 +736,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                               borderRadius: '10px',
                               backgroundColor: theme.colors.primary + '20',
                               color: theme.colors.primary,
-                              fontSize: '10px',
+                              fontSize: theme.fontSizes[1],
                               fontWeight: 600,
                             }}
                           >
@@ -919,7 +776,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                 {cardData.latestEvent && (
                   <div
                     style={{
-                      fontSize: '11px',
+                      fontSize: theme.fontSizes[1],
                       color: theme.colors.textTertiary,
                       marginTop: '4px',
                       display: 'flex',
@@ -979,7 +836,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                     color: isShownOnMap
                       ? theme.colors.primary
                       : theme.colors.text,
-                    fontSize: '11px',
+                    fontSize: theme.fontSizes[1],
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     fontWeight: isShownOnMap ? 600 : 400,
@@ -1020,7 +877,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                   >
                     <div
                       style={{
-                        fontSize: '11px',
+                        fontSize: theme.fontSizes[1],
                         color: theme.colors.textSecondary,
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px',
@@ -1045,7 +902,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                         style={{
                           flex: 1,
                           color: theme.colors.text,
-                          fontSize: '13px',
+                          fontSize: theme.fontSizes[2],
                           lineHeight: '1.5',
                           display: 'flex',
                           alignItems: 'center',
@@ -1074,7 +931,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                       </span>
                       <span
                         style={{
-                          fontSize: '10px',
+                          fontSize: theme.fontSizes[1],
                           color: theme.colors.textSecondary,
                           padding: '2px 6px',
                           borderRadius: '3px',
@@ -1112,7 +969,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                           }}
                         >
                           <Activity size={12} color={sessionColor} />
-                          <span style={{ fontSize: '11px' }}>
+                          <span style={{ fontSize: theme.fontSizes[1] }}>
                             {cardData.session.fileAccessCount} file reads
                           </span>
                         </div>
@@ -1126,7 +983,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                           }}
                         >
                           <Edit3 size={12} color={sessionColor} />
-                          <span style={{ fontSize: '11px' }}>
+                          <span style={{ fontSize: theme.fontSizes[1] }}>
                             {cardData.session.fileWriteCount} file writes
                           </span>
                         </div>
@@ -1140,7 +997,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                           }}
                         >
                           <Sparkles size={12} color={sessionColor} />
-                          <span style={{ fontSize: '11px' }}>
+                          <span style={{ fontSize: theme.fontSizes[1] }}>
                             {cardData.session.toolCallCount} tool calls
                           </span>
                         </div>
@@ -1152,6 +1009,167 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
             )
           );
         })()}
+
+        {/* Action Buttons */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '0',
+            borderTop: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          {/* Resume Button */}
+          {onOpenTerminal && (
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                console.log('[AgentSessionCard] Resume button clicked');
+                setIsTerminalLoading(true);
+                try {
+                  await onOpenTerminal();
+                } finally {
+                  // Keep loading for a moment to show the window is opening
+                  setTimeout(() => setIsTerminalLoading(false), 1500);
+                }
+              }}
+              disabled={isTerminalLoading}
+              style={{
+                flex: 1,
+                background: 'none',
+                border: 'none',
+                padding: '8px',
+                cursor: isTerminalLoading ? 'wait' : 'pointer',
+                color: theme.colors.textSecondary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                transition: 'all 0.2s',
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts.body,
+                borderRight: `1px solid ${theme.colors.border}`,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+              onMouseEnter={(e) => {
+                if (!isTerminalLoading) {
+                  e.currentTarget.style.backgroundColor = `${theme.colors.primary}15`;
+                  e.currentTarget.style.color = theme.colors.primary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isTerminalLoading) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }
+              }}
+              title={
+                isTerminalLoading
+                  ? 'Opening terminal...'
+                  : 'Resume session in terminal'
+              }
+            >
+              {isTerminalLoading && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: `linear-gradient(90deg,
+                      transparent 0%,
+                      ${theme.colors.primary}40 50%,
+                      transparent 100%)`,
+                    animation: 'shimmer 1.5s infinite',
+                  }}
+                />
+              )}
+              <span style={{ position: 'relative', zIndex: 1 }}>
+                {isTerminalLoading ? 'Opening...' : 'Resume'}
+              </span>
+            </button>
+          )}
+          {/* Details Button */}
+          {onSessionDetailSelect && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('[AgentSessionCard] Details button clicked');
+                onSessionDetailSelect();
+              }}
+              style={{
+                flex: 1,
+                background: 'none',
+                border: 'none',
+                padding: '8px',
+                cursor: 'pointer',
+                color: theme.colors.textSecondary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                transition: 'all 0.2s',
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts.body,
+                borderRight: `1px solid ${theme.colors.border}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = `${theme.colors.primary}15`;
+                e.currentTarget.style.color = theme.colors.primary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+              title="Open detail view"
+            >
+              <span>Details</span>
+            </button>
+          )}
+          {/* Delete Button */}
+          {onDeleteSession && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (
+                  confirm(
+                    'Are you sure you want to delete this session? This cannot be undone.',
+                  )
+                ) {
+                  onDeleteSession();
+                }
+              }}
+              style={{
+                flex: 1,
+                background: 'none',
+                border: 'none',
+                padding: '8px',
+                cursor: 'pointer',
+                color: theme.colors.textSecondary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                transition: 'all 0.2s',
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts.body,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = `${theme.colors.error}15`;
+                e.currentTarget.style.color = theme.colors.error || '#ef4444';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+              title="Delete session"
+            >
+              <Trash2 size={14} />
+              <span>Delete</span>
+            </button>
+          )}
+        </div>
       </div>
     </>
   );

@@ -719,8 +719,6 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                         if (!canOpenDirectory || group.isCurrentDirectory) {
                           return;
                         }
-                        e.currentTarget.style.backgroundColor =
-                          theme.colors.background;
                         e.currentTarget.style.borderColor =
                           theme.colors.primary;
                       }}
@@ -728,8 +726,6 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                         if (group.isCurrentDirectory) {
                           return;
                         }
-                        e.currentTarget.style.backgroundColor =
-                          baseBackgroundColor;
                         e.currentTarget.style.borderColor = theme.colors.border;
                       }}
                       style={{
@@ -737,7 +733,6 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '10px 12px',
-                        borderRadius: '6px',
                         border: group.isCurrentDirectory
                           ? `2px solid ${theme.colors.primary}`
                           : `1px solid ${theme.colors.border}`,
@@ -823,7 +818,6 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: '10px',
                     }}
                   >
                     {group.sessions.map((sessionWithEvents) => {
