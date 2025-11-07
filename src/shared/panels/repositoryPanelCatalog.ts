@@ -258,6 +258,14 @@ export const repositoryPanelCatalog = [
     slices: [] as const,
     surfaces: ['principal'] as const,
   },
+  {
+    id: 'localhostBrowser',
+    label: 'Localhost Browser',
+    description:
+      'View localhost development servers in an embedded browser view.',
+    slices: [] as const,
+    surfaces: ['manager', 'viewer', 'agent', 'principal'] as const,
+  },
 ] as const satisfies readonly RepositoryPanelDefinitionBase[];
 
 export type RepositoryPanelCatalogEntry =

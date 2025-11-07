@@ -26,6 +26,7 @@ import { GraphsListPanel } from './components/GraphsListPanel';
 import { GraphDetailPanel } from './components/GraphDetailPanel';
 import { TerminalReplayPanel } from './components/TerminalReplayPanel';
 import { PresencePanel } from './components/PresencePanel';
+import { LocalhostBrowserPanel } from './components/LocalhostBrowserPanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -99,6 +100,7 @@ const panelRenderers: Partial<
   ),
   terminalReplay: () => <TerminalReplayPanel />,
   presence: () => <PresencePanel />,
+  localhostBrowser: () => <LocalhostBrowserPanel />,
 };
 
 export const repositoryPanelDefinitions = repositoryPanelCatalog.map(
