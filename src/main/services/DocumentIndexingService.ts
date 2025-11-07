@@ -6,7 +6,7 @@
  * document discovery and indexing.
  */
 
-import { ipcMain, IpcMainInvokeEvent } from 'electron';
+import { BrowserWindow } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import {
@@ -14,10 +14,7 @@ import {
   DocumentIndexer,
   FlexSearchAdapter,
   NodeStorageAdapter,
-  type SearchableDocument,
-  type SearchResult,
   type SearchOptions,
-  type IndexingProgress,
   type SearchEngineConfig,
   type MarkdownFileProvider,
   type MarkdownFile,
@@ -26,11 +23,9 @@ import {
 } from '@a24z/markdown-search';
 
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
+import type { AlexandriaEntry } from '@a24z/core-library';
 import {
   DocumentSearchChannel,
-  type InitializeSearchRequest,
-  type IndexRepositoryRequest,
-  type IndexRepositoryResponse,
   type SearchDocumentsRequest,
   type SearchDocumentsResponse,
   type GetIndexStatusResponse,
@@ -41,6 +36,9 @@ import {
   type IndexErrorEvent,
   type RepositoryIndexStatus,
 } from '../../shared/ipc/DocumentSearchIPC';
+import { MonitoringInternalEvent } from '../../repository-monitoring-server/types';
+import type { WorkspaceChangeEventPayload } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
 // Removed RepositoryInfo interface - no longer tracking individual repositories
 
@@ -52,6 +50,11 @@ export class DocumentIndexingService {
   private isInitialized = false;
   private isIndexing = false;
   private lastIndexTime: Date | undefined = undefined;
+
+  // File watching and change tracking
+  private pendingChanges = new Map<string, Set<string>>(); // repo path -> set of changed file paths
+  private debounceTimers = new Map<string, NodeJS.Timeout>(); // repo path -> timer
+  private readonly DEBOUNCE_MS = 2000; // 2 seconds debounce
 
   // Configuration
   private config = {
@@ -69,7 +72,7 @@ export class DocumentIndexingService {
   /**
    * Initialize the service and register IPC handlers
    */
-  async initialize(initConfig?: any): Promise<void> {
+  async initialize(initConfig?: Partial<typeof this.config>): Promise<void> {
     if (this.isInitialized) {
       return;
     }
@@ -114,6 +117,11 @@ export class DocumentIndexingService {
     this.searchEngine = new SearchEngine(engineConfig);
     await this.searchEngine.initialize();
     this.documentIndexer = new DocumentIndexer();
+
+    // Subscribe to repository monitoring events for file watching
+    if (this.config.enableWatching) {
+      this.setupRepositoryMonitoring();
+    }
 
     this.isInitialized = true;
   }
@@ -189,11 +197,142 @@ export class DocumentIndexingService {
         };
       },
 
-      watchFiles: (callback: (changes: FileChange[]) => void) => {
+      watchFiles: (_callback: (changes: FileChange[]) => void) => {
         // Return a disposable that does nothing for now
         return { dispose: () => {} };
       },
     };
+  }
+
+  /**
+   * Setup repository monitoring for real-time file watching
+   */
+  private setupRepositoryMonitoring(): void {
+    try {
+      const monitoringManager = getRepositoryMonitoringManager();
+
+      monitoringManager.on(
+        MonitoringInternalEvent.WORKSPACE_CHANGED,
+        (payload: WorkspaceChangeEventPayload) => {
+          this.handleWorkspaceChange(payload);
+        },
+      );
+
+      console.log(
+        '[DocumentIndexingService] Subscribed to repository monitoring events',
+      );
+    } catch (error) {
+      console.error(
+        '[DocumentIndexingService] Failed to setup repository monitoring:',
+        error,
+      );
+    }
+  }
+
+  /**
+   * Handle workspace change events from repository monitoring
+   */
+  private handleWorkspaceChange(payload: WorkspaceChangeEventPayload): void {
+    const { repoPath, changes } = payload;
+
+    // If no changes array, this is likely a git state change without file details
+    // We'll do a full refresh in this case (fallback behavior)
+    if (!changes || changes.length === 0) {
+      console.log(
+        `[DocumentIndexingService] Workspace changed for ${repoPath} (no file details, skipping)`,
+      );
+      return;
+    }
+
+    // Filter for markdown files
+    const markdownChanges = changes.filter((change) =>
+      /\.(md|MD|markdown)$/i.test(change.path),
+    );
+
+    if (markdownChanges.length === 0) {
+      // No markdown files changed, skip
+      return;
+    }
+
+    console.log(
+      `[DocumentIndexingService] ${markdownChanges.length} markdown file(s) changed in ${repoPath}`,
+    );
+
+    // Track changes for this repository
+    if (!this.pendingChanges.has(repoPath)) {
+      this.pendingChanges.set(repoPath, new Set());
+    }
+
+    const repoChanges = this.pendingChanges.get(repoPath);
+    if (!repoChanges) {
+      console.error(
+        `[DocumentIndexingService] Failed to get pending changes for ${repoPath}`,
+      );
+      return;
+    }
+
+    for (const change of markdownChanges) {
+      repoChanges.add(change.path);
+    }
+
+    // Debounce: clear existing timer and set a new one
+    const existingTimer = this.debounceTimers.get(repoPath);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    const timer = setTimeout(() => {
+      this.processRepositoryChanges(repoPath);
+    }, this.DEBOUNCE_MS);
+
+    this.debounceTimers.set(repoPath, timer);
+  }
+
+  /**
+   * Process accumulated changes for a repository after debounce
+   */
+  private async processRepositoryChanges(repoPath: string): Promise<void> {
+    const changes = this.pendingChanges.get(repoPath);
+    if (!changes || changes.size === 0) {
+      return;
+    }
+
+    const changedFiles = Array.from(changes);
+    console.log(
+      `[DocumentIndexingService] Processing ${changedFiles.length} markdown changes for ${repoPath}`,
+    );
+
+    // Clear pending changes
+    this.pendingChanges.delete(repoPath);
+    this.debounceTimers.delete(repoPath);
+
+    try {
+      // For now, do a full re-index of all repositories
+      // TODO: In the future, implement incremental updates using searchEngine.updateFiles()
+      console.log(
+        '[DocumentIndexingService] Triggering full re-index due to markdown changes',
+      );
+      await this.refreshIndex();
+
+      // Emit document changed events for each file
+      for (const filePath of changedFiles) {
+        const fullPath = path.join(repoPath, filePath);
+        this.sendDocumentChanged({
+          type: 'modified', // We don't have fine-grained add/delete info yet
+          document: {
+            id: fullPath,
+            path: fullPath,
+            repository: repoPath,
+          },
+          timestamp: new Date(),
+        });
+      }
+    } catch (error) {
+      console.error(
+        `[DocumentIndexingService] Failed to process changes for ${repoPath}:`,
+        error,
+      );
+    }
   }
 
   /**
@@ -420,24 +559,25 @@ export class DocumentIndexingService {
 
       // Apply repository filter if specified
       if (request.repositories && request.repositories.length > 0) {
+        const repositories = request.repositories;
         filtered = filtered.filter((result) => {
           // The filePath contains the full path to the document
           // We need to check if it starts with any of the selected repository paths
-          return request.repositories!.some((repoPath) =>
+          return repositories.some((repoPath) =>
             result.filePath.startsWith(repoPath),
           );
         });
       }
 
-      if (request.filters?.minScore) {
-        filtered = filtered.filter(
-          (r) => r.score >= request.filters!.minScore!,
-        );
+      if (request.filters?.minScore !== undefined) {
+        const minScore = request.filters.minScore;
+        filtered = filtered.filter((r) => r.score >= minScore);
       }
 
       if (request.filters?.tags) {
+        const tags = request.filters.tags;
         filtered = filtered.filter((r) =>
-          r.tags?.some((tag) => request.filters!.tags!.includes(tag)),
+          r.tags?.some((tag) => tags.includes(tag)),
         );
       }
 
@@ -508,11 +648,11 @@ export class DocumentIndexingService {
       try {
         const entries = await this.alexandriaRegistry.getRepositories();
         this.alexandriaRepositories = entries
-          .map((entry: any) => ({
-            path: entry.localClones?.[0]?.path || entry.location || '',
+          .map((entry: AlexandriaEntry) => ({
+            path: entry.path || '',
             name: entry.name,
           }))
-          .filter((repo: any) => repo.path); // Filter out entries without valid paths
+          .filter((repo) => repo.path); // Filter out entries without valid paths
       } catch (error) {
         console.error(
           '[DocumentIndexingService] Failed to load Alexandria repositories:',
@@ -578,8 +718,7 @@ export class DocumentIndexingService {
    */
   private sendIndexUpdate(event: IndexUpdateEvent): void {
     // Send to all renderer windows
-    const { BrowserWindow } = require('electron');
-    BrowserWindow.getAllWindows().forEach((window: any) => {
+    BrowserWindow.getAllWindows().forEach((window) => {
       window.webContents.send(DocumentSearchChannel.INDEX_UPDATE, event);
     });
   }
@@ -588,8 +727,7 @@ export class DocumentIndexingService {
    * Send document changed event to renderer
    */
   private sendDocumentChanged(event: DocumentChangedEvent): void {
-    const { BrowserWindow } = require('electron');
-    BrowserWindow.getAllWindows().forEach((window: any) => {
+    BrowserWindow.getAllWindows().forEach((window) => {
       window.webContents.send(DocumentSearchChannel.DOCUMENT_CHANGED, event);
     });
   }
@@ -598,8 +736,7 @@ export class DocumentIndexingService {
    * Send index error event to renderer
    */
   private sendIndexError(event: IndexErrorEvent): void {
-    const { BrowserWindow } = require('electron');
-    BrowserWindow.getAllWindows().forEach((window: any) => {
+    BrowserWindow.getAllWindows().forEach((window) => {
       window.webContents.send(DocumentSearchChannel.INDEX_ERROR, event);
     });
   }
@@ -608,7 +745,12 @@ export class DocumentIndexingService {
    * Cleanup on shutdown
    */
   async shutdown(): Promise<void> {
-    // No watchers to close anymore
+    // Clear all debounce timers
+    for (const timer of this.debounceTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.debounceTimers.clear();
+    this.pendingChanges.clear();
 
     // Save index
     if (this.config.persistIndex && this.searchEngine) {
