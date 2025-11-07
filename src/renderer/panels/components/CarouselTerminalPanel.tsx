@@ -852,7 +852,8 @@ export const CarouselTerminalPanel = forwardRef<
 
               <span
                 style={{
-                  fontSize: '13px',
+                  fontSize: theme.fontSizes[0],
+                  fontFamily: theme.fonts.body,
                   color: theme.colors.textSecondary,
                   minWidth: '60px',
                   textAlign: 'center',
@@ -1082,7 +1083,8 @@ export const CarouselTerminalPanel = forwardRef<
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  fontSize: '14px',
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts.body,
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.opacity = '0.9';
@@ -1121,7 +1123,8 @@ export const CarouselTerminalPanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '11px',
+        fontSize: theme.fontSizes[0],
+        fontFamily: theme.fonts.body,
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',
@@ -1163,7 +1166,7 @@ export const CarouselTerminalPanelPreview: React.FC = () => {
       </div>
       <div
         style={{
-          fontFamily: 'monospace',
+          fontFamily: theme.fonts.mono,
           color: theme.colors.textSecondary,
         }}
       >

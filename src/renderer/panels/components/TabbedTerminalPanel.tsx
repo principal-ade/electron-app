@@ -637,8 +637,11 @@ export const TabbedTerminalPanel = forwardRef<
                       : theme.colors.backgroundSecondary,
                     borderBottom: `1px solid ${theme.colors.border}`,
                     cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: tab.isActive ? 600 : 400,
+                    fontSize: theme.fontSizes[1],
+                    fontWeight: tab.isActive
+                      ? theme.fontWeights.semibold
+                      : theme.fontWeights.body,
+                    fontFamily: theme.fonts.body,
                     color: tab.isActive
                       ? theme.colors.text
                       : theme.colors.textSecondary,
@@ -925,7 +928,8 @@ export const TabbedTerminalPanel = forwardRef<
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  fontSize: '14px',
+                  fontSize: theme.fontSizes[1],
+                  fontFamily: theme.fonts.body,
                 }}
               >
                 New Terminal
@@ -958,7 +962,8 @@ export const TabbedTerminalPanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '11px',
+        fontSize: theme.fontSizes[0],
+        fontFamily: theme.fonts.body,
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',
@@ -995,7 +1000,7 @@ export const TabbedTerminalPanelPreview: React.FC = () => {
       </div>
       <div
         style={{
-          fontFamily: 'monospace',
+          fontFamily: theme.fonts.mono,
           color: theme.colors.textSecondary,
         }}
       >

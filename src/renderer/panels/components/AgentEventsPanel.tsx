@@ -279,12 +279,19 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Activity size={16} style={{ color: theme.colors.primary }} />
-          <span style={{ fontWeight: 600, fontSize: '14px' }}>
+          <span
+            style={{
+              fontWeight: theme.fontWeights.semibold,
+              fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
+            }}
+          >
             Agent Events
           </span>
           <span
             style={{
-              fontSize: '12px',
+              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts.body,
               color: theme.colors.textSecondary,
               backgroundColor: theme.colors.background,
               padding: '2px 8px',
@@ -304,7 +311,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
             style={{
               height: '32px',
               padding: '0 12px',
-              fontSize: '12px',
+              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts.body,
               backgroundColor:
                 healthStatus === 'healthy'
                   ? theme.colors.success
@@ -361,7 +369,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
             style={{
               height: '32px',
               padding: '0 12px',
-              fontSize: '12px',
+              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts.body,
               backgroundColor: filterByRepo
                 ? theme.colors.primary
                 : 'transparent',
@@ -387,7 +396,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
             style={{
               height: '32px',
               padding: '0 12px',
-              fontSize: '12px',
+              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts.body,
               backgroundColor: autoScroll
                 ? theme.colors.success
                 : 'transparent',
@@ -408,7 +418,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
             style={{
               height: '32px',
               padding: '0 12px',
-              fontSize: '12px',
+              fontSize: theme.fontSizes[0],
+              fontFamily: theme.fonts.body,
               backgroundColor: 'transparent',
               color:
                 events.length === 0
@@ -448,7 +459,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
               onClick={() => toggleEventTypeFilter(eventType)}
               style={{
                 padding: '4px 8px',
-                fontSize: '11px',
+                fontSize: theme.fontSizes[0],
+                fontFamily: theme.fonts.body,
                 backgroundColor:
                   selectedEventTypes.has(eventType) ||
                   selectedEventTypes.size === 0
@@ -496,12 +508,23 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
               size={32}
               style={{ opacity: 0.3, marginBottom: '12px' }}
             />
-            <div style={{ fontSize: '14px' }}>
+            <div
+              style={{
+                fontSize: theme.fontSizes[1],
+                fontFamily: theme.fonts.body,
+              }}
+            >
               {events.length === 0
                 ? 'No events received yet'
                 : 'No events match the filter'}
             </div>
-            <div style={{ fontSize: '12px', marginTop: '4px' }}>
+            <div
+              style={{
+                fontSize: theme.fontSizes[0],
+                fontFamily: theme.fonts.body,
+                marginTop: '4px',
+              }}
+            >
               {filterByRepo && repositoryPath
                 ? `Listening for events in ${repositoryPath}`
                 : 'Listening for events from all repositories'}
@@ -562,8 +585,9 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                       >
                         <span
                           style={{
-                            fontSize: '11px',
-                            fontWeight: 600,
+                            fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts.body,
+                            fontWeight: theme.fontWeights.semibold,
                             color: eventColor,
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px',
@@ -574,12 +598,13 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                         {entry.event.toolName && (
                           <span
                             style={{
-                              fontSize: '11px',
+                              fontSize: theme.fontSizes[0],
+                              fontFamily: theme.fonts.body,
                               color: theme.colors.text,
                               backgroundColor: theme.colors.backgroundSecondary,
                               padding: '2px 6px',
                               borderRadius: '3px',
-                              fontWeight: 500,
+                              fontWeight: theme.fontWeights.medium,
                             }}
                           >
                             {entry.event.toolName}
@@ -587,7 +612,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                         )}
                         <span
                           style={{
-                            fontSize: '11px',
+                            fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts.body,
                             color: theme.colors.textSecondary,
                           }}
                         >
@@ -595,7 +621,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                         </span>
                         <span
                           style={{
-                            fontSize: '11px',
+                            fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts.body,
                             color: theme.colors.textSecondary,
                           }}
                         >
@@ -606,7 +633,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                       {filePaths.length > 0 && (
                         <div
                           style={{
-                            fontSize: '12px',
+                            fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts.body,
                             color: theme.colors.text,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -652,14 +680,15 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                         padding: '12px',
                         borderTop: `1px solid ${theme.colors.border}`,
                         backgroundColor: theme.colors.backgroundSecondary,
-                        fontSize: '12px',
+                        fontSize: theme.fontSizes[0],
+                        fontFamily: theme.fonts.body,
                       }}
                     >
                       {/* Session info */}
                       <div style={{ marginBottom: '12px' }}>
                         <div
                           style={{
-                            fontWeight: 600,
+                            fontWeight: theme.fontWeights.semibold,
                             marginBottom: '4px',
                             color: theme.colors.textSecondary,
                           }}
@@ -667,7 +696,10 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                           Session
                         </div>
                         <div
-                          style={{ fontFamily: 'monospace', fontSize: '11px' }}
+                          style={{
+                            fontFamily: theme.fonts.mono,
+                            fontSize: theme.fontSizes[0],
+                          }}
                         >
                           {entry.event.sessionId}
                         </div>
@@ -678,14 +710,19 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                         <div style={{ marginBottom: '12px' }}>
                           <div
                             style={{
-                              fontWeight: 600,
+                              fontWeight: theme.fontWeights.semibold,
                               marginBottom: '4px',
                               color: theme.colors.textSecondary,
                             }}
                           >
                             Repository
                           </div>
-                          <div style={{ fontSize: '11px' }}>
+                          <div
+                            style={{
+                              fontSize: theme.fontSizes[0],
+                              fontFamily: theme.fonts.body,
+                            }}
+                          >
                             <div>
                               📦 {entry.event.repository.owner}/
                               {entry.event.repository.repo}
@@ -705,7 +742,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                         <div style={{ marginBottom: '12px' }}>
                           <div
                             style={{
-                              fontWeight: 600,
+                              fontWeight: theme.fontWeights.semibold,
                               marginBottom: '4px',
                               color: theme.colors.textSecondary,
                             }}
@@ -723,8 +760,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                               <div
                                 key={path}
                                 style={{
-                                  fontSize: '11px',
-                                  fontFamily: 'monospace',
+                                  fontSize: theme.fontSizes[0],
+                                  fontFamily: theme.fonts.mono,
                                   color: theme.colors.text,
                                   padding: '2px 6px',
                                   backgroundColor: theme.colors.background,
@@ -746,7 +783,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                       <div>
                         <div
                           style={{
-                            fontWeight: 600,
+                            fontWeight: theme.fontWeights.semibold,
                             marginBottom: '4px',
                             color: theme.colors.textSecondary,
                           }}
@@ -755,8 +792,8 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                         </div>
                         <pre
                           style={{
-                            fontSize: '10px',
-                            fontFamily: 'monospace',
+                            fontSize: theme.fontSizes[0],
+                            fontFamily: theme.fonts.mono,
                             backgroundColor: theme.colors.background,
                             padding: '8px',
                             borderRadius: '4px',
@@ -790,7 +827,8 @@ export const AgentEventsPanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '11px',
+        fontSize: theme.fontSizes[0],
+        fontFamily: theme.fonts.body,
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',
@@ -805,7 +843,7 @@ export const AgentEventsPanelPreview: React.FC = () => {
           borderLeft: `3px solid #3b82f6`,
         }}
       >
-        <div style={{ fontWeight: 600 }}>Read</div>
+        <div style={{ fontWeight: theme.fontWeights.semibold }}>Read</div>
         <div style={{ color: theme.colors.textSecondary }}>src/index.ts</div>
       </div>
       <div
@@ -816,7 +854,7 @@ export const AgentEventsPanelPreview: React.FC = () => {
           borderLeft: `3px solid #22c55e`,
         }}
       >
-        <div style={{ fontWeight: 600 }}>Write</div>
+        <div style={{ fontWeight: theme.fontWeights.semibold }}>Write</div>
         <div style={{ color: theme.colors.textSecondary }}>src/utils.ts</div>
       </div>
     </div>

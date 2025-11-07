@@ -57,9 +57,10 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
       <div
         style={{
           fontSize: theme.fontSizes[1],
+          fontFamily: theme.fonts.body,
           color: theme.colors.textSecondary,
           marginBottom: '12px',
-          fontWeight: 600,
+          fontWeight: theme.fontWeights.semibold,
           textTransform: 'uppercase',
           display: 'flex',
           alignItems: 'center',
@@ -97,8 +98,9 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
             <div
               style={{
                 fontSize: theme.fontSizes[2],
+                fontFamily: theme.fonts.body,
                 color: theme.colors.text,
-                fontWeight: 500,
+                fontWeight: theme.fontWeights.medium,
                 flex: 1,
                 lineHeight: '1.4',
               }}
@@ -150,7 +152,10 @@ export const GitStatusPanel: React.FC<GitStatusPanelProps> = ({
             )}
             {repository.lastCommitHash && (
               <span
-                style={{ fontFamily: theme.fonts.monospace, fontSize: '9px' }}
+                style={{
+                  fontFamily: theme.fonts.monospace,
+                  fontSize: theme.fontSizes[0],
+                }}
               >
                 {repository.lastCommitHash.substring(0, 8)}
               </span>
@@ -172,7 +177,8 @@ export const GitStatusPanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '12px',
+        fontSize: theme.fontSizes[0],
+        fontFamily: theme.fonts.body,
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',
@@ -187,11 +193,11 @@ export const GitStatusPanelPreview: React.FC = () => {
         }}
       >
         <GitBranch size={14} />
-        <span style={{ fontWeight: 500 }}>main</span>
+        <span style={{ fontWeight: theme.fontWeights.medium }}>main</span>
       </div>
       <div
         style={{
-          fontSize: '11px',
+          fontSize: theme.fontSizes[0],
           color: theme.colors.textSecondary,
         }}
       >
@@ -199,7 +205,7 @@ export const GitStatusPanelPreview: React.FC = () => {
       </div>
       <div
         style={{
-          fontSize: '10px',
+          fontSize: theme.fontSizes[0],
           color: theme.colors.textTertiary,
           display: 'flex',
           gap: '4px',
