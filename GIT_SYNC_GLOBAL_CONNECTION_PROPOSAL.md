@@ -6,13 +6,15 @@ This document proposes architectural changes to support **global Git-Sync connec
 
 ## Current Architecture
 
-### Connection Model
-- **Connection Type**: Room-only
-- **Connection ID**: `${repoId}:${branch}` (e.g., "a24z-ai/a24z:main")
-- **Connection Requirement**: Must specify repository and branch
-- **Presence**: Only visible when in a specific room
+### Connection Mode
+
+* **Connection Type**: Room-only
+* **Connection ID**: `${repoId}:${branch}` (e.g., "a24z-ai/a24z:main")
+* **Connection Requirement**: Must specify repository and branch
+* **Presence**: Only visible when in a specific room
 
 ### Connection Config
+
 ```typescript
 interface GitSyncConfig {
   repoId: string;      // Required: "owner/repo"
@@ -23,9 +25,10 @@ interface GitSyncConfig {
 ```
 
 ### Limitations
+
 1. Users must open a repository to appear online
 2. Cannot see global presence without joining a room
-3. Closing all repositories = disconnecting from Git-Sync entirely
+3. Closing all repositories \= disconnecting from Git-Sync entirely
 4. No persistent connection for presence-only features
 5. Connection status tied to specific repo/branch combinations
 
@@ -34,27 +37,29 @@ interface GitSyncConfig {
 ### Two-Tier Connection Model
 
 #### 1. Global Connection (Presence Layer)
-- **Purpose**: Authentication, presence broadcasting, user discovery
-- **Lifecycle**: Establish on app launch (when authenticated), persist across repository changes
-- **Features**:
-  - Global presence ("User is online")
-  - User discovery (see all online users)
-  - Cross-repository notifications
-  - Real-time collaboration signals
-  - Device tracking
+
+* **Purpose**: Authentication, presence broadcasting, user discovery
+* **Lifecycle**: Establish on app launch (when authenticated), persist across repository changes
+* **Features**:
+  * Global presence ("User is online")
+  * User discovery (see all online users)
+  * Cross-repository notifications
+  * Real-time collaboration signals
+  * Device tracking
 
 #### 2. Room Connections (Collaboration Layer)
-- **Purpose**: Repository/branch-specific collaboration
-- **Lifecycle**: Created when opening a repository, destroyed when closed
-- **Features**:
-  - File locking
-  - Presence in specific repo/branch
-  - Repository-specific events
-  - Peer tracking per room
+
+* **Purpose**: Repository/branch-specific collaboration
+* **Lifecycle**: Created when opening a repository, destroyed when closed
+* **Features**:
+  * File locking
+  * Presence in specific repo/branch
+  * Repository-specific events
+  * Peer tracking per room
 
 ### Connection States
 
-```
+```markdown
 User States:
 1. Offline:           Not connected to Git-Sync at all
 2. Online (Global):   Connected to Git-Sync, no rooms joined
@@ -72,14 +77,16 @@ Connection Types:
 #### New Endpoints/Connection Types
 
 **Global Connection Endpoint**
-```
+
+```markdown
 WebSocket: /presence/connect
 Auth: GitHub token (no repo-specific permissions required)
 Purpose: Global presence and user discovery
 ```
 
 **Room Connection** (existing pattern)
-```
+
+```markdown
 WebSocket: /sync/connect
 Auth: GitHub token + repo-specific verification
 Purpose: Repository/branch collaboration
@@ -127,6 +134,7 @@ class GitSyncServer {
 #### New Message Protocol
 
 **Global Connection Messages**
+
 ```typescript
 // Client → Server
 {
@@ -163,6 +171,7 @@ class GitSyncServer {
 ```
 
 **Room Connection Messages** (existing, unchanged)
+
 ```typescript
 {
   type: 'lock_acquired',
@@ -176,14 +185,16 @@ class GitSyncServer {
 #### Authentication Changes
 
 **Global Connection Auth**
-- Verify GitHub token validity
-- No repository-specific permissions required
-- Rate limiting per user (prevent abuse)
+
+* Verify GitHub token validity
+* No repository-specific permissions required
+* Rate limiting per user (prevent abuse)
 
 **Room Connection Auth** (existing)
-- Verify GitHub token validity
-- Verify repository access permissions
-- Check branch access rights
+
+* Verify GitHub token validity
+* Verify repository access permissions
+* Check branch access rights
 
 ### 2. Main Process Changes (Electron)
 
@@ -482,24 +493,28 @@ const tooltip = isGloballyConnected
 ## Migration Strategy
 
 ### Phase 1: Server Implementation
+
 1. Add global connection endpoint
 2. Implement presence tracking
 3. Add message protocol for global events
 4. Deploy alongside existing room-only connections (backward compatible)
 
 ### Phase 2: Main Process Updates
+
 1. Add global connection methods to GitSyncWebSocketManager
 2. Update IPC API with new methods
 3. Implement connection lifecycle management
 4. Test with both connection types
 
 ### Phase 3: Renderer Updates
+
 1. Update GitSyncConnectionManager
 2. Modify useGitSyncConnection hook
 3. Update UI components (PresencePanel, GitSyncStatusIndicator)
 4. Add global connect/disconnect functionality
 
 ### Phase 4: Testing & Rollout
+
 1. Test global connection without rooms
 2. Test room connections with global connection
 3. Test disconnection scenarios
@@ -509,23 +524,26 @@ const tooltip = isGloballyConnected
 ## Benefits
 
 ### User Experience
-- ✅ Always visible to team when app is open
-- ✅ See who's online without opening repositories
-- ✅ Persistent presence across repository switches
-- ✅ Better collaboration awareness
+
+* ✅ Always visible to team when app is open
+* ✅ See who's online without opening repositories
+* ✅ Persistent presence across repository switches
+* ✅ Better collaboration awareness
 
 ### Technical
-- ✅ Cleaner separation of concerns (presence vs collaboration)
-- ✅ Reduced connection churn (global connection persists)
-- ✅ More efficient presence updates (single global connection)
-- ✅ Foundation for cross-repository features
+
+* ✅ Cleaner separation of concerns (presence vs collaboration)
+* ✅ Reduced connection churn (global connection persists)
+* ✅ More efficient presence updates (single global connection)
+* ✅ Foundation for cross-repository features
 
 ### Future Capabilities
-- Direct messaging between users
-- Cross-repository notifications
-- Team presence dashboard
-- Activity feeds across all repositories
-- Smart suggestions based on team activity
+
+* Direct messaging between users
+* Cross-repository notifications
+* Team presence dashboard
+* Activity feeds across all repositories
+* Smart suggestions based on team activity
 
 ## Backward Compatibility
 
@@ -549,40 +567,45 @@ The proposed changes maintain backward compatibility:
 ## Security Considerations
 
 ### Global Connection
-- Token validation on every connection
-- Rate limiting to prevent abuse
-- No repository data transmitted over global connection
-- Presence-only information (no sensitive data)
+
+* Token validation on every connection
+* Rate limiting to prevent abuse
+* No repository data transmitted over global connection
+* Presence-only information (no sensitive data)
 
 ### Room Connection
-- Existing security model unchanged
-- Repository access verification required
-- File content remains room-specific
-- Separate token validation per room
+
+* Existing security model unchanged
+* Repository access verification required
+* File content remains room-specific
+* Separate token validation per room
 
 ## Performance Considerations
 
 ### Server Load
-- **Before**: N connections per user (one per open repo)
-- **After**: 1 global + N room connections per user
-- **Net impact**: +1 connection per user, but more efficient presence updates
+
+* **Before**: N connections per user (one per open repo)
+* **After**: 1 global + N room connections per user
+* **Net impact**: +1 connection per user, but more efficient presence updates
 
 ### Network Traffic
-- Global connection: Low bandwidth (presence events only)
-- Room connections: Higher bandwidth (file operations, locks)
-- Overall: Slight increase, but more efficient presence broadcasting
+
+* Global connection: Low bandwidth (presence events only)
+* Room connections: Higher bandwidth (file operations, locks)
+* Overall: Slight increase, but more efficient presence broadcasting
 
 ### Connection Stability
-- Global connection: Long-lived, needs robust reconnection
-- Room connections: Shorter-lived, tolerant of failures
-- Monitoring: Track connection health separately
+
+* Global connection: Long-lived, needs robust reconnection
+* Room connections: Shorter-lived, tolerant of failures
+* Monitoring: Track connection health separately
 
 ## Success Metrics
 
 1. **Connection reliability**: Global connection uptime >99.5%
 2. **User adoption**: % of users with persistent global connection
-3. **Presence accuracy**: Latency of presence updates <2s
-4. **Room join time**: Time to join room after opening repository <500ms
+3. **Presence accuracy**: Latency of presence updates \<2s
+4. **Room join time**: Time to join room after opening repository \<500ms
 5. **User satisfaction**: Feedback on improved collaboration awareness
 
 ## Next Steps
@@ -598,19 +621,19 @@ The proposed changes maintain backward compatibility:
 
 ## Timeline Estimate
 
-- **Server implementation**: 2-3 weeks
-- **Main process changes**: 1-2 weeks
-- **Renderer updates**: 1 week
-- **Testing & refinement**: 1-2 weeks
-- **Total**: ~6-8 weeks
+* **Server implementation**: 2-3 weeks
+* **Main process changes**: 1-2 weeks
+* **Renderer updates**: 1 week
+* **Testing & refinement**: 1-2 weeks
+* **Total**: \~6-8 weeks
 
 ## Related Documents
 
-- `GIT_SYNC_ARCHITECTURE_AND_ISSUES.md` - Current architecture overview
-- Server repository documentation
-- WebSocket protocol specification
+* `GIT_SYNC_ARCHITECTURE_AND_ISSUES.md` - Current architecture overview
+* Server repository documentation
+* WebSocket protocol specification
 
----
+***
 
 **Document Version**: 1.0
 **Date**: 2025-11-05

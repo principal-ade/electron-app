@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   MapIcon,
   HelpCircle,
@@ -15,6 +15,7 @@ import {
   type CityData,
   type CityBuilding,
   type CityDistrict,
+  createFileColorHighlightLayers,
 } from '@principal-ai/code-city-react';
 import {
   RepositoryToolbar,
@@ -73,7 +74,7 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
   toolbarExpanded = false,
 }) => {
   const { theme } = useTheme();
-  const { getAllLayers, setLayerEnabled } = useHighlightLayers();
+  const { getAllLayers, setLayerEnabled, registerLayer, unregisterLayer } = useHighlightLayers();
   const highlightLayers = getAllLayers();
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
   const [showLayersPanel, setShowLayersPanel] = useState(false);
@@ -88,24 +89,29 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
       return null;
     }
 
-    // Count files and directories from cityData
-    let fileCount = 0;
+    // Use metadata if available, otherwise count manually
+    if (cityData.metadata?.totalFiles !== undefined && cityData.metadata?.totalDirectories !== undefined) {
+      return {
+        fileCount: cityData.metadata.totalFiles,
+        directoryCount: cityData.metadata.totalDirectories,
+      };
+    }
+
+    // Count files from buildings array and directories from districts tree
+    const fileCount = cityData.buildings?.length || 0;
     let directoryCount = 0;
 
-    const countItems = (districts: CityDistrict[]) => {
+    const countDistricts = (districts: CityDistrict[]) => {
       for (const district of districts) {
         directoryCount++;
-        if (district.buildings) {
-          fileCount += district.buildings.length;
-        }
-        if (district.subDistricts) {
-          countItems(district.subDistricts);
+        if (district.children) {
+          countDistricts(district.children);
         }
       }
     };
 
     if (cityData.districts) {
-      countItems(cityData.districts);
+      countDistricts(cityData.districts);
     }
 
     return { fileCount, directoryCount };
@@ -122,6 +128,65 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
       onRequestCityData();
     }
   }, [cityData, loading, onRequestCityData]);
+
+  // Generate file color layers from city data
+  const fileColorLayers = useMemo(() => {
+    if (!cityData || !cityData.buildings) {
+      return [];
+    }
+
+    // Create file color layers based on file extensions
+    const layers = createFileColorHighlightLayers(cityData.buildings);
+    return layers;
+  }, [cityData]);
+
+  // Track whether file color layers are currently registered and the last git/agent state
+  const fileColorLayersRegistered = useRef(false);
+  const lastHasGitOrAgentLayers = useRef<boolean | null>(null);
+
+  // Compute whether git/agent layers exist (memoized to avoid recalculation)
+  const hasGitOrAgentLayers = useMemo(() => {
+    return highlightLayers.some(
+      (layer) =>
+        (layer.id.includes('git-highlight') ||
+          layer.id.includes('agent') ||
+          layer.id.includes('event-highlight')) &&
+        !layer.id.includes('file-color')
+    );
+  }, [highlightLayers]);
+
+  // Register/unregister file suffix color layers based on presence of git/agent layers
+  useEffect(() => {
+    const shouldShowFileColors = !hasGitOrAgentLayers && fileColorLayers.length > 0;
+
+    // Only update lastState if the git/agent state has changed
+    const gitAgentStateChanged = lastHasGitOrAgentLayers.current !== hasGitOrAgentLayers;
+    if (gitAgentStateChanged) {
+      lastHasGitOrAgentLayers.current = hasGitOrAgentLayers;
+    }
+
+    // Register file color layers if they should be shown and aren't already registered
+    if (shouldShowFileColors && !fileColorLayersRegistered.current) {
+      fileColorLayers.forEach((layer, idx) => {
+        const layerId = `file-color-${idx}`;
+        registerLayer(layerId, {
+          name: layer.name,
+          enabled: true,
+          color: layer.color,
+          priority: layer.priority || 0,
+          items: layer.items,
+        });
+      });
+      fileColorLayersRegistered.current = true;
+    }
+    // Unregister file color layers if they shouldn't be shown but are currently registered
+    else if (!shouldShowFileColors && fileColorLayersRegistered.current) {
+      fileColorLayers.forEach((_, idx) => {
+        unregisterLayer(`file-color-${idx}`);
+      });
+      fileColorLayersRegistered.current = false;
+    }
+  }, [hasGitOrAgentLayers, fileColorLayers, registerLayer, unregisterLayer]);
 
   return (
     <div
