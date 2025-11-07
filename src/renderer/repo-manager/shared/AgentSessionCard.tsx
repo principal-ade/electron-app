@@ -458,8 +458,8 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                               </span>
                               <span
                                 style={{
-                                  fontFamily: 'monospace',
-                                  fontSize: '12px',
+                                  fontFamily: theme.fonts.monospace,
+                                  fontSize: theme.fontSizes[1],
                                   color: theme.colors.textSecondary,
                                 }}
                               >
@@ -778,8 +778,8 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                   <span style={{ opacity: 0.5 }}>•</span>
                   <span
                     style={{
-                      fontFamily: 'monospace',
-                      fontSize: '11px',
+                      fontFamily: theme.fonts.monospace,
+                      fontSize: theme.fontSizes[0],
                       color: theme.colors.textTertiary,
                       cursor: 'pointer',
                       transition: 'color 0.2s',
@@ -935,7 +935,7 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                       <>
                         <span style={{ opacity: 0.5 }}>→</span>
                         <span
-                          style={{ fontFamily: 'monospace', fontSize: '10px' }}
+                          style={{ fontFamily: theme.fonts.monospace, fontSize: theme.fontSizes[0] }}
                         >
                           {cardData.latestEvent.fileName}
                         </span>
@@ -1062,8 +1062,8 @@ export const AgentSessionCard: React.FC<AgentSessionCardProps> = ({
                             </span>
                             <span
                               style={{
-                                fontFamily: 'monospace',
-                                fontSize: '12px',
+                                fontFamily: theme.fonts.monospace,
+                                fontSize: theme.fontSizes[1],
                                 color: theme.colors.textSecondary,
                               }}
                             >

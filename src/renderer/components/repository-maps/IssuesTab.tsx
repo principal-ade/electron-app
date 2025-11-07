@@ -394,7 +394,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
               <p
                 style={{
                   fontFamily: 'monospace',
-                  fontSize: '14px',
+                  fontSize: theme.fontSizes[2],
                   color: theme.colors.text,
                   marginBottom: '8px',
                 }}
@@ -403,7 +403,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
               </p>
               <p
                 style={{
-                  fontSize: '12px',
+                  fontSize: theme.fontSizes[1],
                   color: theme.colors.textSecondary,
                 }}
               >
@@ -450,8 +450,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                     issueFilter === filter
                       ? theme.colors.background
                       : theme.colors.text,
-                  fontSize: '13px',
-                  fontWeight: issueFilter === filter ? 600 : 400,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: issueFilter === filter ? theme.fontWeights.semibold : 400,
                   cursor: 'pointer',
                   textTransform: 'capitalize',
                 }}
@@ -482,7 +482,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                 border: `1px solid ${theme.colors.border}`,
                 backgroundColor: theme.colors.background,
                 color: theme.colors.textSecondary,
-                fontSize: '13px',
+                fontSize: theme.fontSizes[2],
                 cursor: 'pointer',
               }}
             >
@@ -505,8 +505,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
               border: `1px solid ${theme.colors.border}`,
               backgroundColor: theme.colors.background,
               color: theme.colors.text,
-              fontSize: '14px',
-              fontWeight: 600,
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.semibold,
               cursor: 'pointer',
             }}
           >
@@ -532,8 +532,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                 selectedIssues.size > 0
                   ? theme.colors.background
                   : theme.colors.textSecondary,
-              fontSize: '14px',
-              fontWeight: 600,
+              fontSize: theme.fontSizes[2],
+              fontWeight: theme.fontWeights.semibold,
               cursor: selectedIssues.size > 0 ? 'pointer' : 'not-allowed',
               opacity: selectedIssues.size > 0 ? 1 : 0.5,
             }}
@@ -621,8 +621,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                           backgroundColor:
                             issue.state === 'open' ? '#22c55e22' : '#6b728022',
                           color: issue.state === 'open' ? '#22c55e' : '#6b7280',
-                          fontSize: '11px',
-                          fontWeight: 600,
+                          fontSize: theme.fontSizes[0],
+                          fontWeight: theme.fontWeights.semibold,
                           textTransform: 'uppercase',
                         }}
                       >
@@ -632,7 +632,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                       <span
                         style={{
                           color: theme.colors.textSecondary,
-                          fontSize: '13px',
+                          fontSize: theme.fontSizes[2],
                         }}
                       >
                         #{issue.number}
@@ -659,8 +659,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                       style={{
                         color: theme.colors.text,
                         marginBottom: '8px',
-                        fontSize: '15px',
-                        fontWeight: 600,
+                        fontSize: theme.fontSizes[3],
+                        fontWeight: theme.fontWeights.semibold,
                       }}
                     >
                       {issue.title}
@@ -686,8 +686,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                               borderRadius: '12px',
                               backgroundColor: `#${label.color}22`,
                               color: `#${label.color}`,
-                              fontSize: '11px',
-                              fontWeight: 500,
+                              fontSize: theme.fontSizes[0],
+                              fontWeight: theme.fontWeights.medium,
                             }}
                           >
                             <Tag size={10} />
@@ -702,7 +702,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                         display: 'flex',
                         alignItems: 'center',
                         gap: '16px',
-                        fontSize: '12px',
+                        fontSize: theme.fontSizes[1],
                         color: theme.colors.textSecondary,
                       }}
                     >
@@ -816,8 +816,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                           : '#6b728022',
                       color:
                         selectedIssue.state === 'open' ? '#22c55e' : '#6b7280',
-                      fontSize: '12px',
-                      fontWeight: 600,
+                      fontSize: theme.fontSizes[1],
+                      fontWeight: theme.fontWeights.semibold,
                       textTransform: 'uppercase',
                     }}
                   >
@@ -826,7 +826,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                   <span
                     style={{
                       color: theme.colors.textSecondary,
-                      fontSize: '14px',
+                      fontSize: theme.fontSizes[2],
                     }}
                   >
                     #{selectedIssue.number}
@@ -835,8 +835,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                 <h2
                   style={{
                     color: theme.colors.text,
-                    fontSize: '20px',
-                    fontWeight: 600,
+                    fontSize: theme.fontSizes[4],
+                    fontWeight: theme.fontWeights.semibold,
                     margin: 0,
                   }}
                 >
@@ -875,7 +875,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                   alignItems: 'center',
                   gap: '20px',
                   marginBottom: '20px',
-                  fontSize: '13px',
+                  fontSize: theme.fontSizes[2],
                   color: theme.colors.textSecondary,
                 }}
               >
@@ -935,8 +935,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                         borderRadius: '16px',
                         backgroundColor: `#${label.color}22`,
                         color: `#${label.color}`,
-                        fontSize: '12px',
-                        fontWeight: 500,
+                        fontSize: theme.fontSizes[1],
+                        fontWeight: theme.fontWeights.medium,
                       }}
                     >
                       <Tag size={12} />
@@ -959,8 +959,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                   <h3
                     style={{
                       color: theme.colors.text,
-                      fontSize: '14px',
-                      fontWeight: 600,
+                      fontSize: theme.fontSizes[2],
+                      fontWeight: theme.fontWeights.semibold,
                       marginTop: 0,
                       marginBottom: '12px',
                     }}
@@ -970,7 +970,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                   <div
                     style={{
                       color: theme.colors.text,
-                      fontSize: '14px',
+                      fontSize: theme.fontSizes[2],
                       lineHeight: 1.6,
                       whiteSpace: 'pre-wrap',
                       wordBreak: 'break-word',
@@ -1002,7 +1002,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                   gap: '6px',
                   color: theme.colors.primary,
                   textDecoration: 'none',
-                  fontSize: '14px',
+                  fontSize: theme.fontSizes[2],
                 }}
               >
                 <ExternalLink size={14} />
@@ -1023,8 +1023,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                       border: `1px solid ${theme.colors.border}`,
                       backgroundColor: theme.colors.background,
                       color: theme.colors.text,
-                      fontSize: '14px',
-                      fontWeight: 500,
+                      fontSize: theme.fontSizes[2],
+                      fontWeight: theme.fontWeights.medium,
                       cursor: isClosingIssue ? 'not-allowed' : 'pointer',
                       opacity: isClosingIssue ? 0.5 : 1,
                     }}
@@ -1046,8 +1046,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                     border: 'none',
                     backgroundColor: theme.colors.primary,
                     color: theme.colors.background,
-                    fontSize: '14px',
-                    fontWeight: 500,
+                    fontSize: theme.fontSizes[2],
+                    fontWeight: theme.fontWeights.medium,
                     cursor: 'pointer',
                   }}
                 >
@@ -1099,8 +1099,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
               <h2
                 style={{
                   color: theme.colors.text,
-                  fontSize: '20px',
-                  fontWeight: 600,
+                  fontSize: theme.fontSizes[4],
+                  fontWeight: theme.fontWeights.semibold,
                   margin: 0,
                 }}
               >
@@ -1134,8 +1134,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                   style={{
                     display: 'block',
                     color: theme.colors.text,
-                    fontSize: '14px',
-                    fontWeight: 600,
+                    fontSize: theme.fontSizes[2],
+                    fontWeight: theme.fontWeights.semibold,
                     marginBottom: '8px',
                   }}
                 >
@@ -1155,7 +1155,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                     border: `1px solid ${theme.colors.border}`,
                     backgroundColor: theme.colors.backgroundLight,
                     color: theme.colors.text,
-                    fontSize: '14px',
+                    fontSize: theme.fontSizes[2],
                   }}
                 />
               </div>
@@ -1166,8 +1166,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                   style={{
                     display: 'block',
                     color: theme.colors.text,
-                    fontSize: '14px',
-                    fontWeight: 600,
+                    fontSize: theme.fontSizes[2],
+                    fontWeight: theme.fontWeights.semibold,
                     marginBottom: '8px',
                   }}
                 >
@@ -1187,7 +1187,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                     border: `1px solid ${theme.colors.border}`,
                     backgroundColor: theme.colors.backgroundLight,
                     color: theme.colors.text,
-                    fontSize: '14px',
+                    fontSize: theme.fontSizes[2],
                     resize: 'vertical',
                   }}
                 />
@@ -1199,8 +1199,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                   style={{
                     display: 'block',
                     color: theme.colors.text,
-                    fontSize: '14px',
-                    fontWeight: 600,
+                    fontSize: theme.fontSizes[2],
+                    fontWeight: theme.fontWeights.semibold,
                     marginBottom: '8px',
                   }}
                 >
@@ -1222,7 +1222,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                       border: `1px solid ${theme.colors.border}`,
                       backgroundColor: theme.colors.backgroundLight,
                       color: theme.colors.text,
-                      fontSize: '14px',
+                      fontSize: theme.fontSizes[2],
                     }}
                   />
                   <button
@@ -1233,7 +1233,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                       border: 'none',
                       backgroundColor: theme.colors.primary,
                       color: theme.colors.background,
-                      fontSize: '14px',
+                      fontSize: theme.fontSizes[2],
                       cursor: 'pointer',
                     }}
                   >
@@ -1255,7 +1255,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                           borderRadius: '12px',
                           backgroundColor: theme.colors.primary + '22',
                           color: theme.colors.primary,
-                          fontSize: '12px',
+                          fontSize: theme.fontSizes[1],
                         }}
                       >
                         {label}
@@ -1283,8 +1283,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                   style={{
                     display: 'block',
                     color: theme.colors.text,
-                    fontSize: '14px',
-                    fontWeight: 600,
+                    fontSize: theme.fontSizes[2],
+                    fontWeight: theme.fontWeights.semibold,
                     marginBottom: '8px',
                   }}
                 >
@@ -1306,7 +1306,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                       border: `1px solid ${theme.colors.border}`,
                       backgroundColor: theme.colors.backgroundLight,
                       color: theme.colors.text,
-                      fontSize: '14px',
+                      fontSize: theme.fontSizes[2],
                     }}
                   />
                   <button
@@ -1317,7 +1317,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                       border: 'none',
                       backgroundColor: theme.colors.primary,
                       color: theme.colors.background,
-                      fontSize: '14px',
+                      fontSize: theme.fontSizes[2],
                       cursor: 'pointer',
                     }}
                   >
@@ -1339,7 +1339,7 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                           borderRadius: '12px',
                           backgroundColor: theme.colors.textSecondary + '22',
                           color: theme.colors.text,
-                          fontSize: '12px',
+                          fontSize: theme.fontSizes[1],
                         }}
                       >
                         @{assignee}
@@ -1381,8 +1381,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                   border: `1px solid ${theme.colors.border}`,
                   backgroundColor: theme.colors.background,
                   color: theme.colors.text,
-                  fontSize: '14px',
-                  fontWeight: 500,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: theme.fontWeights.medium,
                   cursor: 'pointer',
                 }}
               >
@@ -1406,8 +1406,8 @@ export const IssuesTab: React.FC<IssuesTabProps> = ({
                     isCreatingIssue || !newIssue.title.trim()
                       ? theme.colors.textSecondary
                       : theme.colors.background,
-                  fontSize: '14px',
-                  fontWeight: 600,
+                  fontSize: theme.fontSizes[2],
+                  fontWeight: theme.fontWeights.semibold,
                   cursor:
                     isCreatingIssue || !newIssue.title.trim()
                       ? 'not-allowed'

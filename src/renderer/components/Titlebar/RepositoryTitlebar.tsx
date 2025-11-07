@@ -8,6 +8,8 @@ import {
   ArrowLeftRight,
   ArrowRightLeft,
   FolderOpen,
+  Cloud,
+  CloudOff,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
@@ -26,6 +28,7 @@ import { SaveWorkspaceModal } from '../../repo-manager/shared/SaveWorkspaceModal
 import { DevSidecarService } from '../../main-process-api/DevSidecarService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { ShellService } from '../../main-process-api/ShellService';
+import { useRepositoryGitStatus } from '../../hooks/useRepositoryGitStatus';
 
 export interface RepositoryTitlebarProps {
   repository?: Repository;
@@ -90,6 +93,14 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
     null,
   );
   const [showOpenInIDE, setShowOpenInIDE] = useState(false);
+
+  // Get local clone path for git status
+  const localClonePath = selectedSource?.type === 'local'
+    ? selectedSource.location
+    : repository?.localClones?.[0]?.path;
+
+  // Subscribe to git status (includes ahead/behind counts)
+  const { gitStatus } = useRepositoryGitStatus(localClonePath || null);
 
   // Listen for dev sidecar window events
   useEffect(() => {
@@ -253,6 +264,62 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
                 >
                   {selectedSource.metadata.currentBranch}
                 </span>
+                {/* Remote sync status */}
+                {gitStatus && (
+                  <span
+                    style={{
+                      marginLeft: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    {gitStatus.ahead === 0 && gitStatus.behind === 0 ? (
+                      <span
+                        style={{
+                          color: theme.colors.success,
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                        title="In sync with remote"
+                      >
+                        <Cloud size={14} />
+                      </span>
+                    ) : (
+                      <>
+                        <span
+                          style={{
+                            color: theme.colors.warning,
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                          title={`${gitStatus.ahead > 0 ? `${gitStatus.ahead} commit${gitStatus.ahead > 1 ? 's' : ''} ahead` : ''}${gitStatus.ahead > 0 && gitStatus.behind > 0 ? ', ' : ''}${gitStatus.behind > 0 ? `${gitStatus.behind} commit${gitStatus.behind > 1 ? 's' : ''} behind` : ''}`}
+                        >
+                          <CloudOff size={14} />
+                        </span>
+                        <span
+                          style={{
+                            fontSize: `${theme.fontSizes[1]}px`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          {gitStatus.ahead > 0 && (
+                            <span style={{ color: theme.colors.success }}>
+                              ↑{gitStatus.ahead}
+                            </span>
+                          )}
+                          {gitStatus.behind > 0 && (
+                            <span style={{ color: theme.colors.warning }}>
+                              ↓{gitStatus.behind}
+                            </span>
+                          )}
+                        </span>
+                      </>
+                    )}
+                  </span>
+                )}
               </>
             )}
         </span>

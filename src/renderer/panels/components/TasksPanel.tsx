@@ -259,6 +259,7 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
               textAlign: 'center',
               color: theme.colors.textSecondary,
               fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
             }}
           >
             Loading tasks...
@@ -270,6 +271,7 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
               textAlign: 'center',
               color: theme.colors.error || '#ef4444',
               fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
             }}
           >
             {error}
@@ -281,6 +283,7 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
               textAlign: 'center',
               color: theme.colors.textSecondary,
               fontSize: theme.fontSizes[1],
+              fontFamily: theme.fonts.body,
             }}
           >
             <div
@@ -351,7 +354,8 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                       style={{
                         fontSize: theme.fontSizes[1],
                         color: theme.colors.text,
-                        fontWeight: 500,
+                        fontWeight: theme.fontWeights.medium,
+                        fontFamily: theme.fonts.body,
                         marginBottom: '4px',
                       }}
                     >
@@ -362,6 +366,7 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                         style={{
                           fontSize: theme.fontSizes[0],
                           color: theme.colors.textSecondary,
+                          fontFamily: theme.fonts.body,
                         }}
                       >
                         From: {task.senderId}
@@ -383,7 +388,8 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                           color: getPriorityColor(task.priority),
                           borderRadius: '10px',
                           fontSize: theme.fontSizes[0],
-                          fontWeight: 500,
+                          fontWeight: theme.fontWeights.medium,
+                          fontFamily: theme.fonts.body,
                           textTransform: 'uppercase',
                         }}
                       >
@@ -492,7 +498,8 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                           color: theme.colors.primary,
                           borderRadius: '10px',
                           fontSize: theme.fontSizes[0],
-                          fontWeight: 500,
+                          fontWeight: theme.fontWeights.medium,
+                          fontFamily: theme.fonts.body,
                         }}
                       >
                         {tag}
@@ -504,8 +511,9 @@ export const TasksPanel: React.FC<TasksPanelProps> = ({
                 {/* Metadata */}
                 <div
                   style={{
-                    fontSize: '10px',
+                    fontSize: theme.fontSizes[0],
                     color: theme.colors.textSecondary,
+                    fontFamily: theme.fonts.body,
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
@@ -538,7 +546,8 @@ export const TasksPanelPreview: React.FC = () => {
     <div
       style={{
         padding: '12px',
-        fontSize: '12px',
+        fontSize: theme.fontSizes[0],
+        fontFamily: theme.fonts.body,
         color: theme.colors.text,
         display: 'flex',
         flexDirection: 'column',

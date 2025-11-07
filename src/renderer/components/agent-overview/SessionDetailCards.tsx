@@ -51,7 +51,7 @@ export const FileActionButtons: React.FC<FileActionButtonsProps> = ({
         <p
           style={{
             color: theme.colors.success,
-            fontSize: '14px',
+            fontSize: theme.fontSizes[2],
             margin: '0 0 4px 0',
           }}
         >
@@ -59,8 +59,8 @@ export const FileActionButtons: React.FC<FileActionButtonsProps> = ({
         </p>
         <p
           style={{
-            fontSize: '20px',
-            fontWeight: 'bold',
+            fontSize: theme.fontSizes[4],
+            fontWeight: theme.fontWeights.bold,
             color: theme.colors.text,
             margin: 0,
           }}
@@ -95,7 +95,7 @@ export const FileActionButtons: React.FC<FileActionButtonsProps> = ({
         <p
           style={{
             color: theme.colors.error,
-            fontSize: '14px',
+            fontSize: theme.fontSizes[2],
             margin: '0 0 4px 0',
           }}
         >
@@ -103,8 +103,8 @@ export const FileActionButtons: React.FC<FileActionButtonsProps> = ({
         </p>
         <p
           style={{
-            fontSize: '20px',
-            fontWeight: 'bold',
+            fontSize: theme.fontSizes[4],
+            fontWeight: theme.fontWeights.bold,
             color: theme.colors.text,
             margin: 0,
           }}
@@ -139,7 +139,7 @@ export const FileActionButtons: React.FC<FileActionButtonsProps> = ({
         <p
           style={{
             color: theme.colors.warning,
-            fontSize: '14px',
+            fontSize: theme.fontSizes[2],
             margin: '0 0 4px 0',
           }}
         >
@@ -147,8 +147,8 @@ export const FileActionButtons: React.FC<FileActionButtonsProps> = ({
         </p>
         <p
           style={{
-            fontSize: '20px',
-            fontWeight: 'bold',
+            fontSize: theme.fontSizes[4],
+            fontWeight: theme.fontWeights.bold,
             color: theme.colors.text,
             margin: 0,
           }}
@@ -188,7 +188,7 @@ export const ToolStatsCards: React.FC<ToolStatsCardsProps> = ({
       >
         <p
           style={{
-            fontSize: '12px',
+            fontSize: theme.fontSizes[1],
             color: theme.colors.textSecondary,
             margin: '0 0 4px 0',
           }}
@@ -197,8 +197,8 @@ export const ToolStatsCards: React.FC<ToolStatsCardsProps> = ({
         </p>
         <p
           style={{
-            fontSize: '18px',
-            fontWeight: 600,
+            fontSize: theme.fontSizes[3],
+            fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
             margin: 0,
           }}
@@ -215,7 +215,7 @@ export const ToolStatsCards: React.FC<ToolStatsCardsProps> = ({
       >
         <p
           style={{
-            fontSize: '12px',
+            fontSize: theme.fontSizes[1],
             color: theme.colors.textSecondary,
             margin: '0 0 4px 0',
           }}
@@ -224,8 +224,8 @@ export const ToolStatsCards: React.FC<ToolStatsCardsProps> = ({
         </p>
         <p
           style={{
-            fontSize: '18px',
-            fontWeight: 600,
+            fontSize: theme.fontSizes[3],
+            fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
             margin: 0,
           }}
@@ -253,10 +253,10 @@ export const ToolUsageCard: React.FC<ToolUsageCardProps> = ({ toolCounts }) => {
     >
       <h3
         style={{
-          fontWeight: 500,
+          fontWeight: theme.fontWeights.medium,
           marginBottom: '8px',
           color: theme.colors.text,
-          fontSize: '14px',
+          fontSize: theme.fontSizes[2],
         }}
       >
         Tool Usage
@@ -287,14 +287,14 @@ export const ToolUsageCard: React.FC<ToolUsageCardProps> = ({ toolCounts }) => {
               <span
                 style={{
                   fontFamily: theme.fonts.monospace,
-                  fontSize: '13px',
+                  fontSize: theme.fontSizes[2],
                   color: theme.colors.text,
                 }}
               >
                 {toolName}
               </span>
               <span
-                style={{ fontSize: '12px', color: theme.colors.textSecondary }}
+                style={{ fontSize: theme.fontSizes[1], color: theme.colors.textSecondary }}
               >
                 {count}
               </span>
@@ -327,7 +327,7 @@ export const RecentToolCallsCard: React.FC<RecentToolCallsCardProps> = ({
     >
       <h3
         style={{
-          fontWeight: 500,
+          fontWeight: theme.fontWeights.medium,
           marginBottom: '12px',
           color: theme.colors.text,
         }}
@@ -366,7 +366,7 @@ export const RecentToolCallsCard: React.FC<RecentToolCallsCardProps> = ({
                 <span
                   style={{
                     fontFamily: theme.fonts.monospace,
-                    fontSize: '14px',
+                    fontSize: theme.fontSizes[2],
                     color: theme.colors.text,
                   }}
                 >
@@ -374,7 +374,7 @@ export const RecentToolCallsCard: React.FC<RecentToolCallsCardProps> = ({
                 </span>
                 <span
                   style={{
-                    fontSize: '12px',
+                    fontSize: theme.fontSizes[1],
                     color: theme.colors.textSecondary,
                   }}
                 >
@@ -385,7 +385,7 @@ export const RecentToolCallsCard: React.FC<RecentToolCallsCardProps> = ({
                 Object.keys(toolCall.parameters).length > 0 && (
                   <div
                     style={{
-                      fontSize: '12px',
+                      fontSize: theme.fontSizes[1],
                       color: theme.colors.textSecondary,
                     }}
                   >
@@ -440,7 +440,7 @@ export const KnipAnalysisStats: React.FC<KnipAnalysisStatsProps> = ({
       >
         <p
           style={{
-            fontSize: '12px',
+            fontSize: theme.fontSizes[1],
             color: theme.colors.textSecondary,
             margin: '0 0 4px 0',
           }}
@@ -449,8 +449,8 @@ export const KnipAnalysisStats: React.FC<KnipAnalysisStatsProps> = ({
         </p>
         <p
           style={{
-            fontSize: '18px',
-            fontWeight: 600,
+            fontSize: theme.fontSizes[3],
+            fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
             margin: 0,
           }}
@@ -467,7 +467,7 @@ export const KnipAnalysisStats: React.FC<KnipAnalysisStatsProps> = ({
       >
         <p
           style={{
-            fontSize: '12px',
+            fontSize: theme.fontSizes[1],
             color: theme.colors.textSecondary,
             margin: '0 0 4px 0',
           }}
@@ -476,8 +476,8 @@ export const KnipAnalysisStats: React.FC<KnipAnalysisStatsProps> = ({
         </p>
         <p
           style={{
-            fontSize: '18px',
-            fontWeight: 600,
+            fontSize: theme.fontSizes[3],
+            fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
             margin: 0,
           }}
@@ -494,7 +494,7 @@ export const KnipAnalysisStats: React.FC<KnipAnalysisStatsProps> = ({
       >
         <p
           style={{
-            fontSize: '12px',
+            fontSize: theme.fontSizes[1],
             color: theme.colors.textSecondary,
             margin: '0 0 4px 0',
           }}
@@ -503,8 +503,8 @@ export const KnipAnalysisStats: React.FC<KnipAnalysisStatsProps> = ({
         </p>
         <p
           style={{
-            fontSize: '18px',
-            fontWeight: 600,
+            fontSize: theme.fontSizes[3],
+            fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
             margin: 0,
           }}
@@ -521,7 +521,7 @@ export const KnipAnalysisStats: React.FC<KnipAnalysisStatsProps> = ({
       >
         <p
           style={{
-            fontSize: '12px',
+            fontSize: theme.fontSizes[1],
             color: theme.colors.textSecondary,
             margin: '0 0 4px 0',
           }}
@@ -530,8 +530,8 @@ export const KnipAnalysisStats: React.FC<KnipAnalysisStatsProps> = ({
         </p>
         <p
           style={{
-            fontSize: '18px',
-            fontWeight: 600,
+            fontSize: theme.fontSizes[3],
+            fontWeight: theme.fontWeights.semibold,
             color: theme.colors.text,
             margin: 0,
           }}

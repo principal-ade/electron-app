@@ -74,11 +74,21 @@ style={{ fontWeight: theme.fontWeights.semibold, fontSize: theme.fontSizes[2] }}
 
 ---
 
-### [ ] src/renderer/components/repository-maps/IssuesTab.tsx
-**Issue Count:** 15+ hardcoded fontWeight values
-**Lines:** 454, 509, 536, 625, 663, 690, 820, 839, and more
+### [x] src/renderer/components/repository-maps/IssuesTab.tsx ✅
+**Issue Count:** 19 fontWeight + 35 fontSize instances = 54 total
+**Lines:** Multiple throughout the file
 **Problems:**
-- Multiple instances of hardcoded fontWeight: 600, 500
+- **fontWeight (19 instances):**
+  - Lines 454, 509, 536, 625, 663, 820, 839, 963, 1103, 1138, 1170, 1203, 1287, 1410: `fontWeight: 600` → Fixed to `theme.fontWeights.semibold`
+  - Lines 690, 939, 1027, 1050, 1385: `fontWeight: 500` → Fixed to `theme.fontWeights.medium`
+  - Line 454: Ternary `? 600 : 400` → Fixed to `? theme.fontWeights.semibold : 400`
+- **fontSize (35 instances):**
+  - `fontSize: '11px'` (2 instances) → Fixed to `theme.fontSizes[0]`
+  - `fontSize: '12px'` (5 instances) → Fixed to `theme.fontSizes[1]`
+  - `fontSize: '13px'` (4 instances) → Fixed to `theme.fontSizes[2]`
+  - `fontSize: '14px'` (22 instances) → Fixed to `theme.fontSizes[2]`
+  - `fontSize: '15px'` (1 instance) → Fixed to `theme.fontSizes[3]`
+  - `fontSize: '20px'` (2 instances) → Fixed to `theme.fontSizes[4]`
 
 ---
 
@@ -94,12 +104,16 @@ style={{ fontWeight: theme.fontWeights.semibold, fontSize: theme.fontSizes[2] }}
 
 ---
 
-### [ ] src/renderer/repo-manager/shared/AgentSessionCard.tsx
+### [x] src/renderer/repo-manager/shared/AgentSessionCard.tsx ✅
 **Issue Count:** 4 instances
 **Lines:** 461, 781, 938, 1065
 **Problems:**
-- All instances: `fontFamily: 'monospace'`
-- Line 938: Also has `fontSize: '10px'`
+- Lines 461, 1065: `fontFamily: 'monospace'` → Fixed to `theme.fonts.monospace`
+- Lines 461, 1065: `fontSize: '12px'` → Fixed to `theme.fontSizes[1]`
+- Line 781: `fontFamily: 'monospace'` → Fixed to `theme.fonts.monospace`
+- Line 781: `fontSize: '11px'` → Fixed to `theme.fontSizes[0]`
+- Line 938: `fontFamily: 'monospace'` → Fixed to `theme.fonts.monospace`
+- Line 938: `fontSize: '10px'` → Fixed to `theme.fontSizes[0]`
 
 ---
 
@@ -115,13 +129,20 @@ style={{ fontWeight: theme.fontWeights.semibold, fontSize: theme.fontSizes[2] }}
 
 ---
 
-### [ ] src/renderer/components/agent-overview/SessionDetailCards.tsx
-**Issue Count:** 10+ instances
-**Lines:** 63, 107, 151, 201, 228, 256, 330, 453, 480, 507, 534
+### [x] src/renderer/components/agent-overview/SessionDetailCards.tsx ✅
+**Issue Count:** 11 fontWeight + 24 fontSize instances = 35 total
+**Lines:** Multiple throughout the file
 **Problems:**
-- fontWeight: 'bold' (lines 63, 107, 151)
-- fontWeight: 600 (lines 201, 228, 453, 480, 507, 534)
-- fontWeight: 500 (lines 256, 330)
+- **fontWeight (11 instances):**
+  - Lines 63, 107, 151: `fontWeight: 'bold'` → Fixed to `theme.fontWeights.bold`
+  - Lines 201, 228, 453, 480, 507, 534 (and more): `fontWeight: 600` → Fixed to `theme.fontWeights.semibold`
+  - Lines 256, 330: `fontWeight: 500` → Fixed to `theme.fontWeights.medium`
+- **fontSize (24 instances):**
+  - `fontSize: '12px'` (9 instances) → Fixed to `theme.fontSizes[1]`
+  - `fontSize: '13px'` (1 instance) → Fixed to `theme.fontSizes[2]`
+  - `fontSize: '14px'` (5 instances) → Fixed to `theme.fontSizes[2]`
+  - `fontSize: '18px'` (6 instances) → Fixed to `theme.fontSizes[3]`
+  - `fontSize: '20px'` (3 instances) → Fixed to `theme.fontSizes[4]`
 
 ---
 
@@ -234,9 +255,9 @@ style={{ fontWeight: theme.fontWeights.semibold, fontSize: theme.fontSizes[2] }}
 
 - **Total Files:** 30+
 - **Total Instances:** 100+
-- **Completed:** 7 files (1 deleted) ✅
-- **High Priority:** 5 files → 3 remaining (mdx-editor.ts, ToolsPanel.tsx, RepositorySettingsModal.tsx)
-- **Medium Priority:** 8 files → 7 remaining
+- **Completed:** 10 files (1 deleted) ✅
+- **High Priority:** 5 files → 2 remaining (mdx-editor.ts, ToolsPanel.tsx) ⚠️ RepositorySettingsModal.tsx is in unused/ directory
+- **Medium Priority:** 8 files → 5 remaining
 - **Low Priority:** 15 files → 13 remaining
 
 ## Refactoring Strategy

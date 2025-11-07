@@ -52,7 +52,8 @@ export const RepositoryTasksAndNotesPanel: React.FC<
                 ? theme.colors.primary
                 : theme.colors.textSecondary,
             fontSize: theme.fontSizes[1],
-            fontWeight: 600,
+            fontWeight: theme.fontWeights.semibold,
+            fontFamily: theme.fonts.body,
             cursor: 'pointer',
             transition: 'all 0.2s',
           }}
@@ -74,7 +75,8 @@ export const RepositoryTasksAndNotesPanel: React.FC<
                 ? theme.colors.primary
                 : theme.colors.textSecondary,
             fontSize: theme.fontSizes[1],
-            fontWeight: 600,
+            fontWeight: theme.fontWeights.semibold,
+            fontFamily: theme.fonts.body,
             cursor: 'pointer',
             transition: 'all 0.2s',
           }}
