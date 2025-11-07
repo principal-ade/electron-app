@@ -1,0 +1,47 @@
+================================================================================
+                    FONT STYLES HARDCODING SUMMARY
+                        9 Priority Panel Components
+================================================================================
+
+PANEL NAME                        TOTAL  fontSize  fontFamily  fontWeight  PRIORITY
+────────────────────────────────────────────────────────────────────────────────
+TerminalDebugModal.tsx              33      19         4           10      CRITICAL
+AgentEventsPanel.tsx                32      20         3            9      CRITICAL
+QualityHexagonPanel.tsx             14       3         4            7      HIGH
+GitCommitHistoryPanel.tsx           13       6         3            4      HIGH
+GitIssuesPanel.tsx                  11       7         0            4      HIGH
+GitPullRequestsPanel.tsx            11       7         0            4      HIGH
+ToolsPanel.tsx                      11       1         2            8      MEDIUM
+GitStatusPanel.tsx                   8       4         1            3      MEDIUM
+FileTreePanelContent.tsx             2       1         0            1      LOW
+────────────────────────────────────────────────────────────────────────────────
+TOTAL                              135      68        17           50
+
+PERCENTAGE BREAKDOWN:
+  - fontSize (string literals):   50.4%  (68 instances)
+  - fontWeight (numeric):          37.0%  (50 instances)
+  - fontFamily (hardcoded):        12.6%  (17 instances)
+
+MOST COMMON HARDCODED VALUES:
+  Font Sizes:    '12px' (50+), '14px' (15+), '11px' (15+), '10px' (12+), '9px' (6+)
+  Font Families: 'monospace' (15+), mixed theme.fonts.* usage
+  Font Weights:  600 (40+), 500 (7+), 700 (3+)
+
+IMPLEMENTATION COST ESTIMATE:
+  Phase 1 (CRITICAL):    2 panels,  65 instances  ~16-20 hours
+  Phase 2 (HIGH):        4 panels,  49 instances  ~12-15 hours
+  Phase 3 (MEDIUM):      2 panels,  19 instances  ~4-6 hours
+  ────────────────────────────────
+  TOTAL:                 8 panels, 133 instances  ~32-41 hours
+
+QUICK FIXES CHECKLIST:
+  [ ] Create theme.fontSizes extension with xs, sm, base, md, lg, xl, xl2 sizes
+  [ ] Standardize fontFamily (prefer theme.fonts.monospace over 'monospace')
+  [ ] Create typography helper functions for common combinations
+  [ ] Update TerminalDebugModal.tsx (highest impact - 33 instances)
+  [ ] Update AgentEventsPanel.tsx (second highest - 32 instances)
+  [ ] Ensure QualityHexagonPanel is consistent (14 instances)
+  [ ] Batch update GitCommit/Issues/PullRequests panels (35 instances)
+
+FULL ANALYSIS: See FONT_STYLES_ANALYSIS.md for detailed breakdown
+================================================================================
