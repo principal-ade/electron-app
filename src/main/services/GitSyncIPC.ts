@@ -7,15 +7,19 @@
 
 import { ipcMain, BrowserWindow } from 'electron';
 import { GitSyncEvent } from '../../window/main-process-api-implementations/gitSyncApi';
+import { PresenceEvent } from '../../window/main-process-api-implementations/presenceApi';
 import {
   GitSyncConfig,
   GitSyncConnectionResult,
   GitSyncStatus,
-  GitSyncMessage,
+  GitSyncMessage as APIGitSyncMessage,
   GitSyncRoomTokenRequest,
   GitSyncRoomTokenResponse,
 } from '../../shared/main-process-api-interfaces/GitSyncAPI';
-import { gitSyncWebSocketManager } from './GitSyncWebSocketManager';
+import {
+  gitSyncWebSocketManager,
+  GitSyncMessage,
+} from './GitSyncWebSocketManager';
 
 class GitSyncIPC {
   constructor() {
@@ -70,13 +74,15 @@ class GitSyncIPC {
       GitSyncEvent.SEND_MESSAGE,
       async (
         event,
-        message: GitSyncMessage,
+        message: APIGitSyncMessage,
       ): Promise<{ success: boolean; error?: string }> => {
         console.log('[GitSyncIPC] Send message:', message);
 
+        // Cast API GitSyncMessage.data (unknown) to internal GitSyncMessage
+        // The internal GitSyncMessage has an index signature allowing this cast
         return await gitSyncWebSocketManager.sendMessageToConnection(
           message.connectionId,
-          message.data as any, // API GitSyncMessage.data -> Internal GitSyncMessage
+          message.data as Parameters<typeof gitSyncWebSocketManager.sendMessageToConnection>[1],
         );
       },
     );
@@ -137,6 +143,30 @@ class GitSyncIPC {
     ipcMain.handle(GitSyncEvent.GET_ALL_CONNECTIONS, async () => {
       return gitSyncWebSocketManager.getAllConnections();
     });
+
+    // Handler for presence:connect (connect for presence tracking only)
+    ipcMain.handle(
+      PresenceEvent.CONNECT,
+      async (event, token: string): Promise<GitSyncConnectionResult> => {
+        console.log('[GitSyncIPC] Connect to presence requested');
+
+        // Get the window ID from the event sender
+        const window = BrowserWindow.fromWebContents(event.sender);
+        const windowId = window?.id ?? -1;
+
+        return await gitSyncWebSocketManager.connectToPresence(token, windowId);
+      },
+    );
+
+    // Handler for presence:disconnect (disconnect from presence-only connection)
+    ipcMain.handle(
+      PresenceEvent.DISCONNECT,
+      async (): Promise<{ success: boolean; message?: string }> => {
+        console.log('[GitSyncIPC] Disconnect from presence requested');
+
+        return await gitSyncWebSocketManager.disconnectFromPresence();
+      },
+    );
 
     // Handler for git-sync:check-service
     ipcMain.handle(

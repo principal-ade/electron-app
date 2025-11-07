@@ -89,6 +89,23 @@ export interface PresenceAPI {
   unsubscribeFromPresence(): Promise<void>;
 
   /**
+   * Connect to Git-Sync for presence tracking only (no repository required)
+   * @param token - GitHub token for authentication
+   * @returns Connection result
+   */
+  connectToPresence(token: string): Promise<{
+    success: boolean;
+    connectionId?: string;
+    message?: string;
+    error?: string;
+  }>;
+
+  /**
+   * Disconnect from presence-only connection
+   */
+  disconnectFromPresence(): Promise<{ success: boolean; message?: string }>;
+
+  /**
    * Listen for presence events
    */
   onPresenceEvent(callback: (message: PresenceEvent) => void): () => void;

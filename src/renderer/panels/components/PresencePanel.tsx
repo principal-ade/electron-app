@@ -19,6 +19,8 @@ import type {
 } from '../../../shared/main-process-api-interfaces/PresenceAPI';
 import { useGitSyncConnection } from '../../hooks/useGitSyncConnection';
 import { GitSyncService } from '../../main-process-api/GitSyncService';
+import { SecureAuthService } from '../../services/SecureAuthService';
+import { AuthenticationService } from '../../main-process-api/AuthenticationService';
 
 export const PresencePanel: React.FC = () => {
   const { theme } = useTheme();
@@ -27,8 +29,11 @@ export const PresencePanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const { isConnected, connectionCount, isAuthenticated } = useGitSyncConnection();
+  const { isConnected, connectionCount } = useGitSyncConnection();
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [hasGitHubAuth, setHasGitHubAuth] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
@@ -59,6 +64,61 @@ export const PresencePanel: React.FC = () => {
     }
   }, []);
 
+  // Handle GitHub login
+  const handleLogin = useCallback(async () => {
+    try {
+      setIsLoggingIn(true);
+      setError(null);
+
+      const result = await AuthenticationService.login();
+
+      if (result.authenticated) {
+        setHasGitHubAuth(true);
+        console.info('[PresencePanel] Successfully authenticated with GitHub');
+      } else {
+        setError(result.error || 'Failed to authenticate with GitHub');
+      }
+    } catch (err) {
+      console.error('[PresencePanel] Failed to login:', err);
+      setError(err instanceof Error ? err.message : 'Failed to login');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }, []);
+
+  // Connect to Git-Sync for presence tracking only
+  const handleConnect = useCallback(async () => {
+    try {
+      setIsConnecting(true);
+      setError(null);
+
+      // Get GitHub token
+      const authService = SecureAuthService.getInstance();
+      const authResult = await authService.checkAuth();
+
+      if (!authResult.authenticated || !authResult.token) {
+        setError('Please authenticate with GitHub first');
+        return;
+      }
+
+      // Connect to presence
+      const result = await PresenceService.connectToPresence(authResult.token);
+
+      if (!result.success) {
+        setError(result.error || 'Failed to connect to presence');
+      } else {
+        console.info('[PresencePanel] Connected to Git-Sync for presence tracking');
+        // Refresh presence data
+        await fetchPresence();
+      }
+    } catch (err) {
+      console.error('[PresencePanel] Failed to connect:', err);
+      setError(err instanceof Error ? err.message : 'Failed to connect');
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [fetchPresence]);
+
   // Disconnect from all Git-Sync connections
   const handleDisconnectAll = useCallback(async () => {
     try {
@@ -81,6 +141,22 @@ export const PresencePanel: React.FC = () => {
     } finally {
       setIsDisconnecting(false);
     }
+  }, []);
+
+  // Check GitHub authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const authService = SecureAuthService.getInstance();
+        const authResult = await authService.checkAuth();
+        setHasGitHubAuth(authResult.authenticated);
+      } catch (error) {
+        console.error('[PresencePanel] Failed to check auth:', error);
+        setHasGitHubAuth(false);
+      }
+    };
+
+    void checkAuth();
   }, []);
 
   // Subscribe to presence events
@@ -224,6 +300,95 @@ export const PresencePanel: React.FC = () => {
     gap: '12px',
   };
 
+  // If not authenticated, show full-screen login prompt
+  if (!hasGitHubAuth) {
+    return (
+      <div style={baseContainerStyle}>
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '32px',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+              alignItems: 'center',
+              textAlign: 'center',
+              maxWidth: '400px',
+            }}
+          >
+            <Users size={64} color={theme.colors.textSecondary} />
+            <div>
+              <h3
+                style={{
+                  margin: 0,
+                  marginBottom: '12px',
+                  fontSize: `${theme.fontSizes[3]}px`,
+                  fontWeight: theme.fontWeights.semibold,
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.text,
+                }}
+              >
+                Login to connect with other users
+              </h3>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.textSecondary,
+                  lineHeight: theme.lineHeights.body,
+                }}
+              >
+                Authenticate with GitHub to see who's online and collaborate with your team in real-time.
+              </p>
+            </div>
+            <button
+              onClick={handleLogin}
+              disabled={isLoggingIn}
+              style={{
+                padding: '12px 24px',
+                fontSize: `${theme.fontSizes[2]}px`,
+                fontFamily: theme.fonts.body,
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.background,
+                backgroundColor: theme.colors.primary,
+                border: 'none',
+                borderRadius: '8px',
+                cursor: isLoggingIn ? 'not-allowed' : 'pointer',
+                opacity: isLoggingIn ? 0.6 : 1,
+                transition: 'all 0.2s ease',
+                minWidth: '180px',
+              }}
+              onMouseEnter={(e) => {
+                if (!isLoggingIn) {
+                  e.currentTarget.style.opacity = '0.9';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isLoggingIn) {
+                  e.currentTarget.style.opacity = '1';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }
+              }}
+            >
+              {isLoggingIn ? 'Logging in...' : 'Login with GitHub'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={contentContainerStyle}>
       {/* Header with stats */}
@@ -263,8 +428,7 @@ export const PresencePanel: React.FC = () => {
       </div>
 
       {/* Current User Connection Status */}
-      {isAuthenticated && (
-        <div
+      <div
           style={{
             padding: '12px',
             backgroundColor: theme.colors.background,
@@ -323,20 +487,52 @@ export const PresencePanel: React.FC = () => {
             )}
           </div>
           {!isConnected && (
-            <div
-              style={{
-                marginTop: '4px',
-                padding: '8px',
-                fontSize: `${theme.fontSizes[0]}px`,
-                fontFamily: theme.fonts.body,
-                color: theme.colors.textSecondary,
-                backgroundColor: theme.colors.backgroundTertiary,
-                borderRadius: '4px',
-                lineHeight: '1.4',
-              }}
-            >
-              Open a repository to connect to Git-Sync and collaborate with your team in real-time.
-            </div>
+            <>
+              <div
+                style={{
+                  marginTop: '4px',
+                  padding: '8px',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.textSecondary,
+                  backgroundColor: theme.colors.backgroundTertiary,
+                  borderRadius: '4px',
+                  lineHeight: '1.4',
+                }}
+              >
+                Connect to Git-Sync to see who's online and collaborate with your team in real-time.
+              </div>
+              <button
+                onClick={handleConnect}
+                disabled={isConnecting}
+                style={{
+                  marginTop: '8px',
+                  padding: '8px 12px',
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
+                  fontWeight: theme.fontWeights.medium,
+                  color: theme.colors.background,
+                  backgroundColor: theme.colors.primary,
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: isConnecting ? 'not-allowed' : 'pointer',
+                  opacity: isConnecting ? 0.6 : 1,
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isConnecting) {
+                    e.currentTarget.style.opacity = '0.9';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isConnecting) {
+                    e.currentTarget.style.opacity = '1';
+                  }
+                }}
+              >
+                {isConnecting ? 'Connecting...' : 'Connect to Presence'}
+              </button>
+            </>
           )}
           {isConnected && (
             <button
@@ -369,42 +565,41 @@ export const PresencePanel: React.FC = () => {
             </button>
           )}
         </div>
-      )}
 
       {/* User list */}
       <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-        }}
-      >
-        {users.length === 0 ? (
-          <div
-            style={{
-              padding: '32px',
-              textAlign: 'center',
-              color: theme.colors.textSecondary,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-            }}
-          >
-            <Users
-              size={32}
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+          }}
+        >
+          {users.length === 0 ? (
+            <div
               style={{
+                padding: '32px',
+                textAlign: 'center',
                 color: theme.colors.textSecondary,
-                marginBottom: '12px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
               }}
-            />
-            <p style={{ margin: 0 }}>No users online</p>
-            <p style={{ margin: '8px 0 0 0', fontSize: `${theme.fontSizes[0]}px` }}>
-              Users will appear here when they connect to the traffic controller
-            </p>
-          </div>
-        ) : (
+            >
+              <Users
+                size={32}
+                style={{
+                  color: theme.colors.textSecondary,
+                  marginBottom: '12px',
+                }}
+              />
+              <p style={{ margin: 0 }}>No users online</p>
+              <p style={{ margin: '8px 0 0 0', fontSize: `${theme.fontSizes[0]}px` }}>
+                Users will appear here when they connect to the traffic controller
+              </p>
+            </div>
+          ) : (
           users.map((user) => (
             <div
               key={user.userId}

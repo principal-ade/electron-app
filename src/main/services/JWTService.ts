@@ -1,24 +1,13 @@
 import { ipcMain } from 'electron';
 const jwt = require('jsonwebtoken');
 import fetch from 'node-fetch';
+import { deviceIdService } from './DeviceIdService';
 
 const JWT_SECRET =
   process.env.SYNC_JWT_SECRET || 'dev-secret-change-in-production';
 const JWT_EXPIRY = '1h'; // 1 hour expiry
 
 // JWT interface to avoid importing types
-interface JwtVerifyOptions {
-  algorithms?: string[];
-  audience?: string | string[];
-  issuer?: string | string[];
-  ignoreExpiration?: boolean;
-  ignoreNotBefore?: boolean;
-  subject?: string;
-  clockTolerance?: number;
-  maxAge?: string | number;
-  clockTimestamp?: number;
-}
-
 interface JwtSignOptions {
   algorithm?: string;
   keyid?: string;
@@ -64,6 +53,14 @@ interface JWTPayload {
   repositories: RepositoryPermission[];
   iat?: number;
   exp?: number;
+}
+
+interface JWTUserResult {
+  userId: string;
+  githubHandle: string;
+  email?: string;
+  avatar?: string;
+  repositories: string[];
 }
 
 export class JWTService {
@@ -150,7 +147,7 @@ export class JWTService {
   static async createJWT(githubToken: string): Promise<{
     success: boolean;
     token?: string;
-    user?: any;
+    user?: JWTUserResult;
     error?: string;
   }> {
     try {
@@ -283,8 +280,8 @@ export class JWTService {
 
           console.log(`[JWTService] Access granted for ${params.repoId}`);
 
-          // Generate agentId if not provided
-          const agentId = params.agentId || `electron-${Date.now()}`;
+          // Get stable device ID (persisted across restarts)
+          const agentId = params.agentId || await deviceIdService.getDeviceId();
           const branch = params.branch || 'main';
 
           // Map GitHub permissions to sync permissions

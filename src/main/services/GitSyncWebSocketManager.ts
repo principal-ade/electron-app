@@ -14,6 +14,7 @@ import type {
   GitSyncStatus,
 } from '../../shared/main-process-api-interfaces/GitSyncAPI';
 import fetch from 'node-fetch';
+import { deviceIdService } from './DeviceIdService';
 
 interface ConnectionInfo {
   connectionId: string;
@@ -54,7 +55,7 @@ interface ErrorResponse {
   error?: string;
 }
 
-interface GitSyncMessage {
+export interface GitSyncMessage {
   type: string;
   payload?: GitSyncMessage | Record<string, unknown>;
   peer?: {
@@ -88,7 +89,7 @@ export class GitSyncWebSocketManager {
   private serverUrl: string;
   private authServerUrl: string;
   private readonly RECONNECT_DELAY = 5000;
-  private readonly PING_INTERVAL = 30000;
+  private readonly PING_INTERVAL = 25000; // 25s - arrives before server's 30s check
 
   // Hardcoded defaults
   private readonly DEFAULT_DEV_SERVER = 'ws://localhost:3001';
@@ -331,8 +332,8 @@ export class GitSyncWebSocketManager {
         '[GitSyncWebSocketManager] Requesting room token from auth server',
       );
 
-      // Generate a stable device ID
-      const agentId = `electron-${Date.now()}`;
+      // Get stable device ID (persisted across restarts)
+      const agentId = await deviceIdService.getDeviceId();
 
       // Use the configured auth server URL
       const authServerUrl = this.authServerUrl;
@@ -504,8 +505,9 @@ export class GitSyncWebSocketManager {
       case 'peer_left':
         // Remove peer from status
         if (message.peer) {
+          const peerAgentId = message.peer.agentId;
           connectionInfo.status.peers = connectionInfo.status.peers.filter(
-            (p) => p.agentId !== message.peer!.agentId,
+            (p) => p.agentId !== peerAgentId,
           );
         }
         this.broadcastToRenderers(
@@ -786,6 +788,74 @@ export class GitSyncWebSocketManager {
   }
 
   /**
+   * Connect to Git-Sync for presence tracking only (no specific repository)
+   * This creates a lightweight connection just to track online users
+   */
+  async connectToPresence(
+    token: string,
+    windowId: number,
+  ): Promise<{
+    success: boolean;
+    connectionId?: string;
+    message?: string;
+    error?: string;
+  }> {
+    const connectionId = '__presence_only__';
+
+    // Check if already connected
+    const existing = this.connections.get(connectionId);
+    if (existing?.ws?.readyState === WebSocket.OPEN) {
+      console.log('[GitSyncWebSocketManager] Already connected to presence');
+
+      // Make sure we're subscribed to the global presence room
+      await this.subscribeToPresence();
+
+      return {
+        success: true,
+        connectionId,
+        message: 'Already connected to presence',
+      };
+    }
+
+    // Create a presence-only config
+    const config: GitSyncConfig = {
+      repoId: '__presence_only__',
+      repoPath: '',
+      branch: 'main',
+      token,
+    };
+
+    try {
+      // Connect using the standard flow
+      const result = await this.connect(config, windowId);
+
+      if (result.success) {
+        // Automatically subscribe to global presence
+        await this.subscribeToPresence();
+      }
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
+      console.error('[GitSyncWebSocketManager] Failed to connect to presence:', error);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  }
+
+  /**
+   * Disconnect from presence-only connection
+   */
+  async disconnectFromPresence(): Promise<{
+    success: boolean;
+    message?: string;
+  }> {
+    return this.disconnect('__presence_only__');
+  }
+
+  /**
    * Subscribe to global presence events
    * Uses any existing connection to join the __global_presence__ room
    */
@@ -805,7 +875,9 @@ export class GitSyncWebSocketManager {
       // Join the global presence room
       const joinMessage = {
         type: 'join_room',
-        roomId: '__global_presence__',
+        payload: {
+          roomId: '__global_presence__',
+        },
       };
 
       this.sendMessage(activeConnection, joinMessage);

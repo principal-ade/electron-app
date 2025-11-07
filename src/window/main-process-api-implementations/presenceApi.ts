@@ -7,6 +7,8 @@ export enum PresenceEvent {
   GET_USER = 'presence:get-user',
   SUBSCRIBE = 'presence:subscribe',
   UNSUBSCRIBE = 'presence:unsubscribe',
+  CONNECT = 'presence:connect',
+  DISCONNECT = 'presence:disconnect',
 
   // Events (from main to renderer)
   ON_PRESENCE_EVENT = 'presence:event',
@@ -23,6 +25,12 @@ export const presenceAPI: PresenceAPI = {
   subscribeToPresence: () => ipcRenderer.invoke(PresenceEvent.SUBSCRIBE),
 
   unsubscribeFromPresence: () => ipcRenderer.invoke(PresenceEvent.UNSUBSCRIBE),
+
+  connectToPresence: (token: string) =>
+    ipcRenderer.invoke(PresenceEvent.CONNECT, token),
+
+  disconnectFromPresence: () =>
+    ipcRenderer.invoke(PresenceEvent.DISCONNECT),
 
   onPresenceEvent: (callback) => {
     const subscription = (_event: unknown, message: unknown) =>

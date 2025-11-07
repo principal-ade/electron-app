@@ -71,6 +71,41 @@ export class PresenceService {
   }
 
   /**
+   * Connect to Git-Sync for presence tracking only (no repository required)
+   */
+  static async connectToPresence(token: string): Promise<{
+    success: boolean;
+    connectionId?: string;
+    message?: string;
+    error?: string;
+  }> {
+    try {
+      return await window.mainProcess.presence.connectToPresence(token);
+    } catch (error) {
+      console.error('[PresenceService] Failed to connect to presence:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to connect',
+      };
+    }
+  }
+
+  /**
+   * Disconnect from presence-only connection
+   */
+  static async disconnectFromPresence(): Promise<{ success: boolean; message?: string }> {
+    try {
+      return await window.mainProcess.presence.disconnectFromPresence();
+    } catch (error) {
+      console.error('[PresenceService] Failed to disconnect from presence:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to disconnect',
+      };
+    }
+  }
+
+  /**
    * Listen for presence events via IPC
    */
   static onPresenceEvent(callback: (event: {
