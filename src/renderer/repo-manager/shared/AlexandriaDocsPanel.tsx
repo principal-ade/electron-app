@@ -56,6 +56,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
     useState<AlexandriaEntry | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('recentlyEdited');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
+  const [hoveredDocument, setHoveredDocument] = useState<string | null>(null);
 
   // Format relative time (e.g., "2 hours ago", "3 days ago")
   const formatRelativeTime = useCallback((date: Date): string => {
@@ -268,6 +269,42 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
       unregisterLayer(LAYER_ID);
     };
   }, [selectedDocument, documents, registerLayer, unregisterLayer]);
+
+  // Highlight associated files on hover (with lower opacity)
+  useEffect(() => {
+    const LAYER_ID = 'alexandria-doc-hover';
+
+    if (hoveredDocument && hoveredDocument !== selectedDocument) {
+      // Find the hovered document in our list
+      const hoveredDoc = documents.find((doc) => doc.path === hoveredDocument);
+
+      if (hoveredDoc?.files && hoveredDoc.files.length > 0) {
+        // Register hover highlight layer for this document's files
+        registerLayer(LAYER_ID, {
+          name: `${hoveredDoc.name} Files (Hover)`,
+          enabled: true,
+          color: '#8b5cf6', // Same purple color but with lower opacity
+          opacity: 0.3,
+          priority: 15, // Lower priority than selection
+          items: hoveredDoc.files.map((path) => ({
+            path,
+            type: 'file' as const,
+          })),
+        });
+      } else {
+        // No files to highlight, unregister the layer
+        unregisterLayer(LAYER_ID);
+      }
+    } else {
+      // No document hovered or hovering over selected document, unregister the layer
+      unregisterLayer(LAYER_ID);
+    }
+
+    // Cleanup when component unmounts or hover changes
+    return () => {
+      unregisterLayer(LAYER_ID);
+    };
+  }, [hoveredDocument, selectedDocument, documents, registerLayer, unregisterLayer]);
 
   return (
     <div
@@ -527,6 +564,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                 onFileSelect={onFileSelect}
                 gitStatus={gitStatus}
                 hasChangedFiles={docsWithChanges.has(doc.path)}
+                onHover={setHoveredDocument}
               />
             ))}
           </div>

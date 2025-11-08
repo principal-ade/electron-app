@@ -14,6 +14,7 @@ interface AlexandriaDocItemProps {
   onFileSelect?: (filePath: string) => void;
   gitStatus?: GitStatus;
   hasChangedFiles?: boolean;
+  onHover?: (docPath: string | null) => void;
 }
 
 export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
@@ -25,6 +26,7 @@ export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
   onFileSelect,
   gitStatus,
   hasChangedFiles = false,
+  onHover,
 }) => {
   const { theme } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -58,11 +60,13 @@ export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
             e.currentTarget.style.backgroundColor =
               theme.colors.backgroundTertiary;
           }
+          onHover?.(doc.path);
         }}
         onMouseLeave={(e) => {
           if (!isSelected) {
             e.currentTarget.style.backgroundColor = 'transparent';
           }
+          onHover?.(null);
         }}
       >
         <div
