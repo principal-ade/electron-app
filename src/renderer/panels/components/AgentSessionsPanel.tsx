@@ -448,7 +448,8 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
       if (b.isCurrentDirectory && !a.isCurrentDirectory) {
         return 1;
       }
-      return (b.lastActivity ?? 0) - (a.lastActivity ?? 0);
+      // Sort alphabetically by directory name
+      return a.directory.localeCompare(b.directory);
     });
 
     return sortedGroups;
@@ -636,7 +637,6 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '16px',
         }}
       >
         {isLoading && sessions.length === 0 ? (
@@ -672,7 +672,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
           </div>
         ) : (
           <div
-            style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
+            style={{ display: 'flex', flexDirection: 'column' }}
           >
             {sessionsByDirectory.map((group) => {
               const canOpenDirectory =
@@ -703,7 +703,6 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '8px',
                   }}
                 >
                   {shouldShowDirectoryHeader && (
@@ -773,7 +772,7 @@ export const AgentSessionsPanel: React.FC<AgentSessionsPanelProps> = ({
                           <span
                             style={{
                               fontWeight: theme.fontWeights.semibold,
-                              fontSize: theme.fontSizes[0],
+                              fontSize: theme.fontSizes[2],
                               color: group.isCurrentDirectory
                                 ? theme.colors.primary
                                 : theme.colors.text,
