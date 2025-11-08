@@ -241,7 +241,7 @@ const FeedViewInner: React.FC = () => {
       },
       middle: {
         type: 'tabs' as const,
-        panels: ['readme-viewer', 'recent-commits'],
+        panels: ['graph-view', 'readme-viewer', 'recent-commits'],
         config: {
           defaultActiveTab: 0,
           tabPosition: 'top' as const,

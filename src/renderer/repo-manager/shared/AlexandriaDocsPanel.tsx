@@ -33,12 +33,14 @@ interface AlexandriaDocsPanelProps {
   repositoryPath: string;
   onDocumentSelect: (filePath: string, type: 'markdown' | 'excalidraw') => void;
   selectedDocument?: string;
+  onFileSelect?: (filePath: string) => void;
 }
 
 export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
   repositoryPath,
   onDocumentSelect,
   selectedDocument,
+  onFileSelect,
 }) => {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -464,6 +466,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                 onSelect={onDocumentSelect}
                 formatRelativeTime={formatRelativeTime}
                 trackedFiles={doc.files}
+                onFileSelect={onFileSelect}
               />
             ))}
           </div>

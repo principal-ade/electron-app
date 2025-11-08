@@ -1282,13 +1282,27 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       (panelId: string) => {
         // Check left panel
         const leftPanel = panelLayout.left;
-        if (
+        if (typeof leftPanel === 'string') {
+          // Single panel case
+          if (leftPanel === panelId) {
+            // Auto-expand the panel if it's collapsed
+            if (panelCollapsedState.left) {
+              handleLeftPanelCollapsedChange(false);
+            }
+            return; // Found it, we're done
+          }
+        } else if (
           typeof leftPanel === 'object' &&
           leftPanel !== null &&
           'type' in leftPanel &&
           leftPanel.type === 'tabs'
         ) {
+          // Tabs configuration case
           if (leftPanel.panels.includes(panelId)) {
+            // Auto-expand the panel if it's collapsed
+            if (panelCollapsedState.left) {
+              handleLeftPanelCollapsedChange(false);
+            }
             setLeftPanelActivePanelId(panelId);
             return; // Found it, we're done
           }
@@ -1296,12 +1310,18 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
 
         // Check middle panel
         const middlePanel = panelLayout.middle;
-        if (
+        if (typeof middlePanel === 'string') {
+          // Single panel case
+          if (middlePanel === panelId) {
+            return; // Found it, we're done (middle never collapses)
+          }
+        } else if (
           typeof middlePanel === 'object' &&
           middlePanel !== null &&
           'type' in middlePanel &&
           middlePanel.type === 'tabs'
         ) {
+          // Tabs configuration case
           if (middlePanel.panels.includes(panelId)) {
             setMiddlePanelActivePanelId(panelId);
             return; // Found it, we're done
@@ -1310,22 +1330,40 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
 
         // Check right panel
         const rightPanel = panelLayout.right;
-        if (
+        if (typeof rightPanel === 'string') {
+          // Single panel case
+          if (rightPanel === panelId) {
+            // Auto-expand the panel if it's collapsed
+            if (panelCollapsedState.right) {
+              handleRightPanelCollapsedChange(false);
+            }
+            return; // Found it, we're done
+          }
+        } else if (
           typeof rightPanel === 'object' &&
           rightPanel !== null &&
           'type' in rightPanel &&
           rightPanel.type === 'tabs'
         ) {
+          // Tabs configuration case
           if (rightPanel.panels.includes(panelId)) {
+            // Auto-expand the panel if it's collapsed
+            if (panelCollapsedState.right) {
+              handleRightPanelCollapsedChange(false);
+            }
             setRightPanelActivePanelId(panelId);
             return; // Found it, we're done
           }
         }
 
-        // Panel not found in any tab group (it's either a single panel or doesn't exist)
-        // This is fine - single panels don't need focusing
+        // Panel not found in any slot
       },
-      [panelLayout],
+      [
+        panelLayout,
+        panelCollapsedState,
+        handleLeftPanelCollapsedChange,
+        handleRightPanelCollapsedChange,
+      ],
     );
 
     // Handle documentation selection
@@ -2019,6 +2057,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             }
             onDocumentSelect={handleDocumentSelect}
             selectedDocument={selectedDocPath ?? undefined}
+            onFileSelect={handleFileClick}
           />
         ),
         agentEvents: (

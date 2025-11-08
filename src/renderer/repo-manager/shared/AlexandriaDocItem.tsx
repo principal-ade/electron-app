@@ -10,6 +10,7 @@ interface AlexandriaDocItemProps {
   onSelect: (filePath: string, type: 'markdown' | 'excalidraw') => void;
   formatRelativeTime: (date: Date) => string;
   trackedFiles?: string[];
+  onFileSelect?: (filePath: string) => void;
 }
 
 export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
@@ -18,6 +19,7 @@ export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
   onSelect,
   formatRelativeTime,
   trackedFiles,
+  onFileSelect,
 }) => {
   const { theme } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -238,6 +240,7 @@ export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
             <CodebaseViewFileTree
               files={trackedFiles}
               defaultOpen={true}
+              onFileSelect={onFileSelect}
             />
           </div>
         </div>

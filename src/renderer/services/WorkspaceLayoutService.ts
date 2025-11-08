@@ -414,7 +414,7 @@ export class WorkspaceLayoutService {
           middle: 'markdownViewer',
           right: 'codeViewer',
         },
-        defaultSizes: { left: 20, middle: 50, right: 30 },
+        defaultSizes: { left: 20, middle: 40, right: 40 },
         defaultCollapsed: { left: false, right: true },
         createdAt: now,
         updatedAt: now,

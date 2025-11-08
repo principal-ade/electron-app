@@ -70,7 +70,10 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
         return;
       }
 
-      if (openGitDiff) {
+      // Route based on whether the file has git changes
+      // Files with changes → openGitDiff (show diff viewer)
+      // Files without changes → openFile (just open in code viewer)
+      if (status && openGitDiff) {
         openGitDiff(filePath, status);
         return;
       }
