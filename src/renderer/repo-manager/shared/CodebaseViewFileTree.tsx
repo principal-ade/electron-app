@@ -12,6 +12,7 @@ interface CodebaseViewFileTreeProps {
   selectedFile?: string;
   defaultOpen?: boolean;
   padding?: string;
+  autoHeight?: boolean;
 }
 
 /**
@@ -39,6 +40,7 @@ export const CodebaseViewFileTree: React.FC<CodebaseViewFileTreeProps> = ({
   selectedFile,
   defaultOpen = true,
   padding = '0px',
+  autoHeight = false,
 }) => {
   const { theme } = useTheme();
 
@@ -113,6 +115,7 @@ export const CodebaseViewFileTree: React.FC<CodebaseViewFileTreeProps> = ({
       openByDefault={defaultOpen}
       transparentBackground={true}
       padding={padding}
+      autoHeight={autoHeight}
     />
   );
 };

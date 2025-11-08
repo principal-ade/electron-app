@@ -267,6 +267,7 @@ export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
               defaultOpen={true}
               onFileSelect={onFileSelect}
               padding="8px 12px"
+              autoHeight={true}
             />
           </div>
         </div>
