@@ -17,6 +17,7 @@ import { AlexandriaDocsService } from '../../main-process-api/AlexandriaDocsServ
 import { documentSearchService } from '../../services/DocumentSearchService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { AlexandriaDocItem } from './AlexandriaDocItem';
+import { useHighlightLayers } from '../../contexts/HighlightLayersContext';
 
 export interface AlexandriaDocItemData {
   path: string;
@@ -46,6 +47,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
   gitStatus,
 }) => {
   const { theme } = useTheme();
+  const { registerLayer, unregisterLayer } = useHighlightLayers();
   const [searchQuery, setSearchQuery] = useState('');
   const [documents, setDocuments] = useState<AlexandriaDocItemData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -231,6 +233,41 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
         .map((doc) => doc.path),
     );
   }, [documents, gitStatus]);
+
+  // Highlight associated files on the map when a document is selected
+  useEffect(() => {
+    const LAYER_ID = 'alexandria-doc-files';
+
+    if (selectedDocument) {
+      // Find the selected document in our list
+      const selectedDoc = documents.find((doc) => doc.path === selectedDocument);
+
+      if (selectedDoc?.files && selectedDoc.files.length > 0) {
+        // Register highlight layer for this document's files
+        registerLayer(LAYER_ID, {
+          name: `${selectedDoc.name} Files`,
+          enabled: true,
+          color: '#8b5cf6', // Purple color for document associations
+          priority: 20,
+          items: selectedDoc.files.map((path) => ({
+            path,
+            type: 'file' as const,
+          })),
+        });
+      } else {
+        // No files to highlight, unregister the layer
+        unregisterLayer(LAYER_ID);
+      }
+    } else {
+      // No document selected, unregister the layer
+      unregisterLayer(LAYER_ID);
+    }
+
+    // Cleanup when component unmounts or selection changes
+    return () => {
+      unregisterLayer(LAYER_ID);
+    };
+  }, [selectedDocument, documents, registerLayer, unregisterLayer]);
 
   return (
     <div
