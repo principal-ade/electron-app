@@ -11,6 +11,7 @@ interface CodebaseViewFileTreeProps {
   onFileSelect?: (filePath: string) => void;
   selectedFile?: string;
   defaultOpen?: boolean;
+  padding?: string;
 }
 
 /**
@@ -37,6 +38,7 @@ export const CodebaseViewFileTree: React.FC<CodebaseViewFileTreeProps> = ({
   onFileSelect,
   selectedFile,
   defaultOpen = true,
+  padding = '0px',
 }) => {
   const { theme } = useTheme();
 
@@ -110,7 +112,7 @@ export const CodebaseViewFileTree: React.FC<CodebaseViewFileTreeProps> = ({
       selectedFile={selectedFile}
       openByDefault={defaultOpen}
       transparentBackground={true}
-      padding="0px"
+      padding={padding}
     />
   );
 };

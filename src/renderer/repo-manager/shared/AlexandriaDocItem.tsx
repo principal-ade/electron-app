@@ -258,7 +258,6 @@ export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
             style={{
               maxHeight: '400px',
               overflow: 'auto',
-              padding: '8px 12px',
               backgroundColor: theme.colors.background,
             }}
           >
@@ -267,6 +266,7 @@ export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
               gitStatus={gitStatus}
               defaultOpen={true}
               onFileSelect={onFileSelect}
+              padding="8px 12px"
             />
           </div>
         </div>
