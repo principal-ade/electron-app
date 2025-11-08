@@ -65,6 +65,21 @@ export async function createGitHubTokenAuthEnvForUrl(
       return null;
     }
 
+    // Find a real Node.js executable instead of Electron
+    // process.execPath in Electron points to the Electron binary, not Node
+    // We need to find the system Node.js
+    let nodeExecutable = 'node'; // Fallback to PATH
+
+    // Try to find node in common locations
+    const { execSync } = require('child_process');
+    try {
+      // Use 'which node' to find the actual Node.js binary
+      nodeExecutable = execSync('which node', { encoding: 'utf-8' }).trim();
+    } catch (err) {
+      // Fallback to 'node' in PATH if 'which' fails
+      nodeExecutable = 'node';
+    }
+
     const scriptContent = `#!/usr/bin/env node
 const prompt = process.argv[2] || '';
 if (/username/i.test(prompt)) {
@@ -89,17 +104,32 @@ process.stdout.write('');
 
     await fs.writeFile(scriptPath, scriptContent, { mode: 0o700 });
 
+    // Create a wrapper script that calls Node with the askpass script
+    // This avoids shebang issues where #!/usr/bin/env node might find the wrong Node
+    const wrapperPath = path.join(
+      os.tmpdir(),
+      `principle-git-askpass-wrapper-${randomUUID()}.sh`,
+    );
+
+    const wrapperContent = `#!/bin/bash
+exec "${nodeExecutable}" "${scriptPath}" "$@"
+`;
+
+    await fs.writeFile(wrapperPath, wrapperContent, { mode: 0o700 });
+
     return {
       source: 'github-token',
       env: {
         GIT_TERMINAL_PROMPT: '0',
-        GIT_ASKPASS: scriptPath,
+        GIT_ASKPASS: wrapperPath,
         GCM_INTERACTIVE: 'never',
         [TOKEN_ENV_VAR]: token,
+        NODE_OPTIONS: '', // Clear NODE_OPTIONS to prevent ts-node preload issues
       },
       cleanup: async () => {
         try {
           await fs.unlink(scriptPath);
+          await fs.unlink(wrapperPath);
         } catch (error) {
           const err = error as NodeJS.ErrnoException;
           if (err.code !== 'ENOENT') {
