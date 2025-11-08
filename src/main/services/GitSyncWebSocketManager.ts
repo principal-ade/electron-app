@@ -384,6 +384,65 @@ export class GitSyncWebSocketManager {
   }
 
   /**
+   * Get presence token from the landing-page auth server
+   * Used for presence-only connections (no specific repository)
+   */
+  private async getPresenceToken(githubToken: string): Promise<RoomTokenInfo> {
+    try {
+      console.log(
+        '[GitSyncWebSocketManager] Requesting presence token from auth server',
+      );
+
+      // Get stable device ID (persisted across restarts)
+      const agentId = await deviceIdService.getDeviceId();
+
+      // Use the configured auth server URL
+      const authServerUrl = this.authServerUrl;
+
+      // Call landing-page's presence-token endpoint
+      const response = await fetch(`${authServerUrl}/api/auth/cli/presence-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          github_token: githubToken,
+          device_id: agentId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = (await response
+          .json()
+          .catch(() => ({}))) as ErrorResponse;
+        throw new Error(
+          errorData.error || `Failed to get presence token: ${response.status}`,
+        );
+      }
+
+      const data = (await response.json()) as RoomTokenResponse;
+
+      return {
+        access_token: data.access_token,
+        permissions: {
+          canRead: data.permissions?.canJoin || false,
+          canWrite: data.permissions?.canEdit || false,
+          canAdmin: data.permissions?.canAdmin,
+        },
+        repository: '__presence_only__',
+        branch: 'main',
+        expiresIn: data.expires_in || 7200,
+      };
+    } catch (error) {
+      console.error(
+        '[GitSyncWebSocketManager] Failed to get presence token:',
+        error,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Authenticate with the traffic controller using JWT
    */
   private authenticate(
@@ -817,24 +876,143 @@ export class GitSyncWebSocketManager {
       };
     }
 
-    // Create a presence-only config
-    const config: GitSyncConfig = {
-      repoId: '__presence_only__',
-      repoPath: '',
-      branch: 'main',
-      token,
-    };
-
     try {
-      // Connect using the standard flow
-      const result = await this.connect(config, windowId);
-
-      if (result.success) {
-        // Automatically subscribe to global presence
-        await this.subscribeToPresence();
+      // Validate token
+      if (!token) {
+        return {
+          success: false,
+          error: 'GitHub token is required',
+        };
       }
 
-      return result;
+      // Get presence token from OAuth server (uses separate endpoint)
+      const presenceToken = await this.getPresenceToken(token);
+
+      // Create WebSocket connection
+      const wsUrl = `${this.serverUrl}/ws`;
+      console.log('[GitSyncWebSocketManager] Connecting to presence:', wsUrl);
+
+      const ws = new WebSocket(wsUrl);
+
+      // Set up connection info
+      const connectionInfo: ConnectionInfo = {
+        connectionId,
+        repoId: '__presence_only__',
+        repoPath: '',
+        branch: 'main',
+        windowId,
+        ws,
+        token,
+        status: {
+          connected: false,
+          authenticated: false,
+          repoId: '__presence_only__',
+          branch: 'main',
+          activeLocks: [],
+          queuedLocks: 0,
+          peers: [],
+        },
+      };
+
+      // Store connection IMMEDIATELY before setting up handlers
+      this.connections.set(connectionId, connectionInfo);
+
+      return new Promise((resolve, reject) => {
+        let errorOccurred = false;
+
+        // Connection error handler
+        const handleError = (error: Error) => {
+          if (errorOccurred) return;
+          errorOccurred = true;
+
+          console.error('[GitSyncWebSocketManager] WebSocket error:', error);
+          this.connections.delete(connectionId);
+
+          reject({
+            success: false,
+            error: error.message || 'WebSocket error',
+          });
+        };
+
+        // Connection opened
+        ws.on('open', () => {
+          console.log('[GitSyncWebSocketManager] Connected to presence');
+          connectionInfo.status.connected = true;
+
+          // Authenticate with presence token
+          this.authenticate(connectionInfo, presenceToken);
+
+          // Start ping interval
+          this.startPingInterval(connectionInfo);
+
+          // Broadcast connection-added event
+          this.broadcastConnectionEvent('connection-added', connectionId);
+
+          resolve({
+            success: true,
+            connectionId,
+            message: 'Connected to presence tracking',
+          });
+
+          // Subscribe to global presence after connection is established
+          setTimeout(() => {
+            this.subscribeToPresence();
+          }, 500);
+        });
+
+        // Receive messages
+        ws.on('message', (data: WebSocket.Data) => {
+          try {
+            const message = JSON.parse(data.toString());
+            this.handleMessage(connectionInfo, message);
+          } catch (error) {
+            console.error(
+              '[GitSyncWebSocketManager] Failed to parse message:',
+              error,
+            );
+          }
+        });
+
+        // Connection error
+        ws.on('error', handleError);
+
+        // Connection closed
+        ws.on('close', () => {
+          console.log('[GitSyncWebSocketManager] Disconnected from presence');
+          connectionInfo.status.connected = false;
+          connectionInfo.status.authenticated = false;
+          this.stopPingInterval(connectionInfo);
+
+          // Broadcast disconnect event
+          this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
+            type: 'disconnected',
+          });
+
+          const stillExists = this.connections.has(connectionId);
+
+          if (!stillExists) {
+            console.log(
+              '[GitSyncWebSocketManager] Presence connection was manually disconnected, not reconnecting',
+            );
+            this.broadcastConnectionEvent('connection-removed', connectionId);
+            return;
+          }
+
+          // Auto-reconnect for presence
+          if (!errorOccurred) {
+            if (connectionInfo.reconnectTimer) {
+              clearTimeout(connectionInfo.reconnectTimer);
+            }
+
+            connectionInfo.reconnectTimer = setTimeout(() => {
+              console.log('[GitSyncWebSocketManager] Attempting to reconnect to presence');
+              this.connectToPresence(token, connectionInfo.windowId).catch((error) => {
+                console.error('[GitSyncWebSocketManager] Presence reconnect failed:', error);
+              });
+            }, this.RECONNECT_DELAY);
+          }
+        });
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
       console.error('[GitSyncWebSocketManager] Failed to connect to presence:', error);

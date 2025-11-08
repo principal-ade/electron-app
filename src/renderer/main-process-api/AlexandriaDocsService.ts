@@ -7,6 +7,7 @@ import type { AlexandriaEntry } from '@a24z/core-library';
 import type {
   AlexandriaDocsWithExclusions,
   ComprehensiveDocuments,
+  DocumentsWithFiles,
 } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
 
 export class AlexandriaDocsService {
@@ -50,5 +51,16 @@ export class AlexandriaDocsService {
     entry: AlexandriaEntry,
   ): Promise<ComprehensiveDocuments> {
     return window.mainProcess.alexandriaDocs.getComprehensiveDocuments(entry);
+  }
+
+  /**
+   * Get all documents with their associated CodebaseView files
+   * @param entry - The Alexandria repository entry
+   * @returns Object with documents and their associated files
+   */
+  static async getDocumentsWithFiles(
+    entry: AlexandriaEntry,
+  ): Promise<DocumentsWithFiles> {
+    return window.mainProcess.alexandriaDocs.getDocumentsWithFiles(entry);
   }
 }

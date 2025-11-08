@@ -6,8 +6,9 @@
 import {
   AlexandriaOutpostManager,
   NodeFileSystemAdapter,
+  MemoryPalace,
 } from '@a24z/core-library';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry, CodebaseView } from '@a24z/core-library';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
 import { LocalNodeGlobAdapter } from '../adapters/LocalNodeGlobAdapter';
@@ -784,5 +785,47 @@ export class AlexandriaRegistryService {
       excluded,
       all,
     };
+  }
+
+  /**
+   * Get all CodebaseViews for a repository using MemoryPalace
+   * @param repositoryPath - Local path to the repository
+   * @returns Array of CodebaseView configurations
+   */
+  async getCodebaseViews(repositoryPath: string): Promise<CodebaseView[]> {
+    try {
+      const fsAdapter = new NodeFileSystemAdapter();
+      const memoryPalace = new MemoryPalace(repositoryPath, fsAdapter);
+      return memoryPalace.listViews();
+    } catch (error) {
+      console.error(
+        `[getCodebaseViews] Error loading views for ${repositoryPath}:`,
+        error,
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Get a specific CodebaseView by ID using MemoryPalace
+   * @param repositoryPath - Local path to the repository
+   * @param viewId - ID of the view to retrieve
+   * @returns CodebaseView configuration or null if not found
+   */
+  async getCodebaseView(
+    repositoryPath: string,
+    viewId: string,
+  ): Promise<CodebaseView | null> {
+    try {
+      const fsAdapter = new NodeFileSystemAdapter();
+      const memoryPalace = new MemoryPalace(repositoryPath, fsAdapter);
+      return memoryPalace.getView(viewId);
+    } catch (error) {
+      console.error(
+        `[getCodebaseView] Error loading view ${viewId} for ${repositoryPath}:`,
+        error,
+      );
+      return null;
+    }
   }
 }

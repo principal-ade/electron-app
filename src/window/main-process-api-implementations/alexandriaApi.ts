@@ -68,4 +68,8 @@ export const alexandriaAPI: AlexandriaAPI = {
   refreshRepository: (name: string) =>
     ipcRenderer.invoke(AlexandriaAPIEvent.REFRESH, name),
   getRepositoryCount: () => ipcRenderer.invoke(AlexandriaAPIEvent.GET_COUNT),
+  getCodebaseViews: (repositoryPath: string) =>
+    ipcRenderer.invoke(AlexandriaAPIEvent.GET_CODEBASE_VIEWS, repositoryPath),
+  getCodebaseView: (repositoryPath: string, viewId: string) =>
+    ipcRenderer.invoke(AlexandriaAPIEvent.GET_CODEBASE_VIEW, repositoryPath, viewId),
 };

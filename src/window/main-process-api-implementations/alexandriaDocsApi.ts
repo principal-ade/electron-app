@@ -21,4 +21,7 @@ export const alexandriaDocsAPI: AlexandriaDocsAPI = {
       AlexandriaDocsAPIEvent.GET_COMPREHENSIVE_DOCUMENTS,
       entry,
     ),
+
+  getDocumentsWithFiles: (entry: AlexandriaEntry) =>
+    ipcRenderer.invoke(AlexandriaDocsAPIEvent.GET_DOCUMENTS_WITH_FILES, entry),
 };

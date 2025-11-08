@@ -2,7 +2,7 @@
  * IPC API interface for Alexandria repository management
  */
 
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry, CodebaseView } from '@a24z/core-library';
 
 export enum AlexandriaEventType {
   ADDED = 'added',
@@ -26,6 +26,8 @@ export enum AlexandriaAPIEvent {
   GET_WITH_VIEWS = 'alexandria:get-with-views',
   REFRESH = 'alexandria:refresh',
   GET_COUNT = 'alexandria:get-count',
+  GET_CODEBASE_VIEWS = 'alexandria:get-codebase-views',
+  GET_CODEBASE_VIEW = 'alexandria:get-codebase-view',
   REPOSITORY_ADDED = 'alexandria:repository-added',
   REPOSITORY_UPDATED = 'alexandria:repository-updated',
   REPOSITORY_REMOVED = 'alexandria:repository-removed',
@@ -87,4 +89,20 @@ export interface AlexandriaAPI {
    * Get total repository count
    */
   getRepositoryCount(): Promise<number>;
+
+  /**
+   * Get all CodebaseViews for a repository
+   * @param repositoryPath - Local path to the repository
+   */
+  getCodebaseViews(repositoryPath: string): Promise<CodebaseView[]>;
+
+  /**
+   * Get a specific CodebaseView by ID
+   * @param repositoryPath - Local path to the repository
+   * @param viewId - ID of the view to retrieve
+   */
+  getCodebaseView(
+    repositoryPath: string,
+    viewId: string,
+  ): Promise<CodebaseView | null>;
 }

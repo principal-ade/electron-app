@@ -5,26 +5,29 @@ import {
   FileText,
   Book,
   Loader,
-  Eye,
-  EyeOff,
   ArrowDownAZ,
   Clock,
+  List,
+  Eye,
 } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { AlexandriaDocsService } from '../../main-process-api/AlexandriaDocsService';
 import { documentSearchService } from '../../services/DocumentSearchService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
+import { AlexandriaDocItem } from './AlexandriaDocItem';
 
-interface AlexandriaDocItem {
+export interface AlexandriaDocItemData {
   path: string;
   name: string;
   relativePath: string;
   isTracked: boolean;
   mtime?: Date;
+  files?: string[];
 }
 
 type SortMode = 'alphabetical' | 'recentlyEdited';
+type FilterMode = 'all' | 'tracked';
 
 interface AlexandriaDocsPanelProps {
   repositoryPath: string;
@@ -39,12 +42,13 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
 }) => {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
-  const [documents, setDocuments] = useState<AlexandriaDocItem[]>([]);
+  const [documents, setDocuments] = useState<AlexandriaDocItemData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [alexandriaEntry, setAlexandriaEntry] =
     useState<AlexandriaEntry | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('recentlyEdited');
+  const [filterMode, setFilterMode] = useState<FilterMode>('all');
 
   // Format relative time (e.g., "2 hours ago", "3 days ago")
   const formatRelativeTime = useCallback((date: Date): string => {
@@ -80,70 +84,46 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
 
       setAlexandriaEntry(entry);
 
-      // Get comprehensive documents including tracked and untracked
-      const comprehensiveDocs =
-        await AlexandriaDocsService.getComprehensiveDocuments(entry);
-      const { tracked, untracked, excluded } = comprehensiveDocs;
+      // Get documents with their associated CodebaseView files
+      const documentsWithFiles =
+        await AlexandriaDocsService.getDocumentsWithFiles(entry);
+      const { documents: docs } = documentsWithFiles;
 
-      // Convert document paths to our format
-      const docItems: AlexandriaDocItem[] = [];
+      // Convert to our format and add file stats
+      const docItems: AlexandriaDocItemData[] = [];
 
-      // Add tracked documents with file stats
-      for (const docPath of tracked) {
-        const fileName = docPath.split('/').pop() || docPath;
+      for (const doc of docs) {
+        const fileName = doc.relativePath.split('/').pop() || doc.relativePath;
         const name = fileName.replace(/\.(md|MD)$/i, '');
-        const fullPath = `${repositoryPath}/${docPath}`.replace(/\/+/g, '/');
 
         // Get file modification time
         let mtime: Date | undefined;
         try {
-          const stats = await FileSystemService.getFileStats(fullPath);
+          const stats = await FileSystemService.getFileStats(doc.path);
           if (stats?.lastModified) {
             mtime = new Date(stats.lastModified);
           }
         } catch (err) {
-          console.warn(`Failed to get mtime for ${fullPath}:`, err);
+          console.warn(`Failed to get mtime for ${doc.path}:`, err);
         }
 
         docItems.push({
-          path: fullPath,
+          path: doc.path,
           name: name,
-          relativePath: docPath,
-          isTracked: true,
+          relativePath: doc.relativePath,
+          isTracked: doc.isTracked,
           mtime,
-        });
-      }
-
-      // Add untracked documents with file stats
-      for (const docPath of untracked) {
-        const fileName = docPath.split('/').pop() || docPath;
-        const name = fileName.replace(/\.(md|MD)$/i, '');
-        const fullPath = `${repositoryPath}/${docPath}`.replace(/\/+/g, '/');
-
-        // Get file modification time
-        let mtime: Date | undefined;
-        try {
-          const stats = await FileSystemService.getFileStats(fullPath);
-          if (stats?.lastModified) {
-            mtime = new Date(stats.lastModified);
-          }
-        } catch (err) {
-          console.warn(`Failed to get mtime for ${fullPath}:`, err);
-        }
-
-        docItems.push({
-          path: fullPath,
-          name: name,
-          relativePath: docPath,
-          isTracked: false,
-          mtime,
+          files: doc.files,
         });
       }
 
       setDocuments(docItems);
 
+      const trackedCount = docItems.filter((d) => d.isTracked).length;
+      const untrackedCount = docItems.filter((d) => !d.isTracked).length;
+
       console.info(
-        `[AlexandriaDocsPanel] Loaded ${tracked.length} tracked, ${untracked.length} untracked documents (${excluded.length} excluded)`,
+        `[AlexandriaDocsPanel] Loaded ${trackedCount} tracked, ${untrackedCount} untracked documents`,
       );
     } catch (err) {
       console.error('[AlexandriaDocsPanel] Failed to fetch documents:', err);
@@ -202,6 +182,11 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
         )
       : documents;
 
+    // Then filter by tracked/untracked mode
+    if (filterMode === 'tracked') {
+      filtered = filtered.filter((doc) => doc.isTracked);
+    }
+
     // Then sort based on selected mode
     const sorted = [...filtered].sort((a, b) => {
       if (sortMode === 'recentlyEdited') {
@@ -222,7 +207,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
     });
 
     return sorted;
-  }, [documents, searchQuery, sortMode]);
+  }, [documents, searchQuery, sortMode, filterMode]);
 
   return (
     <div
@@ -260,25 +245,11 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
             }}
           >
             <Book size={16} color={theme.colors.primary} />
-            <span
-              style={{
-                fontSize: theme.fontSizes[1],
-                fontWeight: theme.fontWeights.semibold,
-                color: theme.colors.text,
-              }}
-            >
-              Documents
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {alexandriaEntry && (
               <span
                 style={{
-                  fontSize: theme.fontSizes[0],
+                  fontSize: theme.fontSizes[1],
                   color: theme.colors.textSecondary,
-                  backgroundColor: theme.colors.backgroundTertiary,
-                  padding: '2px 6px',
-                  borderRadius: '4px',
                   fontWeight: theme.fontWeights.medium,
                 }}
               >
@@ -286,27 +257,89 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                 {documents.length === 1 ? 'document' : 'documents'}
               </span>
             )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {documents.length > 0 && (
-              <select
-                value={sortMode}
-                onChange={(e) => setSortMode(e.target.value as SortMode)}
-                style={{
-                  fontSize: theme.fontSizes[0],
-                  fontFamily: theme.fonts.body,
-                  color: theme.colors.text,
-                  backgroundColor: theme.colors.backgroundTertiary,
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '4px',
-                  padding: '2px 6px',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  fontWeight: theme.fontWeights.medium,
-                }}
-                title="Sort documents"
-              >
-                <option value="alphabetical">A-Z</option>
-                <option value="recentlyEdited">Recently Edited</option>
-              </select>
+              <>
+                <button
+                  onClick={() =>
+                    setFilterMode(filterMode === 'all' ? 'tracked' : 'all')
+                  }
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '6px',
+                    padding: '4px 8px',
+                    cursor: 'pointer',
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts.body,
+                    fontWeight: theme.fontWeights.medium,
+                    color: theme.colors.text,
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.background;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                  }}
+                  title={`Filter: ${filterMode === 'all' ? 'All Documents' : 'Tracked Only'}`}
+                >
+                  {filterMode === 'all' ? (
+                    <List size={14} color={theme.colors.primary} />
+                  ) : (
+                    <Eye size={14} color={theme.colors.primary} />
+                  )}
+                  <span>{filterMode === 'all' ? 'All' : 'Tracked'}</span>
+                </button>
+                <button
+                  onClick={() =>
+                    setSortMode(
+                      sortMode === 'alphabetical'
+                        ? 'recentlyEdited'
+                        : 'alphabetical',
+                    )
+                  }
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: theme.colors.backgroundTertiary,
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '6px',
+                    padding: '4px 8px',
+                    cursor: 'pointer',
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts.body,
+                    fontWeight: theme.fontWeights.medium,
+                    color: theme.colors.text,
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.background;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                  }}
+                  title={`Sort: ${sortMode === 'alphabetical' ? 'Alphabetical' : 'Recently Edited'}`}
+                >
+                  {sortMode === 'alphabetical' ? (
+                    <ArrowDownAZ size={14} color={theme.colors.primary} />
+                  ) : (
+                    <Clock size={14} color={theme.colors.primary} />
+                  )}
+                  <span>
+                    {sortMode === 'alphabetical' ? 'A-Z' : 'Recent'}
+                  </span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -358,7 +391,6 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
         style={{
           flex: 1,
           overflow: 'auto',
-          padding: '12px',
         }}
       >
         {loading ? (
@@ -423,161 +455,16 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             {filteredDocuments.map((doc) => (
-              <div
+              <AlexandriaDocItem
                 key={doc.path}
-                onClick={() => onDocumentSelect(doc.path, 'markdown')}
-                style={{
-                  padding: '10px 12px',
-                  backgroundColor:
-                    selectedDocument === doc.path
-                      ? `${theme.colors.primary}15`
-                      : 'transparent',
-                  border:
-                    selectedDocument === doc.path
-                      ? `1px solid ${theme.colors.primary}`
-                      : '1px solid transparent',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  if (selectedDocument !== doc.path) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (selectedDocument !== doc.path) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '8px',
-                  }}
-                >
-                  <div
-                    style={{
-                      position: 'relative',
-                      flexShrink: 0,
-                      marginTop: '2px',
-                    }}
-                  >
-                    <FileText
-                      size={16}
-                      color={
-                        selectedDocument === doc.path
-                          ? theme.colors.primary
-                          : theme.colors.textSecondary
-                      }
-                    />
-                    {/* Tracked/Untracked indicator */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: -2,
-                        right: -2,
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        backgroundColor: doc.isTracked ? '#10b981' : '#f59e0b',
-                        border: `1px solid ${theme.colors.background}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      title={
-                        doc.isTracked
-                          ? 'Tracked (in CodebaseView)'
-                          : 'Untracked'
-                      }
-                    >
-                      {doc.isTracked ? (
-                        <Eye size={6} color="white" />
-                      ) : (
-                        <EyeOff size={6} color="white" />
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'space-between',
-                        gap: '8px',
-                        marginBottom: '2px',
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[1],
-                          fontWeight:
-                            selectedDocument === doc.path
-                              ? theme.fontWeights.semibold
-                              : theme.fontWeights.medium,
-                          color:
-                            selectedDocument === doc.path
-                              ? theme.colors.primary
-                              : theme.colors.text,
-                        }}
-                      >
-                        {doc.name}
-                      </div>
-                      {doc.mtime && (
-                        <div
-                          style={{
-                            fontSize: theme.fontSizes[0],
-                            color: theme.colors.textSecondary,
-                            opacity: 0.7,
-                            flexShrink: 0,
-                            fontWeight: theme.fontWeights.medium,
-                          }}
-                          title={doc.mtime.toLocaleString()}
-                        >
-                          {formatRelativeTime(doc.mtime)}
-                        </div>
-                      )}
-                    </div>
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: theme.colors.textSecondary,
-                          opacity: 0.8,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          flex: 1,
-                        }}
-                      >
-                        {doc.relativePath}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: theme.fontSizes[0],
-                          color: doc.isTracked ? '#10b981' : '#f59e0b',
-                          fontWeight: theme.fontWeights.medium,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {doc.isTracked ? 'tracked' : 'untracked'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                doc={doc}
+                isSelected={selectedDocument === doc.path}
+                onSelect={onDocumentSelect}
+                formatRelativeTime={formatRelativeTime}
+                trackedFiles={doc.files}
+              />
             ))}
           </div>
         )}
@@ -595,7 +482,9 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
             textAlign: 'center',
           }}
         >
-          Showing tracked and untracked markdown documents
+          {filterMode === 'all'
+            ? 'Showing tracked and untracked markdown documents'
+            : 'Showing tracked markdown documents only'}
         </div>
       )}
     </div>

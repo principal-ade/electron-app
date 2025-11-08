@@ -3,7 +3,7 @@
  * Communicates with main process via IPC using window.mainProcess
  */
 
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry, CodebaseView } from '@a24z/core-library';
 import type { AlexandriaChangeEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 
 export class AlexandriaService {
@@ -57,5 +57,27 @@ export class AlexandriaService {
 
   static async getRepositoryCount(): Promise<number> {
     return window.mainProcess.alexandria.getRepositoryCount();
+  }
+
+  /**
+   * Get all CodebaseViews for a repository
+   * @param repositoryPath - Local path to the repository
+   */
+  static async getCodebaseViews(
+    repositoryPath: string,
+  ): Promise<CodebaseView[]> {
+    return window.mainProcess.alexandria.getCodebaseViews(repositoryPath);
+  }
+
+  /**
+   * Get a specific CodebaseView by ID
+   * @param repositoryPath - Local path to the repository
+   * @param viewId - ID of the view to retrieve
+   */
+  static async getCodebaseView(
+    repositoryPath: string,
+    viewId: string,
+  ): Promise<CodebaseView | null> {
+    return window.mainProcess.alexandria.getCodebaseView(repositoryPath, viewId);
   }
 }

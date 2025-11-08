@@ -60,30 +60,87 @@ export const LocalhostBrowserPanel: React.FC<LocalhostBrowserPanelProps> = ({
 
   const localhostUrl = port ? `http://localhost:${port}${path}` : '';
 
+  // Log when URL changes
+  useEffect(() => {
+    if (port && localhostUrl) {
+      console.log('[LocalhostBrowser] URL updated:', localhostUrl);
+    }
+  }, [port, path, localhostUrl]);
+
   useEffect(() => {
     const webview = webviewRef.current;
     if (!webview) return;
 
     const handleDidStartLoading = () => {
+      console.log('[LocalhostBrowser] Started loading:', localhostUrl);
       setIsLoading(true);
     };
 
     const handleDidStopLoading = () => {
+      const url = webview.getURL();
+      console.log('[LocalhostBrowser] Successfully loaded:', url);
       setIsLoading(false);
-      setCurrentUrl(webview.getURL());
+      setCurrentUrl(url);
       setCanGoBack(webview.canGoBack());
       setCanGoForward(webview.canGoForward());
     };
 
     const handleDidNavigate = () => {
-      setCurrentUrl(webview.getURL());
+      const url = webview.getURL();
+      console.log('[LocalhostBrowser] Navigated to:', url);
+      setCurrentUrl(url);
       setCanGoBack(webview.canGoBack());
       setCanGoForward(webview.canGoForward());
     };
 
-    const handleDidFailLoad = (event: Event) => {
-      console.error('Webview failed to load:', event);
+    const handleDidFailLoad = (event: any) => {
+      console.error('[LocalhostBrowser] Failed to load:', {
+        url: localhostUrl,
+        errorCode: event.errorCode,
+        errorDescription: event.errorDescription,
+        validatedURL: event.validatedURL,
+        isMainFrame: event.isMainFrame,
+      });
       setIsLoading(false);
+    };
+
+    // Capture console messages from inside the webview
+    const handleConsoleMessage = (event: any) => {
+      const prefix = '[LocalhostBrowser:Webview]';
+      const level = event.level || 0; // 0=log, 1=warn, 2=error
+      const message = event.message || '';
+
+      if (level === 2) {
+        console.error(`${prefix} [ERROR]`, message, event);
+      } else if (level === 1) {
+        console.warn(`${prefix} [WARN]`, message, event);
+      } else {
+        console.log(`${prefix}`, message);
+      }
+    };
+
+    // Catch any crashes
+    const handleCrashed = (event: any) => {
+      console.error('[LocalhostBrowser] Webview CRASHED:', event);
+    };
+
+    // Catch unresponsive
+    const handleUnresponsive = (event: any) => {
+      console.warn('[LocalhostBrowser] Webview became unresponsive:', event);
+    };
+
+    const handleResponsive = (event: any) => {
+      console.log('[LocalhostBrowser] Webview became responsive again:', event);
+    };
+
+    // Catch plugin crashes
+    const handlePluginCrashed = (event: any) => {
+      console.error('[LocalhostBrowser] Plugin crashed:', event);
+    };
+
+    // Catch destroyed
+    const handleDestroyed = (event: any) => {
+      console.warn('[LocalhostBrowser] Webview destroyed:', event);
     };
 
     webview.addEventListener('did-start-loading', handleDidStartLoading);
@@ -91,6 +148,12 @@ export const LocalhostBrowserPanel: React.FC<LocalhostBrowserPanelProps> = ({
     webview.addEventListener('did-navigate', handleDidNavigate);
     webview.addEventListener('did-navigate-in-page', handleDidNavigate);
     webview.addEventListener('did-fail-load', handleDidFailLoad);
+    webview.addEventListener('console-message', handleConsoleMessage);
+    webview.addEventListener('crashed', handleCrashed);
+    webview.addEventListener('unresponsive', handleUnresponsive);
+    webview.addEventListener('responsive', handleResponsive);
+    webview.addEventListener('plugin-crashed', handlePluginCrashed);
+    webview.addEventListener('destroyed', handleDestroyed);
 
     return () => {
       webview.removeEventListener('did-start-loading', handleDidStartLoading);
@@ -98,6 +161,12 @@ export const LocalhostBrowserPanel: React.FC<LocalhostBrowserPanelProps> = ({
       webview.removeEventListener('did-navigate', handleDidNavigate);
       webview.removeEventListener('did-navigate-in-page', handleDidNavigate);
       webview.removeEventListener('did-fail-load', handleDidFailLoad);
+      webview.removeEventListener('console-message', handleConsoleMessage);
+      webview.removeEventListener('crashed', handleCrashed);
+      webview.removeEventListener('unresponsive', handleUnresponsive);
+      webview.removeEventListener('responsive', handleResponsive);
+      webview.removeEventListener('plugin-crashed', handlePluginCrashed);
+      webview.removeEventListener('destroyed', handleDestroyed);
     };
   }, []);
 
@@ -129,8 +198,16 @@ export const LocalhostBrowserPanel: React.FC<LocalhostBrowserPanelProps> = ({
     e.preventDefault();
     const parsedPort = parseInt(portInput, 10);
     if (parsedPort > 0 && parsedPort <= 65535) {
+      const url = `http://localhost:${parsedPort}${pathInput}`;
+      console.log('[LocalhostBrowser] Setting port and path:', {
+        port: parsedPort,
+        path: pathInput,
+        url,
+      });
       setPort(parsedPort);
       setPath(pathInput);
+    } else {
+      console.warn('[LocalhostBrowser] Invalid port number:', portInput);
     }
   };
 

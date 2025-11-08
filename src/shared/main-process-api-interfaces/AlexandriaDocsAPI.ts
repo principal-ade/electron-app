@@ -10,6 +10,7 @@ export enum AlexandriaDocsAPIEvent {
   GET_EXCLUDED_DOCUMENTS = 'alexandria-docs:get-excluded-documents',
   GET_DOCUMENTS_WITH_EXCLUSIONS = 'alexandria-docs:get-documents-with-exclusions',
   GET_COMPREHENSIVE_DOCUMENTS = 'alexandria-docs:get-comprehensive-documents',
+  GET_DOCUMENTS_WITH_FILES = 'alexandria-docs:get-documents-with-files',
 }
 
 export interface AlexandriaDocsWithExclusions {
@@ -22,6 +23,21 @@ export interface ComprehensiveDocuments {
   untracked: string[];
   excluded: string[];
   all: string[];
+}
+
+export interface DocumentWithFiles {
+  /** Full path to the document */
+  path: string;
+  /** Relative path from repository root */
+  relativePath: string;
+  /** Whether this document is tracked (in a CodebaseView) */
+  isTracked: boolean;
+  /** Files associated with this document from CodebaseView (only if tracked) */
+  files?: string[];
+}
+
+export interface DocumentsWithFiles {
+  documents: DocumentWithFiles[];
 }
 
 export interface AlexandriaDocsAPI {
@@ -58,4 +74,11 @@ export interface AlexandriaDocsAPI {
   getComprehensiveDocuments(
     entry: AlexandriaEntry,
   ): Promise<ComprehensiveDocuments>;
+
+  /**
+   * Get all documents with their associated CodebaseView files
+   * @param entry - The Alexandria repository entry
+   * @returns Object with documents and their associated files
+   */
+  getDocumentsWithFiles(entry: AlexandriaEntry): Promise<DocumentsWithFiles>;
 }

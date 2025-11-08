@@ -102,6 +102,14 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
     return this.registryService.getRepositoryCount();
   }
 
+  async getCodebaseViews(repositoryPath: string) {
+    return this.registryService.getCodebaseViews(repositoryPath);
+  }
+
+  async getCodebaseView(repositoryPath: string, viewId: string) {
+    return this.registryService.getCodebaseView(repositoryPath, viewId);
+  }
+
   private async registerWithMonitoring(repo: AlexandriaEntry): Promise<void> {
     if (!repo?.path) {
       return;
@@ -148,6 +156,8 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
     ipcMain.removeHandler(AlexandriaAPIEvent.GET_WITH_VIEWS);
     ipcMain.removeHandler(AlexandriaAPIEvent.REFRESH);
     ipcMain.removeHandler(AlexandriaAPIEvent.GET_COUNT);
+    ipcMain.removeHandler(AlexandriaAPIEvent.GET_CODEBASE_VIEWS);
+    ipcMain.removeHandler(AlexandriaAPIEvent.GET_CODEBASE_VIEW);
   }
 }
 
@@ -184,6 +194,15 @@ export function registerAlexandriaHandlers(): void {
   );
   ipcMain.handle(AlexandriaAPIEvent.GET_COUNT, () =>
     handler.getRepositoryCount(),
+  );
+  ipcMain.handle(
+    AlexandriaAPIEvent.GET_CODEBASE_VIEWS,
+    (_, repositoryPath: string) => handler.getCodebaseViews(repositoryPath),
+  );
+  ipcMain.handle(
+    AlexandriaAPIEvent.GET_CODEBASE_VIEW,
+    (_, repositoryPath: string, viewId: string) =>
+      handler.getCodebaseView(repositoryPath, viewId),
   );
 
   console.log('[Alexandria] IPC handlers registered');
