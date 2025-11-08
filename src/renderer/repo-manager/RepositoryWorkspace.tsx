@@ -2058,6 +2058,24 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             onDocumentSelect={handleDocumentSelect}
             selectedDocument={selectedDocPath ?? undefined}
             onFileSelect={handleFileClick}
+            gitStatus={
+              cacheData?.gitStatus
+                ? {
+                    staged: cacheData.gitStatus.stagedFiles.map((path) => ({
+                      path,
+                    })),
+                    unstaged: cacheData.gitStatus.modifiedFiles.map((path) => ({
+                      path,
+                    })),
+                    untracked: cacheData.gitStatus.untrackedFiles.map((path) => ({
+                      path,
+                    })),
+                    deleted: cacheData.gitStatus.deletedFiles.map((path) => ({
+                      path,
+                    })),
+                  }
+                : undefined
+            }
           />
         ),
         agentEvents: (

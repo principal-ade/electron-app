@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { FileText, Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
 import type { AlexandriaDocItemData } from './AlexandriaDocsPanel';
+import type { GitStatus } from '../../../shared/types/repository.types';
 import { CodebaseViewFileTree } from './CodebaseViewFileTree';
 
 interface AlexandriaDocItemProps {
@@ -11,6 +12,8 @@ interface AlexandriaDocItemProps {
   formatRelativeTime: (date: Date) => string;
   trackedFiles?: string[];
   onFileSelect?: (filePath: string) => void;
+  gitStatus?: GitStatus;
+  hasChangedFiles?: boolean;
 }
 
 export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
@@ -20,6 +23,8 @@ export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
   formatRelativeTime,
   trackedFiles,
   onFileSelect,
+  gitStatus,
+  hasChangedFiles = false,
 }) => {
   const { theme } = useTheme();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -164,46 +169,66 @@ export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
                 {doc.relativePath}
               </div>
               <div
-                onClick={handleTrackedClick}
                 style={{
-                  fontSize: theme.fontSizes[1],
-                  color: doc.isTracked
-                    ? theme.colors.success
-                    : theme.colors.warning,
-                  fontWeight: theme.fontWeights.medium,
-                  flexShrink: 0,
-                  cursor: canExpand ? 'pointer' : 'default',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  padding: canExpand ? '2px 6px' : '0',
-                  borderRadius: '4px',
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  if (canExpand) {
-                    e.currentTarget.style.backgroundColor =
-                      doc.isTracked
-                        ? `${theme.colors.success}20`
-                        : `${theme.colors.warning}20`;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (canExpand) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
+                  gap: '6px',
                 }}
               >
-                {canExpand && (
-                  <>
-                    {isExpanded ? (
-                      <ChevronDown size={14} />
-                    ) : (
-                      <ChevronRight size={14} />
-                    )}
-                  </>
+                <div
+                  onClick={handleTrackedClick}
+                  style={{
+                    fontSize: theme.fontSizes[1],
+                    color: doc.isTracked
+                      ? theme.colors.success
+                      : theme.colors.warning,
+                    fontWeight: theme.fontWeights.medium,
+                    flexShrink: 0,
+                    cursor: canExpand ? 'pointer' : 'default',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: canExpand ? '2px 6px' : '0',
+                    borderRadius: '4px',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (canExpand) {
+                      e.currentTarget.style.backgroundColor =
+                        doc.isTracked
+                          ? `${theme.colors.success}20`
+                          : `${theme.colors.warning}20`;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (canExpand) {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }
+                  }}
+                >
+                  {canExpand && (
+                    <>
+                      {isExpanded ? (
+                        <ChevronDown size={14} />
+                      ) : (
+                        <ChevronRight size={14} />
+                      )}
+                    </>
+                  )}
+                  <span>{doc.isTracked ? 'tracked' : 'untracked'}</span>
+                </div>
+                {hasChangedFiles && (
+                  <div
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: '#f59e0b',
+                      flexShrink: 0,
+                    }}
+                    title="Associated files have uncommitted changes"
+                  />
                 )}
-                <span>{doc.isTracked ? 'tracked' : 'untracked'}</span>
               </div>
             </div>
           </div>
@@ -239,6 +264,7 @@ export const AlexandriaDocItem: React.FC<AlexandriaDocItemProps> = ({
           >
             <CodebaseViewFileTree
               files={trackedFiles}
+              gitStatus={gitStatus}
               defaultOpen={true}
               onFileSelect={onFileSelect}
             />

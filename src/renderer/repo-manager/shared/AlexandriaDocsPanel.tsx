@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import {
   Search,
@@ -11,6 +11,7 @@ import {
   Eye,
 } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
+import type { GitStatus } from '../../../shared/types/repository.types';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { AlexandriaDocsService } from '../../main-process-api/AlexandriaDocsService';
 import { documentSearchService } from '../../services/DocumentSearchService';
@@ -34,6 +35,7 @@ interface AlexandriaDocsPanelProps {
   onDocumentSelect: (filePath: string, type: 'markdown' | 'excalidraw') => void;
   selectedDocument?: string;
   onFileSelect?: (filePath: string) => void;
+  gitStatus?: GitStatus;
 }
 
 export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
@@ -41,6 +43,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
   onDocumentSelect,
   selectedDocument,
   onFileSelect,
+  gitStatus,
 }) => {
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -210,6 +213,24 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
 
     return sorted;
   }, [documents, searchQuery, sortMode, filterMode]);
+
+  // Compute which docs have associated files with changes
+  const docsWithChanges = useMemo(() => {
+    if (!gitStatus) return new Set<string>();
+
+    const changedFiles = new Set([
+      ...gitStatus.staged.map((f) => f.path),
+      ...gitStatus.unstaged.map((f) => f.path),
+      ...gitStatus.untracked.map((f) => f.path),
+      ...gitStatus.deleted.map((f) => f.path),
+    ]);
+
+    return new Set(
+      documents
+        .filter((doc) => doc.files?.some((file) => changedFiles.has(file)))
+        .map((doc) => doc.path),
+    );
+  }, [documents, gitStatus]);
 
   return (
     <div
@@ -467,6 +488,8 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
                 formatRelativeTime={formatRelativeTime}
                 trackedFiles={doc.files}
                 onFileSelect={onFileSelect}
+                gitStatus={gitStatus}
+                hasChangedFiles={docsWithChanges.has(doc.path)}
               />
             ))}
           </div>
