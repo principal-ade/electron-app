@@ -266,7 +266,6 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
           {/* Toggle switch at the top */}
           <div
             style={{
-              padding: '8px 16px',
               borderBottom: `1px solid ${theme.colors.border}`,
             }}
           >
@@ -275,9 +274,6 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
                 display: 'flex',
                 alignItems: 'stretch',
                 backgroundColor: theme.colors.backgroundTertiary,
-                borderRadius: '6px',
-                padding: '2px',
-                border: `1px solid ${theme.colors.border}`,
                 width: '100%',
               }}
             >
@@ -296,7 +292,6 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
                   border: showFullTree
                     ? `1px solid ${theme.colors.border}`
                     : '1px solid transparent',
-                  borderRadius: '4px',
                   cursor: 'pointer',
                   fontWeight: showFullTree ? 600 : 400,
                   transition: 'all 0.2s',
@@ -319,7 +314,6 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
                   border: !showFullTree
                     ? `1px solid ${theme.colors.border}`
                     : '1px solid transparent',
-                  borderRadius: '4px',
                   cursor: 'pointer',
                   fontWeight: !showFullTree ? 600 : 400,
                   transition: 'all 0.2s',
@@ -441,9 +435,6 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
             display: 'flex',
             alignItems: 'stretch',
             backgroundColor: theme.colors.backgroundTertiary,
-            borderRadius: '6px',
-            padding: '2px',
-            border: `1px solid ${theme.colors.border}`,
             width: '100%',
           }}
         >
@@ -462,7 +453,6 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               border: showFullTree
                 ? `1px solid ${theme.colors.border}`
                 : '1px solid transparent',
-              borderRadius: '4px',
               cursor: 'pointer',
               fontWeight: showFullTree ? 600 : 400,
               transition: 'all 0.2s',
@@ -485,7 +475,6 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               border: !showFullTree
                 ? `1px solid ${theme.colors.border}`
                 : '1px solid transparent',
-              borderRadius: '4px',
               cursor: 'pointer',
               fontWeight: !showFullTree ? 600 : 400,
               transition: 'all 0.2s',
