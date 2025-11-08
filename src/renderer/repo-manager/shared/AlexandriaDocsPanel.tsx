@@ -9,6 +9,7 @@ import {
   Clock,
   List,
   Eye,
+  Target,
 } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import type { GitStatus } from '../../../shared/types/repository.types';
@@ -57,6 +58,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
   const [sortMode, setSortMode] = useState<SortMode>('recentlyEdited');
   const [filterMode, setFilterMode] = useState<FilterMode>('all');
   const [hoveredDocument, setHoveredDocument] = useState<string | null>(null);
+  const [showCoverage, setShowCoverage] = useState(false);
 
   // Format relative time (e.g., "2 hours ago", "3 days ago")
   const formatRelativeTime = useCallback((date: Date): string => {
@@ -253,6 +255,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
           items: selectedDoc.files.map((path) => ({
             path,
             type: 'file' as const,
+            renderStrategy: 'fill' as const,
           })),
         });
       } else {
@@ -289,6 +292,7 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
           items: hoveredDoc.files.map((path) => ({
             path,
             type: 'file' as const,
+            renderStrategy: 'fill' as const,
           })),
         });
       } else {
@@ -305,6 +309,47 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
       unregisterLayer(LAYER_ID);
     };
   }, [hoveredDocument, selectedDocument, documents, registerLayer, unregisterLayer]);
+
+  // Highlight all files from all tracked documents (coverage view)
+  useEffect(() => {
+    const LAYER_ID = 'alexandria-coverage';
+
+    if (showCoverage) {
+      // Collect all unique files from all tracked documents
+      const allFiles = new Set<string>();
+      documents.forEach((doc) => {
+        if (doc.isTracked && doc.files) {
+          doc.files.forEach((file) => allFiles.add(file));
+        }
+      });
+
+      if (allFiles.size > 0) {
+        // Register coverage highlight layer
+        registerLayer(LAYER_ID, {
+          name: `Documentation Coverage (${allFiles.size} files)`,
+          enabled: true,
+          color: '#10b981', // Green color for coverage
+          opacity: 0.5,
+          priority: 10, // Lower priority than individual document highlights
+          items: Array.from(allFiles).map((path) => ({
+            path,
+            type: 'file' as const,
+            renderStrategy: 'fill' as const,
+          })),
+        });
+      } else {
+        unregisterLayer(LAYER_ID);
+      }
+    } else {
+      // Coverage view disabled, unregister the layer
+      unregisterLayer(LAYER_ID);
+    }
+
+    // Cleanup when component unmounts
+    return () => {
+      unregisterLayer(LAYER_ID);
+    };
+  }, [showCoverage, documents, registerLayer, unregisterLayer]);
 
   return (
     <div
@@ -358,6 +403,47 @@ export const AlexandriaDocsPanel: React.FC<AlexandriaDocsPanelProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {documents.length > 0 && (
               <>
+                <button
+                  onClick={() => setShowCoverage(!showCoverage)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: showCoverage
+                      ? `${theme.colors.success}22`
+                      : theme.colors.backgroundTertiary,
+                    border: `1px solid ${showCoverage ? theme.colors.success : theme.colors.border}`,
+                    borderRadius: '6px',
+                    padding: '4px 8px',
+                    cursor: 'pointer',
+                    fontSize: theme.fontSizes[0],
+                    fontFamily: theme.fonts.body,
+                    fontWeight: theme.fontWeights.medium,
+                    color: theme.colors.text,
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = showCoverage
+                      ? `${theme.colors.success}33`
+                      : theme.colors.background;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = showCoverage
+                      ? `${theme.colors.success}22`
+                      : theme.colors.backgroundTertiary;
+                  }}
+                  title={
+                    showCoverage
+                      ? 'Hide coverage overlay on map'
+                      : 'Show all documented files on map'
+                  }
+                >
+                  <Target
+                    size={14}
+                    color={showCoverage ? theme.colors.success : theme.colors.primary}
+                  />
+                  <span>Coverage</span>
+                </button>
                 <button
                   onClick={() =>
                     setFilterMode(filterMode === 'all' ? 'tracked' : 'all')

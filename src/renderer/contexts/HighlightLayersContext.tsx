@@ -9,6 +9,7 @@ import React, {
 export interface HighlightItem {
   path: string;
   type: 'file' | 'directory';
+  renderStrategy?: 'border' | 'fill';
 }
 
 export interface HighlightLayer {
