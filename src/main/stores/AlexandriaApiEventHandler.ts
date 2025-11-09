@@ -9,12 +9,16 @@ import { AlexandriaRegistryService } from './AlexandriaRegistryService';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { RepositoryRegistrationManager } from '../repository-monitoring/RepositoryRegistrationManager';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
+import { MonitoringInternalEvent } from '../../repository-monitoring-server/types';
+import type { WorkspaceChangeEventPayload } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 
 export class AlexandriaApiEventHandler implements AlexandriaAPI {
   private registryService: AlexandriaRegistryService;
+  private updateTimers: Map<string, NodeJS.Timeout> = new Map();
 
   constructor() {
     this.registryService = AlexandriaRegistryService.getInstance();
+    this.setupRepositoryMonitoring();
   }
 
   // This is implemented in the preload/renderer side, not in main process
@@ -143,9 +147,95 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
   }
 
   /**
+   * Set up repository monitoring to listen for file changes
+   */
+  private setupRepositoryMonitoring(): void {
+    try {
+      const monitoringManager = getRepositoryMonitoringManager();
+
+      monitoringManager.on(
+        MonitoringInternalEvent.WORKSPACE_CHANGED,
+        (payload: WorkspaceChangeEventPayload) => {
+          this.handleWorkspaceChange(payload);
+        },
+      );
+
+      console.log(
+        '[Alexandria] Subscribed to repository monitoring events',
+      );
+    } catch (error) {
+      console.error(
+        '[Alexandria] Failed to setup repository monitoring:',
+        error,
+      );
+    }
+  }
+
+  /**
+   * Handle workspace change events from repository monitoring
+   */
+  private handleWorkspaceChange(payload: WorkspaceChangeEventPayload): void {
+    const { repoPath, changes } = payload;
+
+    // If no changes, ignore (likely a git state change without file details)
+    if (!changes || changes.length === 0) {
+      return;
+    }
+
+    // Check if any markdown files in the .alexandria directory were changed
+    const hasAlexandriaMarkdownChanges = changes.some((change) => {
+      const normalizedPath = change.path.toLowerCase();
+      return (
+        normalizedPath.includes('/.alexandria/') &&
+        normalizedPath.endsWith('.md')
+      );
+    });
+
+    if (!hasAlexandriaMarkdownChanges) {
+      return;
+    }
+
+    // Debounce updates to avoid flooding on multiple file changes
+    const existingTimer = this.updateTimers.get(repoPath);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    const timer = setTimeout(async () => {
+      this.updateTimers.delete(repoPath);
+
+      // Check if this repository is registered in Alexandria
+      try {
+        const repo = await this.registryService.getRepositoryByPath(repoPath);
+        if (repo) {
+          console.log(
+            `[Alexandria] Detected markdown changes in ${repo.name}, broadcasting update`,
+          );
+          this.broadcastAlexandriaEvent(
+            AlexandriaAPIEvent.REPOSITORY_UPDATED,
+            repo,
+          );
+        }
+      } catch (error) {
+        console.error(
+          '[Alexandria] Failed to broadcast repository update:',
+          error,
+        );
+      }
+    }, 500); // 500ms debounce
+
+    this.updateTimers.set(repoPath, timer);
+  }
+
+  /**
    * Clean up handlers when shutting down
    */
   destroy(): void {
+    // Clear all pending update timers
+    for (const timer of this.updateTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.updateTimers.clear();
     // Remove all handlers using enum values
     ipcMain.removeHandler(AlexandriaAPIEvent.GET_ALL);
     ipcMain.removeHandler(AlexandriaAPIEvent.GET);
