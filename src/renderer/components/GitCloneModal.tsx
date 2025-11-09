@@ -14,7 +14,8 @@ import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
-import type { MultiRepoWorkspace } from '../../shared/types/userPreferences.types';
+import { WorkspaceService } from '../main-process-api/WorkspaceService';
+import type { Workspace } from '@a24z/core-library';
 
 interface GitCloneModalProps {
   isOpen: boolean;
@@ -65,9 +66,10 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   const [cloneProgress, setCloneProgress] = useState<string>('');
   const [existingRepoPath, setExistingRepoPath] = useState<string>('');
 
-  // Multi-Repo Workspace state
-  const [workspaces, setWorkspaces] = useState<MultiRepoWorkspace[]>([]);
-  const [selectedWorkspace, setSelectedWorkspace] = useState<MultiRepoWorkspace | null>(null);
+  // Workspace state
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [defaultWorkspace, setDefaultWorkspace] = useState<Workspace | null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
 
   // Reset state when modal opens and focus the input
   useEffect(() => {
@@ -98,13 +100,20 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
   // Load workspaces when modal opens
   useEffect(() => {
     if (isOpen) {
-      UserPreferencesService.getPreferences().then((prefs) => {
-        const loadedWorkspaces = prefs.multiRepoWorkspaces ?? [];
+      Promise.all([
+        WorkspaceService.getWorkspaces(),
+        WorkspaceService.getDefaultWorkspace(),
+      ]).then(([loadedWorkspaces, defaultWs]) => {
         setWorkspaces(loadedWorkspaces);
+        setDefaultWorkspace(defaultWs);
 
-        // Auto-select default workspace
-        const defaultWorkspace = loadedWorkspaces.find((w) => w.isDefault);
-        setSelectedWorkspace(defaultWorkspace ?? loadedWorkspaces[0] ?? null);
+        // Auto-select default workspace, or first workspace if no default
+        setSelectedWorkspace(defaultWs ?? loadedWorkspaces[0] ?? null);
+      }).catch((error) => {
+        console.error('[GitCloneModal] Error loading workspaces:', error);
+        setWorkspaces([]);
+        setDefaultWorkspace(null);
+        setSelectedWorkspace(null);
       });
     }
   }, [isOpen]);
@@ -248,7 +257,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
 
       // Priority: 1) Selected workspace, 2) defaultCloneDirectory (backwards compat), 3) Prompt user
       if (selectedWorkspace) {
-        baseDir = selectedWorkspace.path;
+        baseDir = selectedWorkspace.suggestedClonePath;
       } else {
         const preferences = await UserPreferencesService.getPreferences();
         baseDir = preferences.defaultCloneDirectory;
@@ -383,6 +392,20 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
           targetPath,
         );
 
+        // Add to selected workspace if one is selected
+        if (selectedWorkspace && registeredRepo) {
+          setCloneProgress('Adding to workspace...');
+          try {
+            await WorkspaceService.addRepositoryToWorkspace(
+              registeredRepo,
+              selectedWorkspace.id
+            );
+          } catch (error) {
+            console.error('[GitCloneModal] Error adding to workspace:', error);
+            // Don't fail the clone if workspace addition fails
+          }
+        }
+
         setCloneProgress('Clone complete!');
         setCurrentStep('complete');
 
@@ -449,6 +472,20 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
         repoName,
         pathToRegister,
       );
+
+      // Add to selected workspace if one is selected
+      if (selectedWorkspace && registeredRepo) {
+        setCloneProgress('Adding to workspace...');
+        try {
+          await WorkspaceService.addRepositoryToWorkspace(
+            registeredRepo,
+            selectedWorkspace.id
+          );
+        } catch (error) {
+          console.error('[GitCloneModal] Error adding to workspace:', error);
+          // Don't fail the registration if workspace addition fails
+        }
+      }
 
       setCloneProgress('Registration complete!');
       setCurrentStep('complete');
@@ -747,7 +784,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                         {workspaces.map((workspace) => (
                           <option key={workspace.id} value={workspace.id}>
                             {workspace.name}
-                            {workspace.isDefault ? ' (Default)' : ''}
+                            {defaultWorkspace?.id === workspace.id ? ' (Default)' : ''}
                           </option>
                         ))}
                       </select>
@@ -825,7 +862,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                     style={{ color: theme.colors.text }}
                   >
                     {selectedWorkspace
-                      ? `${selectedWorkspace.path}/${repoName}`
+                      ? `${selectedWorkspace.suggestedClonePath || ''}/${repoName}`
                       : cloneDirectory || 'Click "Clone Repository" to select location...'}
                   </span>
                 </div>

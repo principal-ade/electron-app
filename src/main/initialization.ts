@@ -37,6 +37,7 @@ import { setupAgentConfigHandlers } from './agent-management/agentConfigHandlers
 import { registerFileSystemIpcHandlers } from './file-system/fileSystemHandlers';
 import { registerRepositoryHandlers } from './stores/RepositoryApiEventHandler';
 import { registerAlexandriaHandlers } from './stores/AlexandriaApiEventHandler';
+import { registerWorkspaceHandlers } from './stores/WorkspaceApiEventHandler';
 import { registerAlexandriaDocsHandlers } from './stores/AlexandriaDocsApiEventHandler';
 import { registerRepositoryNotesHandlers } from './principal-mcp/repositoryNotesHandlers';
 import { registerPalaceTasksHandlers } from './palace-tasks/palaceTasksHandlers';
@@ -148,6 +149,7 @@ const registerAllIpcHandlers = async () => {
   await registerLinksHandlers();
   registerRepositoryHandlers();
   registerAlexandriaHandlers();
+  registerWorkspaceHandlers();
   registerAlexandriaDocsHandlers();
   registerRepositoryNotesHandlers();
   registerPalaceTasksHandlers();

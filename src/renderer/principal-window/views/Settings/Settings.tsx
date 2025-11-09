@@ -6,14 +6,17 @@ import {
   RefreshCw,
   Settings as SettingsIcon,
   Activity,
+  FolderOpen,
 } from 'lucide-react';
 import { GeneralSettings } from './components/GeneralSettings';
 import { AIAssistantsSettings } from './components/AIAssistantsSettings';
 import { UpdatesSettings } from './components/UpdatesSettings';
 import { ObservabilitySettings } from './components/ObservabilitySettings';
+import { WorkspaceSettings } from './components/WorkspaceSettings';
 
 type SettingsCategory =
   | 'general'
+  | 'workspaces'
   | 'ai-assistants'
   | 'updates'
   | 'observability';
@@ -101,6 +104,46 @@ export const Settings: React.FC = () => {
             >
               <Globe size={18} />
               General
+            </button>
+
+            <button
+              onClick={() => setActiveCategory('workspaces')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor:
+                  activeCategory === 'workspaces'
+                    ? theme.colors.primary + '20'
+                    : 'transparent',
+                color:
+                  activeCategory === 'workspaces'
+                    ? theme.colors.primary
+                    : theme.colors.text,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                fontSize: '14px',
+                fontWeight: activeCategory === 'workspaces' ? 600 : 500,
+                textAlign: 'left',
+                width: '100%',
+              }}
+              onMouseEnter={(e) => {
+                if (activeCategory !== 'workspaces') {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeCategory !== 'workspaces') {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <FolderOpen size={18} />
+              Workspaces
             </button>
 
             <button
@@ -249,6 +292,7 @@ export const Settings: React.FC = () => {
           }}
         >
           {activeCategory === 'general' && <GeneralSettings />}
+          {activeCategory === 'workspaces' && <WorkspaceSettings />}
           {activeCategory === 'ai-assistants' && <AIAssistantsSettings />}
           {activeCategory === 'updates' && <UpdatesSettings />}
           {activeCategory === 'observability' && <ObservabilitySettings />}

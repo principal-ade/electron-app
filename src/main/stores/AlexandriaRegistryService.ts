@@ -8,7 +8,7 @@ import {
   NodeFileSystemAdapter,
   MemoryPalace,
 } from '@a24z/core-library';
-import type { AlexandriaEntry, CodebaseView } from '@a24z/core-library';
+import type { AlexandriaEntry, CodebaseView, Workspace, WorkspaceMembership } from '@a24z/core-library';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
 import { LocalNodeGlobAdapter } from '../adapters/LocalNodeGlobAdapter';
@@ -827,5 +827,117 @@ export class AlexandriaRegistryService {
       );
       return null;
     }
+  }
+
+  // ===== Workspace CRUD Methods =====
+
+  /**
+   * Create a new workspace
+   */
+  async createWorkspace(workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workspace> {
+    return this.outpostManager.workspaces.createWorkspace(workspace);
+  }
+
+  /**
+   * Get a specific workspace by ID
+   */
+  async getWorkspace(id: string): Promise<Workspace | null> {
+    return this.outpostManager.workspaces.getWorkspace(id);
+  }
+
+  /**
+   * Get all workspaces
+   */
+  async getWorkspaces(): Promise<Workspace[]> {
+    return this.outpostManager.workspaces.getWorkspaces();
+  }
+
+  /**
+   * Update an existing workspace
+   */
+  async updateWorkspace(id: string, updates: Partial<Omit<Workspace, 'id' | 'createdAt'>>): Promise<Workspace> {
+    return this.outpostManager.workspaces.updateWorkspace(id, updates);
+  }
+
+  /**
+   * Delete a workspace
+   */
+  async deleteWorkspace(id: string): Promise<boolean> {
+    return this.outpostManager.workspaces.deleteWorkspace(id);
+  }
+
+  // ===== Workspace Membership Management =====
+
+  /**
+   * Add a repository to a workspace
+   */
+  async addRepositoryToWorkspace(
+    repository: AlexandriaEntry | string,
+    workspaceId: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    return this.outpostManager.workspaces.addRepositoryToWorkspace(repository, workspaceId, metadata);
+  }
+
+  /**
+   * Remove a repository from a workspace
+   */
+  async removeRepositoryFromWorkspace(
+    repository: AlexandriaEntry | string,
+    workspaceId: string
+  ): Promise<void> {
+    return this.outpostManager.workspaces.removeRepositoryFromWorkspace(repository, workspaceId);
+  }
+
+  /**
+   * Get all memberships for a workspace
+   */
+  async getWorkspaceMemberships(workspaceId: string): Promise<WorkspaceMembership[]> {
+    return this.outpostManager.workspaces.getWorkspaceMemberships(workspaceId);
+  }
+
+  /**
+   * Get all workspaces that contain a specific repository
+   */
+  async getRepositoryWorkspaces(repository: AlexandriaEntry | string): Promise<Workspace[]> {
+    return this.outpostManager.workspaces.getRepositoryWorkspaces(repository);
+  }
+
+  // ===== Workspace Query Methods =====
+
+  /**
+   * Get all repositories in a workspace
+   */
+  async getRepositoriesInWorkspace(workspaceId: string): Promise<AlexandriaEntry[]> {
+    return this.outpostManager.workspaces.getRepositoriesInWorkspace(
+      workspaceId,
+      this.outpostManager['projectRegistry'] // Access internal projectRegistry
+    );
+  }
+
+  /**
+   * Check if a repository is in a workspace
+   */
+  async isRepositoryInWorkspace(
+    repository: AlexandriaEntry | string,
+    workspaceId: string
+  ): Promise<boolean> {
+    return this.outpostManager.workspaces.isRepositoryInWorkspace(repository, workspaceId);
+  }
+
+  // ===== Default Workspace Methods =====
+
+  /**
+   * Get the default workspace
+   */
+  async getDefaultWorkspace(): Promise<Workspace | null> {
+    return this.outpostManager.workspaces.getDefaultWorkspace();
+  }
+
+  /**
+   * Set the default workspace
+   */
+  async setDefaultWorkspace(workspaceId: string): Promise<void> {
+    return this.outpostManager.workspaces.setDefaultWorkspace(workspaceId);
   }
 }

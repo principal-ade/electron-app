@@ -4,6 +4,7 @@ import type { ActWorkflowAPI } from './ActWorkflowAPI';
 import type { AgentConfigAPI } from './AgentConfigAPI';
 import type { AlexandriaAPI } from './AlexandriaAPI';
 import type { AlexandriaDocsAPI } from './AlexandriaDocsAPI';
+import type { WorkspaceAPI } from './WorkspaceAPI';
 import type { AgentInstallationAPI } from './AgentInstallationAPI';
 import type { AgentSessionAPI } from './AgentSessionAPI';
 import type { AgentSessionSDKAPI } from './AgentSessionSDKAPI';
@@ -84,6 +85,7 @@ export interface MainProcessAPI {
   agentConfig: AgentConfigAPI;
   alexandria: AlexandriaAPI;
   alexandriaDocs: AlexandriaDocsAPI;
+  workspace: WorkspaceAPI;
   agentInstallation: AgentInstallationAPI;
   agentSession: AgentSessionAPI;
   agentSessionSDK: AgentSessionSDKAPI;
