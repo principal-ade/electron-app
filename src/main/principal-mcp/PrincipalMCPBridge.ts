@@ -63,6 +63,146 @@ export class PrincipalMCPBridge extends EventEmitter {
     });
   }
 
+  /**
+   * Shared handler for task submission endpoints.
+   * Both /dependencies/submit and /tasks/submit use identical logic on the bridge side.
+   * The difference in fallback behavior is handled by the MCP client, not the bridge.
+   */
+  private async handleTaskSubmission(
+    req: Request,
+    res: Response,
+  ): Promise<void> {
+    try {
+      const request: SubmitDependencyTaskRequest = req.body;
+
+      // Validate required fields
+      if (
+        !request.dependencyId ||
+        !request.taskSummary ||
+        !request.taskDetails
+      ) {
+        res.status(400).json({
+          success: false,
+          message: 'dependencyId, taskSummary, and taskDetails are required',
+        });
+        return;
+      }
+
+      const taskId = `task-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+      // Resolve dependency using repository monitoring server
+      let dependencyResolution = null;
+      try {
+        const repositoryMonitoring = getRepositoryMonitoringManager();
+        dependencyResolution = await repositoryMonitoring.resolveDependency(
+          request.dependencyId,
+          request.repositoryRoot,
+        );
+
+        console.log(
+          '[Principal MCP Bridge] Dependency resolution result:',
+          dependencyResolution,
+        );
+      } catch (error) {
+        console.error(
+          '[Principal MCP Bridge] Failed to resolve dependency:',
+          error,
+        );
+      }
+
+      // Build response with resolution information
+      const response: Record<string, unknown> = {
+        success: true,
+        taskId,
+        repository: request.repositoryRoot,
+        message: 'Dependency task submitted successfully',
+        resolution: dependencyResolution || {
+          dependencyId: request.dependencyId,
+          found: false,
+          message: 'Dependency resolution unavailable',
+        },
+      };
+
+      // Add specific information based on resolution results
+      if (dependencyResolution?.found) {
+        if (dependencyResolution.alexandriaEntry) {
+          response.message = `Found registered repository: ${dependencyResolution.alexandriaEntry.name}`;
+          response.alexandriaEntry = dependencyResolution.alexandriaEntry;
+
+          // Write task to dependency's Memory Palace
+          try {
+            const dependencyPath = dependencyResolution.alexandriaEntry.path;
+            const fsAdapter = new NodeFileSystemAdapter();
+            const validatedPath = MemoryPalace.validateRepositoryPath(
+              fsAdapter,
+              dependencyPath,
+            ) as ValidatedRepositoryPath;
+            const palace = new MemoryPalace(validatedPath, fsAdapter);
+
+            // Compose task content
+            const content = request.taskDetails.trim().startsWith('#')
+              ? request.taskDetails
+              : `# ${request.taskSummary}\n\n${request.taskDetails}`;
+
+            // Create task input
+            const taskInput: CreateTaskInput = {
+              content,
+              directoryPath: '' as unknown as ValidatedRelativePath, // Root of dependency repo
+              priority: request.priority,
+              tags: request.tags,
+              anchors:
+                request.anchors?.map(
+                  (anchor) => anchor as unknown as ValidatedRelativePath,
+                ) || [],
+            };
+
+            // Determine sender ID from source repository
+            const senderName = request.repositoryRoot
+              ? fsAdapter.getRepositoryName(
+                  request.repositoryRoot as ValidatedRepositoryPath,
+                )
+              : 'external';
+
+            // Write task to dependency's Memory Palace
+            const task = palace.receiveTask(taskInput, senderName);
+
+            response.taskWritten = true;
+            response.taskPath = task.id;
+            response.dependencyRepository = dependencyPath;
+
+            console.log(
+              `[Principal MCP Bridge] Task written to ${dependencyPath}/.palace-work/tasks/active/${task.id}.task.md`,
+            );
+          } catch (error) {
+            console.error(
+              '[Principal MCP Bridge] Failed to write task to dependency Memory Palace:',
+              error,
+            );
+            response.taskWritten = false;
+            response.taskWriteError =
+              error instanceof Error ? error.message : 'Unknown error';
+          }
+        } else if (dependencyResolution.packageInfo) {
+          response.message = `Dependency already exists in ${dependencyResolution.packageInfo.packagePath}`;
+          response.existingPackage = dependencyResolution.packageInfo;
+        }
+
+        if (dependencyResolution.suggestions) {
+          response.installationSuggestions = dependencyResolution.suggestions;
+        }
+      } else {
+        response.message = `Dependency '${request.dependencyId}' not found in registered repositories`;
+      }
+
+      res.json(response);
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
   private setupRoutes() {
     // Health check
     this.app.get('/health', (_req: Request, res: Response) => {
@@ -74,144 +214,17 @@ export class PrincipalMCPBridge extends EventEmitter {
       });
     });
 
-    // Submit Dependency Task
+    // Submit Dependency Task (Legacy)
+    // Uses shared handler - implementation identical to /tasks/submit
     this.app.post(
       '/dependencies/submit',
-      async (req: Request, res: Response) => {
-        try {
-          const request: SubmitDependencyTaskRequest = req.body;
-
-          // Validate required fields
-          if (
-            !request.dependencyId ||
-            !request.taskSummary ||
-            !request.taskDetails
-          ) {
-            res.status(400).json({
-              success: false,
-              message:
-                'dependencyId, taskSummary, and taskDetails are required',
-            });
-            return;
-          }
-
-          const taskId = `task-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-
-          // Resolve dependency using repository monitoring server
-          let dependencyResolution = null;
-          try {
-            const repositoryMonitoring = getRepositoryMonitoringManager();
-            dependencyResolution = await repositoryMonitoring.resolveDependency(
-              request.dependencyId,
-              request.repositoryRoot,
-            );
-
-            console.log(
-              '[Principal MCP Bridge] Dependency resolution result:',
-              dependencyResolution,
-            );
-          } catch (error) {
-            console.error(
-              '[Principal MCP Bridge] Failed to resolve dependency:',
-              error,
-            );
-          }
-
-          // Build response with resolution information
-          const response: Record<string, unknown> = {
-            success: true,
-            taskId,
-            repository: request.repositoryRoot,
-            message: 'Dependency task submitted successfully',
-            resolution: dependencyResolution || {
-              dependencyId: request.dependencyId,
-              found: false,
-              message: 'Dependency resolution unavailable',
-            },
-          };
-
-          // Add specific information based on resolution results
-          if (dependencyResolution?.found) {
-            if (dependencyResolution.alexandriaEntry) {
-              response.message = `Found registered repository: ${dependencyResolution.alexandriaEntry.name}`;
-              response.alexandriaEntry = dependencyResolution.alexandriaEntry;
-
-              // Write task to dependency's Memory Palace
-              try {
-                const dependencyPath =
-                  dependencyResolution.alexandriaEntry.path;
-                const fsAdapter = new NodeFileSystemAdapter();
-                const validatedPath = MemoryPalace.validateRepositoryPath(
-                  fsAdapter,
-                  dependencyPath,
-                ) as ValidatedRepositoryPath;
-                const palace = new MemoryPalace(validatedPath, fsAdapter);
-
-                // Compose task content
-                const content = request.taskDetails.trim().startsWith('#')
-                  ? request.taskDetails
-                  : `# ${request.taskSummary}\n\n${request.taskDetails}`;
-
-                // Create task input
-                const taskInput: CreateTaskInput = {
-                  content,
-                  directoryPath: '' as unknown as ValidatedRelativePath, // Root of dependency repo
-                  priority: request.priority,
-                  tags: request.tags,
-                  anchors:
-                    request.anchors?.map(
-                      (anchor) => anchor as unknown as ValidatedRelativePath,
-                    ) || [],
-                };
-
-                // Determine sender ID from source repository
-                const senderName = request.repositoryRoot
-                  ? fsAdapter.getRepositoryName(
-                      request.repositoryRoot as ValidatedRepositoryPath,
-                    )
-                  : 'external';
-
-                // Write task to dependency's Memory Palace
-                const task = palace.receiveTask(taskInput, senderName);
-
-                response.taskWritten = true;
-                response.taskPath = task.id;
-                response.dependencyRepository = dependencyPath;
-
-                console.log(
-                  `[Principal MCP Bridge] Task written to ${dependencyPath}/.palace-work/tasks/active/${task.id}.task.md`,
-                );
-              } catch (error) {
-                console.error(
-                  '[Principal MCP Bridge] Failed to write task to dependency Memory Palace:',
-                  error,
-                );
-                response.taskWritten = false;
-                response.taskWriteError =
-                  error instanceof Error ? error.message : 'Unknown error';
-              }
-            } else if (dependencyResolution.packageInfo) {
-              response.message = `Dependency already exists in ${dependencyResolution.packageInfo.packagePath}`;
-              response.existingPackage = dependencyResolution.packageInfo;
-            }
-
-            if (dependencyResolution.suggestions) {
-              response.installationSuggestions =
-                dependencyResolution.suggestions;
-            }
-          } else {
-            response.message = `Dependency '${request.dependencyId}' not found in registered repositories`;
-          }
-
-          res.json(response);
-        } catch (error) {
-          res.status(500).json({
-            success: false,
-            message: error instanceof Error ? error.message : 'Unknown error',
-          });
-        }
-      },
+      this.handleTaskSubmission.bind(this),
     );
+
+    // Submit Task (New - Recommended)
+    // Uses shared handler - implementation identical to /dependencies/submit
+    // The difference in fallback behavior is handled by the MCP client, not the bridge
+    this.app.post('/tasks/submit', this.handleTaskSubmission.bind(this));
 
     // Resolve Dependency (without submitting task)
     this.app.post(
