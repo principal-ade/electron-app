@@ -1363,6 +1363,9 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         panelCollapsedState,
         handleLeftPanelCollapsedChange,
         handleRightPanelCollapsedChange,
+        setLeftPanelActivePanelId,
+        setMiddlePanelActivePanelId,
+        setRightPanelActivePanelId,
       ],
     );
 
@@ -1436,12 +1439,27 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     const handleGitChangeSelect = useCallback(
       (filePath: string, status?: GitChangeSelectionStatus) => {
         setSelectedFile(filePath);
+
+        // Check if it's a markdown file
+        const isMarkdown =
+          filePath.toLowerCase().endsWith('.md') ||
+          filePath.toLowerCase().endsWith('.mdx');
+
         // Open in BOTH code viewer and diff viewer
         setSelectedCodeFile(filePath);
         setSelectedDiffFile({ path: filePath, status });
         setRightPaneMode('document');
-        // Focus the diff viewer tab (prioritize it when both are in same panel)
-        focusPanelTab('gitDiffViewer');
+
+        if (isMarkdown) {
+          // For markdown files, also set up markdown viewer
+          setSelectedDocPath(filePath);
+          setSelectedDocType('markdown');
+          // Focus the markdown viewer tab for markdown files
+          focusPanelTab('markdownViewer');
+        } else {
+          // Focus the diff viewer tab (prioritize it when both are in same panel)
+          focusPanelTab('gitDiffViewer');
+        }
       },
       [focusPanelTab],
     );
@@ -2560,6 +2578,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           onConfigurePanels={() => setShowPanelConfigModal(true)}
           onSwitchPanels={handleSwitchPanels}
           onSwitchLeftMiddlePanels={handleSwitchLeftMiddlePanels}
+          onShowGitChanges={() => focusPanelTab('gitChanges')}
           showSidebarControls
           sidebarCollapsed={panelCollapsedState.left ?? false}
           onToggleSidebar={() =>

@@ -38,6 +38,7 @@ export interface RepositoryTitlebarProps {
   onSecretsClick?: () => void;
   onLinksClick?: () => void;
   onAddNoteClick?: () => void;
+  onShowGitChanges?: () => void;
   showSidebarControls?: boolean;
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
@@ -71,6 +72,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   onSecretsClick,
   onLinksClick,
   onAddNoteClick,
+  onShowGitChanges,
   showSidebarControls = false,
   sidebarCollapsed = false,
   onToggleSidebar,
@@ -101,7 +103,17 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
     : repository?.localClones?.[0]?.path;
 
   // Subscribe to git status (includes ahead/behind counts)
-  const { gitStatus } = useRepositoryGitStatus(localClonePath || null);
+  const { gitStatus, gitStatusWithFiles } = useRepositoryGitStatus(localClonePath || null);
+
+  // Check if there are uncommitted changes
+  const hasUncommittedChanges = gitStatusWithFiles
+    ? gitStatusWithFiles.modifiedFiles.length +
+        gitStatusWithFiles.untrackedFiles.length +
+        gitStatusWithFiles.stagedFiles.length +
+        gitStatusWithFiles.createdFiles.length +
+        gitStatusWithFiles.deletedFiles.length >
+      0
+    : false;
 
   // Listen for dev sidecar window events
   useEffect(() => {
@@ -264,6 +276,32 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
                   }}
                 >
                   {selectedSource.metadata.currentBranch}
+                  {hasUncommittedChanges && onShowGitChanges && (
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onShowGitChanges();
+                      }}
+                      style={{
+                        display: 'inline-block',
+                        width: '6px',
+                        height: '6px',
+                        borderRadius: '50%',
+                        backgroundColor: theme.colors.warning,
+                        marginLeft: '6px',
+                        verticalAlign: 'middle',
+                        cursor: 'pointer',
+                        transition: 'opacity 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '0.7';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                      title="Click to view uncommitted changes"
+                    />
+                  )}
                 </span>
                 {/* Remote sync status */}
                 {gitStatus && (
