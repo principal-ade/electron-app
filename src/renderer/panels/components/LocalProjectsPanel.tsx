@@ -4,12 +4,10 @@ import { Search } from 'lucide-react';
 
 import { useAllRepositories } from '../../hooks/useRepositoryData';
 import { LocalProjectCard } from './LocalProjectCard';
-import { useWorkspaceFilter } from '../../contexts/WorkspaceFilterContext';
 
 export const LocalProjectsPanel: React.FC = () => {
   const { theme } = useTheme();
   const [filter, setFilter] = useState('');
-  const { selectedWorkspace } = useWorkspaceFilter();
 
   // Load all local repositories with caching
   const { repositories: localRepos, loading } = useAllRepositories();
@@ -18,20 +16,10 @@ export const LocalProjectsPanel: React.FC = () => {
 
   // Filter and sort local repositories by most recent commit
   const filteredAndSortedRepositories = useMemo(() => {
-    // Filter repositories
+    // Filter repositories by search term
     const filtered = localRepos.filter((repoData) => {
       const entry = repoData.repository;
 
-      // Filter by workspace if one is selected
-      if (selectedWorkspace) {
-        const localClones = entry.localClones || [];
-        const isInWorkspace = localClones.some((clone) =>
-          clone.path.startsWith(selectedWorkspace.path),
-        );
-        if (!isInWorkspace) return false;
-      }
-
-      // Filter by search term
       if (!normalizedFilter) return true;
 
       const haystack = [
@@ -57,7 +45,7 @@ export const LocalProjectsPanel: React.FC = () => {
 
       return bTime - aTime; // Descending order (newest first)
     });
-  }, [localRepos, normalizedFilter, selectedWorkspace]);
+  }, [localRepos, normalizedFilter]);
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',

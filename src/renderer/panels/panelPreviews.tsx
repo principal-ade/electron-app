@@ -59,6 +59,8 @@ import { MDXEditorPanelPreview } from './components/MDXEditorPanel';
 import { GitHubReadmePanel } from './components/GitHubReadmePanel';
 import { PresencePanelPreview } from './components/PresencePanel';
 import { LocalhostBrowserPanelPreview } from './components/LocalhostBrowserPanel';
+import { WorkspacesListPanelPreview } from './components/WorkspacesListPanel';
+import { WorkspaceEntriesPanelPreview } from './components/WorkspaceEntriesPanel';
 
 export interface PanelPreviewMetadata {
   icon: React.ReactNode;
@@ -268,6 +270,18 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     label: 'Localhost Browser',
     description:
       'View localhost development servers in an embedded browser view.',
+  },
+  workspacesList: {
+    icon: <Layers size={16} />,
+    preview: <WorkspacesListPanelPreview />,
+    label: 'Workspaces',
+    description: 'Browse and manage your workspaces for organizing repositories.',
+  },
+  workspaceEntries: {
+    icon: <FolderGit2 size={16} />,
+    preview: <WorkspaceEntriesPanelPreview />,
+    label: 'Workspace Repositories',
+    description: 'View and manage repositories in the selected workspace.',
   },
 };
 

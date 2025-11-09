@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { FolderOpen, Plus, Trash2, Star, Edit2, Check, X, Palette } from 'lucide-react';
+import { FolderOpen, Trash2, Star, Edit2, Check, X } from 'lucide-react';
 import { WorkspaceService } from '../../../../main-process-api/WorkspaceService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import type { Workspace } from '@a24z/core-library';
@@ -9,7 +9,6 @@ export const WorkspaceSettings: React.FC = () => {
   const { theme } = useTheme();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [defaultWorkspace, setDefaultWorkspace] = useState<Workspace | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -61,33 +60,6 @@ export const WorkspaceSettings: React.FC = () => {
       }
     } catch (error) {
       console.error('[WorkspaceSettings] Error selecting directory:', error);
-    }
-  };
-
-  const handleCreate = async () => {
-    if (!formName.trim()) {
-      alert('Please enter a workspace name');
-      return;
-    }
-
-    try {
-      await WorkspaceService.createWorkspace({
-        name: formName,
-        description: formDescription || undefined,
-        color: formColor,
-        suggestedClonePath: formPath || undefined,
-        icon: undefined,
-      });
-
-      // Reset form
-      setFormName('');
-      setFormDescription('');
-      setFormPath('');
-      setFormColor('#3b82f6');
-      setIsCreating(false);
-    } catch (error) {
-      console.error('[WorkspaceSettings] Error creating workspace:', error);
-      alert('Failed to create workspace');
     }
   };
 
@@ -144,12 +116,10 @@ export const WorkspaceSettings: React.FC = () => {
     setFormDescription(workspace.description || '');
     setFormPath(workspace.suggestedClonePath || '');
     setFormColor(workspace.color || '#3b82f6');
-    setIsCreating(false);
   };
 
   const cancelEditing = () => {
     setEditingId(null);
-    setIsCreating(false);
     setFormName('');
     setFormDescription('');
     setFormPath('');
@@ -172,36 +142,12 @@ export const WorkspaceSettings: React.FC = () => {
           Workspaces
         </h3>
         <p style={{ fontSize: '14px', color: theme.colors.textSecondary, margin: 0 }}>
-          Organize your repositories into workspaces. Repositories can belong to multiple workspaces.
+          Manage your workspaces. Create new workspaces from the Workspaces panel in the FeedView.
         </p>
       </div>
 
-      {/* Create Button */}
-      {!isCreating && !editingId && (
-        <button
-          onClick={() => setIsCreating(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 16px',
-            borderRadius: '8px',
-            border: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.primary,
-            color: 'white',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 500,
-            marginBottom: '20px',
-          }}
-        >
-          <Plus size={16} />
-          Create Workspace
-        </button>
-      )}
-
-      {/* Create/Edit Form */}
-      {(isCreating || editingId) && (
+      {/* Edit Form */}
+      {editingId && (
         <div
           style={{
             padding: '20px',
@@ -212,7 +158,7 @@ export const WorkspaceSettings: React.FC = () => {
           }}
         >
           <h4 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', color: theme.colors.text }}>
-            {isCreating ? 'Create New Workspace' : 'Edit Workspace'}
+            Edit Workspace
           </h4>
 
           {/* Name */}
@@ -343,7 +289,7 @@ export const WorkspaceSettings: React.FC = () => {
               Cancel
             </button>
             <button
-              onClick={() => (editingId ? handleUpdate(editingId) : handleCreate())}
+              onClick={() => handleUpdate(editingId)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -359,7 +305,7 @@ export const WorkspaceSettings: React.FC = () => {
               }}
             >
               <Check size={16} />
-              {editingId ? 'Save Changes' : 'Create'}
+              Save Changes
             </button>
           </div>
         </div>

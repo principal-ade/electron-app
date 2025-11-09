@@ -266,6 +266,22 @@ export const repositoryPanelCatalog = [
     slices: [] as const,
     surfaces: ['manager', 'viewer', 'agent', 'principal'] as const,
   },
+  {
+    id: 'workspacesList',
+    label: 'Workspaces',
+    description:
+      'Browse and manage your workspaces for organizing repositories.',
+    slices: [] as const,
+    surfaces: ['principal'] as const,
+  },
+  {
+    id: 'workspaceEntries',
+    label: 'Workspace Repositories',
+    description:
+      'View and manage repositories in the selected workspace.',
+    slices: [] as const,
+    surfaces: ['principal'] as const,
+  },
 ] as const satisfies readonly RepositoryPanelDefinitionBase[];
 
 export type RepositoryPanelCatalogEntry =

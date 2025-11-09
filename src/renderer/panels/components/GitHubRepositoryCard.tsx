@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@a24z/industry-theme';
 import {
@@ -8,6 +8,8 @@ import {
   Download,
   Folder,
   Cloud,
+  Layers,
+  Check,
 } from 'lucide-react';
 
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
@@ -16,6 +18,8 @@ import { WindowService } from '../../main-process-api/WindowService';
 import { GitCloneModal } from '../../components/GitCloneModal';
 import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.types';
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
+import { WorkspaceService } from '../../main-process-api/WorkspaceService';
+import type { Workspace } from '@a24z/core-library';
 
 interface GitHubRepositoryCardProps {
   repository: GitHubRepository;
@@ -33,6 +37,10 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
   const isStarred = variant === 'starred';
   const isReadmeSelected = selectedRepository?.id === repository.id;
   const [showCloneModal, setShowCloneModal] = useState(false);
+  const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [repositoryWorkspaces, setRepositoryWorkspaces] = useState<Set<string>>(new Set());
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const badgeColor = isStarred
     ? theme.colors.warning || '#f59e0b'
@@ -78,6 +86,67 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
       console.error('Error opening cloned repository dashboard:', error);
     }
   };
+
+  const handleToggleWorkspaceDropdown = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!showWorkspaceDropdown) {
+      // Load workspaces when opening dropdown
+      try {
+        const [allWorkspaces, repoWorkspaces] = await Promise.all([
+          WorkspaceService.getWorkspaces(),
+          localRepo ? WorkspaceService.getRepositoryWorkspaces(localRepo.repository) : Promise.resolve([]),
+        ]);
+
+        setWorkspaces(allWorkspaces);
+        setRepositoryWorkspaces(new Set(repoWorkspaces.map(w => w.id)));
+      } catch (error) {
+        console.error('Error loading workspaces:', error);
+      }
+    }
+
+    setShowWorkspaceDropdown(!showWorkspaceDropdown);
+  };
+
+  const handleAddToWorkspace = async (e: React.MouseEvent, workspace: Workspace) => {
+    e.stopPropagation();
+
+    if (!localRepo) return;
+
+    try {
+      const isInWorkspace = repositoryWorkspaces.has(workspace.id);
+
+      if (isInWorkspace) {
+        // Remove from workspace
+        await WorkspaceService.removeRepositoryFromWorkspace(localRepo.repository, workspace.id);
+        setRepositoryWorkspaces(prev => {
+          const next = new Set(prev);
+          next.delete(workspace.id);
+          return next;
+        });
+      } else {
+        // Add to workspace
+        await WorkspaceService.addRepositoryToWorkspace(localRepo.repository, workspace.id);
+        setRepositoryWorkspaces(prev => new Set(prev).add(workspace.id));
+      }
+    } catch (error) {
+      console.error('Error updating workspace membership:', error);
+    }
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowWorkspaceDropdown(false);
+      }
+    };
+
+    if (showWorkspaceDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showWorkspaceDropdown]);
 
   const starCount = repository.stargazers_count ?? 0;
 
@@ -232,6 +301,134 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
           {localRepo ? <FolderOpen size={12} /> : <Download size={12} />}
           {localRepo ? 'Open' : 'Clone'}
         </button>
+
+        {/* Add to Workspace button - only show for cloned repos */}
+        {localRepo && (
+          <div style={{ position: 'relative' }} ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={handleToggleWorkspaceDropdown}
+              title="Add to workspace"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '6px',
+                borderRadius: '4px',
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: showWorkspaceDropdown
+                  ? theme.colors.backgroundTertiary || theme.colors.backgroundSecondary
+                  : theme.colors.background,
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(event) => {
+                if (!showWorkspaceDropdown) {
+                  event.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary ||
+                    theme.colors.backgroundSecondary;
+                  event.currentTarget.style.color = theme.colors.text;
+                }
+              }}
+              onMouseLeave={(event) => {
+                if (!showWorkspaceDropdown) {
+                  event.currentTarget.style.backgroundColor = theme.colors.background;
+                  event.currentTarget.style.color = theme.colors.textSecondary;
+                }
+              }}
+            >
+              <Layers size={12} />
+            </button>
+
+            {/* Workspace dropdown */}
+            {showWorkspaceDropdown && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 4px)',
+                  right: 0,
+                  minWidth: '200px',
+                  maxHeight: '300px',
+                  overflowY: 'auto',
+                  backgroundColor: theme.colors.background,
+                  border: `1px solid ${theme.colors.border}`,
+                  borderRadius: '6px',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  zIndex: 1000,
+                  padding: '4px',
+                }}
+              >
+                {workspaces.length === 0 ? (
+                  <div
+                    style={{
+                      padding: '12px',
+                      textAlign: 'center',
+                      color: theme.colors.textSecondary,
+                      fontSize: `${theme.fontSizes[0]}px`,
+                    }}
+                  >
+                    No workspaces available
+                  </div>
+                ) : (
+                  workspaces.map((workspace) => {
+                    const isInWorkspace = repositoryWorkspaces.has(workspace.id);
+                    return (
+                      <button
+                        key={workspace.id}
+                        type="button"
+                        onClick={(e) => handleAddToWorkspace(e, workspace)}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '8px',
+                          padding: '8px 12px',
+                          borderRadius: '4px',
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          color: theme.colors.text,
+                          fontSize: `${theme.fontSizes[1]}px`,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'background-color 0.15s',
+                        }}
+                        onMouseEnter={(event) => {
+                          event.currentTarget.style.backgroundColor =
+                            theme.colors.backgroundTertiary ||
+                            theme.colors.backgroundSecondary;
+                        }}
+                        onMouseLeave={(event) => {
+                          event.currentTarget.style.backgroundColor = 'transparent';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                          <div
+                            style={{
+                              width: '8px',
+                              height: '8px',
+                              borderRadius: '2px',
+                              backgroundColor: workspace.color || theme.colors.primary,
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {workspace.name}
+                          </span>
+                        </div>
+                        {isInWorkspace && (
+                          <Check size={14} color={theme.colors.success || '#10b981'} />
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <button
           type="button"
           onClick={handleOpenInGitHub}

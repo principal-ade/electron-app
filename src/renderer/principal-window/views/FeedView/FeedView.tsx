@@ -10,6 +10,7 @@ import {
   Star,
   Activity,
   Folder,
+  Layers,
 } from 'lucide-react';
 import { ConfigurablePanelLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
@@ -27,6 +28,8 @@ import { GitHubUserSignalsPanel } from '../../../panels/components/GitHubUserSig
 import { GitSyncDiagnosticPanel } from '../../../panels/components/GitSyncDiagnosticPanel';
 import { LocalProjectsPanel } from '../../../panels/components/LocalProjectsPanel';
 import { PresencePanel } from '../../../panels/components/PresencePanel';
+import { WorkspacesListPanel } from '../../../panels/components/WorkspacesListPanel';
+import { WorkspaceEntriesPanel } from '../../../panels/components/WorkspaceEntriesPanel';
 import {
   SelectedRepositoryProvider,
   useSelectedRepository,
@@ -36,24 +39,19 @@ import {
   useWorkspaceFilter,
 } from '../../../contexts/WorkspaceFilterContext';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
-import type { MultiRepoWorkspace } from '../../../../shared/types/userPreferences.types';
 import { FeedViewHeader } from './FeedViewHeader';
 
 const FeedViewInner: React.FC = () => {
   const { theme } = useTheme();
   const { repositories, loading } = useAllRepositories();
   const { selectedRepository } = useSelectedRepository();
-  const { selectedWorkspaceId, setSelectedWorkspaceId, setSelectedWorkspace } =
-    useWorkspaceFilter();
+  const { selectedWorkspace, setSelectedWorkspace } = useWorkspaceFilter();
 
   const [selectedGraphId, setSelectedGraphId] = useState<string | null>(null);
   const [selectedTopLevelNodes, setSelectedTopLevelNodes] = useState<string[]>(
     [],
   );
   const [showGitSyncPanel, setShowGitSyncPanel] = useState(false);
-
-  // Multi-Repo Workspace state
-  const [workspaces, setWorkspaces] = useState<MultiRepoWorkspace[]>([]);
 
   // Build dependency graphs using cluster detection
   const graphs = useMemo(() => {
@@ -75,12 +73,11 @@ const FeedViewInner: React.FC = () => {
     }
   }, [selectedGraph]);
 
-  // Load git sync panel visibility preference and workspaces
+  // Load git sync panel visibility preference
   useEffect(() => {
     UserPreferencesService.getPreferences()
       .then((prefs) => {
         setShowGitSyncPanel(prefs.showGitSyncPanel ?? false);
-        setWorkspaces(prefs.multiRepoWorkspaces ?? []);
       })
       .catch(console.error);
 
@@ -88,9 +85,6 @@ const FeedViewInner: React.FC = () => {
       const detail = (event as CustomEvent).detail;
       if (detail?.showGitSyncPanel !== undefined) {
         setShowGitSyncPanel(detail.showGitSyncPanel);
-      }
-      if (detail?.multiRepoWorkspaces !== undefined) {
-        setWorkspaces(detail.multiRepoWorkspaces ?? []);
       }
     };
 
@@ -105,16 +99,6 @@ const FeedViewInner: React.FC = () => {
       );
     };
   }, []);
-
-  // Update context when selected workspace changes
-  useEffect(() => {
-    if (selectedWorkspaceId === 'all') {
-      setSelectedWorkspace(null);
-    } else {
-      const workspace = workspaces.find((w) => w.id === selectedWorkspaceId);
-      setSelectedWorkspace(workspace || null);
-    }
-  }, [selectedWorkspaceId, workspaces, setSelectedWorkspace]);
 
   // Use panel persistence hook for three-panel layout
   const panelState = usePanelPersistence({
@@ -132,6 +116,23 @@ const FeedViewInner: React.FC = () => {
         label: 'Local Projects',
         icon: <Folder size={16} />,
         content: <LocalProjectsPanel />,
+      },
+      {
+        id: 'workspaces-list',
+        label: 'Workspaces',
+        icon: <Layers size={16} />,
+        content: (
+          <WorkspacesListPanel
+            selectedWorkspaceId={selectedWorkspace?.id}
+            onWorkspaceSelect={setSelectedWorkspace}
+          />
+        ),
+      },
+      {
+        id: 'workspace-entries',
+        label: 'Workspace Repositories',
+        icon: <FolderGit2 size={16} />,
+        content: <WorkspaceEntriesPanel selectedWorkspace={selectedWorkspace} />,
       },
       {
         id: 'github-projects',
@@ -221,6 +222,8 @@ const FeedViewInner: React.FC = () => {
     selectedTopLevelNodes,
     selectedRepository,
     showGitSyncPanel,
+    selectedWorkspace,
+    setSelectedWorkspace,
   ]);
 
   // Memoize layout based on git sync panel visibility
@@ -230,6 +233,7 @@ const FeedViewInner: React.FC = () => {
         type: 'tabs' as const,
         panels: [
           'local-projects',
+          'workspaces-list',
           'github-projects',
           'github-starred',
           'graphs-list',
@@ -241,7 +245,7 @@ const FeedViewInner: React.FC = () => {
       },
       middle: {
         type: 'tabs' as const,
-        panels: ['graph-view', 'readme-viewer', 'recent-commits'],
+        panels: ['workspace-entries', 'graph-view', 'readme-viewer', 'recent-commits'],
         config: {
           defaultActiveTab: 0,
           tabPosition: 'top' as const,
@@ -268,12 +272,8 @@ const FeedViewInner: React.FC = () => {
         overflow: 'hidden',
       }}
     >
-      <FeedViewHeader
-        selectedWorkspaceId={selectedWorkspaceId}
-        setSelectedWorkspaceId={setSelectedWorkspaceId}
-        workspaces={workspaces}
-        setWorkspaces={setWorkspaces}
-      />
+      {/* Header */}
+      <FeedViewHeader />
 
       {/* Panel Layout */}
       <ConfigurablePanelLayout
