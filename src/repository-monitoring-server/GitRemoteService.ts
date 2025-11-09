@@ -4,7 +4,6 @@
  */
 
 import { GitCore } from '../shared/repository-core/GitCore';
-import { createGitHubTokenAuthEnvForUrl } from '../shared/git/githubTokenAuth';
 import type { GitRemoteInfo } from './types';
 
 export class GitRemoteService {
@@ -290,15 +289,11 @@ export class GitRemoteService {
   /**
    * Test if a git URL is accessible
    * Uses ls-remote with a short timeout
+   * Relies on git's configured credential helper for HTTPS authentication
    */
   private static async testGitAccess(
     url: string,
   ): Promise<{ available: boolean; reason: string }> {
-    const isGitHubHttps =
-      url.startsWith('https://') && url.includes('github.com');
-    let credentialHelper: Awaited<
-      ReturnType<typeof createGitHubTokenAuthEnvForUrl>
-    > | null = null;
     try {
       // Use a temporary directory for the test (no actual clone)
       const os = require('os');
@@ -306,20 +301,12 @@ export class GitRemoteService {
 
       const timeout = 5000; // 5 seconds
 
-      credentialHelper = await createGitHubTokenAuthEnvForUrl(url);
-
-      await this.execGitWithTimeout(
-        ['ls-remote', url],
-        tmpDir,
-        timeout,
-        credentialHelper?.env,
-      );
+      // Git will use configured credential helper (set up by GitCredentialHelper)
+      await this.execGitWithTimeout(['ls-remote', url], tmpDir, timeout);
 
       return {
         available: true,
-        reason: credentialHelper
-          ? 'Authentication successful using stored GitHub token'
-          : 'Authentication successful',
+        reason: 'Repository is accessible',
       };
     } catch (error: unknown) {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -327,29 +314,7 @@ export class GitRemoteService {
       if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
         return {
           available: false,
-          reason: 'Authentication required - repository is private',
-        };
-      }
-
-      if (
-        isGitHubHttps &&
-        !credentialHelper &&
-        (errorMsg.includes('Authentication') || errorMsg.includes('permission'))
-      ) {
-        return {
-          available: false,
-          reason: 'Authentication required - GitHub token not available',
-        };
-      }
-
-      if (
-        isGitHubHttps &&
-        credentialHelper &&
-        errorMsg.includes('Authentication')
-      ) {
-        return {
-          available: false,
-          reason: 'Stored GitHub token was rejected',
+          reason: 'Connection timed out',
         };
       }
 
@@ -360,14 +325,14 @@ export class GitRemoteService {
         return { available: false, reason: 'Repository not found or private' };
       }
 
-      if (errorMsg.includes('Authentication')) {
+      if (errorMsg.includes('Authentication') || errorMsg.includes('authentication')) {
         return { available: false, reason: 'Authentication required' };
       }
 
       if (errorMsg.includes('Permission denied')) {
         return {
           available: false,
-          reason: 'Permission denied - check SSH keys',
+          reason: 'Permission denied - check authentication',
         };
       }
 
@@ -383,10 +348,6 @@ export class GitRemoteService {
         available: false,
         reason: `Connection failed: ${errorMsg.substring(0, 100)}`,
       };
-    } finally {
-      if (credentialHelper) {
-        await credentialHelper.cleanup();
-      }
     }
   }
 

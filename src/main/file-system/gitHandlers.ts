@@ -3,7 +3,6 @@ import { GitRepositoryService } from './gitRepositoryService';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { GitEvents } from '../../shared/main-process-api-interfaces/GitAPI';
 import { GitRemoteService } from '../../repository-monitoring-server/GitRemoteService';
-import { createGitHubTokenAuthEnvForUrl } from '../../shared/git/githubTokenAuth';
 
 // Create a single instance of the git service
 const gitService = new GitRepositoryService();
@@ -191,7 +190,6 @@ export function registerGitHandlers(): void {
         timestamp: string;
         normalizedUrl?: string;
         authMethod?: 'SSH' | 'HTTPS';
-        tokenAvailable?: boolean;
         sshAgent?: boolean;
       }
 
@@ -209,14 +207,14 @@ export function registerGitHandlers(): void {
         const parentDir = targetPath.substring(0, targetPath.lastIndexOf('/'));
         const git = await gitClientFactory.getClient(parentDir);
 
-        // Clone the repository with normalized URL and authentication handling
         // Check if this is an SSH URL
         const isSSH =
           normalizedUrl.startsWith('git@') || normalizedUrl.includes('ssh://');
         diagnostics.authMethod = isSSH ? 'SSH' : 'HTTPS';
 
-        // Only pass serializable environment variables
-        const baseEnv = {
+        // For HTTPS, git will use the configured credential helper (set up by GitCredentialHelper)
+        // For SSH, use SSH agent
+        const cloneEnv = {
           PATH: process.env.PATH,
           HOME: process.env.HOME,
           USER: process.env.USER,
@@ -224,46 +222,16 @@ export function registerGitHandlers(): void {
           SSH_AGENT_PID: process.env.SSH_AGENT_PID,
         };
 
-        let cleanupAuthHelper: (() => Promise<void>) | null = null;
-        let cloneEnv: NodeJS.ProcessEnv = { ...baseEnv };
-
-        if (!isSSH) {
-          const githubAuth =
-            await createGitHubTokenAuthEnvForUrl(normalizedUrl);
-
-          if (githubAuth) {
-            console.info(
-              `[Git] Using stored GitHub token for HTTPS clone of ${normalizedUrl}`,
-            );
-            diagnostics.tokenAvailable = true;
-            cloneEnv = { ...baseEnv, ...githubAuth.env };
-            cleanupAuthHelper = githubAuth.cleanup;
-          } else {
-            console.warn(
-              `[Git] No GitHub token available for HTTPS clone of ${normalizedUrl}`,
-            );
-            diagnostics.tokenAvailable = false;
-            cloneEnv = {
-              ...baseEnv,
-              GIT_TERMINAL_PROMPT: '0',
-              GIT_ASKPASS: '/bin/echo',
-              GCM_INTERACTIVE: 'never',
-            };
-          }
-        } else {
+        if (isSSH) {
           diagnostics.sshAgent = !!process.env.SSH_AUTH_SOCK;
         }
 
-        try {
-          await git.raw(['clone', normalizedUrl, targetPath], {
-            env: cloneEnv,
-            timeout: 120000, // 2 minutes for clone operation
-          });
-        } finally {
-          if (cleanupAuthHelper) {
-            await cleanupAuthHelper();
-          }
-        }
+        console.log(`[Git] Cloning repository via ${diagnostics.authMethod}:`, normalizedUrl);
+
+        await git.raw(['clone', normalizedUrl, targetPath], {
+          env: cloneEnv,
+          timeout: 120000, // 2 minutes for clone operation
+        });
 
         return true;
       } catch (error) {
@@ -281,29 +249,16 @@ export function registerGitHandlers(): void {
         // Parse common git error patterns
         if (errorMsg.includes('Authentication failed') || errorMsg.includes('authentication')) {
           if (diagnostics.authMethod === 'HTTPS') {
-            if (diagnostics.tokenAvailable === false) {
-              userMessage = 'Authentication failed - No GitHub credentials found.';
-              suggestions.push(
-                '**You need to authenticate with GitHub:**',
-                '',
-                '1. Run: gh auth login',
-                '   (Install GitHub CLI first: brew install gh)',
-                '',
-                '2. Or set up a Personal Access Token:',
-                '   • Go to GitHub → Settings → Developer Settings → Personal Access Tokens',
-                '   • Generate a token with "repo" scope',
-                '   • Configure Git to use it',
-              );
-            } else {
-              userMessage = 'Authentication failed - Your GitHub token may have expired or lacks permissions.';
-              suggestions.push(
-                '**Token authentication failed:**',
-                '',
-                '1. Re-authenticate with GitHub: gh auth login',
-                '2. Or generate a new Personal Access Token with "repo" scope',
-                '3. Ensure the token has access to this repository',
-              );
-            }
+            userMessage = 'Authentication failed - Please log in to Principal.';
+            suggestions.push(
+              '**GitHub authentication required:**',
+              '',
+              '1. Log in to Principal (the app will configure git credentials)',
+              '2. Or manually authenticate:',
+              '   • Go to Settings in Principal → GitHub Login',
+              '',
+              'If already logged in, try logging out and back in to refresh credentials.',
+            );
           } else {
             userMessage = 'SSH Authentication failed.';
             suggestions.push(
@@ -372,13 +327,13 @@ export function registerGitHandlers(): void {
           `• Auth Method: ${diagnostics.authMethod}`,
         );
 
-        if (diagnostics.authMethod === 'HTTPS') {
+        if (diagnostics.authMethod === 'SSH') {
           suggestions.push(
-            `• GitHub Token Available: ${diagnostics.tokenAvailable ? 'Yes' : 'No'}`,
+            `• SSH Agent Running: ${diagnostics.sshAgent ? 'Yes' : 'No'}`,
           );
         } else {
           suggestions.push(
-            `• SSH Agent Running: ${diagnostics.sshAgent ? 'Yes' : 'No'}`,
+            `• Using git credential helper (configured by Principal)`,
           );
         }
 

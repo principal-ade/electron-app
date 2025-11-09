@@ -18,6 +18,7 @@ import {
   KeychainNotAvailableError,
 } from './UnifiedSecureStorage';
 import { AuthEvent } from '../../shared/ipc-events/AuthEvents';
+import { GitCredentialHelper } from './GitCredentialHelper';
 
 interface GitHubUser {
   login: string;
@@ -252,6 +253,16 @@ class AuthService {
             result.token,
           );
 
+          // Configure git credentials for HTTPS cloning
+          try {
+            await GitCredentialHelper.configureGitCredentials(result.token);
+            console.log('[AuthService] Git credentials configured for HTTPS cloning');
+          } catch (gitConfigError) {
+            // Don't fail login if git config fails - user can still use the app
+            console.error('[AuthService] Failed to configure git credentials:', gitConfigError);
+            console.warn('[AuthService] HTTPS cloning may not work, but login successful');
+          }
+
           return {
             success: true,
             authenticated: true,
@@ -291,6 +302,15 @@ class AuthService {
 
         // Clear AuthStateManager
         AuthStateManager.getInstance().clearAuthentication();
+
+        // Clear git credentials
+        try {
+          await GitCredentialHelper.clearGitCredentials();
+          console.log('[AuthService] Git credentials cleared on logout');
+        } catch (gitClearError) {
+          // Don't fail logout if git credential clearing fails
+          console.error('[AuthService] Failed to clear git credentials:', gitClearError);
+        }
 
         return { success: true };
       } catch (error: any) {
