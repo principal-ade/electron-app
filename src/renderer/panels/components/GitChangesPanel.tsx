@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import { GitStatusFileTree, type GitFileStatus } from '@a24z/dynamic-file-tree';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
@@ -32,8 +32,29 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
   } = useRepositoryPanelContext();
   const { openGitDiff, openFile } = actions;
 
+  // Calculate if there are changes
+  const hasChanges =
+    gitStatus.staged.length > 0 ||
+    gitStatus.unstaged.length > 0 ||
+    gitStatus.untracked.length > 0 ||
+    gitStatus.deleted.length > 0;
+
   // State for toggling between full tree and changes only
-  const [showFullTree, setShowFullTree] = useState(true);
+  // Smart default: start with "Changes Only" mode to avoid flicker when there are changes
+  const [showFullTree, setShowFullTree] = useState(false);
+  const userHasToggledView = useRef(false);
+
+  // Update default view mode based on whether there are changes
+  // Only auto-update if user hasn't manually toggled the view
+  useEffect(() => {
+    if (!gitStatusLoading && repositoryPath && !userHasToggledView.current) {
+      // Defer the update to ensure data is fully loaded and avoid flicker
+      const rafId = requestAnimationFrame(() => {
+        setShowFullTree(!hasChanges);
+      });
+      return () => cancelAnimationFrame(rafId);
+    }
+  }, [hasChanges, gitStatusLoading, repositoryPath]);
 
   // Determine file status based on git status data
   const getFileStatus = useCallback(
@@ -116,12 +137,6 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
     // but we can call refresh explicitly if needed
     setContextMenu(null);
   }, []);
-
-  const hasChanges =
-    gitStatus.staged.length > 0 ||
-    gitStatus.unstaged.length > 0 ||
-    gitStatus.untracked.length > 0 ||
-    gitStatus.deleted.length > 0;
 
   const gitChangesData = useMemo(() => {
     if (!repositoryPath || gitStatusLoading) {
@@ -278,7 +293,10 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
               }}
             >
               <button
-                onClick={() => setShowFullTree(true)}
+                onClick={() => {
+                  userHasToggledView.current = true;
+                  setShowFullTree(true);
+                }}
                 style={{
                   flex: 1,
                   padding: '6px 12px',
@@ -300,7 +318,10 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
                 Full Tree
               </button>
               <button
-                onClick={() => setShowFullTree(false)}
+                onClick={() => {
+                  userHasToggledView.current = true;
+                  setShowFullTree(false);
+                }}
                 style={{
                   flex: 1,
                   padding: '6px 12px',
@@ -439,7 +460,10 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
           }}
         >
           <button
-            onClick={() => setShowFullTree(true)}
+            onClick={() => {
+              userHasToggledView.current = true;
+              setShowFullTree(true);
+            }}
             style={{
               flex: 1,
               padding: '6px 12px',
@@ -461,7 +485,10 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
             Full Tree
           </button>
           <button
-            onClick={() => setShowFullTree(false)}
+            onClick={() => {
+              userHasToggledView.current = true;
+              setShowFullTree(false);
+            }}
             style={{
               flex: 1,
               padding: '6px 12px',
