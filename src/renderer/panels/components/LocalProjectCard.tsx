@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { FolderOpen, Focus, Loader2 } from 'lucide-react';
+import { FolderOpen, Focus, Loader2, Home, AlertTriangle, MoveRight } from 'lucide-react';
+import type { Workspace } from '@a24z/core-library';
 
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';
 import { WindowService } from '../../main-process-api/WindowService';
+import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { RepositoryAvatar } from '../../components/repository-maps/RepositoryAvatar';
 
 // Add spin animation styles to document if not already present
@@ -25,15 +27,19 @@ if (typeof document !== 'undefined') {
 
 interface LocalProjectCardProps {
   repositoryData: RepositoryCacheData;
+  workspace?: Workspace | null;
 }
 
 export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
   repositoryData,
+  workspace,
 }) => {
   const { theme } = useTheme();
   const { selectedRepository, setSelectedRepository } = useSelectedRepository();
   const entry = repositoryData.repository;
   const [windowState, setWindowState] = useState<'closed' | 'opening' | 'ready'>('closed');
+  const [isInWorkspaceDirectory, setIsInWorkspaceDirectory] = useState<boolean | null>(null);
+  const [isMoving, setIsMoving] = useState(false);
 
   // Check if this repo is selected for README view
   const isReadmeSelected =
@@ -45,6 +51,26 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
         : parseInt(entry.github.id, 10)) ||
       selectedRepository.full_name ===
         `${entry.github.owner}/${entry.github.name}`);
+
+  // Check if repository is in workspace directory
+  useEffect(() => {
+    const checkLocation = async () => {
+      if (!workspace || !workspace.id) {
+        setIsInWorkspaceDirectory(null);
+        return;
+      }
+
+      try {
+        const result = await WorkspaceService.isRepositoryInWorkspaceDirectory(entry, workspace.id);
+        setIsInWorkspaceDirectory(result);
+      } catch (error) {
+        console.error('Failed to check repository location:', error);
+        setIsInWorkspaceDirectory(null);
+      }
+    };
+
+    checkLocation();
+  }, [entry, workspace]);
 
   // Subscribe to repository window state changes
   useEffect(() => {
@@ -117,6 +143,37 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       await WindowService.openRepositoryDashboard(entry);
     } catch (error) {
       console.error('Error opening repository dashboard:', error);
+    }
+  };
+
+  const handleMoveToWorkspace = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!workspace || !workspace.id) return;
+
+    if (!confirm(`Move ${entry.name} to ${workspace.suggestedClonePath}?\n\nThis will move all files to the workspace directory.`)) {
+      return;
+    }
+
+    try {
+      setIsMoving(true);
+      const newPath = await WorkspaceService.moveRepositoryToWorkspaceDirectory(entry, workspace.id);
+
+      // Update the entry with the new path so the check reflects the change
+      // Type assertion needed because path requires ValidatedRepositoryPath branded type
+      entry.path = newPath as typeof entry.path;
+
+      // Refresh the location status
+      setIsInWorkspaceDirectory(true);
+      alert(`Successfully moved ${entry.name} to workspace directory!`);
+
+      // Force a page reload to refresh all repository data
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to move repository:', error);
+      alert(`Failed to move repository: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsMoving(false);
     }
   };
 
@@ -241,7 +298,81 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       </div>
 
       {/* Action buttons */}
-      <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', gap: '4px', flexShrink: 0, alignItems: 'center' }}>
+        {/* Location indicator */}
+        {workspace && workspace.suggestedClonePath && isInWorkspaceDirectory !== null && (
+          <div
+            title={
+              isInWorkspaceDirectory
+                ? `In workspace directory: ${workspace.suggestedClonePath}`
+                : `Outside workspace directory`
+            }
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '24px',
+              height: '24px',
+              borderRadius: '4px',
+              backgroundColor: isInWorkspaceDirectory
+                ? `${theme.colors.success || '#10b981'}15`
+                : `${theme.colors.warning || '#f59e0b'}15`,
+              color: isInWorkspaceDirectory
+                ? theme.colors.success || '#10b981'
+                : theme.colors.warning || '#f59e0b',
+            }}
+          >
+            {isInWorkspaceDirectory ? <Home size={14} /> : <AlertTriangle size={14} />}
+          </div>
+        )}
+
+        {/* Move to workspace button */}
+        {workspace && workspace.suggestedClonePath && isInWorkspaceDirectory === false && (
+          <button
+            type="button"
+            onClick={handleMoveToWorkspace}
+            disabled={isMoving}
+            title={`Move to ${workspace.suggestedClonePath}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '6px 10px',
+              gap: '4px',
+              borderRadius: '4px',
+              border: `1px solid ${theme.colors.primary || '#3b82f6'}`,
+              backgroundColor: `${theme.colors.primary || '#3b82f6'}15`,
+              color: theme.colors.primary || '#3b82f6',
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontWeight: theme.fontWeights.medium,
+              cursor: isMoving ? 'wait' : 'pointer',
+              opacity: isMoving ? 0.6 : 1,
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(event) => {
+              if (!isMoving) {
+                event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}25`;
+              }
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.backgroundColor = `${theme.colors.primary || '#3b82f6'}15`;
+            }}
+          >
+            {isMoving ? (
+              <Loader2
+                size={12}
+                style={{
+                  animation: 'spin 1s linear infinite',
+                }}
+              />
+            ) : (
+              <MoveRight size={12} />
+            )}
+            {isMoving ? 'Moving...' : 'Move'}
+          </button>
+        )}
+
+        {/* Open/Focus button */}
         <button
           type="button"
           onClick={handleOpenLocally}

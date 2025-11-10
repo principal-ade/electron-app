@@ -81,4 +81,20 @@ export class WorkspaceService {
   static async setDefaultWorkspace(workspaceId: string): Promise<void> {
     return window.mainProcess.workspace.setDefaultWorkspace(workspaceId);
   }
+
+  // ===== Repository Location Management =====
+
+  static async isRepositoryInWorkspaceDirectory(
+    repository: AlexandriaEntry,
+    workspaceId: string
+  ): Promise<boolean | null> {
+    return window.mainProcess.workspace.isRepositoryInWorkspaceDirectory(repository, workspaceId);
+  }
+
+  static async moveRepositoryToWorkspaceDirectory(
+    repository: AlexandriaEntry,
+    workspaceId: string
+  ): Promise<string> {
+    return window.mainProcess.workspace.moveRepositoryToWorkspaceDirectory(repository, workspaceId);
+  }
 }

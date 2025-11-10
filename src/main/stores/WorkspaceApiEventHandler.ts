@@ -4,6 +4,8 @@
 
 import { ipcMain, BrowserWindow } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
+import path from 'path';
+import fs from 'fs-extra';
 import { WorkspaceAPIEvent, type WorkspaceAPI, type WorkspaceChangeEvent } from '../../shared/main-process-api-interfaces/WorkspaceAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
 import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@a24z/core-library';
@@ -137,6 +139,74 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     }
   }
 
+  // ===== Repository Location Management =====
+
+  async isRepositoryInWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<boolean | null> {
+    const workspace = await this.service.getWorkspace(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`);
+    }
+
+    // If workspace doesn't have a suggested clone path, return null
+    if (!workspace.suggestedClonePath) {
+      return null;
+    }
+
+    // Normalize both paths for comparison
+    const normalizedWorkspacePath = path.normalize(workspace.suggestedClonePath);
+    const normalizedRepoPath = path.normalize(repository.path);
+
+    // Check if the repository path starts with the workspace path
+    // We add a separator to ensure we're checking for a directory boundary
+    const workspacePathWithSep = normalizedWorkspacePath.endsWith(path.sep)
+      ? normalizedWorkspacePath
+      : normalizedWorkspacePath + path.sep;
+
+    return normalizedRepoPath.startsWith(workspacePathWithSep);
+  }
+
+  async moveRepositoryToWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<string> {
+    const workspace = await this.service.getWorkspace(workspaceId);
+    if (!workspace) {
+      throw new Error(`Workspace ${workspaceId} not found`);
+    }
+
+    if (!workspace.suggestedClonePath) {
+      throw new Error(`Workspace ${workspace.name} does not have a suggested clone path configured`);
+    }
+
+    // Get the repository directory name
+    const repoName = path.basename(repository.path);
+    const targetPath = path.join(workspace.suggestedClonePath, repoName);
+
+    // Check if target already exists
+    if (await fs.pathExists(targetPath)) {
+      throw new Error(`Target path ${targetPath} already exists`);
+    }
+
+    // Ensure the workspace directory exists
+    await fs.ensureDir(workspace.suggestedClonePath);
+
+    // Move the repository
+    try {
+      await fs.move(repository.path, targetPath, { overwrite: false });
+      console.log(`[Workspace] Moved repository from ${repository.path} to ${targetPath}`);
+
+      // Update the repository entry in the registry with the new path
+      // Type assertion needed because path requires ValidatedRepositoryPath branded type
+      await this.service.updateRepository(repository.name, { path: targetPath as typeof repository.path });
+
+      // Broadcast workspace change event to notify UI components
+      const repoId = repository.github?.id || repository.name;
+      this.broadcastWorkspaceChange('membership-changed', undefined, workspaceId, repoId);
+
+      return targetPath;
+    } catch (error) {
+      console.error(`[Workspace] Failed to move repository:`, error);
+      throw new Error(`Failed to move repository: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   /**
    * Clean up handlers when shutting down
    */
@@ -155,6 +225,8 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
     ipcMain.removeHandler(WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE);
     ipcMain.removeHandler(WorkspaceAPIEvent.GET_DEFAULT_WORKSPACE);
     ipcMain.removeHandler(WorkspaceAPIEvent.SET_DEFAULT_WORKSPACE);
+    ipcMain.removeHandler(WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE_DIRECTORY);
+    ipcMain.removeHandler(WorkspaceAPIEvent.MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY);
   }
 }
 
@@ -242,6 +314,19 @@ export function registerWorkspaceHandlers(): void {
     WorkspaceAPIEvent.SET_DEFAULT_WORKSPACE,
     (_event: IpcMainInvokeEvent, workspaceId: string) =>
       handler.setDefaultWorkspace(workspaceId)
+  );
+
+  // Repository Location Management
+  ipcMain.handle(
+    WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE_DIRECTORY,
+    (_event: IpcMainInvokeEvent, repository: AlexandriaEntry, workspaceId: string) =>
+      handler.isRepositoryInWorkspaceDirectory(repository, workspaceId)
+  );
+
+  ipcMain.handle(
+    WorkspaceAPIEvent.MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY,
+    (_event: IpcMainInvokeEvent, repository: AlexandriaEntry, workspaceId: string) =>
+      handler.moveRepositoryToWorkspaceDirectory(repository, workspaceId)
   );
 
   console.log('[Workspace] IPC handlers registered');

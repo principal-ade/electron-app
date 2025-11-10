@@ -403,6 +403,16 @@ export class AlexandriaRegistryService {
   }
 
   /**
+   * Update repository metadata
+   * @param name - Repository name
+   * @param updates - Partial updates to apply
+   * @returns Updated repository entry
+   */
+  async updateRepository(name: string, updates: Partial<Omit<AlexandriaEntry, 'name' | 'registeredAt'>>): Promise<AlexandriaEntry> {
+    return this.outpostManager.updateRepository(name, updates);
+  }
+
+  /**
    * Get total repository count
    */
   async getRepositoryCount(): Promise<number> {

@@ -83,4 +83,13 @@ export const workspaceApi: WorkspaceAPI = {
   setDefaultWorkspace(workspaceId: string): Promise<void> {
     return ipcRenderer.invoke(WorkspaceAPIEvent.SET_DEFAULT_WORKSPACE, workspaceId);
   },
+
+  // Repository Location Management
+  isRepositoryInWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<boolean | null> {
+    return ipcRenderer.invoke(WorkspaceAPIEvent.IS_REPOSITORY_IN_WORKSPACE_DIRECTORY, repository, workspaceId);
+  },
+
+  moveRepositoryToWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<string> {
+    return ipcRenderer.invoke(WorkspaceAPIEvent.MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY, repository, workspaceId);
+  },
 };

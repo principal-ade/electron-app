@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Search, Folder, FolderOpen } from 'lucide-react';
+import { Search, Folder, FolderOpen, X } from 'lucide-react';
 import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { LocalProjectCard } from './LocalProjectCard';
-import { useAllRepositories } from '../../hooks/useRepositoryData';
 
 interface WorkspaceEntriesPanelProps {
   selectedWorkspace?: Workspace | null;
@@ -15,10 +14,9 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
   selectedWorkspace,
 }) => {
   const { theme } = useTheme();
-  const [workspaceRepoIds, setWorkspaceRepoIds] = useState<string[]>([]);
+  const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('');
-  const { repositories: allRepositories, loading: allReposLoading } = useAllRepositories();
 
   // Local state to track the current workspace data (to handle updates)
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(selectedWorkspace || null);
@@ -33,7 +31,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     if (!currentWorkspace) return;
 
     const unsubscribe = WorkspaceService.onWorkspaceChange(async (event) => {
-      if (event.type === 'workspace-updated' && event.workspace?.id === currentWorkspace.id) {
+      if (event.type === 'updated' && event.workspace?.id === currentWorkspace.id) {
         // Refresh the workspace data
         const updated = await WorkspaceService.getWorkspace(currentWorkspace.id);
         if (updated) {
@@ -45,10 +43,10 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     return unsubscribe;
   }, [currentWorkspace?.id]);
 
-  // Load repository IDs in this workspace
+  // Load repositories in this workspace
   useEffect(() => {
     if (!selectedWorkspace) {
-      setWorkspaceRepoIds([]);
+      setWorkspaceRepositories([]);
       return;
     }
 
@@ -56,17 +54,10 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
       try {
         setLoading(true);
         const repos = await WorkspaceService.getRepositoriesInWorkspace(selectedWorkspace.id);
-        // Extract repository identifiers (github.id or name)
-        const ids = repos.map(repo => {
-          if (repo.github?.id) {
-            return `${repo.github.owner}/${repo.github.name}`;
-          }
-          return repo.name;
-        });
-        setWorkspaceRepoIds(ids);
+        setWorkspaceRepositories(repos);
       } catch (error) {
         console.error('Failed to load workspace repositories:', error);
-        setWorkspaceRepoIds([]);
+        setWorkspaceRepositories([]);
       } finally {
         setLoading(false);
       }
@@ -110,21 +101,37 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     }
   };
 
-  // Filter repositories that belong to this workspace
+  // Remove home directory handler
+  const handleRemoveHomeDir = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!currentWorkspace || !currentWorkspace.suggestedClonePath) return;
+
+    if (!confirm(`Remove home directory from workspace "${currentWorkspace.name}"?\n\nThis will not delete any files, only remove the workspace's clone directory setting.`)) {
+      return;
+    }
+
+    try {
+      await WorkspaceService.updateWorkspace(currentWorkspace.id, {
+        suggestedClonePath: null as any
+      });
+    } catch (error) {
+      console.error('Failed to remove home directory:', error);
+      alert(`Failed to remove home directory: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  // Filter repositories that belong to this workspace and enrich with git data
   const filteredRepositories = useMemo(() => {
-    if (!selectedWorkspace || workspaceRepoIds.length === 0) {
+    if (!selectedWorkspace || workspaceRepositories.length === 0) {
       return [];
     }
 
-    // Get repositories that are in this workspace
-    const workspaceRepos = allRepositories.filter((repoData) => {
-      const entry = repoData.repository;
-      const repoId = entry.github?.id
-        ? `${entry.github.owner}/${entry.github.name}`
-        : entry.name;
-
-      return workspaceRepoIds.includes(repoId);
-    });
+    // Convert workspace repositories to RepositoryCacheData format
+    const workspaceRepos = workspaceRepositories.map(entry => ({
+      repository: entry,
+      status: null as any, // Status will be loaded by LocalProjectCard if needed
+    }));
 
     // Apply search filter
     if (!normalizedFilter) {
@@ -145,7 +152,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
 
       return haystack.includes(normalizedFilter);
     });
-  }, [selectedWorkspace, workspaceRepoIds, allRepositories, normalizedFilter]);
+  }, [selectedWorkspace, workspaceRepositories, normalizedFilter]);
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
@@ -220,7 +227,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
   }
 
   // Loading state
-  if (loading || allReposLoading) {
+  if (loading) {
     return (
       <div style={baseContainerStyle}>
         <div
@@ -287,47 +294,87 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
 
           {/* Right: Home directory */}
           <div
-            onClick={handleClickHomeDir}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '4px',
               minWidth: 0,
-              cursor: 'pointer',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              transition: 'background-color 0.15s ease',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-            title="Click to select home directory"
           >
-            <FolderOpen
-              size={14}
+            <div
+              onClick={handleClickHomeDir}
               style={{
-                color: theme.colors.textSecondary,
-                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                minWidth: 0,
+                cursor: 'pointer',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                transition: 'background-color 0.15s ease',
               }}
-            />
-            <span
-              style={{
-                fontSize: `${theme.fontSizes[0]}px`,
-                color: currentWorkspace.suggestedClonePath
-                  ? theme.colors.textSecondary
-                  : theme.colors.textTertiary,
-                fontFamily: theme.fonts.mono,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                fontStyle: currentWorkspace.suggestedClonePath ? 'normal' : 'italic',
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
               }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
+              title="Click to select home directory"
             >
-              {currentWorkspace.suggestedClonePath || 'No home directory'}
-            </span>
+              <FolderOpen
+                size={14}
+                style={{
+                  color: theme.colors.textSecondary,
+                  flexShrink: 0,
+                }}
+              />
+              <span
+                style={{
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  color: currentWorkspace.suggestedClonePath
+                    ? theme.colors.textSecondary
+                    : theme.colors.textTertiary,
+                  fontFamily: theme.fonts.mono,
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  fontStyle: currentWorkspace.suggestedClonePath ? 'normal' : 'italic',
+                }}
+              >
+                {currentWorkspace.suggestedClonePath || 'No home directory'}
+              </span>
+            </div>
+            {currentWorkspace.suggestedClonePath && (
+              <button
+                onClick={handleRemoveHomeDir}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '20px',
+                  height: '20px',
+                  padding: 0,
+                  border: 'none',
+                  borderRadius: '3px',
+                  backgroundColor: 'transparent',
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.error;
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }}
+                title="Remove home directory"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -392,6 +439,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
           <LocalProjectCard
             key={repoData.repository.path}
             repositoryData={repoData}
+            workspace={currentWorkspace}
           />
         ))}
 
