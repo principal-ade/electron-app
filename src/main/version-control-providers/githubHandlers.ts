@@ -158,7 +158,22 @@ export class GitHubAdapter {
         return errorDetail;
       }
 
-      const data = await response.json();
+      // Check if the response is raw content (e.g., application/vnd.github.v3.raw)
+      const contentType = response.headers.get('content-type') || '';
+      let data: any;
+
+      if (
+        contentType.includes('application/vnd.github.v3.raw') ||
+        contentType.includes('text/plain') ||
+        options.headers?.Accept?.includes('application/vnd.github.v3.raw')
+      ) {
+        // For raw content, return as text
+        data = await response.text();
+      } else {
+        // For JSON responses, parse as JSON
+        data = await response.json();
+      }
+
       console.log(
         '[GitHub] makeGitHubAPICall: Request successful for endpoint:',
         endpoint,
@@ -552,66 +567,34 @@ export class GitHubAdapter {
         return ghResult.stdout;
       }
       console.warn(
-        '[GitHub:getFileContent] gh api failed, stderr:',
+        '[GitHub:getFileContent] gh api failed, trying token-based API',
         ghResult.stderr,
       );
 
-      // HTTPS fallback if gh not installed or fails
-      try {
-        const https = require('https');
-        const options = {
-          hostname: 'api.github.com',
-          path: `/repos/${owner}/${repo}/contents/${encodeURI(path)}${ref ? `?ref=${encodeURIComponent(ref)}` : ''}`,
-          method: 'GET',
-          headers: {
-            'User-Agent': 'Principle-MD',
-            Accept: 'application/vnd.github.v3.raw',
-          },
-        };
+      // Try token-based API using stored credentials
+      const apiEndpoint = `/repos/${owner}/${repo}/contents/${path}${refSuffix}`;
+      const apiResult = await this.makeGitHubAPICall(apiEndpoint, {
+        headers: {
+          Accept: 'application/vnd.github.v3.raw',
+        },
+      });
 
-        const content: string | null = await new Promise((resolve) => {
-          const req = https.request(options, (res: any) => {
-            let data = '';
-            res.on('data', (chunk: any) => {
-              data += chunk;
-            });
-            res.on('end', () => {
-              if (
-                res.statusCode &&
-                res.statusCode >= 200 &&
-                res.statusCode < 300
-              ) {
-                console.debug('[GitHub:getFileContent] https success', {
-                  bytes: data.length,
-                  status: res.statusCode,
-                });
-                resolve(data);
-              } else {
-                console.error('[GitHub:getFileContent] https failed', {
-                  status: res.statusCode,
-                });
-                console.error(
-                  '[GitHub:getFileContent] Full URL attempted:',
-                  `https://api.github.com${options.path}`,
-                );
-                resolve(null);
-              }
-            });
-          });
-          req.on('error', (error: any) => {
-            console.error(
-              '[GitHub:getFileContent] https error:',
-              error.message,
-            );
-            resolve(null);
-          });
-          req.end();
+      if (apiResult.success && apiResult.data) {
+        // When using v3.raw, the data is returned as plain text
+        const content =
+          typeof apiResult.data === 'string'
+            ? apiResult.data
+            : JSON.stringify(apiResult.data);
+        console.debug('[GitHub:getFileContent] token API success', {
+          bytes: content.length,
         });
-
-        if (content) return content;
-      } catch (webErr) {
-        console.error('[GitHub:getFileContent] HTTPS fallback error:', webErr);
+        return content;
       }
+
+      console.error('[GitHub:getFileContent] Token API failed', {
+        status: apiResult.status,
+        error: apiResult.error,
+      });
 
       return null;
     } catch (error) {
