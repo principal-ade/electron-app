@@ -167,7 +167,20 @@ export class GitExecutor extends BaseExecutor {
 
       this.parseLines(result.stdout).forEach((line) => {
         const status = line.substring(0, 2);
-        const file = line.substring(3);
+        let file = line.substring(3);
+
+        // Git wraps filenames with special characters (spaces, quotes, etc.) in double quotes
+        // and escapes special characters within them. Remove the quotes and unescape.
+        if (file.startsWith('"') && file.endsWith('"')) {
+          file = file.slice(1, -1); // Remove surrounding quotes
+          // Unescape common git escape sequences
+          file = file
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\')
+            .replace(/\\t/g, '\t')
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\r');
+        }
 
         // Index status (first character)
         if (

@@ -441,7 +441,20 @@ export class GitHubAdapter {
               // Git status porcelain format: "XY filename"
               // X = staged status, Y = unstaged status
               const statusFlags = line.substring(0, 2);
-              const filePath = line.substring(3).trim();
+              let filePath = line.substring(3).trim();
+
+              // Git wraps filenames with special characters (spaces, quotes, etc.) in double quotes
+              // and escapes special characters within them. Remove the quotes and unescape.
+              if (filePath.startsWith('"') && filePath.endsWith('"')) {
+                filePath = filePath.slice(1, -1); // Remove surrounding quotes
+                // Unescape common git escape sequences
+                filePath = filePath
+                  .replace(/\\"/g, '"')
+                  .replace(/\\\\/g, '\\')
+                  .replace(/\\t/g, '\t')
+                  .replace(/\\n/g, '\n')
+                  .replace(/\\r/g, '\r');
+              }
 
               // Determine the primary status based on the flags
               let status: 'added' | 'modified' | 'deleted' | 'renamed' =

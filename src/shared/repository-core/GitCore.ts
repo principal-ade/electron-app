@@ -100,7 +100,20 @@ export class GitCore {
           const status = line.substring(0, 2);
           // Git porcelain format has either 1 or 2 spaces after the status codes
           // Find where the filename starts (after the status codes and space(s))
-          const file = line.substring(2).trim();
+          let file = line.substring(2).trim();
+
+          // Git wraps filenames with special characters (spaces, quotes, etc.) in double quotes
+          // and escapes special characters within them. Remove the quotes and unescape.
+          if (file.startsWith('"') && file.endsWith('"')) {
+            file = file.slice(1, -1); // Remove surrounding quotes
+            // Unescape common git escape sequences
+            file = file
+              .replace(/\\"/g, '"')
+              .replace(/\\\\/g, '\\')
+              .replace(/\\t/g, '\t')
+              .replace(/\\n/g, '\n')
+              .replace(/\\r/g, '\r');
+          }
 
           // First character is staged status
           if (status[0] !== ' ' && status[0] !== '?') {
