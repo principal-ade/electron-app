@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Search, Folder } from 'lucide-react';
+import { Search, Folder, FolderOpen } from 'lucide-react';
 import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
+import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { LocalProjectCard } from './LocalProjectCard';
 import { useAllRepositories } from '../../hooks/useRepositoryData';
 
@@ -18,6 +19,31 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('');
   const { repositories: allRepositories, loading: allReposLoading } = useAllRepositories();
+
+  // Local state to track the current workspace data (to handle updates)
+  const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(selectedWorkspace || null);
+
+  // Update local workspace when selectedWorkspace prop changes
+  useEffect(() => {
+    setCurrentWorkspace(selectedWorkspace || null);
+  }, [selectedWorkspace]);
+
+  // Listen for workspace updates and refresh the current workspace
+  useEffect(() => {
+    if (!currentWorkspace) return;
+
+    const unsubscribe = WorkspaceService.onWorkspaceChange(async (event) => {
+      if (event.type === 'workspace-updated' && event.workspace?.id === currentWorkspace.id) {
+        // Refresh the workspace data
+        const updated = await WorkspaceService.getWorkspace(currentWorkspace.id);
+        if (updated) {
+          setCurrentWorkspace(updated);
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [currentWorkspace?.id]);
 
   // Load repository IDs in this workspace
   useEffect(() => {
@@ -59,6 +85,30 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
   }, [selectedWorkspace]);
 
   const normalizedFilter = filter.trim().toLowerCase();
+
+  // Home directory click handler - opens native picker and saves immediately
+  const handleClickHomeDir = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!currentWorkspace) return;
+
+    try {
+      const result = await FileSystemService.selectDirectory({
+        title: 'Select Home Directory',
+        buttonLabel: 'Select Directory',
+        properties: ['openDirectory', 'createDirectory'],
+      });
+
+      if (result && !result.canceled && result.filePaths?.[0]) {
+        const selectedPath = result.filePaths[0];
+        await WorkspaceService.updateWorkspace(currentWorkspace.id, {
+          suggestedClonePath: selectedPath
+        });
+      }
+    } catch (error) {
+      console.error('Failed to select or update directory:', error);
+    }
+  };
 
   // Filter repositories that belong to this workspace
   const filteredRepositories = useMemo(() => {
@@ -111,7 +161,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
   };
 
   // No workspace selected
-  if (!selectedWorkspace) {
+  if (!currentWorkspace) {
     return (
       <div style={baseContainerStyle}>
         <div
@@ -213,18 +263,75 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     <div style={contentContainerStyle}>
       {/* Workspace header */}
       <div>
-        <h3
+        <div
           style={{
-            margin: '0 0 4px 0',
-            fontSize: `${theme.fontSizes[2]}px`,
-            fontWeight: theme.fontWeights.semibold,
-            color: theme.colors.text,
-            fontFamily: theme.fonts.body,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '16px',
+            marginBottom: '4px',
           }}
         >
-          {selectedWorkspace.name}
-        </h3>
-        {selectedWorkspace.description && (
+          {/* Left: Workspace name */}
+          <h3
+            style={{
+              margin: 0,
+              fontSize: `${theme.fontSizes[2]}px`,
+              fontWeight: theme.fontWeights.semibold,
+              color: theme.colors.text,
+              fontFamily: theme.fonts.body,
+            }}
+          >
+            {currentWorkspace.name}
+          </h3>
+
+          {/* Right: Home directory */}
+          <div
+            onClick={handleClickHomeDir}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              minWidth: 0,
+              cursor: 'pointer',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              transition: 'background-color 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+            title="Click to select home directory"
+          >
+            <FolderOpen
+              size={14}
+              style={{
+                color: theme.colors.textSecondary,
+                flexShrink: 0,
+              }}
+            />
+            <span
+              style={{
+                fontSize: `${theme.fontSizes[0]}px`,
+                color: currentWorkspace.suggestedClonePath
+                  ? theme.colors.textSecondary
+                  : theme.colors.textTertiary,
+                fontFamily: theme.fonts.mono,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                fontStyle: currentWorkspace.suggestedClonePath ? 'normal' : 'italic',
+              }}
+            >
+              {currentWorkspace.suggestedClonePath || 'No home directory'}
+            </span>
+          </div>
+        </div>
+
+        {currentWorkspace.description && (
           <p
             style={{
               margin: 0,
@@ -233,7 +340,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
               fontFamily: theme.fonts.body,
             }}
           >
-            {selectedWorkspace.description}
+            {currentWorkspace.description}
           </p>
         )}
       </div>

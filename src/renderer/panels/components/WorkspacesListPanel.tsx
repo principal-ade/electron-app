@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Folder, Search, Layers, Plus } from 'lucide-react';
+import { Folder, Search, Layers, Plus, Edit2, Check, X } from 'lucide-react';
 import type { Workspace } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { CreateWorkspaceModal } from '../../components/CreateWorkspaceModal';
@@ -268,6 +268,54 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(workspace.name);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleStartEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsEditing(true);
+    setEditedName(workspace.name);
+  };
+
+  const handleSave = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+
+    const trimmedName = editedName.trim();
+    if (!trimmedName || trimmedName === workspace.name) {
+      setIsEditing(false);
+      setEditedName(workspace.name);
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await WorkspaceService.updateWorkspace(workspace.id, { name: trimmedName });
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to update workspace name:', error);
+      // Revert to original name on error
+      setEditedName(workspace.name);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setIsEditing(false);
+    setEditedName(workspace.name);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancel();
+    }
+  };
 
   const cardStyle: React.CSSProperties = {
     display: 'flex',
@@ -285,7 +333,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
         ? theme.colors.primary || theme.colors.border
         : 'transparent'
     }`,
-    cursor: 'pointer',
+    cursor: isEditing ? 'default' : 'pointer',
     transition: 'all 0.15s ease',
   };
 
@@ -304,7 +352,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
   return (
     <div
       style={cardStyle}
-      onClick={onClick}
+      onClick={isEditing ? undefined : onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -327,17 +375,120 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
             <Layers size={12} />
           )}
         </div>
-        <span style={{ flex: 1 }}>{workspace.name}</span>
-        {isDefault && (
-          <span
-            style={{
-              fontSize: `${theme.fontSizes[0]}px`,
-              color: theme.colors.textSecondary,
-              fontWeight: 400,
-            }}
-          >
-            Default
-          </span>
+
+        {isEditing ? (
+          <>
+            <input
+              type="text"
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onClick={(e) => e.stopPropagation()}
+              autoFocus
+              disabled={isSaving}
+              style={{
+                flex: 1,
+                padding: '4px 8px',
+                borderRadius: '4px',
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                fontFamily: theme.fonts.body,
+                outline: 'none',
+              }}
+            />
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              title="Save (Enter)"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '24px',
+                height: '24px',
+                padding: 0,
+                border: 'none',
+                borderRadius: '4px',
+                backgroundColor: theme.colors.success || '#10b981',
+                color: 'white',
+                cursor: isSaving ? 'not-allowed' : 'pointer',
+                opacity: isSaving ? 0.6 : 1,
+                transition: 'opacity 0.15s ease',
+              }}
+            >
+              <Check size={14} />
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isSaving}
+              title="Cancel (Esc)"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '24px',
+                height: '24px',
+                padding: 0,
+                border: 'none',
+                borderRadius: '4px',
+                backgroundColor: theme.colors.backgroundTertiary,
+                color: theme.colors.text,
+                cursor: isSaving ? 'not-allowed' : 'pointer',
+                opacity: isSaving ? 0.6 : 1,
+                transition: 'opacity 0.15s ease',
+              }}
+            >
+              <X size={14} />
+            </button>
+          </>
+        ) : (
+          <>
+            <span style={{ flex: 1 }}>{workspace.name}</span>
+            {isHovered && (
+              <button
+                onClick={handleStartEdit}
+                title="Edit workspace name"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '24px',
+                  height: '24px',
+                  padding: 0,
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: 'transparent',
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }}
+              >
+                <Edit2 size={14} />
+              </button>
+            )}
+            {isDefault && (
+              <span
+                style={{
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  color: theme.colors.textSecondary,
+                  fontWeight: 400,
+                }}
+              >
+                Default
+              </span>
+            )}
+          </>
         )}
       </div>
 
