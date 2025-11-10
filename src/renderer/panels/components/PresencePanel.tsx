@@ -176,7 +176,24 @@ export const PresencePanel: React.FC = () => {
 
     // Listen for real-time presence events via IPC
     const unsubscribe = PresenceService.onPresenceEvent((event) => {
-      console.info('[PresencePanel] Presence event received:', event.type);
+      console.info('[PresencePanel] Presence event received:', event.type, event.payload);
+
+      // If we receive user_offline event, check if it's for us
+      if (event.type === 'presence:user_offline' && event.payload) {
+        const offlineUserId = (event.payload as any).userId;
+        // Get current user from auth
+        const authService = SecureAuthService.getInstance();
+        authService.checkAuth().then((authResult) => {
+          if (authResult.authenticated && authResult.user?.login === offlineUserId) {
+            console.warn('[PresencePanel] WE went offline on server side! Server marked us as offline.');
+            // Optionally trigger a reconnect here
+            if (isConnected) {
+              console.warn('[PresencePanel] Local state says connected but server says offline - state mismatch!');
+            }
+          }
+        }).catch(console.error);
+      }
+
       // Refetch presence data when any event occurs
       void fetchPresence();
     });
@@ -391,180 +408,70 @@ export const PresencePanel: React.FC = () => {
 
   return (
     <div style={contentContainerStyle}>
-      {/* Header with stats */}
+      {/* Header with online count and toggle */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '8px 12px',
+          padding: '12px',
           backgroundColor: theme.colors.background,
           borderRadius: '6px',
           border: `1px solid ${theme.colors.border}`,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Users size={16} color={theme.colors.textSecondary} />
+          <Users size={18} color={theme.colors.text} />
           <span
             style={{
-              fontSize: `${theme.fontSizes[1]}px`,
+              fontSize: `${theme.fontSizes[2]}px`,
               fontWeight: theme.fontWeights.semibold,
               fontFamily: theme.fonts.body,
               color: theme.colors.text,
             }}
           >
-            {Math.max(0, stats?.totalOnline ?? users.length)} Online
+            Online ({users.length})
           </span>
         </div>
-        <div
-          style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: isSubscribed ? '#10b981' : '#6b7280',
-          }}
-          title={isSubscribed ? 'Subscribed to presence' : 'Not subscribed'}
-        />
-      </div>
 
-      {/* Current User Connection Status */}
-      <div
-          style={{
-            padding: '12px',
-            backgroundColor: theme.colors.background,
-            borderRadius: '6px',
-            border: `1px solid ${theme.colors.border}`,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
+        {/* Online/Offline Toggle */}
+        <button
+          onClick={() => {
+            if (isConnected) {
+              handleDisconnectAll();
+            } else {
+              handleConnect();
+            }
           }}
+          disabled={isConnecting || isDisconnecting}
+          style={{
+            position: 'relative',
+            width: '44px',
+            height: '24px',
+            borderRadius: '12px',
+            border: 'none',
+            cursor: (isConnecting || isDisconnecting) ? 'not-allowed' : 'pointer',
+            backgroundColor: isConnected ? '#10b981' : '#6b7280',
+            transition: 'background-color 0.2s ease',
+            opacity: (isConnecting || isDisconnecting) ? 0.6 : 1,
+          }}
+          title={isConnected ? 'Go offline' : 'Go online'}
         >
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              position: 'absolute',
+              top: '2px',
+              left: isConnected ? '22px' : '2px',
+              width: '20px',
+              height: '20px',
+              borderRadius: '50%',
+              backgroundColor: '#ffffff',
+              transition: 'left 0.2s ease',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Circle
-                size={8}
-                fill={isConnected ? '#10b981' : '#6b7280'}
-                color={isConnected ? '#10b981' : '#6b7280'}
-              />
-              <span
-                style={{
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  fontWeight: theme.fontWeights.semibold,
-                  fontFamily: theme.fonts.body,
-                  color: theme.colors.text,
-                }}
-              >
-                You
-              </span>
-            </div>
-            {isConnected ? (
-              <Wifi size={16} color="#10b981" />
-            ) : (
-              <WifiOff size={16} color="#6b7280" />
-            )}
-          </div>
-          <div
-            style={{
-              fontSize: `${theme.fontSizes[0]}px`,
-              fontFamily: theme.fonts.body,
-              color: theme.colors.textSecondary,
-            }}
-          >
-            {isConnected ? (
-              connectionCount > 0 ? (
-                `Connected to Git-Sync (${connectionCount} ${connectionCount === 1 ? 'room' : 'rooms'})`
-              ) : (
-                'Connected to Git-Sync (no rooms joined)'
-              )
-            ) : (
-              'Not connected to Git-Sync'
-            )}
-          </div>
-          {!isConnected && (
-            <>
-              <div
-                style={{
-                  marginTop: '4px',
-                  padding: '8px',
-                  fontSize: `${theme.fontSizes[0]}px`,
-                  fontFamily: theme.fonts.body,
-                  color: theme.colors.textSecondary,
-                  backgroundColor: theme.colors.backgroundTertiary,
-                  borderRadius: '4px',
-                  lineHeight: '1.4',
-                }}
-              >
-                Connect to Git-Sync to see who's online and collaborate with your team in real-time.
-              </div>
-              <button
-                onClick={handleConnect}
-                disabled={isConnecting}
-                style={{
-                  marginTop: '8px',
-                  padding: '8px 12px',
-                  fontSize: `${theme.fontSizes[0]}px`,
-                  fontFamily: theme.fonts.body,
-                  fontWeight: theme.fontWeights.medium,
-                  color: theme.colors.background,
-                  backgroundColor: theme.colors.primary,
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: isConnecting ? 'not-allowed' : 'pointer',
-                  opacity: isConnecting ? 0.6 : 1,
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isConnecting) {
-                    e.currentTarget.style.opacity = '0.9';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isConnecting) {
-                    e.currentTarget.style.opacity = '1';
-                  }
-                }}
-              >
-                {isConnecting ? 'Connecting...' : 'Connect to Presence'}
-              </button>
-            </>
-          )}
-          {isConnected && (
-            <button
-              onClick={handleDisconnectAll}
-              disabled={isDisconnecting}
-              style={{
-                marginTop: '4px',
-                padding: '6px 12px',
-                fontSize: `${theme.fontSizes[0]}px`,
-                fontFamily: theme.fonts.body,
-                fontWeight: theme.fontWeights.medium,
-                color: theme.colors.error || '#ef4444',
-                backgroundColor: 'transparent',
-                border: `1px solid ${theme.colors.error || '#ef4444'}`,
-                borderRadius: '4px',
-                cursor: isDisconnecting ? 'not-allowed' : 'pointer',
-                opacity: isDisconnecting ? 0.6 : 1,
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                if (!isDisconnecting) {
-                  e.currentTarget.style.backgroundColor = `${theme.colors.error || '#ef4444'}15`;
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
-            >
-              {isDisconnecting ? 'Disconnecting...' : 'Disconnect All'}
-            </button>
-          )}
-        </div>
+          />
+        </button>
+      </div>
 
       {/* User list */}
       <div

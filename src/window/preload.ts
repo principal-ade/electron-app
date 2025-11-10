@@ -19,7 +19,6 @@ import { agentSessionApi } from './main-process-api-implementations/agentSession
 import { agentSessionSDKApi } from './main-process-api-implementations/agentSessionSDKApi';
 import { agentInstallationAPI } from './main-process-api-implementations/agentInstallationApi';
 import { agentSessionEventsAPI } from './main-process-api-implementations/agentSessionEventsApi';
-import { agentUpdateAPI } from './main-process-api-implementations/agentUpdateApi';
 import { authenticationAPI } from './main-process-api-implementations/authenticationApi';
 import { clipboardAPI } from './main-process-api-implementations/clipboardApi';
 import { excalidrawAPI } from './main-process-api-implementations/excalidrawApi';
@@ -102,7 +101,6 @@ const mainProcessExposure: MainProcessAPI = {
   agentSession: agentSessionApi,
   agentSessionSDK: agentSessionSDKApi,
   agentSessionEvents: agentSessionEventsAPI,
-  agentUpdate: agentUpdateAPI,
   appVersionManager: appVersionManagerApi,
   authentication: authenticationAPI,
   clipboard: clipboardAPI,

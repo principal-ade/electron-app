@@ -89,7 +89,7 @@ export class GitSyncWebSocketManager {
   private serverUrl: string;
   private authServerUrl: string;
   private readonly RECONNECT_DELAY = 5000;
-  private readonly PING_INTERVAL = 25000; // 25s - arrives before server's 30s check
+  private readonly PING_INTERVAL = 8000; // 8s - arrives before server's 10s timeout
 
   // Hardcoded defaults
   private readonly DEFAULT_DEV_SERVER = 'ws://localhost:3001';
@@ -306,10 +306,13 @@ export class GitSyncWebSocketManager {
             return;
           }
 
-          // Auto-reconnect after delay (only if not an error scenario and still in Map)
-          if (!errorOccurred) {
-            this.scheduleReconnect(connectionInfo, config);
-          }
+          // Auto-reconnect after delay (connection still exists in Map, so reconnect)
+          console.log(
+            '[GitSyncWebSocketManager] Scheduling reconnect for:',
+            connectionId,
+            errorOccurred ? '(after error)' : '(clean close)',
+          );
+          this.scheduleReconnect(connectionInfo, config);
         });
       });
     } catch (error) {
@@ -998,19 +1001,21 @@ export class GitSyncWebSocketManager {
             return;
           }
 
-          // Auto-reconnect for presence
-          if (!errorOccurred) {
-            if (connectionInfo.reconnectTimer) {
-              clearTimeout(connectionInfo.reconnectTimer);
-            }
-
-            connectionInfo.reconnectTimer = setTimeout(() => {
-              console.log('[GitSyncWebSocketManager] Attempting to reconnect to presence');
-              this.connectToPresence(token, connectionInfo.windowId).catch((error) => {
-                console.error('[GitSyncWebSocketManager] Presence reconnect failed:', error);
-              });
-            }, this.RECONNECT_DELAY);
+          // Auto-reconnect for presence (always reconnect if still in Map)
+          console.log(
+            '[GitSyncWebSocketManager] Scheduling presence reconnect',
+            errorOccurred ? '(after error)' : '(clean close)',
+          );
+          if (connectionInfo.reconnectTimer) {
+            clearTimeout(connectionInfo.reconnectTimer);
           }
+
+          connectionInfo.reconnectTimer = setTimeout(() => {
+            console.log('[GitSyncWebSocketManager] Attempting to reconnect to presence');
+            this.connectToPresence(token, connectionInfo.windowId).catch((error) => {
+              console.error('[GitSyncWebSocketManager] Presence reconnect failed:', error);
+            });
+          }, this.RECONNECT_DELAY);
         });
       });
     } catch (error) {
@@ -1091,6 +1096,13 @@ export class GitSyncWebSocketManager {
         users: unknown[];
         stats: { totalOnline: number; totalRepositories: number; activeCollaborations: number };
       };
+
+      console.log('[GitSyncWebSocketManager] Presence data from server:', {
+        totalUsers: data.users.length,
+        totalOnline: data.stats.totalOnline,
+        users: data.users,
+      });
+
       return {
         success: true,
         data,

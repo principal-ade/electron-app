@@ -8,7 +8,6 @@ import type { WorkspaceAPI } from './WorkspaceAPI';
 import type { AgentInstallationAPI } from './AgentInstallationAPI';
 import type { AgentSessionAPI } from './AgentSessionAPI';
 import type { AgentSessionSDKAPI } from './AgentSessionSDKAPI';
-import type { AgentUpdateAPI } from './AgentUpdateAPI';
 import type { AuthenticationAPI } from './AuthenticationAPI';
 import type { ClipboardAPI } from './ClipboardAPI';
 import type { FileSystemAPI } from './FileSystemAPI';
@@ -54,11 +53,6 @@ export type {
 } from './AgentSessionEventsAPI';
 export { AgentSessionEventsAPIEvent } from './AgentSessionEventsAPI';
 export type {
-  AgentUpdateAPI,
-  AgentUpdatePreferences,
-  UpdateCheckResult,
-} from './AgentUpdateAPI';
-export type {
   AuthenticationAPI,
   AuthUser,
   AuthResult,
@@ -90,7 +84,6 @@ export interface MainProcessAPI {
   agentSession: AgentSessionAPI;
   agentSessionSDK: AgentSessionSDKAPI;
   agentSessionEvents: AgentSessionEventsAPI;
-  agentUpdate: AgentUpdateAPI;
   appVersionManager: AppVersionManagerAPI;
   authentication: AuthenticationAPI;
   clipboard: ClipboardAPI;
