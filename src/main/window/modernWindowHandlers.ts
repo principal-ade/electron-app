@@ -323,6 +323,19 @@ export function registerModernWindowHandlers(): void {
         // Broadcast immediately that window is opening
         broadcastRepositoryWindowsChanged();
 
+        // Track repository opened in presence system
+        const { presenceWindowBridge } = require('../services/PresenceWindowBridge');
+        presenceWindowBridge.trackRepositoryOpened(
+          String(window.window.id),
+          owner,
+          repoName,
+          currentBranch || 'main',
+          repository.path,
+        );
+
+        // Setup focus tracking for presence
+        presenceWindowBridge.setupWindowFocusTracking(window.window, String(window.window.id));
+
         // Listen for when window is ready to show, then broadcast again
         window.window.once('ready-to-show', () => {
           console.log('[ModernWindow] Repository dashboard window ready to show');
@@ -348,6 +361,12 @@ export function registerModernWindowHandlers(): void {
           '[ModernWindow] Window already exists, focusing without reload:',
           windowName,
         );
+        // Track focus for existing window
+        const { presenceWindowBridge } = require('../services/PresenceWindowBridge');
+        const existingWindow = applicationWindows.get(existingWindowId);
+        if (existingWindow) {
+          presenceWindowBridge.trackRepositoryFocused(String(existingWindowId));
+        }
       }
     },
   );

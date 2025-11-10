@@ -10,6 +10,14 @@ export enum PresenceEvent {
   CONNECT = 'presence:connect',
   DISCONNECT = 'presence:disconnect',
 
+  // Write operations
+  REPORT_REPO_OPENED = 'presence:report-repo-opened',
+  REPORT_REPO_CLOSED = 'presence:report-repo-closed',
+  REPORT_ACTIVE_REPO = 'presence:report-active-repo',
+  UPDATE_STATUS = 'presence:update-status',
+  SET_VISIBILITY = 'presence:set-visibility',
+  SEND_HEARTBEAT = 'presence:send-heartbeat',
+
   // Events (from main to renderer)
   ON_PRESENCE_EVENT = 'presence:event',
 }
@@ -39,4 +47,22 @@ export const presenceAPI: PresenceAPI = {
     return () =>
       ipcRenderer.removeListener(PresenceEvent.ON_PRESENCE_EVENT, subscription);
   },
+
+  reportRepositoryOpened: (owner, repo, branch, localPath) =>
+    ipcRenderer.invoke(PresenceEvent.REPORT_REPO_OPENED, owner, repo, branch, localPath),
+
+  reportRepositoryClosed: (owner, repo) =>
+    ipcRenderer.invoke(PresenceEvent.REPORT_REPO_CLOSED, owner, repo),
+
+  reportActiveRepository: (owner, repo) =>
+    ipcRenderer.invoke(PresenceEvent.REPORT_ACTIVE_REPO, owner, repo),
+
+  updateStatus: (status, message) =>
+    ipcRenderer.invoke(PresenceEvent.UPDATE_STATUS, status, message),
+
+  setVisibility: (visible) =>
+    ipcRenderer.invoke(PresenceEvent.SET_VISIBILITY, visible),
+
+  sendHeartbeat: () =>
+    ipcRenderer.invoke(PresenceEvent.SEND_HEARTBEAT),
 };

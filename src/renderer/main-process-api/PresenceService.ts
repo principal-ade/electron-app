@@ -121,4 +121,113 @@ export class PresenceService {
       return () => {};
     }
   }
+
+  /**
+   * Report that a repository has been opened
+   */
+  static async reportRepositoryOpened(
+    owner: string,
+    repo: string,
+    branch: string,
+    localPath?: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      return await window.mainProcess.presence.reportRepositoryOpened(
+        owner,
+        repo,
+        branch,
+        localPath,
+      );
+    } catch (error) {
+      console.error('[PresenceService] Failed to report repository opened:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to report repository opened',
+      };
+    }
+  }
+
+  /**
+   * Report that a repository has been closed
+   */
+  static async reportRepositoryClosed(
+    owner: string,
+    repo: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      return await window.mainProcess.presence.reportRepositoryClosed(owner, repo);
+    } catch (error) {
+      console.error('[PresenceService] Failed to report repository closed:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to report repository closed',
+      };
+    }
+  }
+
+  /**
+   * Report that a repository is now the active/focused one
+   */
+  static async reportActiveRepository(
+    owner: string,
+    repo: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      return await window.mainProcess.presence.reportActiveRepository(owner, repo);
+    } catch (error) {
+      console.error('[PresenceService] Failed to report active repository:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to report active repository',
+      };
+    }
+  }
+
+  /**
+   * Update user status
+   */
+  static async updateStatus(
+    status: 'online' | 'away',
+    message?: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      return await window.mainProcess.presence.updateStatus(status, message);
+    } catch (error) {
+      console.error('[PresenceService] Failed to update status:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to update status',
+      };
+    }
+  }
+
+  /**
+   * Set user visibility (visible/invisible mode)
+   */
+  static async setVisibility(visible: boolean): Promise<{ success: boolean; message?: string }> {
+    try {
+      return await window.mainProcess.presence.setVisibility(visible);
+    } catch (error) {
+      console.error('[PresenceService] Failed to set visibility:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to set visibility',
+      };
+    }
+  }
+
+  /**
+   * Send a heartbeat to keep presence alive
+   */
+  static async sendHeartbeat(): Promise<{ success: boolean; message?: string }> {
+    try {
+      return await window.mainProcess.presence.sendHeartbeat();
+    } catch (error) {
+      console.error('[PresenceService] Failed to send heartbeat:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to send heartbeat',
+      };
+    }
+  }
 }

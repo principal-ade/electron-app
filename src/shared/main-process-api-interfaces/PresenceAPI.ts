@@ -46,15 +46,40 @@ export interface PresenceData {
   stats: PresenceStats;
 }
 
-export interface PresenceEvent {
-  type:
-    | 'presence:user_online'
-    | 'presence:user_offline'
-    | 'presence:repo_opened'
-    | 'presence:repo_closed'
-    | 'presence:repo_focused'
-    | 'presence:status_changed';
-  payload: Record<string, unknown>;
+export interface PresenceEventPayloads {
+  'presence:user_online': {
+    userId: string;
+    agentId: string;
+  };
+  'presence:user_offline': {
+    userId: string;
+    agentId: string;
+  };
+  'presence:repo_opened': {
+    userId: string;
+    repoId: string;
+    branch: string;
+  };
+  'presence:repo_closed': {
+    userId: string;
+    repoId: string;
+  };
+  'presence:repo_focused': {
+    userId: string;
+    repoId: string;
+  };
+  'presence:status_changed': {
+    userId: string;
+    status: 'online' | 'away' | 'offline';
+    message?: string;
+  };
+}
+
+export type PresenceEventType = keyof PresenceEventPayloads;
+
+export interface PresenceEvent<T extends PresenceEventType = PresenceEventType> {
+  type: T;
+  payload: PresenceEventPayloads[T];
   timestamp: number;
 }
 
@@ -109,4 +134,61 @@ export interface PresenceAPI {
    * Listen for presence events
    */
   onPresenceEvent(callback: (message: PresenceEvent) => void): () => void;
+
+  /**
+   * Report that a repository has been opened
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   * @param branch - Current branch
+   * @param localPath - Optional local path
+   */
+  reportRepositoryOpened(
+    owner: string,
+    repo: string,
+    branch: string,
+    localPath?: string,
+  ): Promise<{ success: boolean; message?: string }>;
+
+  /**
+   * Report that a repository has been closed
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   */
+  reportRepositoryClosed(
+    owner: string,
+    repo: string,
+  ): Promise<{ success: boolean; message?: string }>;
+
+  /**
+   * Report that a repository is now the active/focused one
+   * @param owner - Repository owner
+   * @param repo - Repository name
+   */
+  reportActiveRepository(
+    owner: string,
+    repo: string,
+  ): Promise<{ success: boolean; message?: string }>;
+
+  /**
+   * Update user status
+   * @param status - User status (online/away)
+   * @param message - Optional status message
+   */
+  updateStatus(
+    status: 'online' | 'away',
+    message?: string,
+  ): Promise<{ success: boolean; message?: string }>;
+
+  /**
+   * Set user visibility (visible/invisible mode)
+   * @param visible - Whether user should be visible to others
+   */
+  setVisibility(
+    visible: boolean,
+  ): Promise<{ success: boolean; message?: string }>;
+
+  /**
+   * Send a heartbeat to keep presence alive
+   */
+  sendHeartbeat(): Promise<{ success: boolean; message?: string }>;
 }

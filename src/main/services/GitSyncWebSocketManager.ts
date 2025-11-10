@@ -1191,6 +1191,312 @@ export class GitSyncWebSocketManager {
       };
     }
   }
+
+  /**
+   * Report that a repository has been opened
+   */
+  async reportRepositoryOpened(
+    owner: string,
+    repo: string,
+    branch: string,
+    localPath?: string,
+    token?: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+
+      // Get auth token - use provided token or get from active connection
+      let authToken = token;
+      if (!authToken) {
+        const activeConnection = Array.from(this.connections.values()).find(
+          (conn) => conn.ws?.readyState === WebSocket.OPEN && conn.status.authenticated,
+        );
+        authToken = activeConnection?.token;
+      }
+
+      if (!authToken) {
+        return {
+          success: false,
+          message: 'No authentication token available',
+        };
+      }
+
+      const response = await fetch(`${httpUrl}/api/presence/repo/open`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          owner,
+          repo,
+          branch,
+          localPath,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to report repository opened: ${response.status}`);
+      }
+
+      console.log('[GitSyncWebSocketManager] Reported repository opened:', { owner, repo, branch });
+      return { success: true, message: 'Repository opened reported' };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to report repository opened';
+      console.error('[GitSyncWebSocketManager] Failed to report repository opened:', error);
+      return { success: false, message: errorMessage };
+    }
+  }
+
+  /**
+   * Report that a repository has been closed
+   */
+  async reportRepositoryClosed(
+    owner: string,
+    repo: string,
+    token?: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+
+      // Get auth token - use provided token or get from active connection
+      let authToken = token;
+      if (!authToken) {
+        const activeConnection = Array.from(this.connections.values()).find(
+          (conn) => conn.ws?.readyState === WebSocket.OPEN && conn.status.authenticated,
+        );
+        authToken = activeConnection?.token;
+      }
+
+      if (!authToken) {
+        return {
+          success: false,
+          message: 'No authentication token available',
+        };
+      }
+
+      const response = await fetch(`${httpUrl}/api/presence/repo/close`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          owner,
+          repo,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to report repository closed: ${response.status}`);
+      }
+
+      console.log('[GitSyncWebSocketManager] Reported repository closed:', { owner, repo });
+      return { success: true, message: 'Repository closed reported' };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to report repository closed';
+      console.error('[GitSyncWebSocketManager] Failed to report repository closed:', error);
+      return { success: false, message: errorMessage };
+    }
+  }
+
+  /**
+   * Report that a repository is now the active/focused one
+   */
+  async reportActiveRepository(
+    owner: string,
+    repo: string,
+    token?: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+
+      // Get auth token - use provided token or get from active connection
+      let authToken = token;
+      if (!authToken) {
+        const activeConnection = Array.from(this.connections.values()).find(
+          (conn) => conn.ws?.readyState === WebSocket.OPEN && conn.status.authenticated,
+        );
+        authToken = activeConnection?.token;
+      }
+
+      if (!authToken) {
+        return {
+          success: false,
+          message: 'No authentication token available',
+        };
+      }
+
+      const response = await fetch(`${httpUrl}/api/presence/repo/focus`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          owner,
+          repo,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to report active repository: ${response.status}`);
+      }
+
+      console.log('[GitSyncWebSocketManager] Reported active repository:', { owner, repo });
+      return { success: true, message: 'Active repository reported' };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to report active repository';
+      console.error('[GitSyncWebSocketManager] Failed to report active repository:', error);
+      return { success: false, message: errorMessage };
+    }
+  }
+
+  /**
+   * Update user status
+   */
+  async updatePresenceStatus(
+    status: 'online' | 'away',
+    statusMessage?: string,
+    token?: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+
+      // Get auth token - use provided token or get from active connection
+      let authToken = token;
+      if (!authToken) {
+        const activeConnection = Array.from(this.connections.values()).find(
+          (conn) => conn.ws?.readyState === WebSocket.OPEN && conn.status.authenticated,
+        );
+        authToken = activeConnection?.token;
+      }
+
+      if (!authToken) {
+        return {
+          success: false,
+          message: 'No authentication token available',
+        };
+      }
+
+      const response = await fetch(`${httpUrl}/api/presence/status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          status,
+          message: statusMessage,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update presence status: ${response.status}`);
+      }
+
+      console.log('[GitSyncWebSocketManager] Updated presence status:', { status, statusMessage });
+      return { success: true, message: 'Status updated' };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update presence status';
+      console.error('[GitSyncWebSocketManager] Failed to update presence status:', error);
+      return { success: false, message: errorMessage };
+    }
+  }
+
+  /**
+   * Set user visibility (visible/invisible mode)
+   */
+  async setPresenceVisibility(
+    visible: boolean,
+    token?: string,
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+
+      // Get auth token - use provided token or get from active connection
+      let authToken = token;
+      if (!authToken) {
+        const activeConnection = Array.from(this.connections.values()).find(
+          (conn) => conn.ws?.readyState === WebSocket.OPEN && conn.status.authenticated,
+        );
+        authToken = activeConnection?.token;
+      }
+
+      if (!authToken) {
+        return {
+          success: false,
+          message: 'No authentication token available',
+        };
+      }
+
+      const response = await fetch(`${httpUrl}/api/presence/visibility`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          visible,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to set presence visibility: ${response.status}`);
+      }
+
+      console.log('[GitSyncWebSocketManager] Set presence visibility:', { visible });
+      return { success: true, message: `Visibility set to ${visible ? 'visible' : 'invisible'}` };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to set presence visibility';
+      console.error('[GitSyncWebSocketManager] Failed to set presence visibility:', error);
+      return { success: false, message: errorMessage };
+    }
+  }
+
+  /**
+   * Send a heartbeat to keep presence alive
+   */
+  async sendPresenceHeartbeat(token?: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
+
+      // Get auth token - use provided token or get from active connection
+      let authToken = token;
+      if (!authToken) {
+        const activeConnection = Array.from(this.connections.values()).find(
+          (conn) => conn.ws?.readyState === WebSocket.OPEN && conn.status.authenticated,
+        );
+        authToken = activeConnection?.token;
+      }
+
+      if (!authToken) {
+        return {
+          success: false,
+          message: 'No authentication token available',
+        };
+      }
+
+      const response = await fetch(`${httpUrl}/api/presence/heartbeat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to send presence heartbeat: ${response.status}`);
+      }
+
+      return { success: true, message: 'Heartbeat sent' };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send presence heartbeat';
+      console.error('[GitSyncWebSocketManager] Failed to send presence heartbeat:', error);
+      return { success: false, message: errorMessage };
+    }
+  }
 }
 
 // Export singleton instance

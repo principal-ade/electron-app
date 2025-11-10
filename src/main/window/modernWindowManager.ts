@@ -179,6 +179,13 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
 
       // Broadcast repository window change if this was a repository window
       if (wasRepositoryWindow) {
+        // Track repository closed in presence system
+        import('../services/PresenceWindowBridge').then((module) => {
+          module.presenceWindowBridge.trackRepositoryClosed(String(this.window.id));
+        }).catch((error) => {
+          console.error('[ModernWindow] Error tracking presence closure:', error);
+        });
+
         // Import and call broadcast function from modernWindowHandlers
         import('./modernWindowHandlers').then((module) => {
           if (module.broadcastRepositoryWindowsChanged) {

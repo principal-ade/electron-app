@@ -9,13 +9,12 @@ import {
   Folder,
   GitBranch,
   Monitor,
-  Wifi,
-  WifiOff,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { PresenceService } from '../../main-process-api/PresenceService';
 import type {
   UserPresence,
-  PresenceStats,
 } from '../../../shared/main-process-api-interfaces/PresenceAPI';
 import { useGitSyncConnection } from '../../hooks/useGitSyncConnection';
 import { GitSyncService } from '../../main-process-api/GitSyncService';
@@ -25,15 +24,15 @@ import { AuthenticationService } from '../../main-process-api/AuthenticationServ
 export const PresencePanel: React.FC = () => {
   const { theme } = useTheme();
   const [users, setUsers] = useState<UserPresence[]>([]);
-  const [stats, setStats] = useState<PresenceStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const { isConnected, connectionCount } = useGitSyncConnection();
+  const { isConnected } = useGitSyncConnection();
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [hasGitHubAuth, setHasGitHubAuth] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [userStatus, setUserStatus] = useState<'online' | 'away'>('online');
+  const [isVisible, setIsVisible] = useState(true);
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
@@ -48,7 +47,6 @@ export const PresencePanel: React.FC = () => {
       setError(null);
       const data = await PresenceService.getUsers();
       setUsers(data.users || []);
-      setStats(data.stats || null);
       setIsLoading(false);
     } catch (err) {
       console.error('[PresencePanel] Failed to fetch presence data:', err);
@@ -85,6 +83,35 @@ export const PresencePanel: React.FC = () => {
       setIsLoggingIn(false);
     }
   }, []);
+
+  // Handle status change
+  const handleStatusChange = useCallback(async (newStatus: 'online' | 'away') => {
+    try {
+      const result = await PresenceService.updateStatus(newStatus);
+      if (result.success) {
+        setUserStatus(newStatus);
+      } else {
+        console.error('[PresencePanel] Failed to update status:', result.message);
+      }
+    } catch (err) {
+      console.error('[PresencePanel] Failed to update status:', err);
+    }
+  }, []);
+
+  // Handle visibility toggle
+  const handleVisibilityToggle = useCallback(async () => {
+    try {
+      const newVisibility = !isVisible;
+      const result = await PresenceService.setVisibility(newVisibility);
+      if (result.success) {
+        setIsVisible(newVisibility);
+      } else {
+        console.error('[PresencePanel] Failed to set visibility:', result.message);
+      }
+    } catch (err) {
+      console.error('[PresencePanel] Failed to set visibility:', err);
+    }
+  }, [isVisible]);
 
   // Connect to Git-Sync for presence tracking only
   const handleConnect = useCallback(async () => {
@@ -163,7 +190,6 @@ export const PresencePanel: React.FC = () => {
   useEffect(() => {
     // Subscribe to global presence (will fail gracefully if no connection)
     void PresenceService.subscribeToPresence().then((subscribed) => {
-      setIsSubscribed(subscribed);
       if (subscribed) {
         console.info('[PresencePanel] Subscribed to presence events');
       } else {
@@ -179,12 +205,12 @@ export const PresencePanel: React.FC = () => {
       console.info('[PresencePanel] Presence event received:', event.type, event.payload);
 
       // If we receive user_offline event, check if it's for us
-      if (event.type === 'presence:user_offline' && event.payload) {
-        const offlineUserId = (event.payload as any).userId;
+      if (event.type === 'presence:user_offline') {
+        const offlineUserId = event.payload.userId;
         // Get current user from auth
         const authService = SecureAuthService.getInstance();
         authService.checkAuth().then((authResult) => {
-          if (authResult.authenticated && authResult.user?.login === offlineUserId) {
+          if (authResult.authenticated && authResult.user?.githubHandle === offlineUserId) {
             console.warn('[PresencePanel] WE went offline on server side! Server marked us as offline.');
             // Optionally trigger a reconnect here
             if (isConnected) {
@@ -202,7 +228,7 @@ export const PresencePanel: React.FC = () => {
       unsubscribe();
       void PresenceService.unsubscribeFromPresence();
     };
-  }, [fetchPresence]);
+  }, [fetchPresence, isConnected]);
 
   const renderState = (
     icon: React.ReactNode,
@@ -472,6 +498,95 @@ export const PresencePanel: React.FC = () => {
           />
         </button>
       </div>
+
+      {/* Status and Visibility Controls */}
+      {isConnected && (
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            padding: '12px',
+            backgroundColor: theme.colors.background,
+            borderRadius: '6px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          {/* Status Selector */}
+          <div style={{ flex: 1, display: 'flex', gap: '4px' }}>
+            <button
+              onClick={() => handleStatusChange('online')}
+              disabled={!isConnected}
+              style={{
+                flex: 1,
+                padding: '6px 12px',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontFamily: theme.fonts.body,
+                fontWeight: theme.fontWeights.medium,
+                color: userStatus === 'online' ? '#ffffff' : theme.colors.text,
+                backgroundColor: userStatus === 'online' ? '#10b981' : theme.colors.backgroundSecondary,
+                border: `1px solid ${userStatus === 'online' ? '#10b981' : theme.colors.border}`,
+                borderRadius: '4px',
+                cursor: isConnected ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s ease',
+              }}
+              title="Set status to online"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <Circle size={10} fill="#10b981" color="#10b981" />
+                <span>Online</span>
+              </div>
+            </button>
+            <button
+              onClick={() => handleStatusChange('away')}
+              disabled={!isConnected}
+              style={{
+                flex: 1,
+                padding: '6px 12px',
+                fontSize: `${theme.fontSizes[1]}px`,
+                fontFamily: theme.fonts.body,
+                fontWeight: theme.fontWeights.medium,
+                color: userStatus === 'away' ? '#ffffff' : theme.colors.text,
+                backgroundColor: userStatus === 'away' ? '#f59e0b' : theme.colors.backgroundSecondary,
+                border: `1px solid ${userStatus === 'away' ? '#f59e0b' : theme.colors.border}`,
+                borderRadius: '4px',
+                cursor: isConnected ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s ease',
+              }}
+              title="Set status to away"
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <Circle size={10} fill="#f59e0b" color="#f59e0b" />
+                <span>Away</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Visibility Toggle */}
+          <button
+            onClick={handleVisibilityToggle}
+            disabled={!isConnected}
+            style={{
+              padding: '6px 12px',
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
+              fontWeight: theme.fontWeights.medium,
+              color: isVisible ? theme.colors.text : '#ffffff',
+              backgroundColor: isVisible ? theme.colors.backgroundSecondary : '#6b7280',
+              border: `1px solid ${isVisible ? theme.colors.border : '#6b7280'}`,
+              borderRadius: '4px',
+              cursor: isConnected ? 'pointer' : 'not-allowed',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+            title={isVisible ? 'Go invisible' : 'Go visible'}
+          >
+            {isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
+            <span>{isVisible ? 'Visible' : 'Invisible'}</span>
+          </button>
+        </div>
+      )}
 
       {/* User list */}
       <div

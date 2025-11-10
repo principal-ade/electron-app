@@ -91,6 +91,92 @@ class PresenceIPC {
         // is handled automatically when disconnecting
       },
     );
+
+    // Handler for presence:report-repo-opened
+    ipcMain.handle(
+      PresenceEvent.REPORT_REPO_OPENED,
+      async (
+        event,
+        owner: string,
+        repo: string,
+        branch: string,
+        localPath?: string,
+      ): Promise<{ success: boolean; message?: string }> => {
+        console.log('[PresenceIPC] Report repository opened:', { owner, repo, branch, localPath });
+
+        return await gitSyncWebSocketManager.reportRepositoryOpened(
+          owner,
+          repo,
+          branch,
+          localPath,
+        );
+      },
+    );
+
+    // Handler for presence:report-repo-closed
+    ipcMain.handle(
+      PresenceEvent.REPORT_REPO_CLOSED,
+      async (
+        event,
+        owner: string,
+        repo: string,
+      ): Promise<{ success: boolean; message?: string }> => {
+        console.log('[PresenceIPC] Report repository closed:', { owner, repo });
+
+        return await gitSyncWebSocketManager.reportRepositoryClosed(owner, repo);
+      },
+    );
+
+    // Handler for presence:report-active-repo
+    ipcMain.handle(
+      PresenceEvent.REPORT_ACTIVE_REPO,
+      async (
+        event,
+        owner: string,
+        repo: string,
+      ): Promise<{ success: boolean; message?: string }> => {
+        console.log('[PresenceIPC] Report active repository:', { owner, repo });
+
+        return await gitSyncWebSocketManager.reportActiveRepository(owner, repo);
+      },
+    );
+
+    // Handler for presence:update-status
+    ipcMain.handle(
+      PresenceEvent.UPDATE_STATUS,
+      async (
+        event,
+        status: 'online' | 'away',
+        statusMessage?: string,
+      ): Promise<{ success: boolean; message?: string }> => {
+        console.log('[PresenceIPC] Update status:', { status, statusMessage });
+
+        return await gitSyncWebSocketManager.updatePresenceStatus(status, statusMessage);
+      },
+    );
+
+    // Handler for presence:set-visibility
+    ipcMain.handle(
+      PresenceEvent.SET_VISIBILITY,
+      async (
+        event,
+        visible: boolean,
+      ): Promise<{ success: boolean; message?: string }> => {
+        console.log('[PresenceIPC] Set visibility:', { visible });
+
+        return await gitSyncWebSocketManager.setPresenceVisibility(visible);
+      },
+    );
+
+    // Handler for presence:send-heartbeat
+    ipcMain.handle(
+      PresenceEvent.SEND_HEARTBEAT,
+      async (): Promise<{ success: boolean; message?: string }> => {
+        console.log('[PresenceIPC] Send heartbeat');
+
+        return await gitSyncWebSocketManager.sendPresenceHeartbeat();
+      },
+    );
   }
 }
 
