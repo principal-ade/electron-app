@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Loader2,
   LogIn,
-  Search,
   Users,
 } from 'lucide-react';
 
@@ -17,6 +16,7 @@ import type {
   GitHubOrganization,
   GitHubOrgMember,
 } from '../../../shared/main-process-api-interfaces/GitHubAPI';
+import { UserAvatar } from '../../components/repository-maps/UserAvatar';
 
 interface PersonWithOrg extends GitHubUser {
   organizations?: string[];
@@ -37,6 +37,7 @@ export const GitHubSocialPanel: React.FC = () => {
     isLoggingIn,
     login,
     loginError,
+    user,
   } = useAuthState();
 
   const [socialData, setSocialData] = useState<SocialData>({
@@ -47,7 +48,6 @@ export const GitHubSocialPanel: React.FC = () => {
   });
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState('');
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
     new Set(),
   );
@@ -203,9 +203,15 @@ export const GitHubSocialPanel: React.FC = () => {
   // Compute coworkers (people in your organizations)
   const coworkers = useMemo(() => {
     const coworkerMap = new Map<string, PersonWithOrg>();
+    const currentUserLogin = user?.login;
 
     socialData.orgMembers.forEach((members, orgLogin) => {
       members.forEach((member) => {
+        // Skip the current user
+        if (currentUserLogin && member.login === currentUserLogin) {
+          return;
+        }
+
         if (!coworkerMap.has(member.login)) {
           coworkerMap.set(member.login, {
             ...member,
@@ -223,32 +229,16 @@ export const GitHubSocialPanel: React.FC = () => {
             updated_at: '',
           });
         } else {
-          const existing = coworkerMap.get(member.login)!;
-          existing.organizations?.push(orgLogin);
+          const existing = coworkerMap.get(member.login);
+          if (existing && existing.organizations) {
+            existing.organizations.push(orgLogin);
+          }
         }
       });
     });
 
     return Array.from(coworkerMap.values());
-  }, [socialData.orgMembers]);
-
-  const normalizedFilter = filter.trim().toLowerCase();
-
-  const filteredCoworkers = useMemo(
-    () =>
-      coworkers.filter((person) =>
-        person.login.toLowerCase().includes(normalizedFilter),
-      ),
-    [coworkers, normalizedFilter],
-  );
-
-  const filteredFollowing = useMemo(
-    () =>
-      socialData.following.filter((person) =>
-        person.login.toLowerCase().includes(normalizedFilter),
-      ),
-    [socialData.following, normalizedFilter],
-  );
+  }, [socialData.orgMembers, user?.login]);
 
   const hasData =
     socialData.following.length > 0 ||
@@ -345,38 +335,6 @@ export const GitHubSocialPanel: React.FC = () => {
 
   return (
     <div style={contentContainerStyle}>
-      {/* Search bar */}
-      <div style={{ position: 'relative' }}>
-        <Search
-          size={16}
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '12px',
-            transform: 'translateY(-50%)',
-            color: theme.colors.textSecondary,
-            pointerEvents: 'none',
-          }}
-        />
-        <input
-          type="text"
-          value={filter}
-          placeholder="Search people..."
-          onChange={(event) => setFilter(event.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px 12px 8px 36px',
-            borderRadius: '6px',
-            border: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
-            fontSize: `${theme.fontSizes[1]}px`,
-            fontFamily: theme.fonts.body,
-            outline: 'none',
-          }}
-        />
-      </div>
-
       {error && hasData && (
         <div
           style={{
@@ -406,108 +364,84 @@ export const GitHubSocialPanel: React.FC = () => {
           gap: '8px',
         }}
       >
-        {/* Organizations Section */}
-        {socialData.organizations.map((org) => {
-          const sectionId = `org-${org.login}`;
-          const isCollapsed = collapsedSections.has(sectionId);
-          const members = socialData.orgMembers.get(org.login) || [];
-          const filteredMembers = normalizedFilter
-            ? members.filter((m) =>
-                m.login.toLowerCase().includes(normalizedFilter),
-              )
-            : members;
-
-          if (normalizedFilter && filteredMembers.length === 0) {
-            return null;
-          }
-
-          return (
-            <div key={org.login}>
-              <button
-                onClick={() => toggleSection(sectionId)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '8px 12px',
-                  backgroundColor: theme.colors.background,
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.background;
-                }}
+        {/* Co-workers Section */}
+        {coworkers.length > 0 && (
+          <div>
+            <button
+              onClick={() => toggleSection('coworkers')}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                backgroundColor: theme.colors.background,
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }}
+            >
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                <div
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  {isCollapsed ? (
-                    <ChevronRight
-                      size={16}
-                      color={theme.colors.textSecondary}
-                    />
-                  ) : (
-                    <ChevronDown size={16} color={theme.colors.textSecondary} />
-                  )}
-                  <img
-                    src={org.avatar_url}
-                    alt={org.login}
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '4px',
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: `${theme.fontSizes[1]}px`,
-                      fontWeight: theme.fontWeights.semibold,
-                      fontFamily: theme.fonts.body,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    {org.login}
-                  </span>
-                </div>
+                {collapsedSections.has('coworkers') ? (
+                  <ChevronRight size={16} color={theme.colors.textSecondary} />
+                ) : (
+                  <ChevronDown size={16} color={theme.colors.textSecondary} />
+                )}
+                <Users size={16} color={theme.colors.textSecondary} />
                 <span
                   style={{
-                    fontSize: `${theme.fontSizes[0]}px`,
+                    fontSize: `${theme.fontSizes[2]}px`,
+                    fontWeight: theme.fontWeights.semibold,
                     fontFamily: theme.fonts.body,
-                    color: theme.colors.textSecondary,
+                    color: theme.colors.text,
                   }}
                 >
-                  {normalizedFilter
-                    ? `${filteredMembers.length} / ${members.length}`
-                    : members.length}
+                  Co-workers
                 </span>
-              </button>
+              </div>
+              <span
+                style={{
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {coworkers.length}
+              </span>
+            </button>
 
-              {!isCollapsed && (
-                <div
-                  style={{
-                    paddingLeft: '12px',
-                    marginTop: '4px',
-                  }}
-                >
-                  {filteredMembers.map((member) => (
-                    <PersonItem key={member.id} person={member} theme={theme} />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+            {!collapsedSections.has('coworkers') && (
+              <div
+                style={{
+                  paddingLeft: '12px',
+                  marginTop: '4px',
+                }}
+              >
+                {coworkers.map((person) => (
+                  <PersonItem
+                    key={person.id}
+                    person={person}
+                    theme={theme}
+                    showOrgs={person.organizations}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Following Section */}
-        {filteredFollowing.length > 0 && (
+        {socialData.following.length > 0 && (
           <div>
             <button
               onClick={() => toggleSection('following')}
@@ -542,7 +476,7 @@ export const GitHubSocialPanel: React.FC = () => {
                 <Users size={16} color={theme.colors.textSecondary} />
                 <span
                   style={{
-                    fontSize: `${theme.fontSizes[1]}px`,
+                    fontSize: `${theme.fontSizes[2]}px`,
                     fontWeight: theme.fontWeights.semibold,
                     fontFamily: theme.fonts.body,
                     color: theme.colors.text,
@@ -558,9 +492,7 @@ export const GitHubSocialPanel: React.FC = () => {
                   color: theme.colors.textSecondary,
                 }}
               >
-                {normalizedFilter
-                  ? `${filteredFollowing.length} / ${socialData.following.length}`
-                  : filteredFollowing.length}
+                {socialData.following.length}
               </span>
             </button>
 
@@ -571,7 +503,78 @@ export const GitHubSocialPanel: React.FC = () => {
                   marginTop: '4px',
                 }}
               >
-                {filteredFollowing.map((person) => (
+                {socialData.following.map((person) => (
+                  <PersonItem key={person.id} person={person} theme={theme} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Followers Section */}
+        {socialData.followers.length > 0 && (
+          <div>
+            <button
+              onClick={() => toggleSection('followers')}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                backgroundColor: theme.colors.background,
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }}
+            >
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                {collapsedSections.has('followers') ? (
+                  <ChevronRight size={16} color={theme.colors.textSecondary} />
+                ) : (
+                  <ChevronDown size={16} color={theme.colors.textSecondary} />
+                )}
+                <Users size={16} color={theme.colors.textSecondary} />
+                <span
+                  style={{
+                    fontSize: `${theme.fontSizes[2]}px`,
+                    fontWeight: theme.fontWeights.semibold,
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.text,
+                  }}
+                >
+                  Followers
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {socialData.followers.length}
+              </span>
+            </button>
+
+            {!collapsedSections.has('followers') && (
+              <div
+                style={{
+                  paddingLeft: '12px',
+                  marginTop: '4px',
+                }}
+              >
+                {socialData.followers.map((person) => (
                   <PersonItem key={person.id} person={person} theme={theme} />
                 ))}
               </div>
@@ -585,15 +588,30 @@ export const GitHubSocialPanel: React.FC = () => {
 
 interface PersonItemProps {
   person: GitHubUser | GitHubOrgMember;
-  theme: any;
+  theme: ReturnType<typeof useTheme>['theme'];
+  showOrgs?: string[];
 }
 
-const PersonItem: React.FC<PersonItemProps> = ({ person, theme }) => {
+const PersonItem: React.FC<PersonItemProps> = ({ person, theme, showOrgs }) => {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
+  const handleClick = (e: React.MouseEvent) => {
+    // If clicking the org count badge, toggle expansion
+    if (showOrgs && showOrgs.length > 0 && (e.target as HTMLElement).closest('[data-org-badge]')) {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsExpanded(!isExpanded);
+      return;
+    }
+    // Otherwise, let the link navigate
+  };
+
   return (
     <a
       href={`https://github.com/${person.login}`}
       target="_blank"
       rel="noopener noreferrer"
+      onClick={handleClick}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -611,34 +629,79 @@ const PersonItem: React.FC<PersonItemProps> = ({ person, theme }) => {
         e.currentTarget.style.backgroundColor = 'transparent';
       }}
     >
+      <UserAvatar
+        avatarUrl={person.avatar_url}
+        username={person.login}
+        size={40}
+      />
       <div
         style={{
-          width: '6px',
-          height: '6px',
-          borderRadius: '50%',
-          backgroundColor: theme.colors.success || '#10b981',
-          flexShrink: 0,
-        }}
-      />
-      <img
-        src={person.avatar_url}
-        alt={person.login}
-        style={{
-          width: '24px',
-          height: '24px',
-          borderRadius: '50%',
-          flexShrink: 0,
-        }}
-      />
-      <span
-        style={{
-          fontSize: `${theme.fontSizes[1]}px`,
-          fontFamily: theme.fonts.body,
-          color: theme.colors.text,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          flex: 1,
+          minWidth: 0,
         }}
       >
-        {person.login}
-      </span>
+        <span
+          style={{
+            fontSize: `${theme.fontSizes[2]}px`,
+            fontWeight: theme.fontWeights.medium,
+            fontFamily: theme.fonts.body,
+            color: theme.colors.text,
+          }}
+        >
+          {person.login}
+        </span>
+        {showOrgs && showOrgs.length > 0 && !isExpanded && (
+          <span
+            data-org-badge
+            style={{
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontFamily: theme.fonts.body,
+              color: theme.colors.textSecondary,
+              backgroundColor: theme.colors.backgroundSecondary,
+              padding: '2px 6px',
+              borderRadius: '3px',
+              border: `1px solid ${theme.colors.border}`,
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+            title={`Member of ${showOrgs.length} organization${showOrgs.length !== 1 ? 's' : ''}`}
+          >
+            {showOrgs.length} org{showOrgs.length !== 1 ? 's' : ''}
+          </span>
+        )}
+        {showOrgs && showOrgs.length > 0 && isExpanded && (
+          <div
+            data-org-badge
+            style={{
+              display: 'flex',
+              gap: '4px',
+              flexWrap: 'wrap',
+              cursor: 'pointer',
+            }}
+            title="Click to collapse"
+          >
+            {showOrgs.map((org) => (
+              <span
+                key={org}
+                style={{
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.textSecondary,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                  border: `1px solid ${theme.colors.border}`,
+                }}
+              >
+                {org}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
     </a>
   );
 };
