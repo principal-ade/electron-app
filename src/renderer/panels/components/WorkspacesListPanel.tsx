@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Folder, Search, Layers, Plus, Edit2, Check, X } from 'lucide-react';
+import { Folder, Layers, Plus, Edit2, Check, X } from 'lucide-react';
 import type { Workspace } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { CreateWorkspaceModal } from '../../components/CreateWorkspaceModal';
@@ -17,7 +17,6 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
   const { theme } = useTheme();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('');
   const [defaultWorkspaceId, setDefaultWorkspaceId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
@@ -50,33 +49,18 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
     return unsubscribe;
   }, []);
 
-  const normalizedFilter = filter.trim().toLowerCase();
-
-  // Filter and sort workspaces
-  const filteredAndSortedWorkspaces = useMemo(() => {
-    const filtered = workspaces.filter((workspace) => {
-      if (!normalizedFilter) return true;
-
-      const haystack = [
-        workspace.name,
-        workspace.description || '',
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      return haystack.includes(normalizedFilter);
-    });
-
-    // Sort: default workspace first, then by most recently updated
-    return filtered.sort((a, b) => {
+  // Sort workspaces
+  const sortedWorkspaces = useMemo(() => {
+    // Sort: default workspace first, then by name alphabetically
+    return [...workspaces].sort((a, b) => {
       // Default workspace always first
       if (a.id === defaultWorkspaceId) return -1;
       if (b.id === defaultWorkspaceId) return 1;
 
-      // Then by most recently updated
-      return b.updatedAt - a.updatedAt;
+      // Then sort alphabetically by name (case-insensitive)
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
     });
-  }, [workspaces, normalizedFilter, defaultWorkspaceId]);
+  }, [workspaces, defaultWorkspaceId]);
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
@@ -173,38 +157,6 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
         </button>
       </div>
 
-      {/* Search bar */}
-      <div style={{ position: 'relative' }}>
-        <Search
-          size={16}
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '12px',
-            transform: 'translateY(-50%)',
-            color: theme.colors.textSecondary,
-            pointerEvents: 'none',
-          }}
-        />
-        <input
-          type="text"
-          value={filter}
-          placeholder="Filter workspaces..."
-          onChange={(event) => setFilter(event.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px 12px 8px 36px',
-            borderRadius: '6px',
-            border: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
-            fontSize: `${theme.fontSizes[1]}px`,
-            fontFamily: theme.fonts.body,
-            outline: 'none',
-          }}
-        />
-      </div>
-
       {/* Scrollable content */}
       <div
         style={{
@@ -216,7 +168,7 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
         }}
       >
         {/* Workspace list */}
-        {filteredAndSortedWorkspaces.map((workspace) => (
+        {sortedWorkspaces.map((workspace) => (
           <WorkspaceCard
             key={workspace.id}
             workspace={workspace}
@@ -227,7 +179,7 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
         ))}
 
         {/* No results message */}
-        {filteredAndSortedWorkspaces.length === 0 && !loading && (
+        {sortedWorkspaces.length === 0 && !loading && (
           <div
             style={{
               padding: '32px',
@@ -235,11 +187,7 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
               color: theme.colors.textSecondary,
             }}
           >
-            <p style={{ margin: 0 }}>
-              {normalizedFilter
-                ? 'No workspaces match your filter.'
-                : 'No workspaces found.'}
-            </p>
+            <p style={{ margin: 0 }}>No workspaces found.</p>
           </div>
         )}
       </div>
@@ -447,36 +395,36 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
         ) : (
           <>
             <span style={{ flex: 1 }}>{workspace.name}</span>
-            {isHovered && (
-              <button
-                onClick={handleStartEdit}
-                title="Edit workspace name"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '24px',
-                  height: '24px',
-                  padding: 0,
-                  border: 'none',
-                  borderRadius: '4px',
-                  backgroundColor: 'transparent',
-                  color: theme.colors.textSecondary,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-                  e.currentTarget.style.color = theme.colors.text;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = theme.colors.textSecondary;
-                }}
-              >
-                <Edit2 size={14} />
-              </button>
-            )}
+            <button
+              onClick={handleStartEdit}
+              title="Edit workspace name"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '24px',
+                height: '24px',
+                padding: 0,
+                border: 'none',
+                borderRadius: '4px',
+                backgroundColor: 'transparent',
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                opacity: isHovered ? 1 : 0,
+                pointerEvents: isHovered ? 'auto' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.color = theme.colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <Edit2 size={14} />
+            </button>
             {isDefault && (
               <span
                 style={{
@@ -492,7 +440,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
         )}
       </div>
 
-      {workspace.description && (
+      {(workspace.suggestedClonePath || workspace.description) && (
         <div
           style={{
             fontSize: `${theme.fontSizes[0]}px`,
@@ -500,9 +448,22 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
             fontFamily: theme.fonts.body,
             marginLeft: '28px',
             lineHeight: 1.4,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
           }}
         >
-          {workspace.description}
+          {workspace.suggestedClonePath && (
+            <div
+              style={{
+                fontFamily: theme.fonts.mono,
+                fontSize: `${theme.fontSizes[0] - 1}px`,
+              }}
+            >
+              {workspace.suggestedClonePath}
+            </div>
+          )}
+          {workspace.description && <div>{workspace.description}</div>}
         </div>
       )}
     </div>

@@ -241,7 +241,7 @@ const FeedViewInner: React.FC = () => {
           'graphs-list',
         ],
         config: {
-          defaultActiveTab: 0,
+          defaultActiveTab: 1,
           tabPosition: 'top' as const,
         },
       },

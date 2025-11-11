@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Search, Folder, FolderOpen, X } from 'lucide-react';
+import { Folder, FolderOpen, X } from 'lucide-react';
 import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
@@ -16,7 +16,6 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
   const { theme } = useTheme();
   const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState('');
 
   // Local state to track the current workspace data (to handle updates)
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(selectedWorkspace || null);
@@ -75,8 +74,6 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     return unsubscribe;
   }, [selectedWorkspace]);
 
-  const normalizedFilter = filter.trim().toLowerCase();
-
   // Home directory click handler - opens native picker and saves immediately
   const handleClickHomeDir = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -121,38 +118,18 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     }
   };
 
-  // Filter repositories that belong to this workspace and enrich with git data
-  const filteredRepositories = useMemo(() => {
+  // Convert repositories to display format
+  const repositories = useMemo(() => {
     if (!selectedWorkspace || workspaceRepositories.length === 0) {
       return [];
     }
 
     // Convert workspace repositories to RepositoryCacheData format
-    const workspaceRepos = workspaceRepositories.map(entry => ({
+    return workspaceRepositories.map(entry => ({
       repository: entry,
       status: null as any, // Status will be loaded by LocalProjectCard if needed
     }));
-
-    // Apply search filter
-    if (!normalizedFilter) {
-      return workspaceRepos;
-    }
-
-    return workspaceRepos.filter((repoData) => {
-      const entry = repoData.repository;
-      const haystack = [
-        entry.name,
-        entry.github?.name ?? '',
-        entry.github?.owner ?? '',
-        entry.github?.description ?? '',
-        entry.remoteUrl ?? '',
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      return haystack.includes(normalizedFilter);
-    });
-  }, [selectedWorkspace, workspaceRepositories, normalizedFilter]);
+  }, [selectedWorkspace, workspaceRepositories]);
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
@@ -392,38 +369,6 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
         )}
       </div>
 
-      {/* Search bar */}
-      <div style={{ position: 'relative' }}>
-        <Search
-          size={16}
-          style={{
-            position: 'absolute',
-            top: '50%',
-            left: '12px',
-            transform: 'translateY(-50%)',
-            color: theme.colors.textSecondary,
-            pointerEvents: 'none',
-          }}
-        />
-        <input
-          type="text"
-          value={filter}
-          placeholder="Filter repositories..."
-          onChange={(event) => setFilter(event.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px 12px 8px 36px',
-            borderRadius: '6px',
-            border: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
-            fontSize: `${theme.fontSizes[1]}px`,
-            fontFamily: theme.fonts.body,
-            outline: 'none',
-          }}
-        />
-      </div>
-
       {/* Scrollable content */}
       <div
         style={{
@@ -435,7 +380,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
         }}
       >
         {/* Repository list */}
-        {filteredRepositories.map((repoData) => (
+        {repositories.map((repoData) => (
           <LocalProjectCard
             key={repoData.repository.path}
             repositoryData={repoData}
@@ -444,7 +389,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
         ))}
 
         {/* No results message */}
-        {filteredRepositories.length === 0 && !loading && (
+        {repositories.length === 0 && !loading && (
           <div
             style={{
               padding: '32px',
@@ -452,11 +397,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
               color: theme.colors.textSecondary,
             }}
           >
-            <p style={{ margin: 0 }}>
-              {normalizedFilter
-                ? 'No repositories match your filter.'
-                : 'No repositories in this workspace.'}
-            </p>
+            <p style={{ margin: 0 }}>No repositories in this workspace.</p>
           </div>
         )}
       </div>

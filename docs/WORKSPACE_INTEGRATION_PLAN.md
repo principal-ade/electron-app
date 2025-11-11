@@ -78,6 +78,10 @@ export enum WorkspaceAPIEvent {
   GET_DEFAULT_WORKSPACE = 'workspace:get-default',
   SET_DEFAULT_WORKSPACE = 'workspace:set-default',
 
+  // Repository Location Management (Already Implemented ✅)
+  IS_REPOSITORY_IN_WORKSPACE_DIRECTORY = 'workspace:is-repository-in-directory',
+  MOVE_REPOSITORY_TO_WORKSPACE_DIRECTORY = 'workspace:move-repository-to-directory',
+
   // Events
   WORKSPACE_ADDED = 'workspace:added',
   WORKSPACE_UPDATED = 'workspace:updated',
@@ -116,8 +120,14 @@ export interface WorkspaceAPI {
   // Default Workspace
   getDefaultWorkspace(): Promise<Workspace | null>;
   setDefaultWorkspace(workspaceId: string): Promise<void>;
+
+  // Repository Location Management (Already Implemented ✅)
+  isRepositoryInWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<boolean | null>;
+  moveRepositoryToWorkspaceDirectory(repository: AlexandriaEntry, workspaceId: string): Promise<string>;
 }
 ```
+
+**Note**: The repository location management methods (`isRepositoryInWorkspaceDirectory` and `moveRepositoryToWorkspaceDirectory`) are already implemented. See the "Repository Location Management (Implemented)" section for full documentation.
 
 **Checklist**:
 - [ ] Create `src/shared/main-process-api-interfaces/WorkspaceAPI.ts`
@@ -828,6 +838,26 @@ UserPreferencesService.clearMultiRepoWorkspaces();
 
 ---
 
+## Repository Location Management (Implemented)
+
+The system includes functionality for moving existing repository clones to workspace directories. This feature is **already implemented** and documented separately.
+
+**See**: [REPOSITORY_LOCATION_MANAGEMENT.md](./REPOSITORY_LOCATION_MANAGEMENT.md) for complete documentation including:
+- API methods (`isRepositoryInWorkspaceDirectory`, `moveRepositoryToWorkspaceDirectory`)
+- Event broadcasting details
+- UI integration (LocalProjectCard)
+- Known issues and limitations
+- Recommendations for improvement
+- Usage examples and testing considerations
+
+**Quick Summary**:
+- Check if a repository is in a workspace directory
+- Move a repository to a workspace directory
+- Automatically updates Alexandria registry with new path
+- Broadcasts events when repositories are moved
+
+---
+
 ## Testing Checklist
 
 ### Unit Tests
@@ -900,6 +930,14 @@ UserPreferencesService.clearMultiRepoWorkspaces();
 
 ---
 
-**Document Status**: Draft
+## Related Documentation
+
+- [REPOSITORY_LOCATION_MANAGEMENT.md](./REPOSITORY_LOCATION_MANAGEMENT.md) - Moving existing repository clones to workspace directories
+- [MULTI_WORKSPACE_MEMBERSHIP_DESIGN.md](./MULTI_WORKSPACE_MEMBERSHIP_DESIGN.md) - Multi-workspace membership design
+
+---
+
+**Document Status**: Draft (Updated 2025-11-11)
 **Created**: 2025-11-09
+**Last Updated**: 2025-11-11 - Extracted repository location management documentation to separate file (REPOSITORY_LOCATION_MANAGEMENT.md)
 **Author**: Claude Code
