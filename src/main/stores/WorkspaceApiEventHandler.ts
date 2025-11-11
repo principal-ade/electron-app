@@ -7,8 +7,10 @@ import type { IpcMainInvokeEvent } from 'electron';
 import path from 'path';
 import fs from 'fs-extra';
 import { WorkspaceAPIEvent, type WorkspaceAPI, type WorkspaceChangeEvent } from '../../shared/main-process-api-interfaces/WorkspaceAPI';
+import { AlexandriaAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
 import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@a24z/core-library';
+import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
 export class WorkspaceApiEventHandler implements WorkspaceAPI {
   private service: AlexandriaRegistryService;
@@ -51,6 +53,80 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
         window.webContents.send(eventName, event);
       }
     });
+  }
+
+  /**
+   * Broadcast Alexandria events to all windows
+   */
+  private broadcastAlexandriaEvent(
+    eventType: AlexandriaAPIEvent.REPOSITORY_UPDATED,
+    data: AlexandriaEntry
+  ): void {
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach((window) => {
+      if (!window.isDestroyed()) {
+        window.webContents.send(eventType, data);
+      }
+    });
+  }
+
+  /**
+   * Check if repository has git watching enabled
+   */
+  private async isGitWatchingEnabled(repoPath: string): Promise<boolean> {
+    try {
+      const monitoringManager = getMonitoringManager();
+      const status = await monitoringManager.getMonitoringStatus();
+      const repoInfo = status.repositories.find(r => r.path === repoPath);
+      return repoInfo?.gitWatchingEnabled || false;
+    } catch (error) {
+      console.error('[Workspace] Failed to check git watching status:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Check if repository window is currently open
+   */
+  private isRepositoryWindowOpen(repository: AlexandriaEntry): boolean {
+    // Extract repository info to build window name (same logic as OPEN_REPOSITORY_DASHBOARD)
+    let owner = repository.github?.owner;
+    let repoName = repository.name;
+    let remoteUrl = repository.remoteUrl;
+
+    // If still no owner, try to parse from the name (might be in format owner/repo)
+    if (!owner && repository.name.includes('/')) {
+      const parts = repository.name.split('/');
+      owner = parts[0];
+      repoName = parts[1];
+    }
+
+    // Default to 'unknown' if we still couldn't find an owner
+    if (!owner) {
+      owner = 'unknown';
+    }
+
+    // Ensure we have a remoteUrl
+    if (!remoteUrl) {
+      remoteUrl = `https://github.com/${owner}/${repoName}`;
+    }
+
+    const windowName = `repository-maps-${remoteUrl}`;
+
+    // Check if window exists and is not destroyed
+    const {
+      getSpecialWindows,
+      getApplicationWindows,
+    } = require('../window/modernWindowManager');
+    const specialWindows = getSpecialWindows();
+    const applicationWindows = getApplicationWindows();
+    const existingWindowId = specialWindows.get(windowName);
+    const windowExists =
+      existingWindowId &&
+      applicationWindows.get(existingWindowId) &&
+      !applicationWindows.get(existingWindowId).window.isDestroyed();
+
+    return !!windowExists;
   }
 
   // ===== Workspace CRUD =====
@@ -175,6 +251,14 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       throw new Error(`Workspace ${workspace.name} does not have a suggested clone path configured`);
     }
 
+    // CRITICAL: Check if repository has an open window - prevent move if true
+    if (this.isRepositoryWindowOpen(repository)) {
+      throw new Error(
+        `Cannot move repository "${repository.name}" while it has an open window. ` +
+        'Please close the repository window first.'
+      );
+    }
+
     // Get the repository directory name
     const repoName = path.basename(repository.path);
     const targetPath = path.join(workspace.suggestedClonePath, repoName);
@@ -184,24 +268,89 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
       throw new Error(`Target path ${targetPath} already exists`);
     }
 
-    // Ensure the workspace directory exists
-    await fs.ensureDir(workspace.suggestedClonePath);
+    const oldPath = repository.path as string;
 
-    // Move the repository
+    // Check if git watching is currently enabled (so we can restore it)
+    const wasGitWatching = await this.isGitWatchingEnabled(oldPath);
+    console.log(`[Workspace] Git watching ${wasGitWatching ? 'enabled' : 'disabled'} for ${oldPath}`);
+
     try {
-      await fs.move(repository.path, targetPath, { overwrite: false });
-      console.log(`[Workspace] Moved repository from ${repository.path} to ${targetPath}`);
+      const monitoringManager = getMonitoringManager();
 
-      // Update the repository entry in the registry with the new path
-      // Type assertion needed because path requires ValidatedRepositoryPath branded type
+      // Step 1: Disable git watching if it was enabled
+      if (wasGitWatching) {
+        console.log(`[Workspace] Disabling git watching for ${oldPath}`);
+        await monitoringManager.disableGitWatching(oldPath);
+      }
+
+      // Step 2: Unregister repository from monitoring server
+      console.log(`[Workspace] Unregistering repository from monitoring server: ${oldPath}`);
+      await monitoringManager.unregisterRepository(oldPath);
+
+      // Step 3: Ensure the workspace directory exists
+      await fs.ensureDir(workspace.suggestedClonePath);
+
+      // Step 4: Move the repository files
+      console.log(`[Workspace] Moving repository from ${oldPath} to ${targetPath}`);
+      await fs.move(oldPath, targetPath, { overwrite: false });
+
+      // Step 5: Update the repository entry in the registry with the new path
+      console.log(`[Workspace] Updating Alexandria registry with new path: ${targetPath}`);
       await this.service.updateRepository(repository.name, { path: targetPath as typeof repository.path });
 
-      // Broadcast workspace change event to notify UI components
+      // Step 6: Get updated entry from registry for event broadcasting
+      const updatedEntry = await this.service.getRepository(repository.name);
+      if (!updatedEntry) {
+        throw new Error(`Failed to retrieve updated repository entry for ${repository.name}`);
+      }
+
+      // Step 7: Re-register repository with new path
+      console.log(`[Workspace] Re-registering repository with new path: ${targetPath}`);
+      await monitoringManager.registerRepository(targetPath);
+
+      // Step 8: Re-enable git watching if it was enabled before
+      if (wasGitWatching) {
+        console.log(`[Workspace] Re-enabling git watching for ${targetPath}`);
+        await monitoringManager.enableGitWatching(targetPath);
+      }
+
+      // Step 9: Broadcast REPOSITORY_UPDATED event (Alexandria) for Feed panels
+      console.log(`[Workspace] Broadcasting REPOSITORY_UPDATED event for ${repository.name}`);
+      this.broadcastAlexandriaEvent(AlexandriaAPIEvent.REPOSITORY_UPDATED, updatedEntry);
+
+      // Step 10: Broadcast MEMBERSHIP_CHANGED event (Workspace) for workspace state
       const repoId = repository.github?.id || repository.name;
+      console.log(`[Workspace] Broadcasting MEMBERSHIP_CHANGED event for workspace ${workspaceId}`);
       this.broadcastWorkspaceChange('membership-changed', undefined, workspaceId, repoId);
 
+      console.log(`[Workspace] Successfully moved repository ${repository.name} to ${targetPath}`);
       return targetPath;
     } catch (error) {
+      // If we fail after moving files, attempt to move them back
+      if (await fs.pathExists(targetPath)) {
+        console.error(`[Workspace] Move failed, attempting rollback...`);
+        try {
+          await fs.move(targetPath, oldPath);
+
+          // Re-register with old path
+          const monitoringManager = getMonitoringManager();
+          await monitoringManager.registerRepository(oldPath);
+          if (wasGitWatching) {
+            await monitoringManager.enableGitWatching(oldPath);
+          }
+
+          console.log(`[Workspace] Successfully rolled back repository move`);
+        } catch (rollbackError) {
+          console.error(`[Workspace] CRITICAL: Failed to rollback repository move:`, rollbackError);
+          throw new Error(
+            `Failed to move repository and rollback also failed. ` +
+            `Repository may be in an inconsistent state. ` +
+            `Original error: ${error instanceof Error ? error.message : String(error)}. ` +
+            `Rollback error: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
+          );
+        }
+      }
+
       console.error(`[Workspace] Failed to move repository:`, error);
       throw new Error(`Failed to move repository: ${error instanceof Error ? error.message : String(error)}`);
     }

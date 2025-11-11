@@ -167,8 +167,7 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       setIsInWorkspaceDirectory(true);
       alert(`Successfully moved ${entry.name} to workspace directory!`);
 
-      // Force a page reload to refresh all repository data
-      window.location.reload();
+      // Events will update all panels automatically - no need for hard reload
     } catch (error) {
       console.error('Failed to move repository:', error);
       alert(`Failed to move repository: ${error instanceof Error ? error.message : String(error)}`);
