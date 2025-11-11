@@ -82,7 +82,7 @@ async moveRepositoryToWorkspaceDirectory(
 - Error if target path already exists
 - Error if file move fails
 
-**Implementation Flow**:
+**Current Implementation Flow**:
 
 ```
 1. ✅ Validate workspace exists
@@ -94,6 +94,26 @@ async moveRepositoryToWorkspaceDirectory(
 7. ✅ Update Alexandria registry with new path
 8. ✅ Broadcast MEMBERSHIP_CHANGED event
 9. ✅ Return new path
+```
+
+**Recommended Implementation Flow** (with unregister/re-register):
+
+```
+1. ✅ Validate workspace exists
+2. ✅ Validate workspace has suggestedClonePath
+3. ✅ Check if repository has open window (PREVENT if true)
+4. ✅ Construct target path: suggestedClonePath + repoName
+5. ✅ Check target path doesn't exist
+6. ⚡ NEW: Unregister repository from monitoring server
+7. ⚡ NEW: Disable git watching if enabled
+8. ✅ Ensure workspace directory exists
+9. ✅ Move files using fs.move() with overwrite: false
+10. ✅ Update Alexandria registry with new path
+11. ⚡ NEW: Re-register repository with new path
+12. ⚡ NEW: Re-enable git watching if it was enabled
+13. ⚡ NEW: Broadcast REPOSITORY_UPDATED event (Alexandria)
+14. ✅ Broadcast MEMBERSHIP_CHANGED event (Workspace)
+15. ✅ Return new path
 ```
 
 **Preventative Checks**:
@@ -191,6 +211,95 @@ const handleMoveToWorkspace = async (e: React.MouseEvent) => {
 
 ---
 
+## Repository Monitoring System
+
+### How Monitoring Works
+
+**Key Finding**: Repositories are registered with the monitoring server **on app startup**, NOT when windows are opened.
+
+#### Registration Lifecycle
+
+**File**: `src/main/repository-monitoring/RepositoryRegistrationManager.ts`
+
+1. **On App Startup**:
+   - ALL repositories from Alexandria registry are registered
+   - Happens in batches of 5 at a time
+   - Registration is independent of windows being open
+
+2. **Git Watching** (Conditional):
+   - Can be enabled on startup via user preference: `enableGitWatchingOnStartup`
+   - Default is **OFF** - watching only enabled when repository windows open
+   - If OFF, monitoring server registers repos but doesn't enable FSMonitor
+
+3. **Lifecycle Flow**:
+   ```
+   App Start → Register ALL repos → (Optional) Enable git watching for all
+   Window Open → Enable git watching for specific repo (if not already enabled)
+   ```
+
+#### Important Distinction
+
+- **Registered** = Repository known to monitoring server, basic state tracked
+- **Watched** = FSMonitor enabled, actively tracking git changes with file watchers
+
+### When to Unregister Before Moving
+
+Since repositories are always registered, you should **unregister before moving** to avoid:
+- Stale path references in monitoring server's internal map
+- File watchers trying to watch non-existent old path
+- Cache entries keyed by old path becoming invalid
+
+---
+
+## Feed Panels Requiring Event Updates
+
+### High Priority (Must Update After Move)
+
+#### 1. **Local Projects Panel** (`local-projects`)
+- **Component**: `src/renderer/panels/components/LocalProjectsPanel.tsx`
+- **Uses repository paths**: YES - displays all local repositories with paths
+- **Impact**: Shows stale paths after move
+- **Required Event**: `REPOSITORY_UPDATED` from Alexandria
+
+#### 2. **Workspace Repositories Panel** (`workspace-entries`)
+- **Component**: `src/renderer/panels/components/WorkspaceEntriesPanel.tsx`
+- **Uses repository paths**: YES - displays repos in workspace
+- **Impact**: Shows stale paths, "Move" button appears incorrectly
+- **Critical**: This is where the "Move to workspace" button lives!
+- **Required Event**: `REPOSITORY_UPDATED` + `MEMBERSHIP_CHANGED`
+
+#### 3. **Git-Sync Diagnostic Panel** (`git-sync-diagnostic`) *[Optional Panel]*
+- **Component**: `src/renderer/panels/components/GitSyncDiagnosticPanel.tsx`
+- **Uses repository paths**: YES - diagnostic data tied to paths
+- **Impact**: Diagnostics reference wrong path
+- **Required Event**: `REPOSITORY_UPDATED`
+
+### Medium Priority (May Need Update)
+
+#### 4. **README Viewer Panel** (`readme-viewer`)
+- **Component**: `src/renderer/panels/components/GitHubReadmePanel.tsx`
+- **Uses repository paths**: MAYBE - if it caches local README paths
+- **Impact**: May show stale content
+- **Required Event**: `REPOSITORY_UPDATED` (if caching local paths)
+
+#### 5. **Recent Commits Panel** (`recent-commits`)
+- **Component**: `src/renderer/panels/components/RecentCommitsPanel.tsx`
+- **Uses repository paths**: MAYBE - if it uses local git commands
+- **Impact**: May show wrong commits
+- **Required Event**: `REPOSITORY_UPDATED` (if using local git)
+
+### Low Priority (No Update Needed)
+
+These panels do NOT depend on repository paths:
+- **Workspaces Panel** (`workspaces-list`) - Already subscribes to workspace events
+- **GitHub Projects Panel** (`github-projects`) - GitHub API data only
+- **Starred Panel** (`github-starred`) - GitHub starred repos
+- **Graphs Panel** (`graphs-list`) - Graph metadata only
+- **Live Presence Panel** (`presence`) - Shows who's online
+- **GitHub Network Panel** (`github-social`) - GitHub social data
+
+---
+
 ## Known Issues & Limitations
 
 ### 1. **Hard Page Reload Required**
@@ -201,38 +310,86 @@ const handleMoveToWorkspace = async (e: React.MouseEvent) => {
 ### 2. **No Alexandria Update Event**
 - **Issue**: `updateRepository()` doesn't broadcast `REPOSITORY_UPDATED` event
 - **Why**: Event is only sent when using `refreshRepository()` method
-- **Impact**: Other parts of app don't know path changed
+- **Impact**: Feed panels show stale paths after move
 
-### 3. **Git Watchers Not Updated**
-- **Issue**: RepositoryMonitoringServer still watches old path
+### 3. **Repository Not Unregistered Before Move**
+- **Issue**: Repository remains registered with old path during move
+- **Why**: No unregister step in move flow
+- **Impact**: Monitoring server has stale path reference
+
+### 4. **Git Watchers Not Updated**
+- **Issue**: If git watching enabled, FSMonitor still watches old path
 - **Why**: No notification mechanism for path changes
 - **Impact**: File changes at new location not detected
 
-### 4. **Open Windows Not Updated**
+### 5. **Open Windows Not Updated**
 - **Issue**: If repository has an open window, it's not notified
 - **Why**: No path change events broadcast to windows
 - **Impact**: Open window may break or show stale data
 
-### 5. **No Rollback on Partial Failure**
+### 6. **No Rollback on Partial Failure**
 - **Issue**: If registry update fails after moving files, files aren't moved back
 - **Why**: No transaction/rollback mechanism
 - **Impact**: Can leave system in inconsistent state
 
-### 6. **Single Event Broadcast**
+### 7. **Single Event Broadcast**
 - **Issue**: Only `MEMBERSHIP_CHANGED` event sent
 - **Why**: Move operation treated as membership change only
-- **Impact**: Components listening for path updates don't react
+- **Impact**: Feed panels listening for path updates don't react
 
 ---
 
 ## Recommendations for Improvement
 
-### Priority 1: Add Proper Event Propagation
+### Priority 1: Prevent Move if Window is Open ⚡ CRITICAL
+```typescript
+// In WorkspaceApiEventHandler.moveRepositoryToWorkspaceDirectory()
+// Before moving:
+
+const isWindowOpen = await WindowService.isRepositoryWindowOpen(repository);
+if (isWindowOpen) {
+  throw new Error(
+    'Cannot move repository while it has an open window. ' +
+    'Please close the repository window first.'
+  );
+}
+```
+
+### Priority 2: Unregister Before Move, Re-register After ⚡ CRITICAL
+```typescript
+// In WorkspaceApiEventHandler.moveRepositoryToWorkspaceDirectory()
+
+// 1. Check if watching is enabled (so we can restore it)
+const wasWatching = await this.monitoringManager.isGitWatchingEnabled(repository.path);
+
+// 2. Disable watching and unregister
+if (wasWatching) {
+  await this.monitoringManager.disableGitWatching(repository.path);
+}
+await this.monitoringManager.unregisterRepository(repository.path);
+
+// 3. Move files
+await fs.move(repository.path, targetPath, { overwrite: false });
+
+// 4. Update registry
+await this.service.updateRepository(entry.name, { path: targetPath });
+
+// 5. Re-register with new path
+await this.monitoringManager.registerRepository(targetPath);
+if (wasWatching) {
+  await this.monitoringManager.enableGitWatching(targetPath);
+}
+```
+
+### Priority 3: Broadcast REPOSITORY_UPDATED Event ⚡ CRITICAL
 ```typescript
 // In WorkspaceApiEventHandler.moveRepositoryToWorkspaceDirectory()
 // After updating repository:
 
-// Broadcast Alexandria repository update event
+// Get updated entry from registry
+const updatedEntry = await this.service.getRepository(entry.name);
+
+// Broadcast Alexandria repository update event for Feed panels
 this.broadcastAlexandriaEvent(
   AlexandriaAPIEvent.REPOSITORY_UPDATED,
   updatedEntry
@@ -242,45 +399,50 @@ this.broadcastAlexandriaEvent(
 this.broadcastWorkspaceChange('membership-changed', undefined, workspaceId, repoId);
 ```
 
-### Priority 2: Update Repository Monitoring
-```typescript
-// Notify RepositoryMonitoringServer of path change
-await RepositoryMonitoringServer.updateRepositoryPath(
-  repository.path,  // old path
-  targetPath        // new path
-);
-```
+**Feed Panels that will update**:
+- ✅ Local Projects Panel - receives `REPOSITORY_UPDATED`
+- ✅ Workspace Repositories Panel - receives `REPOSITORY_UPDATED` + `MEMBERSHIP_CHANGED`
+- ✅ Git-Sync Diagnostic Panel - receives `REPOSITORY_UPDATED`
 
-### Priority 3: Remove Hard Reload
+### Priority 4: Remove Hard Reload
 With proper events, the UI should update reactively:
 ```typescript
-// Instead of window.location.reload()
-// Just let event handlers update the UI
+// In LocalProjectCard.tsx handleMoveToWorkspace()
+// Remove this line:
+// window.location.reload();
+
+// Instead, just update local state and let events propagate:
+entry.path = newPath as typeof entry.path;
+setIsInWorkspaceDirectory(true);
+alert(`Successfully moved ${entry.name} to workspace directory!`);
+// Events will update all panels automatically
 ```
 
-### Priority 4: Add Rollback Mechanism
+### Priority 5: Add Rollback Mechanism
 ```typescript
 try {
-  await fs.move(repository.path, targetPath);
+  // Unregister
+  await this.monitoringManager.unregisterRepository(repository.path);
+
+  // Move files
+  await fs.move(repository.path, targetPath, { overwrite: false });
+
   try {
+    // Update registry
     await this.service.updateRepository(entry.name, { path: targetPath });
+
+    // Re-register with new path
+    await this.monitoringManager.registerRepository(targetPath);
   } catch (registryError) {
-    // Rollback the file move
+    // Rollback: move files back and re-register old path
     await fs.move(targetPath, repository.path);
+    await this.monitoringManager.registerRepository(repository.path);
     throw registryError;
   }
 } catch (error) {
   // Handle error
+  throw new Error(`Failed to move repository: ${error.message}`);
 }
-```
-
-### Priority 5: Update Open Windows
-```typescript
-// After successful move
-WindowService.notifyRepositoryPathChanged(
-  repository.name,
-  targetPath
-);
 ```
 
 ---
@@ -380,5 +542,18 @@ if (workspace.suggestedClonePath && needsMove === false) {
 
 **Document Status**: Complete
 **Created**: 2025-11-11
-**Last Updated**: 2025-11-11
+**Last Updated**: 2025-11-11 - Added repository monitoring system details, Feed panel dependencies, and unregister/re-register recommendations
 **Author**: Claude Code
+
+## Summary of Key Findings
+
+1. **Repositories are registered on app startup**, not when windows are opened
+2. **Unregister before moving** to avoid stale references in monitoring server
+3. **Three Feed panels require event updates** after move:
+   - Local Projects Panel
+   - Workspace Repositories Panel
+   - Git-Sync Diagnostic Panel
+4. **Broadcast both events** for complete update:
+   - `REPOSITORY_UPDATED` (Alexandria) for Feed panels
+   - `MEMBERSHIP_CHANGED` (Workspace) for workspace state
+5. **Prevent move if window is open** to avoid breaking open repository dashboards
