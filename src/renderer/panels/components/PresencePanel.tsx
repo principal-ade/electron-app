@@ -31,7 +31,6 @@ export const PresencePanel: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [hasGitHubAuth, setHasGitHubAuth] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [userStatus, setUserStatus] = useState<'online' | 'away'>('online');
   const [isVisible, setIsVisible] = useState(true);
 
   const baseContainerStyle: React.CSSProperties = {
@@ -81,20 +80,6 @@ export const PresencePanel: React.FC = () => {
       setError(err instanceof Error ? err.message : 'Failed to login');
     } finally {
       setIsLoggingIn(false);
-    }
-  }, []);
-
-  // Handle status change
-  const handleStatusChange = useCallback(async (newStatus: 'online' | 'away') => {
-    try {
-      const result = await PresenceService.updateStatus(newStatus);
-      if (result.success) {
-        setUserStatus(newStatus);
-      } else {
-        console.error('[PresencePanel] Failed to update status:', result.message);
-      }
-    } catch (err) {
-      console.error('[PresencePanel] Failed to update status:', err);
     }
   }, []);
 
@@ -188,12 +173,19 @@ export const PresencePanel: React.FC = () => {
 
   // Subscribe to presence events
   useEffect(() => {
-    // Subscribe to global presence (will fail gracefully if no connection)
+    // If not connected, just clear loading state and exit
+    if (!isConnected) {
+      setIsLoading(false);
+      setUsers([]);
+      return;
+    }
+
+    // Subscribe to global presence
     void PresenceService.subscribeToPresence().then((subscribed) => {
       if (subscribed) {
         console.info('[PresencePanel] Subscribed to presence events');
       } else {
-        console.warn('[PresencePanel] Failed to subscribe - no active GitSync connection');
+        console.warn('[PresencePanel] Failed to subscribe - connection not ready yet');
       }
     });
 
@@ -456,7 +448,7 @@ export const PresencePanel: React.FC = () => {
               color: theme.colors.text,
             }}
           >
-            Online ({users.length})
+            {isConnected ? `Online (${users.length})` : 'Offline'}
           </span>
         </div>
 
@@ -499,74 +491,24 @@ export const PresencePanel: React.FC = () => {
         </button>
       </div>
 
-      {/* Status and Visibility Controls */}
+      {/* Visibility Control */}
       {isConnected && (
         <div
           style={{
             display: 'flex',
-            gap: '8px',
+            justifyContent: 'center',
             padding: '12px',
             backgroundColor: theme.colors.background,
             borderRadius: '6px',
             border: `1px solid ${theme.colors.border}`,
           }}
         >
-          {/* Status Selector */}
-          <div style={{ flex: 1, display: 'flex', gap: '4px' }}>
-            <button
-              onClick={() => handleStatusChange('online')}
-              disabled={!isConnected}
-              style={{
-                flex: 1,
-                padding: '6px 12px',
-                fontSize: `${theme.fontSizes[1]}px`,
-                fontFamily: theme.fonts.body,
-                fontWeight: theme.fontWeights.medium,
-                color: userStatus === 'online' ? '#ffffff' : theme.colors.text,
-                backgroundColor: userStatus === 'online' ? '#10b981' : theme.colors.backgroundSecondary,
-                border: `1px solid ${userStatus === 'online' ? '#10b981' : theme.colors.border}`,
-                borderRadius: '4px',
-                cursor: isConnected ? 'pointer' : 'not-allowed',
-                transition: 'all 0.2s ease',
-              }}
-              title="Set status to online"
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                <Circle size={10} fill="#10b981" color="#10b981" />
-                <span>Online</span>
-              </div>
-            </button>
-            <button
-              onClick={() => handleStatusChange('away')}
-              disabled={!isConnected}
-              style={{
-                flex: 1,
-                padding: '6px 12px',
-                fontSize: `${theme.fontSizes[1]}px`,
-                fontFamily: theme.fonts.body,
-                fontWeight: theme.fontWeights.medium,
-                color: userStatus === 'away' ? '#ffffff' : theme.colors.text,
-                backgroundColor: userStatus === 'away' ? '#f59e0b' : theme.colors.backgroundSecondary,
-                border: `1px solid ${userStatus === 'away' ? '#f59e0b' : theme.colors.border}`,
-                borderRadius: '4px',
-                cursor: isConnected ? 'pointer' : 'not-allowed',
-                transition: 'all 0.2s ease',
-              }}
-              title="Set status to away"
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                <Circle size={10} fill="#f59e0b" color="#f59e0b" />
-                <span>Away</span>
-              </div>
-            </button>
-          </div>
-
           {/* Visibility Toggle */}
           <button
             onClick={handleVisibilityToggle}
             disabled={!isConnected}
             style={{
-              padding: '6px 12px',
+              padding: '8px 16px',
               fontSize: `${theme.fontSizes[1]}px`,
               fontFamily: theme.fonts.body,
               fontWeight: theme.fontWeights.medium,
@@ -578,18 +520,19 @@ export const PresencePanel: React.FC = () => {
               transition: 'all 0.2s ease',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '6px',
             }}
-            title={isVisible ? 'Go invisible' : 'Go visible'}
+            title={isVisible ? 'Hide from others (invisible mode)' : 'Show to others (visible mode)'}
           >
-            {isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
+            {isVisible ? <Eye size={16} /> : <EyeOff size={16} />}
             <span>{isVisible ? 'Visible' : 'Invisible'}</span>
           </button>
         </div>
       )}
 
-      {/* User list */}
-      <div
+      {/* User list - only show when connected */}
+      {isConnected ? (
+        <div
           style={{
             flex: 1,
             overflowY: 'auto',
@@ -751,7 +694,39 @@ export const PresencePanel: React.FC = () => {
             </div>
           ))
         )}
-      </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '32px',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '12px',
+              color: theme.colors.textSecondary,
+            }}
+          >
+            <Users size={48} style={{ opacity: 0.5 }} />
+            <div>
+              <p style={{ margin: 0, fontWeight: theme.fontWeights.semibold }}>
+                Go online to see other users
+              </p>
+              <p style={{ margin: '8px 0 0 0', fontSize: `${theme.fontSizes[0]}px` }}>
+                Enable the connection switch above to view presence
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

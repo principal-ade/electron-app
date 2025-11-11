@@ -6,7 +6,6 @@ import {
   History,
   Network,
   FileText,
-  UserCheck,
   Star,
   Activity,
   Folder,
@@ -24,7 +23,6 @@ import { GitHubStarredPanel } from '../../../panels/components/GitHubStarredPane
 import { GitHubSocialPanel } from '../../../panels/components/GitHubSocialPanel';
 import { RecentCommitsPanel } from '../../../panels/components/RecentCommitsPanel';
 import { GitHubReadmePanel } from '../../../panels/components/GitHubReadmePanel';
-import { GitHubUserSignalsPanel } from '../../../panels/components/GitHubUserSignalsPanel';
 import { GitSyncDiagnosticPanel } from '../../../panels/components/GitSyncDiagnosticPanel';
 import { LocalProjectsPanel } from '../../../panels/components/LocalProjectsPanel';
 import { PresencePanel } from '../../../panels/components/PresencePanel';
@@ -165,12 +163,6 @@ const FeedViewInner: React.FC = () => {
         content: <GitHubReadmePanel repository={selectedRepository} />,
       },
       {
-        id: 'github-user-signals',
-        label: 'User Signals',
-        icon: <UserCheck size={16} />,
-        content: <GitHubUserSignalsPanel />,
-      },
-      {
         id: 'graphs-list',
         label: 'Graphs',
         icon: <Network size={16} />,
@@ -253,7 +245,7 @@ const FeedViewInner: React.FC = () => {
       },
       right: {
         type: 'tabs' as const,
-        panels: showGitSyncPanel ? ['presence', 'github-social', 'github-user-signals', 'git-sync-diagnostic'] : ['presence', 'github-social', 'github-user-signals'],
+        panels: showGitSyncPanel ? ['presence', 'github-social', 'git-sync-diagnostic'] : ['presence', 'github-social'],
         config: {
           defaultActiveTab: 0,
           tabPosition: 'top' as const,

@@ -15,6 +15,7 @@ import type {
 } from '../../shared/main-process-api-interfaces/GitSyncAPI';
 import fetch from 'node-fetch';
 import { deviceIdService } from './DeviceIdService';
+import jwt from 'jsonwebtoken';
 
 interface ConnectionInfo {
   connectionId: string;
@@ -905,7 +906,7 @@ export class GitSyncWebSocketManager {
         branch: 'main',
         windowId,
         ws,
-        token,
+        token: presenceToken.access_token, // Extract JWT string from token object
         status: {
           connected: false,
           authenticated: false,
@@ -1430,6 +1431,16 @@ export class GitSyncWebSocketManager {
         };
       }
 
+      // Decode JWT to get userId (decode without verification - we don't need the secret)
+      const payload = jwt.decode(authToken) as { userId?: string } | null;
+
+      if (!payload || !payload.userId) {
+        return {
+          success: false,
+          message: 'Invalid token: missing userId',
+        };
+      }
+
       const response = await fetch(`${httpUrl}/api/presence/visibility`, {
         method: 'POST',
         headers: {
@@ -1437,6 +1448,7 @@ export class GitSyncWebSocketManager {
           Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
+          userId: payload.userId,
           visible,
         }),
       });
@@ -1445,7 +1457,7 @@ export class GitSyncWebSocketManager {
         throw new Error(`Failed to set presence visibility: ${response.status}`);
       }
 
-      console.log('[GitSyncWebSocketManager] Set presence visibility:', { visible });
+      console.log('[GitSyncWebSocketManager] Set presence visibility:', { userId: payload.userId, visible });
       return { success: true, message: `Visibility set to ${visible ? 'visible' : 'invisible'}` };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to set presence visibility';

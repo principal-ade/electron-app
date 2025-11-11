@@ -248,9 +248,7 @@ export const UpdatesSettings: React.FC = () => {
                 padding: '12px 20px',
                 backgroundColor: isChecking
                   ? theme.colors.backgroundTertiary
-                  : updateAvailable
-                    ? theme.colors.warning
-                    : theme.colors.primary,
+                  : theme.colors.primary,
                 color: isChecking ? theme.colors.textSecondary : '#ffffff',
                 border: 'none',
                 borderRadius: '8px',
@@ -275,11 +273,7 @@ export const UpdatesSettings: React.FC = () => {
                   isChecking ? { animation: 'spin 1s linear infinite' } : {}
                 }
               />
-              {isChecking
-                ? 'Checking...'
-                : updateAvailable
-                  ? `Update to v${availableVersion}`
-                  : 'Check for Updates'}
+              {isChecking ? 'Checking...' : 'Check for Updates'}
             </button>
           </div>
 
@@ -318,20 +312,18 @@ export const UpdatesSettings: React.FC = () => {
               </p>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Update Available Section */}
-      {updateAvailable && availableVersion && (
-        <div
-          style={{
-            backgroundColor: `${theme.colors.warning}10`,
-            border: `2px solid ${theme.colors.warning}`,
-            borderRadius: '12px',
-            padding: '24px',
-            marginBottom: '32px',
-          }}
-        >
+          {/* Update Available Section */}
+          {updateAvailable && availableVersion && (
+            <div
+              style={{
+                marginTop: '20px',
+                padding: '20px',
+                backgroundColor: `${theme.colors.warning}10`,
+                border: `2px solid ${theme.colors.warning}`,
+                borderRadius: '12px',
+              }}
+            >
           <h4
             style={{
               fontSize: '18px',
@@ -509,7 +501,9 @@ export const UpdatesSettings: React.FC = () => {
             </div>
           )}
         </div>
-      )}
+          )}
+        </div>
+      </div>
 
       {/* Auto-update info */}
       <div
