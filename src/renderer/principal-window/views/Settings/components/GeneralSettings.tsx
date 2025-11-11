@@ -37,6 +37,8 @@ export const GeneralSettings: React.FC = () => {
   const [showMonitorButton, setShowMonitorButton] = useState(false);
   const [showSearchButton, setShowSearchButton] = useState(false);
   const [showTerminalButton, setShowTerminalButton] = useState(false);
+  const [showPresencePanel, setShowPresencePanel] = useState(false);
+  const [presenceAutoConnect, setPresenceAutoConnect] = useState(true);
 
   const editorOptions = useMemo(
     () => Object.entries(EDITOR_LABELS) as Array<[EditorId, string]>,
@@ -69,6 +71,8 @@ export const GeneralSettings: React.FC = () => {
       setShowMonitorButton(prefs.showMonitorButton ?? false);
       setShowSearchButton(prefs.showSearchButton ?? false);
       setShowTerminalButton(prefs.showTerminalButton ?? false);
+      setShowPresencePanel(prefs.showPresencePanel ?? false);
+      setPresenceAutoConnect(prefs.presenceAutoConnect ?? true);
     };
 
     UserPreferencesService.getPreferences()
@@ -561,6 +565,199 @@ export const GeneralSettings: React.FC = () => {
                     height: '18px',
                     width: '18px',
                     left: showGitSyncPanel ? '27px' : '3px',
+                    bottom: '3px',
+                    backgroundColor: 'white',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                  }}
+                />
+              </span>
+            </label>
+          </div>
+
+          {/* Show Presence Panel */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '16px',
+              marginTop: '16px',
+              paddingTop: '16px',
+              borderTop: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <label
+                htmlFor="showPresencePanel"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  display: 'block',
+                  marginBottom: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Show Presence Panel
+              </label>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  lineHeight: '1.5',
+                }}
+              >
+                When enabled, the Presence diagnostic panel will be visible in
+                the Feed view. This panel shows detailed presence information
+                for debugging. When disabled (default), you can still use
+                presence features through the Social panel.
+              </p>
+            </div>
+            <label
+              style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '48px',
+                height: '24px',
+                flexShrink: 0,
+              }}
+            >
+              <input
+                id="showPresencePanel"
+                type="checkbox"
+                checked={showPresencePanel}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  setShowPresencePanel(newValue);
+                  await UserPreferencesService.updatePreferences({
+                    showPresencePanel: newValue,
+                  });
+                }}
+                style={{
+                  opacity: 0,
+                  width: 0,
+                  height: 0,
+                }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: showPresencePanel
+                    ? theme.colors.primary
+                    : theme.colors.border,
+                  transition: '0.3s',
+                  borderRadius: '24px',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    content: '',
+                    height: '18px',
+                    width: '18px',
+                    left: showPresencePanel ? '27px' : '3px',
+                    bottom: '3px',
+                    backgroundColor: 'white',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                  }}
+                />
+              </span>
+            </label>
+          </div>
+
+          {/* Presence Auto-Connect */}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: '16px',
+              marginTop: '16px',
+              paddingTop: '16px',
+              borderTop: `1px solid ${theme.colors.border}`,
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <label
+                htmlFor="presenceAutoConnect"
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                  display: 'block',
+                  marginBottom: '8px',
+                  cursor: 'pointer',
+                }}
+              >
+                Auto-Connect to Presence on Startup
+              </label>
+              <p
+                style={{
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  lineHeight: '1.5',
+                }}
+              >
+                When enabled (default), automatically connects to the presence
+                server on app startup if you're authenticated with GitHub. You
+                can manually control your connection in the Auth view.
+              </p>
+            </div>
+            <label
+              style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '48px',
+                height: '24px',
+                flexShrink: 0,
+              }}
+            >
+              <input
+                id="presenceAutoConnect"
+                type="checkbox"
+                checked={presenceAutoConnect}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  setPresenceAutoConnect(newValue);
+                  await UserPreferencesService.updatePreferences({
+                    presenceAutoConnect: newValue,
+                  });
+                }}
+                style={{
+                  opacity: 0,
+                  width: 0,
+                  height: 0,
+                }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: presenceAutoConnect
+                    ? theme.colors.primary
+                    : theme.colors.border,
+                  transition: '0.3s',
+                  borderRadius: '24px',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    content: '',
+                    height: '18px',
+                    width: '18px',
+                    left: presenceAutoConnect ? '27px' : '3px',
                     bottom: '3px',
                     backgroundColor: 'white',
                     transition: '0.3s',

@@ -50,6 +50,7 @@ const FeedViewInner: React.FC = () => {
     [],
   );
   const [showGitSyncPanel, setShowGitSyncPanel] = useState(false);
+  const [showPresencePanel, setShowPresencePanel] = useState(false);
 
   // Build dependency graphs using cluster detection
   const graphs = useMemo(() => {
@@ -71,11 +72,12 @@ const FeedViewInner: React.FC = () => {
     }
   }, [selectedGraph]);
 
-  // Load git sync panel visibility preference
+  // Load panel visibility preferences
   useEffect(() => {
     UserPreferencesService.getPreferences()
       .then((prefs) => {
         setShowGitSyncPanel(prefs.showGitSyncPanel ?? false);
+        setShowPresencePanel(prefs.showPresencePanel ?? false);
       })
       .catch(console.error);
 
@@ -83,6 +85,9 @@ const FeedViewInner: React.FC = () => {
       const detail = (event as CustomEvent).detail;
       if (detail?.showGitSyncPanel !== undefined) {
         setShowGitSyncPanel(detail.showGitSyncPanel);
+      }
+      if (detail?.showPresencePanel !== undefined) {
+        setShowPresencePanel(detail.showPresencePanel);
       }
     };
 
@@ -187,13 +192,17 @@ const FeedViewInner: React.FC = () => {
           />
         ),
       },
-      {
+    ];
+
+    // Conditionally add presence panel
+    if (showPresencePanel) {
+      basePanels.push({
         id: 'presence',
         label: 'Live Presence',
         icon: <Users size={16} />,
         content: <PresencePanel />,
-      },
-    ];
+      });
+    }
 
     // Conditionally add git sync panel
     if (showGitSyncPanel) {
@@ -214,6 +223,7 @@ const FeedViewInner: React.FC = () => {
     selectedTopLevelNodes,
     selectedRepository,
     showGitSyncPanel,
+    showPresencePanel,
     selectedWorkspace,
     setSelectedWorkspace,
   ]);

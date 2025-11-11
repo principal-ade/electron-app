@@ -4,6 +4,8 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronRight,
+  Eye,
+  EyeOff,
   Loader2,
   LogIn,
   Users,
@@ -17,6 +19,8 @@ import type {
   GitHubOrgMember,
 } from '../../../shared/main-process-api-interfaces/GitHubAPI';
 import { UserAvatar } from '../../components/repository-maps/UserAvatar';
+import { PresenceService } from '../../main-process-api/PresenceService';
+import { useGitSyncConnection } from '../../hooks/useGitSyncConnection';
 
 interface PersonWithOrg extends GitHubUser {
   organizations?: string[];
@@ -51,6 +55,8 @@ export const GitHubSocialPanel: React.FC = () => {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
     new Set(),
   );
+  const [isVisible, setIsVisible] = useState(true);
+  const { isConnected } = useGitSyncConnection();
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
@@ -199,6 +205,21 @@ export const GitHubSocialPanel: React.FC = () => {
       return next;
     });
   }, []);
+
+  // Handle visibility toggle
+  const handleVisibilityToggle = useCallback(async () => {
+    try {
+      const newVisibility = !isVisible;
+      const result = await PresenceService.setVisibility(newVisibility);
+      if (result.success) {
+        setIsVisible(newVisibility);
+      } else {
+        console.error('[GitHubSocialPanel] Failed to set visibility:', result.message);
+      }
+    } catch (err) {
+      console.error('[GitHubSocialPanel] Failed to set visibility:', err);
+    }
+  }, [isVisible]);
 
   // Compute coworkers (people in your organizations)
   const coworkers = useMemo(() => {
@@ -351,6 +372,55 @@ export const GitHubSocialPanel: React.FC = () => {
         >
           <AlertCircle size={16} />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* Visibility Control - only show when connected */}
+      {isConnected && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px',
+            backgroundColor: theme.colors.background,
+            borderRadius: '6px',
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <span
+            style={{
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
+              fontWeight: theme.fontWeights.medium,
+              color: theme.colors.text,
+            }}
+          >
+            Connection Status
+          </span>
+          <button
+            onClick={handleVisibilityToggle}
+            disabled={!isConnected}
+            style={{
+              padding: '4px 10px',
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontFamily: theme.fonts.body,
+              fontWeight: theme.fontWeights.medium,
+              color: isVisible ? '#10b981' : '#f59e0b',
+              backgroundColor: isVisible ? `#10b98120` : `#f59e0b20`,
+              border: `1px solid ${isVisible ? '#10b981' : '#f59e0b'}`,
+              borderRadius: '3px',
+              cursor: isConnected ? 'pointer' : 'not-allowed',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+            title={isVisible ? 'Click to go away' : 'Click to go online'}
+          >
+            {isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
+            <span>{isVisible ? 'Online' : 'Away'}</span>
+          </button>
         </div>
       )}
 

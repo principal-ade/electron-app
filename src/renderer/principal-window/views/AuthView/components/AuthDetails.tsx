@@ -12,6 +12,7 @@ import {
   Building,
   RefreshCw,
   ExternalLink,
+  Users,
 } from 'lucide-react';
 import { gitSyncConnectionManager } from '../../../../services/git-sync/GitSyncConnectionManager';
 import { GithubService } from '../../../../main-process-api/GithubService';
@@ -19,6 +20,9 @@ import { SSHSetupService } from '../../../../main-process-api/SSHSetupService';
 import { AuthenticationService } from '../../../../main-process-api/AuthenticationService';
 import { SSHSetupWizard } from '../../../../components/SSHSetupWizard';
 import { KeychainPermissionModal } from '../../../../components/KeychainPermissionModal';
+import { PresenceService } from '../../../../main-process-api/PresenceService';
+import { SecureAuthService } from '../../../../services/SecureAuthService';
+import { useGitSyncConnection } from '../../../../hooks/useGitSyncConnection';
 import type {
   TokenInfo,
   GitHubSSHKey,
@@ -143,6 +147,11 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     errorType?: string;
   } | null>(null);
   const [loadingKeychainStatus, setLoadingKeychainStatus] = useState(false);
+
+  // Presence connectivity state
+  const { isConnected } = useGitSyncConnection();
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const cardBackground = theme.colors.backgroundTertiary;
   const secondaryBackground = theme.colors.backgroundSecondary;
@@ -390,6 +399,50 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
       setLoadingKeychainStatus(false);
     }
   };
+
+  // Handle presence connection
+  const handleConnectPresence = useCallback(async () => {
+    if (!isAuthenticated) return;
+
+    try {
+      setIsConnecting(true);
+
+      // Get GitHub token
+      const authService = SecureAuthService.getInstance();
+      const authResult = await authService.checkAuth();
+
+      if (!authResult.authenticated || !authResult.token) {
+        console.error('[AuthDetails] Not authenticated, cannot connect to presence');
+        return;
+      }
+
+      // Connect to presence
+      const result = await PresenceService.connectToPresence(authResult.token);
+
+      if (!result.success) {
+        console.error('[AuthDetails] Failed to connect to presence:', result.error);
+      } else {
+        console.info('[AuthDetails] Connected to presence');
+      }
+    } catch (err) {
+      console.error('[AuthDetails] Failed to connect to presence:', err);
+    } finally {
+      setIsConnecting(false);
+    }
+  }, [isAuthenticated]);
+
+  // Handle presence disconnection
+  const handleDisconnectPresence = useCallback(async () => {
+    try {
+      setIsDisconnecting(true);
+      await gitSyncConnectionManager.disconnectAll();
+      console.info('[AuthDetails] Disconnected from presence');
+    } catch (err) {
+      console.error('[AuthDetails] Failed to disconnect from presence:', err);
+    } finally {
+      setIsDisconnecting(false);
+    }
+  }, []);
 
   return (
     <div
@@ -705,6 +758,105 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
             </div>
           )}
         </div>
+
+        {/* Presence Connectivity Card */}
+        {isAuthenticated && (
+          <div
+            style={{
+              backgroundColor: cardBackground,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '12px',
+              padding: '24px',
+              marginBottom: '24px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '20px',
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <Users size={20} />
+                Presence & Collaboration
+              </h2>
+            </div>
+
+            <p
+              style={{
+                color: theme.colors.textSecondary,
+                fontSize: '14px',
+                marginBottom: '20px',
+              }}
+            >
+              Connect to the presence server to see who else is online and share your activity with your team.
+            </p>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
+              <button
+                onClick={() => {
+                  if (isConnected) {
+                    handleDisconnectPresence();
+                  } else {
+                    handleConnectPresence();
+                  }
+                }}
+                disabled={isConnecting || isDisconnecting}
+                style={{
+                  position: 'relative',
+                  width: '54px',
+                  height: '28px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  cursor: (isConnecting || isDisconnecting) ? 'not-allowed' : 'pointer',
+                  backgroundColor: isConnected ? '#10b981' : '#6b7280',
+                  transition: 'background-color 0.2s ease',
+                  opacity: (isConnecting || isDisconnecting) ? 0.6 : 1,
+                }}
+                title={isConnected ? 'Disconnect from presence' : 'Connect to presence'}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '2px',
+                    left: isConnected ? '28px' : '2px',
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    backgroundColor: '#ffffff',
+                    transition: 'left 0.2s ease',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  }}
+                />
+              </button>
+              <span
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: theme.colors.text,
+                }}
+              >
+                {isConnecting ? 'Connecting...' : isDisconnecting ? 'Disconnecting...' : isConnected ? 'Connected' : 'Disconnected'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Token Permissions Card */}
         {isAuthenticated && tokenInfo && (

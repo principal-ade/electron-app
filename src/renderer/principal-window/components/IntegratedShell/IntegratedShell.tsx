@@ -9,6 +9,8 @@ import { SystemMonitor } from '../../views/SystemMonitor/SystemMonitor';
 import { AuthView } from '../../views/AuthView';
 import { FeedView } from '../../views/FeedView';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
+import { PresenceService } from '../../../main-process-api/PresenceService';
+import { SecureAuthService } from '../../../services/SecureAuthService';
 import type { InteractiveShellNavigationView } from '../../../../shared/types/userPreferences.types';
 import './IntegratedShell.css';
 
@@ -105,6 +107,46 @@ export const IntegratedShell: React.FC = () => {
     };
     loadPreferences();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-connect to presence on startup if enabled
+  useEffect(() => {
+    const autoConnectPresence = async () => {
+      try {
+        const prefs = await UserPreferencesService.getPreferences();
+
+        // Check if auto-connect is disabled (defaults to true if undefined)
+        if (prefs.presenceAutoConnect === false) {
+          return;
+        }
+
+        // Check if user is authenticated
+        const authService = SecureAuthService.getInstance();
+        const authResult = await authService.checkAuth();
+
+        if (!authResult.authenticated || !authResult.token) {
+          console.info('[IntegratedShell] Skipping presence auto-connect: not authenticated');
+          return;
+        }
+
+        // Auto-connect to presence
+        console.info('[IntegratedShell] Auto-connecting to presence on startup');
+        const result = await PresenceService.connectToPresence(authResult.token);
+
+        if (result.success) {
+          console.info('[IntegratedShell] Successfully auto-connected to presence');
+        } else {
+          console.warn('[IntegratedShell] Failed to auto-connect to presence:', result.error);
+        }
+      } catch (error) {
+        console.error('[IntegratedShell] Error during presence auto-connect:', error);
+      }
+    };
+
+    // Only run after preferences are loaded
+    if (preferencesLoaded) {
+      autoConnectPresence();
+    }
+  }, [preferencesLoaded]);
 
   // Save navigation view when it changes
   const handleViewChange = async (view: NavigationView) => {
