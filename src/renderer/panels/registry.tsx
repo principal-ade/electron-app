@@ -22,7 +22,6 @@ import { GitCommitHistoryPanel } from './components/GitCommitHistoryPanel';
 import { MDXEditorPanel } from './components/MDXEditorPanel';
 import { GitHubProjectsPanel } from './components/GitHubProjectsPanel';
 import { GitHubSocialPanel } from './components/GitHubSocialPanel';
-import { GraphsListPanel } from './components/GraphsListPanel';
 import { GraphDetailPanel } from './components/GraphDetailPanel';
 import { TerminalReplayPanel } from './components/TerminalReplayPanel';
 import { PresencePanel } from './components/PresencePanel';
@@ -83,14 +82,6 @@ const panelRenderers: Partial<
       onSave={(content) => {
         console.warn('Markdown saved:', content);
       }}
-    />
-  ),
-  graphsList: () => (
-    <GraphsListPanel
-      graphs={[]}
-      loading={false}
-      selectedGraphId={null}
-      onGraphSelect={() => {}}
     />
   ),
   graphDetail: () => (

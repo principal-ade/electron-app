@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
+import type { AlexandriaEntry } from '@a24z/core-library';
 import {
   FolderGit2,
   Users,
@@ -15,8 +16,8 @@ import { ConfigurablePanelLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 import { useAllRepositories } from '../../../hooks/useRepositoryData';
-import { buildDependencyGraphs } from '../../../services/DependencyGraphService';
-import { GraphsListPanel } from '../../../panels/components/GraphsListPanel';
+import { buildWorkspaceDependencyGraph } from '../../../services/WorkspaceDependencyGraphService';
+import { WorkspaceService } from '../../../main-process-api/WorkspaceService';
 import { GraphDetailPanel } from '../../../panels/components/GraphDetailPanel';
 import { GitHubProjectsPanel } from '../../../panels/components/GitHubProjectsPanel';
 import { GitHubStarredPanel } from '../../../panels/components/GitHubStarredPanel';
@@ -41,36 +42,63 @@ import { FeedViewHeader } from './FeedViewHeader';
 
 const FeedViewInner: React.FC = () => {
   const { theme } = useTheme();
-  const { repositories, loading } = useAllRepositories();
+  const { repositories } = useAllRepositories();
   const { selectedRepository } = useSelectedRepository();
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspaceFilter();
 
-  const [selectedGraphId, setSelectedGraphId] = useState<string | null>(null);
+  const [workspaceRepositories, setWorkspaceRepositories] = useState<
+    AlexandriaEntry[]
+  >([]);
   const [selectedTopLevelNodes, setSelectedTopLevelNodes] = useState<string[]>(
     [],
   );
   const [showGitSyncPanel, setShowGitSyncPanel] = useState(false);
   const [showPresencePanel, setShowPresencePanel] = useState(false);
 
-  // Build dependency graphs using cluster detection
-  const graphs = useMemo(() => {
-    if (repositories.length === 0) return [];
-    return buildDependencyGraphs(repositories);
-  }, [repositories]);
+  // Load repositories in selected workspace
+  useEffect(() => {
+    if (!selectedWorkspace) {
+      setWorkspaceRepositories([]);
+      return;
+    }
 
-  // Get the currently selected graph
-  const selectedGraph = useMemo(() => {
-    return graphs.find((g) => g.id === selectedGraphId) || null;
-  }, [graphs, selectedGraphId]);
+    const loadWorkspaceRepos = async () => {
+      try {
+        const repos = await WorkspaceService.getRepositoriesInWorkspace(
+          selectedWorkspace.id,
+        );
+        setWorkspaceRepositories(repos);
+      } catch (error) {
+        console.error('Failed to load workspace repositories:', error);
+        setWorkspaceRepositories([]);
+      }
+    };
+
+    loadWorkspaceRepos();
+  }, [selectedWorkspace]);
+
+  // Build dependency graph for selected workspace
+  const workspaceGraph = useMemo(() => {
+    if (!selectedWorkspace || workspaceRepositories.length === 0) {
+      return null;
+    }
+
+    // Create a map of repository path -> cache data
+    const repoDataMap = new Map(
+      repositories.map((repo) => [repo.repository.path, repo]),
+    );
+
+    return buildWorkspaceDependencyGraph(workspaceRepositories, repoDataMap);
+  }, [selectedWorkspace, workspaceRepositories, repositories]);
 
   // Initialize selected top-level nodes when graph changes
   React.useEffect(() => {
-    if (selectedGraph) {
-      setSelectedTopLevelNodes(selectedGraph.metadata.topLevelRepositories);
+    if (workspaceGraph) {
+      setSelectedTopLevelNodes(workspaceGraph.metadata.topLevelRepositories);
     } else {
       setSelectedTopLevelNodes([]);
     }
-  }, [selectedGraph]);
+  }, [workspaceGraph]);
 
   // Load panel visibility preferences
   useEffect(() => {
@@ -168,25 +196,12 @@ const FeedViewInner: React.FC = () => {
         content: <GitHubReadmePanel repository={selectedRepository} />,
       },
       {
-        id: 'graphs-list',
-        label: 'Graphs',
-        icon: <Network size={16} />,
-        content: (
-          <GraphsListPanel
-            graphs={graphs}
-            loading={loading}
-            selectedGraphId={selectedGraphId}
-            onGraphSelect={setSelectedGraphId}
-          />
-        ),
-      },
-      {
         id: 'graph-view',
-        label: 'Graph',
+        label: 'Workspace Graph',
         icon: <Network size={16} />,
         content: (
           <GraphDetailPanel
-            graph={selectedGraph}
+            graph={workspaceGraph}
             selectedTopLevelNodes={selectedTopLevelNodes}
             onTopLevelNodesChange={setSelectedTopLevelNodes}
           />
@@ -216,10 +231,7 @@ const FeedViewInner: React.FC = () => {
 
     return basePanels;
   }, [
-    graphs,
-    loading,
-    selectedGraphId,
-    selectedGraph,
+    workspaceGraph,
     selectedTopLevelNodes,
     selectedRepository,
     showGitSyncPanel,
@@ -238,7 +250,6 @@ const FeedViewInner: React.FC = () => {
           'workspaces-list',
           'github-projects',
           'github-starred',
-          'graphs-list',
         ],
         config: {
           defaultActiveTab: 1,

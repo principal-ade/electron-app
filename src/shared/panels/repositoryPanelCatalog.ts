@@ -227,20 +227,12 @@ export const repositoryPanelCatalog = [
     surfaces: ['principal'] as const,
   },
   {
-    id: 'graphsList',
-    label: 'Dependency Graphs',
-    description:
-      'Browse dependency clusters discovered across your repositories.',
-    slices: ['graphs'] as const,
-    surfaces: ['principal'] as const,
-  },
-  {
     id: 'graphDetail',
-    label: 'Graph Visualization',
+    label: 'Package Dependencies',
     description:
-      'Interactive graph visualization with filtering and cluster analysis.',
-    slices: ['graphs'] as const,
-    surfaces: ['principal'] as const,
+      'Visualize package dependencies within a repository or monorepo workspace.',
+    slices: ['packages'] as const,
+    surfaces: ['principal', 'manager', 'viewer'] as const,
   },
   {
     id: 'terminalReplay',
