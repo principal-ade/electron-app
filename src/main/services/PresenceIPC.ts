@@ -9,6 +9,7 @@ import { ipcMain } from 'electron';
 import { PresenceEvent } from '../../window/main-process-api-implementations/presenceApi';
 import { PresenceData, UserPresence } from '../../shared/main-process-api-interfaces/PresenceAPI';
 import { gitSyncWebSocketManager } from './GitSyncWebSocketManager';
+import { authService } from './AuthService';
 
 class PresenceIPC {
   constructor() {
@@ -104,11 +105,13 @@ class PresenceIPC {
       ): Promise<{ success: boolean; message?: string }> => {
         console.log('[PresenceIPC] Report repository opened:', { owner, repo, branch, localPath });
 
+        const token = await authService.getValidToken();
         return await gitSyncWebSocketManager.reportRepositoryOpened(
           owner,
           repo,
           branch,
           localPath,
+          token || undefined,
         );
       },
     );
@@ -123,7 +126,8 @@ class PresenceIPC {
       ): Promise<{ success: boolean; message?: string }> => {
         console.log('[PresenceIPC] Report repository closed:', { owner, repo });
 
-        return await gitSyncWebSocketManager.reportRepositoryClosed(owner, repo);
+        const token = await authService.getValidToken();
+        return await gitSyncWebSocketManager.reportRepositoryClosed(owner, repo, token || undefined);
       },
     );
 
@@ -137,7 +141,8 @@ class PresenceIPC {
       ): Promise<{ success: boolean; message?: string }> => {
         console.log('[PresenceIPC] Report active repository:', { owner, repo });
 
-        return await gitSyncWebSocketManager.reportActiveRepository(owner, repo);
+        const token = await authService.getValidToken();
+        return await gitSyncWebSocketManager.reportActiveRepository(owner, repo, token || undefined);
       },
     );
 
@@ -151,7 +156,8 @@ class PresenceIPC {
       ): Promise<{ success: boolean; message?: string }> => {
         console.log('[PresenceIPC] Update status:', { status, statusMessage });
 
-        return await gitSyncWebSocketManager.updatePresenceStatus(status, statusMessage);
+        const token = await authService.getValidToken();
+        return await gitSyncWebSocketManager.updatePresenceStatus(status, statusMessage, token || undefined);
       },
     );
 
@@ -164,7 +170,21 @@ class PresenceIPC {
       ): Promise<{ success: boolean; message?: string }> => {
         console.log('[PresenceIPC] Set visibility:', { visible });
 
-        return await gitSyncWebSocketManager.setPresenceVisibility(visible);
+        const token = await authService.getValidToken();
+        const user = await authService.getCurrentUser();
+
+        if (!user) {
+          return {
+            success: false,
+            message: 'No authenticated user found',
+          };
+        }
+
+        return await gitSyncWebSocketManager.setPresenceVisibility(
+          visible,
+          user.login, // Pass GitHub username as userId
+          token || undefined,
+        );
       },
     );
 
@@ -174,7 +194,8 @@ class PresenceIPC {
       async (): Promise<{ success: boolean; message?: string }> => {
         console.log('[PresenceIPC] Send heartbeat');
 
-        return await gitSyncWebSocketManager.sendPresenceHeartbeat();
+        const token = await authService.getValidToken();
+        return await gitSyncWebSocketManager.sendPresenceHeartbeat(token || undefined);
       },
     );
   }

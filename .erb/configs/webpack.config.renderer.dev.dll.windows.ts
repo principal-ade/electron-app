@@ -63,6 +63,7 @@ const configuration: webpack.Configuration = {
         // Exclude all Node.js specific packages
         const nodeOnlyPackages = [
           '@modelcontextprotocol/sdk',
+          '@principal-ai/control-tower-core', // WebSocket/collaboration library - Node.js only, uses node:module
           'simple-git', // Git operations library - Node.js only, uses child_process
           'electron-debug',
           'electron-devtools-installer',

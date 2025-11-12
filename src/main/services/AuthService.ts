@@ -731,6 +731,24 @@ class AuthService {
   }
 
   /**
+   * Get current authenticated user information
+   */
+  async getCurrentUser(): Promise<{ login: string; email: string; name?: string; id?: number; avatarUrl?: string } | null> {
+    try {
+      const auth = await this.getStoredAuth();
+
+      if (auth.success && auth.user) {
+        return auth.user;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[AuthService] Error getting current user:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get token metadata including expiry and refresh token info
    */
   async getTokenMetadata(): Promise<{
