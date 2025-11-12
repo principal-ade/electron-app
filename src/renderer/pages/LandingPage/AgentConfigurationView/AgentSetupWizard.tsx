@@ -17,6 +17,7 @@ interface AgentSetupWizardProps {
   agentStatus: AgentSetupStatus;
   checkAgentStatus: () => void;
   onShowDetails: () => void;
+  onBackToAssistants?: () => void;
   handleClaudeTourNext?: () => void;
   handleClaudeTourAction?: (action: {
     fn: (step: number) => Promise<void>;
@@ -40,6 +41,7 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
   agentStatus,
   checkAgentStatus,
   onShowDetails,
+  onBackToAssistants,
   handleClaudeTourNext,
   handleClaudeTourAction,
   handleClaudeTourButtonClick,
@@ -259,6 +261,28 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
       >
         {/* Header - Fixed height */}
         <div className="mb-4 flex-shrink-0 relative">
+          {onBackToAssistants && (
+            <button
+              onClick={onBackToAssistants}
+              className="absolute top-0 left-0 p-2 rounded-lg transition-colors flex items-center gap-2"
+              style={{
+                backgroundColor: theme.colors.backgroundTertiary,
+                color: theme.colors.textSecondary,
+                border: `1px solid ${theme.colors.border}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.surface;
+                e.currentTarget.style.color = theme.colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <span className="text-sm">← Back</span>
+            </button>
+          )}
           <h2
             className="text-2xl font-bold mb-1 text-center"
             style={{ color: theme.colors.text }}

@@ -14,6 +14,7 @@ interface AgentConfigurationViewProps {
   viewLayout?: 'simple' | 'detailed';
   onShowDetails?: () => void;
   onBackToSetup?: () => void;
+  onBackToAssistants?: () => void;
   handleClaudeTourNext?: () => void;
   handleClaudeTourAction?: (action: {
     fn: (step: number) => Promise<void>;
@@ -33,6 +34,7 @@ export const AgentConfigurationView: React.FC<AgentConfigurationViewProps> = ({
   viewLayout = 'simple',
   onShowDetails,
   onBackToSetup,
+  onBackToAssistants,
   handleClaudeTourNext,
   handleClaudeTourAction,
   handleClaudeTourButtonClick,
@@ -47,6 +49,7 @@ export const AgentConfigurationView: React.FC<AgentConfigurationViewProps> = ({
         agentStatus={agentStatus}
         checkAgentStatus={checkAgentStatus}
         onShowDetails={onShowDetails || (() => {})}
+        onBackToAssistants={onBackToAssistants}
         handleClaudeTourNext={handleClaudeTourNext}
         handleClaudeTourAction={handleClaudeTourAction}
         handleClaudeTourButtonClick={handleClaudeTourButtonClick}

@@ -377,30 +377,6 @@ export const AIAssistantsSettings: React.FC = () => {
 
   return (
     <div style={{ height: '100%', overflow: 'auto' }}>
-      <div
-        style={{
-          padding: '20px 0',
-          borderBottom: `1px solid ${theme.colors.border}`,
-          marginBottom: '20px',
-        }}
-      >
-        <button
-          onClick={() => setActiveAgentView(null)}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '6px',
-            border: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
-            cursor: 'pointer',
-            fontSize: '14px',
-            marginBottom: '16px',
-          }}
-        >
-          ← Back to AI Assistants
-        </button>
-      </div>
-
       {activeAgentView === 'claude' && agentStatus && (
         <AgentConfigurationView
           agentType={SupportedAgent.CLAUDE}
@@ -409,6 +385,7 @@ export const AIAssistantsSettings: React.FC = () => {
           viewLayout={agentViewLayout}
           onShowDetails={() => setAgentViewLayout('detailed')}
           onBackToSetup={() => setAgentViewLayout('simple')}
+          onBackToAssistants={() => setActiveAgentView(null)}
         />
       )}
 
@@ -420,6 +397,7 @@ export const AIAssistantsSettings: React.FC = () => {
           viewLayout={agentViewLayout}
           onShowDetails={() => setAgentViewLayout('detailed')}
           onBackToSetup={() => setAgentViewLayout('simple')}
+          onBackToAssistants={() => setActiveAgentView(null)}
         />
       )}
     </div>
