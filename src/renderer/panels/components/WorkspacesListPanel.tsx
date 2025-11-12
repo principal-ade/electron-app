@@ -274,11 +274,13 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
     backgroundColor: isSelected
       ? theme.colors.backgroundTertiary
       : isHovered
-      ? theme.colors.backgroundSecondary
+      ? theme.colors.backgroundTertiary
       : 'transparent',
     border: `1px solid ${
       isSelected
         ? theme.colors.primary || theme.colors.border
+        : isHovered
+        ? theme.colors.border
         : 'transparent'
     }`,
     cursor: isEditing ? 'default' : 'pointer',
@@ -290,7 +292,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
     alignItems: 'center',
     gap: '8px',
     color: theme.colors.text,
-    fontSize: `${theme.fontSizes[1]}px`,
+    fontSize: `${theme.fontSizes[2]}px`,
     fontWeight: theme.fontWeights.semibold,
     fontFamily: theme.fonts.body,
   };
@@ -310,17 +312,17 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '20px',
-            height: '20px',
+            width: '24px',
+            height: '24px',
             borderRadius: '4px',
             backgroundColor: `${iconColor}20`,
             color: iconColor,
           }}
         >
           {workspace.icon ? (
-            <span style={{ fontSize: '12px' }}>{workspace.icon}</span>
+            <span style={{ fontSize: '16px' }}>{workspace.icon}</span>
           ) : (
-            <Layers size={12} />
+            <Layers size={16} />
           )}
         </div>
 
@@ -341,7 +343,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                 border: `1px solid ${theme.colors.border}`,
                 backgroundColor: theme.colors.background,
                 color: theme.colors.text,
-                fontSize: `${theme.fontSizes[1]}px`,
+                fontSize: `${theme.fontSizes[2]}px`,
                 fontWeight: theme.fontWeights.semibold,
                 fontFamily: theme.fonts.body,
                 outline: 'none',
@@ -367,7 +369,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                 transition: 'opacity 0.15s ease',
               }}
             >
-              <Check size={14} />
+              <Check size={16} />
             </button>
             <button
               onClick={handleCancel}
@@ -389,7 +391,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                 transition: 'opacity 0.15s ease',
               }}
             >
-              <X size={14} />
+              <X size={16} />
             </button>
           </>
         ) : (
@@ -423,12 +425,12 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                 e.currentTarget.style.color = theme.colors.textSecondary;
               }}
             >
-              <Edit2 size={14} />
+              <Edit2 size={16} />
             </button>
             {isDefault && (
               <span
                 style={{
-                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontSize: `${theme.fontSizes[1]}px`,
                   color: theme.colors.textSecondary,
                   fontWeight: 400,
                 }}
@@ -443,10 +445,10 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
       {(workspace.suggestedClonePath || workspace.description) && (
         <div
           style={{
-            fontSize: `${theme.fontSizes[0]}px`,
+            fontSize: `${theme.fontSizes[1]}px`,
             color: theme.colors.textSecondary,
             fontFamily: theme.fonts.body,
-            marginLeft: '28px',
+            marginLeft: '32px',
             lineHeight: 1.4,
             display: 'flex',
             flexDirection: 'column',
@@ -457,7 +459,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
             <div
               style={{
                 fontFamily: theme.fonts.mono,
-                fontSize: `${theme.fontSizes[0] - 1}px`,
+                fontSize: `${theme.fontSizes[1]}px`,
               }}
             >
               {workspace.suggestedClonePath}
