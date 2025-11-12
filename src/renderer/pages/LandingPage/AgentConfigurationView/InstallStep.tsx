@@ -57,29 +57,21 @@ export const InstallStep: React.FC<InstallStepProps> = ({
         <div
           className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
           style={{
-            backgroundColor: isInstalled
-              ? `${agentConfig.ui.color}20`
-              : theme.colors.backgroundTertiary,
+            backgroundColor: `${agentConfig.ui.color}20`,
           }}
         >
-          {isInstalled ? (
-            <Download size={32} style={{ color: agentConfig.ui.color }} />
-          ) : (
-            <Download size={32} style={{ color: theme.colors.textSecondary }} />
-          )}
+          <Download size={32} style={{ color: agentConfig.ui.color }} />
         </div>
         <h3
           className="text-xl font-semibold mb-2"
           style={{
-            color: isInstalled ? agentConfig.ui.color : theme.colors.text,
+            color: agentConfig.ui.color,
           }}
         >
-          {isInstalled ? 'Installed' : `Install ${agentDisplayName}`}
+          {agentDisplayName}
         </h3>
         <p style={{ color: theme.colors.textSecondary, height: '48px' }}>
-          {isInstalled
-            ? `${agentDisplayName} is installed and ready to use`
-            : `First, we need to install the ${agentDisplayName} application`}
+          {`Don't have ${agentDisplayName} installed yet? Download it to get started`}
         </p>
       </div>
 
@@ -120,95 +112,55 @@ export const InstallStep: React.FC<InstallStepProps> = ({
           </>
         )}
 
-        {/* Installation handled externally - show info instead */}
-        {!isInstalled && (
-          <>
-            {isProcessing && installProgress ? (
-              <div className="max-w-md mx-auto">
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400" />
-                  <span className="text-blue-400">
-                    {installProgress.message || 'Installing...'}
-                    {installProgress.stage && (
-                      <span
-                        className="ml-2 text-sm"
-                        style={{ color: theme.colors.primary, opacity: 0.8 }}
-                      >
-                        ({installProgress.stage})
-                      </span>
-                    )}
-                  </span>
-                </div>
-                {installProgress.progress !== undefined && (
-                  <div
-                    className="w-full rounded-full h-3 overflow-hidden"
-                    style={{ backgroundColor: theme.colors.surface }}
-                  >
-                    <div
-                      className="bg-blue-500 h-full rounded-full transition-all duration-300"
-                      style={{ width: `${installProgress.progress}%` }}
-                    />
-                  </div>
-                )}
-                {installProgress.message === 'Installation complete!' && (
-                  <div className="mt-4">
-                    <button
-                      onClick={handleCheckInstallation}
-                      className="text-sm transition-colors"
-                      style={{ color: theme.colors.textSecondary }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.color = theme.colors.text)
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.color =
-                          theme.colors.textSecondary)
-                      }
-                    >
-                      Check installation status
-                    </button>
-                  </div>
-                )}
+        {/* Show download link - not blocking configuration */}
+        <>
+          {isProcessing && installProgress ? (
+            <div className="max-w-md mx-auto">
+              <div className="flex items-center justify-center gap-3 mb-3">
+                <span style={{ color: theme.colors.textSecondary }}>
+                  {installProgress.message || 'Opening download page...'}
+                </span>
               </div>
-            ) : (
-              <>
-                <button
-                  onClick={() => {
-                    if (
-                      handleClaudeTourButtonClick &&
-                      isClaudeTourActive &&
-                      claudeTourStepIndex === 0
-                    ) {
-                      handleClaudeTourButtonClick(0, onInstall);
-                    } else {
-                      onInstall();
-                    }
-                  }}
-                  disabled={isProcessing || !isCurrentStep}
-                  data-tour="install-agent"
-                  className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                  style={{
-                    backgroundColor: theme.colors.primary,
-                    color: theme.colors.background,
-                  }}
-                  onMouseEnter={(e) =>
-                    !e.currentTarget.disabled &&
-                    (e.currentTarget.style.backgroundColor =
-                      theme.colors.primary)
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  if (
+                    handleClaudeTourButtonClick &&
+                    isClaudeTourActive &&
+                    claudeTourStepIndex === 0
+                  ) {
+                    handleClaudeTourButtonClick(0, onInstall);
+                  } else {
+                    onInstall();
                   }
-                  onMouseLeave={(e) =>
-                    !e.currentTarget.disabled &&
-                    (e.currentTarget.style.backgroundColor =
-                      theme.colors.primary)
-                  }
-                >
-                  {isProcessing
-                    ? 'Installing...'
-                    : `Install ${agentDisplayName} →`}
-                </button>
-              </>
-            )}
-          </>
-        )}
+                }}
+                disabled={isProcessing}
+                data-tour="install-agent"
+                className="px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                style={{
+                  backgroundColor: theme.colors.primary,
+                  color: theme.colors.background,
+                }}
+                onMouseEnter={(e) =>
+                  !e.currentTarget.disabled &&
+                  (e.currentTarget.style.backgroundColor =
+                    theme.colors.primary)
+                }
+                onMouseLeave={(e) =>
+                  !e.currentTarget.disabled &&
+                  (e.currentTarget.style.backgroundColor =
+                    theme.colors.primary)
+                }
+              >
+                {isProcessing
+                  ? 'Opening...'
+                  : `Download ${agentDisplayName} →`}
+              </button>
+            </>
+          )}
+        </>
       </div>
     </div>
   );

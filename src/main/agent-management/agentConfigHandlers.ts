@@ -52,38 +52,16 @@ export function setupAgentConfigHandlers() {
 
         // Check if agent is installed by checking if config file exists
         // We no longer install agents, just configure hooks
-        // For Claude and OpenCode, check if they're in the system
+        // For Claude, OpenCode, and Cline - we don't block on installation
+        // Users can configure hooks regardless of whether we detect the binary
         if (agentType === 'claude') {
-          // For Claude, check if the CLI binary exists
-          try {
-            const claudePath = await EnvironmentConfig.findExecutable('claude');
-            if (claudePath) {
-              isInstalled = true;
-              console.log('[AgentConfig] Claude CLI found at:', claudePath);
-            } else {
-              isInstalled = false;
-              console.log('[AgentConfig] Claude CLI not found');
-            }
-          } catch (error) {
-            console.log('[AgentConfig] Error checking for Claude CLI:', error);
-            isInstalled = false;
-          }
+          // Claude: Don't block on installation detection
+          isInstalled = true;
+          console.log('[AgentConfig] Claude - allowing configuration regardless of installation status');
         } else if (agentType === 'opencode') {
-          // For OpenCode, check if it's available in the system
-          try {
-            const openCodePath =
-              await EnvironmentConfig.findExecutable('opencode');
-            if (openCodePath) {
-              isInstalled = true;
-              console.log('[AgentConfig] OpenCode found at:', openCodePath);
-            } else {
-              isInstalled = false;
-              console.log('[AgentConfig] OpenCode not found');
-            }
-          } catch (error) {
-            console.log('[AgentConfig] Error checking for OpenCode:', error);
-            isInstalled = false;
-          }
+          // OpenCode: Don't block on installation detection
+          isInstalled = true;
+          console.log('[AgentConfig] OpenCode - allowing configuration regardless of installation status');
         } else if (agentType === 'cline') {
           // Cline is a VS Code extension, consider it "installed" if VS Code is present
           // Users need to install the extension themselves
