@@ -22,6 +22,7 @@ export const AgentConnectionVisualizer: React.FC<
   const agentConfig = getAgentInfo(agentType);
   const [isHoveringPrincipalADE, setIsHoveringPrincipalADE] =
     React.useState(false);
+  const [isHoveringMCP, setIsHoveringMCP] = React.useState(false);
   const [selectedComponent, setSelectedComponent] = React.useState<
     'agent' | 'principal-ade' | 'mcp' | null
   >(null);
@@ -146,14 +147,13 @@ export const AgentConnectionVisualizer: React.FC<
           />
           <foreignObject
             x="-30"
-            y="-28"
+            y="-25"
             width="60"
             height="50"
             style={{ pointerEvents: 'none' }}
           >
             <div
               className="flex flex-col items-center justify-center w-full h-full"
-              style={{ paddingTop: '4px' }}
             >
               <Database
                 size={
@@ -172,7 +172,7 @@ export const AgentConnectionVisualizer: React.FC<
                 }}
               />
               <span
-                className="text-xs font-medium"
+                className="text-xs font-medium text-center"
                 style={{
                   marginTop: '2px',
                   color:
@@ -183,6 +183,7 @@ export const AgentConnectionVisualizer: React.FC<
                     isHoveringPrincipalADE && hasHooks && isInstalled
                       ? 600
                       : 500,
+                  width: '100%',
                 }}
               >
                 Principal ADE
@@ -304,6 +305,8 @@ export const AgentConnectionVisualizer: React.FC<
         {showMCPServer && (
           <g
             transform="translate(380, 160)"
+            onMouseEnter={() => setIsHoveringMCP(true)}
+            onMouseLeave={() => setIsHoveringMCP(false)}
             onClick={() => setSelectedComponent('mcp')}
             style={{ cursor: 'pointer' }}
           >
@@ -311,27 +314,44 @@ export const AgentConnectionVisualizer: React.FC<
               cx="0"
               cy="0"
               r="40"
-              fill={theme.colors.backgroundSecondary}
+              fill={
+                isHoveringMCP && hasMCP
+                  ? `${theme.colors.primary}20`
+                  : theme.colors.backgroundSecondary
+              }
               fillOpacity={hasMCP ? 0.8 : 0.5}
-              stroke={theme.colors.border}
-              strokeWidth="2"
+              stroke={hasMCP ? theme.colors.primary : theme.colors.border}
+              strokeWidth={isHoveringMCP && hasMCP ? '3' : '2'}
               strokeDasharray={hasMCP ? '0' : '5,5'}
-              className="transition-all duration-500"
+              style={{ transition: 'all 0.2s' }}
             />
             <foreignObject x="-30" y="-22" width="60" height="50">
-              <div className="flex flex-col items-center justify-center w-full h-full">
+              <div
+                className="flex flex-col items-center justify-center w-full h-full"
+                style={{ pointerEvents: 'none' }}
+              >
                 <Brain
-                  size={18}
+                  size={isHoveringMCP && hasMCP ? 20 : 18}
+                  className="transition-all duration-200"
                   style={{
-                    color: theme.colors.textSecondary,
+                    color: hasMCP
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary,
                     marginBottom: '2px',
+                    transform:
+                      isHoveringMCP && hasMCP
+                        ? 'translateY(-1px)'
+                        : 'translateY(0)',
                   }}
                 />
                 <div className="text-center">
                   <div
                     className="text-xs font-medium"
                     style={{
-                      color: theme.colors.textSecondary,
+                      color: hasMCP
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary,
+                      fontWeight: isHoveringMCP && hasMCP ? 600 : 500,
                     }}
                   >
                     Principal
@@ -339,7 +359,10 @@ export const AgentConnectionVisualizer: React.FC<
                   <div
                     className="text-[10px] font-medium"
                     style={{
-                      color: theme.colors.textSecondary,
+                      color: hasMCP
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary,
+                      fontWeight: isHoveringMCP && hasMCP ? 600 : 500,
                     }}
                   >
                     MCP
@@ -387,6 +410,7 @@ export const AgentConnectionVisualizer: React.FC<
           {selectedComponent === 'principal-ade' && (
             <>
               <text
+                x="0"
                 textAnchor="middle"
                 className="text-xs font-semibold"
                 y="-5"
@@ -395,6 +419,7 @@ export const AgentConnectionVisualizer: React.FC<
                 Principal ADE
               </text>
               <text
+                x="0"
                 textAnchor="middle"
                 className="text-xs"
                 y="10"

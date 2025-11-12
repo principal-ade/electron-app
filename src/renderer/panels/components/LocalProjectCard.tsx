@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { FolderOpen, Focus, Loader2, Home, AlertTriangle, MoveRight } from 'lucide-react';
+import { FolderOpen, Focus, Loader2, Home, AlertTriangle, MoveRight, X } from 'lucide-react';
 import type { Workspace } from '@a24z/core-library';
 
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
@@ -40,6 +40,7 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
   const [windowState, setWindowState] = useState<'closed' | 'opening' | 'ready'>('closed');
   const [isInWorkspaceDirectory, setIsInWorkspaceDirectory] = useState<boolean | null>(null);
   const [isMoving, setIsMoving] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   // Check if this repo is selected for README view
   const isReadmeSelected =
@@ -173,6 +174,28 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       alert(`Failed to move repository: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsMoving(false);
+    }
+  };
+
+  const handleRemoveFromWorkspace = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    if (!workspace || !workspace.id) return;
+
+    if (!confirm(`Remove ${entry.name} from workspace "${workspace.name}"?\n\nThis will not delete any files, only remove the repository from this workspace.`)) {
+      return;
+    }
+
+    try {
+      setIsRemoving(true);
+      await WorkspaceService.removeRepositoryFromWorkspace(entry, workspace.id);
+
+      // Events will update all panels automatically - no need for hard reload
+    } catch (error) {
+      console.error('Failed to remove repository from workspace:', error);
+      alert(`Failed to remove repository: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsRemoving(false);
     }
   };
 
@@ -426,6 +449,52 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
               ? 'Opening...'
               : 'Open'}
         </button>
+
+        {/* Remove from workspace button */}
+        {workspace && (
+          <button
+            type="button"
+            onClick={handleRemoveFromWorkspace}
+            disabled={isRemoving}
+            title={`Remove from workspace "${workspace.name}"`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px',
+              padding: 0,
+              borderRadius: '4px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: theme.colors.textSecondary,
+              cursor: isRemoving ? 'wait' : 'pointer',
+              opacity: isRemoving ? 0.6 : 1,
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(event) => {
+              if (!isRemoving) {
+                event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
+                event.currentTarget.style.color = '#fff';
+              }
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.style.backgroundColor = 'transparent';
+              event.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+          >
+            {isRemoving ? (
+              <Loader2
+                size={14}
+                style={{
+                  animation: 'spin 1s linear infinite',
+                }}
+              />
+            ) : (
+              <X size={14} />
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
