@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Folder, Home, X } from 'lucide-react';
+import { Folder, Home, X, Plus } from 'lucide-react';
 import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { LocalProjectCard } from './LocalProjectCard';
+import { AddRepositoryToWorkspaceModal } from './AddRepositoryToWorkspaceModal';
 
 interface WorkspaceEntriesPanelProps {
   selectedWorkspace?: Workspace | null;
@@ -16,6 +17,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
   const { theme } = useTheme();
   const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   // Local state to track the current workspace data (to handle updates)
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(selectedWorkspace || null);
@@ -40,6 +42,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     });
 
     return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWorkspace?.id]);
 
   // Load repositories in this workspace
@@ -110,6 +113,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
 
     try {
       await WorkspaceService.updateWorkspace(currentWorkspace.id, {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         suggestedClonePath: null as any
       });
     } catch (error) {
@@ -125,11 +129,33 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     }
 
     // Convert workspace repositories to RepositoryCacheData format
+    // Create minimal cache data - LocalProjectCard will handle loading full data
     return workspaceRepositories.map(entry => ({
-      repository: entry,
-      status: null as any, // Status will be loaded by LocalProjectCard if needed
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      repository: entry as any, // EnhancedAlexandriaEntry type
+      gitStatus: null,
+      gitBranch: '',
+      branchStatus: { ahead: 0, behind: 0 },
+      gitRemote: null,
+      fileTree: null,
+      markdownFiles: [],
+      packages: [],
+      qualityMetrics: null,
+      packageSummary: null,
+      lastFullRefresh: 0,
+      partialUpdates: { git: 0, files: 0, packages: 0, quality: 0 },
+      cacheSlices: {},
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      status: null as any,
     }));
   }, [selectedWorkspace, workspaceRepositories]);
+
+  // Get current repository IDs for the modal
+  const currentRepositoryIds = useMemo(() => {
+    return workspaceRepositories
+      .map(entry => entry.github?.id)
+      .filter((id): id is string => !!id);
+  }, [workspaceRepositories]);
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
@@ -256,18 +282,58 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
             marginBottom: '4px',
           }}
         >
-          {/* Left: Workspace name */}
-          <h3
+          {/* Left: Workspace name and Add button */}
+          <div
             style={{
-              margin: 0,
-              fontSize: `${theme.fontSizes[2]}px`,
-              fontWeight: theme.fontWeights.semibold,
-              color: theme.colors.text,
-              fontFamily: theme.fonts.body,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
             }}
           >
-            {currentWorkspace.name}
-          </h3>
+            <h3
+              style={{
+                margin: 0,
+                fontSize: `${theme.fontSizes[2]}px`,
+                fontWeight: theme.fontWeights.semibold,
+                color: theme.colors.text,
+                fontFamily: theme.fonts.body,
+              }}
+            >
+              {currentWorkspace.name}
+            </h3>
+            <button
+              onClick={() => setShowAddModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                backgroundColor: 'transparent',
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                fontSize: `${theme.fontSizes[0]}px`,
+                fontWeight: theme.fontWeights.medium,
+                fontFamily: theme.fonts.body,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.primary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.color = '#fff';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+              title="Add repository to workspace"
+            >
+              <Plus size={14} />
+              Add
+            </button>
+          </div>
 
           {/* Right: Home directory */}
           <div
@@ -311,7 +377,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
                   color: currentWorkspace.suggestedClonePath
                     ? theme.colors.textSecondary
                     : theme.colors.textTertiary,
-                  fontFamily: theme.fonts.mono,
+                  fontFamily: theme.fonts.monospace,
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
@@ -401,6 +467,14 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* Add Repository Modal */}
+      <AddRepositoryToWorkspaceModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        workspace={currentWorkspace}
+        currentRepositoryIds={currentRepositoryIds}
+      />
     </div>
   );
 };

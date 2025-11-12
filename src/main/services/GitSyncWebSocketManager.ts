@@ -25,7 +25,7 @@ import jwt from 'jsonwebtoken';
 import {
   BaseClient,
   ClientBuilder,
-  WebSocketTransportAdapter,
+  WebSocketClientTransportAdapter,
   type IAuthAdapter,
   type AuthResult,
   type TokenPayload,
@@ -50,6 +50,11 @@ class JWTAuthAdapter implements IAuthAdapter {
       success: true,
       token: this.token,
     };
+  }
+
+  getCurrentToken(): string {
+    console.log('[JWTAuthAdapter] getCurrentToken() called, returning token:', this.token ? 'TOKEN_EXISTS' : 'NO_TOKEN');
+    return this.token;
   }
 
   async validateToken(token: string): Promise<TokenPayload> {
@@ -141,6 +146,7 @@ export class GitSyncWebSocketManager {
   private connections: Map<string, ConnectionInfo> = new Map();
   private serverUrl: string;
   private authServerUrl: string;
+  private presenceRoomJoinInProgress: boolean = false;
 
   // Hardcoded defaults
   private readonly DEFAULT_DEV_SERVER = 'ws://localhost:3001';
@@ -254,7 +260,8 @@ export class GitSyncWebSocketManager {
       const authAdapter = new JWTAuthAdapter(roomToken.access_token);
 
       // Create Control Tower Core client using ClientBuilder
-      const transport = new WebSocketTransportAdapter();
+      const transport = new WebSocketClientTransportAdapter();
+
       const client = new ClientBuilder()
         .withTransport(transport)
         .withAuth(authAdapter)
@@ -293,7 +300,7 @@ export class GitSyncWebSocketManager {
       // Set up event handlers using Control Tower Core's event system
       this.setupClientEventHandlers(connectionInfo, config);
 
-      // Connect the client (BaseClient.connect takes URL as parameter)
+      // Connect the client - auth adapter will provide token automatically
       await client.connect(wsUrl);
 
       console.log('[GitSyncWebSocketManager] Connected:', connectionId);
@@ -859,6 +866,12 @@ export class GitSyncWebSocketManager {
       // Get presence token from OAuth server (uses separate endpoint)
       const presenceToken = await this.getPresenceToken(token);
 
+      console.log('[GitSyncWebSocketManager] Got presence token, decoding...');
+
+      // Debug: decode the token to see what's in it
+      const decoded = jwt.decode(presenceToken.access_token);
+      console.log('[GitSyncWebSocketManager] Presence token payload:', decoded);
+
       // Create WebSocket URL
       const wsUrl = `${this.serverUrl}/ws`;
       console.log('[GitSyncWebSocketManager] Connecting to presence:', wsUrl);
@@ -867,7 +880,8 @@ export class GitSyncWebSocketManager {
       const authAdapter = new JWTAuthAdapter(presenceToken.access_token);
 
       // Create Control Tower Core client
-      const transport = new WebSocketTransportAdapter();
+      const transport = new WebSocketClientTransportAdapter();
+
       const client = new ClientBuilder()
         .withTransport(transport)
         .withAuth(authAdapter)
@@ -906,15 +920,11 @@ export class GitSyncWebSocketManager {
       // Set up event handlers
       this.setupPresenceEventHandlers(connectionInfo);
 
-      // Connect the client
+      // Connect the client - auth adapter will provide token automatically
+      console.log('[GitSyncWebSocketManager] Calling client.connect() for presence...');
       await client.connect(wsUrl);
 
       console.log('[GitSyncWebSocketManager] Connected to presence');
-
-      // Subscribe to global presence after connection
-      setTimeout(() => {
-        this.subscribeToPresence();
-      }, 500);
 
       return {
         success: true,
@@ -945,7 +955,13 @@ export class GitSyncWebSocketManager {
     client.on('connected', () => {
       console.log('[GitSyncWebSocketManager] Presence client connected');
       connectionInfo.status.connected = true;
+      connectionInfo.status.authenticated = true; // Auth is handled by Control Tower Core
       this.broadcastConnectionEvent('connection-added', connectionId);
+
+      // Auto-subscribe to presence after successful connection
+      setTimeout(() => {
+        this.subscribeToPresence();
+      }, 100);
     });
 
     // Disconnected
@@ -992,10 +1008,34 @@ export class GitSyncWebSocketManager {
         return false;
       }
 
+      // Check if already in the presence room or join is in progress
+      const currentRoom = activeConnection.client.getCurrentRoomId();
+      console.log('[GitSyncWebSocketManager] Current room ID:', currentRoom);
+      if (currentRoom === '__global_presence__') {
+        console.log('[GitSyncWebSocketManager] Already subscribed to global presence');
+        return true;
+      }
+
+      // Check if join is already in progress
+      if (this.presenceRoomJoinInProgress) {
+        console.log('[GitSyncWebSocketManager] Presence room join already in progress, skipping');
+        return true;
+      }
+
       // Join the global presence room using Control Tower Core's joinRoom method
-      await activeConnection.client.joinRoom('__global_presence__');
-      console.log('[GitSyncWebSocketManager] Subscribed to global presence');
-      return true;
+      console.log('[GitSyncWebSocketManager] Calling joinRoom for __global_presence__...');
+      this.presenceRoomJoinInProgress = true;
+
+      try {
+        await activeConnection.client.joinRoom('__global_presence__');
+        console.log('[GitSyncWebSocketManager] Subscribed to global presence');
+        return true;
+      } finally {
+        // Reset flag after a delay to allow server to confirm
+        setTimeout(() => {
+          this.presenceRoomJoinInProgress = false;
+        }, 1000);
+      }
     } catch (error) {
       console.error('[GitSyncWebSocketManager] Failed to subscribe to presence:', error);
       return false;
