@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { FolderOpen, Focus, Loader2, Home, AlertTriangle, MoveRight, X } from 'lucide-react';
+import { FolderOpen, Focus, Loader2, Home, AlertTriangle, MoveRight, X, Copy, Check } from 'lucide-react';
 import type { Workspace } from '@a24z/core-library';
 
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
@@ -41,6 +41,7 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
   const [isInWorkspaceDirectory, setIsInWorkspaceDirectory] = useState<boolean | null>(null);
   const [isMoving, setIsMoving] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [copiedPath, setCopiedPath] = useState(false);
 
   // Check if this repo is selected for README view
   const isReadmeSelected =
@@ -199,6 +200,17 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
     }
   };
 
+  const handleCopyPath = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(entry.path);
+      setCopiedPath(true);
+      setTimeout(() => setCopiedPath(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy path:', err);
+    }
+  };
+
   const isHighlighted = isReadmeSelected;
   const highlightColor = theme.colors.primary;
 
@@ -279,6 +291,37 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
           >
             {entry.name}
           </span>
+        </div>
+        <div
+          onClick={handleCopyPath}
+          style={{
+            fontSize: `${theme.fontSizes[0]}px`,
+            color: copiedPath
+              ? theme.colors.success || '#10b981'
+              : theme.colors.textTertiary || theme.colors.textSecondary,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            transition: 'color 0.15s ease',
+          }}
+          title={copiedPath ? 'Copied!' : `Click to copy: ${entry.path}`}
+          onMouseEnter={(event) => {
+            if (!copiedPath) {
+              event.currentTarget.style.color = theme.colors.textSecondary;
+            }
+          }}
+          onMouseLeave={(event) => {
+            if (!copiedPath) {
+              event.currentTarget.style.color = theme.colors.textTertiary || theme.colors.textSecondary;
+            }
+          }}
+        >
+          {copiedPath ? <Check size={12} /> : <Copy size={12} />}
+          {entry.path}
         </div>
         <div
           style={{

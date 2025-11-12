@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Folder, FolderOpen, X } from 'lucide-react';
+import { Folder, Home, X } from 'lucide-react';
 import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
@@ -298,7 +298,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
               }}
               title="Click to select home directory"
             >
-              <FolderOpen
+              <Home
                 size={14}
                 style={{
                   color: theme.colors.textSecondary,
