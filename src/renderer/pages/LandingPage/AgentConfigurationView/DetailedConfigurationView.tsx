@@ -739,6 +739,9 @@ export const DetailedConfigurationView: React.FC<
     } else if (agentType === 'opencode') {
       console.log('[MCP] Rendering OpenCode MCP content');
       return <OpenCodeMCPContent />;
+    } else if (agentType === 'droid') {
+      console.log('[MCP] Rendering Droid MCP content');
+      return <DroidMCPContent />;
     }
     console.log('[MCP] Unknown agent type, returning null');
     return null;
@@ -1069,6 +1072,110 @@ export const DetailedConfigurationView: React.FC<
             {isTogglingOpenCodeMCP
               ? 'Processing...'
               : openCodeMCPStatus.hasPrincipleMD
+                ? 'Disable'
+                : 'Enable'}
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Droid-specific MCP content
+  const DroidMCPContent = () => {
+    const [droidMCPStatus, setDroidMCPStatus] = React.useState<{
+      hasPrincipleMD: boolean;
+      mcpServers: Record<string, any>;
+    }>({ hasPrincipleMD: false, mcpServers: {} });
+    const [isTogglingDroidMCP, setIsTogglingDroidMCP] =
+      React.useState(false);
+
+    React.useEffect(() => {
+      loadDroidMCPStatus();
+    }, []);
+
+    const loadDroidMCPStatus = async () => {
+      console.log('[MCP] Loading Droid MCP status...');
+      try {
+        const mcpResult = await AgentConfigurationService.getAgentMCPStatus(
+          'droid' as SupportedAgent,
+        );
+        console.log('[MCP] Droid MCP result:', mcpResult);
+
+        setDroidMCPStatus({
+          hasPrincipleMD: mcpResult.status?.hasMCP || false,
+          mcpServers: mcpResult.status?.servers || {},
+        });
+      } catch (error) {
+        console.error('[MCP] Error loading Droid MCP status:', error);
+      }
+    };
+
+    const handleToggleDroidMCP = async () => {
+      setIsTogglingDroidMCP(true);
+      try {
+        if (droidMCPStatus.hasPrincipleMD) {
+          console.log('[MCP] Removing MCP from Droid...');
+          const result = await AgentConfigurationService.removeMCPFromAgent(
+            'droid' as SupportedAgent,
+          );
+          console.log('[MCP] Remove result:', result);
+          if (result.success) {
+            await loadDroidMCPStatus();
+            checkConfigFile();
+          }
+        } else {
+          console.log('[MCP] Adding MCP to Droid...');
+          const result = await AgentConfigurationService.addMCPToAgent(
+            'droid' as SupportedAgent,
+          );
+          console.log('[MCP] Add result:', result);
+          if (result.success) {
+            await loadDroidMCPStatus();
+            checkConfigFile();
+          }
+        }
+      } catch (error) {
+        console.error('[MCP] Error toggling Droid MCP:', error);
+      } finally {
+        setIsTogglingDroidMCP(false);
+      }
+    };
+
+    return (
+      <div className="p-4">
+        <div
+          className="flex items-center justify-between p-4 rounded-lg border-2 transition-colors"
+          style={{
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderColor: droidMCPStatus.hasPrincipleMD
+              ? agentConfig.ui.color
+              : 'transparent',
+          }}
+        >
+          <div className="flex-1">
+            <h4 className="font-medium text-white">Principle MD MCP Server</h4>
+            <p className="text-xs text-slate-400 mt-1">
+              {droidMCPStatus.hasPrincipleMD
+                ? 'Enabled in ~/.factory/mcp.json'
+                : 'Not configured'}
+            </p>
+          </div>
+          <button
+            onClick={handleToggleDroidMCP}
+            disabled={isTogglingDroidMCP}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isTogglingDroidMCP ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            style={{
+              backgroundColor: droidMCPStatus.hasPrincipleMD
+                ? theme.colors.error
+                : theme.colors.success,
+              color: 'white',
+            }}
+          >
+            {isTogglingDroidMCP
+              ? 'Processing...'
+              : droidMCPStatus.hasPrincipleMD
                 ? 'Disable'
                 : 'Enable'}
           </button>

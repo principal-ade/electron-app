@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { FolderOpen, Focus, Loader2, Home, AlertTriangle, MoveRight, X, Copy, Check } from 'lucide-react';
+import { FolderOpen, Focus, Loader2, Home, AlertTriangle, MoveRight, X, Copy, Check, Trash2 } from 'lucide-react';
 import type { Workspace } from '@a24z/core-library';
 
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';
 import { WindowService } from '../../main-process-api/WindowService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
+import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { RepositoryAvatar } from '../../components/repository-maps/RepositoryAvatar';
+import { DeleteAlexandriaEntryModal } from './DeleteAlexandriaEntryModal';
 
 // Add spin animation styles to document if not already present
 if (typeof document !== 'undefined') {
@@ -42,6 +44,7 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
   const [isMoving, setIsMoving] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [copiedPath, setCopiedPath] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Check if this repo is selected for README view
   const isReadmeSelected =
@@ -208,6 +211,16 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
       setTimeout(() => setCopiedPath(false), 2000);
     } catch (err) {
       console.error('Failed to copy path:', err);
+    }
+  };
+
+  const handleDeleteEntry = async (deleteLocal: boolean) => {
+    try {
+      await AlexandriaService.removeRepository(entry.name, deleteLocal);
+      // Events will update all panels automatically
+    } catch (error) {
+      console.error('Failed to delete Alexandria entry:', error);
+      alert(`Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -538,7 +551,49 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
             )}
           </button>
         )}
+
+        {/* Delete Alexandria entry button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowDeleteModal(true);
+          }}
+          title="Delete repository entry"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '28px',
+            height: '28px',
+            padding: 0,
+            borderRadius: '4px',
+            border: 'none',
+            backgroundColor: 'transparent',
+            color: theme.colors.textSecondary,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(event) => {
+            event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
+            event.currentTarget.style.color = '#fff';
+          }}
+          onMouseLeave={(event) => {
+            event.currentTarget.style.backgroundColor = 'transparent';
+            event.currentTarget.style.color = theme.colors.textSecondary;
+          }}
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
+
+      {/* Delete confirmation modal */}
+      <DeleteAlexandriaEntryModal
+        isOpen={showDeleteModal}
+        entry={entry}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteEntry}
+      />
     </div>
   );
 };

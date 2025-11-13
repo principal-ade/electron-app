@@ -223,7 +223,10 @@ export const AgentSetupWizard: React.FC<AgentSetupWizardProps> = ({
         ? localInstallStatus
         : (agentStatus?.isInstalled ?? true);
 
-    if (!isInstalled) return 'install';
+    // Never block on installation for these agents - allow hook configuration regardless
+    const neverBlockInstall = ['claude', 'opencode', 'cline', 'droid'].includes(agentType);
+
+    if (!isInstalled && !neverBlockInstall) return 'install';
     if (!agentStatus?.hasHooks) return 'configure';
     if (agentStatus?.hasHooks && !mcpStatus.enabled) return 'mcp';
     return 'complete';
