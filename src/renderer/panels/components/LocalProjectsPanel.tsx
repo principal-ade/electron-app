@@ -1,16 +1,54 @@
 import React, { useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Search } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 
 import { useAllRepositories } from '../../hooks/useRepositoryData';
 import { LocalProjectCard } from './LocalProjectCard';
+import { FileSystemService } from '../../main-process-api/FileSystemService';
+import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 
 export const LocalProjectsPanel: React.FC = () => {
   const { theme } = useTheme();
   const [filter, setFilter] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
 
   // Load all local repositories with caching
-  const { repositories: localRepos, loading } = useAllRepositories();
+  const { repositories: localRepos, loading, refetch } = useAllRepositories();
+
+  const handleAddProject = async () => {
+    try {
+      setIsAdding(true);
+
+      // Open directory picker
+      const result = await FileSystemService.selectDirectory({
+        title: 'Select Project Directory',
+        buttonLabel: 'Add Project',
+        properties: ['openDirectory'],
+      });
+
+      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+        return;
+      }
+
+      const projectPath = result.filePaths[0];
+
+      // Extract project name from path (last directory name)
+      const projectName = projectPath.split('/').pop() || 'unknown';
+
+      // Register the repository
+      await AlexandriaService.registerRepository(projectName, projectPath);
+
+      // Refresh the repository list
+      await refetch();
+
+      console.log(`Successfully added project: ${projectName} at ${projectPath}`);
+    } catch (error) {
+      console.error('Failed to add project:', error);
+      alert(`Failed to add project: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsAdding(false);
+    }
+  };
 
   const normalizedFilter = filter.trim().toLowerCase();
 
@@ -101,36 +139,68 @@ export const LocalProjectsPanel: React.FC = () => {
 
   return (
     <div style={contentContainerStyle}>
-      {/* Search bar */}
-      <div style={{ position: 'relative' }}>
-        <Search
-          size={16}
+      {/* Search bar with add button */}
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search
+            size={16}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '12px',
+              transform: 'translateY(-50%)',
+              color: theme.colors.textSecondary,
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            type="text"
+            value={filter}
+            placeholder="Filter local projects..."
+            onChange={(event) => setFilter(event.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px 12px 8px 36px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
+              outline: 'none',
+            }}
+          />
+        </div>
+        <button
+          onClick={handleAddProject}
+          disabled={isAdding}
+          title="Add existing project"
           style={{
-            position: 'absolute',
-            top: '50%',
-            left: '12px',
-            transform: 'translateY(-50%)',
-            color: theme.colors.textSecondary,
-            pointerEvents: 'none',
-          }}
-        />
-        <input
-          type="text"
-          value={filter}
-          placeholder="Filter local projects..."
-          onChange={(event) => setFilter(event.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px 12px 8px 36px',
+            padding: '8px',
             borderRadius: '6px',
             border: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.background,
-            color: theme.colors.text,
-            fontSize: `${theme.fontSizes[1]}px`,
-            fontFamily: theme.fonts.body,
-            outline: 'none',
+            backgroundColor: theme.colors.primary,
+            color: theme.colors.buttonText || theme.colors.background,
+            cursor: isAdding ? 'default' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: isAdding ? 0.6 : 1,
+            transition: 'opacity 0.2s',
           }}
-        />
+          onMouseEnter={(e) => {
+            if (!isAdding) {
+              e.currentTarget.style.opacity = '0.9';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isAdding) {
+              e.currentTarget.style.opacity = '1';
+            }
+          }}
+        >
+          <Plus size={16} />
+        </button>
       </div>
 
       {/* Scrollable content */}
