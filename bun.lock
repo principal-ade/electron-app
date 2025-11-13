@@ -27,7 +27,7 @@
         "@principal-ai/code-city-react": "^0.1.1",
         "@principal-ai/codebase-composition": "^0.2.8",
         "@principal-ai/codebase-quality-lenses": "^0.1.7",
-        "@principal-ai/control-tower-core": "^0.1.15",
+        "@principal-ai/control-tower-core": "^0.1.16",
         "@principal-ai/repository-abstraction": "^0.2.0",
         "@principal-ai/repository-monitoring": "^0.1.4",
         "@radix-ui/react-tabs": "^1.1.13",
@@ -921,7 +921,7 @@
 
     "@principal-ai/codebase-quality-lenses": ["@principal-ai/codebase-quality-lenses@0.1.7", "", {}, "sha512-mgKkh4ttLCgftIxTMM11nG48PfLPpGf562ntZVekjg0h+7m/4tG7uYBrCjp/fQaKSYToM6dvcLXk5tYHozmuTQ=="],
 
-    "@principal-ai/control-tower-core": ["@principal-ai/control-tower-core@0.1.15", "", { "dependencies": { "ws": "^8.18.3" } }, "sha512-Q7E1D5BX9HA49dzxqi9Jaq4Dd0eN8A52FG3MC09cy0HlkaZkkCA3DW5VT4gvKfJtbn9799BA+frLf4rdhBAArA=="],
+    "@principal-ai/control-tower-core": ["@principal-ai/control-tower-core@0.1.16", "", { "dependencies": { "ws": "^8.18.3" } }, "sha512-AiwGzdcPKpWKoDXRDnHkulMWY7nbDa3EYMg8naZgvDjtKVprMb1bYNPTEXr4mZbNJvqHhr1gQwZ89wgNcVYMxA=="],
 
     "@principal-ai/repository-abstraction": ["@principal-ai/repository-abstraction@0.2.2", "", {}, ""],
 
