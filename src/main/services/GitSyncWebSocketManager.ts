@@ -502,125 +502,6 @@ export class GitSyncWebSocketManager {
   }
 
   /**
-   * Handle incoming messages from the traffic controller
-   */
-  private handleMessage(
-    connectionInfo: ConnectionInfo,
-    message: GitSyncMessage,
-  ) {
-    console.log(
-      '[GitSyncWebSocketManager] Received message:',
-      message.type,
-      message,
-    );
-
-    // Unwrap server_message envelope
-    if (
-      message.type === 'server_message' &&
-      isGitSyncMessage(message.payload)
-    ) {
-      console.log(
-        '[GitSyncWebSocketManager] Unwrapping server_message:',
-        message.payload.type,
-      );
-      this.handleMessage(connectionInfo, message.payload);
-      return;
-    }
-
-    switch (message.type) {
-      case 'auth_success':
-        connectionInfo.status.authenticated = true;
-        console.log(
-          '[GitSyncWebSocketManager] Authenticated:',
-          connectionInfo.connectionId,
-        );
-        // Broadcast to renderers
-        this.broadcastToRenderers(
-          GitSyncEvent.ON_MESSAGE,
-          connectionInfo.connectionId,
-          message,
-        );
-        break;
-
-      case 'auth_error':
-      case 'error':
-        console.error(
-          '[GitSyncWebSocketManager] Error from traffic controller:',
-          message,
-        );
-        this.broadcastToRenderers(
-          GitSyncEvent.ON_MESSAGE,
-          connectionInfo.connectionId,
-          message,
-        );
-        break;
-
-      case 'peer_joined':
-        // Add peer to status
-        if (message.peer) {
-          connectionInfo.status.peers.push({
-            agentId: message.peer.agentId,
-            userId: message.peer.userId,
-            branch: message.peer.branch || connectionInfo.branch,
-          });
-        }
-        this.broadcastToRenderers(
-          GitSyncEvent.ON_MESSAGE,
-          connectionInfo.connectionId,
-          message,
-        );
-        this.broadcastConnectionEvent(
-          'connection-status-changed',
-          connectionInfo.connectionId,
-        );
-        break;
-
-      case 'peer_left':
-        // Remove peer from status
-        if (message.peer) {
-          const peerAgentId = message.peer.agentId;
-          connectionInfo.status.peers = connectionInfo.status.peers.filter(
-            (p) => p.agentId !== peerAgentId,
-          );
-        }
-        this.broadcastToRenderers(
-          GitSyncEvent.ON_MESSAGE,
-          connectionInfo.connectionId,
-          message,
-        );
-        this.broadcastConnectionEvent(
-          'connection-status-changed',
-          connectionInfo.connectionId,
-        );
-        break;
-
-      case 'pong':
-        // Heartbeat response - handled by Control Tower Core
-        break;
-
-      case 'presence:user_online':
-      case 'presence:user_offline':
-      case 'presence:repo_opened':
-      case 'presence:repo_closed':
-      case 'presence:repo_focused':
-      case 'presence:status_changed':
-        // Forward presence events to all renderers with a special event name
-        console.log('[GitSyncWebSocketManager] Presence event received:', message.type);
-        this.broadcastPresenceEvent(message);
-        break;
-
-      default:
-        // Forward all other messages to renderers
-        this.broadcastToRenderers(
-          GitSyncEvent.ON_MESSAGE,
-          connectionInfo.connectionId,
-          message,
-        );
-        break;
-    }
-  }
-
-  /**
    * Disconnect from traffic controller
    */
   async disconnect(
@@ -870,11 +751,6 @@ export class GitSyncWebSocketManager {
       // Create Control Tower Core client with logging
       const transport = new WebSocketClientTransportAdapter();
 
-      // Log all incoming messages from server
-      transport.onMessage((message: unknown) => {
-        console.log('[GitSyncWebSocketManager] 📨 Raw message from server:', JSON.stringify(message).substring(0, 300));
-      });
-
       const client = new ClientBuilder()
         .withTransport(transport)
         .withAuth(authAdapter)
@@ -948,8 +824,8 @@ export class GitSyncWebSocketManager {
       this.broadcastConnectionEvent('connection-added', connectionId);
 
       // Auto-subscribe to presence after successful connection
-      setTimeout(() => {
-        this.subscribeToPresence();
+      setTimeout(async () => {
+        await this.subscribeToPresence();
       }, 100);
     });
 
@@ -1038,6 +914,7 @@ export class GitSyncWebSocketManager {
         console.log('[GitSyncWebSocketManager] → Calling joinRoom(__global_presence__)...');
 
         // Wait for the room_joined event to confirm successful join
+        // IMPORTANT: Set up the promise and event listener BEFORE calling joinRoom()
         const joinPromise = new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
             console.error('[GitSyncWebSocketManager] ✗ Room join timeout - no room_joined event received');
