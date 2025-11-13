@@ -35,9 +35,9 @@ const repoManagerEntryPath = path.join(
   'index.tsx',
 );
 const legacyEntryPath = path.join(webpackPaths.srcRendererPath, 'index.tsx');
-const palaceRoomWorkspaceEntryPath = path.join(
+const alexandriaWorkspaceEntryPath = path.join(
   webpackPaths.srcRendererPath,
-  'palace-room-workspace',
+  'alexandria-workspace',
   'index.tsx',
 );
 const titlebarEntryPath = path.join(
@@ -98,14 +98,14 @@ if (fs.existsSync(repoManagerEntryPath)) {
   );
 }
 
-// Register Palace Room Workspace entry when present
-if (fs.existsSync(palaceRoomWorkspaceEntryPath)) {
-  entryPoints['palace-room-workspace'] = palaceRoomWorkspaceEntryPath;
+// Register Alexandria Workspace entry when present
+if (fs.existsSync(alexandriaWorkspaceEntryPath)) {
+  entryPoints['alexandria-workspace'] = alexandriaWorkspaceEntryPath;
   htmlPlugins.push(
     new HtmlWebpackPlugin({
-      filename: 'palace-room-workspace.html',
+      filename: 'alexandria-workspace.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
-      chunks: ['palace-room-workspace'],
+      chunks: ['alexandria-workspace'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,

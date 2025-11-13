@@ -508,9 +508,9 @@ export function registerModernWindowHandlers(): void {
     window.window.loadURL(url);
   });
 
-  // Palace Room Workspace Window
-  ipcMain.handle(WindowEvent.OPEN_PALACE_ROOM_WORKSPACE, async () => {
-    const windowName = 'palace-room-workspace';
+  // Alexandria Workspace Window
+  ipcMain.handle(WindowEvent.OPEN_ALEXANDRIA_WORKSPACE, async () => {
+    const windowName = 'alexandria-workspace';
 
     const window = createSpecialWindow(
       windowName,
@@ -519,7 +519,7 @@ export function registerModernWindowHandlers(): void {
         height: 832,
         minWidth: 1024,
         minHeight: 720,
-        title: 'Palace Room Workspace',
+        title: 'Alexandria Workspace',
       },
       {
         fileSystemAdapter: true,
@@ -533,7 +533,7 @@ export function registerModernWindowHandlers(): void {
 
     if (!window) return;
 
-    const url = resolveHtmlPath('palace-room-workspace.html');
+    const url = resolveHtmlPath('alexandria-workspace.html');
     window.window.loadURL(url);
   });
 

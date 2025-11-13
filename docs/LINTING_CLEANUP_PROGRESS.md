@@ -97,7 +97,6 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 | principal-window           | 1       | ⬇️ **-6** |
 | types                      | ✅ Clean | -         |
 | contexts                   | ✅ Clean | -         |
-| palace-room-workspace      | ✅ Clean | -         |
 | GlobalFeedbackProvider.tsx | ✅ Clean | -         |
 | App.tsx                    | ✅ Clean | -         |
 | dev-sidecar-logs           | ✅ Clean | -         |
@@ -119,7 +118,6 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 | types                      | ✅ Clean | -          |
 | contexts                   | ✅ Clean | -          |
 | providers                  | ✅ Clean | -          |
-| palace-room-workspace      | ✅ Clean | -          |
 | GlobalFeedbackProvider.tsx | ✅ Clean | -          |
 | config                     | ✅ Clean | -          |
 | App.tsx                    | ✅ Clean | -          |
@@ -159,7 +157,7 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 * **renderer/panels** - Total issues at 110 (up from 45), TypeScript errors increased +66 to 94 🚨
 
-✅ **Completed Renderer Subdirectories**: types, contexts, palace-room-workspace, GlobalFeedbackProvider.tsx, App.tsx, dev-sidecar-logs, config, providers
+✅ **Completed Renderer Subdirectories**: types, contexts, GlobalFeedbackProvider.tsx, App.tsx, dev-sidecar-logs, config, providers
 
 ✅ **Partially Clean Directories**:
 
