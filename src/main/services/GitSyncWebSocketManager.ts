@@ -846,14 +846,12 @@ export class GitSyncWebSocketManager {
     });
 
     // Room joined - emitted when successfully joined a room
-    client.on('room_joined', (data: { roomId: string; state: unknown }) => {
-      console.log(`[GitSyncWebSocketManager] ✓ room_joined event: ${data.roomId}`);
-      // Event is also handled in subscribeToPresence() promise
+    client.on('room_joined', (_data: { roomId: string; state: unknown }) => {
+      // Event is handled in subscribeToPresence() promise
     });
 
     // Presence updated - emitted when users join/leave or update their presence
     client.on('presence_updated', (data: { users: unknown[] }) => {
-      console.log(`[GitSyncWebSocketManager] ✓ presence_updated event: ${data.users.length} users`);
       // Broadcast to renderers
       this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
         type: 'presence_updated',
@@ -861,12 +859,6 @@ export class GitSyncWebSocketManager {
       });
     });
 
-    // Listen for ALL events to debug
-    const originalEmit = client.emit.bind(client);
-    client.emit = function (event: string, ...args: unknown[]) {
-      console.log(`[GitSyncWebSocketManager] 📡 Event emitted: ${event}`, args.length > 0 ? args[0] : '');
-      return originalEmit(event, ...args);
-    } as typeof client.emit;
   }
 
   /**
@@ -911,34 +903,27 @@ export class GitSyncWebSocketManager {
       this.presenceRoomJoinInProgress = true;
 
       try {
-        console.log('[GitSyncWebSocketManager] → Calling joinRoom(__global_presence__)...');
-
         // Wait for the room_joined event to confirm successful join
         // IMPORTANT: Set up the promise and event listener BEFORE calling joinRoom()
         const joinPromise = new Promise<void>((resolve, reject) => {
           const timeout = setTimeout(() => {
-            console.error('[GitSyncWebSocketManager] ✗ Room join timeout - no room_joined event received');
+            console.error('[GitSyncWebSocketManager] Room join timeout - no room_joined event received');
             reject(new Error('Room join timeout'));
           }, 5000);
 
           const onRoomJoined = (data: { roomId: string; state: unknown }) => {
-            console.log(`[GitSyncWebSocketManager] → onRoomJoined callback fired for: ${data.roomId}`);
             if (data.roomId === '__global_presence__') {
-              console.log('[GitSyncWebSocketManager] ✓ Successfully joined __global_presence__');
               clearTimeout(timeout);
               activeConnection.client.off('room_joined', onRoomJoined);
               resolve();
             }
           };
 
-          console.log('[GitSyncWebSocketManager] → Registering room_joined listener...');
           activeConnection.client.on('room_joined', onRoomJoined);
         });
 
         await activeConnection.client.joinRoom('__global_presence__');
-        console.log('[GitSyncWebSocketManager] → joinRoom() call completed, waiting for event...');
         await joinPromise;
-        console.log('[GitSyncWebSocketManager] ✓ Join promise resolved');
         return true;
       } finally {
         this.presenceRoomJoinInProgress = false;
