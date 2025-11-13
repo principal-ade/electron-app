@@ -9,7 +9,7 @@
   },
   "main": "dist/main/main.js",
   "dependencies": {
-    "@a24z/agent-manager": "^1.0.10",
+    "@a24z/agent-manager": "^1.0.13",
     "@a24z/callimachus": "^0.1.4",
     "@a24z/core-library": "^0.1.31",
     "@a24z/dynamic-file-tree": "^0.1.27",
