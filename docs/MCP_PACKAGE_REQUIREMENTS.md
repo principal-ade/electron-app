@@ -1,6 +1,7 @@
 # MCP Package Requirements: @principal-ai/agent-mcp
 
 ## Overview
+
 This document outlines the exports and functionality needed in the new `@principal-ai/agent-mcp` package to complete the migration from `@/core-lib/lib/agents`.
 
 ## Required Exports
@@ -8,6 +9,7 @@ This document outlines the exports and functionality needed in the new `@princip
 ### 1. Branding Configuration
 
 #### Constants
+
 ```typescript
 export const BRANDING: BrandingConfig = {
   company: 'Principal ADE',
@@ -17,6 +19,7 @@ export const BRANDING: BrandingConfig = {
 ```
 
 #### Types
+
 ```typescript
 export interface BrandingConfig {
   company: string;
@@ -32,6 +35,7 @@ export interface BrandingConfig {
 ```
 
 #### Functions
+
 ```typescript
 export function getMcpFallbackPath(): string;
 ```
@@ -39,6 +43,7 @@ export function getMcpFallbackPath(): string;
 ### 2. MCP Configuration Functions
 
 #### Core Configuration
+
 ```typescript
 /**
  * Configure MCP servers for an agent
@@ -50,7 +55,7 @@ export function getMcpFallbackPath(): string;
 export function configureAgentMCP(
   agentType: SupportedAgent,
   settings: AgentSettings,
-  mcpServers: Record<string, any>
+  mcpServers: Record<string, any>,
 ): AgentSettings;
 
 /**
@@ -63,7 +68,7 @@ export function configureAgentMCP(
 export function removeAgentMCP(
   agentType: SupportedAgent,
   settings: AgentSettings,
-  serverNames?: string[]
+  serverNames?: string[],
 ): AgentSettings;
 
 /**
@@ -76,7 +81,7 @@ export function removeAgentMCP(
 export function hasAgentMCP(
   agentType: SupportedAgent,
   settings: AgentSettings,
-  serverName?: string
+  serverName?: string,
 ): boolean;
 
 /**
@@ -87,7 +92,7 @@ export function hasAgentMCP(
  */
 export function countAgentMCPServers(
   agentType: SupportedAgent,
-  settings: AgentSettings
+  settings: AgentSettings,
 ): number;
 ```
 
@@ -117,6 +122,7 @@ export type MCPServerMap = Record<string, MCPServerConfig>;
 ### 4. Agent-Specific MCP Configuration
 
 #### Claude MCP
+
 ```typescript
 export interface ClaudeMCPConfig {
   mcpServers?: MCPServerMap;
@@ -127,6 +133,7 @@ export function getClaudeMCPDefaults(): ClaudeMCPConfig;
 ```
 
 #### Gemini MCP
+
 ```typescript
 export interface GeminiMCPConfig {
   mcpServers?: MCPServerMap;
@@ -137,6 +144,7 @@ export function getGeminiMCPDefaults(): GeminiMCPConfig;
 ```
 
 #### OpenCode MCP
+
 ```typescript
 export interface OpenCodeMCPConfig {
   mcpServers?: MCPServerMap;
@@ -144,6 +152,17 @@ export interface OpenCodeMCPConfig {
 }
 
 export function getOpenCodeMCPDefaults(): OpenCodeMCPConfig;
+```
+
+#### Droid MCP
+
+```typescript
+export interface DroidMCPConfig {
+  mcpServers?: MCPServerMap;
+  // Droid-specific MCP settings
+}
+
+export function getDroidMCPDefaults(): DroidMCPConfig;
 ```
 
 ## Dependencies from agent-monitoring
@@ -155,7 +174,7 @@ import {
   SupportedAgent,
   AgentSettings,
   AgentInfo,
-  getAgentInfo
+  getAgentInfo,
 } from '@principal-ai/agent-monitoring';
 ```
 
@@ -184,19 +203,22 @@ import {
 ## Usage Patterns in Current Codebase
 
 ### 1. Branding Usage
+
 Currently used in 15+ files for:
+
 - Display names in UI
 - MCP server configuration paths
 - Default settings initialization
 
 ```typescript
 // Example from src/renderer/services/MCPService.ts
-import { BRANDING } from "@/core-lib/lib/agents";
+import { BRANDING } from '@/core-lib/lib/agents';
 
 const serverPath = path.join(BRANDING.configDir, 'mcp-servers');
 ```
 
 ### 2. MCP Configuration Usage
+
 Used in agent configuration handlers:
 
 ```typescript
@@ -204,16 +226,16 @@ Used in agent configuration handlers:
 if (hasAgentMCP(agentType, settings, 'principle-mcp')) {
   // Server already configured
 } else {
-  const updatedSettings = configureAgentMCP(
-    agentType,
-    settings,
-    { 'principle-mcp': mcpServerConfig }
-  );
+  const updatedSettings = configureAgentMCP(agentType, settings, {
+    'principle-mcp': mcpServerConfig,
+  });
 }
 ```
 
 ### 3. MCP Server Management
+
 Needed for:
+
 - Starting/stopping MCP servers
 - Monitoring server status
 - Handling server communication
@@ -221,35 +243,41 @@ Needed for:
 ## Integration Points
 
 ### With electron-react
+
 - `src/main/mcp-app-control/mcp-integration.ts`
 - `src/main/principal-mcp/PrincipalMCPBridge.ts`
 - `src/renderer/services/MCPService.ts`
 
 ### With agent-monitoring
+
 - Shares `SupportedAgent` and `AgentSettings` types
 - MCP configuration is part of agent settings
 
 ## Priority Exports
 
 **Must Have** (Blocking migration):
+
 1. `BRANDING` constant
 2. `BrandingConfig` type
 3. `getMcpFallbackPath()` function
 
 **Should Have** (For full functionality):
+
 1. `configureAgentMCP()`
 2. `removeAgentMCP()`
 3. `hasAgentMCP()`
 4. `countAgentMCPServers()`
 
 **Nice to Have** (Future enhancements):
-1. Agent-specific MCP configurations
+
+1. Agent-specific MCP configurations (Claude, Gemini, OpenCode, Droid)
 2. MCP server status types
 3. Default configurations per agent
 
 ## Testing Requirements
 
 The package should include tests for:
+
 1. Configuration CRUD operations
 2. Path resolution (getMcpFallbackPath)
 3. Agent-specific configuration validation

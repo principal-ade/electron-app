@@ -69,6 +69,11 @@ export function setupAgentConfigHandlers() {
           console.log(
             '[AgentConfig] Cline is a VS Code extension - hooks can be configured',
           );
+        } else if (agentType === 'droid') {
+          // Droid: Don't block on installation detection
+          isInstalled = true;
+          console.log('[AgentConfig] Droid - allowing configuration regardless of installation status');
+          );
         } else {
           // For other agents, check if config file exists
           try {

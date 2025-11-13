@@ -15,7 +15,7 @@ export const AIAssistantsSettings: React.FC = () => {
   const [agentStatus, setAgentStatus] =
     useState<AgentInstallationStatus | null>(null);
   const [activeAgentView, setActiveAgentView] = useState<
-    'claude' | 'opencode' | null
+    'claude' | 'opencode' | 'droid' | null
   >(null);
   const [agentViewLayout, setAgentViewLayout] = useState<'simple' | 'detailed'>(
     'simple',
@@ -369,6 +369,104 @@ export const AIAssistantsSettings: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* Droid */}
+            <div
+              style={{
+                backgroundColor: theme.colors.backgroundSecondary,
+                borderRadius: '12px',
+                padding: '20px',
+                border: `1px solid ${theme.colors.border}`,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '8px',
+                      background:
+                        'linear-gradient(135deg, #8b5cf620, #8b5cf640)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Bot size={20} color="#8b5cf6" />
+                  </div>
+                  <div>
+                    <h5
+                      style={{
+                        fontSize: '16px',
+                        fontWeight: 600,
+                        margin: '0 0 4px 0',
+                      }}
+                    >
+                      Droid
+                    </h5>
+                    <p
+                      style={{
+                        fontSize: '13px',
+                        color: theme.colors.textSecondary,
+                        margin: 0,
+                      }}
+                    >
+                      Advanced AI assistant
+                    </p>
+                    {agentStatus?.droid?.isInstalled && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          marginTop: '4px',
+                        }}
+                      >
+                        <CheckCircle size={12} color={theme.colors.success} />
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            color: theme.colors.success,
+                          }}
+                        >
+                          Installed
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setActiveAgentView('droid');
+                    setAgentViewLayout('simple');
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: `1px solid ${theme.colors.border}`,
+                    backgroundColor: theme.colors.background,
+                    color: theme.colors.text,
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                  }}
+                >
+                  Configure
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -393,6 +491,18 @@ export const AIAssistantsSettings: React.FC = () => {
         <AgentConfigurationView
           agentType={SupportedAgent.OPENCODE}
           agentStatus={agentStatus.opencode}
+          checkAgentStatus={checkAgentStatus}
+          viewLayout={agentViewLayout}
+          onShowDetails={() => setAgentViewLayout('detailed')}
+          onBackToSetup={() => setAgentViewLayout('simple')}
+          onBackToAssistants={() => setActiveAgentView(null)}
+        />
+      )}
+
+      {activeAgentView === 'droid' && agentStatus && (
+        <AgentConfigurationView
+          agentType={'droid' as SupportedAgent}
+          agentStatus={agentStatus.droid}
           checkAgentStatus={checkAgentStatus}
           viewLayout={agentViewLayout}
           onShowDetails={() => setAgentViewLayout('detailed')}

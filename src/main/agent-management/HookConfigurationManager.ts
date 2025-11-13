@@ -2,6 +2,7 @@ import {
   ClaudeConfigManager,
   ClineConfigManager,
   OpenCodeConfigManager,
+  DroidConfigManager,
   type HookOptions,
   type OpenCodePluginOptions,
 } from '@a24z/agent-manager';
@@ -50,11 +51,13 @@ export class HookConfigurationManager {
   private claudeManager: ClaudeConfigManager;
   private clineManager: ClineConfigManager;
   private openCodeManager: OpenCodeConfigManager;
+  private droidManager: DroidConfigManager;
 
   private constructor() {
     this.claudeManager = new ClaudeConfigManager();
     this.clineManager = new ClineConfigManager();
     this.openCodeManager = new OpenCodeConfigManager();
+    this.droidManager = new DroidConfigManager();
 
     // Set the default fallback directory for Claude (Cline doesn't have this method)
     this.claudeManager.setFallbackDirectory('~/.principle/hooks');
@@ -146,6 +149,26 @@ export class HookConfigurationManager {
         };
       }
 
+      // Handle Droid using the DroidConfigManager
+      if (agentType === 'droid') {
+        const options: HookOptions = {
+          port: this.getAgentSessionEventsPorts(), // Agent events ports [3045, 3043]
+          dir: '~/.principle/hooks',
+        };
+
+        await this.droidManager.enableHooks(options);
+        const status = await this.droidManager.getHookStatus();
+        const hookCount = Array.from(status.values()).filter(
+          (enabled) => enabled,
+        ).length;
+
+        return {
+          success: true,
+          hookCount,
+          configPath: '~/.droid/settings.json',
+        };
+      }
+
       return {
         success: false,
         hookCount: 0,
@@ -209,6 +232,17 @@ export class HookConfigurationManager {
           success: true,
           hookCount: 0,
           configPath: '~/.config/openCode/openCode.json',
+        };
+      }
+
+      // Handle Droid using the DroidConfigManager
+      if (agentType === 'droid') {
+        await this.droidManager.disableHooks();
+
+        return {
+          success: true,
+          hookCount: 0,
+          configPath: '~/.droid/settings.json',
         };
       }
 
@@ -291,6 +325,30 @@ export class HookConfigurationManager {
         return {
           hasHooks: isEnabled,
           hookCount: isEnabled ? 1 : 0,
+          isSupported: true,
+        };
+      }
+
+      // Handle Droid using the DroidConfigManager
+      if (agentType === 'droid') {
+        const isInstalled = await this.droidManager.isDroidInstalled();
+        if (!isInstalled) {
+          return {
+            hasHooks: false,
+            hookCount: 0,
+            isSupported: true,
+            supportMessage: 'Droid not installed',
+          };
+        }
+
+        const status = await this.droidManager.getHookStatus();
+        const enabledHooks = Array.from(status.values()).filter(
+          (enabled) => enabled,
+        );
+
+        return {
+          hasHooks: enabledHooks.length > 0,
+          hookCount: enabledHooks.length,
           isSupported: true,
         };
       }
@@ -406,6 +464,9 @@ export class HookConfigurationManager {
         // OpenCode uses a plugin system for hooks
         return { isSupported: true };
 
+      case 'droid':
+        return { isSupported: true };
+
       default:
         return {
           isSupported: false,
@@ -454,7 +515,7 @@ export class HookConfigurationManager {
       // Get list of agents to check
       const agentsToCheck = agentType
         ? [agentType]
-        : (['claude', 'opencode', 'cline'] as SupportedAgent[]);
+        : (['claude', 'opencode', 'cline', 'droid'] as SupportedAgent[]);
 
       for (const agent of agentsToCheck) {
         if (agent === 'claude') {

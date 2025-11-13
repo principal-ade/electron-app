@@ -378,7 +378,9 @@ export class HttpEventServer extends EventEmitter {
             ? 'cline-hook'
             : agent === 'opencode'
               ? 'opencode-hook'
-              : agent; // fallback to agent name
+              : agent === 'droid'
+                ? 'droid-hook'
+                : agent; // fallback to agent name
       this.log('info', `Setting up route for ${agent} at /${routePath}`);
 
       // POST endpoint for agent events
