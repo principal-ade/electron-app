@@ -74,11 +74,21 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
         id: 'terminal',
         label: 'Terminal',
         content: TerminalPanelComponent ? (
-          <TerminalPanelComponent
-            context={context}
-            actions={context.actions}
-            events={context.events}
-          />
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            <TerminalPanelComponent
+              context={context}
+              actions={context.actions}
+              events={context.events}
+            />
+          </div>
         ) : (
           <div
             style={{
@@ -122,34 +132,6 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
             </h3>
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Details panel will go here
-            </p>
-          </div>
-        ),
-      },
-      {
-        id: 'terminal',
-        label: 'Terminal',
-        content: (
-          <div
-            style={{
-              padding: '16px',
-              backgroundColor: theme.colors.background,
-              color: theme.colors.text,
-              height: '100%',
-              overflow: 'auto',
-            }}
-          >
-            <h3
-              style={{
-                marginBottom: '12px',
-                fontSize: `${theme.fontSizes[3]}px`,
-                fontWeight: theme.fontWeights.semibold,
-              }}
-            >
-              Terminal
-            </h3>
-            <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
-              Terminal panel will go here
             </p>
           </div>
         ),
