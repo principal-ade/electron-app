@@ -467,7 +467,7 @@ export const CarouselTerminalPanel = forwardRef<
       currentPanelIndexRef.current = currentPanelIndex;
     }, [tabs, currentPanelIndex]);
 
-    // Prevent space key from scrolling the carousel container
+    // Prevent space key and paste from scrolling the carousel container
     useEffect(() => {
       const wrapper = carouselWrapperRef.current;
       if (!wrapper) return;
@@ -496,8 +496,28 @@ export const CarouselTerminalPanel = forwardRef<
         }
       };
 
+      const handlePaste = (e: ClipboardEvent) => {
+        const target = e.target as HTMLElement;
+        const isFromTerminal = target.closest('.xterm') !== null;
+
+        if (isFromTerminal) {
+          // Mark that we're pasting - use longer timeout since paste can be slower
+          isTyping = true;
+
+          const scrollContainer = findScrollContainer();
+          if (scrollContainer) {
+            savedScrollLeft = scrollContainer.scrollLeft;
+          }
+
+          clearTimeout(typingTimeout);
+          typingTimeout = setTimeout(() => {
+            isTyping = false;
+          }, 200);
+        }
+      };
+
       const handleScroll = (e: Event) => {
-        // If we're typing in terminal, restore scroll position
+        // If we're typing/pasting in terminal, restore scroll position
         if (isTyping) {
           const scrollContainer = e.target as HTMLElement;
           // Restore the scroll position immediately
@@ -523,6 +543,9 @@ export const CarouselTerminalPanel = forwardRef<
           // Listen for keydown to track typing
           scrollContainer.addEventListener('keydown', handleKeyDown, true);
 
+          // Listen for paste events
+          scrollContainer.addEventListener('paste', handlePaste, true);
+
           // Listen for scroll events to restore position during typing
           scrollContainer.addEventListener('scroll', handleScroll, {
             capture: true,
@@ -536,6 +559,7 @@ export const CarouselTerminalPanel = forwardRef<
         const scrollContainer = findScrollContainer();
         if (scrollContainer) {
           scrollContainer.removeEventListener('keydown', handleKeyDown, true);
+          scrollContainer.removeEventListener('paste', handlePaste, true);
           scrollContainer.removeEventListener('scroll', handleScroll);
         }
       };
