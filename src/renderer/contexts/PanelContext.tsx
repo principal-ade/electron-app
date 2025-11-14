@@ -54,18 +54,24 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
   // Wire up terminal events to panel event bus
   useEffect(() => {
+    let unsubData: (() => void) | null = null;
+    let unsubExit: (() => void) | null = null;
+
     // Forward terminal data events to panel event bus
-    const unsubscribeData = TerminalService.onData((terminalData) => {
+    TerminalService.onData((terminalData) => {
+      console.info('[PanelContext] Terminal data received:', terminalData);
       events.emit({
         type: 'terminal:data',
         source: 'alexandria-workspace',
         timestamp: Date.now(),
         payload: terminalData,
       });
+    }).then((unsub) => {
+      unsubData = unsub;
     });
 
     // Forward terminal exit events to panel event bus
-    const unsubscribeExit = TerminalService.onExit((terminalExit) => {
+    TerminalService.onExit((terminalExit) => {
       events.emit({
         type: 'terminal:exit',
         source: 'alexandria-workspace',
@@ -77,12 +83,14 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       setTerminalSessions((prev) =>
         prev.filter((s) => s.id !== terminalExit.sessionId)
       );
+    }).then((unsub) => {
+      unsubExit = unsub;
     });
 
     // Cleanup on unmount
     return () => {
-      unsubscribeData.then((unsub) => unsub());
-      unsubscribeExit.then((unsub) => unsub());
+      unsubData?.();
+      unsubExit?.();
     };
   }, [events]);
 
