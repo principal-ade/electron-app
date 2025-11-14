@@ -54,6 +54,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
   // Wire up terminal events to panel event bus
   useEffect(() => {
+    console.info('[PanelContext] Setting up terminal event listeners');
     let unsubData: (() => void) | null = null;
     let unsubExit: (() => void) | null = null;
 
@@ -67,6 +68,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         payload: terminalData,
       });
     }).then((unsub) => {
+      console.info('[PanelContext] Terminal data listener subscribed');
       unsubData = unsub;
     });
 
