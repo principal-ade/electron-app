@@ -3,6 +3,7 @@ import { useTheme } from '@a24z/industry-theme';
 import type { Workspace } from '@a24z/core-library';
 import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
+import { panels as terminalPanels } from '@principal-ade/industry-themed-terminal-panel';
 
 type PanelDefinition = {
   id: string;
@@ -24,16 +25,19 @@ interface AlexandriaWorkspaceLayoutProps {
  */
 const AlexandriaWorkspaceLayoutContent: React.FC = () => {
   const { theme } = useTheme();
-  const _context = usePanelProvider();
+  const context = usePanelProvider();
 
   // Panel layout configuration (left/middle/right)
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'workspace-repos',
-    middle: 'content-viewer',
+    middle: 'terminal',
     right: 'details',
   });
 
   const [isEditMode, _setIsEditMode] = useState(false);
+
+  // Get the terminal panel component
+  const TerminalPanelComponent = terminalPanels[0]?.component;
 
   // Define panels
   const panels: PanelDefinition[] = useMemo(
@@ -67,9 +71,15 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
         ),
       },
       {
-        id: 'content-viewer',
-        label: 'Content',
-        content: (
+        id: 'terminal',
+        label: 'Terminal',
+        content: TerminalPanelComponent ? (
+          <TerminalPanelComponent
+            context={context}
+            actions={context.actions}
+            events={context.events}
+          />
+        ) : (
           <div
             style={{
               padding: '16px',
@@ -77,19 +87,13 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
               color: theme.colors.text,
               height: '100%',
               overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <h3
-              style={{
-                marginBottom: '12px',
-                fontSize: `${theme.fontSizes[3]}px`,
-                fontWeight: theme.fontWeights.semibold,
-              }}
-            >
-              Content Viewer
-            </h3>
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
-              Main content panel will go here
+              Terminal panel not available
             </p>
           </div>
         ),
@@ -151,7 +155,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
         ),
       },
     ],
-    [theme]
+    [theme, context, TerminalPanelComponent]
   );
 
   return (

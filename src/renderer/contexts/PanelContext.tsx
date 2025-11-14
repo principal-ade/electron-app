@@ -251,6 +251,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       events,
       workspace,
       repository,
+      repositoryPath: repository?.path,
       theme,
       terminalSessions,
     }),
