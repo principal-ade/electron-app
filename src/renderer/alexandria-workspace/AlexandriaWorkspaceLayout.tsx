@@ -4,6 +4,7 @@ import type { Workspace } from '@a24z/core-library';
 import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
 import { panels as terminalPanels } from '@principal-ade/industry-themed-terminal-panel';
+import '@principal-ade/industry-themed-terminal-panel/dist/panels.bundle.css';
 
 type PanelDefinition = {
   id: string;
