@@ -104,6 +104,12 @@ export interface WindowAPI {
   openCallimachusWindow(): Promise<void>;
 
   /**
+   * Open Alexandria Workspace Manager window
+   * Opens a dedicated window for managing workspaces and their repository members
+   */
+  openAlexandriaWorkspace(): Promise<void>;
+
+  /**
    * Get the unique ID of the current window
    * Useful for isolating resources (like terminal sessions) per window
    * @returns The Electron BrowserWindow ID

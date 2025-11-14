@@ -129,6 +129,22 @@ export class WindowService {
   }
 
   /**
+   * Open Alexandria Workspace Manager window
+   * Opens a dedicated window for managing workspaces and their repository members
+   */
+  static async openAlexandriaWorkspace(): Promise<void> {
+    try {
+      await window.mainProcess.window.openAlexandriaWorkspace();
+    } catch (error) {
+      console.error(
+        '[WindowService] Failed to open Alexandria Workspace window:',
+        error,
+      );
+      throw new Error('Failed to open Alexandria Workspace window');
+    }
+  }
+
+  /**
    * Check if a repository window is already open
    * @param repository - Alexandria repository entry to check
    * @returns True if the repository window is open, false otherwise

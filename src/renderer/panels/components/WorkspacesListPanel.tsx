@@ -3,8 +3,8 @@ import { useTheme } from '@a24z/industry-theme';
 import { Folder, Layers, Plus, Edit2, Check, X, ExternalLink } from 'lucide-react';
 import type { Workspace } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
+import { WindowService } from '../../main-process-api/WindowService';
 import { CreateWorkspaceModal } from '../../components/CreateWorkspaceModal';
-import { WindowEvent } from '../../../shared/ipc-events/WindowEvents';
 
 interface WorkspacesListPanelProps {
   selectedWorkspaceId?: string | null;
@@ -117,7 +117,7 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
 
   const handleOpenWorkspaceManager = async () => {
     try {
-      await window.electron.ipcRenderer.invoke(WindowEvent.OPEN_ALEXANDRIA_WORKSPACE);
+      await WindowService.openAlexandriaWorkspace();
     } catch (error) {
       console.error('Failed to open Alexandria Workspace window:', error);
     }
