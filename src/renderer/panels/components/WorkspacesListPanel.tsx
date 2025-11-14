@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Folder, Layers, Plus, Edit2, Check, X } from 'lucide-react';
+import { Folder, Layers, Plus, Edit2, Check, X, ExternalLink } from 'lucide-react';
 import type { Workspace } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { CreateWorkspaceModal } from '../../components/CreateWorkspaceModal';
+import { WindowEvent } from '../../../shared/ipc-events/WindowEvents';
 
 interface WorkspacesListPanelProps {
   selectedWorkspaceId?: string | null;
@@ -114,6 +115,14 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
     );
   }
 
+  const handleOpenWorkspaceManager = async () => {
+    try {
+      await window.electron.ipcRenderer.invoke(WindowEvent.OPEN_ALEXANDRIA_WORKSPACE);
+    } catch (error) {
+      console.error('Failed to open Alexandria Workspace window:', error);
+    }
+  };
+
   return (
     <div style={contentContainerStyle}>
       {/* Header with create button */}
@@ -136,25 +145,54 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
         >
           Workspaces
         </h3>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '28px',
-            height: '28px',
-            borderRadius: '6px',
-            border: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.primary,
-            color: 'white',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
-          }}
-          title="Create new workspace"
-        >
-          <Plus size={16} />
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={handleOpenWorkspaceManager}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.backgroundTertiary,
+              color: theme.colors.text,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title="Open Workspace Manager"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.borderColor = theme.colors.primary || theme.colors.border;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+              e.currentTarget.style.borderColor = theme.colors.border;
+            }}
+          >
+            <ExternalLink size={16} />
+          </button>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.primary,
+              color: 'white',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title="Create new workspace"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Scrollable content */}
