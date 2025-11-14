@@ -128,9 +128,14 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
       return [];
     }
 
+    // Sort repositories alphabetically by name
+    const sortedRepos = [...workspaceRepositories].sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+
     // Convert workspace repositories to RepositoryCacheData format
     // Create minimal cache data - LocalProjectCard will handle loading full data
-    return workspaceRepositories.map(entry => ({
+    return sortedRepos.map(entry => ({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       repository: entry as any, // EnhancedAlexandriaEntry type
       gitStatus: null,
