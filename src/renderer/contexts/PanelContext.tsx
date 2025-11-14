@@ -15,11 +15,15 @@ import type {
   WorkspaceMetadata,
   RepositoryMetadata,
   PanelEvent,
+  PanelEventEmitter,
 } from '@principal-ade/panel-framework-core';
 import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
+import { WorkspaceService } from '../main-process-api/WorkspaceService';
+import { WindowService } from '../main-process-api/WindowService';
+import type { AlexandriaEntry } from '@a24z/core-library';
 
-// Extend PanelActions with terminal-specific actions
+// Extend PanelActions with terminal and workspace-specific actions
 interface ExtendedPanelActions extends PanelActions {
   createTerminalSession?: (options?: { cwd?: string }) => Promise<string>;
   writeToTerminal?: (sessionId: string, data: string) => Promise<void>;
@@ -29,9 +33,49 @@ interface ExtendedPanelActions extends PanelActions {
     rows: number
   ) => Promise<void>;
   destroyTerminalSession?: (sessionId: string) => Promise<void>;
+  removeRepositoryFromWorkspace?: (
+    repositoryId: string,
+    workspaceId: string
+  ) => Promise<void>;
+  copyToClipboard?: (text: string) => Promise<void>;
 }
 
-const PanelContext = createContext<PanelContextValue | null>(null);
+// Extended context interface that panels actually expect
+// This includes both framework properties and direct data access
+interface ExtendedPanelContextValue extends PanelContextValue {
+  repositoryPath: string | null;
+  repository: RepositoryMetadata | null;
+  gitStatus: {
+    staged: string[];
+    unstaged: string[];
+    untracked: string[];
+    deleted: string[];
+  };
+  gitStatusLoading: boolean;
+  markdownFiles: Array<{ path: string; title?: string; lastModified: number }>;
+  fileTree: unknown | null;
+  packages: unknown[] | null;
+  quality: unknown | null;
+  terminalSessions?: Array<{
+    id: string;
+    pid: number;
+    cwd: string;
+    shell: string;
+    createdAt: number;
+    lastActivity: number;
+    repositoryPath?: string;
+  }>;
+  loading: boolean;
+}
+
+// Provider value that contains context, actions, and events separately
+interface PanelProviderValue {
+  context: ExtendedPanelContextValue;
+  actions: ExtendedPanelActions;
+  events: PanelEventEmitter;
+}
+
+const PanelContext = createContext<PanelProviderValue | null>(null);
 
 interface PanelProviderProps {
   children: ReactNode;
@@ -44,13 +88,40 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   children,
   workspace,
   repository,
-  theme,
+  theme: _theme,
 }) => {
   // Initialize event bus
   const events = useMemo(() => new PanelEventBus(), []);
 
   // Track active terminal sessions
   const [terminalSessions, setTerminalSessions] = useState<TerminalInfo[]>([]);
+
+  // Track workspace repositories
+  const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
+  const [repositoriesLoading, setRepositoriesLoading] = useState(false);
+
+  // Fetch workspace repositories
+  useEffect(() => {
+    const fetchRepositories = async () => {
+      if (!workspace?.id) {
+        setWorkspaceRepositories([]);
+        return;
+      }
+
+      setRepositoriesLoading(true);
+      try {
+        const repos = await WorkspaceService.getRepositoriesInWorkspace(workspace.id as string);
+        setWorkspaceRepositories(repos);
+      } catch (error) {
+        console.error('[PanelContext] Failed to fetch workspace repositories:', error);
+        setWorkspaceRepositories([]);
+      } finally {
+        setRepositoriesLoading(false);
+      }
+    };
+
+    fetchRepositories();
+  }, [workspace?.id]);
 
   // Wire up terminal events to panel event bus
   useEffect(() => {
@@ -93,8 +164,20 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     };
   }, [events]);
 
-  // Define data slices
-  const [slices] = useState<Map<string, DataSlice>>(
+  // Listen for repository:opened events and open repository window
+  useEffect(() => {
+    const unsubscribe = events.on('repository:opened', (event) => {
+      const { repository } = event.payload as { repositoryId: string; repository: AlexandriaEntry };
+      if (repository) {
+        WindowService.openRepositoryDashboard(repository);
+      }
+    });
+
+    return unsubscribe;
+  }, [events]);
+
+  // Define data slices (memoized to update with workspace repositories)
+  const slices = useMemo<Map<string, DataSlice>>(
     () =>
       new Map([
         [
@@ -116,7 +199,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           {
             scope: 'workspace' as const,
             name: 'workspace',
-            data: null,
+            data: workspace,
             loading: false,
             error: null,
             refresh: async () => {
@@ -126,20 +209,31 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
           },
         ],
         [
-          'repositories',
+          'workspaceRepositories',
           {
             scope: 'workspace' as const,
-            name: 'repositories',
-            data: null,
-            loading: false,
+            name: 'workspaceRepositories',
+            data: workspaceRepositories,
+            loading: repositoriesLoading,
             error: null,
             refresh: async () => {
-              // TODO: Implement repositories data fetching
-              console.info('[PanelContext] Refreshing repositories data...');
+              // Refetch repositories
+              if (workspace?.id) {
+                setRepositoriesLoading(true);
+                try {
+                  const repos = await WorkspaceService.getRepositoriesInWorkspace(workspace.id as string);
+                  setWorkspaceRepositories(repos);
+                } catch (error) {
+                  console.error('[PanelContext] Failed to refresh workspace repositories:', error);
+                } finally {
+                  setRepositoriesLoading(false);
+                }
+              }
             },
           },
         ],
-      ])
+      ]),
+    [workspace, workspaceRepositories, repositoriesLoading]
   );
 
   // Define panel actions
@@ -210,11 +304,50 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         await TerminalService.destroy(sessionId);
         setTerminalSessions((prev) => prev.filter((s) => s.id !== sessionId));
       },
+
+      // Workspace actions
+      removeRepositoryFromWorkspace: async (
+        repositoryId: string,
+        workspaceId: string
+      ) => {
+        console.info(
+          '[PanelContext] Removing repository from workspace:',
+          repositoryId,
+          workspaceId
+        );
+
+        try {
+          await WorkspaceService.removeRepositoryFromWorkspace(repositoryId, workspaceId);
+
+          // Refresh the repositories list
+          if (workspace?.id === workspaceId) {
+            const repos = await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
+            setWorkspaceRepositories(repos);
+          }
+
+          // Emit event
+          events.emit({
+            type: 'workspace:membership-changed',
+            source: 'alexandria-workspace',
+            timestamp: Date.now(),
+            payload: { repositoryId, workspaceId, action: 'removed' },
+          });
+        } catch (error) {
+          console.error('[PanelContext] Failed to remove repository from workspace:', error);
+          throw error;
+        }
+      },
+
+      copyToClipboard: async (text: string) => {
+        console.info('[PanelContext] Copying to clipboard');
+        await navigator.clipboard.writeText(text);
+      },
     }),
     [events, repository, workspace]
   );
 
-  const contextValue: PanelContextValue = useMemo(
+  // Create the extended context value with both framework and panel-specific properties
+  const context: ExtendedPanelContextValue = useMemo(
     () => ({
       currentScope: {
         type: repository ? ('repository' as const) : ('workspace' as const),
@@ -253,30 +386,57 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
         await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
       },
+      // Panel-specific properties
+      repositoryPath: repository?.path || null,
+      repository: repository || null,
+      gitStatus: {
+        staged: [],
+        unstaged: [],
+        untracked: [],
+        deleted: [],
+      },
+      gitStatusLoading: false,
+      markdownFiles: [],
+      fileTree: null,
+      packages: null,
+      quality: null,
+      terminalSessions: terminalSessions.map((session) => ({
+        id: session.id,
+        pid: 0, // TerminalInfo doesn't include pid
+        cwd: session.directory || '',
+        shell: '', // TerminalInfo doesn't include shell
+        createdAt: session.createdAt || Date.now(),
+        lastActivity: session.lastActivity || Date.now(),
+        repositoryPath: undefined, // TerminalInfo doesn't include repositoryPath
+      })),
+      loading: false,
+    }),
+    [workspace, repository, slices, terminalSessions]
+  );
+
+  // Combine context, actions, and events into provider value
+  const value: PanelProviderValue = useMemo(
+    () => ({
+      context,
       actions,
       events,
-      workspace,
-      repository,
-      repositoryPath: repository?.path,
-      theme,
-      terminalSessions,
     }),
-    [workspace, repository, actions, events, slices, theme, terminalSessions]
+    [context, actions, events]
   );
 
   return (
-    <PanelContext.Provider value={contextValue}>
+    <PanelContext.Provider value={value}>
       {children}
     </PanelContext.Provider>
   );
 };
 
-export const usePanelProvider = (): PanelContextValue => {
-  const context = useContext(PanelContext);
-  if (!context) {
+export const usePanelProvider = (): PanelProviderValue => {
+  const value = useContext(PanelContext);
+  if (!value) {
     throw new Error('usePanelProvider must be used within a PanelProvider');
   }
-  return context;
+  return value;
 };
 
 export default PanelContext;

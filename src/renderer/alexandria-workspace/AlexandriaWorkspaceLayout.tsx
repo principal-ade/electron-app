@@ -5,6 +5,7 @@ import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/pan
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
 import { panels as terminalPanels } from '@principal-ade/industry-themed-terminal-panel';
 import '@principal-ade/industry-themed-terminal-panel/dist/panels.bundle.css';
+import { panels as workspacePanels } from '@a24z/alexandria-workspace-panel';
 
 type PanelDefinition = {
   id: string;
@@ -26,7 +27,7 @@ interface AlexandriaWorkspaceLayoutProps {
  */
 const AlexandriaWorkspaceLayoutContent: React.FC = () => {
   const { theme } = useTheme();
-  const context = usePanelProvider();
+  const { context, actions, events } = usePanelProvider();
 
   // Panel layout configuration (left/middle/right)
   const [layout, setLayout] = useState<PanelLayout>({
@@ -37,8 +38,9 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
 
   const [isEditMode, _setIsEditMode] = useState(false);
 
-  // Get the terminal panel component
+  // Get panel components
   const TerminalPanelComponent = terminalPanels[0]?.component;
+  const WorkspacePanelComponent = workspacePanels[0]?.component;
 
   // Define panels
   const panels: PanelDefinition[] = useMemo(
@@ -46,7 +48,23 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
       {
         id: 'workspace-repos',
         label: 'Repositories',
-        content: (
+        content: WorkspacePanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            <WorkspacePanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
           <div
             style={{
               padding: '16px',
@@ -54,19 +72,13 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
               color: theme.colors.text,
               height: '100%',
               overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <h3
-              style={{
-                marginBottom: '12px',
-                fontSize: `${theme.fontSizes[3]}px`,
-                fontWeight: theme.fontWeights.semibold,
-              }}
-            >
-              Workspace Repositories
-            </h3>
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
-              Repository list panel will go here
+              Workspace panel not available
             </p>
           </div>
         ),
@@ -86,8 +98,8 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
           >
             <TerminalPanelComponent
               context={context}
-              actions={context.actions}
-              events={context.events}
+              actions={actions}
+              events={events}
             />
           </div>
         ) : (
@@ -138,7 +150,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
         ),
       },
     ],
-    [theme, context, TerminalPanelComponent]
+    [theme, context, actions, events, TerminalPanelComponent, WorkspacePanelComponent]
   );
 
   return (
@@ -179,6 +191,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
   return (
     <PanelProvider
       workspace={{
+        id: workspace.id,
         name: workspace.name,
         path: workspace.suggestedClonePath || '/workspace',
       }}

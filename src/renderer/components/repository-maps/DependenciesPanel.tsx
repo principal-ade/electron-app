@@ -90,6 +90,7 @@ export const DependenciesPanel: React.FC<DependenciesPanelProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState({ current: 0, total: 0, phase: '' });
   const [dependencyItems, setDependencyItems] = useState<DependencyItem[]>([]);
+  const [isAnalyzed, setIsAnalyzed] = useState(false); // Track if analysis has been run
   const [filterType, setFilterType] = useState<
     'all' | 'production' | 'development' | 'peer'
   >('all');
@@ -124,6 +125,59 @@ export const DependenciesPanel: React.FC<DependenciesPanelProps> = ({
       }
     }
   }, [packageLayers, selectedPackage, onPackageSelected]);
+
+  // Load basic dependencies immediately when package is selected
+  React.useEffect(() => {
+    if (!selectedPackageData || selectedPackage === '__placeholder__') {
+      setDependencyItems([]);
+      return;
+    }
+
+    // Extract basic dependency info from package.json
+    const { dependencies, devDependencies, peerDependencies } =
+      selectedPackageData.packageData;
+
+    const basicDeps: DependencyItem[] = [];
+
+    if (dependencies) {
+      Object.entries(dependencies).forEach(([name, version]) => {
+        basicDeps.push({
+          name,
+          currentVersion: version,
+          isOutdated: false, // Will be determined by analysis
+          dependencyType: 'production',
+        });
+      });
+    }
+
+    if (devDependencies) {
+      Object.entries(devDependencies).forEach(([name, version]) => {
+        basicDeps.push({
+          name,
+          currentVersion: version,
+          isOutdated: false,
+          dependencyType: 'development',
+        });
+      });
+    }
+
+    if (peerDependencies) {
+      Object.entries(peerDependencies).forEach(([name, version]) => {
+        basicDeps.push({
+          name,
+          currentVersion: version,
+          isOutdated: false,
+          dependencyType: 'peer',
+        });
+      });
+    }
+
+    // Sort by name
+    basicDeps.sort((a, b) => a.name.localeCompare(b.name));
+
+    setDependencyItems(basicDeps);
+    setIsAnalyzed(false);
+  }, [selectedPackageData, selectedPackage]);
 
   // Get selected package data
   const selectedPackageData = useMemo(() => {
@@ -561,6 +615,7 @@ Please check for breaking changes and compatibility issues before updating.`;
       });
 
       setDependencyItems(items);
+      setIsAnalyzed(true); // Mark as analyzed
 
       // Prepare results
       const results: DependencyAnalysisResults = {
@@ -717,85 +772,91 @@ Please check for breaking changes and compatibility issues before updating.`;
       </div>
 
       {/* Package Selection or Summary */}
-      {!analysisResults ? (
-        // Only show selector if more than one package
-        packageLayers && packageLayers.length > 1 ? (
-          <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '12px',
-                fontWeight: 500,
-                color: theme.colors.textSecondary,
-                marginBottom: '6px',
-              }}
-            >
-              Select Package
-            </label>
-            <select
-              value={selectedPackage}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                const prevValue = selectedPackage;
+      {packageLayers && packageLayers.length > 1 && !isAnalyzed ? (
+        // Only show selector if more than one package and not analyzed
+        <div>
+          <label
+            style={{
+              display: 'block',
+              fontSize: '12px',
+              fontWeight: 500,
+              color: theme.colors.textSecondary,
+              marginBottom: '6px',
+            }}
+          >
+            Select Package
+          </label>
+          <select
+            value={selectedPackage}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              const prevValue = selectedPackage;
 
-                setSelectedPackage(newValue);
-                setAnalysisResults(null);
-                setDependencyItems([]);
-                setError(null);
-                setAnalysisStatus('');
+              setSelectedPackage(newValue);
+              setAnalysisResults(null);
+              setIsAnalyzed(false);
+              setError(null);
+              setAnalysisStatus('');
 
-                // Handle package selection/deselection callbacks
-                if (prevValue !== undefined && prevValue !== newValue) {
-                  // Deselect previous package
-                  onPackageDeselected?.();
-                }
-
-                if (newValue !== '__placeholder__' && newValue !== prevValue) {
-                  // Select new package (newValue can be empty string for root package)
-                  const selectedPackageData = packageLayers?.find(
-                    (pkg) => pkg.packageData.path === newValue,
-                  );
-                  if (selectedPackageData) {
-                    onPackageSelected?.(
-                      selectedPackageData.packageData.path,
-                      selectedPackageData.packageData.name,
-                    );
-                  }
-                } else if (newValue === '__placeholder__') {
-                  // This is the placeholder "Choose a package..." option
-                  onPackageDeselected?.();
-                }
-              }}
-              disabled={
-                isAnalyzing || !packageLayers || packageLayers.length === 0
+              // Handle package selection/deselection callbacks
+              if (prevValue !== undefined && prevValue !== newValue) {
+                // Deselect previous package
+                onPackageDeselected?.();
               }
-              style={{
-                width: '100%',
-                padding: '8px',
-                borderRadius: '6px',
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.backgroundSecondary,
-                color: theme.colors.text,
-                fontSize: '13px',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="__placeholder__">Choose a package...</option>
-              {packageLayers?.map((pkg) => (
-                <option key={pkg.packageData.path} value={pkg.packageData.path}>
-                  {pkg.packageData.name} ({pkg.packageData.path || 'root'})
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : packageLayers && packageLayers.length === 1 ? (
-          // Single package - show info without selector
+
+              if (newValue !== '__placeholder__' && newValue !== prevValue) {
+                // Select new package (newValue can be empty string for root package)
+                const selectedPackageData = packageLayers?.find(
+                  (pkg) => pkg.packageData.path === newValue,
+                );
+                if (selectedPackageData) {
+                  onPackageSelected?.(
+                    selectedPackageData.packageData.path,
+                    selectedPackageData.packageData.name,
+                  );
+                }
+              } else if (newValue === '__placeholder__') {
+                // This is the placeholder "Choose a package..." option
+                onPackageDeselected?.();
+              }
+            }}
+            disabled={
+              isAnalyzing || !packageLayers || packageLayers.length === 0
+            }
+            style={{
+              width: '100%',
+              padding: '8px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.backgroundSecondary,
+              color: theme.colors.text,
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="__placeholder__">Choose a package...</option>
+            {packageLayers?.map((pkg) => (
+              <option key={pkg.packageData.path} value={pkg.packageData.path}>
+                {pkg.packageData.name} ({pkg.packageData.path || 'root'})
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : selectedPackageData && dependencyItems.length > 0 && !isAnalyzed ? (
+        // Show package info card when dependencies are loaded but not analyzed
+        <div
+          style={{
+            padding: '12px',
+            borderRadius: '8px',
+            backgroundColor: theme.colors.backgroundSecondary,
+            border: `1px solid ${theme.colors.border}`,
+          }}
+        >
           <div
             style={{
-              padding: '12px',
-              borderRadius: '8px',
-              backgroundColor: theme.colors.backgroundSecondary,
-              border: `1px solid ${theme.colors.border}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
             }}
           >
             <div
@@ -815,7 +876,7 @@ Please check for breaking changes and compatibility issues before updating.`;
                     margin: 0,
                   }}
                 >
-                  {packageLayers[0].packageData.name}
+                  {selectedPackageData.packageData.name}
                 </h4>
                 <p
                   style={{
@@ -825,13 +886,40 @@ Please check for breaking changes and compatibility issues before updating.`;
                     marginTop: '2px',
                   }}
                 >
-                  {packageLayers[0].packageData.path}
+                  {selectedPackageData.packageData.path || 'root'} •{' '}
+                  {dependencyItems.length} dependencies
                 </p>
               </div>
             </div>
+            {/* Only show Change Package button if multiple packages */}
+            {packageLayers && packageLayers.length > 1 && (
+              <button
+                onClick={() => {
+                  setSelectedPackage('__placeholder__');
+                  setAnalysisResults(null);
+                  setIsAnalyzed(false);
+                  setDependencyItems([]);
+                  setSmartFilter('none');
+                  setSelectedDependencies(new Set());
+                  onPackageDeselected?.();
+                }}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  borderRadius: '4px',
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                }}
+              >
+                Change Package
+              </button>
+            )}
           </div>
-        ) : null
-      ) : (
+        </div>
+      ) : isAnalyzed && analysisResults ? (
         <div
           style={{
             padding: '12px',
@@ -885,11 +973,14 @@ Please check for breaking changes and compatibility issues before updating.`;
             {packageLayers && packageLayers.length > 1 && (
               <button
                 onClick={() => {
+                  setSelectedPackage('__placeholder__');
                   setAnalysisResults(null);
+                  setIsAnalyzed(false);
                   setDependencyItems([]);
                   setSmartFilter('none');
                   setSelectedDependencies(new Set());
                   onPackageAnalysisEnd?.(); // Clear highlight when changing package
+                  onPackageDeselected?.();
                 }}
                 style={{
                   padding: '4px 8px',
@@ -1077,43 +1168,26 @@ Please check for breaking changes and compatibility issues before updating.`;
             })()}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {/* Analyze Button - Only show when no results */}
-      {!analysisResults && (
+      {/* Analyze Button - Show when dependencies are loaded but not analyzed */}
+      {dependencyItems.length > 0 && !isAnalyzed && (
         <div>
           <button
             onClick={handleAnalyze}
-            disabled={
-              selectedPackage === '__placeholder__' ||
-              selectedPackage === undefined ||
-              isAnalyzing
-            }
+            disabled={isAnalyzing}
             style={{
               width: '100%',
               padding: '10px',
               borderRadius: '6px',
               border: 'none',
-              backgroundColor:
-                selectedPackage === '__placeholder__' ||
-                selectedPackage === undefined ||
-                isAnalyzing
-                  ? theme.colors.backgroundLight
-                  : theme.colors.primary,
-              color:
-                selectedPackage === '__placeholder__' ||
-                selectedPackage === undefined ||
-                isAnalyzing
-                  ? theme.colors.textSecondary
-                  : '#fff',
+              backgroundColor: isAnalyzing
+                ? theme.colors.backgroundLight
+                : theme.colors.primary,
+              color: isAnalyzing ? theme.colors.textSecondary : '#fff',
               fontSize: '13px',
               fontWeight: 500,
-              cursor:
-                selectedPackage === '__placeholder__' ||
-                selectedPackage === undefined ||
-                isAnalyzing
-                  ? 'not-allowed'
-                  : 'pointer',
+              cursor: isAnalyzing ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -1127,7 +1201,10 @@ Please check for breaking changes and compatibility issues before updating.`;
                 Analyzing...
               </>
             ) : (
-              'Analyze Dependencies'
+              <>
+                <Zap size={14} />
+                Analyze for Updates & Vulnerabilities
+              </>
             )}
           </button>
 
@@ -1210,8 +1287,8 @@ Please check for breaking changes and compatibility issues before updating.`;
               gap: '12px',
             }}
           >
-            {/* Smart Filters - Only show when no summary view */}
-            {!analysisResults && (
+            {/* Smart Filters - Only show when analyzed */}
+            {isAnalyzed && (
               <div
                 style={{
                   display: 'flex',
@@ -1603,62 +1680,66 @@ Please check for breaking changes and compatibility issues before updating.`;
                 )}
               </div>
 
-              {/* Outdated Filter */}
-              <button
-                onClick={() => setShowOutdatedOnly(!showOutdatedOnly)}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  borderRadius: '4px',
-                  border: `1px solid ${showOutdatedOnly ? theme.colors.warning : theme.colors.border}`,
-                  backgroundColor: showOutdatedOnly
-                    ? `${theme.colors.warning}20`
-                    : theme.colors.backgroundSecondary,
-                  color: showOutdatedOnly
-                    ? theme.colors.warning
-                    : theme.colors.text,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <Filter size={10} />
-                Outdated Only (
-                {dependencyItems.filter((d) => d.isOutdated).length})
-              </button>
+              {/* Outdated Filter - Only show when analyzed */}
+              {isAnalyzed && (
+                <button
+                  onClick={() => setShowOutdatedOnly(!showOutdatedOnly)}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    borderRadius: '4px',
+                    border: `1px solid ${showOutdatedOnly ? theme.colors.warning : theme.colors.border}`,
+                    backgroundColor: showOutdatedOnly
+                      ? `${theme.colors.warning}20`
+                      : theme.colors.backgroundSecondary,
+                    color: showOutdatedOnly
+                      ? theme.colors.warning
+                      : theme.colors.text,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <Filter size={10} />
+                  Outdated Only (
+                  {dependencyItems.filter((d) => d.isOutdated).length})
+                </button>
+              )}
 
-              {/* Vulnerable Filter */}
-              <button
-                onClick={() => setShowVulnerableOnly(!showVulnerableOnly)}
-                style={{
-                  padding: '4px 8px',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  borderRadius: '4px',
-                  border: `1px solid ${showVulnerableOnly ? theme.colors.error : theme.colors.border}`,
-                  backgroundColor: showVulnerableOnly
-                    ? `${theme.colors.error}20`
-                    : theme.colors.backgroundSecondary,
-                  color: showVulnerableOnly
-                    ? theme.colors.error
-                    : theme.colors.text,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <AlertTriangle size={10} />
-                Vulnerable (
-                {
-                  dependencyItems.filter(
-                    (d) => d.vulnerabilities && d.vulnerabilities.length > 0,
-                  ).length
-                }
-                )
-              </button>
+              {/* Vulnerable Filter - Only show when analyzed */}
+              {isAnalyzed && (
+                <button
+                  onClick={() => setShowVulnerableOnly(!showVulnerableOnly)}
+                  style={{
+                    padding: '4px 8px',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    borderRadius: '4px',
+                    border: `1px solid ${showVulnerableOnly ? theme.colors.error : theme.colors.border}`,
+                    backgroundColor: showVulnerableOnly
+                      ? `${theme.colors.error}20`
+                      : theme.colors.backgroundSecondary,
+                    color: showVulnerableOnly
+                      ? theme.colors.error
+                      : theme.colors.text,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <AlertTriangle size={10} />
+                  Vulnerable (
+                  {
+                    dependencyItems.filter(
+                      (d) => d.vulnerabilities && d.vulnerabilities.length > 0,
+                    ).length
+                  }
+                  )
+                </button>
+              )}
 
               {/* Results Count */}
               <div
@@ -1673,8 +1754,8 @@ Please check for breaking changes and compatibility issues before updating.`;
               </div>
             </div>
 
-            {/* Selection Actions Bar */}
-            {selectedDependencies.size > 0 && (
+            {/* Selection Actions Bar - Only show when analyzed */}
+            {isAnalyzed && selectedDependencies.size > 0 && (
               <div
                 style={{
                   display: 'flex',
@@ -1740,8 +1821,9 @@ Please check for breaking changes and compatibility issues before updating.`;
               </div>
             )}
 
-            {/* Quick Actions for Outdated Dependencies */}
-            {filteredDependencies.filter((d) => d.isOutdated).length > 0 &&
+            {/* Quick Actions for Outdated Dependencies - Only show when analyzed */}
+            {isAnalyzed &&
+              filteredDependencies.filter((d) => d.isOutdated).length > 0 &&
               selectedDependencies.size === 0 && (
                 <div
                   style={{
@@ -1812,6 +1894,7 @@ Please check for breaking changes and compatibility issues before updating.`;
             {filteredDependencies.map((dep) => {
               const depKey = `${dep.name}-${dep.dependencyType}`;
               const isSelected = selectedDependencies.has(depKey);
+              const isClickable = isAnalyzed && dep.isOutdated;
 
               return (
                 <div
@@ -1828,22 +1911,22 @@ Please check for breaking changes and compatibility issues before updating.`;
                     fontSize: '12px',
                     border: `1px solid ${isSelected ? theme.colors.primary : theme.colors.border}`,
                     transition: 'all 0.2s',
-                    cursor: dep.isOutdated ? 'pointer' : 'default',
+                    cursor: isClickable ? 'pointer' : 'default',
                   }}
                   onClick={() => {
-                    if (dep.isOutdated) {
+                    if (isClickable) {
                       toggleDependencySelection(depKey);
                     }
                   }}
                   onMouseEnter={(e) => {
-                    if (!isSelected) {
+                    if (!isSelected && isClickable) {
                       e.currentTarget.style.backgroundColor =
                         theme.colors.backgroundLight;
                       e.currentTarget.style.borderColor = theme.colors.primary;
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (!isSelected) {
+                    if (!isSelected && isClickable) {
                       e.currentTarget.style.backgroundColor =
                         theme.colors.background;
                       e.currentTarget.style.borderColor = theme.colors.border;
@@ -1860,7 +1943,7 @@ Please check for breaking changes and compatibility issues before updating.`;
                       minWidth: 0,
                     }}
                   >
-                    {dep.isOutdated && (
+                    {isAnalyzed && dep.isOutdated && (
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1893,7 +1976,11 @@ Please check for breaking changes and compatibility issues before updating.`;
                     <span
                       style={{
                         fontWeight: 500,
-                        color: dep.isOutdated ? theme.colors.text : '#10b981',
+                        color: isAnalyzed
+                          ? dep.isOutdated
+                            ? theme.colors.text
+                            : '#10b981'
+                          : theme.colors.text,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
