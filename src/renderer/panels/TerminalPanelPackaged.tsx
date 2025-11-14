@@ -104,6 +104,7 @@ const TerminalPanelPackaged = forwardRef<
       canTakeControl: true,
     });
     const [shouldRenderTerminal, setShouldRenderTerminal] = useState(true);
+    const [isTransitioning, setIsTransitioning] = useState(false);
 
     // Expose scrollToBottom, focus, and getTerminal methods via ref
     useImperativeHandle(
@@ -200,6 +201,9 @@ const TerminalPanelPackaged = forwardRef<
             ownershipStatus.ownedByWindowId &&
             !ownershipStatus.ownedByThisWindow
           ) {
+            console.log(
+              `[TerminalPanelPackaged] Terminal owned by window ${ownershipStatus.ownedByWindowId}, showing overlay`,
+            );
             setOwnershipStatus({
               isOwned: true,
               ownedByWindowId: ownershipStatus.ownedByWindowId,
@@ -208,7 +212,13 @@ const TerminalPanelPackaged = forwardRef<
             setShouldRenderTerminal(false);
           } else {
             // Claim ownership
+            console.log(
+              `[TerminalPanelPackaged] Claiming ownership of session ${newSessionId}`,
+            );
             await TerminalService.claimOwnership(newSessionId);
+            console.log(
+              `[TerminalPanelPackaged] Successfully claimed ownership`,
+            );
             setShouldRenderTerminal(true);
           }
         } catch (error) {
@@ -236,11 +246,20 @@ const TerminalPanelPackaged = forwardRef<
     useEffect(() => {
       if (!sessionId) return;
 
+      console.log(
+        `[TerminalPanelPackaged] Setting up ownership lost listener for session ${sessionId}`,
+      );
+
       const unsubscribe = TerminalService.onOwnershipLost((data) => {
+        console.log(
+          `[TerminalPanelPackaged] Received ownership lost event:`,
+          data,
+        );
         if (data.sessionId === sessionId) {
           console.log(
             `[TerminalPanelPackaged] Ownership lost for session ${sessionId}, new owner: ${data.newOwnerWindowId}`,
           );
+          console.log('[TerminalPanelPackaged] Setting shouldRenderTerminal to false to show overlay');
           setOwnershipStatus({
             isOwned: true,
             ownedByWindowId: data.newOwnerWindowId,
@@ -251,11 +270,15 @@ const TerminalPanelPackaged = forwardRef<
       });
 
       return () => {
+        console.log(
+          `[TerminalPanelPackaged] Cleaning up ownership lost listener for session ${sessionId}`,
+        );
         unsubscribe();
       };
     }, [sessionId]);
 
     // Listen for terminal data from backend
+    // Only subscribe when we own the terminal (shouldRenderTerminal is true)
     useEffect(() => {
       if (!sessionId || !shouldRenderTerminal) return;
 
@@ -448,17 +471,45 @@ const TerminalPanelPackaged = forwardRef<
       if (!sessionId) return;
 
       try {
-        await TerminalService.claimOwnership(sessionId);
+        console.log('[TerminalPanelPackaged] Taking control with force=true');
+        setIsTransitioning(true); // Show overlay during transition
+
+        await TerminalService.claimOwnership(sessionId, true); // force=true to take from other window
         setOwnershipStatus({
           isOwned: false,
           ownedByWindowId: null,
           canTakeControl: true,
         });
-        // Setting shouldRenderTerminal to true will trigger the refresh useEffect
-        // which will properly load the buffer contents
         setShouldRenderTerminal(true);
+
+        // Trigger a resize to force the terminal to redraw and show the buffer
+        // Change dimensions slightly then back to force a full redraw
+        setTimeout(() => {
+          if (terminalRef.current) {
+            const terminal = terminalRef.current.getTerminal();
+            if (terminal) {
+              const currentCols = terminal.cols;
+              const currentRows = terminal.rows;
+              // Resize to different dimensions to trigger redraw
+              terminal.resize(currentCols - 1, currentRows);
+              // Resize back to original dimensions
+              setTimeout(() => {
+                terminal.resize(currentCols, currentRows);
+                // Hide overlay after resize completes
+                setTimeout(() => {
+                  setIsTransitioning(false);
+                }, 50);
+              }, 50);
+            } else {
+              setIsTransitioning(false);
+            }
+          } else {
+            setIsTransitioning(false);
+          }
+        }, 100);
       } catch (error) {
         console.error('[TerminalPanelPackaged] Failed to take control:', error);
+        setIsTransitioning(false);
       }
     }, [sessionId]);
 
@@ -494,8 +545,45 @@ const TerminalPanelPackaged = forwardRef<
               primary: false,
             },
           ],
+          opacity: 1.0, // Full opacity
         }
-      : undefined;
+      : isTransitioning
+        ? {
+            message: 'Loading terminal...',
+            subtitle: 'Please wait',
+            actions: [],
+            opacity: 1.0, // Full opacity
+          }
+        : undefined;
+
+    // Debug logging for overlay state
+    useEffect(() => {
+      console.log('[TerminalPanelPackaged] shouldRenderTerminal:', shouldRenderTerminal);
+      console.log('[TerminalPanelPackaged] overlayState:', overlayState ? 'SHOWING OVERLAY' : 'NO OVERLAY');
+    }, [shouldRenderTerminal, overlayState]);
+
+    if (!shouldRenderTerminal && overlayState) {
+      // Show overlay without mounting the terminal
+      return (
+        <div className={className} style={{ height: '100%', width: '100%' }}>
+          <ThemedTerminalWithProvider
+            ref={terminalRef}
+            onData={handleData}
+            onResize={handleResize}
+            onLinkClick={handleLinkClick}
+            headerTitle={headerTitle}
+            headerSubtitle={headerSubtitle}
+            headerBadge={headerBadge}
+            hideHeader={hideHeader}
+            autoFocus={false}
+            isVisible={isVisible}
+            onClose={onClose}
+            onDestroy={handleDestroyClick}
+            overlayState={overlayState}
+          />
+        </div>
+      );
+    }
 
     return (
       <div className={className} style={{ height: '100%', width: '100%' }}>

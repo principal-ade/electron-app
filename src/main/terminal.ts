@@ -761,13 +761,22 @@ class TerminalManager {
       async (event, sessionId: string, force: boolean = false) => {
         const session = this.sessions.get(sessionId);
         if (!session) {
+          console.log(`[Terminal] Cannot claim ownership: session ${sessionId} not found`);
           return { success: false, reason: 'Session not found' };
         }
 
         const senderWindowId = BrowserWindow.fromWebContents(event.sender)?.id;
         if (!senderWindowId) {
+          console.log(`[Terminal] Cannot claim ownership: could not determine sender window ID`);
           return { success: false, reason: 'Could not determine window ID' };
         }
+
+        console.log(
+          `[Terminal] Window ${senderWindowId} attempting to claim ownership of session ${sessionId}`,
+        );
+        console.log(
+          `[Terminal] Current owner: ${session.ownedByWindowId || 'none'}`,
+        );
 
         // Check if already owned by another window
         if (
@@ -776,6 +785,10 @@ class TerminalManager {
         ) {
           const ownerWindow = BrowserWindow.fromId(session.ownedByWindowId);
           const ownerExists = ownerWindow && !ownerWindow.isDestroyed();
+
+          console.log(
+            `[Terminal] Session owned by window ${session.ownedByWindowId}, ownerExists: ${ownerExists}, force: ${force}`,
+          );
 
           if (ownerExists && !force) {
             return {
@@ -787,6 +800,9 @@ class TerminalManager {
 
           // If owner window doesn't exist or force=true, notify old owner (if it exists)
           if (ownerExists) {
+            console.log(
+              `[Terminal] Notifying window ${session.ownedByWindowId} that it lost ownership to window ${senderWindowId}`,
+            );
             ownerWindow.webContents.send(TerminalAPIEvents.OWNERSHIP_LOST, {
               sessionId,
               newOwnerWindowId: senderWindowId,
@@ -799,7 +815,7 @@ class TerminalManager {
         session.ownershipClaimedAt = Date.now();
 
         console.log(
-          `[Terminal] Window ${senderWindowId} claimed ownership of session ${sessionId}`,
+          `[Terminal] Window ${senderWindowId} successfully claimed ownership of session ${sessionId}`,
         );
 
         return { success: true };

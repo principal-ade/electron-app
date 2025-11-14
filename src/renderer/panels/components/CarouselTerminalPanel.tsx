@@ -21,6 +21,7 @@ import TerminalPanelPackaged, {
   TerminalPanelPackagedRef,
 } from '../TerminalPanelPackaged';
 import { TerminalService } from '../../main-process-api/TerminalService';
+import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { TerminalDebugModal } from './TerminalDebugModal';
 
 export interface TerminalTab {
@@ -125,6 +126,8 @@ export const CarouselTerminalPanel = forwardRef<
     );
     const [showDebugModal, setShowDebugModal] = useState(false);
     const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
+    const [showDebugButton, setShowDebugButton] = useState(false);
+    const [showShowAllButton, setShowShowAllButton] = useState(true);
 
     // Store refs to terminal panels for each tab
     const terminalRefs = useRef<Map<string, TerminalPanelPackagedRef>>(
@@ -165,6 +168,38 @@ export const CarouselTerminalPanel = forwardRef<
       () => `terminal:${repositoryKey}`,
       [repositoryKey],
     );
+
+    // Load button visibility preferences
+    useEffect(() => {
+      UserPreferencesService.getPreferences().then((prefs) => {
+        setShowDebugButton(prefs.showTerminalDebugButton ?? false);
+        setShowShowAllButton(prefs.showTerminalShowAllButton ?? true);
+      });
+
+      const handlePreferencesUpdated = (event: Event) => {
+        const detail = (event as CustomEvent).detail;
+        if (detail) {
+          if ('showTerminalDebugButton' in detail) {
+            setShowDebugButton(detail.showTerminalDebugButton ?? false);
+          }
+          if ('showTerminalShowAllButton' in detail) {
+            setShowShowAllButton(detail.showTerminalShowAllButton ?? true);
+          }
+        }
+      };
+
+      window.addEventListener(
+        'user-preferences-updated',
+        handlePreferencesUpdated as EventListener,
+      );
+
+      return () => {
+        window.removeEventListener(
+          'user-preferences-updated',
+          handlePreferencesUpdated as EventListener,
+        );
+      };
+    }, []);
 
     // Stable callback for restoring sessions - prevents duplicate session restoration
     const restoreSessions = useCallback(async () => {
@@ -934,43 +969,45 @@ export const CarouselTerminalPanel = forwardRef<
               )}
 
               {/* Show all terminals toggle */}
-              <button
-                onClick={() => onShowAllTerminalsChange?.(!showAllTerminals)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '32px',
-                  height: '32px',
-                  border: 'none',
-                  backgroundColor: showAllTerminals
-                    ? theme.colors.primary
-                    : 'transparent',
-                  cursor: 'pointer',
-                  color: showAllTerminals ? '#fff' : theme.colors.textSecondary,
-                  borderRadius: '4px',
-                }}
-                onMouseEnter={(e) => {
-                  if (!showAllTerminals) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!showAllTerminals) {
-                    e.currentTarget.style.backgroundColor = showAllTerminals
+              {showShowAllButton && (
+                <button
+                  onClick={() => onShowAllTerminalsChange?.(!showAllTerminals)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '32px',
+                    height: '32px',
+                    border: 'none',
+                    backgroundColor: showAllTerminals
                       ? theme.colors.primary
-                      : 'transparent';
+                      : 'transparent',
+                    cursor: 'pointer',
+                    color: showAllTerminals ? '#fff' : theme.colors.textSecondary,
+                    borderRadius: '4px',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!showAllTerminals) {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundTertiary;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!showAllTerminals) {
+                      e.currentTarget.style.backgroundColor = showAllTerminals
+                        ? theme.colors.primary
+                        : 'transparent';
+                    }
+                  }}
+                  title={
+                    showAllTerminals
+                      ? 'Show current repo terminals only'
+                      : 'Show all terminals'
                   }
-                }}
-                title={
-                  showAllTerminals
-                    ? 'Show current repo terminals only'
-                    : 'Show all terminals'
-                }
-              >
-                <Monitor size={14} />
-              </button>
+                >
+                  <Monitor size={14} />
+                </button>
+              )}
 
               {/* Add new terminal button */}
               <button
@@ -1000,31 +1037,33 @@ export const CarouselTerminalPanel = forwardRef<
               </button>
 
               {/* Debug button */}
-              <button
-                onClick={() => setShowDebugModal(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '32px',
-                  height: '32px',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  cursor: 'pointer',
-                  color: theme.colors.warning,
-                  borderRadius: '4px',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor =
-                    theme.colors.backgroundTertiary;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-                title="Debug terminal sessions"
-              >
-                <Bug size={16} />
-              </button>
+              {showDebugButton && (
+                <button
+                  onClick={() => setShowDebugModal(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '32px',
+                    height: '32px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    cursor: 'pointer',
+                    color: theme.colors.warning,
+                    borderRadius: '4px',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundTertiary;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  title="Debug terminal sessions"
+                >
+                  <Bug size={16} />
+                </button>
+              )}
             </div>
           </div>
         )}
