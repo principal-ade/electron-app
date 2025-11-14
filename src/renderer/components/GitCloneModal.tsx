@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Github,
@@ -180,6 +180,11 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
       });
     }
   }, [isOpen]);
+
+  // Sort workspaces alphabetically by name
+  const sortedWorkspaces = useMemo(() => {
+    return [...workspaces].sort((a, b) => a.name.localeCompare(b.name));
+  }, [workspaces]);
 
   // Normalize git URL (handle browser URLs, add .git if needed)
   const normalizeGitUrl = (url: string): string => {
@@ -827,7 +832,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                   Clone Location
                 </h3>
 
-                {workspaces.length > 0 && (
+                {sortedWorkspaces.length > 0 && (
                   <div className="mb-2">
                     <label
                       className="block text-sm mb-2"
@@ -842,7 +847,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                           if (e.target.value === 'none') {
                             setSelectedWorkspace(null);
                           } else {
-                            const workspace = workspaces.find((w) => w.id === e.target.value);
+                            const workspace = sortedWorkspaces.find((w) => w.id === e.target.value);
                             setSelectedWorkspace(workspace || null);
                           }
                         }}
@@ -859,7 +864,7 @@ export const GitCloneModal: React.FC<GitCloneModalProps> = ({
                         }}
                       >
                         <option value="none">None / Custom Location</option>
-                        {workspaces.map((workspace) => (
+                        {sortedWorkspaces.map((workspace) => (
                           <option key={workspace.id} value={workspace.id}>
                             {workspace.name}
                             {defaultWorkspace?.id === workspace.id ? ' (Default)' : ''}
