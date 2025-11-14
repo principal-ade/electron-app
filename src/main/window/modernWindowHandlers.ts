@@ -570,7 +570,7 @@ export function registerModernWindowHandlers(): void {
 
       // Register window with terminal manager to receive terminal events
       const { terminalManager } = await import('../terminal');
-      terminalManager?.registerWindow(window.window);
+      terminalManager?.setMainWindow(window.window);
       console.log(
         `[modernWindowHandlers] Registered Alexandria Workspace window ${window.window.id} with terminal manager`,
       );
