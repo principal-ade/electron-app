@@ -44,10 +44,7 @@ export default class MenuBuilder {
   }
 
   setupDevelopmentEnvironment(): void {
-    // Commented out to allow custom context menus in the renderer
-    // If you need "Inspect Element", use Cmd+Option+I to open DevTools
-    // or add it back with conditional logic based on target element
-    /*
+    // Enable right-click inspect in development
     this.mainWindow.webContents.on('context-menu', (event, props) => {
       const { x, y } = props;
 
@@ -60,7 +57,6 @@ export default class MenuBuilder {
         },
       ]).popup({ window: this.mainWindow });
     });
-    */
   }
 
   buildDarwinTemplate(): MenuItemConstructorOptions[] {
