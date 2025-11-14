@@ -3,6 +3,7 @@ import React, {
   useContext,
   useMemo,
   useState,
+  useEffect,
   type ReactNode,
 } from 'react';
 import type { Theme } from '@a24z/industry-theme';
@@ -15,6 +16,20 @@ import type {
   RepositoryMetadata,
   PanelEvent,
 } from '@principal-ade/panel-framework-core';
+import { TerminalService } from '../main-process-api/TerminalService';
+import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
+
+// Extend PanelActions with terminal-specific actions
+interface ExtendedPanelActions extends PanelActions {
+  createTerminalSession?: (options?: { cwd?: string }) => Promise<string>;
+  writeToTerminal?: (sessionId: string, data: string) => Promise<void>;
+  resizeTerminal?: (
+    sessionId: string,
+    cols: number,
+    rows: number
+  ) => Promise<void>;
+  destroyTerminalSession?: (sessionId: string) => Promise<void>;
+}
 
 const PanelContext = createContext<PanelContextValue | null>(null);
 
@@ -33,6 +48,43 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 }) => {
   // Initialize event bus
   const events = useMemo(() => new PanelEventBus(), []);
+
+  // Track active terminal sessions
+  const [terminalSessions, setTerminalSessions] = useState<TerminalInfo[]>([]);
+
+  // Wire up terminal events to panel event bus
+  useEffect(() => {
+    // Forward terminal data events to panel event bus
+    const unsubscribeData = TerminalService.onData((terminalData) => {
+      events.emit({
+        type: 'terminal:data',
+        source: 'alexandria-workspace',
+        timestamp: Date.now(),
+        payload: terminalData,
+      });
+    });
+
+    // Forward terminal exit events to panel event bus
+    const unsubscribeExit = TerminalService.onExit((terminalExit) => {
+      events.emit({
+        type: 'terminal:exit',
+        source: 'alexandria-workspace',
+        timestamp: Date.now(),
+        payload: terminalExit,
+      });
+
+      // Remove session from list on exit
+      setTerminalSessions((prev) =>
+        prev.filter((s) => s.id !== terminalExit.sessionId)
+      );
+    });
+
+    // Cleanup on unmount
+    return () => {
+      unsubscribeData.then((unsub) => unsub());
+      unsubscribeExit.then((unsub) => unsub());
+    };
+  }, [events]);
 
   // Define data slices
   const [slices] = useState<Map<string, DataSlice>>(
@@ -84,7 +136,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   );
 
   // Define panel actions
-  const actions: PanelActions = useMemo(
+  const actions: ExtendedPanelActions = useMemo(
     () => ({
       openFile: (filePath: string) => {
         console.info('[PanelContext] Opening file:', filePath);
@@ -125,8 +177,35 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       notifyPanels: (event: PanelEvent) => {
         events.emit(event);
       },
+
+      // Terminal actions
+      createTerminalSession: async (options?: { cwd?: string }) => {
+        console.info('[PanelContext] Creating terminal session:', options);
+        const cwd = options?.cwd || repository?.path || workspace.path;
+        const sessionId = await TerminalService.create(cwd, 'alexandria-workspace');
+
+        // Fetch updated terminal info
+        const terminals = await TerminalService.list();
+        setTerminalSessions(terminals);
+
+        return sessionId;
+      },
+
+      writeToTerminal: async (sessionId: string, data: string) => {
+        await TerminalService.write(sessionId, data);
+      },
+
+      resizeTerminal: async (sessionId: string, cols: number, rows: number) => {
+        await TerminalService.resize(sessionId, cols, rows);
+      },
+
+      destroyTerminalSession: async (sessionId: string) => {
+        console.info('[PanelContext] Destroying terminal session:', sessionId);
+        await TerminalService.destroy(sessionId);
+        setTerminalSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      },
     }),
-    [events]
+    [events, repository, workspace]
   );
 
   const contextValue: PanelContextValue = useMemo(
@@ -173,8 +252,9 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       workspace,
       repository,
       theme,
+      terminalSessions,
     }),
-    [workspace, repository, actions, events, slices, theme]
+    [workspace, repository, actions, events, slices, theme, terminalSessions]
   );
 
   return (
