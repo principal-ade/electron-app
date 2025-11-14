@@ -54,13 +54,11 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
   // Wire up terminal events to panel event bus
   useEffect(() => {
-    console.info('[PanelContext] Setting up terminal event listeners');
     let unsubData: (() => void) | null = null;
     let unsubExit: (() => void) | null = null;
 
     // Forward terminal data events to panel event bus
     TerminalService.onData((terminalData) => {
-      console.info('[PanelContext] Terminal data received:', terminalData);
       events.emit({
         type: 'terminal:data',
         source: 'alexandria-workspace',
@@ -68,7 +66,6 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         payload: terminalData,
       });
     }).then((unsub) => {
-      console.info('[PanelContext] Terminal data listener subscribed');
       unsubData = unsub;
     });
 
@@ -190,13 +187,8 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
       // Terminal actions
       createTerminalSession: async (options?: { cwd?: string }) => {
-        console.info('[PanelContext] Creating terminal session:', options);
-        console.info('[PanelContext] Repository path:', repository?.path);
-        console.info('[PanelContext] Workspace path:', workspace.path);
         const cwd = options?.cwd || repository?.path || workspace.path;
-        console.info('[PanelContext] Resolved cwd:', cwd);
         const sessionId = await TerminalService.create(cwd, 'alexandria-workspace');
-        console.info('[PanelContext] Terminal session created:', sessionId);
 
         // Fetch updated terminal info
         const terminals = await TerminalService.list();
