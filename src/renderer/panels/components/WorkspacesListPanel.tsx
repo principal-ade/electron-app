@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Folder, Layers, Plus, Edit2, Check, X, ExternalLink } from 'lucide-react';
+import { Layers, Plus, Edit2, Check, X, ExternalLink } from 'lucide-react';
 import type { Workspace } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { WindowService } from '../../main-process-api/WindowService';
@@ -18,7 +18,9 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
   const { theme } = useTheme();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [loading, setLoading] = useState(true);
-  const [defaultWorkspaceId, setDefaultWorkspaceId] = useState<string | null>(null);
+  const [defaultWorkspaceId, setDefaultWorkspaceId] = useState<string | null>(
+    null,
+  );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Load workspaces on mount
@@ -42,7 +44,7 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
     loadWorkspaces();
 
     // Subscribe to workspace changes
-    const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
+    const unsubscribe = WorkspaceService.onWorkspaceChange(() => {
       // Reload workspaces when they change
       loadWorkspaces();
     });
@@ -115,9 +117,9 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
     );
   }
 
-  const handleOpenWorkspaceManager = async () => {
+  const handleOpenWorkspaceManager = async (workspaceId: string) => {
     try {
-      await WindowService.openAlexandriaWorkspace();
+      await WindowService.openAlexandriaWorkspace(workspaceId);
     } catch (error) {
       console.error('Failed to open Alexandria Workspace window:', error);
     }
@@ -145,54 +147,25 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
         >
           Workspaces
         </h3>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={handleOpenWorkspaceManager}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '28px',
-              height: '28px',
-              borderRadius: '6px',
-              border: `1px solid ${theme.colors.border}`,
-              backgroundColor: theme.colors.backgroundTertiary,
-              color: theme.colors.text,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            title="Open Workspace Manager"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-              e.currentTarget.style.borderColor = theme.colors.primary || theme.colors.border;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
-              e.currentTarget.style.borderColor = theme.colors.border;
-            }}
-          >
-            <ExternalLink size={16} />
-          </button>
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '28px',
-              height: '28px',
-              borderRadius: '6px',
-              border: `1px solid ${theme.colors.border}`,
-              backgroundColor: theme.colors.primary,
-              color: 'white',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            title="Create new workspace"
-          >
-            <Plus size={16} />
-          </button>
-        </div>
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '28px',
+            height: '28px',
+            borderRadius: '6px',
+            border: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.primary,
+            color: 'white',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          title="Create new workspace"
+        >
+          <Plus size={16} />
+        </button>
       </div>
 
       {/* Scrollable content */}
@@ -213,6 +186,7 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
             isSelected={workspace.id === selectedWorkspaceId}
             isDefault={workspace.id === defaultWorkspaceId}
             onClick={() => onWorkspaceSelect?.(workspace)}
+            onOpenWorkspace={() => handleOpenWorkspaceManager(workspace.id)}
           />
         ))}
 
@@ -244,6 +218,7 @@ interface WorkspaceCardProps {
   isSelected: boolean;
   isDefault: boolean;
   onClick: () => void;
+  onOpenWorkspace: () => void;
 }
 
 const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
@@ -251,6 +226,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
   isSelected,
   isDefault,
   onClick,
+  onOpenWorkspace,
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
@@ -276,7 +252,9 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
 
     try {
       setIsSaving(true);
-      await WorkspaceService.updateWorkspace(workspace.id, { name: trimmedName });
+      await WorkspaceService.updateWorkspace(workspace.id, {
+        name: trimmedName,
+      });
       setIsEditing(false);
     } catch (error) {
       console.error('Failed to update workspace name:', error);
@@ -312,14 +290,14 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
     backgroundColor: isSelected
       ? theme.colors.backgroundTertiary
       : isHovered
-      ? theme.colors.backgroundTertiary
-      : 'transparent',
+        ? theme.colors.backgroundTertiary
+        : 'transparent',
     border: `1px solid ${
       isSelected
         ? theme.colors.primary || theme.colors.border
         : isHovered
-        ? theme.colors.border
-        : 'transparent'
+          ? theme.colors.border
+          : 'transparent'
     }`,
     cursor: isEditing ? 'default' : 'pointer',
     transition: 'all 0.15s ease',
@@ -436,6 +414,40 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
           <>
             <span style={{ flex: 1 }}>{workspace.name}</span>
             <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenWorkspace();
+              }}
+              title="Open workspace"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '24px',
+                height: '24px',
+                padding: 0,
+                border: 'none',
+                borderRadius: '4px',
+                backgroundColor: 'transparent',
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                opacity: isHovered ? 1 : 0,
+                pointerEvents: isHovered ? 'auto' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+                e.currentTarget.style.color = theme.colors.text;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              <ExternalLink size={16} />
+            </button>
+            <button
               onClick={handleStartEdit}
               title="Edit workspace name"
               style={{
@@ -455,7 +467,8 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                 transition: 'all 0.15s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
                 e.currentTarget.style.color = theme.colors.text;
               }}
               onMouseLeave={(e) => {

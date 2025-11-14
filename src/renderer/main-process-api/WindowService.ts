@@ -129,12 +129,13 @@ export class WindowService {
   }
 
   /**
-   * Open Alexandria Workspace Manager window
-   * Opens a dedicated window for managing workspaces and their repository members
+   * Open Alexandria Workspace window for a specific workspace
+   * Opens a dedicated window for managing a single workspace and its repository members
+   * @param workspaceId - The ID of the workspace to open
    */
-  static async openAlexandriaWorkspace(): Promise<void> {
+  static async openAlexandriaWorkspace(workspaceId: string): Promise<void> {
     try {
-      await window.mainProcess.window.openAlexandriaWorkspace();
+      await window.mainProcess.window.openAlexandriaWorkspace(workspaceId);
     } catch (error) {
       console.error(
         '[WindowService] Failed to open Alexandria Workspace window:',

@@ -64,10 +64,10 @@ export const windowAPI: WindowAPI = {
     ipcRenderer.invoke(WindowEvent.OPEN_CALLIMACHUS_WINDOW),
 
   /**
-   * Open Alexandria Workspace Manager window
+   * Open Alexandria Workspace window for a specific workspace
    */
-  openAlexandriaWorkspace: () =>
-    ipcRenderer.invoke(WindowEvent.OPEN_ALEXANDRIA_WORKSPACE),
+  openAlexandriaWorkspace: (workspaceId: string) =>
+    ipcRenderer.invoke(WindowEvent.OPEN_ALEXANDRIA_WORKSPACE, workspaceId),
 
   /**
    * Get the unique ID of the current window

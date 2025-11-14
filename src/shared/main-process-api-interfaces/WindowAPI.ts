@@ -104,10 +104,11 @@ export interface WindowAPI {
   openCallimachusWindow(): Promise<void>;
 
   /**
-   * Open Alexandria Workspace Manager window
-   * Opens a dedicated window for managing workspaces and their repository members
+   * Open Alexandria Workspace window for a specific workspace
+   * Opens a dedicated window for managing a single workspace and its repository members
+   * @param workspaceId - The ID of the workspace to open
    */
-  openAlexandriaWorkspace(): Promise<void>;
+  openAlexandriaWorkspace(workspaceId: string): Promise<void>;
 
   /**
    * Get the unique ID of the current window

@@ -24,7 +24,10 @@ export interface RepositoryWindowState {
  * Get list of open repository windows with their states
  */
 function getOpenRepositoryWindows(): RepositoryWindowState[] {
-  const { getSpecialWindows, getApplicationWindows } = require('./modernWindowManager');
+  const {
+    getSpecialWindows,
+    getApplicationWindows,
+  } = require('./modernWindowManager');
   const specialWindows = getSpecialWindows();
   const applicationWindows = getApplicationWindows();
 
@@ -233,7 +236,9 @@ export function registerModernWindowHandlers(): void {
       }
 
       // Try to get the full repository from the database which includes avatarUrl and vcsType
-      const { RepositoryApiEventHandler } = require('../stores/RepositoryApiEventHandler');
+      const {
+        RepositoryApiEventHandler,
+      } = require('../stores/RepositoryApiEventHandler');
       const repositoryHandler = new RepositoryApiEventHandler();
       let existingRepo = await repositoryHandler.getRepository(remoteUrl);
 
@@ -249,11 +254,18 @@ export function registerModernWindowHandlers(): void {
 
       // If repository doesn't have avatar but is a GitHub repo, fetch metadata
       if (existingRepo && !existingRepo.avatarUrl && vcsType === 'github') {
-        console.log('[modernWindowHandlers] Fetching avatar for repository:', remoteUrl);
+        console.log(
+          '[modernWindowHandlers] Fetching avatar for repository:',
+          remoteUrl,
+        );
         try {
-          existingRepo = await repositoryHandler.refreshRepositoryMetadata(remoteUrl);
+          existingRepo =
+            await repositoryHandler.refreshRepositoryMetadata(remoteUrl);
         } catch (error) {
-          console.error('[modernWindowHandlers] Failed to refresh metadata:', error);
+          console.error(
+            '[modernWindowHandlers] Failed to refresh metadata:',
+            error,
+          );
         }
       }
 
@@ -264,7 +276,8 @@ export function registerModernWindowHandlers(): void {
         remoteUrl,
         vcsType: existingRepo?.vcsType || vcsType,
         avatarUrl: existingRepo?.avatarUrl,
-        description: existingRepo?.description || repository.github?.description,
+        description:
+          existingRepo?.description || repository.github?.description,
         localClones: repository.path
           ? [{ path: repository.path, currentBranch, addedAt: Date.now() }]
           : existingRepo?.localClones || [],
@@ -272,9 +285,12 @@ export function registerModernWindowHandlers(): void {
         // Add other metadata that might be useful
         metadata: {
           stars: repository.github?.stars || existingRepo?.metadata?.stars,
-          description: repository.github?.description || existingRepo?.metadata?.description,
+          description:
+            repository.github?.description ||
+            existingRepo?.metadata?.description,
           topics: repository.github?.topics || existingRepo?.metadata?.topics,
-          license: repository.github?.license || existingRepo?.metadata?.license,
+          license:
+            repository.github?.license || existingRepo?.metadata?.license,
           defaultBranch: existingRepo?.metadata?.defaultBranch,
           isPrivate: existingRepo?.metadata?.isPrivate,
         },
@@ -324,7 +340,9 @@ export function registerModernWindowHandlers(): void {
         broadcastRepositoryWindowsChanged();
 
         // Track repository opened in presence system
-        const { presenceWindowBridge } = require('../services/PresenceWindowBridge');
+        const {
+          presenceWindowBridge,
+        } = require('../services/PresenceWindowBridge');
         presenceWindowBridge.trackRepositoryOpened(
           String(window.window.id),
           owner,
@@ -334,11 +352,16 @@ export function registerModernWindowHandlers(): void {
         );
 
         // Setup focus tracking for presence
-        presenceWindowBridge.setupWindowFocusTracking(window.window, String(window.window.id));
+        presenceWindowBridge.setupWindowFocusTracking(
+          window.window,
+          String(window.window.id),
+        );
 
         // Listen for when window is ready to show, then broadcast again
         window.window.once('ready-to-show', () => {
-          console.log('[ModernWindow] Repository dashboard window ready to show');
+          console.log(
+            '[ModernWindow] Repository dashboard window ready to show',
+          );
           // Broadcast that window is now ready
           broadcastRepositoryWindowsChanged();
         });
@@ -362,7 +385,9 @@ export function registerModernWindowHandlers(): void {
           windowName,
         );
         // Track focus for existing window
-        const { presenceWindowBridge } = require('../services/PresenceWindowBridge');
+        const {
+          presenceWindowBridge,
+        } = require('../services/PresenceWindowBridge');
         const existingWindow = applicationWindows.get(existingWindowId);
         if (existingWindow) {
           presenceWindowBridge.trackRepositoryFocused(String(existingWindowId));
@@ -509,33 +534,45 @@ export function registerModernWindowHandlers(): void {
   });
 
   // Alexandria Workspace Window
-  ipcMain.handle(WindowEvent.OPEN_ALEXANDRIA_WORKSPACE, async () => {
-    const windowName = 'alexandria-workspace';
+  ipcMain.handle(
+    WindowEvent.OPEN_ALEXANDRIA_WORKSPACE,
+    async (_event, workspaceId: string) => {
+      if (!workspaceId) {
+        console.error(
+          '[modernWindowHandlers] OPEN_ALEXANDRIA_WORKSPACE called without workspaceId',
+        );
+        return;
+      }
 
-    const window = createSpecialWindow(
-      windowName,
-      {
-        width: 1280,
-        height: 832,
-        minWidth: 1024,
-        minHeight: 720,
-        title: 'Alexandria Workspace',
-      },
-      {
-        fileSystemAdapter: true,
-        windowManagerAdapter: true,
-        githubAdapter: true,
-        contentSecurityPolicy: true,
-        externalLinkHandler: true,
-        menu: true,
-      },
-    );
+      const windowName = `alexandria-workspace-${workspaceId}`;
 
-    if (!window) return;
+      const window = createSpecialWindow(
+        windowName,
+        {
+          width: 1280,
+          height: 832,
+          minWidth: 1024,
+          minHeight: 720,
+          title: 'Alexandria Workspace',
+        },
+        {
+          fileSystemAdapter: true,
+          windowManagerAdapter: true,
+          githubAdapter: true,
+          contentSecurityPolicy: true,
+          externalLinkHandler: true,
+          menu: true,
+        },
+      );
 
-    const url = resolveHtmlPath('alexandria-workspace.html');
-    window.window.loadURL(url);
-  });
+      if (!window) return;
+
+      // Pass workspace ID to the window via URL parameter
+      const encodedWorkspaceId = encodeURIComponent(workspaceId);
+      const url = `${resolveHtmlPath('alexandria-workspace.html')}?workspaceId=${encodedWorkspaceId}`;
+      window.window.loadURL(url);
+    },
+  );
 
   // Check if repository window is already open
   ipcMain.handle(

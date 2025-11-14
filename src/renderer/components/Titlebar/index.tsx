@@ -24,5 +24,8 @@ export type { CallimachusTitlebarProps } from './CallimachusTitlebar';
 export { TerminalTitlebar } from './TerminalTitlebar';
 export type { TerminalTitlebarProps } from './TerminalTitlebar';
 
+export { AlexandriaWorkspaceTitlebar } from './AlexandriaWorkspaceTitlebar';
+export type { AlexandriaWorkspaceTitlebarProps } from './AlexandriaWorkspaceTitlebar';
+
 // For backward compatibility with old imports
 export { RepositoryTitlebar as RepoManagerTitlebar } from './RepositoryTitlebar';
