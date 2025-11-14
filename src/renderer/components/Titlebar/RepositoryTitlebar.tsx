@@ -10,6 +10,8 @@ import {
   FolderOpen,
   Cloud,
   CloudOff,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
@@ -96,6 +98,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   );
   const [showOpenInIDE, setShowOpenInIDE] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
+  const [pathCopied, setPathCopied] = useState(false);
 
   // Get local clone path for git status
   const localClonePath = selectedSource?.type === 'local'
@@ -190,6 +193,22 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
       } catch (error) {
         console.error(
           '[RepositoryTitlebar] Failed to open in Finder:',
+          error,
+        );
+      }
+    }
+  };
+
+  // Handle copy path to clipboard
+  const handleCopyPath = async () => {
+    if (selectedSource?.type === 'local' && selectedSource.location) {
+      try {
+        await navigator.clipboard.writeText(selectedSource.location);
+        setPathCopied(true);
+        setTimeout(() => setPathCopied(false), 2000);
+      } catch (error) {
+        console.error(
+          '[RepositoryTitlebar] Failed to copy path to clipboard:',
           error,
         );
       }
@@ -685,6 +704,44 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
             isCollapsed={rightSidebarCollapsed}
             onToggle={onToggleRightSidebar}
           />
+        )}
+        {/* Copy path button - only show for local clones */}
+        {hasLocalClone && (
+          <button
+            onClick={handleCopyPath}
+            style={{
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: pathCopied ? theme.colors.backgroundTertiary : 'transparent',
+              border: 'none',
+              color: pathCopied ? theme.colors.success : theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              width: '32px',
+              height: '32px',
+            }}
+            onMouseEnter={(e) => {
+              if (!pathCopied) {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+                e.currentTarget.style.color = theme.colors.text;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!pathCopied) {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }
+            }}
+            title={pathCopied ? 'Path copied!' : 'Copy clone path to clipboard'}
+          >
+            {pathCopied ? <Check size={14} /> : <Copy size={14} />}
+          </button>
         )}
         {/* Open in Finder button - only show for local clones */}
         {hasLocalClone && (

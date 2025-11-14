@@ -31,6 +31,8 @@ import {
   type TokenPayload,
   type Credentials,
   type Event,
+  type RoomState,
+  type RoomUser,
 } from '@principal-ai/control-tower-core';
 
 /**
@@ -146,6 +148,7 @@ export class GitSyncWebSocketManager {
   private serverUrl: string;
   private authServerUrl: string;
   private presenceRoomJoinInProgress: boolean = false;
+  private presenceRoomState: { users: Map<string, RoomUser> | Record<string, unknown> } | null = null;
 
   // Hardcoded defaults
   private readonly DEFAULT_DEV_SERVER = 'ws://localhost:3001';
@@ -846,12 +849,33 @@ export class GitSyncWebSocketManager {
     });
 
     // Room joined - emitted when successfully joined a room
-    client.on('room_joined', (_data: { roomId: string; state: unknown }) => {
-      // Event is handled in subscribeToPresence() promise
+    client.on('room_joined', (data: { roomId: string; state: RoomState }) => {
+      console.log('[GitSyncWebSocketManager] 📡 Event emitted: room_joined', data);
+
+      // Store presence room state if this is the global presence room
+      if (data.roomId === '__global_presence__' && data.state?.users) {
+        this.presenceRoomState = { users: data.state.users as Map<string, RoomUser> | Record<string, unknown> };
+        const userCount = data.state.users instanceof Map ? data.state.users.size : Object.keys(data.state.users).length;
+        console.log('[GitSyncWebSocketManager] ✓ Stored presence room state with', userCount, 'users');
+        console.log('[GitSyncWebSocketManager] Users type:', data.state.users instanceof Map ? 'Map' : 'Object');
+      }
+
+      console.log('[GitSyncWebSocketManager] ✓ room_joined event:', data.roomId);
     });
 
     // Presence updated - emitted when users join/leave or update their presence
-    client.on('presence_updated', (data: { users: unknown[] }) => {
+    client.on('presence_updated', (data: { users: RoomUser[] }) => {
+      console.log('[GitSyncWebSocketManager] 📡 presence_updated event received');
+
+      // Update stored room state - convert array to Map
+      const usersMap = new Map<string, RoomUser>();
+      for (const user of data.users) {
+        usersMap.set(user.id, user);
+      }
+      this.presenceRoomState = { users: usersMap };
+
+      console.log('[GitSyncWebSocketManager] ✓ Updated presence room state with', usersMap.size, 'users');
+
       // Broadcast to renderers
       this.broadcastToRenderers(GitSyncEvent.ON_MESSAGE, connectionId, {
         type: 'presence_updated',
@@ -935,7 +959,7 @@ export class GitSyncWebSocketManager {
   }
 
   /**
-   * Fetch presence data from the traffic controller (REST API)
+   * Fetch presence data from the stored room state
    */
   async fetchPresenceData(): Promise<{
     success: boolean;
@@ -946,22 +970,56 @@ export class GitSyncWebSocketManager {
     error?: string;
   }> {
     try {
-      // Convert WebSocket URL to HTTP URL for REST API calls
-      const httpUrl = this.serverUrl.replace('wss://', 'https://').replace('ws://', 'http://');
-      const response = await fetch(`${httpUrl}/api/presence/users`);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch presence: ${response.status}`);
+      // Check if we have stored presence room state
+      if (!this.presenceRoomState) {
+        console.warn('[GitSyncWebSocketManager] No presence room state available');
+        return {
+          success: true,
+          data: {
+            users: [],
+            stats: { totalOnline: 0, totalRepositories: 0, activeCollaborations: 0 },
+          },
+        };
       }
 
-      const data = await response.json() as {
-        users: unknown[];
-        stats: { totalOnline: number; totalRepositories: number; activeCollaborations: number };
-      };
+      // Convert users to array - handle both Map and plain object
+      let usersArray: unknown[];
+      const isMap = this.presenceRoomState.users instanceof Map;
+      console.log('[GitSyncWebSocketManager] presenceRoomState.users type:', isMap ? 'Map' : 'Object');
+
+      if (isMap) {
+        usersArray = Array.from((this.presenceRoomState.users as Map<string, RoomUser>).values());
+      } else {
+        // If it's a plain object, use Object.values
+        usersArray = Object.values(this.presenceRoomState.users as Record<string, unknown>);
+      }
+
+      // Transform RoomUser objects to UserPresence format expected by the UI
+      const transformedUsers = usersArray.map((user: unknown) => {
+        const u = user as Record<string, unknown>;
+        return {
+          userId: (u.id as string) || (u.userId as string),
+          status: (u.status as string) || 'online',
+          openRepositories: (u.openRepositories as unknown[]) || [],
+          activeRepository: u.activeRepository as string | undefined,
+          lastSeen: (u.lastActivity as number) || (u.lastSeen as number) || Date.now(),
+          devices: (u.devices as unknown[]) || [],
+          statusMessage: u.statusMessage as string | undefined,
+          // Preserve any additional metadata
+          ...(u.metadata as Record<string, unknown> | undefined),
+        };
+      });
+
+      const totalOnline = transformedUsers.length;
+
+      console.log('[GitSyncWebSocketManager] Fetched presence data:', totalOnline, 'users');
 
       return {
         success: true,
-        data,
+        data: {
+          users: transformedUsers,
+          stats: { totalOnline, totalRepositories: 0, activeCollaborations: 0 },
+        },
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch presence data';

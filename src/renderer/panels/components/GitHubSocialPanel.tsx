@@ -21,6 +21,7 @@ import type {
 import { UserAvatar } from '../../components/repository-maps/UserAvatar';
 import { PresenceService } from '../../main-process-api/PresenceService';
 import { useGitSyncConnection } from '../../hooks/useGitSyncConnection';
+import type { UserPresence } from '../../../shared/main-process-api-interfaces/PresenceAPI';
 
 interface PersonWithOrg extends GitHubUser {
   organizations?: string[];
@@ -57,6 +58,7 @@ export const GitHubSocialPanel: React.FC = () => {
   );
   const [isVisible, setIsVisible] = useState(true);
   const { isConnected } = useGitSyncConnection();
+  const [presenceData, setPresenceData] = useState<UserPresence[]>([]);
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
@@ -186,6 +188,36 @@ export const GitHubSocialPanel: React.FC = () => {
     }
   }, [fetchSocialData, isAuthenticated]);
 
+  // Fetch and subscribe to presence data
+  useEffect(() => {
+    if (!isConnected) {
+      setPresenceData([]);
+      return;
+    }
+
+    const fetchPresence = async () => {
+      try {
+        const data = await PresenceService.getUsers();
+        setPresenceData(data.users || []);
+      } catch (err) {
+        console.error('[GitHubSocialPanel] Failed to fetch presence:', err);
+      }
+    };
+
+    // Initial fetch
+    void fetchPresence();
+
+    // Subscribe to presence updates
+    const unsubscribe = PresenceService.onPresenceEvent((_event) => {
+      // Refetch presence data when any presence event occurs
+      void fetchPresence();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isConnected]);
+
   const handleLogin = useCallback(async () => {
     try {
       await login();
@@ -220,6 +252,15 @@ export const GitHubSocialPanel: React.FC = () => {
       console.error('[GitHubSocialPanel] Failed to set visibility:', err);
     }
   }, [isVisible]);
+
+  // Create a map of userId to presence status for quick lookups
+  const presenceMap = useMemo(() => {
+    const map = new Map<string, UserPresence['status']>();
+    presenceData.forEach((presence) => {
+      map.set(presence.userId, presence.status);
+    });
+    return map;
+  }, [presenceData]);
 
   // Compute coworkers (people in your organizations)
   const coworkers = useMemo(() => {
@@ -260,6 +301,30 @@ export const GitHubSocialPanel: React.FC = () => {
 
     return Array.from(coworkerMap.values());
   }, [socialData.orgMembers, user?.login]);
+
+  // Compute "other online users" - those who are online but not in coworkers/following/followers
+  const otherOnlineUsers = useMemo(() => {
+    const knownUserIds = new Set<string>();
+
+    // Add all coworkers
+    coworkers.forEach((person) => knownUserIds.add(person.login));
+
+    // Add all following
+    socialData.following.forEach((person) => knownUserIds.add(person.login));
+
+    // Add all followers
+    socialData.followers.forEach((person) => knownUserIds.add(person.login));
+
+    // Add current user
+    if (user?.login) {
+      knownUserIds.add(user.login);
+    }
+
+    // Filter presence data for users not in the above sets and who are online
+    return presenceData.filter(
+      (presence) => presence.status === 'online' && !knownUserIds.has(presence.userId)
+    );
+  }, [coworkers, socialData.following, socialData.followers, presenceData, user?.login]);
 
   const hasData =
     socialData.following.length > 0 ||
@@ -434,6 +499,97 @@ export const GitHubSocialPanel: React.FC = () => {
           gap: '8px',
         }}
       >
+        {/* Online Now Section - Users online but not in other sections */}
+        {otherOnlineUsers.length > 0 && (
+          <div>
+            <button
+              onClick={() => toggleSection('onlineNow')}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                backgroundColor: theme.colors.background,
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                textAlign: 'left',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.background;
+              }}
+            >
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                {collapsedSections.has('onlineNow') ? (
+                  <ChevronRight size={16} color={theme.colors.textSecondary} />
+                ) : (
+                  <ChevronDown size={16} color={theme.colors.textSecondary} />
+                )}
+                <div
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: '#10b981',
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: `${theme.fontSizes[2]}px`,
+                    fontWeight: theme.fontWeights.semibold,
+                    fontFamily: theme.fonts.body,
+                    color: theme.colors.text,
+                  }}
+                >
+                  Online Now
+                </span>
+              </div>
+              <span
+                style={{
+                  fontSize: `${theme.fontSizes[0]}px`,
+                  fontFamily: theme.fonts.body,
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                {otherOnlineUsers.length}
+              </span>
+            </button>
+
+            {!collapsedSections.has('onlineNow') && (
+              <div
+                style={{
+                  paddingLeft: '12px',
+                  marginTop: '4px',
+                }}
+              >
+                {otherOnlineUsers.map((presence) => (
+                  <PersonItem
+                    key={presence.userId}
+                    person={{
+                      id: 0,
+                      login: presence.userId,
+                      avatar_url: `https://github.com/${presence.userId}.png`,
+                      url: `https://github.com/${presence.userId}`,
+                      html_url: `https://github.com/${presence.userId}`,
+                      type: 'User',
+                      site_admin: false,
+                    }}
+                    theme={theme}
+                    presenceStatus={presence.status}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Co-workers Section */}
         {coworkers.length > 0 && (
           <div>
@@ -503,6 +659,7 @@ export const GitHubSocialPanel: React.FC = () => {
                     person={person}
                     theme={theme}
                     showOrgs={person.organizations}
+                    presenceStatus={presenceMap.get(person.login)}
                   />
                 ))}
               </div>
@@ -574,7 +731,12 @@ export const GitHubSocialPanel: React.FC = () => {
                 }}
               >
                 {socialData.following.map((person) => (
-                  <PersonItem key={person.id} person={person} theme={theme} />
+                  <PersonItem
+                    key={person.id}
+                    person={person}
+                    theme={theme}
+                    presenceStatus={presenceMap.get(person.login)}
+                  />
                 ))}
               </div>
             )}
@@ -645,7 +807,12 @@ export const GitHubSocialPanel: React.FC = () => {
                 }}
               >
                 {socialData.followers.map((person) => (
-                  <PersonItem key={person.id} person={person} theme={theme} />
+                  <PersonItem
+                    key={person.id}
+                    person={person}
+                    theme={theme}
+                    presenceStatus={presenceMap.get(person.login)}
+                  />
                 ))}
               </div>
             )}
@@ -660,10 +827,25 @@ interface PersonItemProps {
   person: GitHubUser | GitHubOrgMember;
   theme: ReturnType<typeof useTheme>['theme'];
   showOrgs?: string[];
+  presenceStatus?: 'online' | 'away' | 'offline';
 }
 
-const PersonItem: React.FC<PersonItemProps> = ({ person, theme, showOrgs }) => {
+const PersonItem: React.FC<PersonItemProps> = ({ person, theme, showOrgs, presenceStatus }) => {
   const [isExpanded, setIsExpanded] = React.useState(false);
+
+  // Get color for presence status
+  const getPresenceColor = (status?: 'online' | 'away' | 'offline'): string => {
+    switch (status) {
+      case 'online':
+        return '#10b981'; // green
+      case 'away':
+        return '#f59e0b'; // amber
+      case 'offline':
+        return '#6b7280'; // gray
+      default:
+        return 'transparent'; // no indicator if no status
+    }
+  };
 
   const handleClick = (e: React.MouseEvent) => {
     // If clicking the org count badge, toggle expansion
@@ -699,11 +881,31 @@ const PersonItem: React.FC<PersonItemProps> = ({ person, theme, showOrgs }) => {
         e.currentTarget.style.backgroundColor = 'transparent';
       }}
     >
-      <UserAvatar
-        avatarUrl={person.avatar_url}
-        username={person.login}
-        size={40}
-      />
+      {/* Avatar with presence indicator */}
+      <div style={{ position: 'relative' }}>
+        <UserAvatar
+          avatarUrl={person.avatar_url}
+          username={person.login}
+          size={40}
+        />
+        {/* Presence indicator dot */}
+        {presenceStatus && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '0px',
+              right: '0px',
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              backgroundColor: getPresenceColor(presenceStatus),
+              border: `2px solid ${theme.colors.backgroundSecondary}`,
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
+            }}
+            title={`Status: ${presenceStatus}`}
+          />
+        )}
+      </div>
       <div
         style={{
           display: 'flex',

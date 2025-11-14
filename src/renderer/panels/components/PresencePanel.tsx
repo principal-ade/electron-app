@@ -633,7 +633,7 @@ export const PresencePanel: React.FC = () => {
               )}
 
               {/* Open repositories */}
-              {user.openRepositories.length > 0 && (
+              {user.openRepositories && user.openRepositories.length > 0 && (
                 <div
                   style={{
                     display: 'flex',
@@ -673,7 +673,7 @@ export const PresencePanel: React.FC = () => {
               )}
 
               {/* Devices */}
-              {user.devices.length > 0 && (
+              {user.devices && user.devices.length > 0 && (
                 <div
                   style={{
                     display: 'flex',
