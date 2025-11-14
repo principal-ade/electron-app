@@ -568,6 +568,13 @@ export function registerModernWindowHandlers(): void {
 
       if (!window) return;
 
+      // Register window with terminal manager to receive terminal events
+      const { terminalManager } = await import('../terminal');
+      terminalManager?.registerWindow(window.window);
+      console.log(
+        `[modernWindowHandlers] Registered Alexandria Workspace window ${window.window.id} with terminal manager`,
+      );
+
       // Pass workspace ID to the window via URL parameter
       const encodedWorkspaceId = encodeURIComponent(workspaceId);
       const url = `${resolveHtmlPath('alexandria-workspace.html')}?workspaceId=${encodedWorkspaceId}`;
