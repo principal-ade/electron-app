@@ -176,11 +176,16 @@ export const AlexandriaWorkspaceLayout: React.FC<
 > = ({ workspace, repository }) => {
   const { theme } = useTheme();
 
+  console.info('[AlexandriaWorkspaceLayout] Workspace:', workspace);
+  console.info('[AlexandriaWorkspaceLayout] Workspace suggestedClonePath:', workspace.suggestedClonePath);
+  const workspacePath = workspace.suggestedClonePath || '/workspace';
+  console.info('[AlexandriaWorkspaceLayout] Resolved workspace path:', workspacePath);
+
   return (
     <PanelProvider
       workspace={{
         name: workspace.name,
-        path: workspace.suggestedClonePath || '/workspace',
+        path: workspacePath,
       }}
       repository={repository}
       theme={theme}

@@ -189,8 +189,12 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       // Terminal actions
       createTerminalSession: async (options?: { cwd?: string }) => {
         console.info('[PanelContext] Creating terminal session:', options);
+        console.info('[PanelContext] Repository path:', repository?.path);
+        console.info('[PanelContext] Workspace path:', workspace.path);
         const cwd = options?.cwd || repository?.path || workspace.path;
+        console.info('[PanelContext] Resolved cwd:', cwd);
         const sessionId = await TerminalService.create(cwd, 'alexandria-workspace');
+        console.info('[PanelContext] Terminal session created:', sessionId);
 
         // Fetch updated terminal info
         const terminals = await TerminalService.list();
