@@ -562,6 +562,7 @@ export function registerModernWindowHandlers(): void {
           contentSecurityPolicy: true,
           externalLinkHandler: true,
           menu: true,
+          maximizeOnShow: true,
         },
       );
 
