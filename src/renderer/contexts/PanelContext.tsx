@@ -169,6 +169,33 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
     fetchRepositories();
   }, [workspace?.id]);
 
+  // Listen for workspace membership changes and refresh repositories
+  useEffect(() => {
+    const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
+      // Only refresh if it's a membership change for the current workspace
+      if (event.type === 'membership-changed' && event.workspaceId === workspace?.id) {
+        console.info('[PanelContext] Workspace membership changed, refreshing repositories');
+
+        // Refetch repositories
+        if (workspace?.id) {
+          setRepositoriesLoading(true);
+          WorkspaceService.getRepositoriesInWorkspace(workspace.id as string)
+            .then((repos) => {
+              setWorkspaceRepositories(repos);
+            })
+            .catch((error) => {
+              console.error('[PanelContext] Failed to refresh workspace repositories after membership change:', error);
+            })
+            .finally(() => {
+              setRepositoriesLoading(false);
+            });
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [workspace?.id]);
+
   // Wire up terminal events to panel event bus
   useEffect(() => {
     let unsubData: (() => void) | null = null;
