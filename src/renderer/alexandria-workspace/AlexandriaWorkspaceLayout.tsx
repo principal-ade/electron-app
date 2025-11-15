@@ -1,11 +1,13 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useTheme } from '@a24z/industry-theme';
 import type { Workspace } from '@a24z/core-library';
 import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
 import { panels as terminalPanels } from '@principal-ade/industry-themed-terminal-panel';
 import '@principal-ade/industry-themed-terminal-panel/dist/panels.bundle.css';
-import { panels as workspacePanels } from '@a24z/alexandria-workspace-panel';
+import { panels as workspacePanels } from '@industry-theme/alexandria-workspace-panel';
+import { panels as docsPanels } from '@principal-ade/alexandria-docs-panel';
+import type { AlexandriaEntry } from '@a24z/core-library';
 
 type PanelDefinition = {
   id: string;
@@ -18,14 +20,19 @@ interface AlexandriaWorkspaceLayoutProps {
   repository?: {
     name: string;
     path: string;
-    branch?: string;
   };
+}
+
+interface AlexandriaWorkspaceLayoutContentProps {
+  onRepositorySelected: (repository: { name: string; path: string }) => void;
 }
 
 /**
  * Content component that uses panel context
  */
-const AlexandriaWorkspaceLayoutContent: React.FC = () => {
+const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutContentProps> = ({
+  onRepositorySelected,
+}) => {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
 
@@ -33,14 +40,42 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
   const [layout, setLayout] = useState<PanelLayout>({
     left: 'workspace-repos',
     middle: 'terminal',
-    right: 'details',
+    right: 'alexandria-docs',
   });
 
   const [isEditMode, _setIsEditMode] = useState(false);
 
+  // Listen for repository:selected events
+  useEffect(() => {
+    const unsubscribe = events.on('repository:selected', (event) => {
+      const { repository, repositoryPath } = event.payload as {
+        repositoryId: string;
+        repository: AlexandriaEntry;
+        repositoryPath: string;
+      };
+
+      console.info('[AlexandriaWorkspaceLayout] Repository selected event received:', {
+        repository,
+        repositoryPath,
+      });
+
+      if (repository) {
+        const selectedRepo = {
+          name: repository.name,
+          path: repositoryPath || repository.path,
+        };
+        console.info('[AlexandriaWorkspaceLayout] Updating selected repository:', selectedRepo);
+        onRepositorySelected(selectedRepo);
+      }
+    });
+
+    return unsubscribe;
+  }, [events, onRepositorySelected]);
+
   // Get panel components
   const TerminalPanelComponent = terminalPanels[0]?.component;
   const WorkspacePanelComponent = workspacePanels[0]?.component;
+  const DocsPanelComponent = docsPanels[0]?.component;
 
   // Define panels
   const panels: PanelDefinition[] = useMemo(
@@ -122,9 +157,25 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
         ),
       },
       {
-        id: 'details',
-        label: 'Details',
-        content: (
+        id: 'alexandria-docs',
+        label: 'Documentation',
+        content: DocsPanelComponent ? (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            <DocsPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
+        ) : (
           <div
             style={{
               padding: '16px',
@@ -132,25 +183,19 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
               color: theme.colors.text,
               height: '100%',
               overflow: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
-            <h3
-              style={{
-                marginBottom: '12px',
-                fontSize: `${theme.fontSizes[3]}px`,
-                fontWeight: theme.fontWeights.semibold,
-              }}
-            >
-              Details
-            </h3>
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
-              Details panel will go here
+              Alexandria Docs panel not available
             </p>
           </div>
         ),
       },
     ],
-    [theme, context, actions, events, TerminalPanelComponent, WorkspacePanelComponent]
+    [theme, context, actions, events, TerminalPanelComponent, WorkspacePanelComponent, DocsPanelComponent]
   );
 
   return (
@@ -185,8 +230,19 @@ const AlexandriaWorkspaceLayoutContent: React.FC = () => {
  */
 export const AlexandriaWorkspaceLayout: React.FC<
   AlexandriaWorkspaceLayoutProps
-> = ({ workspace, repository }) => {
+> = ({ workspace, repository: initialRepository }) => {
   const { theme } = useTheme();
+
+  // Track the selected repository
+  const [selectedRepository, setSelectedRepository] = useState<{
+    name: string;
+    path: string;
+  } | undefined>(initialRepository);
+
+  // Log when repository changes
+  useEffect(() => {
+    console.info('[AlexandriaWorkspaceLayout] Selected repository state updated:', selectedRepository);
+  }, [selectedRepository]);
 
   return (
     <PanelProvider
@@ -195,10 +251,12 @@ export const AlexandriaWorkspaceLayout: React.FC<
         name: workspace.name,
         path: workspace.suggestedClonePath || '/workspace',
       }}
-      repository={repository}
+      repository={selectedRepository}
       theme={theme}
     >
-      <AlexandriaWorkspaceLayoutContent />
+      <AlexandriaWorkspaceLayoutContent
+        onRepositorySelected={setSelectedRepository}
+      />
     </PanelProvider>
   );
 };

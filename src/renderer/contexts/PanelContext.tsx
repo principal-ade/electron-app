@@ -21,6 +21,7 @@ import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { WindowService } from '../main-process-api/WindowService';
+import { AlexandriaDocsService } from '../main-process-api/AlexandriaDocsService';
 import type { AlexandriaEntry } from '@a24z/core-library';
 
 // Extend PanelActions with terminal and workspace-specific actions
@@ -99,6 +100,51 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   // Track workspace repositories
   const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
   const [repositoriesLoading, setRepositoriesLoading] = useState(false);
+
+  // Track markdown files for the current repository
+  const [markdownFiles, setMarkdownFiles] = useState<Array<{ path: string; title?: string; lastModified: number }>>([]);
+  const [markdownLoading, setMarkdownLoading] = useState(false);
+
+  // Fetch markdown files when repository changes
+  useEffect(() => {
+    const fetchMarkdownFiles = async () => {
+      if (!repository?.path) {
+        setMarkdownFiles([]);
+        return;
+      }
+
+      setMarkdownLoading(true);
+      try {
+        // Create an AlexandriaEntry from the repository
+        const entry: AlexandriaEntry = {
+          name: repository.name,
+          path: repository.path,
+        } as AlexandriaEntry;
+
+        const docs = await AlexandriaDocsService.getComprehensiveDocuments(entry);
+
+        // Combine all documents (tracked + untracked)
+        const allDocs = [...docs.tracked, ...docs.untracked];
+
+        // Map to the format expected by the panel
+        const files = allDocs.map((docPath) => ({
+          path: docPath,
+          title: undefined, // We could extract title from file content if needed
+          lastModified: Date.now(), // We could get actual mtime if needed
+        }));
+
+        console.info('[PanelContext] Fetched markdown files for repository:', repository.path, files);
+        setMarkdownFiles(files);
+      } catch (error) {
+        console.error('[PanelContext] Failed to fetch markdown files:', error);
+        setMarkdownFiles([]);
+      } finally {
+        setMarkdownLoading(false);
+      }
+    };
+
+    fetchMarkdownFiles();
+  }, [repository?.path, repository?.name]);
 
   // Fetch workspace repositories
   useEffect(() => {
@@ -232,8 +278,42 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             },
           },
         ],
+        [
+          'markdown',
+          {
+            scope: 'repository' as const,
+            name: 'markdown',
+            data: markdownFiles,
+            loading: markdownLoading,
+            error: null,
+            refresh: async () => {
+              // Refetch markdown files
+              if (repository?.path) {
+                setMarkdownLoading(true);
+                try {
+                  const entry: AlexandriaEntry = {
+                    name: repository.name,
+                    path: repository.path,
+                  } as AlexandriaEntry;
+                  const docs = await AlexandriaDocsService.getComprehensiveDocuments(entry);
+                  const allDocs = [...docs.tracked, ...docs.untracked];
+                  const files = allDocs.map((docPath) => ({
+                    path: docPath,
+                    title: undefined,
+                    lastModified: Date.now(),
+                  }));
+                  setMarkdownFiles(files);
+                } catch (error) {
+                  console.error('[PanelContext] Failed to refresh markdown files:', error);
+                } finally {
+                  setMarkdownLoading(false);
+                }
+              }
+            },
+          },
+        ],
       ]),
-    [workspace, workspaceRepositories, repositoriesLoading]
+    [workspace, workspaceRepositories, repositoriesLoading, markdownFiles, markdownLoading, repository]
   );
 
   // Define panel actions
@@ -348,13 +428,15 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
   // Create the extended context value with both framework and panel-specific properties
   const context: ExtendedPanelContextValue = useMemo(
-    () => ({
-      currentScope: {
-        type: repository ? ('repository' as const) : ('workspace' as const),
-        workspace,
-        repository,
-      },
-      slices,
+    () => {
+      console.info('[PanelContext] Creating context with repository:', repository);
+      return {
+        currentScope: {
+          type: repository ? ('repository' as const) : ('workspace' as const),
+          workspace,
+          repository,
+        },
+        slices,
       getSlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
         return slices.get(name) as DataSlice<T> | undefined;
       },
@@ -410,7 +492,8 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         repositoryPath: undefined, // TerminalInfo doesn't include repositoryPath
       })),
       loading: false,
-    }),
+      };
+    },
     [workspace, repository, slices, terminalSessions]
   );
 
