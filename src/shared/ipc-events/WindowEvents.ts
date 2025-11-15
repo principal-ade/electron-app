@@ -10,6 +10,8 @@ export enum WindowEvent {
   OPEN_REPOSITORY_DASHBOARD = 'window:open-repository-dashboard',
   // Open a markdown viewer for a specific file path (no dialog)
   OPEN_MARKDOWN_VIEW = 'window:open-markdown-view',
+  // Open a markdown viewer with a relative path from repository
+  OPEN_MARKDOWN_VIEW_FROM_REPOSITORY = 'window:open-markdown-view-from-repository',
   // Open the markdown file selection dialog (existing)
   OPEN_MARKDOWN_FILE_DIALOG = 'window:open-markdown-file-dialog',
   OPEN_CALLIMACHUS_WINDOW = 'window:open-callimachus',

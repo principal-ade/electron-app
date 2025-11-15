@@ -52,6 +52,21 @@ export const windowAPI: WindowAPI = {
     ),
 
   /**
+   * Open a markdown viewer window with a relative file path from repository
+   */
+  openMarkdownViewFromRepository: (
+    relativeFilePath: string,
+    repositoryPath: string,
+    options?: { viewMode?: 'single' | 'book' },
+  ) =>
+    ipcRenderer.invoke(
+      WindowEvent.OPEN_MARKDOWN_VIEW_FROM_REPOSITORY,
+      relativeFilePath,
+      repositoryPath,
+      options,
+    ),
+
+  /**
    * Open Repository Dashboard for Alexandria repositories
    */
   openRepositoryDashboard: (repository: AlexandriaEntry) =>

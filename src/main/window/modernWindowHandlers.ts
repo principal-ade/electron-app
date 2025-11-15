@@ -507,6 +507,78 @@ export function registerModernWindowHandlers(): void {
     },
   );
 
+  // Open a markdown view window with relative path from repository
+  ipcMain.handle(
+    WindowEvent.OPEN_MARKDOWN_VIEW_FROM_REPOSITORY,
+    async (
+      _event,
+      relativeFilePath: string,
+      repositoryPath: string,
+      options?: { viewMode?: 'single' | 'book' },
+    ) => {
+      if (!relativeFilePath || typeof relativeFilePath !== 'string') return;
+      if (!repositoryPath || typeof repositoryPath !== 'string') return;
+
+      try {
+        // Resolve the relative path against the repository path
+        const absoluteFilePath = path.join(repositoryPath, relativeFilePath);
+
+        // Use the existing OPEN_MARKDOWN_VIEW handler logic
+        const fileName = path.basename(absoluteFilePath);
+        const windowName = `markdown-${absoluteFilePath}`;
+
+        // Get screen dimensions for full-size window
+        const primaryDisplay = screen.getPrimaryDisplay();
+        const { width: screenWidth, height: screenHeight } =
+          primaryDisplay.workAreaSize;
+
+        // If viewMode is 'single', position window on right half of screen
+        const isRightHalf = options?.viewMode === 'single';
+        const windowConfig = isRightHalf
+          ? {
+              width: Math.floor(screenWidth / 2),
+              height: screenHeight,
+              x: Math.floor(screenWidth / 2),
+              y: 0,
+              minWidth: 600,
+              minHeight: 400,
+              title: `${path.basename(repositoryPath)}: ${fileName}`,
+            }
+          : {
+              width: 1200,
+              height: 800,
+              minWidth: 800,
+              minHeight: 600,
+              title: `${path.basename(repositoryPath)}: ${fileName}`,
+            };
+
+        const window = createSpecialWindow(windowName, windowConfig, {
+          fileSystemAdapter: true,
+          contentSecurityPolicy: true,
+          externalLinkHandler: true,
+          maximizeOnShow: !isRightHalf, // Don't maximize if positioning on right half
+        });
+
+        if (!window) return;
+
+        // Load with file data
+        const encodedData = encodeURIComponent(
+          JSON.stringify({
+            mode: 'markdown-view',
+            filePath: absoluteFilePath,
+            projectName: repositoryPath,
+            viewMode: options?.viewMode,
+          }),
+        );
+        const url = `${resolveHtmlPath('index.html')}#markdown-view/${encodedData}`;
+
+        window.window.loadURL(url);
+      } catch (err) {
+        console.error('[modernWindowHandlers] OPEN_MARKDOWN_VIEW_FROM_REPOSITORY error:', err);
+      }
+    },
+  );
+
   // Callimachus Pattern Discovery Window
   ipcMain.handle(WindowEvent.OPEN_CALLIMACHUS_WINDOW, async () => {
     const windowName = 'callimachus-pattern-discovery';

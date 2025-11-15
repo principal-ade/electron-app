@@ -8,6 +8,7 @@ import '@principal-ade/industry-themed-terminal-panel/dist/panels.bundle.css';
 import { panels as workspacePanels } from '@industry-theme/alexandria-workspace-panel';
 import { panels as docsPanels } from '@principal-ade/alexandria-docs-panel';
 import type { AlexandriaEntry } from '@a24z/core-library';
+import { WindowService } from '../main-process-api/WindowService';
 
 type PanelDefinition = {
   id: string;
@@ -71,6 +72,37 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
 
     return unsubscribe;
   }, [events, onRepositorySelected]);
+
+  // Listen for file:opened events (from Alexandria docs panel)
+  useEffect(() => {
+    const unsubscribe = events.on('file:opened', async (event) => {
+      const { filePath } = event.payload as { filePath: string };
+
+      console.info('[AlexandriaWorkspaceLayout] File opened event received:', filePath);
+
+      // If it's a markdown file, open it in the standalone markdown viewer
+      if (filePath.endsWith('.md')) {
+        // We need a repository context to open the markdown file
+        const repositoryPath = context.currentScope.repository?.path;
+
+        if (!repositoryPath) {
+          console.warn('[AlexandriaWorkspaceLayout] Cannot open markdown file - no repository selected');
+          return;
+        }
+
+        try {
+          // Use the new function that handles relative paths in the main process
+          await WindowService.openMarkdownViewFromRepository(filePath, repositoryPath, {
+            viewMode: 'single',
+          });
+        } catch (error) {
+          console.error('[AlexandriaWorkspaceLayout] Failed to open markdown viewer:', error);
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [events, context]);
 
   // Get panel components
   const TerminalPanelComponent = terminalPanels[0]?.component;

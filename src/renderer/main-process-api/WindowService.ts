@@ -95,6 +95,30 @@ export class WindowService {
   }
 
   /**
+   * Open a markdown viewer window with a relative file path
+   * The main process will resolve the relative path against the repository path
+   * @param relativeFilePath - Path to the markdown file relative to the repository
+   * @param repositoryPath - Absolute path to the repository
+   * @param options - Optional configuration for the markdown viewer
+   */
+  static async openMarkdownViewFromRepository(
+    relativeFilePath: string,
+    repositoryPath: string,
+    options?: { viewMode?: 'single' | 'book' },
+  ): Promise<void> {
+    try {
+      await window.mainProcess.window.openMarkdownViewFromRepository(
+        relativeFilePath,
+        repositoryPath,
+        options,
+      );
+    } catch (error) {
+      console.error('[WindowService] Failed to open markdown view from repository:', error);
+      throw new Error('Failed to open markdown view window');
+    }
+  }
+
+  /**
    * Open Repository Dashboard for Alexandria repositories
    * @param repository - Alexandria repository from @a24z/core-library package
    */

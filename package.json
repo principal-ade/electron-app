@@ -389,7 +389,16 @@
       "hardenedRuntime": true,
       "entitlements": "assets/entitlements.mac.plist",
       "entitlementsInherit": "assets/entitlements.mac.plist",
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "signIgnore": [
+        ".*\\.png$",
+        ".*\\.jpg$",
+        ".*\\.jpeg$",
+        ".*\\.gif$",
+        ".*\\.svg$",
+        ".*\\.ico$",
+        ".*\\.icns$"
+      ]
     },
     "afterPack": ".erb/scripts/after-pack.js",
     "afterSign": ".erb/scripts/notarize.js",

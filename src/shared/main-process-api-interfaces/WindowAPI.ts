@@ -92,6 +92,19 @@ export interface WindowAPI {
   ): Promise<void>;
 
   /**
+   * Open a markdown viewer window with a relative file path
+   * The main process will resolve the relative path against the repository path
+   * @param relativeFilePath - Path to the markdown file relative to the repository
+   * @param repositoryPath - Absolute path to the repository
+   * @param options - Optional configuration for the markdown viewer
+   */
+  openMarkdownViewFromRepository(
+    relativeFilePath: string,
+    repositoryPath: string,
+    options?: { viewMode?: 'single' | 'book' },
+  ): Promise<void>;
+
+  /**
    * Open Repository Dashboard for Alexandria repositories
    * @param repository - Alexandria repository entry with path information
    */
