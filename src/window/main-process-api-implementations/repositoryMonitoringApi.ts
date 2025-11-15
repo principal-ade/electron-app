@@ -52,6 +52,10 @@ export const repositoryMonitoringAPI: RepositoryMonitoringAPI = {
     );
   },
 
+  getServerStatus: async () => {
+    return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.GET_SERVER_STATUS);
+  },
+
   startMonitoring: async () => {
     return ipcRenderer.invoke(RepositoryMonitoringAPIEvent.START_MONITORING);
   },

@@ -4,7 +4,6 @@ import type { AlexandriaEntry } from '@a24z/core-library';
 import {
   FolderGit2,
   Users,
-  History,
   Network,
   FileText,
   Star,
@@ -22,7 +21,6 @@ import { GraphDetailPanel } from '../../../panels/components/GraphDetailPanel';
 import { GitHubProjectsPanel } from '../../../panels/components/GitHubProjectsPanel';
 import { GitHubStarredPanel } from '../../../panels/components/GitHubStarredPanel';
 import { GitHubSocialPanel } from '../../../panels/components/GitHubSocialPanel';
-import { RecentCommitsPanel } from '../../../panels/components/RecentCommitsPanel';
 import { GitHubReadmePanel } from '../../../panels/components/GitHubReadmePanel';
 import { GitSyncDiagnosticPanel } from '../../../panels/components/GitSyncDiagnosticPanel';
 import { LocalProjectsPanel } from '../../../panels/components/LocalProjectsPanel';
@@ -184,12 +182,6 @@ const FeedViewInner: React.FC = () => {
         content: <GitHubSocialPanel />,
       },
       {
-        id: 'recent-commits',
-        label: 'Recent Commits',
-        icon: <History size={16} />,
-        content: <RecentCommitsPanel repository={selectedRepository} />,
-      },
-      {
         id: 'readme-viewer',
         label: 'README',
         icon: <FileText size={16} />,
@@ -258,7 +250,7 @@ const FeedViewInner: React.FC = () => {
       },
       middle: {
         type: 'tabs' as const,
-        panels: ['workspace-entries', 'graph-view', 'readme-viewer', 'recent-commits'],
+        panels: ['workspace-entries', 'graph-view', 'readme-viewer'],
         config: {
           defaultActiveTab: 0,
           tabPosition: 'top' as const,

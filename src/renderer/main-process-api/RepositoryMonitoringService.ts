@@ -157,6 +157,30 @@ export class RepositoryMonitoringService {
   }
 
   /**
+   * Get server status (running state)
+   */
+  static async getServerStatus(): Promise<{
+    running: boolean;
+    ready: boolean;
+    restartAttempts: number;
+  }> {
+    try {
+      return await window.mainProcess.repositoryMonitoring.getServerStatus();
+    } catch (error) {
+      console.error(
+        '[RepositoryMonitoring] Error getting server status:',
+        error,
+      );
+      // Return stopped status on error
+      return {
+        running: false,
+        ready: false,
+        restartAttempts: 0,
+      };
+    }
+  }
+
+  /**
    * Start the monitoring process
    */
   static async startMonitoring(): Promise<void> {

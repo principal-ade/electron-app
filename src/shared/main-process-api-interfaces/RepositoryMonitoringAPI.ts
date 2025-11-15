@@ -121,6 +121,7 @@ export enum RepositoryMonitoringAPIEvent {
   GET_PACKAGES = 'repository-monitoring:get-packages',
   METRICS_UPDATED = 'repository-monitoring:metrics-updated',
   GET_MONITORING_STATUS = 'repository-monitoring:get-status',
+  GET_SERVER_STATUS = 'repository-monitoring:get-server-status',
   START_MONITORING = 'repository-monitoring:start',
   STOP_MONITORING = 'repository-monitoring:stop',
   GET_GIT_STATUS = 'repository-monitoring:get-git-status',
@@ -205,6 +206,12 @@ export interface MonitoringStatus {
   history: ResourceSnapshot[]; // Last 30 snapshots (1 minute of data)
 }
 
+export interface ServerStatus {
+  running: boolean;
+  ready: boolean;
+  restartAttempts: number;
+}
+
 export interface RepositoryMonitoringAPI {
   getFileTree(repoPath: string): Promise<FileTree | null>;
   getPackages(
@@ -217,6 +224,7 @@ export interface RepositoryMonitoringAPI {
   unregisterRepository(repoPath: string): Promise<RepositoryMonitoringResult>;
   refreshRepository(repoPath: string): Promise<RepositoryMonitoringResult>;
   getMonitoringStatus(): Promise<MonitoringStatus>;
+  getServerStatus(): Promise<ServerStatus>;
   startMonitoring(): Promise<void>;
   stopMonitoring(): Promise<void>;
   getGitStatus(repoPath: string): Promise<GitStatusMetadata | null>;

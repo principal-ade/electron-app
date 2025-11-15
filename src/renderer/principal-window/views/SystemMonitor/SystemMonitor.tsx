@@ -55,10 +55,12 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
     const fetchStatus = async () => {
       try {
         const data = await RepositoryMonitoringService.getMonitoringStatus();
+        const serverStatus =
+          await RepositoryMonitoringService.getServerStatus();
         setStatus(data);
         setLoading(false);
-        // Check if running based on whether we have data
-        setIsRunning(data.currentMemory > 0 || data.repositories.length > 0);
+        // Use the actual server running state instead of inferring from data
+        setIsRunning(serverStatus?.running ?? false);
       } catch (error) {
         console.error('Failed to fetch monitoring status:', error);
         // Use fallback data if service is not available

@@ -210,6 +210,26 @@ export function registerRepositoryMonitoringHandlers(): void {
     },
   );
 
+  // Get Server Status (running state)
+  ipcMain.handle(RepositoryMonitoringAPIEvent.GET_SERVER_STATUS, async () => {
+    console.log('[RepositoryMonitoring] GET_SERVER_STATUS request');
+    try {
+      const status = manager.getStatus();
+      return status;
+    } catch (error) {
+      console.error(
+        '[RepositoryMonitoring] Error getting server status:',
+        error,
+      );
+      // Return stopped status on error
+      return {
+        running: false,
+        ready: false,
+        restartAttempts: 0,
+      };
+    }
+  });
+
   // Start monitoring
   ipcMain.handle(RepositoryMonitoringAPIEvent.START_MONITORING, async () => {
     console.log('[RepositoryMonitoring] START_MONITORING request');
