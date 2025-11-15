@@ -361,7 +361,13 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
       // Terminal actions
       createTerminalSession: async (options?: { cwd?: string }) => {
-        const cwd = options?.cwd || repository?.path || workspace.path;
+        const cwd = options?.cwd || workspace.path;
+        console.info('[PanelContext] createTerminalSession called with:', {
+          optionsCwd: options?.cwd,
+          workspacePath: workspace.path,
+          finalCwd: cwd,
+          repository: repository?.name
+        });
         const sessionId = await TerminalService.create(cwd, 'alexandria-workspace');
 
         // Fetch updated terminal info
@@ -423,7 +429,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         await navigator.clipboard.writeText(text);
       },
     }),
-    [events, repository, workspace]
+    [events, workspace]
   );
 
   // Create the extended context value with both framework and panel-specific properties
@@ -469,7 +475,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
       },
       // Panel-specific properties
-      repositoryPath: repository?.path || null,
+      repositoryPath: workspace.path, // Use workspace path, not repository path
       repository: repository || null,
       gitStatus: {
         staged: [],

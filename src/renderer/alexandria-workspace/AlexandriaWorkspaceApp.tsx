@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import type { Workspace } from '@a24z/core-library';
+import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { AlexandriaWorkspaceTitlebar } from '../components/Titlebar';
 import { AlexandriaWorkspaceLayout } from './AlexandriaWorkspaceLayout';
@@ -14,6 +14,7 @@ import { AlexandriaWorkspaceLayout } from './AlexandriaWorkspaceLayout';
 export const AlexandriaWorkspaceApp: React.FC = () => {
   const { theme } = useTheme();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +40,15 @@ export const AlexandriaWorkspaceApp: React.FC = () => {
           setError('Workspace not found');
         } else {
           setWorkspace(foundWorkspace);
+
+          // Load workspace repositories
+          try {
+            const repos = await WorkspaceService.getRepositoriesInWorkspace(foundWorkspace.id);
+            setWorkspaceRepositories(repos);
+          } catch (repoErr) {
+            console.error('[AlexandriaWorkspaceApp] Error loading repositories:', repoErr);
+            setWorkspaceRepositories([]);
+          }
         }
       } catch (err) {
         console.error('[AlexandriaWorkspaceApp] Error loading workspace:', err);
@@ -51,7 +61,8 @@ export const AlexandriaWorkspaceApp: React.FC = () => {
     loadWorkspace();
 
     // Subscribe to workspace changes
-    const unsubscribe = WorkspaceService.onWorkspaceChange(() => {
+    const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
+      // Reload workspace data on any workspace change
       loadWorkspace();
     });
 
@@ -139,7 +150,13 @@ export const AlexandriaWorkspaceApp: React.FC = () => {
       }}
     >
       {/* Custom Titlebar */}
-      <AlexandriaWorkspaceTitlebar workspace={workspace} />
+      <AlexandriaWorkspaceTitlebar
+        workspace={workspace}
+        workspaceRepositoryIds={workspaceRepositories
+          .map(entry => entry.github?.id)
+          .filter((id): id is string => id != null)
+        }
+      />
 
       {/* Main Content - Panel Layout */}
       <AlexandriaWorkspaceLayout workspace={workspace} />

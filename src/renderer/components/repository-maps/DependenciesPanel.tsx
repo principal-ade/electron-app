@@ -110,6 +110,14 @@ export const DependenciesPanel: React.FC<DependenciesPanelProps> = ({
   );
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
 
+  // Get selected package data
+  const selectedPackageData = useMemo(() => {
+    if (selectedPackage === undefined || !packageLayers) return null;
+    return packageLayers.find(
+      (pkg) => pkg.packageData.path === selectedPackage,
+    );
+  }, [selectedPackage, packageLayers]);
+
   // Update selectedPackage when packageLayers changes to single package
   React.useEffect(() => {
     if (packageLayers && packageLayers.length === 1) {
@@ -178,14 +186,6 @@ export const DependenciesPanel: React.FC<DependenciesPanelProps> = ({
     setDependencyItems(basicDeps);
     setIsAnalyzed(false);
   }, [selectedPackageData, selectedPackage]);
-
-  // Get selected package data
-  const selectedPackageData = useMemo(() => {
-    if (selectedPackage === undefined || !packageLayers) return null;
-    return packageLayers.find(
-      (pkg) => pkg.packageData.path === selectedPackage,
-    );
-  }, [selectedPackage, packageLayers]);
 
   // Filter dependencies based on current filters
   const filteredDependencies = useMemo(() => {
