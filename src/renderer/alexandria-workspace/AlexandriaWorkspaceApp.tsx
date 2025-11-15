@@ -4,14 +4,15 @@ import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { AlexandriaWorkspaceTitlebar } from '../components/Titlebar';
 import { AlexandriaWorkspaceLayout } from './AlexandriaWorkspaceLayout';
+import { CustomThemeProvider } from '../providers/CustomThemeProvider';
+import { GlobalFeedbackProvider } from '../GlobalFeedbackProvider';
 
 /**
- * Alexandria Workspace Window
+ * Alexandria Workspace Window Content
  *
- * This window provides a dedicated interface for managing a single workspace
- * and its repository members.
+ * This component handles the workspace data loading and rendering.
  */
-export const AlexandriaWorkspaceApp: React.FC = () => {
+const AlexandriaWorkspaceContent: React.FC = () => {
   const { theme } = useTheme();
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
@@ -161,5 +162,21 @@ export const AlexandriaWorkspaceApp: React.FC = () => {
       {/* Main Content - Panel Layout */}
       <AlexandriaWorkspaceLayout workspace={workspace} />
     </div>
+  );
+};
+
+/**
+ * Alexandria Workspace Window
+ *
+ * This window provides a dedicated interface for managing a single workspace
+ * and its repository members.
+ */
+export const AlexandriaWorkspaceApp: React.FC = () => {
+  return (
+    <CustomThemeProvider>
+      <GlobalFeedbackProvider>
+        <AlexandriaWorkspaceContent />
+      </GlobalFeedbackProvider>
+    </CustomThemeProvider>
   );
 };
