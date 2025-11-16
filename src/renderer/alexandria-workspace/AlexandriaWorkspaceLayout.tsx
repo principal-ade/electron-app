@@ -3,10 +3,10 @@ import { useTheme } from '@a24z/industry-theme';
 import type { Workspace } from '@a24z/core-library';
 import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
-import { panels as terminalPanels } from '@principal-ade/industry-themed-terminal-panel';
-import '@principal-ade/industry-themed-terminal-panel/dist/panels.bundle.css';
+import { panels as terminalPanels } from '@industry-theme/terminal-panel';
+import '@industry-theme/terminal-panel/dist/panels.bundle.css';
 import { panels as workspacePanels } from '@industry-theme/alexandria-workspace-panel';
-import { panels as docsPanels } from '@principal-ade/alexandria-docs-panel';
+import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { WindowService } from '../main-process-api/WindowService';
 
