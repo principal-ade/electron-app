@@ -37,12 +37,14 @@ import {
 } from '../../../contexts/WorkspaceFilterContext';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { FeedViewHeader } from './FeedViewHeader';
+import { useAuth } from '../../../hooks/useAuthState';
 
 const FeedViewInner: React.FC = () => {
   const { theme } = useTheme();
   const { repositories } = useAllRepositories();
   const { selectedRepository } = useSelectedRepository();
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspaceFilter();
+  const { isAuthenticated } = useAuth();
 
   const [workspaceRepositories, setWorkspaceRepositories] = useState<
     AlexandriaEntry[]
@@ -137,7 +139,7 @@ const FeedViewInner: React.FC = () => {
     panelType: 'three-panel',
   });
 
-  // Memoize panels array based on git sync panel visibility
+  // Memoize panels array based on git sync panel visibility and authentication
   const panels = useMemo(() => {
     const basePanels = [
       {
@@ -164,24 +166,6 @@ const FeedViewInner: React.FC = () => {
         content: <WorkspaceEntriesPanel selectedWorkspace={selectedWorkspace} />,
       },
       {
-        id: 'github-projects',
-        label: 'GitHub Projects',
-        icon: <FolderGit2 size={16} />,
-        content: <GitHubProjectsPanel />,
-      },
-      {
-        id: 'github-starred',
-        label: 'Starred',
-        icon: <Star size={16} />,
-        content: <GitHubStarredPanel />,
-      },
-      {
-        id: 'github-social',
-        label: 'GitHub Network',
-        icon: <Users size={16} />,
-        content: <GitHubSocialPanel />,
-      },
-      {
         id: 'readme-viewer',
         label: 'README',
         icon: <FileText size={16} />,
@@ -200,6 +184,30 @@ const FeedViewInner: React.FC = () => {
         ),
       },
     ];
+
+    // Only add GitHub panels when authenticated
+    if (isAuthenticated) {
+      basePanels.push(
+        {
+          id: 'github-projects',
+          label: 'GitHub Projects',
+          icon: <FolderGit2 size={16} />,
+          content: <GitHubProjectsPanel />,
+        },
+        {
+          id: 'github-starred',
+          label: 'Starred',
+          icon: <Star size={16} />,
+          content: <GitHubStarredPanel />,
+        },
+        {
+          id: 'github-social',
+          label: 'GitHub Network',
+          icon: <Users size={16} />,
+          content: <GitHubSocialPanel />,
+        },
+      );
+    }
 
     // Conditionally add presence panel
     if (showPresencePanel) {
@@ -230,43 +238,72 @@ const FeedViewInner: React.FC = () => {
     showPresencePanel,
     selectedWorkspace,
     setSelectedWorkspace,
+    isAuthenticated,
   ]);
 
-  // Memoize layout based on git sync panel visibility
+  // Memoize layout based on git sync panel visibility and authentication
   const layout = useMemo(
-    () => ({
-      left: {
-        type: 'tabs' as const,
-        panels: [
-          'local-projects',
-          'workspaces-list',
-          'github-projects',
-          'github-starred',
-        ],
-        config: {
-          defaultActiveTab: 1,
-          tabPosition: 'top' as const,
+    () => {
+      // Build left panel tabs based on authentication
+      const leftPanels = isAuthenticated
+        ? ['local-projects', 'workspaces-list', 'github-projects', 'github-starred']
+        : ['local-projects', 'workspaces-list'];
+
+      // Build right panel tabs based on authentication and git sync
+      const rightPanels: string[] = [];
+      if (showPresencePanel) {
+        rightPanels.push('presence');
+      }
+      if (isAuthenticated) {
+        rightPanels.push('github-social');
+      }
+      if (showGitSyncPanel) {
+        rightPanels.push('git-sync-diagnostic');
+      }
+
+      return {
+        left: {
+          type: 'tabs' as const,
+          panels: leftPanels,
+          config: {
+            defaultActiveTab: 1,
+            tabPosition: 'top' as const,
+          },
         },
-      },
-      middle: {
-        type: 'tabs' as const,
-        panels: ['workspace-entries', 'graph-view', 'readme-viewer'],
-        config: {
-          defaultActiveTab: 0,
-          tabPosition: 'top' as const,
+        middle: {
+          type: 'tabs' as const,
+          panels: ['workspace-entries', 'graph-view', 'readme-viewer'],
+          config: {
+            defaultActiveTab: 0,
+            tabPosition: 'top' as const,
+          },
         },
-      },
-      right: {
-        type: 'tabs' as const,
-        panels: showGitSyncPanel ? ['presence', 'github-social', 'git-sync-diagnostic'] : ['presence', 'github-social'],
-        config: {
-          defaultActiveTab: 0,
-          tabPosition: 'top' as const,
+        right: {
+          type: 'tabs' as const,
+          panels: rightPanels,
+          config: {
+            defaultActiveTab: 0,
+            tabPosition: 'top' as const,
+          },
         },
-      },
-    }),
-    [showGitSyncPanel],
+      };
+    },
+    [showGitSyncPanel, showPresencePanel, isAuthenticated],
   );
+
+  // Determine if right panel should be collapsed
+  // Collapse right panel when user is not authenticated and no other panels are visible
+  const rightPanelCollapsed = useMemo(() => {
+    if (panelState.type !== 'three-panel') return false;
+
+    // If there are no panels in the right section, collapse it
+    if (layout.right.panels.length === 0) {
+      return true;
+    }
+
+    // Otherwise, use the persisted state
+    return panelState.collapsed.right || false;
+  }, [panelState, layout.right.panels.length]);
 
   return (
     <div
@@ -293,7 +330,7 @@ const FeedViewInner: React.FC = () => {
         minSizes={{ left: 15, middle: 30, right: 20 }}
         collapsed={
           panelState.type === 'three-panel'
-            ? panelState.collapsed
+            ? { ...panelState.collapsed, right: rightPanelCollapsed }
             : { left: false, right: false }
         }
         style={{ flex: 1, width: '100%', minHeight: 0 }}
