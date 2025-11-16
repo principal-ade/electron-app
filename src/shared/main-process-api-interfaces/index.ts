@@ -21,6 +21,7 @@ import type { PalaceTasksAPI } from './PalaceTasksAPI';
 import type { RepositoryMonitoringAPI } from './RepositoryMonitoringAPI';
 import type { SecretsAPI } from './SecretsAPI';
 import type { LinksAPI } from './LinksAPI';
+import type { MCPTasksAPI } from './MCPTasksAPI';
 import type { ShellAPI } from './ShellAPI';
 import type { StoreAPI } from './StoreAPI';
 import type { SystemAPI } from './SystemAPI';
@@ -99,6 +100,7 @@ export interface MainProcessAPI {
   repositoryMonitoring: RepositoryMonitoringAPI;
   secrets: SecretsAPI;
   links: LinksAPI;
+  mcpTasks: MCPTasksAPI;
   shell: ShellAPI;
   system: SystemAPI;
   terminal: TerminalAPI;

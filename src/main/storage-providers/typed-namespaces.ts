@@ -8,6 +8,7 @@ import { AgentSessionEvent } from '../../shared/main-process-api-interfaces';
 import { UserPreferences } from '../../shared/types/userPreferences.types';
 import { AgentSessionRecord } from '../../shared/sessionTypes';
 import { SecretMetadata } from '../../shared/main-process-api-interfaces/SecretsAPI';
+import { MCPTaskSubmission } from '../../shared/types/mcp-tasks.types';
 
 // TODO: Define proper AIConfiguration interface
 interface AIConfiguration {
@@ -179,6 +180,13 @@ export interface DockerAnalysisSession {
 }
 
 /**
+ * MCP Tasks Store Data Structure
+ */
+export interface MCPTasksStore {
+  tasks: MCPTaskSubmission[];
+}
+
+/**
  * Type-safe namespace data type definitions
  * Each namespace has its own strongly-typed data structure
  */
@@ -201,6 +209,9 @@ export interface NamespaceDataTypes {
 
   // Links Management namespace
   [StaticNamespaces.REPOSITORY_LINKS]: StoredLinks; // Repository links and bookmarks
+
+  // MCP Tasks namespace
+  [StaticNamespaces.MCP_TASKS]: MCPTasksStore; // MCP task submissions tracking
 }
 
 /**
@@ -293,6 +304,14 @@ export class TypedNamespaceRegistry {
     this.register(StaticNamespaces.REPOSITORY_LINKS, {
       name: StaticNamespaces.REPOSITORY_LINKS,
       description: 'Repository links and bookmarks',
+      storageProvider: 'electron-store',
+      category: NamespaceCategory.CORE,
+    });
+
+    // MCP Tasks
+    this.register(StaticNamespaces.MCP_TASKS, {
+      name: StaticNamespaces.MCP_TASKS,
+      description: 'MCP task submissions tracking',
       storageProvider: 'electron-store',
       category: NamespaceCategory.CORE,
     });

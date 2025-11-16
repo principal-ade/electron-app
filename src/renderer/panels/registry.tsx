@@ -28,6 +28,7 @@ import { PresencePanel } from './components/PresencePanel';
 import { LocalhostBrowserPanel } from './components/LocalhostBrowserPanel';
 import { WorkspacesListPanel } from './components/WorkspacesListPanel';
 import { WorkspaceEntriesPanel } from './components/WorkspaceEntriesPanel';
+import { MCPTasksPanel } from './components/MCPTasksPanel';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -96,6 +97,7 @@ const panelRenderers: Partial<
   localhostBrowser: () => <LocalhostBrowserPanel />,
   workspacesList: () => <WorkspacesListPanel />,
   workspaceEntries: () => <WorkspaceEntriesPanel />,
+  mcpTasks: () => <MCPTasksPanel />,
 };
 
 export const repositoryPanelDefinitions = repositoryPanelCatalog.map(

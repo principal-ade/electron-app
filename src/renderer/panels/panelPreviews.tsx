@@ -21,6 +21,7 @@ import {
   Info,
   Layers,
   DoorClosed,
+  Mailbox,
   Network,
   Package,
   Pencil,
@@ -49,6 +50,7 @@ import { AgentEventsPanelPreview } from './components/AgentEventsPanel';
 import { AgentSessionsPanelPreview } from './components/AgentSessionsPanel';
 import { AgentContextTreePanelPreview } from './components/AgentContextTreePanel';
 import { TasksPanelPreview } from './components/TasksPanel';
+import { MCPTasksPanelPreview } from './components/MCPTasksPanel';
 import { CityVisualizationPanelPreview } from './components/CityVisualizationPanel';
 import { TabbedTerminalPanelPreview } from './components/TabbedTerminalPanel';
 import { FilePreviewPanelPreview } from './components/FilePreviewPanel';
@@ -159,6 +161,12 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     preview: <TasksPanelPreview />,
     label: 'Tasks',
     description: 'Track repository TODOs, notes, and follow-up actions.',
+  },
+  mcpTasks: {
+    icon: <Mailbox size={16} />,
+    preview: <MCPTasksPanelPreview />,
+    label: 'MCP Tasks',
+    description: 'Track tasks submitted through the MCP bridge to dependencies.',
   },
   cityVisualization: {
     icon: <Building2 size={16} />,

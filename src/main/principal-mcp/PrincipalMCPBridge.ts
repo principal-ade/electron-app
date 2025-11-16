@@ -9,6 +9,8 @@ import type {
 } from '@a24z/core-library';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
+import { MCPTasksDomain } from '../services/storage-domains/MCPTasksDomain';
+import { getTypedStorageManager } from '../storage-providers';
 
 interface SubmitDependencyTaskRequest {
   dependencyId: string;
@@ -24,6 +26,7 @@ export class PrincipalMCPBridge extends EventEmitter {
   private app: express.Application;
   private server: Server | null = null;
   private port: number = APP_BRANDING.BRIDGE_PORTS.PRINCIPAL_MCP || 3043;
+  private mcpTasksDomain: MCPTasksDomain | null = null;
 
   constructor(startPort?: number) {
     super();
@@ -89,6 +92,29 @@ export class PrincipalMCPBridge extends EventEmitter {
       }
 
       const taskId = `task-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+      // Record task submission to store (before attempting resolution)
+      let storedTask = null;
+      if (this.mcpTasksDomain) {
+        try {
+          storedTask = await this.mcpTasksDomain.addTask({
+            dependencyId: request.dependencyId,
+            taskSummary: request.taskSummary,
+            taskDetails: request.taskDetails,
+            priority: request.priority,
+            tags: request.tags,
+            anchors: request.anchors,
+            repositoryRoot: request.repositoryRoot,
+            resolutionStatus: 'pending',
+            dependencyResolved: false,
+            taskWritten: false,
+          });
+          console.log('[Principal MCP Bridge] Task recorded to store:', storedTask.taskId);
+        } catch (error) {
+          console.error('[Principal MCP Bridge] Failed to record task to store:', error);
+          // Continue with task submission even if storage fails
+        }
+      }
 
       // Resolve dependency using repository monitoring server
       let dependencyResolution = null;
@@ -173,6 +199,21 @@ export class PrincipalMCPBridge extends EventEmitter {
             console.log(
               `[Principal MCP Bridge] Task written to ${dependencyPath}/.palace-work/tasks/active/${task.id}.task.md`,
             );
+
+            // Update stored task with successful resolution
+            if (this.mcpTasksDomain && storedTask) {
+              try {
+                await this.mcpTasksDomain.updateTask(storedTask.taskId, {
+                  resolutionStatus: 'resolved',
+                  dependencyResolved: true,
+                  dependencyRepository: dependencyPath,
+                  taskPath: `${dependencyPath}/.palace-work/tasks/active/${task.id}.task.md`,
+                  taskWritten: true,
+                });
+              } catch (error) {
+                console.error('[Principal MCP Bridge] Failed to update task in store:', error);
+              }
+            }
           } catch (error) {
             console.error(
               '[Principal MCP Bridge] Failed to write task to dependency Memory Palace:',
@@ -181,6 +222,18 @@ export class PrincipalMCPBridge extends EventEmitter {
             response.taskWritten = false;
             response.taskWriteError =
               error instanceof Error ? error.message : 'Unknown error';
+
+            // Update stored task with failure
+            if (this.mcpTasksDomain && storedTask) {
+              try {
+                await this.mcpTasksDomain.updateTask(storedTask.taskId, {
+                  resolutionStatus: 'failed',
+                  error: error instanceof Error ? error.message : 'Unknown error',
+                });
+              } catch (updateError) {
+                console.error('[Principal MCP Bridge] Failed to update task in store:', updateError);
+              }
+            }
           }
         } else if (dependencyResolution.packageInfo) {
           response.message = `Dependency already exists in ${dependencyResolution.packageInfo.packagePath}`;
@@ -192,6 +245,19 @@ export class PrincipalMCPBridge extends EventEmitter {
         }
       } else {
         response.message = `Dependency '${request.dependencyId}' not found in registered repositories`;
+
+        // Update stored task with unresolved status
+        if (this.mcpTasksDomain && storedTask) {
+          try {
+            await this.mcpTasksDomain.updateTask(storedTask.taskId, {
+              resolutionStatus: 'unresolved',
+              dependencyResolved: false,
+              taskWritten: false,
+            });
+          } catch (error) {
+            console.error('[Principal MCP Bridge] Failed to update task in store:', error);
+          }
+        }
       }
 
       res.json(response);
@@ -282,6 +348,16 @@ export class PrincipalMCPBridge extends EventEmitter {
   }
 
   public async start(): Promise<number> {
+    // Initialize MCP Tasks Domain
+    try {
+      const typedStore = await getTypedStorageManager();
+      this.mcpTasksDomain = new MCPTasksDomain(typedStore);
+      console.log('[Principal MCP Bridge] MCP Tasks tracking initialized');
+    } catch (error) {
+      console.error('[Principal MCP Bridge] Failed to initialize MCP Tasks tracking:', error);
+      // Continue anyway - task tracking is not critical for bridge operation
+    }
+
     return new Promise((resolve, reject) => {
       this.server = this.app.listen(this.port, 'localhost', () => {
         console.log(`✅ Principal MCP Bridge started on port ${this.port}`);

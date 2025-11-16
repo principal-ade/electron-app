@@ -74,8 +74,6 @@ interface MCPTaskSubmission {
 
   // Resolution Status
   resolutionStatus: MCPTaskResolutionStatus;
-  resolutionAttemptedAt?: number;    // When dependency resolution was attempted
-  resolvedAt?: number;               // When successfully resolved and written
 
   // Resolution Results
   dependencyResolved: boolean;       // Whether dependency was found
@@ -83,19 +81,8 @@ interface MCPTaskSubmission {
   taskPath?: string;                 // Full path to written .task.md file
   taskWritten: boolean;              // Whether task was written to Memory Palace
 
-  // Alexandria Integration
-  alexandriaEntry?: {
-    projectId: string;
-    repositoryName: string;
-    repositoryPath: string;
-  };
-
   // Error Tracking
   error?: string;                    // Error message if submission failed
-  errorDetails?: any;                // Additional error context
-
-  // Metadata
-  lastUpdated: number;               // Last modification timestamp
 }
 
 /**
@@ -103,43 +90,9 @@ interface MCPTaskSubmission {
  */
 type MCPTaskResolutionStatus =
   | 'pending'        // Just received, not yet processed
-  | 'resolving'      // Attempting to resolve dependency
   | 'resolved'       // Dependency found, task written to Memory Palace
   | 'unresolved'     // Dependency not found, task not written
-  | 'failed'         // Error during processing
-  | 'archived';      // User manually archived
-
-/**
- * Query options for retrieving tasks from store
- */
-interface MCPTaskQueryOptions {
-  resolutionStatus?: MCPTaskResolutionStatus | MCPTaskResolutionStatus[];
-  dependencyId?: string;
-  dependencyRepository?: string;
-  taskWritten?: boolean;
-  submittedAfter?: number;           // Unix timestamp
-  submittedBefore?: number;          // Unix timestamp
-  tags?: string[];                   // Match any of these tags
-  priority?: 'low' | 'normal' | 'high' | 'critical';
-  limit?: number;                    // Max results to return
-  offset?: number;                   // Pagination offset
-  sortBy?: 'submittedAt' | 'resolvedAt' | 'priority';
-  sortOrder?: 'asc' | 'desc';
-}
-
-/**
- * Statistics about MCP task submissions
- */
-interface MCPTaskStats {
-  total: number;
-  byStatus: Record<MCPTaskResolutionStatus, number>;
-  byPriority: Record<string, number>;
-  resolvedCount: number;
-  unresolvedCount: number;
-  failedCount: number;
-  last24Hours: number;
-  last7Days: number;
-}
+  | 'failed';        // Error during processing
 ```
 
 ---
@@ -171,9 +124,7 @@ export const TYPED_NAMESPACES = {
         repositoryRoot: z.string().optional(),
 
         // Resolution Status
-        resolutionStatus: z.enum(['pending', 'resolving', 'resolved', 'unresolved', 'failed', 'archived']),
-        resolutionAttemptedAt: z.number().optional(),
-        resolvedAt: z.number().optional(),
+        resolutionStatus: z.enum(['pending', 'resolved', 'unresolved', 'failed']),
 
         // Resolution Results
         dependencyResolved: z.boolean(),
@@ -181,28 +132,12 @@ export const TYPED_NAMESPACES = {
         taskPath: z.string().optional(),
         taskWritten: z.boolean(),
 
-        // Alexandria Integration
-        alexandriaEntry: z.object({
-          projectId: z.string(),
-          repositoryName: z.string(),
-          repositoryPath: z.string(),
-        }).optional(),
-
         // Error Tracking
         error: z.string().optional(),
-        errorDetails: z.any().optional(),
-
-        // Metadata
-        lastUpdated: z.number(),
       })),
-
-      // Store metadata
-      lastCleanup: z.number().optional(),
-      retentionDays: z.number().default(90),
     }),
     defaultValue: {
       tasks: [],
-      retentionDays: 90,
     },
   },
 } as const;
@@ -218,10 +153,10 @@ export const TYPED_NAMESPACES = {
 
 ```typescript
 import { MultiStoreManager } from './MultiStoreManager';
-import { MCPTaskSubmission, MCPTaskQueryOptions, MCPTaskStats, MCPTaskResolutionStatus } from '../types/mcp-tasks';
+import { MCPTaskSubmission } from '../types/mcp-tasks';
 
 /**
- * Service for managing MCP task submissions in the persistent store
+ * Simple service for managing MCP task submissions in the persistent store
  */
 export class MCPTaskStore {
   constructor(private storeManager: MultiStoreManager) {}
@@ -229,7 +164,7 @@ export class MCPTaskStore {
   /**
    * Record a new task submission
    */
-  async addTask(submission: Omit<MCPTaskSubmission, 'taskId' | 'submittedAt' | 'lastUpdated'>): Promise<MCPTaskSubmission> {
+  async addTask(submission: Omit<MCPTaskSubmission, 'taskId' | 'submittedAt'>): Promise<MCPTaskSubmission> {
     const store = this.storeManager.getStore('mcp-tasks');
     const data = await store.get();
 
@@ -237,10 +172,9 @@ export class MCPTaskStore {
       ...submission,
       taskId: this.generateTaskId(),
       submittedAt: Date.now(),
-      lastUpdated: Date.now(),
-      resolutionStatus: 'pending',
-      dependencyResolved: false,
-      taskWritten: false,
+      resolutionStatus: submission.resolutionStatus || 'pending',
+      dependencyResolved: submission.dependencyResolved || false,
+      taskWritten: submission.taskWritten || false,
     };
 
     data.tasks.push(task);
@@ -250,87 +184,13 @@ export class MCPTaskStore {
   }
 
   /**
-   * Update an existing task's resolution status
+   * Get all tasks (sorted by most recent first)
    */
-  async updateTask(taskId: string, updates: Partial<MCPTaskSubmission>): Promise<MCPTaskSubmission | null> {
+  async getAllTasks(): Promise<MCPTaskSubmission[]> {
     const store = this.storeManager.getStore('mcp-tasks');
     const data = await store.get();
 
-    const taskIndex = data.tasks.findIndex(t => t.taskId === taskId);
-    if (taskIndex === -1) return null;
-
-    data.tasks[taskIndex] = {
-      ...data.tasks[taskIndex],
-      ...updates,
-      lastUpdated: Date.now(),
-    };
-
-    await store.set(data);
-    return data.tasks[taskIndex];
-  }
-
-  /**
-   * Query tasks with filtering and pagination
-   */
-  async queryTasks(options: MCPTaskQueryOptions = {}): Promise<MCPTaskSubmission[]> {
-    const store = this.storeManager.getStore('mcp-tasks');
-    const data = await store.get();
-
-    let filtered = data.tasks;
-
-    // Apply filters
-    if (options.resolutionStatus) {
-      const statuses = Array.isArray(options.resolutionStatus)
-        ? options.resolutionStatus
-        : [options.resolutionStatus];
-      filtered = filtered.filter(t => statuses.includes(t.resolutionStatus));
-    }
-
-    if (options.dependencyId) {
-      filtered = filtered.filter(t => t.dependencyId === options.dependencyId);
-    }
-
-    if (options.dependencyRepository) {
-      filtered = filtered.filter(t => t.dependencyRepository === options.dependencyRepository);
-    }
-
-    if (options.taskWritten !== undefined) {
-      filtered = filtered.filter(t => t.taskWritten === options.taskWritten);
-    }
-
-    if (options.submittedAfter) {
-      filtered = filtered.filter(t => t.submittedAt >= options.submittedAfter!);
-    }
-
-    if (options.submittedBefore) {
-      filtered = filtered.filter(t => t.submittedAt <= options.submittedBefore!);
-    }
-
-    if (options.tags && options.tags.length > 0) {
-      filtered = filtered.filter(t =>
-        t.tags && t.tags.some(tag => options.tags!.includes(tag))
-      );
-    }
-
-    if (options.priority) {
-      filtered = filtered.filter(t => t.priority === options.priority);
-    }
-
-    // Sort
-    const sortBy = options.sortBy || 'submittedAt';
-    const sortOrder = options.sortOrder || 'desc';
-
-    filtered.sort((a, b) => {
-      const aVal = a[sortBy] || 0;
-      const bVal = b[sortBy] || 0;
-      return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
-    });
-
-    // Paginate
-    const offset = options.offset || 0;
-    const limit = options.limit || filtered.length;
-
-    return filtered.slice(offset, offset + limit);
+    return [...data.tasks].sort((a, b) => b.submittedAt - a.submittedAt);
   }
 
   /**
@@ -343,73 +203,40 @@ export class MCPTaskStore {
   }
 
   /**
-   * Get statistics about task submissions
+   * Update an existing task
    */
-  async getStats(): Promise<MCPTaskStats> {
+  async updateTask(taskId: string, updates: Partial<MCPTaskSubmission>): Promise<MCPTaskSubmission | null> {
     const store = this.storeManager.getStore('mcp-tasks');
     const data = await store.get();
 
-    const now = Date.now();
-    const oneDayAgo = now - 24 * 60 * 60 * 1000;
-    const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const taskIndex = data.tasks.findIndex(t => t.taskId === taskId);
+    if (taskIndex === -1) return null;
 
-    const stats: MCPTaskStats = {
-      total: data.tasks.length,
-      byStatus: {
-        pending: 0,
-        resolving: 0,
-        resolved: 0,
-        unresolved: 0,
-        failed: 0,
-        archived: 0,
-      },
-      byPriority: {
-        low: 0,
-        normal: 0,
-        high: 0,
-        critical: 0,
-        unspecified: 0,
-      },
-      resolvedCount: 0,
-      unresolvedCount: 0,
-      failedCount: 0,
-      last24Hours: 0,
-      last7Days: 0,
+    data.tasks[taskIndex] = {
+      ...data.tasks[taskIndex],
+      ...updates,
     };
 
-    for (const task of data.tasks) {
-      stats.byStatus[task.resolutionStatus]++;
-      stats.byPriority[task.priority || 'unspecified']++;
-
-      if (task.resolutionStatus === 'resolved') stats.resolvedCount++;
-      if (task.resolutionStatus === 'unresolved') stats.unresolvedCount++;
-      if (task.resolutionStatus === 'failed') stats.failedCount++;
-
-      if (task.submittedAt >= oneDayAgo) stats.last24Hours++;
-      if (task.submittedAt >= sevenDaysAgo) stats.last7Days++;
-    }
-
-    return stats;
+    await store.set(data);
+    return data.tasks[taskIndex];
   }
 
   /**
-   * Clean up old tasks based on retention policy
+   * Delete a task by ID
    */
-  async cleanup(): Promise<number> {
+  async deleteTask(taskId: string): Promise<boolean> {
     const store = this.storeManager.getStore('mcp-tasks');
     const data = await store.get();
 
-    const retentionMs = data.retentionDays * 24 * 60 * 60 * 1000;
-    const cutoffTime = Date.now() - retentionMs;
+    const initialLength = data.tasks.length;
+    data.tasks = data.tasks.filter(t => t.taskId !== taskId);
 
-    const beforeCount = data.tasks.length;
-    data.tasks = data.tasks.filter(t => t.submittedAt >= cutoffTime);
-    const afterCount = data.tasks.length;
+    if (data.tasks.length < initialLength) {
+      await store.set(data);
+      return true;
+    }
 
-    data.lastCleanup = Date.now();
-    await store.set(data);
-
-    return beforeCount - afterCount;
+    return false;
   }
 
   private generateTaskId(): string {
@@ -456,16 +283,13 @@ export class PrincipalMCPBridge {
       taskSummary,
       taskDetails,
       ...options,
-      resolutionStatus: 'resolving',
+      resolutionStatus: 'pending',
+      dependencyResolved: false,
+      taskWritten: false,
     });
 
     try {
       // 2. Attempt dependency resolution (EXISTING CODE)
-      await this.mcpTaskStore.updateTask(taskSubmission.taskId, {
-        resolutionStatus: 'resolving',
-        resolutionAttemptedAt: Date.now(),
-      });
-
       const resolutionResult = await this.repositoryMonitoring.resolveDependency(
         dependencyId,
         options.repositoryRoot
@@ -484,12 +308,10 @@ export class PrincipalMCPBridge {
         // Update store with success
         await this.mcpTaskStore.updateTask(taskSubmission.taskId, {
           resolutionStatus: 'resolved',
-          resolvedAt: Date.now(),
           dependencyResolved: true,
           dependencyRepository: resolutionResult.dependency.path,
           taskPath,
           taskWritten: true,
-          alexandriaEntry: resolutionResult.alexandriaEntry,
         });
 
         return {
@@ -498,7 +320,6 @@ export class PrincipalMCPBridge {
           taskWritten: true,
           taskPath,
           dependencyRepository: resolutionResult.dependency.path,
-          alexandriaEntry: resolutionResult.alexandriaEntry,
         };
       } else {
         // Dependency not found
@@ -513,7 +334,6 @@ export class PrincipalMCPBridge {
           taskId: taskSubmission.taskId,
           taskWritten: false,
           error: 'Dependency not found',
-          resolutionDetails: resolutionResult,
         };
       }
     } catch (error) {
@@ -521,7 +341,6 @@ export class PrincipalMCPBridge {
       await this.mcpTaskStore.updateTask(taskSubmission.taskId, {
         resolutionStatus: 'failed',
         error: error.message,
-        errorDetails: error,
       });
 
       throw error;
@@ -539,35 +358,24 @@ export class PrincipalMCPBridge {
 ```typescript
 import { ipcMain } from 'electron';
 import { MCPTaskStore } from './MCPTaskStore';
-import { MCPTaskQueryOptions } from '../types/mcp-tasks';
 
 export enum MCPTaskStoreAPIEvent {
-  QUERY_TASKS = 'mcp-task-store:query-tasks',
+  GET_ALL_TASKS = 'mcp-task-store:get-all-tasks',
   GET_TASK = 'mcp-task-store:get-task',
-  UPDATE_TASK = 'mcp-task-store:update-task',
-  GET_STATS = 'mcp-task-store:get-stats',
-  CLEANUP = 'mcp-task-store:cleanup',
+  DELETE_TASK = 'mcp-task-store:delete-task',
 }
 
 export function registerMCPTaskStoreHandlers(mcpTaskStore: MCPTaskStore) {
-  ipcMain.handle(MCPTaskStoreAPIEvent.QUERY_TASKS, async (event, options: MCPTaskQueryOptions) => {
-    return await mcpTaskStore.queryTasks(options);
+  ipcMain.handle(MCPTaskStoreAPIEvent.GET_ALL_TASKS, async () => {
+    return await mcpTaskStore.getAllTasks();
   });
 
   ipcMain.handle(MCPTaskStoreAPIEvent.GET_TASK, async (event, taskId: string) => {
     return await mcpTaskStore.getTask(taskId);
   });
 
-  ipcMain.handle(MCPTaskStoreAPIEvent.UPDATE_TASK, async (event, taskId: string, updates: any) => {
-    return await mcpTaskStore.updateTask(taskId, updates);
-  });
-
-  ipcMain.handle(MCPTaskStoreAPIEvent.GET_STATS, async () => {
-    return await mcpTaskStore.getStats();
-  });
-
-  ipcMain.handle(MCPTaskStoreAPIEvent.CLEANUP, async () => {
-    return await mcpTaskStore.cleanup();
+  ipcMain.handle(MCPTaskStoreAPIEvent.DELETE_TASK, async (event, taskId: string) => {
+    return await mcpTaskStore.deleteTask(taskId);
   });
 }
 ```
@@ -579,27 +387,19 @@ export function registerMCPTaskStoreHandlers(mcpTaskStore: MCPTaskStore) {
 **File**: `src/renderer/main-process-api/MCPTaskStoreService.ts` (NEW)
 
 ```typescript
-import { MCPTaskQueryOptions, MCPTaskSubmission, MCPTaskStats } from '../../shared/types/mcp-tasks';
+import { MCPTaskSubmission } from '../../shared/types/mcp-tasks';
 
 class MCPTaskStoreService {
-  async queryTasks(options: MCPTaskQueryOptions = {}): Promise<MCPTaskSubmission[]> {
-    return window.api.mcpTaskStore.queryTasks(options);
+  async getAllTasks(): Promise<MCPTaskSubmission[]> {
+    return window.api.mcpTaskStore.getAllTasks();
   }
 
   async getTask(taskId: string): Promise<MCPTaskSubmission | null> {
     return window.api.mcpTaskStore.getTask(taskId);
   }
 
-  async updateTask(taskId: string, updates: Partial<MCPTaskSubmission>): Promise<MCPTaskSubmission | null> {
-    return window.api.mcpTaskStore.updateTask(taskId, updates);
-  }
-
-  async getStats(): Promise<MCPTaskStats> {
-    return window.api.mcpTaskStore.getStats();
-  }
-
-  async cleanup(): Promise<number> {
-    return window.api.mcpTaskStore.cleanup();
+  async deleteTask(taskId: string): Promise<boolean> {
+    return window.api.mcpTaskStore.deleteTask(taskId);
   }
 }
 
@@ -610,16 +410,15 @@ export default new MCPTaskStoreService();
 
 ## Implementation Phases
 
-### Milestone 1: Core Store Infrastructure ✓ (This Document)
+### Milestone 1: Core Store Infrastructure (This Document)
 
 **Deliverables:**
 - [ ] Data model and TypeScript interfaces
 - [ ] Store namespace configuration
-- [ ] MCPTaskStore service class
+- [ ] MCPTaskStore service class with save, fetch, delete operations
 - [ ] Bridge integration (modify PrincipalMCPBridge)
 - [ ] IPC handlers for renderer communication
 - [ ] Renderer service layer
-- [ ] Unit tests for store operations
 
 **Files to Create:**
 - `src/main/stores/MCPTaskStore.ts`
@@ -633,57 +432,22 @@ export default new MCPTaskStoreService();
 - `src/main/initialization.ts` (register handlers)
 - `src/window/main-process-api-implementations/index.ts` (export IPC API)
 
-**Testing Checklist:**
-- [ ] Task submission creates store entry
-- [ ] Successful resolution updates store correctly
-- [ ] Failed resolution records error in store
-- [ ] Query filtering works for all fields
-- [ ] Pagination works correctly
-- [ ] Statistics calculation is accurate
-- [ ] Cleanup removes old tasks based on retention policy
-
 ---
 
-### Milestone 2: UI Panel (Future)
+### Milestone 2: UI Panel (Next)
 
 **Deliverables:**
 - [ ] React component: `MCPTasksPanel`
-- [ ] Task list view with filtering
+- [ ] Task list view showing all tasks
 - [ ] Task detail view
 - [ ] Status indicators and badges
-- [ ] Search and filter controls
-- [ ] Export functionality
-- [ ] Real-time updates when new tasks arrive
+- [ ] Delete button for tasks
 
 **Design Considerations:**
 - Follow existing panel patterns (see `TasksPanel.tsx`)
 - Use PanelContext for panel state management
 - Integrate with AlexandriaWorkspaceLayout
 - Add to panel registry in PanelContext
-- Support drag-and-drop panel positioning
-
----
-
-## Data Retention and Cleanup
-
-### Default Policy
-- Retention period: **90 days**
-- Configurable via `mcp-tasks.retentionDays` store value
-- Automatic cleanup on app startup
-- Manual cleanup via IPC handler
-
-### Cleanup Strategy
-```typescript
-// Automatic cleanup on initialization
-app.on('ready', async () => {
-  const mcpTaskStore = new MCPTaskStore(storeManager);
-  const deleted = await mcpTaskStore.cleanup();
-  console.log(`Cleaned up ${deleted} old MCP task records`);
-});
-
-// Manual cleanup via settings panel
-const deletedCount = await MCPTaskStoreService.cleanup();
-```
 
 ---
 
@@ -692,12 +456,6 @@ const deletedCount = await MCPTaskStoreService.cleanup();
 ### Bridge Level
 - Store submission failures should NOT block task processing
 - Log store errors but continue with Memory Palace write
-- Retry failed store updates in background
-
-### Query Level
-- Return empty arrays on query failures
-- Log errors to console/file
-- Provide meaningful error messages to UI
 
 ### Example Error Handling
 ```typescript
@@ -711,176 +469,32 @@ try {
 
 ---
 
-## Testing Strategy
+## Usage Examples
 
-### Unit Tests
+### Get All Tasks
 ```typescript
-describe('MCPTaskStore', () => {
-  it('should add task with generated ID', async () => {
-    const task = await store.addTask({...});
-    expect(task.taskId).toMatch(/^task-\d+-[a-z0-9]+$/);
-    expect(task.resolutionStatus).toBe('pending');
-  });
-
-  it('should update task resolution status', async () => {
-    const task = await store.addTask({...});
-    const updated = await store.updateTask(task.taskId, {
-      resolutionStatus: 'resolved',
-      taskWritten: true,
-    });
-    expect(updated.resolutionStatus).toBe('resolved');
-  });
-
-  it('should filter tasks by status', async () => {
-    // Add multiple tasks with different statuses
-    const resolved = await store.queryTasks({
-      resolutionStatus: 'resolved'
-    });
-    expect(resolved.every(t => t.resolutionStatus === 'resolved')).toBe(true);
-  });
-
-  it('should calculate stats correctly', async () => {
-    const stats = await store.getStats();
-    expect(stats.total).toBeGreaterThan(0);
-    expect(stats.resolvedCount + stats.unresolvedCount).toBeLessThanOrEqual(stats.total);
-  });
-});
+const tasks = await MCPTaskStoreService.getAllTasks();
+// Returns tasks sorted by most recent first
 ```
 
-### Integration Tests
-- Test full flow: HTTP request → Store → Memory Palace → Store update
-- Test concurrent task submissions
-- Test error recovery
-- Test IPC communication
-
----
-
-## Migration and Backwards Compatibility
-
-### First Launch
-- Store will be created with empty task array
-- No migration needed from existing system
-- Existing Memory Palace tasks remain unchanged
-
-### Future Migrations
-- Version store schema if breaking changes needed
-- Provide migration scripts in `src/main/stores/migrations/`
-- Log migration status on app startup
-
----
-
-## Performance Considerations
-
-### Store Size Management
-- Expected: ~100-1000 tasks over 90 days
-- Each task: ~1-2 KB JSON
-- Total store size: 100 KB - 2 MB (negligible)
-
-### Query Performance
-- In-memory filtering acceptable for expected volumes
-- Add indexing if >10,000 tasks accumulate
-- Consider SQLite migration if performance degrades
-
-### Background Operations
-- Run cleanup on startup (non-blocking)
-- Consider periodic cleanup every 24 hours
-- Debounce rapid task submissions if needed
-
----
-
-## Security and Privacy
-
-### Data Sensitivity
-- Task details may contain proprietary information
-- Store file location: Electron userData directory
-- File permissions: User-only read/write
-
-### Recommendations
-- Do NOT sync store file to cloud storage
-- Exclude store from backups if tasks contain secrets
-- Consider encryption for sensitive task details
-- Add option to disable task storage in settings
-
----
-
-## Future Enhancements
-
-### Potential Features
-1. **Task Deduplication**: Detect and merge duplicate submissions
-2. **Retry Queue**: Automatically retry unresolved tasks
-3. **Task Templates**: Common task patterns
-4. **Batch Operations**: Archive/delete multiple tasks
-5. **Export/Import**: JSON export for sharing or backup
-6. **Search**: Full-text search across task content
-7. **Notifications**: Alert when tasks fail to resolve
-8. **Analytics**: Task submission trends over time
-
-### Store Schema Evolution
+### Get Single Task
 ```typescript
-// Version 2 example
-interface MCPTaskSubmissionV2 extends MCPTaskSubmission {
-  version: 2;
-  retryCount?: number;
-  nextRetryAt?: number;
-  duplicateOf?: string;
-  userNotes?: string;
-}
+const task = await MCPTaskStoreService.getTask('task-123-abc');
 ```
 
----
-
-## References
-
-- **Store Infrastructure**: See `STORE_INFRASTRUCTURE_ANALYSIS.md`
-- **Quick Reference**: See `STORE_QUICK_REFERENCE.md`
-- **Existing Task System**: See `src/main/palace-tasks/` directory
-- **Bridge Implementation**: See `src/main/principal-mcp/PrincipalMCPBridge.ts`
-
----
-
-## Appendix: Example Queries
-
-### Get All Unresolved Tasks
+### Delete Task
 ```typescript
-const unresolved = await MCPTaskStoreService.queryTasks({
-  resolutionStatus: 'unresolved',
-  sortBy: 'submittedAt',
-  sortOrder: 'desc',
-});
-```
-
-### Get Tasks for Specific Dependency
-```typescript
-const tasks = await MCPTaskStoreService.queryTasks({
-  dependencyId: 'my-project-repo',
-  sortBy: 'submittedAt',
-});
-```
-
-### Get High Priority Failed Tasks
-```typescript
-const failedHighPriority = await MCPTaskStoreService.queryTasks({
-  resolutionStatus: 'failed',
-  priority: 'high',
-  limit: 10,
-});
-```
-
-### Get Tasks from Last 24 Hours
-```typescript
-const recent = await MCPTaskStoreService.queryTasks({
-  submittedAfter: Date.now() - 24 * 60 * 60 * 1000,
-  sortBy: 'submittedAt',
-  sortOrder: 'desc',
-});
+const deleted = await MCPTaskStoreService.deleteTask('task-123-abc');
+// Returns true if deleted, false if not found
 ```
 
 ---
 
 ## Document Status
 
-- **Version**: 1.0
+- **Version**: 2.0 (Simplified)
 - **Created**: 2025-11-14
+- **Updated**: 2025-11-15
 - **Status**: Specification (Implementation Pending)
 - **Target Milestone**: Milestone 1 - Core Store Infrastructure
 - **Next Milestone**: Milestone 2 - UI Panel Integration

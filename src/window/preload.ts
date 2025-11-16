@@ -40,6 +40,7 @@ import { palaceTasksApi } from './main-process-api-implementations/palaceTasksAp
 import { repositoryMonitoringAPI } from './main-process-api-implementations/repositoryMonitoringApi';
 import { secretsAPI } from './main-process-api-implementations/secretsApi';
 import { linksAPI } from './main-process-api-implementations/linksApi';
+import { mcpTasksAPI } from './main-process-api-implementations/mcpTasksApi';
 import { apiProxyApi } from './main-process-api-implementations/apiProxyApi';
 import { appVersionManagerApi } from './main-process-api-implementations/appVersionManagerApi';
 import { orbitAPI } from './main-process-api-implementations/orbitApi';
@@ -115,6 +116,7 @@ const mainProcessExposure: MainProcessAPI = {
   repositoryMonitoring: repositoryMonitoringAPI,
   secrets: secretsAPI,
   links: linksAPI,
+  mcpTasks: mcpTasksAPI,
   shell: shellAPI,
   system: systemAPI,
   terminal: terminalAPI,

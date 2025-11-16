@@ -28,6 +28,9 @@ export enum StaticNamespaces {
 
   // Links Management
   REPOSITORY_LINKS = 'repository-links',
+
+  // MCP Tasks
+  MCP_TASKS = 'mcp-tasks',
 }
 
 /**

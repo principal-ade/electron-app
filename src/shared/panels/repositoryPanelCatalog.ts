@@ -89,6 +89,13 @@ export const repositoryPanelCatalog = [
     surfaces: ['explorer', 'manager', 'agent'] as const,
   },
   {
+    id: 'mcpTasks',
+    label: 'MCP Tasks',
+    description: 'Track tasks submitted through the MCP bridge to dependencies.',
+    slices: [] as const,
+    surfaces: ['explorer', 'manager', 'agent', 'principal'] as const,
+  },
+  {
     id: 'cityVisualization',
     label: 'City Visualization',
     description:

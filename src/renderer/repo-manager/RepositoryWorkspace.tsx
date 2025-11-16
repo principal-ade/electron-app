@@ -19,6 +19,7 @@ import {
   FolderGit2,
   FolderOpen,
   RotateCcw,
+  Mailbox,
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { PackageLayer } from '@principal-ai/codebase-composition';
@@ -89,6 +90,7 @@ import { AgentContextTreePanel } from '../panels/components/AgentContextTreePane
 import { useHighlightLayers } from '../contexts/HighlightLayersContext';
 import { CityVisualizationPanel } from '../panels/components/CityVisualizationPanel';
 import { TasksPanel } from '../panels/components/TasksPanel';
+import { MCPTasksPanel } from '../panels/components/MCPTasksPanel';
 import { DrawingsListPanel } from '../panels/components/DrawingsListPanel';
 import { QualityHexagonPanel } from '../panels/components/QualityHexagonPanel';
 import { CityMapManager } from './shared/CityMapManager';
@@ -2129,6 +2131,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             onTaskClick={handleTaskClick}
           />
         ),
+        mcpTasks: <MCPTasksPanel />,
         drawings: (
           <RepositoryPanelProvider
             repositoryPath={
@@ -2323,6 +2326,13 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
         icon: <ListTodo size={14} />,
         visible: true,
         content: panelContentMap.tasks,
+      },
+      {
+        id: 'mcpTasks',
+        label: 'MCP Tasks',
+        icon: <Mailbox size={14} />,
+        visible: true,
+        content: panelContentMap.mcpTasks,
       },
       {
         id: 'packageInfo',

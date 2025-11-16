@@ -894,6 +894,17 @@ export class MultiStoreManager extends EventEmitter {
           defaults: {},
         },
       },
+      {
+        name: StaticNamespaces.MCP_TASKS,
+        storageProvider: StorageProviderType.ELECTRON_STORE,
+        category: NamespaceCategory.CORE,
+        config: {
+          path: 'mcp-tasks',
+          defaults: {
+            tasks: [],
+          },
+        },
+      },
     ];
 
     // Note: Dynamic namespaces (like agent-specific event stores) are added
