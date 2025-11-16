@@ -29,7 +29,7 @@ const configuration: webpack.Configuration = {
     preload: path.join(webpackPaths.srcWindowPath, 'preload.ts'),
     terminal: path.join(webpackPaths.srcMainPath, 'terminal.ts'),
     'event-worker': path.join(webpackPaths.srcPath, 'event-processing-server', 'worker-entry.ts'),
-    'repository-monitoring-worker': path.join(webpackPaths.srcPath, 'repository-monitoring-server', 'worker-entry.ts'),
+    // repository-monitoring-worker is now pre-bundled in the npm package
   },
 
   // Override externals - don't externalize dependencies for workers
@@ -39,9 +39,7 @@ const configuration: webpack.Configuration = {
       // Check if the request is coming from a worker entry or its dependencies
       const isWorkerBundle =
         context?.includes('event-processing-server') ||
-        context?.includes('repository-monitoring-server') ||
-        contextInfo?.issuer?.includes('event-processing-server') ||
-        contextInfo?.issuer?.includes('repository-monitoring-server');
+        contextInfo?.issuer?.includes('event-processing-server');
 
       if (isWorkerBundle) {
         return callback(); // Bundle everything for workers

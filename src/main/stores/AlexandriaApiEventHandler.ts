@@ -7,10 +7,19 @@ import type { AlexandriaAPI } from '../../shared/main-process-api-interfaces/Ale
 import { AlexandriaAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
 import type { AlexandriaEntry } from '@a24z/core-library';
-import { RepositoryRegistrationManager } from '../repository-monitoring/RepositoryRegistrationManager';
+import { RepositoryRegistrationManager } from '@principal-ai/repository-monitoring-server';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
-import { MonitoringInternalEvent } from '../../repository-monitoring-server/types';
 import type { WorkspaceChangeEventPayload } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
+
+// MonitoringInternalEvent constants (matching the package)
+const MonitoringInternalEvent = {
+  METRICS_UPDATED: 'metrics-updated',
+  GIT_STATUS_CHANGED: 'git-status-changed',
+  GIT_STATE_EVENT: 'git-state-event',
+  WORKSPACE_CHANGED: 'workspace-changed',
+  CACHE_SYNC: 'cache-sync',
+  BUILD_ARTIFACTS_DETECTED: 'build-artifacts-detected',
+} as const;
 
 export class AlexandriaApiEventHandler implements AlexandriaAPI {
   private registryService: AlexandriaRegistryService;

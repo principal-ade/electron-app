@@ -45,7 +45,7 @@ import {
   registerRepositoryMonitoringHandlers,
   getManager as getRepositoryMonitoringManager,
 } from './repository-monitoring/ipcHandlers';
-import { RepositoryRegistrationManager } from './repository-monitoring/RepositoryRegistrationManager';
+import { RepositoryRegistrationManager } from '@principal-ai/repository-monitoring-server';
 import { registerApiProxyHandlers } from './services/ApiProxyService';
 import { JWTService } from './services/JWTService';
 import { registerGitHubIpcHandlers } from './version-control-providers/githubHandlers';

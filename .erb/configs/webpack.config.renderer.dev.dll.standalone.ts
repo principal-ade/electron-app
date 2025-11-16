@@ -60,6 +60,8 @@ const configuration: webpack.Configuration = {
         // Exclude all Node.js specific packages
         const nodeOnlyPackages = [
           '@modelcontextprotocol/sdk',
+          '@principal-ai/repository-monitoring', // Node.js only watcher library
+          '@principal-ai/repository-monitoring-server', // Main process only - contains pre-bundled worker
           'simple-git', // Git operations library - Node.js only, uses child_process
           'eslint', // ESLint is Node.js only and should only run in main process
           '@typescript-eslint/eslint-plugin',
@@ -72,7 +74,7 @@ const configuration: webpack.Configuration = {
           'eslint-plugin-compat',
           'eslint-plugin-jest',
           'electron-debug',
-          'electron-devtools-installer', 
+          'electron-devtools-installer',
           'electron-updater',
           'electron-log',
           'electron-store',
@@ -91,8 +93,7 @@ const configuration: webpack.Configuration = {
           'globby', // File system globbing - Node.js only, uses native fs
           'glob', // Glob pattern matching - Node.js only, uses native fs
           'minipass', // Stream library that uses Node.js internals
-          '@a24z/markdown-search', // Has Node.js dependencies for indexing
-          '@principal-ai/repository-monitoring' // Node.js only watcher library
+          '@a24z/markdown-search' // Has Node.js dependencies for indexing
         ];
         
         // Exclude if in the list or contains electron

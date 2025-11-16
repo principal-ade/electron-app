@@ -158,7 +158,7 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
             borderRadius: '6px',
             border: `1px solid ${theme.colors.border}`,
             backgroundColor: theme.colors.primary,
-            color: 'white',
+            color: theme.colors.textInverse,
             cursor: 'pointer',
             transition: 'all 0.15s ease',
           }}
@@ -313,7 +313,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
     fontFamily: theme.fonts.body,
   };
 
-  const iconColor = workspace.color || theme.colors.primary || '#3b82f6';
+  const iconColor = workspace.color || theme.colors.primary;
 
   return (
     <div
@@ -331,12 +331,12 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
             width: '24px',
             height: '24px',
             borderRadius: '4px',
-            backgroundColor: `${iconColor}20`,
+            backgroundColor: `color-mix(in srgb, ${iconColor} 12%, transparent)`,
             color: iconColor,
           }}
         >
           {workspace.icon ? (
-            <span style={{ fontSize: '16px' }}>{workspace.icon}</span>
+            <span style={{ fontSize: `${theme.fontSizes[2]}px` }}>{workspace.icon}</span>
           ) : (
             <Layers size={16} />
           )}
@@ -378,8 +378,8 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                 padding: 0,
                 border: 'none',
                 borderRadius: '4px',
-                backgroundColor: theme.colors.success || '#10b981',
-                color: 'white',
+                backgroundColor: theme.colors.success,
+                color: theme.colors.background,
                 cursor: isSaving ? 'not-allowed' : 'pointer',
                 opacity: isSaving ? 0.6 : 1,
                 transition: 'opacity 0.15s ease',
@@ -551,7 +551,7 @@ export const WorkspacesListPanelPreview: React.FC = () => {
             width: '16px',
             height: '16px',
             borderRadius: '2px',
-            backgroundColor: `${theme.colors.primary || '#3b82f6'}40`,
+            backgroundColor: `color-mix(in srgb, ${theme.colors.primary} 25%, transparent)`,
           }}
         />
         <span>Workspaces</span>

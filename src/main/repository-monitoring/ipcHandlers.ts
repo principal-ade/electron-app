@@ -1,10 +1,10 @@
 /**
  * IPC Handlers for Repository Monitoring
- * Updated for separate process architecture
+ * Updated to use @principal-ai/repository-monitoring-server package
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
-import { RepositoryMonitoringManager } from './RepositoryMonitoringManager';
+import { setupRepositoryMonitoring, RepositoryMonitoringManager } from '@principal-ai/repository-monitoring-server';
 import {
   RepositoryMonitoringAPIEvent,
   GitStatusMetadata,
@@ -12,11 +12,20 @@ import {
   type WorkspaceChangeEventPayload,
   type RepositoryCacheSyncEvent,
 } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
-import { MonitoringInternalEvent } from '../../repository-monitoring-server/types';
 import { QualityLensService } from '../quality-lenses/QualityLensService';
 
 // Type alias for git state event payload (structure defined in repository-monitoring-server)
 type GitStateEventPayload = { event: { type: string }; [key: string]: unknown };
+
+// MonitoringInternalEvent constants (matching the package)
+const MonitoringInternalEvent = {
+  METRICS_UPDATED: 'metrics-updated',
+  GIT_STATUS_CHANGED: 'git-status-changed',
+  GIT_STATE_EVENT: 'git-state-event',
+  WORKSPACE_CHANGED: 'workspace-changed',
+  CACHE_SYNC: 'cache-sync',
+  BUILD_ARTIFACTS_DETECTED: 'build-artifacts-detected',
+} as const;
 
 // Create singleton manager instance
 let repositoryMonitoringManager: RepositoryMonitoringManager | null = null;

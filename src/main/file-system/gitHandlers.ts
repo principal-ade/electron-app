@@ -2,7 +2,7 @@ import { ipcMain, net } from 'electron';
 import { GitRepositoryService } from './gitRepositoryService';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { GitEvents } from '../../shared/main-process-api-interfaces/GitAPI';
-import { GitRemoteService } from '../../repository-monitoring-server/GitRemoteService';
+import { GitRemoteService } from '@principal-ai/repository-monitoring-server';
 
 // Create a single instance of the git service
 const gitService = new GitRepositoryService();

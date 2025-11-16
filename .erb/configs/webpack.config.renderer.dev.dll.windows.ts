@@ -64,6 +64,8 @@ const configuration: webpack.Configuration = {
         const nodeOnlyPackages = [
           '@modelcontextprotocol/sdk',
           '@principal-ai/control-tower-core', // WebSocket/collaboration library - Node.js only, uses node:module
+          '@principal-ai/repository-monitoring', // Node.js only watcher library
+          '@principal-ai/repository-monitoring-server', // Main process only - contains pre-bundled worker
           'simple-git', // Git operations library - Node.js only, uses child_process
           'electron-debug',
           'electron-devtools-installer',
@@ -80,7 +82,6 @@ const configuration: webpack.Configuration = {
           'debug',
           'ts-json-schema-generator',
           'fdir', // Fast directory crawler - Node.js only, used in main process
-          '@principal-ai/repository-monitoring', // Node.js only watcher library
           '@a24z/core-library', // Has Node.js adapters, globby is a devDep not bundled
           'globby', // Node.js file globbing library
           'glob', // Node.js file globbing library

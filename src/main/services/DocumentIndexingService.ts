@@ -36,9 +36,18 @@ import {
   type IndexErrorEvent,
   type RepositoryIndexStatus,
 } from '../../shared/ipc/DocumentSearchIPC';
-import { MonitoringInternalEvent } from '../../repository-monitoring-server/types';
 import type { WorkspaceChangeEventPayload } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
+
+// MonitoringInternalEvent constants (matching the package)
+const MonitoringInternalEvent = {
+  METRICS_UPDATED: 'metrics-updated',
+  GIT_STATUS_CHANGED: 'git-status-changed',
+  GIT_STATE_EVENT: 'git-state-event',
+  WORKSPACE_CHANGED: 'workspace-changed',
+  CACHE_SYNC: 'cache-sync',
+  BUILD_ARTIFACTS_DETECTED: 'build-artifacts-detected',
+} as const;
 
 // Removed RepositoryInfo interface - no longer tracking individual repositories
 
