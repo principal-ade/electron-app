@@ -291,7 +291,9 @@ export const initializeServices = async () => {
       const monitoringManager = getRepositoryMonitoringManager();
 
       const registrationManager =
-        RepositoryRegistrationManager.getInstance(monitoringManager);
+        RepositoryRegistrationManager.getInstance({
+          monitoringManager,
+        });
       await registrationManager.initialize();
       console.log(
         '[Main Process] Repository monitoring registration complete.',

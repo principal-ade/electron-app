@@ -13,7 +13,7 @@ export const LocalProjectsPanel: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
 
   // Load all local repositories with caching
-  const { repositories: localRepos, loading, refetch } = useAllRepositories();
+  const { repositories: localRepos, loading, refresh } = useAllRepositories();
 
   const handleAddProject = async () => {
     try {
@@ -26,7 +26,7 @@ export const LocalProjectsPanel: React.FC = () => {
         properties: ['openDirectory'],
       });
 
-      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+      if (!result || result.canceled || !('filePaths' in result) || !result.filePaths || result.filePaths.length === 0) {
         return;
       }
 
@@ -39,7 +39,7 @@ export const LocalProjectsPanel: React.FC = () => {
       await AlexandriaService.registerRepository(projectName, projectPath);
 
       // Refresh the repository list
-      await refetch();
+      await refresh();
 
       console.log(`Successfully added project: ${projectName} at ${projectPath}`);
     } catch (error) {

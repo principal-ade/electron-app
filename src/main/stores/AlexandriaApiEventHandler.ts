@@ -131,7 +131,9 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
     try {
       const monitoringManager = getRepositoryMonitoringManager();
       const registrationManager =
-        RepositoryRegistrationManager.getInstance(monitoringManager);
+        RepositoryRegistrationManager.getInstance({
+          monitoringManager,
+        });
       await registrationManager.handleRepositoryAdded(repo);
     } catch (error) {
       console.error(
@@ -145,7 +147,9 @@ export class AlexandriaApiEventHandler implements AlexandriaAPI {
     try {
       const monitoringManager = getRepositoryMonitoringManager();
       const registrationManager =
-        RepositoryRegistrationManager.getInstance(monitoringManager);
+        RepositoryRegistrationManager.getInstance({
+          monitoringManager,
+        });
       await registrationManager.handleRepositoryRemoved(repoPath);
     } catch (error) {
       console.error(
