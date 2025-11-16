@@ -17,6 +17,8 @@ import {
   Circle,
   Square,
   CheckSquare,
+  Search,
+  X,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import type { PackageLayer } from '@principal-ai/codebase-composition';
@@ -109,6 +111,7 @@ export const DependenciesPanel: React.FC<DependenciesPanelProps> = ({
     new Set(),
   );
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Get selected package data
   const selectedPackageData = useMemo(() => {
@@ -191,6 +194,14 @@ export const DependenciesPanel: React.FC<DependenciesPanelProps> = ({
   const filteredDependencies = useMemo(() => {
     let filtered = [...dependencyItems];
 
+    // Apply search query first
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((dep) =>
+        dep.name.toLowerCase().includes(query),
+      );
+    }
+
     // Apply smart filters first
     switch (smartFilter) {
       case 'critical-security':
@@ -261,6 +272,7 @@ export const DependenciesPanel: React.FC<DependenciesPanelProps> = ({
     showOutdatedOnly,
     showVulnerableOnly,
     smartFilter,
+    searchQuery,
   ]);
 
   // Toggle dependency selection
@@ -1287,6 +1299,79 @@ Please check for breaking changes and compatibility issues before updating.`;
               gap: '12px',
             }}
           >
+            {/* Search Bar */}
+            <div
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <Search
+                size={14}
+                style={{
+                  position: 'absolute',
+                  left: '10px',
+                  color: theme.colors.textSecondary,
+                  pointerEvents: 'none',
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Search dependencies..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 36px 8px 36px',
+                  borderRadius: '6px',
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  color: theme.colors.text,
+                  fontSize: '13px',
+                  outline: 'none',
+                  transition: 'all 0.2s',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = theme.colors.primary;
+                  e.currentTarget.style.backgroundColor = theme.colors.background;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = theme.colors.border;
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundSecondary;
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    borderRadius: '4px',
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor =
+                      theme.colors.backgroundLight;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  title="Clear search"
+                >
+                  <X size={14} color={theme.colors.textSecondary} />
+                </button>
+              )}
+            </div>
+
             {/* Smart Filters - Only show when analyzed */}
             {isAnalyzed && (
               <div

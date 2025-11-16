@@ -137,7 +137,7 @@ export const repositoryPanelCatalog = [
     label: 'Dependencies',
     description: 'Explore package architecture and dependency relationships.',
     slices: ['packages', 'fileTree'] as const,
-    surfaces: ['manager'] as const,
+    surfaces: ['manager', 'agent'] as const,
   },
   {
     id: 'tools',

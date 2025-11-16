@@ -29,6 +29,7 @@ import { LocalhostBrowserPanel } from './components/LocalhostBrowserPanel';
 import { WorkspacesListPanel } from './components/WorkspacesListPanel';
 import { WorkspaceEntriesPanel } from './components/WorkspaceEntriesPanel';
 import { MCPTasksPanel } from './components/MCPTasksPanel';
+import { RepoSourceArchitecturePanelSimple } from '../repo-manager/shared/RepoSourceArchitecturePanelSimple';
 
 export interface RepositoryPanelRenderProps {
   context: RepositoryPanelContextValue;
@@ -98,6 +99,12 @@ const panelRenderers: Partial<
   workspacesList: () => <WorkspacesListPanel />,
   workspaceEntries: () => <WorkspaceEntriesPanel />,
   mcpTasks: () => <MCPTasksPanel />,
+  dependencies: ({ context }) => (
+    <RepoSourceArchitecturePanelSimple
+      source={{ type: 'repository', repositoryPath: context.repositoryPath }}
+      packageLayers={context.packages}
+    />
+  ),
 };
 
 export const repositoryPanelDefinitions = repositoryPanelCatalog.map(

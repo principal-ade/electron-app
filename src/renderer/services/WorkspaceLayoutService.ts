@@ -424,7 +424,7 @@ export class WorkspaceLayoutService {
         id: 'agent-work',
         name: 'Agent Work',
         description:
-          'Git changes, tasks, agent sessions, agent context, docs, multi terminal, city map, git diff, code viewer, and markdown slides',
+          'Git changes, tasks, agent sessions, dependencies, docs, multi terminal, city map, git diff, code viewer, and markdown slides',
         layout: {
           left: {
             type: 'tabs',
@@ -432,7 +432,7 @@ export class WorkspaceLayoutService {
               'gitChanges',
               'tasks',
               'agentSessions',
-              'agentContext',
+              'dependencies',
               'docs',
             ],
             config: { defaultActiveTab: 0, tabPosition: 'top' },
