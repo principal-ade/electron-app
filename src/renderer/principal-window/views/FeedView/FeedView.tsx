@@ -10,6 +10,7 @@ import {
   Activity,
   Folder,
   Layers,
+  DoorClosed,
 } from 'lucide-react';
 import { ConfigurablePanelLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
@@ -151,7 +152,7 @@ const FeedViewInner: React.FC = () => {
       {
         id: 'workspaces-list',
         label: 'Workspaces',
-        icon: <Layers size={16} />,
+        icon: <DoorClosed size={16} />,
         content: (
           <WorkspacesListPanel
             selectedWorkspaceId={selectedWorkspace?.id}

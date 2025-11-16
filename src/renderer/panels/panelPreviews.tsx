@@ -20,6 +20,7 @@ import {
   Image,
   Info,
   Layers,
+  DoorClosed,
   Network,
   Package,
   Pencil,
@@ -272,7 +273,7 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
       'View localhost development servers in an embedded browser view.',
   },
   workspacesList: {
-    icon: <Layers size={16} />,
+    icon: <DoorClosed size={16} />,
     preview: <WorkspacesListPanelPreview />,
     label: 'Workspaces',
     description: 'Browse and manage your workspaces for organizing repositories.',

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { Layers, Plus, Edit2, Check, X, ExternalLink } from 'lucide-react';
+import { DoorClosed, Plus, Edit2, Check, X, ExternalLink } from 'lucide-react';
 import type { Workspace } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { WindowService } from '../../main-process-api/WindowService';
@@ -338,7 +338,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
           {workspace.icon ? (
             <span style={{ fontSize: `${theme.fontSizes[2]}px` }}>{workspace.icon}</span>
           ) : (
-            <Layers size={16} />
+            <DoorClosed size={16} />
           )}
         </div>
 
