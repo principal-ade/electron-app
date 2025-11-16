@@ -29,7 +29,6 @@ const configuration: webpack.Configuration = {
     preload: path.join(webpackPaths.srcWindowPath, 'preload.ts'),
     terminal: path.join(webpackPaths.srcMainPath, 'terminal.ts'),
     'event-worker': path.join(webpackPaths.srcPath, 'event-processing-server', 'worker-entry.ts'),
-    // repository-monitoring-worker is now pre-bundled in the npm package
   },
 
   // Override externals - don't externalize dependencies for workers
