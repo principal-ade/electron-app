@@ -4,7 +4,7 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
-import { setupRepositoryMonitoring, RepositoryMonitoringManager } from '@principal-ai/repository-monitoring-server';
+import { RepositoryMonitoringManager } from '@principal-ai/repository-monitoring-server';
 import {
   RepositoryMonitoringAPIEvent,
   GitStatusMetadata,
