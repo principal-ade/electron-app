@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@a24z/industry-theme';
-import { DoorClosed, Plus, Edit2, Check, X, ExternalLink } from 'lucide-react';
+import { DoorClosed, Plus, Edit2, Check, X, ExternalLink, Search } from 'lucide-react';
 import type { Workspace } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { WindowService } from '../../main-process-api/WindowService';
@@ -22,6 +22,9 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
     null,
   );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [showSearchBox, setShowSearchBox] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [workspaceRepositories, setWorkspaceRepositories] = useState<Map<string, string[]>>(new Map());
 
   // Load workspaces on mount
   useEffect(() => {
@@ -34,6 +37,21 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
         ]);
         setWorkspaces(allWorkspaces);
         setDefaultWorkspaceId(defaultWorkspace?.id || null);
+
+        // Load repositories for each workspace for search functionality
+        const repoMap = new Map<string, string[]>();
+        await Promise.all(
+          allWorkspaces.map(async (workspace) => {
+            try {
+              const repos = await WorkspaceService.getRepositoriesInWorkspace(workspace.id);
+              repoMap.set(workspace.id, repos.map(r => r.name));
+            } catch (error) {
+              console.error(`Failed to load repos for workspace ${workspace.id}:`, error);
+              repoMap.set(workspace.id, []);
+            }
+          })
+        );
+        setWorkspaceRepositories(repoMap);
       } catch (error) {
         console.error('Failed to load workspaces:', error);
       } finally {
@@ -52,10 +70,27 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
     return unsubscribe;
   }, []);
 
-  // Sort workspaces
+  // Filter and sort workspaces
   const sortedWorkspaces = useMemo(() => {
+    let filtered = workspaces;
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = workspaces.filter((workspace) => {
+        // Search by workspace name
+        if (workspace.name.toLowerCase().includes(query)) {
+          return true;
+        }
+
+        // Search by repository names in this workspace
+        const repos = workspaceRepositories.get(workspace.id) || [];
+        return repos.some(repoName => repoName.toLowerCase().includes(query));
+      });
+    }
+
     // Sort: default workspace first, then by name alphabetically
-    return [...workspaces].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       // Default workspace always first
       if (a.id === defaultWorkspaceId) return -1;
       if (b.id === defaultWorkspaceId) return 1;
@@ -63,7 +98,7 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
       // Then sort alphabetically by name (case-insensitive)
       return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
     });
-  }, [workspaces, defaultWorkspaceId]);
+  }, [workspaces, defaultWorkspaceId, searchQuery, workspaceRepositories]);
 
   const baseContainerStyle: React.CSSProperties = {
     display: 'flex',
@@ -127,7 +162,7 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
 
   return (
     <div style={contentContainerStyle}>
-      {/* Header with create button */}
+      {/* Header with search and create buttons */}
       <div
         style={{
           display: 'flex',
@@ -147,26 +182,103 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
         >
           Workspaces
         </h3>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => {
+              setShowSearchBox(!showSearchBox);
+              if (showSearchBox) {
+                setSearchQuery('');
+              }
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: showSearchBox ? theme.colors.primary : theme.colors.backgroundTertiary,
+              color: showSearchBox ? theme.colors.textInverse : theme.colors.text,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title="Search workspaces"
+          >
+            <Search size={16} />
+          </button>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.primary,
+              color: theme.colors.textInverse,
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            title="Create new workspace"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Search box */}
+      {showSearchBox && (
+        <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            width: '28px',
-            height: '28px',
-            borderRadius: '6px',
-            border: `1px solid ${theme.colors.border}`,
-            backgroundColor: theme.colors.primary,
-            color: theme.colors.textInverse,
-            cursor: 'pointer',
-            transition: 'all 0.15s ease',
+            gap: '8px',
           }}
-          title="Create new workspace"
         >
-          <Plus size={16} />
-        </button>
-      </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by workspace or repository name..."
+            autoFocus
+            style={{
+              flex: 1,
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: `1px solid ${theme.colors.border}`,
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontFamily: theme.fonts.body,
+              outline: 'none',
+            }}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '28px',
+                height: '28px',
+                borderRadius: '6px',
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.backgroundTertiary,
+                color: theme.colors.text,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              title="Clear search"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Scrollable content */}
       <div
@@ -199,7 +311,11 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
               color: theme.colors.textSecondary,
             }}
           >
-            <p style={{ margin: 0 }}>No workspaces found.</p>
+            <p style={{ margin: 0 }}>
+              {searchQuery.trim()
+                ? `No workspaces found matching "${searchQuery}"`
+                : 'No workspaces found.'}
+            </p>
           </div>
         )}
       </div>
