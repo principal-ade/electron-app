@@ -5,7 +5,10 @@
 
 import { ipcMain, dialog, screen } from 'electron';
 import path from 'path';
-import { createSpecialWindow } from './modernWindowManager';
+import {
+  createSpecialWindow,
+  focusOrCreateMainWindow,
+} from './modernWindowManager';
 import { resolveHtmlPath } from '../util';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@a24z/core-library';
@@ -698,4 +701,10 @@ export function registerModernWindowHandlers(): void {
       return !!windowExists;
     },
   );
+
+  // Focus or create main window
+  ipcMain.handle(WindowEvent.FOCUS_OR_CREATE_MAIN_WINDOW, async () => {
+    const window = await focusOrCreateMainWindow();
+    return window !== null;
+  });
 }

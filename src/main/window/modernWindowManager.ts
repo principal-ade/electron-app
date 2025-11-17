@@ -700,6 +700,41 @@ export function createSpecialWindow(
   }
 }
 
+/**
+ * Focus the main window if it exists, otherwise create it
+ * This is useful for "new window" operations that should show the main window
+ */
+export async function focusOrCreateMainWindow(): Promise<IModernApplicationWindow | null> {
+  const mainId = getMainWindowId();
+
+  // If main window exists, focus it
+  if (mainId !== null) {
+    const mainWindow = applicationWindows.get(mainId);
+    if (mainWindow && !mainWindow.window.isDestroyed()) {
+      console.log('[ModernWindow] Focusing existing main window');
+
+      // Restore if minimized
+      if (mainWindow.window.isMinimized()) {
+        mainWindow.window.restore();
+      }
+
+      // Show and focus
+      mainWindow.window.show();
+      mainWindow.window.focus();
+
+      return mainWindow;
+    }
+
+    // Main window ID is stale, clear it
+    console.log('[ModernWindow] Main window ID is stale, clearing');
+    setMainWindowId(null as any);
+  }
+
+  // No main window exists, create one
+  console.log('[ModernWindow] No main window exists, creating new one');
+  return await createWindow();
+}
+
 // Export compatibility functions
 export const getApplicationWindows = () => applicationWindows;
 export const getSpecialWindows = () => specialWindows;

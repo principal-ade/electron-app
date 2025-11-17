@@ -85,6 +85,12 @@ export const windowAPI: WindowAPI = {
     ipcRenderer.invoke(WindowEvent.OPEN_ALEXANDRIA_WORKSPACE, workspaceId),
 
   /**
+   * Focus the main window if it exists, otherwise create it
+   */
+  focusOrCreateMainWindow: () =>
+    ipcRenderer.invoke(WindowEvent.FOCUS_OR_CREATE_MAIN_WINDOW),
+
+  /**
    * Get the unique ID of the current window
    */
   getWindowId: () => ipcRenderer.invoke(WindowEvent.GET_WINDOW_ID),

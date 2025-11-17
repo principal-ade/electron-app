@@ -124,6 +124,13 @@ export interface WindowAPI {
   openAlexandriaWorkspace(workspaceId: string): Promise<void>;
 
   /**
+   * Focus the main window if it exists, otherwise create it
+   * This is useful for "new window" operations that should show the main window
+   * @returns True if successful, false if failed
+   */
+  focusOrCreateMainWindow(): Promise<boolean>;
+
+  /**
    * Get the unique ID of the current window
    * Useful for isolating resources (like terminal sessions) per window
    * @returns The Electron BrowserWindow ID
