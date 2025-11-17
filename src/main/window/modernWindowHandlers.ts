@@ -12,7 +12,8 @@ import {
 import { resolveHtmlPath } from '../util';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@a24z/core-library';
-import type { IModernApplicationWindow } from './types';
+import type { IModernApplicationWindow, WindowMetadata } from './types';
+import { PrimaryWindowType } from './types';
 import { GitBranchService } from '../version-control-providers/gitBranchService';
 
 /**
@@ -314,6 +315,15 @@ export function registerModernWindowHandlers(): void {
         applicationWindows.get(existingWindowId) &&
         !applicationWindows.get(existingWindowId).window.isDestroyed();
 
+      // Create metadata for repository window
+      const metadata: WindowMetadata = {
+        primaryType: PrimaryWindowType.REPOSITORY,
+        displayName: repoName,
+        remoteUrl,
+        localPath: repository.path,
+        purpose: windowName,
+      };
+
       const window = createSpecialWindow(
         windowName,
         {
@@ -333,6 +343,7 @@ export function registerModernWindowHandlers(): void {
           menu: true,
           maximizeOnShow: true,
         },
+        metadata,
       );
 
       if (!window) return;
@@ -621,6 +632,27 @@ export function registerModernWindowHandlers(): void {
 
       const windowName = `alexandria-workspace-${workspaceId}`;
 
+      // Fetch workspace name from the registry
+      let workspaceName = 'Alexandria Workspace';
+      try {
+        const { AlexandriaRegistryService } = require('../stores/AlexandriaRegistryService');
+        const service = AlexandriaRegistryService.getInstance();
+        const workspace = await service.getWorkspace(workspaceId);
+        if (workspace?.name) {
+          workspaceName = workspace.name;
+        }
+      } catch (error) {
+        console.error('[modernWindowHandlers] Failed to fetch workspace name:', error);
+      }
+
+      // Create metadata for workspace window
+      const metadata: WindowMetadata = {
+        primaryType: PrimaryWindowType.WORKSPACE,
+        displayName: workspaceName,
+        workspaceId,
+        purpose: windowName,
+      };
+
       const window = createSpecialWindow(
         windowName,
         {
@@ -628,7 +660,7 @@ export function registerModernWindowHandlers(): void {
           height: 832,
           minWidth: 1024,
           minHeight: 720,
-          title: 'Alexandria Workspace',
+          title: workspaceName,
         },
         {
           fileSystemAdapter: true,
@@ -639,6 +671,7 @@ export function registerModernWindowHandlers(): void {
           menu: true,
           maximizeOnShow: true,
         },
+        metadata,
       );
 
       if (!window) return;

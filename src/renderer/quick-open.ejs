@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Quick Open - Principal ADE</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        height: 100vh;
+        overflow: hidden;
+      }
+      #root {
+        height: 100vh;
+        width: 100vw;
+      }
+    </style>
+    <script>
+      // Define global before any other scripts load
+      window.global = window.global || window;
+      // Also define process if it doesn't exist
+      if (typeof process === "undefined") {
+        window.process = {
+          env: {},
+          version: 'v16.0.0',
+          platform: 'browser',
+          arch: 'browser'
+        };
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

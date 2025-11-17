@@ -7,21 +7,7 @@ import { BrowserWindow, screen, ipcMain, app } from 'electron';
 import path from 'path';
 import log from 'electron-log';
 import { resolveHtmlPath } from '../util';
-import { ElectronFileSystemAdapter } from '../file-system/fileSystemHandlers';
-import { applicationWindows, mainWindowId } from './types';
-
-type RootPathProvider = {
-  getRootPath: () => string | null;
-};
-
-const hasRootPathProvider = (adapter: unknown): adapter is RootPathProvider => {
-  return (
-    typeof adapter === 'object' &&
-    adapter !== null &&
-    'getRootPath' in adapter &&
-    typeof (adapter as { getRootPath?: unknown }).getRootPath === 'function'
-  );
-};
+import { applicationWindows } from './types';
 
 class WindowSwitcher {
   private switcherWindow: BrowserWindow | null = null;
@@ -237,41 +223,10 @@ class WindowSwitcher {
     // Get all application windows except the switcher itself
     for (const [id, appWindow] of applicationWindows.entries()) {
       if (appWindow.window && !appWindow.window.isDestroyed()) {
-        // Generate meaningful title
-        let title = 'Untitled Window';
+        // Simply use the metadata display name!
+        const title = appWindow.metadata?.displayName ?? 'Untitled Window';
 
-        // Check if this is the main window
-        if (id === mainWindowId) {
-          title = 'Main';
-        } else {
-          // Try to get directory name from file system adapter
-          if (appWindow.fileSystemAdapter) {
-            const adapter = appWindow.fileSystemAdapter;
-            let rootPath: string | null = null;
-
-            if (adapter instanceof ElectronFileSystemAdapter) {
-              rootPath = adapter.getRootPath();
-            } else if (hasRootPathProvider(adapter)) {
-              rootPath = adapter.getRootPath();
-            }
-
-            if (rootPath) {
-              log.info(`[Window Switcher] Window ${id} rootPath:`, rootPath);
-              // Extract just the directory name from the path
-              title = path.basename(rootPath);
-            }
-          } else {
-            log.info(`[Window Switcher] Window ${id} has no fileSystemAdapter`);
-          }
-
-          // Fallback to window title if we still don't have a good title
-          if (title === 'Untitled Window') {
-            const windowTitle = appWindow.window.getTitle();
-            if (windowTitle && windowTitle !== 'Principal ADE') {
-              title = windowTitle;
-            }
-          }
-        }
+        log.info(`[Window Switcher] Window ${id} title: ${title} (type: ${appWindow.metadata?.primaryType})`);
 
         this.windowList.push({ id, title });
       }
@@ -459,9 +414,9 @@ export const windowSwitcher = new WindowSwitcher();
 export function setupWindowSwitcherHandlers(): void {
   // Handle window selection from renderer
   ipcMain.on('window-switcher:select', (_event, windowId: number) => {
+    log.info(`[Window Switcher] Selecting window ${windowId}`);
     windowSwitcher.setSelectedWindow(windowId);
-    windowSwitcher.hide();
-    // The hide() method will activate the selected window
+    windowSwitcher.activateSelectedAndHide();
   });
 
   // Handle get window list request

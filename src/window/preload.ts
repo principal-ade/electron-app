@@ -178,7 +178,7 @@ try {
   console.error('[Preload] ❌ Failed to expose titlebar API:', error);
 }
 
-// Expose window switcher API
+// Expose window switcher and quick open API combined
 interface WindowListData {
   windows: Array<{ id: number; title: string }>;
   selectedIndex: number;
@@ -186,6 +186,7 @@ interface WindowListData {
 
 try {
   contextBridge.exposeInMainWorld('electronAPI', {
+    // Window Switcher API
     getWindowList: () => ipcRenderer.send('window-switcher:get-list'),
     selectWindow: (windowId: number) =>
       ipcRenderer.send('window-switcher:select', windowId),
@@ -213,10 +214,23 @@ try {
     },
     cycleSelection: (direction: 'next' | 'previous') =>
       ipcRenderer.send('window-switcher:cycle', direction),
+
+    // Quick Open API
+    onQuickOpenItems: (callback: (event: any, items: any[]) => void) => {
+      const listener = (event: Electron.IpcRendererEvent, items: any[]) =>
+        callback(event, items);
+      ipcRenderer.on('quick-open:items', listener);
+      return () => {
+        ipcRenderer.removeListener('quick-open:items', listener);
+      };
+    },
+    selectQuickOpenItem: (item: any) =>
+      ipcRenderer.send('quick-open:select', item),
+    closeQuickOpen: () => ipcRenderer.send('quick-open:close'),
   });
-  console.info('[Preload] ✅ Window Switcher API exposed');
+  console.info('[Preload] ✅ Window Switcher & Quick Open API exposed');
 } catch (error) {
-  console.error('[Preload] ❌ Failed to expose window switcher API:', error);
+  console.error('[Preload] ❌ Failed to expose API:', error);
 }
 
 try {

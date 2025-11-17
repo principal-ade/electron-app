@@ -25,10 +25,13 @@ import { gitSyncWebSocketManager } from '../services/GitSyncWebSocketManager';
 import {
   WindowFeatures,
   IModernApplicationWindow,
+  WindowMetadata,
+  PrimaryWindowType,
   applicationWindows,
   specialWindows,
   WINDOW_FEATURES,
   setMainWindowId,
+  getMainWindowId,
 } from './types';
 
 // Re-export for backward compatibility
@@ -44,6 +47,7 @@ let titlebarHandlersRegistered = false;
 export class ModernApplicationWindow implements IModernApplicationWindow {
   public window: BrowserWindow;
   public features: WindowFeatures;
+  public metadata: WindowMetadata;
 
   // Optional adapters
   public fileSystemAdapter?: ElectronFileSystemAdapter;
@@ -55,11 +59,18 @@ export class ModernApplicationWindow implements IModernApplicationWindow {
     options?: BrowserWindowConstructorOptions,
     windowType: keyof typeof WINDOW_FEATURES = 'main',
     customFeatures?: Partial<WindowFeatures>,
+    metadata?: WindowMetadata,
   ) {
     // Determine features for this window
     this.features = {
       ...WINDOW_FEATURES[windowType],
       ...customFeatures,
+    };
+
+    // Set metadata (with defaults for unknown windows)
+    this.metadata = metadata ?? {
+      primaryType: PrimaryWindowType.UNKNOWN,
+      displayName: 'Untitled Window',
     };
 
     console.log(
@@ -607,7 +618,23 @@ export async function createWindow(
   console.log(`[ModernWindow] Creating ${windowType} window`);
 
   try {
-    const appWindow = new ModernApplicationWindow(options, windowType);
+    // Create metadata for main window
+    const metadata: WindowMetadata = isMainWindow
+      ? {
+          primaryType: PrimaryWindowType.MAIN,
+          displayName: 'Main',
+        }
+      : {
+          primaryType: PrimaryWindowType.UNKNOWN,
+          displayName: 'Secondary Window',
+        };
+
+    const appWindow = new ModernApplicationWindow(
+      options,
+      windowType,
+      undefined,
+      metadata,
+    );
 
     // Track main window ID
     if (isMainWindow) {
@@ -647,6 +674,7 @@ export function createSpecialWindow(
   purpose: string,
   options: BrowserWindowConstructorOptions,
   features?: Partial<WindowFeatures>,
+  metadata?: WindowMetadata,
 ): IModernApplicationWindow | null {
   // Check if window already exists
   const existingId = specialWindows.get(purpose);
@@ -677,10 +705,18 @@ export function createSpecialWindow(
       `[ModernWindow] Creating special window '${purpose}' with type '${windowType}'`,
     );
 
+    // Use provided metadata or create default with purpose
+    const windowMetadata: WindowMetadata = metadata ?? {
+      primaryType: PrimaryWindowType.UNKNOWN,
+      displayName: options.title || 'Special Window',
+      purpose,
+    };
+
     const appWindow = new ModernApplicationWindow(
       options,
       windowType,
       features,
+      windowMetadata,
     );
 
     // DON'T load any URL here - let the handler do it after window is ready

@@ -1,0 +1,323 @@
+/**
+ * Quick Open - Search and open repositories and workspaces
+ * Command+O keyboard shortcut
+ */
+
+import { BrowserWindow, screen, ipcMain, app } from 'electron';
+import path from 'path';
+import log from 'electron-log';
+import { resolveHtmlPath } from '../util';
+import {
+  PrimaryWindowType,
+  getWindowsByType,
+  getRepositoryUrl,
+  getWorkspaceId,
+} from './types';
+
+interface QuickOpenItem {
+  id: string;
+  type: 'repository' | 'workspace';
+  name: string;
+  description?: string;
+  remoteUrl?: string;
+  localPath?: string;
+  isOpen: boolean;
+  openWindowId?: number;
+}
+
+class QuickOpen {
+  private quickOpenWindow: BrowserWindow | null = null;
+  private isActive = false;
+
+  /**
+   * Show the quick open overlay
+   */
+  public async show(): Promise<void> {
+    log.info('[Quick Open] Showing quick open dialog');
+
+    // Check if window exists and is valid
+    if (this.quickOpenWindow && !this.quickOpenWindow.isDestroyed()) {
+      log.info('[Quick Open] Window exists, focusing');
+      this.quickOpenWindow.show();
+      this.quickOpenWindow.focus();
+      this.isActive = true;
+      return;
+    }
+
+    // Window doesn't exist or was destroyed, create new one
+    log.info('[Quick Open] Creating new quick open window');
+    this.isActive = true;
+    this.quickOpenWindow = null; // Reset reference
+
+    try {
+      await this.createQuickOpenWindow();
+      log.info('[Quick Open] Window created, loading items');
+      await this.loadItems();
+      log.info('[Quick Open] Items loaded successfully');
+    } catch (error) {
+      log.error('[Quick Open] Error showing quick open:', error);
+      this.isActive = false;
+      this.quickOpenWindow = null;
+    }
+  }
+
+  /**
+   * Hide the quick open overlay
+   */
+  public hide(): void {
+    log.info('[Quick Open] Hiding quick open dialog');
+
+    this.isActive = false;
+
+    // Close the quick open window
+    if (this.quickOpenWindow && !this.quickOpenWindow.isDestroyed()) {
+      this.quickOpenWindow.close();
+    }
+
+    this.quickOpenWindow = null;
+    log.info('[Quick Open] Hidden and cleaned up');
+  }
+
+  /**
+   * Toggle the quick open overlay
+   */
+  public toggle(): void {
+    if (this.isActive) {
+      this.hide();
+    } else {
+      this.show();
+    }
+  }
+
+  /**
+   * Check if quick open is currently active
+   */
+  public isShowing(): boolean {
+    return this.isActive;
+  }
+
+  /**
+   * Create the quick open overlay window
+   */
+  private async createQuickOpenWindow(): Promise<void> {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.workArea;
+
+    // Use the correct preload path based on whether app is packaged or in development
+    const preloadPath = app.isPackaged
+      ? path.join(__dirname, 'preload.js')
+      : path.join(__dirname, '../../.erb/dll/preload.js');
+
+    log.info(`[Quick Open] Preload path: ${preloadPath}`);
+    log.info(`[Quick Open] Screen bounds: ${width}x${height}`);
+
+    this.quickOpenWindow = new BrowserWindow({
+      width,
+      height,
+      x: 0,
+      y: 0,
+      frame: false,
+      transparent: true,
+      alwaysOnTop: true,
+      skipTaskbar: true,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      fullscreenable: false,
+      hasShadow: false,
+      focusable: true,
+      backgroundColor: '#00000000',
+      webPreferences: {
+        preload: preloadPath,
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+
+    // Handle window closed
+    this.quickOpenWindow.on('closed', () => {
+      this.isActive = false;
+      this.quickOpenWindow = null;
+      log.info('[Quick Open] Window closed');
+    });
+
+    // Handle blur - close when focus is lost
+    // TODO: Re-enable this once we fix the focus issues
+    // For now, let Escape key handle closing
+    // this.quickOpenWindow.on('blur', () => {
+    //   log.info('[Quick Open] Lost focus, closing');
+    //   this.hide();
+    // });
+
+    // Load the quick open HTML
+    const targetUrl = resolveHtmlPath('quick-open.html');
+    log.info(`[Quick Open] Loading URL: ${targetUrl}`);
+
+    this.quickOpenWindow.loadURL(targetUrl).catch((err) => {
+      log.error('[Quick Open] Failed to load renderer:', err);
+      log.error('[Quick Open] Attempted URL:', targetUrl);
+    });
+
+    // Show the window immediately after loading starts
+    this.quickOpenWindow.show();
+    this.quickOpenWindow.focus();
+    log.info('[Quick Open] Window shown and focused');
+
+    // Enable DevTools in development for debugging
+    if (process.env.NODE_ENV === 'development') {
+      this.quickOpenWindow.webContents.openDevTools({ mode: 'detach' });
+    }
+  }
+
+  /**
+   * Load repositories and workspaces
+   */
+  private async loadItems(): Promise<void> {
+    try {
+      const items: QuickOpenItem[] = [];
+
+      // Get currently open windows
+      const openRepoWindowIds = getWindowsByType(PrimaryWindowType.REPOSITORY);
+      const openWorkspaceWindowIds = getWindowsByType(
+        PrimaryWindowType.WORKSPACE,
+      );
+
+      const openRepoUrls = openRepoWindowIds
+        .map((id) => ({ id, url: getRepositoryUrl(id) }))
+        .filter((item): item is { id: number; url: string } => item.url !== null);
+
+      const openWorkspaceIds = openWorkspaceWindowIds
+        .map((id) => ({ windowId: id, workspaceId: getWorkspaceId(id) }))
+        .filter(
+          (item): item is { windowId: number; workspaceId: string } =>
+            item.workspaceId !== null,
+        );
+
+      // Load repositories from Alexandria
+      const {
+        AlexandriaRegistryService,
+      } = require('../stores/AlexandriaRegistryService');
+      const service = AlexandriaRegistryService.getInstance();
+
+      const repositories = await service.getRepositories();
+      for (const repo of repositories) {
+        const openRepo = openRepoUrls.find((r) => r.url === repo.remoteUrl);
+        items.push({
+          id: repo.remoteUrl,
+          type: 'repository',
+          name: repo.name,
+          description: repo.github?.description || repo.path,
+          remoteUrl: repo.remoteUrl,
+          localPath: repo.path,
+          isOpen: !!openRepo,
+          openWindowId: openRepo?.id,
+        });
+      }
+
+      // Load workspaces from Alexandria
+      const workspaces = await service.getWorkspaces();
+      for (const workspace of workspaces) {
+        const openWorkspace = openWorkspaceIds.find(
+          (w) => w.workspaceId === workspace.id,
+        );
+        items.push({
+          id: workspace.id,
+          type: 'workspace',
+          name: workspace.name,
+          description: workspace.description,
+          isOpen: !!openWorkspace,
+          openWindowId: openWorkspace?.windowId,
+        });
+      }
+
+      log.info(
+        `[Quick Open] Loaded ${items.length} items (${repositories.length} repos, ${workspaces.length} workspaces)`,
+      );
+
+      // Send items to renderer
+      if (this.quickOpenWindow && !this.quickOpenWindow.isDestroyed()) {
+        this.quickOpenWindow.webContents.send('quick-open:items', items);
+      }
+    } catch (error) {
+      log.error('[Quick Open] Failed to load items:', error);
+    }
+  }
+}
+
+// Export singleton instance
+export const quickOpen = new QuickOpen();
+
+/**
+ * Setup IPC handlers for quick open
+ */
+export function setupQuickOpenHandlers(): void {
+  // Handle item selection from renderer
+  ipcMain.on(
+    'quick-open:select',
+    async (_event, item: QuickOpenItem) => {
+      log.info(
+        `[Quick Open] Item selected: ${item.type} - ${item.name} (isOpen: ${item.isOpen})`,
+      );
+
+      if (item.isOpen && item.openWindowId) {
+        // Focus existing window
+        const { applicationWindows } = require('./types');
+        const appWindow = applicationWindows.get(item.openWindowId);
+        if (appWindow && !appWindow.window.isDestroyed()) {
+          if (appWindow.window.isMinimized()) {
+            appWindow.window.restore();
+          }
+          appWindow.window.show();
+          appWindow.window.focus();
+          log.info(`[Quick Open] Focused existing window ${item.openWindowId}`);
+        }
+      } else {
+        // Open new window
+        if (item.type === 'repository') {
+          // Load repository data and open window
+          const {
+            AlexandriaRegistryService,
+          } = require('../stores/AlexandriaRegistryService');
+          const service = AlexandriaRegistryService.getInstance();
+          const repositories = await service.getRepositories();
+          const repo = repositories.find((r: any) => r.remoteUrl === item.id);
+
+          if (repo) {
+            const { WindowEvent } = require('../../shared/ipc-events/WindowEvents');
+            const { BrowserWindow } = require('electron');
+            const focusedWindow = BrowserWindow.getFocusedWindow();
+            if (focusedWindow) {
+              focusedWindow.webContents.send(
+                WindowEvent.OPEN_REPOSITORY_DASHBOARD,
+                repo,
+              );
+            }
+            log.info(`[Quick Open] Opening repository window for ${item.name}`);
+          }
+        } else if (item.type === 'workspace') {
+          // Open workspace window
+          const { WindowEvent } = require('../../shared/ipc-events/WindowEvents');
+          const { BrowserWindow } = require('electron');
+          const focusedWindow = BrowserWindow.getFocusedWindow();
+          if (focusedWindow) {
+            focusedWindow.webContents.send(
+              WindowEvent.OPEN_ALEXANDRIA_WORKSPACE,
+              item.id,
+            );
+          }
+          log.info(`[Quick Open] Opening workspace window for ${item.name}`);
+        }
+      }
+
+      quickOpen.hide();
+    },
+  );
+
+  // Handle close request from renderer
+  ipcMain.on('quick-open:close', () => {
+    log.info('[Quick Open] Close requested');
+    quickOpen.hide();
+  });
+
+  log.info('[Quick Open] IPC handlers registered');
+}

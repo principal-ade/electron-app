@@ -30,7 +30,7 @@
     "@principal-ade/industry-themed-terminal": "^0.1.6",
     "@principal-ade/panel-framework-core": "^0.1.2",
     "@principal-ade/panel-layouts": "^0.1.4",
-    "@industry-theme/terminal-panel": "^0.1.4",
+    "@industry-theme/terminal-panel": "^0.1.6",
     "@principal-ai/agent-monitoring": "^0.3.11",
     "@principal-ai/agent-monitoring-ui": "^0.1.6",
     "@principal-ai/code-city-builder": "^0.1.0",

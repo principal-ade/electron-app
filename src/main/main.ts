@@ -12,6 +12,7 @@ import path from 'path';
 import { app, protocol, ipcMain, dialog, BrowserWindow } from 'electron';
 import log from 'electron-log';
 import { windowSwitcher } from './window/windowSwitcher';
+import { quickOpen, setupQuickOpenHandlers } from './window/quickOpen';
 import {
   createWindow,
   applicationWindows,
@@ -215,6 +216,26 @@ app.on('browser-window-created', (_, window) => {
     ) {
       log.info('[Window Switcher] Cycle shortcut triggered (Command+;)');
       windowSwitcher.showAndCycle();
+      event.preventDefault();
+    }
+
+    // Command+O (or Ctrl+O) - Quick Open (repos/workspaces)
+    if (
+      input.type === 'keyDown' &&
+      input.code === 'KeyO' &&
+      ((process.platform === 'darwin' &&
+        input.meta &&
+        !input.control &&
+        !input.shift &&
+        !input.alt) ||
+        (process.platform !== 'darwin' &&
+          input.control &&
+          !input.meta &&
+          !input.shift &&
+          !input.alt))
+    ) {
+      log.info('[Quick Open] Command+O triggered - Opening repo/workspace picker');
+      quickOpen.show();
       event.preventDefault();
     }
 

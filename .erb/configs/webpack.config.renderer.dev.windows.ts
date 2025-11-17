@@ -70,6 +70,11 @@ const windowSwitcherEntryPath = path.join(
   'window-switcher',
   'index.tsx',
 );
+const quickOpenEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'quick-open',
+  'index.tsx',
+);
 
 // Define entry points - use object format for multiple named entries
 const entryPoints: { [key: string]: string } = {};
@@ -165,6 +170,24 @@ if (fs.existsSync(windowSwitcherEntryPath)) {
       filename: 'window-switcher.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['window-switcher'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: true,
+    }),
+  );
+}
+
+if (fs.existsSync(quickOpenEntryPath)) {
+  entryPoints['quick-open'] = quickOpenEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'quick-open.html',
+      template: path.join(webpackPaths.srcRendererPath, 'quick-open.ejs'),
+      chunks: ['quick-open'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
@@ -452,6 +475,10 @@ const configuration: webpack.Configuration = {
         {
           from: /^\/window-switcher.html/,
           to: '/window-switcher.html',
+        },
+        {
+          from: /^\/quick-open.html/,
+          to: '/quick-open.html',
         },
         { from: /^\/index.html/, to: '/index.html' },
         { from: /./, to: '/index.html' }
