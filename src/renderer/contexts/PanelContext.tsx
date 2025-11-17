@@ -389,13 +389,17 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       // Terminal actions
       createTerminalSession: async (options?: { cwd?: string }) => {
         const cwd = options?.cwd || workspace.path;
+        // Use workspace-specific context to ensure each workspace has its own terminal
+        // but reuses the terminal when the same workspace window is reopened
+        const context = `alexandria-workspace-${workspace.id}`;
         console.info('[PanelContext] createTerminalSession called with:', {
           optionsCwd: options?.cwd,
           workspacePath: workspace.path,
           finalCwd: cwd,
-          repository: repository?.name
+          repository: repository?.name,
+          context
         });
-        const sessionId = await TerminalService.create(cwd, 'alexandria-workspace');
+        const sessionId = await TerminalService.getOrCreate(cwd, context);
 
         // Fetch updated terminal info
         const terminals = await TerminalService.list();

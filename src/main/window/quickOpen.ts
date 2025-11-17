@@ -158,15 +158,23 @@ class QuickOpen {
       log.error('[Quick Open] Attempted URL:', targetUrl);
     });
 
-    // Show the window immediately after loading starts
+    // Log any console messages from the renderer
+    this.quickOpenWindow.webContents.on(
+      'console-message',
+      (event, level, message, line, _sourceId) => {
+        log.info(`[Quick Open Renderer] ${message} (line ${line})`);
+      },
+    );
+
+    // Show and focus the window
     this.quickOpenWindow.show();
     this.quickOpenWindow.focus();
-    log.info('[Quick Open] Window shown and focused');
 
-    // Enable DevTools in development for debugging
-    if (process.env.NODE_ENV === 'development') {
-      this.quickOpenWindow.webContents.openDevTools({ mode: 'detach' });
-    }
+    // Force focus and bring to front (same as window switcher)
+    this.quickOpenWindow.setAlwaysOnTop(true, 'screen-saver');
+    this.quickOpenWindow.moveTop();
+
+    log.info('[Quick Open] Window shown and focused');
   }
 
   /**

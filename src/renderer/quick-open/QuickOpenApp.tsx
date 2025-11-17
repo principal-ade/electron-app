@@ -3,7 +3,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import './QuickOpenApp.css';
+import { useTheme } from '@a24z/industry-theme';
 
 interface QuickOpenItem {
   id: string;
@@ -17,6 +17,7 @@ interface QuickOpenItem {
 }
 
 const QuickOpenApp: React.FC = () => {
+  const { theme } = useTheme();
   const [items, setItems] = useState<QuickOpenItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<QuickOpenItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,22 +90,67 @@ const QuickOpenApp: React.FC = () => {
   };
 
   return (
-    <div className="quick-open-container">
-      <div className="quick-open-dialog">
-        <div className="search-container">
+    <div
+      style={{
+        width: '100vw',
+        height: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        paddingTop: '20vh',
+        background: 'transparent',
+      }}
+    >
+      <div
+        style={{
+          width: '600px',
+          background: theme.colors.background,
+          borderRadius: '8px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div
+          style={{
+            padding: '16px',
+            borderBottom: `1px solid ${theme.colors.border}`,
+          }}
+        >
           <input
             ref={searchInputRef}
             type="text"
-            className="search-input"
             placeholder="Search repositories and workspaces..."
             value={searchQuery}
             onChange={handleSearchChange}
+            style={{
+              width: '100%',
+              padding: '12px',
+              background: theme.colors.panelBackground,
+              border: `1px solid ${theme.colors.border}`,
+              borderRadius: '4px',
+              color: theme.colors.text,
+              fontSize: '14px',
+              outline: 'none',
+            }}
           />
         </div>
 
-        <div className="items-list">
+        <div
+          style={{
+            maxHeight: '400px',
+            overflowY: 'auto',
+          }}
+        >
           {filteredItems.length === 0 ? (
-            <div className="no-results">
+            <div
+              style={{
+                padding: '32px',
+                textAlign: 'center',
+                color: theme.colors.textSecondary,
+              }}
+            >
               {items.length === 0
                 ? 'Loading...'
                 : 'No matching items found'}
@@ -113,32 +159,100 @@ const QuickOpenApp: React.FC = () => {
             filteredItems.map((item, index) => (
               <div
                 key={item.id}
-                className={`item ${index === selectedIndex ? 'selected' : ''} ${item.isOpen ? 'open' : ''}`}
                 onClick={() => handleSelectItem(item)}
                 onMouseEnter={() => setSelectedIndex(index)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                  borderBottom: `1px solid ${theme.colors.border}`,
+                  background:
+                    index === selectedIndex
+                      ? theme.colors.panelBackground
+                      : 'transparent',
+                  opacity: item.isOpen ? 0.7 : 1,
+                }}
               >
-                <div className="item-icon">
+                <div style={{ fontSize: '24px', marginRight: '12px' }}>
                   {item.type === 'repository' ? '📦' : '📁'}
                 </div>
-                <div className="item-content">
-                  <div className="item-name">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      color: theme.colors.text,
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
                     {item.name}
-                    {item.isOpen && <span className="open-badge">Open</span>}
+                    {item.isOpen && (
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          padding: '2px 6px',
+                          background: theme.colors.primary,
+                          color: '#fff',
+                          fontSize: '10px',
+                          borderRadius: '3px',
+                          fontWeight: 600,
+                        }}
+                      >
+                        Open
+                      </span>
+                    )}
                   </div>
                   {item.description && (
-                    <div className="item-description">{item.description}</div>
+                    <div
+                      style={{
+                        color: theme.colors.textSecondary,
+                        fontSize: '12px',
+                        marginTop: '4px',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {item.description}
+                    </div>
                   )}
                 </div>
-                <div className="item-type">{item.type}</div>
+                <div
+                  style={{
+                    color: theme.colors.textSecondary,
+                    fontSize: '11px',
+                    textTransform: 'uppercase',
+                    marginLeft: '12px',
+                  }}
+                >
+                  {item.type}
+                </div>
               </div>
             ))
           )}
         </div>
 
-        <div className="footer">
-          <span className="hint">↑↓ Navigate</span>
-          <span className="hint">Enter Select</span>
-          <span className="hint">Esc Close</span>
+        <div
+          style={{
+            display: 'flex',
+            gap: '16px',
+            padding: '8px 16px',
+            background: theme.colors.panelBackground,
+            borderTop: `1px solid ${theme.colors.border}`,
+          }}
+        >
+          <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+            ↑↓ Navigate
+          </span>
+          <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+            Enter Select
+          </span>
+          <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+            Esc Close
+          </span>
         </div>
       </div>
     </div>
