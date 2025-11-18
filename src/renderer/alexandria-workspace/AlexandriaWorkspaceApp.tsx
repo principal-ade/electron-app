@@ -63,8 +63,16 @@ const AlexandriaWorkspaceContent: React.FC = () => {
 
     // Subscribe to workspace changes
     const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
-      // Reload workspace data on any workspace change
-      loadWorkspace();
+      console.info('[AlexandriaWorkspaceApp] Workspace change event received:', event);
+
+      // Only reload workspace metadata for 'updated' events
+      // 'membership-changed' is handled by PanelContext
+      // 'deleted' would close the window anyway
+      // 'added' doesn't apply to this workspace
+      if (event.type === 'updated' && event.workspaceId === workspaceId) {
+        console.info('[AlexandriaWorkspaceApp] Workspace metadata updated, reloading');
+        loadWorkspace();
+      }
     });
 
     return () => {

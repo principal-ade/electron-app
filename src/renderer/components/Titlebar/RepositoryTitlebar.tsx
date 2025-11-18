@@ -12,6 +12,7 @@ import {
   CloudOff,
   Copy,
   Check,
+  RefreshCw,
 } from 'lucide-react';
 import { useTheme } from '@a24z/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
@@ -99,6 +100,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   const [showOpenInIDE, setShowOpenInIDE] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [pathCopied, setPathCopied] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Get local clone path for git status
   const localClonePath = selectedSource?.type === 'local'
@@ -106,7 +108,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
     : repository?.localClones?.[0]?.path;
 
   // Subscribe to git status (includes ahead/behind counts)
-  const { gitStatus, gitStatusWithFiles } = useRepositoryGitStatus(localClonePath || null);
+  const { gitStatus, gitStatusWithFiles, refresh: refreshGitStatus } = useRepositoryGitStatus(localClonePath || null);
 
   // Check if there are uncommitted changes
   const hasUncommittedChanges = gitStatusWithFiles
@@ -212,6 +214,21 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           error,
         );
       }
+    }
+  };
+
+  // Handle refresh git status button click
+  const handleRefreshGitStatus = async () => {
+    if (isRefreshing) return; // Prevent multiple concurrent refreshes
+
+    setIsRefreshing(true);
+    try {
+      await refreshGitStatus();
+    } catch (error) {
+      console.error('[RepositoryTitlebar] Failed to refresh git status:', error);
+    } finally {
+      // Keep the spinning animation for at least 500ms for visual feedback
+      setTimeout(() => setIsRefreshing(false), 500);
     }
   };
 
@@ -439,6 +456,50 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           gap: '8px',
         }}
       >
+        {/* Refresh git status button - only show for local clones */}
+        {hasLocalClone && (
+          <button
+            onClick={handleRefreshGitStatus}
+            disabled={isRefreshing}
+            style={{
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: 'transparent',
+              border: 'none',
+              color: theme.colors.textSecondary,
+              cursor: isRefreshing ? 'default' : 'pointer',
+              padding: '6px',
+              borderRadius: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              width: '32px',
+              height: '32px',
+              opacity: isRefreshing ? 0.6 : 1,
+            }}
+            onMouseEnter={(e) => {
+              if (!isRefreshing) {
+                e.currentTarget.style.backgroundColor =
+                  theme.colors.backgroundTertiary;
+                e.currentTarget.style.color = theme.colors.text;
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+            title="Refresh git status and check remote"
+          >
+            <RefreshCw
+              size={14}
+              style={{
+                animation: isRefreshing ? 'spin 1s linear infinite' : 'none',
+              }}
+            />
+          </button>
+        )}
+
         {/* Secrets button - only show for local clones */}
         {hasLocalClone && onSecretsClick && (
           <button

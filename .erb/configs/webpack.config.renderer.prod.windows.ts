@@ -3,6 +3,7 @@
  */
 
 import path from 'path';
+import fs from 'fs';
 import webpack from 'webpack';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
@@ -18,6 +19,112 @@ import deleteSourceMaps from '../scripts/delete-source-maps';
 checkNodeEnv('production');
 deleteSourceMaps();
 
+// Define entry points for different windows
+const legacyEntryPath = path.join(webpackPaths.srcRendererPath, 'index.tsx');
+const principalEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'principal-window',
+  'index.tsx',
+);
+const alexandriaWorkspaceEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'alexandria-workspace',
+  'index.tsx',
+);
+const windowSwitcherEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'window-switcher',
+  'index.tsx',
+);
+const quickOpenEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'quick-open',
+  'index.tsx',
+);
+
+// Define entry points - use object format for multiple named entries
+const entryPoints: { [key: string]: string } = {};
+const htmlPlugins: HtmlWebpackPlugin[] = [];
+
+// Add principal entry if it exists
+if (fs.existsSync(principalEntryPath)) {
+  entryPoints.principal = principalEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'principal.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['principal'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    })
+  );
+}
+
+// Add Alexandria Workspace entry if it exists
+if (fs.existsSync(alexandriaWorkspaceEntryPath)) {
+  entryPoints['alexandria-workspace'] = alexandriaWorkspaceEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'alexandria-workspace.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['alexandria-workspace'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    })
+  );
+}
+
+// Add window switcher entry if it exists
+if (fs.existsSync(windowSwitcherEntryPath)) {
+  entryPoints['window-switcher'] = windowSwitcherEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'window-switcher.html',
+      template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['window-switcher'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    }),
+  );
+}
+
+// Add quick open entry if it exists
+if (fs.existsSync(quickOpenEntryPath)) {
+  entryPoints['quick-open'] = quickOpenEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'quick-open.html',
+      template: path.join(webpackPaths.srcRendererPath, 'quick-open.ejs'),
+      chunks: ['quick-open'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    }),
+  );
+}
+
+// Always add legacy entry for index.html (dashboard, etc.)
+entryPoints.main = legacyEntryPath;
+
 const configuration: webpack.Configuration = {
   devtool: 'source-map',
 
@@ -30,12 +137,12 @@ const configuration: webpack.Configuration = {
 
   stats: 'errors-only',
 
-  entry: [path.join(webpackPaths.srcRendererPath, 'index.tsx')],
+  entry: entryPoints,
 
   output: {
     path: webpackPaths.distRendererPath,
     publicPath: './',
-    filename: 'renderer.js',
+    filename: '[name].js', // Use chunk name in filename
   },
 
   module: {
@@ -235,9 +342,11 @@ const configuration: webpack.Configuration = {
       analyzerPort: 8889,
     }),
 
+    // Legacy index.html for main window
     new HtmlWebpackPlugin({
       filename: 'index.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
+      chunks: ['main'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
@@ -247,6 +356,9 @@ const configuration: webpack.Configuration = {
       isDevelopment: false,
       nodeModules: webpackPaths.appNodeModulesPath,
     }),
+
+    // Add all dynamic HTML plugins for different windows
+    ...htmlPlugins,
   ],
 };
 
