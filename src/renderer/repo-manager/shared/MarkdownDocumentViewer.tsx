@@ -4,7 +4,7 @@ import { ThemedSlidePresentationBook } from '../../components/markdown/ThemedSli
 import { ThemedDocumentView } from '../../components/markdown/ThemedDocumentView';
 import { ThemedMonaco } from '../../components/shared/ThemedMonaco';
 import { MarkdownEmptyOverlay } from '../../components/repository-maps/MarkdownEmptyOverlay';
-import type { Theme } from '@a24z/industry-theme';
+import type { Theme } from '@principal-ade/industry-theme';
 
 interface MarkdownDocumentViewerProps {
   viewMode: 'slides' | 'document' | 'book';

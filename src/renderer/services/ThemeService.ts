@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import type { Theme } from '@a24z/industry-theme';
+import type { Theme } from '@principal-ade/industry-theme';
 import { getThemeByName } from '../themes/predefinedThemes';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
@@ -39,7 +39,7 @@ function deepMerge<T extends object>(target: T, source: Partial<T>): T {
 
 class ThemeServiceClass extends EventEmitter {
   private static instance: ThemeServiceClass;
-  private currentThemeName: string = 'default';
+  private currentThemeName: string = 'principalAI';
   private currentColorMode: 'light' | 'dark' = 'dark';
   private currentThemeCache: Theme | null = null;
 

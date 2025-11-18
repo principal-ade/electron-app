@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { DoorClosed, Plus, Edit2, Check, X, ExternalLink, Search } from 'lucide-react';
 import type { Workspace } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';

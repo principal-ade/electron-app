@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { History as HistoryIcon, RefreshCcw, Clock } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import {
   GitService,
   type GitCommitInfo,

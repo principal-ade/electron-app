@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { AlertCircle, Loader2, LogIn } from 'lucide-react';
 
 import { PullRequestsTab } from '../../components/repository-maps/PullRequestsTab';

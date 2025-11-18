@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, GitBranch, Circle } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 
 interface GitChangesHelpModalProps {
   isOpen: boolean;

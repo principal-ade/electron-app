@@ -3,7 +3,7 @@
  * Validates and merges custom theme configurations
  */
 
-import type { Theme } from '@a24z/industry-theme';
+import type { Theme } from '@principal-ade/industry-theme';
 import type {
   DocsThemeConfig,
   ThemeValidationResult,

@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Trash2, AlertCircle } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { TerminalService } from '../../main-process-api/TerminalService';
 import { getTerminalSessionCount } from '../../utils/terminalCleanup';
 

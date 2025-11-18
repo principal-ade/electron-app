@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Bot, CheckCircle } from 'lucide-react';
 import { SupportedAgent } from '@principal-ai/agent-monitoring';
 import {

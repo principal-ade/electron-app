@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { GitStatusFileTree, type GitFileStatus } from '@a24z/dynamic-file-tree';
 import { PathsFileTreeBuilder } from '@principal-ai/repository-abstraction';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';

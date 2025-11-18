@@ -15,7 +15,7 @@ import {
   Grid3x3,
 } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { SnapCarousel, SnapCarouselRef } from '@a24z/panels';
 import TerminalPanelPackaged, {
   TerminalPanelPackagedRef,

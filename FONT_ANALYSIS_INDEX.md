@@ -217,7 +217,7 @@ Week 7: TESTING & VALIDATION
 9. `/Users/griever/Developer/electron-app/src/renderer/panels/components/FileTreePanelContent.tsx`
 
 ### Theme File (Needs Extension):
-- Location: TBD (find where theme is defined in @a24z/industry-theme)
+- Location: TBD (find where theme is defined in @principal-ade/industry-theme)
 - Action: Add fontSizes (named keys), fontWeights, typography helpers
 
 ---

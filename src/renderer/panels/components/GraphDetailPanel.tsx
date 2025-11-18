@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Network } from 'lucide-react';
 import { GraphVizPanel } from './GraphVizPanel';
 import { graphToDot } from '../../services/GraphToDotService';

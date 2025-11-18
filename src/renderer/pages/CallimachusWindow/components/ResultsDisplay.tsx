@@ -1,7 +1,7 @@
 import React from 'react';
 import type { SearchResult } from '@a24z/callimachus';
 import { Code2, Star, Tag, ChevronRight, Loader2 } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 
 interface ResultsDisplayProps {
   results: SearchResult[];

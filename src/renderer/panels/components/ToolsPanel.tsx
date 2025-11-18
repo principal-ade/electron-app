@@ -20,8 +20,8 @@ import {
   Info,
   Activity,
 } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
-import type { Theme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
+import type { Theme } from '@principal-ade/industry-theme';
 import type {
   PackageLayer,
   ConfigFile,

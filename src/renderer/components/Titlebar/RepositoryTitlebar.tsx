@@ -14,7 +14,7 @@ import {
   Check,
   RefreshCw,
 } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { BaseTitlebar } from './BaseTitlebar';
 import { TitlebarOpenInIDE } from './TitlebarOpenInIDE';
 import { GitSyncStatusIndicator } from './GitSyncStatusIndicator';

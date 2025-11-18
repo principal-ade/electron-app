@@ -35,7 +35,7 @@ This guide shows how to implement a new panel using the existing architecture.
 
 ```typescript
 import React from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 
 export const MyNewPanel: React.FC = () => {
   const { theme } = useTheme();
@@ -163,7 +163,7 @@ export const myPanelHandler = new MyPanelHandler();
 
 ```typescript
 import React, { useState, useEffect } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { MyPanelService } from '../../main-process-api/MyPanelService';
 
 export const MyPanel: React.FC = () => {

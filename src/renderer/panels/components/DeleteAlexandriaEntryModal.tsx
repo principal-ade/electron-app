@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { X, Trash2, AlertTriangle, FileX, Database, Briefcase } from 'lucide-react';
 import type { AlexandriaEntry, Workspace } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';

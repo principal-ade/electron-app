@@ -512,7 +512,7 @@ export class EventHistoryStore {
 // src/renderer/repo-manager/components/EventNavigationControls.tsx
 
 import React from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { ChevronLeft, ChevronRight, Circle, Pause } from 'lucide-react';
 
 export interface EventNavigationControlsProps {

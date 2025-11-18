@@ -12,7 +12,7 @@ import {
   Minus,
   ExternalLink,
 } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { MCPTasksService } from '../../main-process-api/MCPTasksService';
 import type { MCPTaskSubmission } from '../../../shared/types/mcp-tasks.types';
 

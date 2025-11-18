@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { SupportedLLMProvider } from '../../../shared/main-process-api-interfaces/LLMModelsAPI';
 import { Sparkles, Loader2 } from 'lucide-react';
 import type { AgentSessionRecord } from '../../../shared/sessionTypes';

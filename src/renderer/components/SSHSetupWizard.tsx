@@ -9,7 +9,7 @@ import {
   ExternalLink,
   ArrowRight,
 } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { SSHSetupService } from '../main-process-api/SSHSetupService';
 import type { SSHKeyInfo } from '../../shared/main-process-api-interfaces/SSHSetupAPI';
 

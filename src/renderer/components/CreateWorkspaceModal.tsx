@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { X, Check, FolderOpen } from 'lucide-react';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { FileSystemService } from '../main-process-api/FileSystemService';

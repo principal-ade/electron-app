@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 
 import { parseMarkdownIntoPresentation } from 'themed-markdown';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';

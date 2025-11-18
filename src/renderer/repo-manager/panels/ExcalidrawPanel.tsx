@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Pencil, Plus, Info } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { ExcalidrawWrapper } from '../../components/shared/ExcalidrawWrapper';
 import { PanelEmptyState } from './PanelEmptyState';
 import { FileSystemService } from '../../main-process-api/FileSystemService';

@@ -9,7 +9,7 @@ import {
   EyeOff,
   Building2,
 } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import {
   ArchitectureMapHighlightLayers,
   type CityData,

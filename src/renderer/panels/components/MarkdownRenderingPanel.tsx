@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FileText, Copy, Check, X, Trash2, Plus, Minus } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { parseMarkdownIntoPresentation } from 'themed-markdown';
 import { MarkdownDocumentViewer } from '../../repo-manager/shared/MarkdownDocumentViewer';
 import { PanelEmptyState } from '../../repo-manager/panels/PanelEmptyState';

@@ -83,7 +83,7 @@ Currently configured languages via MonacoWebpackPlugin:
 
 ### What It Provides ✅
 
-1. **Automatic theme integration** with @a24z/industry-theme
+1. **Automatic theme integration** with @principal-ade/industry-theme
 2. **TypeScript support** with full typing
 3. **Basic Monaco wrapper** with props pass-through
 4. **Two components**:

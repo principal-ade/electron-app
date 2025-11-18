@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import type { Workspace } from '@a24z/core-library';
 import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';

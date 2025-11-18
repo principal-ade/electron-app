@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { CallimachusConfig } from '@a24z/callimachus';
 import { CheckCircle, XCircle, Loader2, Server } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 
 interface ConnectionPanelProps {
   isConnected: boolean;

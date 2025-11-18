@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Copy, Trash2, FolderOpen, Scissors } from 'lucide-react';
 import { ShellService } from '../main-process-api/ShellService';
 import { FileSystemService } from '../main-process-api/FileSystemService';

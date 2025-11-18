@@ -9,7 +9,9 @@ import {
   defaultMarkdownTheme,
   defaultEditorTheme,
   defaultTerminalTheme,
-} from '@a24z/industry-theme';
+  landingPageTheme,
+  landingPageLightTheme,
+} from '@principal-ade/industry-theme';
 
 // Re-export themes from the library with metadata
 export const predefinedThemes: Record<
@@ -20,6 +22,16 @@ export const predefinedThemes: Record<
     theme: Theme;
   }
 > = {
+  principalAI: {
+    name: 'Principal AI',
+    description: 'Modern AI-inspired theme with vibrant indigo and cyan accents',
+    theme: landingPageTheme,
+  },
+  principalAILight: {
+    name: 'Principal AI Light',
+    description: 'Light variant of the Principal AI theme',
+    theme: landingPageLightTheme,
+  },
   terminal: {
     name: 'Terminal',
     description: 'Minimalistic developer-focused dark theme with transparency',
@@ -74,10 +86,10 @@ export const getThemeNames = (): string[] => {
 
 // Get theme by name
 export const getThemeByName = (name: string): Theme | undefined => {
-  // If theme doesn't exist, fall back to 'terminal' as default
+  // If theme doesn't exist, fall back to 'principalAI' as default
   if (!predefinedThemes[name]) {
-    console.warn(`Theme '${name}' not found, falling back to 'terminal'`);
-    return predefinedThemes['terminal']?.theme;
+    console.warn(`Theme '${name}' not found, falling back to 'principalAI'`);
+    return predefinedThemes['principalAI']?.theme;
   }
   return predefinedThemes[name]?.theme;
 };

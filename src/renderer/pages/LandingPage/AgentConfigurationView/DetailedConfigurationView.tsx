@@ -7,8 +7,8 @@ import {
   SupportedAgent,
 } from '@principal-ai/agent-monitoring';
 
-import type { Theme } from '@a24z/industry-theme';
-import { useTheme } from '@a24z/industry-theme';
+import type { Theme } from '@principal-ade/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { AnimatedResizableLayout } from '@a24z/panels';
 import '@a24z/panels/panels.css';
 

@@ -16,7 +16,7 @@ import {
   Square,
 } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import TerminalPanelPackaged, {
   TerminalPanelPackagedRef,
 } from '../TerminalPanelPackaged';

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { ThemeDropdown } from './ThemeDropdown';
 import { ThemeCustomizationButton } from '../../../components/Titlebar/ThemeCustomizationButton';
 import { ViewSidebarControls } from '../ViewSidebarControls/ViewSidebarControls';

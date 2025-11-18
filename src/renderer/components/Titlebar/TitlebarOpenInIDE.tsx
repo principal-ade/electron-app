@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useEffect } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { ShellService } from '../../main-process-api/ShellService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import type { Repository } from '../../../shared/types/repository.types';

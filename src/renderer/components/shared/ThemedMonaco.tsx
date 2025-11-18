@@ -1,7 +1,7 @@
 import React from 'react';
 import Editor, { loader } from '@monaco-editor/react';
 import * as monaco from 'monaco-editor';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 
 // Configure Monaco to use the locally bundled version
 loader.config({ monaco });

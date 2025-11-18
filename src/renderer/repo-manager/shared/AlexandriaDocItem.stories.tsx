@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import React, { useState } from 'react';
-import { ThemeProvider } from '@a24z/industry-theme';
+import { ThemeProvider } from '@principal-ade/industry-theme';
 import { AlexandriaDocItem } from './AlexandriaDocItem';
 import type { AlexandriaDocItemData } from './AlexandriaDocsPanel';
 

@@ -688,7 +688,7 @@ export const gitHooksHandler = new GitHooksHandler();
 // src/renderer/panels/components/GitHooksPanel.tsx
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Check, Circle, AlertTriangle, Plus, Eye, Edit, Trash2 } from 'lucide-react';
 import { GitHooksService } from '../../main-process-api/GitHooksService';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { GitCommit, Calendar, User, AlertCircle, Loader2 } from 'lucide-react';
 import { GithubService } from '../../main-process-api/GithubService';
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';

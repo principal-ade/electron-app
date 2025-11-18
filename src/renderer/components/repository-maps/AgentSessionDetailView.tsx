@@ -20,7 +20,7 @@ import {
   EyeOff,
   Eye,
 } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import type { SessionCardData } from '../../repo-manager/shared/AgentSessionCard';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
 import { SessionEventsView } from './SessionEventsView';

@@ -26,7 +26,7 @@ import {
   DiffSourceToggleWrapper,
 } from '@mdxeditor/editor';
 import { ThemedMDXEditorWithProvider } from '@principal-ade/industry-themed-mdx-editor';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { FileText } from 'lucide-react';

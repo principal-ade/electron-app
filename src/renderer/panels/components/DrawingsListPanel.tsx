@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Pencil, Trash2, Clock, Plus, Copy } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { AlexandriaDrawingService } from '../../main-process-api/AlexandriaDrawingService';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';
 import type { DiagramListItem } from '../../main-process-api/ExcalidrawStorageService';

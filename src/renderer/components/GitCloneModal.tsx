@@ -8,7 +8,7 @@ import {
   Loader,
   ChevronDown,
 } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';

@@ -3,7 +3,7 @@
  * Custom theme configuration for documentation/readme display
  */
 
-import type { Theme } from '@a24z/industry-theme';
+import type { Theme } from '@principal-ade/industry-theme';
 
 /**
  * Simplified theme configuration for docs

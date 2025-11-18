@@ -632,7 +632,7 @@ Create `/Users/griever/Developer/electron-app/src/renderer/panels/components/Loc
 
 ```typescript
 import React, { useState, useEffect } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Globe, RotateCw, Zap } from 'lucide-react';
 
 interface LocalhostProcess {

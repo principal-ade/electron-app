@@ -1,6 +1,6 @@
 import React from 'react';
 import { Bot, Database, Brain } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import {
   getAgentInfo,
   type SupportedAgent,

@@ -3,7 +3,7 @@ import {
   QualityHexagonCompact,
   QualityHexagonDetailed,
 } from '@principal-ai/agent-monitoring-ui';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Grid2x2, RefreshCw } from 'lucide-react';
 import { RepositoryMonitoringService } from '../../main-process-api/RepositoryMonitoringService';
 import type { PackageLayer } from '@principal-ai/codebase-composition';

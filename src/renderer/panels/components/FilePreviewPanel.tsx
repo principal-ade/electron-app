@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { ThemedMonacoWithProvider } from '@principal-ade/industry-themed-monaco-editor';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';

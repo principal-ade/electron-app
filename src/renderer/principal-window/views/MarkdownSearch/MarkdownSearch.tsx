@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Calendar, Filter, Search, Check, FolderOpen } from 'lucide-react';
 import type { SearchResult } from '@a24z/markdown-search';
 import { documentSearchService } from '../../../services/DocumentSearchService';

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Folder, Home, X, Plus } from 'lucide-react';
 import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';

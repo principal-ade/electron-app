@@ -13,7 +13,7 @@ import {
   ArrowDown,
   Minus,
 } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { PalaceTasksService } from '../../main-process-api/PalaceTasksService';
 import type {
   Task,

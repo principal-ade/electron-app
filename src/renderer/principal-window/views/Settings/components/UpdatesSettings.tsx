@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { RefreshCw, Sparkles, Info } from 'lucide-react';
 import { AppVersionManagerService } from '../../../../main-process-api/AppVersionManagerService';
 

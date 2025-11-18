@@ -3,7 +3,7 @@ import { Check, AlertCircle, Server, Settings } from 'lucide-react';
 
 import { getAgentInfo, SupportedAgent } from '@principal-ai/agent-monitoring';
 import { APP_BRANDING } from '../../../../shared/config/appBranding';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 
 import { AgentConnectionVisualizer } from './AgentConnectionVisualizer';
 import { WizardStep } from './WizardStep';

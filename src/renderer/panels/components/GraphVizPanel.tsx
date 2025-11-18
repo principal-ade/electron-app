@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Graphviz } from 'graphviz-react';
 import { Network } from 'lucide-react';
 

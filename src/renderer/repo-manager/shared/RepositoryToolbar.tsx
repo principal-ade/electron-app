@@ -9,7 +9,7 @@ import {
   Filter,
   X,
 } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 
 export interface ToolbarItem {
   id: string;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { FileText, Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
 import type { AlexandriaDocItemData } from './AlexandriaDocsPanel';
 import type { GitStatus } from '../../../shared/types/repository.types';

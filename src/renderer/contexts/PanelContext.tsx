@@ -6,7 +6,7 @@ import React, {
   useEffect,
   type ReactNode,
 } from 'react';
-import type { Theme } from '@a24z/industry-theme';
+import type { Theme } from '@principal-ade/industry-theme';
 import { PanelEventBus } from '@principal-ade/panel-framework-core';
 import type {
   PanelContextValue,

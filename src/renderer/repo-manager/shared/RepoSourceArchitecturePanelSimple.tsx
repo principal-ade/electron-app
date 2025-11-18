@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FolderOpen, AlertCircle, Layers } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { FileTree } from '@principal-ai/repository-abstraction';
 import {
   PackageLayerModule,

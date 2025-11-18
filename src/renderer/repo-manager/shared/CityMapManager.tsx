@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, ReactNode } from 'react';
 import { GitBranch } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import type { CityData } from '@principal-ai/code-city-react';
 import { MultiVersionCityBuilder } from '@principal-ai/code-city-react';
 import type { FileTree } from '@principal-ai/repository-abstraction';

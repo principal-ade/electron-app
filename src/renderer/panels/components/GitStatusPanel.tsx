@@ -1,6 +1,6 @@
 import React from 'react';
 import { GitBranch, Info } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.types';
 
 interface GitStatusPanelProps {

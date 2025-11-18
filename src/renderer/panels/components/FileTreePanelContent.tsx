@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { FolderTree, FileCode } from 'lucide-react';
 import { FileTreeTab } from './FileTreeTab';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';

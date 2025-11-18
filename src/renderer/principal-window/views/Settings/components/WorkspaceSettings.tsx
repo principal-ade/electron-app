@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { FolderOpen, Trash2, Star, Edit2, Check, X } from 'lucide-react';
 import { WorkspaceService } from '../../../../main-process-api/WorkspaceService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';

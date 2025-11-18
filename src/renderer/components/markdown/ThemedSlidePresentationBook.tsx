@@ -3,8 +3,8 @@ import {
   SlidePresentationBook,
   SlidePresentationBookProps,
 } from 'themed-markdown';
-import { useTheme } from '@a24z/industry-theme';
-import type { Theme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
+import type { Theme } from '@principal-ade/industry-theme';
 
 /**
  * ThemedSlidePresentationBook - A wrapper around SlidePresentationBook with theme support

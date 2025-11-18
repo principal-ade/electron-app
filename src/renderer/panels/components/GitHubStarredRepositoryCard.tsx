@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { ExternalLink, FolderOpen, Download } from 'lucide-react';
 
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';

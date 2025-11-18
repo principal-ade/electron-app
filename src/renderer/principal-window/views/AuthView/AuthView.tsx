@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { useAuthState } from '../../../hooks/useAuthState';
 import { AuthDetails } from './components/AuthDetails';
 import './AuthView.css';

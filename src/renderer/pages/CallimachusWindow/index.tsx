@@ -9,7 +9,7 @@ import { ConnectionPanel } from './components/ConnectionPanel';
 import { SearchInterface } from './components/SearchInterface';
 import { ResultsDisplay } from './components/ResultsDisplay';
 import { CallimachusTitlebar } from '../../components/Titlebar';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 
 export const CallimachusWindow: React.FC = () => {
   const { theme } = useTheme();

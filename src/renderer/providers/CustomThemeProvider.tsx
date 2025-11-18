@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ThemeProvider } from '@a24z/industry-theme';
-import type { Theme } from '@a24z/industry-theme';
+import { ThemeProvider } from '@principal-ade/industry-theme';
+import type { Theme } from '@principal-ade/industry-theme';
 import { ThemeService, ThemeChangeEvent } from '../services/ThemeService';
 import { getThemeByName } from '../themes/predefinedThemes';
 
@@ -52,7 +52,7 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
 
   // Show loading or use default theme while loading
   if (isLoading || !selectedTheme) {
-    const defaultTheme = getThemeByName('default');
+    const defaultTheme = getThemeByName('principalAI');
     return <ThemeProvider theme={defaultTheme}>{children}</ThemeProvider>;
   }
 

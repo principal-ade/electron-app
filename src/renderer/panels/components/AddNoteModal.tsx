@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { RepositoryNotesService } from '../../main-process-api/RepositoryNotesService';
 
 interface AddNoteModalProps {

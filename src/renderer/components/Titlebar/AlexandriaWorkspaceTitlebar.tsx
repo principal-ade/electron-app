@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import type { Workspace } from '@a24z/core-library';
 import { Plus } from 'lucide-react';
 import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddRepositoryToWorkspaceModal';

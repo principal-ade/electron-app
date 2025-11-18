@@ -1,7 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import mermaid from 'mermaid';
 
-import { ThemeProvider } from '@a24z/industry-theme';
+import { ThemeProvider } from '@principal-ade/industry-theme';
 import './styles/tailwind.css';
 import './index.css';
 import 'highlight.js/styles/atom-one-dark.css';

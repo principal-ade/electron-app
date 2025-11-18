@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { AlexandriaWorkspaceTitlebar } from '../components/Titlebar';

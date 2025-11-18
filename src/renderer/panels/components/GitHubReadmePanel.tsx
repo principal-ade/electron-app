@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { FileText, Loader2, AlertCircle, X } from 'lucide-react';
 import { parseMarkdownIntoPresentation } from 'themed-markdown';
 import { MarkdownDocumentViewer } from '../../repo-manager/shared/MarkdownDocumentViewer';

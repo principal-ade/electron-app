@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Pencil, Plus } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { ExcalidrawWrapper } from '../../components/shared/ExcalidrawWrapper';
 import { AlexandriaDrawingService } from '../../main-process-api/AlexandriaDrawingService';
 import { useRepositoryPanelContext } from '../RepositoryPanelProvider';

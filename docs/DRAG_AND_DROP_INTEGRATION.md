@@ -1740,7 +1740,7 @@ const fileTreeConfig: PanelConfig = {
 ## Related Dependencies
 
 This feature depends on:
-- `@a24z/industry-theme` - For terminal component (needs drag support)
+- `@principal-ade/industry-theme` - For terminal component (needs drag support)
 - `@a24z/dynamic-file-tree` - For file tree component (needs drag support)
 
 See dependency tasks:

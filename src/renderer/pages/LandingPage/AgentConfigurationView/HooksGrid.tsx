@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 import { SupportedAgent } from '@principal-ai/agent-monitoring';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 
 import { AgentConfigurationService } from '../../../main-process-api/AgentConfigurationService';
 import {

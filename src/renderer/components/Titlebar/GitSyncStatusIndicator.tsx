@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Wifi, WifiOff } from 'lucide-react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import { useGitSyncConnection } from '../../hooks/useGitSyncConnection';
 
 export interface GitSyncStatusIndicatorProps {

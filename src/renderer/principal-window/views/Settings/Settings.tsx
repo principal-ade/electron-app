@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTheme } from '@a24z/industry-theme';
+import { useTheme } from '@principal-ade/industry-theme';
 import {
   Globe,
   Bot,
