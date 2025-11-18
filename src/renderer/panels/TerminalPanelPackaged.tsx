@@ -10,6 +10,7 @@ import { ArrowRight } from 'lucide-react';
 import {
   ThemedTerminalWithProvider,
   type ThemedTerminalRef,
+  type TerminalScrollPosition,
 } from '@principal-ade/industry-themed-terminal';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
@@ -52,12 +53,15 @@ interface TerminalPanelPackagedProps {
   onSessionCreated?: (sessionId: string) => void;
   /** Optional command to run when the terminal is created */
   initialCommand?: string;
+  /** Callback when the terminal scroll position changes */
+  onScrollPositionChange?: (position: TerminalScrollPosition) => void;
 }
 
 export interface TerminalPanelPackagedRef {
   scrollToBottom: () => void;
   focus: () => void;
   getTerminal: () => Terminal | null;
+  fit: () => void;
 }
 
 const TerminalPanelPackaged = forwardRef<
@@ -78,6 +82,7 @@ const TerminalPanelPackaged = forwardRef<
       isVisible = true,
       onSessionCreated,
       initialCommand,
+      onScrollPositionChange,
     },
     ref,
   ) => {
@@ -106,7 +111,7 @@ const TerminalPanelPackaged = forwardRef<
     const [shouldRenderTerminal, setShouldRenderTerminal] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
-    // Expose scrollToBottom, focus, and getTerminal methods via ref
+    // Expose scrollToBottom, focus, fit, and getTerminal methods via ref
     useImperativeHandle(
       ref,
       () => ({
@@ -118,6 +123,9 @@ const TerminalPanelPackaged = forwardRef<
         },
         getTerminal: () => {
           return terminalRef.current?.getTerminal() ?? null;
+        },
+        fit: () => {
+          terminalRef.current?.fit();
         },
       }),
       [],
@@ -571,6 +579,7 @@ const TerminalPanelPackaged = forwardRef<
             onData={handleData}
             onResize={handleResize}
             onLinkClick={handleLinkClick}
+            onScrollPositionChange={onScrollPositionChange}
             headerTitle={headerTitle}
             headerSubtitle={headerSubtitle}
             headerBadge={headerBadge}
@@ -592,6 +601,7 @@ const TerminalPanelPackaged = forwardRef<
           onData={handleData}
           onResize={handleResize}
           onLinkClick={handleLinkClick}
+          onScrollPositionChange={onScrollPositionChange}
           headerTitle={headerTitle}
           headerSubtitle={headerSubtitle}
           headerBadge={headerBadge}
