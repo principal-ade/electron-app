@@ -40,6 +40,7 @@ class QuickOpen {
       log.info('[Quick Open] Window exists, focusing');
       this.quickOpenWindow.show();
       this.quickOpenWindow.focus();
+      this.quickOpenWindow.webContents.focus();
       this.isActive = true;
       return;
     }
@@ -186,6 +187,9 @@ class QuickOpen {
     // Force focus and bring to front (same as window switcher)
     this.quickOpenWindow.setAlwaysOnTop(true, 'screen-saver');
     this.quickOpenWindow.moveTop();
+
+    // Focus webContents to ensure keyboard input works (critical for packaged builds)
+    this.quickOpenWindow.webContents.focus();
 
     log.info('[Quick Open] Window shown and focused');
   }
