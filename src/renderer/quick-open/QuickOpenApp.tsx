@@ -23,37 +23,25 @@ const QuickOpenApp: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const selectedItemRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Listen for items from main process
     const handleItems = (_event: any, receivedItems: QuickOpenItem[]) => {
-      console.log('[Quick Open] Received items:', receivedItems);
+      console.log('[Quick Open] Received items:', JSON.stringify(receivedItems, null, 2));
       setItems(receivedItems);
       setFilteredItems(receivedItems);
     };
 
-    window.electronAPI.onQuickOpenItems?.(handleItems);
+    const removeItemsListener = window.electronAPI.onQuickOpenItems?.(handleItems);
 
     // Focus search input on mount
     searchInputRef.current?.focus();
 
-    // Handle keyboard shortcuts
+    // Handle Escape key at window level (other keys handled in input)
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         window.electronAPI.closeQuickOpen?.();
-      } else if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex((prev) =>
-          prev < filteredItems.length - 1 ? prev + 1 : prev,
-        );
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev));
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        if (filteredItems[selectedIndex]) {
-          handleSelectItem(filteredItems[selectedIndex]);
-        }
       }
     };
 
@@ -61,8 +49,10 @@ const QuickOpenApp: React.FC = () => {
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      // Clean up IPC listener to prevent memory leak
+      removeItemsListener?.();
     };
-  }, [filteredItems, selectedIndex]);
+  }, []);
 
   useEffect(() => {
     // Filter items based on search query
@@ -80,13 +70,58 @@ const QuickOpenApp: React.FC = () => {
     setSelectedIndex(0);
   }, [searchQuery, items]);
 
+  useEffect(() => {
+    // Scroll selected item into view
+    if (selectedItemRef.current) {
+      selectedItemRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }
+  }, [selectedIndex]);
+
   const handleSelectItem = (item: QuickOpenItem) => {
     console.log('[Quick Open] Selected item:', item);
-    window.electronAPI.selectQuickOpenItem?.(item);
+    window.electronAPI?.selectQuickOpenItem?.(item);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    console.log('[Quick Open] Key pressed:', e.key);
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      console.log('[Quick Open] Arrow Down - moving selection down');
+      setSelectedIndex((prev) => {
+        const newIndex = prev < filteredItems.length - 1 ? prev + 1 : prev;
+        console.log('[Quick Open] New index:', newIndex);
+        return newIndex;
+      });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      console.log('[Quick Open] Arrow Up - moving selection up');
+      setSelectedIndex((prev) => {
+        const newIndex = prev > 0 ? prev - 1 : prev;
+        console.log('[Quick Open] New index:', newIndex);
+        return newIndex;
+      });
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      console.log('[Quick Open] Tab - cycling selection');
+      setSelectedIndex((prev) => {
+        const newIndex = prev < filteredItems.length - 1 ? prev + 1 : 0;
+        console.log('[Quick Open] New index:', newIndex);
+        return newIndex;
+      });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      console.log('[Quick Open] Enter - selecting item at index:', selectedIndex);
+      if (filteredItems[selectedIndex]) {
+        handleSelectItem(filteredItems[selectedIndex]);
+      }
+    }
   };
 
   return (
@@ -105,6 +140,7 @@ const QuickOpenApp: React.FC = () => {
         style={{
           width: '600px',
           background: theme.colors.background,
+          border: `1px solid ${theme.colors.border}`,
           borderRadius: '8px',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
           overflow: 'hidden',
@@ -124,15 +160,19 @@ const QuickOpenApp: React.FC = () => {
             placeholder="Search repositories and workspaces..."
             value={searchQuery}
             onChange={handleSearchChange}
+            onKeyDown={handleInputKeyDown}
             style={{
               width: '100%',
               padding: '12px',
-              background: theme.colors.panelBackground,
-              border: `1px solid ${theme.colors.border}`,
+              background: theme.colors.panelBackground || '#1e1e1e',
+              border: `1px solid ${theme.colors.border || '#3e3e3e'}`,
               borderRadius: '4px',
-              color: theme.colors.text,
-              fontSize: '14px',
+              color: theme.colors.text || '#ffffff',
+              fontSize: theme.fontSizes[3],
+              fontFamily: theme.fonts.body,
               outline: 'none',
+              WebkitTextFillColor: theme.colors.text || '#ffffff',
+              boxSizing: 'border-box',
             }}
           />
         </div>
@@ -149,6 +189,7 @@ const QuickOpenApp: React.FC = () => {
                 padding: '32px',
                 textAlign: 'center',
                 color: theme.colors.textSecondary,
+                fontFamily: theme.fonts.body,
               }}
             >
               {items.length === 0
@@ -156,32 +197,39 @@ const QuickOpenApp: React.FC = () => {
                 : 'No matching items found'}
             </div>
           ) : (
-            filteredItems.map((item, index) => (
-              <div
-                key={item.id}
-                onClick={() => handleSelectItem(item)}
-                onMouseEnter={() => setSelectedIndex(index)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                  borderBottom: `1px solid ${theme.colors.border}`,
-                  background:
-                    index === selectedIndex
-                      ? theme.colors.panelBackground
+            filteredItems.map((item, index) => {
+              const isSelected = index === selectedIndex;
+              return (
+                <div
+                  key={item.id}
+                  ref={isSelected ? selectedItemRef : null}
+                  onClick={() => handleSelectItem(item)}
+                  onMouseEnter={() => setSelectedIndex(index)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '12px 16px',
+                    cursor: 'pointer',
+                    borderBottom: `1px solid ${theme.colors.border}`,
+                    borderLeft: isSelected
+                      ? `3px solid ${theme.colors.primary}`
+                      : '3px solid transparent',
+                    background: isSelected
+                      ? `${theme.colors.primary}20`
                       : 'transparent',
-                  opacity: item.isOpen ? 0.7 : 1,
-                }}
-              >
-                <div style={{ fontSize: '24px', marginRight: '12px' }}>
+                    opacity: item.isOpen ? 0.7 : 1,
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                <div style={{ fontSize: theme.fontSizes[6], marginRight: '12px' }}>
                   {item.type === 'repository' ? '📦' : '📁'}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div
                     style={{
                       color: theme.colors.text,
-                      fontSize: '14px',
+                      fontSize: theme.fontSizes[3],
+                      fontFamily: theme.fonts.body,
                       fontWeight: 500,
                       display: 'flex',
                       alignItems: 'center',
@@ -196,7 +244,8 @@ const QuickOpenApp: React.FC = () => {
                           padding: '2px 6px',
                           background: theme.colors.primary,
                           color: '#fff',
-                          fontSize: '10px',
+                          fontSize: theme.fontSizes[1],
+                          fontFamily: theme.fonts.body,
                           borderRadius: '3px',
                           fontWeight: 600,
                         }}
@@ -209,7 +258,8 @@ const QuickOpenApp: React.FC = () => {
                     <div
                       style={{
                         color: theme.colors.textSecondary,
-                        fontSize: '12px',
+                        fontSize: theme.fontSizes[2],
+                        fontFamily: theme.fonts.body,
                         marginTop: '4px',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
@@ -223,7 +273,8 @@ const QuickOpenApp: React.FC = () => {
                 <div
                   style={{
                     color: theme.colors.textSecondary,
-                    fontSize: '11px',
+                    fontSize: theme.fontSizes[1],
+                    fontFamily: theme.fonts.body,
                     textTransform: 'uppercase',
                     marginLeft: '12px',
                   }}
@@ -231,7 +282,8 @@ const QuickOpenApp: React.FC = () => {
                   {item.type}
                 </div>
               </div>
-            ))
+            );
+            })
           )}
         </div>
 
@@ -244,13 +296,16 @@ const QuickOpenApp: React.FC = () => {
             borderTop: `1px solid ${theme.colors.border}`,
           }}
         >
-          <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+          <span style={{ fontSize: theme.fontSizes[1], fontFamily: theme.fonts.body, color: theme.colors.textSecondary }}>
             ↑↓ Navigate
           </span>
-          <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+          <span style={{ fontSize: theme.fontSizes[1], fontFamily: theme.fonts.body, color: theme.colors.textSecondary }}>
+            Tab Cycle
+          </span>
+          <span style={{ fontSize: theme.fontSizes[1], fontFamily: theme.fonts.body, color: theme.colors.textSecondary }}>
             Enter Select
           </span>
-          <span style={{ fontSize: '11px', color: theme.colors.textSecondary }}>
+          <span style={{ fontSize: theme.fontSizes[1], fontFamily: theme.fonts.body, color: theme.colors.textSecondary }}>
             Esc Close
           </span>
         </div>

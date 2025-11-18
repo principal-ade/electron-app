@@ -280,7 +280,7 @@ export function setupQuickOpenHandlers(): void {
           log.info(`[Quick Open] Focused existing window ${item.openWindowId}`);
         }
       } else {
-        // Open new window
+        // Open new window using IPC
         if (item.type === 'repository') {
           // Load repository data and open window
           const {
@@ -293,24 +293,33 @@ export function setupQuickOpenHandlers(): void {
           if (repo) {
             const { WindowEvent } = require('../../shared/ipc-events/WindowEvents');
             const { BrowserWindow } = require('electron');
-            const focusedWindow = BrowserWindow.getFocusedWindow();
-            if (focusedWindow) {
-              focusedWindow.webContents.send(
-                WindowEvent.OPEN_REPOSITORY_DASHBOARD,
-                repo,
+            const allWindows = BrowserWindow.getAllWindows();
+            // Find a non-quick-open window to invoke the handler from
+            const targetWindow = allWindows.find(
+              (w) => !w.isDestroyed() && w !== this.quickOpenWindow,
+            );
+
+            if (targetWindow) {
+              // Use invoke instead of send since the handler uses ipcMain.handle
+              await targetWindow.webContents.executeJavaScript(
+                `window.mainProcess.window.openRepositoryDashboard(${JSON.stringify(repo)})`,
               );
             }
             log.info(`[Quick Open] Opening repository window for ${item.name}`);
           }
         } else if (item.type === 'workspace') {
-          // Open workspace window
-          const { WindowEvent } = require('../../shared/ipc-events/WindowEvents');
+          // Open workspace window using IPC
           const { BrowserWindow } = require('electron');
-          const focusedWindow = BrowserWindow.getFocusedWindow();
-          if (focusedWindow) {
-            focusedWindow.webContents.send(
-              WindowEvent.OPEN_ALEXANDRIA_WORKSPACE,
-              item.id,
+          const allWindows = BrowserWindow.getAllWindows();
+          // Find a non-quick-open window to invoke the handler from
+          const targetWindow = allWindows.find(
+            (w) => !w.isDestroyed() && w !== this.quickOpenWindow,
+          );
+
+          if (targetWindow) {
+            // Use invoke instead of send since the handler uses ipcMain.handle
+            await targetWindow.webContents.executeJavaScript(
+              `window.mainProcess.window.openAlexandriaWorkspace(${JSON.stringify(item.id)})`,
             );
           }
           log.info(`[Quick Open] Opening workspace window for ${item.name}`);

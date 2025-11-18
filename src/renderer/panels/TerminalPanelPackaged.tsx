@@ -6,12 +6,13 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Lock, Unlock, Maximize2, ArrowDown } from 'lucide-react';
 import {
   ThemedTerminalWithProvider,
   type ThemedTerminalRef,
   type TerminalScrollPosition,
 } from '@principal-ade/industry-themed-terminal';
+import { useTheme } from '@principal-ade/industry-theme';
 import { Terminal } from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import '@principal-ade/industry-themed-terminal/styles.css';
@@ -55,6 +56,8 @@ interface TerminalPanelPackagedProps {
   initialCommand?: string;
   /** Callback when the terminal scroll position changes */
   onScrollPositionChange?: (position: TerminalScrollPosition) => void;
+  /** Whether to show the control bar with fit/scroll buttons */
+  showControlBar?: boolean;
 }
 
 export interface TerminalPanelPackagedRef {
@@ -83,9 +86,11 @@ const TerminalPanelPackaged = forwardRef<
       onSessionCreated,
       initialCommand,
       onScrollPositionChange,
+      showControlBar = true,
     },
     ref,
   ) => {
+    const { theme } = useTheme();
     const terminalRef = useRef<ThemedTerminalRef>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [aiSessionInfo, setAiSessionInfo] = useState<{
@@ -97,6 +102,11 @@ const TerminalPanelPackaged = forwardRef<
     >(null);
     const devSidecarSessionIdRef = useRef<string | null>(null);
     const hasInitializedRef = useRef(false);
+    const [scrollPosition, setScrollPosition] = useState<TerminalScrollPosition>({
+      isAtTop: false,
+      isAtBottom: true,
+      isScrollLocked: true,
+    });
 
     // Ownership tracking state
     const [ownershipStatus, setOwnershipStatus] = useState<{
@@ -442,6 +452,24 @@ const TerminalPanelPackaged = forwardRef<
       }
     }, []);
 
+    // Handle scroll position change
+    const handleScrollPositionChange = useCallback(
+      (position: TerminalScrollPosition) => {
+        setScrollPosition(position);
+        onScrollPositionChange?.(position);
+      },
+      [onScrollPositionChange],
+    );
+
+    // Handlers for control bar buttons
+    const handleFit = useCallback(() => {
+      terminalRef.current?.fit();
+    }, []);
+
+    const handleScrollToBottom = useCallback(() => {
+      terminalRef.current?.scrollToBottom();
+    }, []);
+
     // Handle destroy
     const handleDestroyClick = useCallback(() => {
       if (sessionId) {
@@ -579,7 +607,7 @@ const TerminalPanelPackaged = forwardRef<
             onData={handleData}
             onResize={handleResize}
             onLinkClick={handleLinkClick}
-            onScrollPositionChange={onScrollPositionChange}
+            onScrollPositionChange={handleScrollPositionChange}
             headerTitle={headerTitle}
             headerSubtitle={headerSubtitle}
             headerBadge={headerBadge}
@@ -595,23 +623,127 @@ const TerminalPanelPackaged = forwardRef<
     }
 
     return (
-      <div className={className} style={{ height: '100%', width: '100%' }}>
-        <ThemedTerminalWithProvider
-          ref={terminalRef}
-          onData={handleData}
-          onResize={handleResize}
-          onLinkClick={handleLinkClick}
-          onScrollPositionChange={onScrollPositionChange}
-          headerTitle={headerTitle}
-          headerSubtitle={headerSubtitle}
-          headerBadge={headerBadge}
-          hideHeader={hideHeader}
-          autoFocus={autoFocus}
-          isVisible={isVisible}
-          onClose={onClose}
-          onDestroy={handleDestroyClick}
-          overlayState={overlayState}
-        />
+      <div className={className} style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* Terminal control bar */}
+        {showControlBar && !hideHeader && (
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            padding: '8px 12px',
+            backgroundColor: theme.colors.backgroundSecondary,
+            borderBottom: `1px solid ${theme.colors.border}`,
+            alignItems: 'center',
+          }}>
+            <span style={{
+              fontSize: '12px',
+              color: theme.colors.textSecondary,
+              marginRight: 'auto',
+              fontFamily: theme.fonts.monospace,
+            }}>
+              {directory}
+            </span>
+
+            {/* Scroll lock badge */}
+            <span style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '11px',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              backgroundColor: scrollPosition.isScrollLocked
+                ? `${theme.colors.success}22`
+                : `${theme.colors.warning}22`,
+              color: scrollPosition.isScrollLocked
+                ? theme.colors.success
+                : theme.colors.warning,
+              border: `1px solid ${scrollPosition.isScrollLocked
+                ? `${theme.colors.success}44`
+                : `${theme.colors.warning}44`}`,
+            }}>
+              {scrollPosition.isScrollLocked ? (
+                <Lock size={12} />
+              ) : (
+                <Unlock size={12} />
+              )}
+              <span>{scrollPosition.isScrollLocked ? 'Locked' : 'Unlocked'}</span>
+            </span>
+
+            {/* Fit button */}
+            <button
+              onClick={handleFit}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                backgroundColor: theme.colors.primary,
+                color: theme.colors.text,
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'opacity 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+              title="Resize terminal to fit container"
+            >
+              <Maximize2 size={12} />
+              <span>Fit</span>
+            </button>
+
+            {/* Scroll to bottom button */}
+            <button
+              onClick={handleScrollToBottom}
+              disabled={scrollPosition.isAtBottom}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                backgroundColor: scrollPosition.isAtBottom
+                  ? theme.colors.backgroundHover
+                  : theme.colors.accent,
+                color: scrollPosition.isAtBottom
+                  ? theme.colors.textTertiary
+                  : theme.colors.text,
+                border: `1px solid ${theme.colors.border}`,
+                cursor: scrollPosition.isAtBottom ? 'not-allowed' : 'pointer',
+                transition: 'opacity 0.2s',
+                opacity: scrollPosition.isAtBottom ? 0.5 : 1,
+              }}
+              onMouseEnter={(e) => !scrollPosition.isAtBottom && (e.currentTarget.style.opacity = '0.8')}
+              onMouseLeave={(e) => !scrollPosition.isAtBottom && (e.currentTarget.style.opacity = '1')}
+              title="Scroll to bottom and lock"
+            >
+              <ArrowDown size={12} />
+              <span>Bottom</span>
+            </button>
+          </div>
+        )}
+
+        {/* Terminal */}
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <ThemedTerminalWithProvider
+            ref={terminalRef}
+            onData={handleData}
+            onResize={handleResize}
+            onLinkClick={handleLinkClick}
+            onScrollPositionChange={handleScrollPositionChange}
+            headerTitle={headerTitle}
+            headerSubtitle={headerSubtitle}
+            headerBadge={headerBadge}
+            hideHeader={hideHeader}
+            autoFocus={autoFocus}
+            isVisible={isVisible}
+            onClose={onClose}
+            onDestroy={handleDestroyClick}
+            overlayState={overlayState}
+          />
+        </div>
       </div>
     );
   },

@@ -13,10 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Grid3x3,
-  Lock,
-  Unlock,
-  Maximize2,
-  ArrowDown,
 } from 'lucide-react';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import { useTheme } from '@principal-ade/industry-theme';
@@ -64,7 +60,6 @@ interface CarouselTerminalWrapperProps {
   sessionId: string | undefined;
   terminalRef: (el: TerminalPanelPackagedRef | null) => void;
   onSessionCreated: (tabId: string, sessionId: string) => void;
-  onScrollPositionChange?: (position: { isAtTop: boolean; isAtBottom: boolean; isScrollLocked: boolean }) => void;
 }
 
 const CarouselTerminalWrapper = React.memo<CarouselTerminalWrapperProps>(
@@ -76,7 +71,6 @@ const CarouselTerminalWrapper = React.memo<CarouselTerminalWrapperProps>(
     sessionId,
     terminalRef,
     onSessionCreated,
-    onScrollPositionChange,
   }) => {
     const handleSessionCreated = useCallback(
       (newSessionId: string) => {
@@ -97,7 +91,6 @@ const CarouselTerminalWrapper = React.memo<CarouselTerminalWrapperProps>(
         terminalId={sessionId}
         initialCommand={tab.command}
         onSessionCreated={handleSessionCreated}
-        onScrollPositionChange={onScrollPositionChange}
       />
     );
   },
@@ -135,9 +128,6 @@ export const CarouselTerminalPanel = forwardRef<
     const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
     const [showDebugButton, setShowDebugButton] = useState(false);
     const [showShowAllButton, setShowShowAllButton] = useState(true);
-    const [scrollPositions, setScrollPositions] = useState<Map<string, { isAtTop: boolean; isAtBottom: boolean; isScrollLocked: boolean }>>(
-      new Map(),
-    );
 
     // Store refs to terminal panels for each tab
     const terminalRefs = useRef<Map<string, TerminalPanelPackagedRef>>(
@@ -462,40 +452,6 @@ export const CarouselTerminalPanel = forwardRef<
       },
       [],
     );
-
-    // Handle scroll position change for a terminal
-    const handleScrollPositionChange = useCallback(
-      (tabId: string, position: { isAtTop: boolean; isAtBottom: boolean; isScrollLocked: boolean }) => {
-        setScrollPositions((prev) => new Map(prev).set(tabId, position));
-      },
-      [],
-    );
-
-    const activeTab = tabs[currentPanelIndex];
-    const activeScrollPosition = scrollPositions.get(activeTab?.id || '') || {
-      isAtTop: false,
-      isAtBottom: true,
-      isScrollLocked: true,
-    };
-
-    // Handlers for terminal control buttons
-    const handleFit = useCallback(() => {
-      if (activeTab) {
-        const terminalRef = terminalRefs.current.get(activeTab.id);
-        if (terminalRef) {
-          terminalRef.fit();
-        }
-      }
-    }, [activeTab]);
-
-    const handleScrollToBottom = useCallback(() => {
-      if (activeTab) {
-        const terminalRef = terminalRefs.current.get(activeTab.id);
-        if (terminalRef) {
-          terminalRef.scrollToBottom();
-        }
-      }
-    }, [activeTab]);
 
     // Keep callback refs up to date
     useEffect(() => {
@@ -872,107 +828,6 @@ export const CarouselTerminalPanel = forwardRef<
             </div>
           )}
 
-          {/* Terminal control bar - only show for active panel */}
-          {!hideHeader && isActivePanel && (
-            <div style={{
-              display: 'flex',
-              gap: '8px',
-              padding: '8px 12px',
-              backgroundColor: theme.colors.backgroundSecondary,
-              borderBottom: `1px solid ${theme.colors.border}`,
-              alignItems: 'center',
-            }}>
-              <span style={{
-                fontSize: '12px',
-                color: theme.colors.textSecondary,
-                marginRight: 'auto',
-                fontFamily: theme.fonts.monospace,
-              }}>
-                {tab.directory}
-              </span>
-
-              {/* Scroll lock badge */}
-              <span style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '11px',
-                padding: '4px 8px',
-                borderRadius: '4px',
-                backgroundColor: activeScrollPosition.isScrollLocked
-                  ? `${theme.colors.success}22`
-                  : `${theme.colors.warning}22`,
-                color: activeScrollPosition.isScrollLocked
-                  ? theme.colors.success
-                  : theme.colors.warning,
-                border: `1px solid ${activeScrollPosition.isScrollLocked
-                  ? `${theme.colors.success}44`
-                  : `${theme.colors.warning}44`}`,
-              }}>
-                {activeScrollPosition.isScrollLocked ? (
-                  <Lock size={12} />
-                ) : (
-                  <Unlock size={12} />
-                )}
-                <span>{activeScrollPosition.isScrollLocked ? 'Locked' : 'Unlocked'}</span>
-              </span>
-
-              {/* Fit button */}
-              <button
-                onClick={handleFit}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '11px',
-                  padding: '4px 10px',
-                  borderRadius: '4px',
-                  backgroundColor: theme.colors.primary,
-                  color: theme.colors.text,
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'opacity 0.2s',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-                onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                title="Resize terminal to fit container"
-              >
-                <Maximize2 size={12} />
-                <span>Fit</span>
-              </button>
-
-              {/* Scroll to bottom button */}
-              <button
-                onClick={handleScrollToBottom}
-                disabled={activeScrollPosition.isAtBottom}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '11px',
-                  padding: '4px 10px',
-                  borderRadius: '4px',
-                  backgroundColor: activeScrollPosition.isAtBottom
-                    ? theme.colors.backgroundHover
-                    : theme.colors.accent,
-                  color: activeScrollPosition.isAtBottom
-                    ? theme.colors.textTertiary
-                    : theme.colors.text,
-                  border: `1px solid ${theme.colors.border}`,
-                  cursor: activeScrollPosition.isAtBottom ? 'not-allowed' : 'pointer',
-                  transition: 'opacity 0.2s',
-                  opacity: activeScrollPosition.isAtBottom ? 0.5 : 1,
-                }}
-                onMouseEnter={(e) => !activeScrollPosition.isAtBottom && (e.currentTarget.style.opacity = '0.8')}
-                onMouseLeave={(e) => !activeScrollPosition.isAtBottom && (e.currentTarget.style.opacity = '1')}
-                title="Scroll to bottom and lock"
-              >
-                <ArrowDown size={12} />
-                <span>Bottom</span>
-              </button>
-            </div>
-          )}
-
           {/* Terminal */}
           <div style={{ flex: 1, minHeight: 0 }}>
             <CarouselTerminalWrapper
@@ -989,11 +844,6 @@ export const CarouselTerminalPanel = forwardRef<
                 }
               }}
               onSessionCreated={handleSessionCreated}
-              onScrollPositionChange={
-                isActivePanel
-                  ? (position) => handleScrollPositionChange(tab.id, position)
-                  : undefined
-              }
             />
           </div>
         </div>

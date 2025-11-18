@@ -15,6 +15,7 @@ declare global {
       onMaximizeChange: (callback: (isMaximized: boolean) => void) => void;
     };
     electronAPI?: {
+      // Window Switcher API
       getWindowList?: () => void;
       selectWindow?: (windowId: number) => void;
       onWindowListUpdate?: (
@@ -26,6 +27,10 @@ declare global {
       onSelectNext?: (callback: () => void) => void | (() => void);
       onSelectPrevious?: (callback: () => void) => void | (() => void);
       cycleSelection?: (direction: 'next' | 'previous') => void;
+      // Quick Open API
+      onQuickOpenItems?: (callback: (event: any, items: any[]) => void) => void | (() => void);
+      selectQuickOpenItem?: (item: any) => void;
+      closeQuickOpen?: () => void;
     };
     // Window init data for routing
     windowInitData?: unknown;

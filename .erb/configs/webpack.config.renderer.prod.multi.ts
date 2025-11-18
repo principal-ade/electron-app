@@ -60,6 +60,11 @@ const windowSwitcherEntryPath = path.join(
   'window-switcher',
   'index.tsx',
 );
+const quickOpenEntryPath = path.join(
+  webpackPaths.srcRendererPath,
+  'quick-open',
+  'index.tsx',
+);
 
 // Use principal entry if it exists, otherwise fall back to legacy
 if (fs.existsSync(principalEntryPath)) {
@@ -179,6 +184,24 @@ if (fs.existsSync(windowSwitcherEntryPath)) {
       filename: 'window-switcher.html',
       template: path.join(webpackPaths.srcRendererPath, 'index.ejs'),
       chunks: ['window-switcher'],
+      minify: {
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        removeComments: true,
+      },
+      isBrowser: false,
+      isDevelopment: false,
+    }),
+  );
+}
+
+if (fs.existsSync(quickOpenEntryPath)) {
+  entryPoints['quick-open'] = quickOpenEntryPath;
+  htmlPlugins.push(
+    new HtmlWebpackPlugin({
+      filename: 'quick-open.html',
+      template: path.join(webpackPaths.srcRendererPath, 'quick-open.ejs'),
+      chunks: ['quick-open'],
       minify: {
         collapseWhitespace: true,
         removeAttributeQuotes: true,
