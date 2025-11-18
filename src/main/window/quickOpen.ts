@@ -97,6 +97,13 @@ class QuickOpen {
   }
 
   /**
+   * Get the quick open window instance
+   */
+  public getWindow(): BrowserWindow | null {
+    return this.quickOpenWindow;
+  }
+
+  /**
    * Create the quick open overlay window
    */
   private async createQuickOpenWindow(): Promise<void> {
@@ -156,6 +163,12 @@ class QuickOpen {
     this.quickOpenWindow.loadURL(targetUrl).catch((err) => {
       log.error('[Quick Open] Failed to load renderer:', err);
       log.error('[Quick Open] Attempted URL:', targetUrl);
+    });
+
+    // Send items once the page is ready
+    this.quickOpenWindow.webContents.on('did-finish-load', () => {
+      log.info('[Quick Open] HTML loaded successfully');
+      this.loadItems();
     });
 
     // Log any console messages from the renderer
@@ -267,6 +280,9 @@ export function setupQuickOpenHandlers(): void {
         `[Quick Open] Item selected: ${item.type} - ${item.name} (isOpen: ${item.isOpen})`,
       );
 
+      // Close the overlay immediately for instant feedback
+      quickOpen.hide();
+
       if (item.isOpen && item.openWindowId) {
         // Focus existing window
         const { applicationWindows } = require('./types');
@@ -296,7 +312,7 @@ export function setupQuickOpenHandlers(): void {
             const allWindows = BrowserWindow.getAllWindows();
             // Find a non-quick-open window to invoke the handler from
             const targetWindow = allWindows.find(
-              (w) => !w.isDestroyed() && w !== this.quickOpenWindow,
+              (w) => !w.isDestroyed() && w !== quickOpen.getWindow(),
             );
 
             if (targetWindow) {
@@ -313,7 +329,7 @@ export function setupQuickOpenHandlers(): void {
           const allWindows = BrowserWindow.getAllWindows();
           // Find a non-quick-open window to invoke the handler from
           const targetWindow = allWindows.find(
-            (w) => !w.isDestroyed() && w !== this.quickOpenWindow,
+            (w) => !w.isDestroyed() && w !== quickOpen.getWindow(),
           );
 
           if (targetWindow) {
@@ -325,8 +341,6 @@ export function setupQuickOpenHandlers(): void {
           log.info(`[Quick Open] Opening workspace window for ${item.name}`);
         }
       }
-
-      quickOpen.hide();
     },
   );
 

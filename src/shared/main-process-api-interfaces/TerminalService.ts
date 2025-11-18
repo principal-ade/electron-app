@@ -74,7 +74,7 @@ export interface TerminalAPI {
   getOpenWindows: () => Promise<
     Array<{ terminalId: string; windowId: number }>
   >;
-  onData: (callback: (data: TerminalData) => void) => () => void;
+  onDataForSession: (sessionId: string, callback: (data: string) => void) => () => void;
   onExit: (callback: (exit: TerminalExit) => void) => () => void;
   onWindowReady: (
     callback: (data: {

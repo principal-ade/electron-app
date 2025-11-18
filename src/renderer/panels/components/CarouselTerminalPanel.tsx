@@ -1164,7 +1164,7 @@ export const CarouselTerminalPanel = forwardRef<
         <TerminalDebugModal
           isOpen={showDebugModal}
           onClose={() => setShowDebugModal(false)}
-          currentSessionId={sessionIds.get(activeTab?.id || '')}
+          currentSessionId={sessionIds.get(tabs[currentPanelIndex]?.id || '')}
           tabs={tabs.map((tab) => ({
             id: tab.id,
             label: tab.label,

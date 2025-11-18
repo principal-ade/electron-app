@@ -297,31 +297,27 @@ const TerminalPanelPackaged = forwardRef<
 
     // Listen for terminal data from backend
     // Only subscribe when we own the terminal (shouldRenderTerminal is true)
+    // Uses session-specific IPC channel for better performance (no client-side filtering)
     useEffect(() => {
       if (!sessionId || !shouldRenderTerminal) return;
 
       let mounted = true;
-      let unsubscribe: (() => void) | undefined;
 
-      const subscribe = async () => {
-        unsubscribe = await TerminalService.onData((data) => {
-          if (mounted && data.sessionId === sessionId && terminalRef.current) {
-            // Write to terminal
-            terminalRef.current.write(data.data);
+      // Subscribe to session-specific channel - more efficient than global channel with filtering
+      const unsubscribe = TerminalService.onDataForSession(sessionId, (data) => {
+        if (mounted && terminalRef.current) {
+          // Write to terminal
+          terminalRef.current.write(data);
 
-            // Record data written to terminal (what the user actually sees)
-            terminalRecorder.recordDataWritten(sessionId, data.data);
-          }
-        });
-      };
-
-      subscribe();
+          // Record data written to terminal (what the user actually sees)
+          // Only if recording is enabled (early return inside if disabled)
+          terminalRecorder.recordDataWritten(sessionId, data);
+        }
+      });
 
       return () => {
         mounted = false;
-        if (unsubscribe) {
-          unsubscribe();
-        }
+        unsubscribe();
       };
     }, [sessionId, shouldRenderTerminal]);
 

@@ -3,7 +3,6 @@ import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/Term
 import type {
   TerminalAPI,
   TerminalInfo,
-  TerminalData,
   TerminalExit,
   TerminalOwnershipStatus,
   TerminalOwnershipResult,
@@ -68,12 +67,14 @@ export const terminalAPI: TerminalAPI = {
     return ipcRenderer.invoke(TerminalAPIEvents.GET_OPEN_WINDOWS);
   },
 
-  onData: (callback: (data: TerminalData) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, data: TerminalData) =>
+  // Session-specific data subscription - only receives data for this specific session
+  onDataForSession: (sessionId: string, callback: (data: string) => void) => {
+    const channel = `${TerminalAPIEvents.ON_DATA}:${sessionId}`;
+    const listener = (_event: Electron.IpcRendererEvent, data: string) =>
       callback(data);
-    ipcRenderer.on(TerminalAPIEvents.ON_DATA, listener);
+    ipcRenderer.on(channel, listener);
     return () => {
-      ipcRenderer.removeListener(TerminalAPIEvents.ON_DATA, listener);
+      ipcRenderer.removeListener(channel, listener);
     };
   },
 

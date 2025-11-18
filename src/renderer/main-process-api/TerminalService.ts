@@ -1,5 +1,4 @@
 import {
-  TerminalData,
   TerminalExit,
   TerminalInfo,
   TerminalOwnershipStatus,
@@ -35,10 +34,11 @@ export class TerminalService {
     return window.mainProcess.terminal.write(id, data);
   }
 
-  static async onData(
-    callback: (data: TerminalData) => void,
-  ): Promise<() => void> {
-    return window.mainProcess.terminal.onData(callback);
+  static onDataForSession(
+    sessionId: string,
+    callback: (data: string) => void,
+  ): () => void {
+    return window.mainProcess.terminal.onDataForSession(sessionId, callback);
   }
 
   static async onExit(

@@ -100,16 +100,18 @@ class TerminalManager {
       return; // No one viewing, skip IPC entirely
     }
 
+    // Use session-specific channel for better performance
+    // This allows each terminal to subscribe only to its own data
+    const sessionChannel = `${TerminalAPIEvents.ON_DATA}:${sessionId}`;
+
     // Convert Set to Array for iteration compatibility
     const viewerIds = Array.from(session.activeViewers);
     for (const windowId of viewerIds) {
       const window = BrowserWindow.fromId(windowId);
       if (window && !window.isDestroyed()) {
         try {
-          window.webContents.send('terminal:data', {
-            sessionId,
-            data,
-          });
+          // Send on session-specific channel - just the data string, not wrapped in object
+          window.webContents.send(sessionChannel, data);
         } catch (error) {
           console.warn(
             `[Terminal] Failed to send data to window ${windowId}:`,
