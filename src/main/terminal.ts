@@ -37,6 +37,7 @@ interface TerminalSession {
   lastActivity: number;
   ownedByWindowId?: number; // NEW: Which window currently has the active xterm.js instance
   ownershipClaimedAt?: number; // NEW: When ownership was last claimed
+  activeViewers: Set<number>; // NEW: Set of window IDs actively viewing this terminal
 }
 
 class TerminalManager {
@@ -88,6 +89,36 @@ class TerminalManager {
           `[Terminal] Failed to send ${channel} to window ${rendererWindow.id}:`,
           error,
         );
+      }
+    }
+  }
+
+  // Send terminal data only to windows actively viewing this terminal
+  private sendToActiveViewers(sessionId: string, data: string) {
+    const session = this.sessions.get(sessionId);
+    if (!session || session.activeViewers.size === 0) {
+      return; // No one viewing, skip IPC entirely
+    }
+
+    // Convert Set to Array for iteration compatibility
+    const viewerIds = Array.from(session.activeViewers);
+    for (const windowId of viewerIds) {
+      const window = BrowserWindow.fromId(windowId);
+      if (window && !window.isDestroyed()) {
+        try {
+          window.webContents.send('terminal:data', {
+            sessionId,
+            data,
+          });
+        } catch (error) {
+          console.warn(
+            `[Terminal] Failed to send data to window ${windowId}:`,
+            error,
+          );
+        }
+      } else {
+        // Window no longer exists, remove from viewers
+        session.activeViewers.delete(windowId);
       }
     }
   }
@@ -187,6 +218,7 @@ class TerminalManager {
       agentSessionId: activeAgentSessionId || undefined,
       createdAt: now,
       lastActivity: now,
+      activeViewers: new Set(),
     };
     this.sessions.set(sessionId, session);
 
@@ -219,10 +251,7 @@ class TerminalManager {
 
     // Handle PTY data
     ptyProcess.onData((data: string) => {
-      this.broadcastToRendererWindows('terminal:data', {
-        sessionId,
-        data,
-      });
+      this.sendToActiveViewers(sessionId, data);
     });
 
     // Handle PTY exit
@@ -466,6 +495,7 @@ class TerminalManager {
             agentSessionId: activeAgentSessionId || undefined,
             createdAt: now,
             lastActivity: now,
+            activeViewers: new Set(),
           };
           this.sessions.set(sessionId, session);
 
@@ -494,10 +524,7 @@ class TerminalManager {
 
           // Handle PTY data
           ptyProcess.onData((data: string) => {
-            this.broadcastToRendererWindows('terminal:data', {
-              sessionId,
-              data,
-            });
+            this.sendToActiveViewers(sessionId, data);
           });
 
           // Handle PTY exit
@@ -808,11 +835,18 @@ class TerminalManager {
               newOwnerWindowId: senderWindowId,
             });
           }
+
+          // Remove old owner from active viewers
+          if (session.ownedByWindowId) {
+            session.activeViewers.delete(session.ownedByWindowId);
+          }
         }
 
         // Claim ownership
         session.ownedByWindowId = senderWindowId;
         session.ownershipClaimedAt = Date.now();
+        // Add new owner to active viewers
+        session.activeViewers.add(senderWindowId);
 
         console.log(
           `[Terminal] Window ${senderWindowId} successfully claimed ownership of session ${sessionId}`,
@@ -840,6 +874,10 @@ class TerminalManager {
 
         session.ownedByWindowId = undefined;
         session.ownershipClaimedAt = undefined;
+        // Remove from active viewers
+        if (senderWindowId) {
+          session.activeViewers.delete(senderWindowId);
+        }
 
         console.log(
           `[Terminal] Window ${senderWindowId} released ownership of session ${sessionId}`,
@@ -936,6 +974,7 @@ class TerminalManager {
         agentSessionId: activeAgentSessionId || undefined,
         createdAt: now,
         lastActivity: now,
+        activeViewers: new Set(),
       };
       this.sessions.set(sessionId, session);
 
@@ -964,10 +1003,7 @@ class TerminalManager {
 
       // Handle PTY data
       ptyProcess.onData((data: string) => {
-        this.broadcastToRendererWindows('terminal:data', {
-          sessionId,
-          data,
-        });
+        this.sendToActiveViewers(sessionId, data);
       });
 
       // Handle PTY exit
@@ -1054,6 +1090,8 @@ class TerminalManager {
 
     // Track the window
     this.terminalWindows.set(sessionId, terminalWindow);
+    // Add pop-out window to active viewers
+    session.activeViewers.add(terminalWindow.id);
 
     // Terminal-specific: Notify all windows when the terminal window is shown
     terminalWindow.once('show', () => {
@@ -1085,6 +1123,8 @@ class TerminalManager {
     terminalWindow.on('closed', () => {
       console.log(`[Terminal] Pop-out window closed for session ${sessionId}`);
       this.terminalWindows.delete(sessionId);
+      // Remove pop-out window from active viewers
+      session.activeViewers.delete(terminalWindow.id);
 
       // Notify registered windows about the terminal window close
       this.broadcastToRendererWindows(TerminalAPIEvents.ON_WINDOW_CLOSE, {
@@ -1094,20 +1134,8 @@ class TerminalManager {
       });
     });
 
-    // Send terminal data to this window as well
-    if (session.pty) {
-      // Add an additional data listener for the pop-out window
-      // The existing main window listener is already set up in the terminal creation
-      session.pty.onData((data: string) => {
-        // Send to pop-out window
-        if (!terminalWindow.isDestroyed()) {
-          terminalWindow.webContents.send('terminal:data', {
-            sessionId,
-            data,
-          });
-        }
-      });
-    }
+    // Pop-out window will receive terminal data via sendToActiveViewers
+    // (already added to activeViewers above, no additional listener needed)
 
     return { windowId: terminalWindow.id };
   }
