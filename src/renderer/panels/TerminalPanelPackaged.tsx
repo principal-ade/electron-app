@@ -621,7 +621,7 @@ const TerminalPanelPackaged = forwardRef<
     return (
       <div className={className} style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
         {/* Terminal control bar */}
-        {showControlBar && !hideHeader && (
+        {showControlBar && (
           <div style={{
             display: 'flex',
             gap: '8px',
