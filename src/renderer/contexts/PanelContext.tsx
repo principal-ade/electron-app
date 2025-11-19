@@ -4,6 +4,7 @@ import React, {
   useMemo,
   useState,
   useEffect,
+  useRef,
   type ReactNode,
 } from 'react';
 import type { Theme } from '@principal-ade/industry-theme';
@@ -96,6 +97,9 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
   // Track active terminal sessions
   const [terminalSessions, setTerminalSessions] = useState<TerminalInfo[]>([]);
+
+  // Track terminal session subscriptions for cleanup
+  const terminalSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
 
   // Track workspace repositories
   const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
@@ -209,6 +213,13 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         payload: terminalExit,
       });
 
+      // Unsubscribe from terminal data for this session
+      const unsubscribe = terminalSubscriptionsRef.current.get(terminalExit.sessionId);
+      if (unsubscribe) {
+        unsubscribe();
+        terminalSubscriptionsRef.current.delete(terminalExit.sessionId);
+      }
+
       // Remove session from list on exit
       setTerminalSessions((prev) =>
         prev.filter((s) => s.id !== terminalExit.sessionId)
@@ -217,9 +228,15 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       unsubExit = unsub;
     });
 
-    // Cleanup on unmount
+    // Cleanup on unmount - unsubscribe from all terminal data subscriptions
     return () => {
       unsubExit?.();
+
+      // Clean up all terminal data subscriptions
+      terminalSubscriptionsRef.current.forEach((unsubscribe) => {
+        unsubscribe();
+      });
+      terminalSubscriptionsRef.current.clear();
     };
   }, [events]);
 
@@ -387,6 +404,23 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         });
         const sessionId = await TerminalService.getOrCreate(cwd, context);
 
+        // Subscribe to this terminal's data channel and forward to panel event bus
+        // Only subscribe if we haven't already subscribed to this session
+        if (!terminalSubscriptionsRef.current.has(sessionId)) {
+          const unsubscribe = TerminalService.onDataForSession(sessionId, (data) => {
+            // Forward terminal data to panel event bus
+            events.emit({
+              type: 'terminal:data',
+              source: 'alexandria-workspace',
+              timestamp: Date.now(),
+              payload: { sessionId, data },
+            });
+          });
+
+          // Store unsubscribe function for cleanup
+          terminalSubscriptionsRef.current.set(sessionId, unsubscribe);
+        }
+
         // Fetch updated terminal info
         const terminals = await TerminalService.list();
         setTerminalSessions(terminals);
@@ -404,6 +438,14 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
       destroyTerminalSession: async (sessionId: string) => {
         console.info('[PanelContext] Destroying terminal session:', sessionId);
+
+        // Unsubscribe from terminal data before destroying
+        const unsubscribe = terminalSubscriptionsRef.current.get(sessionId);
+        if (unsubscribe) {
+          unsubscribe();
+          terminalSubscriptionsRef.current.delete(sessionId);
+        }
+
         await TerminalService.destroy(sessionId);
         setTerminalSessions((prev) => prev.filter((s) => s.id !== sessionId));
       },

@@ -317,6 +317,9 @@ class TerminalManager {
             );
           }
 
+          const senderWindowId = event.sender.id;
+          let sessionId: string;
+
           // Check if we already have a session for this directory+context
           const sessionKey = this.getSessionKey(directory, context);
           const existingSessionId = this.sessionsByRepo.get(sessionKey);
@@ -324,29 +327,56 @@ class TerminalManager {
             console.log(
               `[Terminal] REUSING existing session ${existingSessionId} for ${sessionKey}`,
             );
-            return existingSessionId;
+            sessionId = existingSessionId;
+          } else {
+            console.log(
+              `[Terminal] Creating NEW session for ${sessionKey} (current sessions: ${this.sessions.size})`,
+            );
+
+            // Check if we've reached the session limit
+            if (this.sessions.size >= this.maxSessions) {
+              throw new Error(
+                `Maximum number of terminal sessions (${this.maxSessions}) reached. Please close some terminals before opening new ones.`,
+              );
+            }
+
+            // Create new session with context
+            sessionId = await this.handleTerminalCreate(
+              event,
+              directory,
+              context,
+            );
+
+            // Track by repository+context
+            this.sessionsByRepo.set(sessionKey, sessionId);
           }
 
-          console.log(
-            `[Terminal] Creating NEW session for ${sessionKey} (current sessions: ${this.sessions.size})`,
-          );
+          // Automatically claim ownership for the calling window
+          const session = this.sessions.get(sessionId);
+          if (session) {
+            // Remove old owner from active viewers if exists
+            if (session.ownedByWindowId && session.ownedByWindowId !== senderWindowId) {
+              session.activeViewers.delete(session.ownedByWindowId);
 
-          // Check if we've reached the session limit
-          if (this.sessions.size >= this.maxSessions) {
-            throw new Error(
-              `Maximum number of terminal sessions (${this.maxSessions}) reached. Please close some terminals before opening new ones.`,
+              // Notify old owner that they lost ownership
+              const oldOwnerWindow = BrowserWindow.fromId(session.ownedByWindowId);
+              if (oldOwnerWindow && !oldOwnerWindow.isDestroyed()) {
+                oldOwnerWindow.webContents.send(TerminalAPIEvents.OWNERSHIP_LOST, {
+                  sessionId,
+                  newOwnerWindowId: senderWindowId,
+                });
+              }
+            }
+
+            // Claim ownership
+            session.ownedByWindowId = senderWindowId;
+            session.ownershipClaimedAt = Date.now();
+            session.activeViewers.add(senderWindowId);
+
+            console.log(
+              `[Terminal] Window ${senderWindowId} automatically claimed ownership of session ${sessionId} via getOrCreate`,
             );
           }
-
-          // Create new session with context
-          const sessionId = await this.handleTerminalCreate(
-            event,
-            directory,
-            context,
-          );
-
-          // Track by repository+context
-          this.sessionsByRepo.set(sessionKey, sessionId);
 
           return sessionId;
         } catch (error) {
@@ -379,8 +409,24 @@ class TerminalManager {
             );
           }
 
+          const senderWindowId = event.sender.id;
+
           // Use the shared terminal creation logic with context
-          return await this.handleTerminalCreate(event, directory, context);
+          const sessionId = await this.handleTerminalCreate(event, directory, context);
+
+          // Automatically claim ownership for the calling window
+          const session = this.sessions.get(sessionId);
+          if (session) {
+            session.ownedByWindowId = senderWindowId;
+            session.ownershipClaimedAt = Date.now();
+            session.activeViewers.add(senderWindowId);
+
+            console.log(
+              `[Terminal] Window ${senderWindowId} automatically claimed ownership of session ${sessionId} via create`,
+            );
+          }
+
+          return sessionId;
         } catch (error) {
           console.error('Failed to create terminal session:', error);
 
@@ -569,6 +615,16 @@ class TerminalManager {
               ptyProcess.write(`${command}\r`);
             }
           }, 500); // Increased delay to ensure shell prompt is ready
+
+          // Automatically claim ownership for the calling window
+          const senderWindowId = event.sender.id;
+          session.ownedByWindowId = senderWindowId;
+          session.ownershipClaimedAt = Date.now();
+          session.activeViewers.add(senderWindowId);
+
+          console.log(
+            `[Terminal] Window ${senderWindowId} automatically claimed ownership of session ${sessionId} via createWithCommand`,
+          );
 
           console.log(
             `Terminal session created successfully with command: ${sessionId}`,

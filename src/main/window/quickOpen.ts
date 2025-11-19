@@ -328,21 +328,77 @@ export function setupQuickOpenHandlers(): void {
             log.info(`[Quick Open] Opening repository window for ${item.name}`);
           }
         } else if (item.type === 'workspace') {
-          // Open workspace window using IPC
-          const { BrowserWindow } = require('electron');
-          const allWindows = BrowserWindow.getAllWindows();
-          // Find a non-quick-open window to invoke the handler from
-          const targetWindow = allWindows.find(
-            (w) => !w.isDestroyed() && w !== quickOpen.getWindow(),
-          );
+          // Open workspace window directly from main process
+          const {
+            createSpecialWindow,
+          } = require('./modernWindowManager');
+          const { resolveHtmlPath } = require('../util');
+          const { PrimaryWindowType } = require('./types');
 
-          if (targetWindow) {
-            // Use invoke instead of send since the handler uses ipcMain.handle
-            await targetWindow.webContents.executeJavaScript(
-              `window.mainProcess.window.openAlexandriaWorkspace(${JSON.stringify(item.id)})`,
+          const workspaceId = item.id;
+          const windowName = `alexandria-workspace-${workspaceId}`;
+
+          // Fetch workspace name from the registry
+          let workspaceName = 'Alexandria Workspace';
+          try {
+            const {
+              AlexandriaRegistryService,
+            } = require('../stores/AlexandriaRegistryService');
+            const service = AlexandriaRegistryService.getInstance();
+            const workspace = await service.getWorkspace(workspaceId);
+            if (workspace?.name) {
+              workspaceName = workspace.name;
+            }
+          } catch (error) {
+            log.error(
+              '[Quick Open] Failed to fetch workspace name:',
+              error,
             );
           }
-          log.info(`[Quick Open] Opening workspace window for ${item.name}`);
+
+          // Create metadata for workspace window
+          const metadata = {
+            primaryType: PrimaryWindowType.WORKSPACE,
+            displayName: workspaceName,
+            workspaceId,
+            purpose: windowName,
+          };
+
+          const window = createSpecialWindow(
+            windowName,
+            {
+              width: 1280,
+              height: 832,
+              minWidth: 1024,
+              minHeight: 720,
+              title: workspaceName,
+            },
+            {
+              fileSystemAdapter: true,
+              windowManagerAdapter: true,
+              githubAdapter: true,
+              contentSecurityPolicy: true,
+              externalLinkHandler: true,
+              menu: true,
+              maximizeOnShow: true,
+            },
+            metadata,
+          );
+
+          if (window) {
+            // Register window with terminal manager to receive terminal events
+            const { terminalManager } = await import('../terminal');
+            terminalManager?.setMainWindow(window.window);
+            log.info(
+              `[Quick Open] Registered Alexandria Workspace window ${window.window.id} with terminal manager`,
+            );
+
+            // Pass workspace ID to the window via URL parameter
+            const encodedWorkspaceId = encodeURIComponent(workspaceId);
+            const url = `${resolveHtmlPath('alexandria-workspace.html')}?workspaceId=${encodedWorkspaceId}`;
+            window.window.loadURL(url);
+            log.info(`[Quick Open] Opening workspace window for ${item.name}`);
+          }
         }
       }
     },
