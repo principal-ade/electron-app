@@ -30,12 +30,14 @@ const QuickOpenApp: React.FC = () => {
   useEffect(() => {
     // Listen for items from main process
     const handleItems = (_event: any, receivedItems: QuickOpenItem[]) => {
-      console.log('[Quick Open] Received items:', JSON.stringify(receivedItems, null, 2));
       setItems(receivedItems);
       setFilteredItems(receivedItems);
     };
 
     const removeItemsListener = window.electronAPI.onQuickOpenItems?.(handleItems);
+
+    // Request items now that listener is ready
+    window.electronAPI.requestQuickOpenItems?.();
 
     // Focus search input on mount
     searchInputRef.current?.focus();

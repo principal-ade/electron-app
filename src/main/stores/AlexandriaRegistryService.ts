@@ -34,10 +34,16 @@ export class AlexandriaRegistryService {
 
   /**
    * Get all repositories with path information and git commit data
+   * @param skipGitInfo - If true, skips loading git commit info for performance
    */
-  async getRepositories(): Promise<AlexandriaEntry[]> {
+  async getRepositories(skipGitInfo = false): Promise<AlexandriaEntry[]> {
     // Use getAllEntries to get repositories with path information
     const entries = this.outpostManager.getAllEntries();
+
+    // If skipGitInfo is true, return entries without git enrichment
+    if (skipGitInfo) {
+      return entries || [];
+    }
 
     // Enrich each repository with last commit information
     const enrichedEntries = await Promise.all(

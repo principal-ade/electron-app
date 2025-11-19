@@ -52,9 +52,7 @@ class QuickOpen {
 
     try {
       await this.createQuickOpenWindow();
-      log.info('[Quick Open] Window created, loading items');
-      await this.loadItems();
-      log.info('[Quick Open] Items loaded successfully');
+      // Note: loadItems() will be called when renderer requests via 'quick-open:request-items'
     } catch (error) {
       log.error('[Quick Open] Error showing quick open:', error);
       this.isActive = false;
@@ -166,10 +164,9 @@ class QuickOpen {
       log.error('[Quick Open] Attempted URL:', targetUrl);
     });
 
-    // Send items once the page is ready
+    // Items will be loaded when renderer requests them via 'quick-open:request-items'
     this.quickOpenWindow.webContents.on('did-finish-load', () => {
       log.info('[Quick Open] HTML loaded successfully');
-      this.loadItems();
     });
 
     // Log any console messages from the renderer
@@ -218,14 +215,25 @@ class QuickOpen {
             item.workspaceId !== null,
         );
 
-      // Load repositories from Alexandria
+      // Load repositories and workspaces from Alexandria in parallel
       const {
         AlexandriaRegistryService,
       } = require('../stores/AlexandriaRegistryService');
       const service = AlexandriaRegistryService.getInstance();
 
-      const repositories = await service.getRepositories();
+      // Load repos and workspaces in parallel for better performance
+      const [repositories, workspaces] = await Promise.all([
+        service.getRepositories(true), // Skip git info loading (Quick Open doesn't display it)
+        service.getWorkspaces(),
+      ]);
+
+      // Add repositories to items
       for (const repo of repositories) {
+        // Skip repos without remoteUrl - they can't be used in Quick Open
+        if (!repo.remoteUrl) {
+          continue;
+        }
+
         const openRepo = openRepoUrls.find((r) => r.url === repo.remoteUrl);
         items.push({
           id: repo.remoteUrl,
@@ -239,8 +247,7 @@ class QuickOpen {
         });
       }
 
-      // Load workspaces from Alexandria
-      const workspaces = await service.getWorkspaces();
+      // Add workspaces to items
       for (const workspace of workspaces) {
         const openWorkspace = openWorkspaceIds.find(
           (w) => w.workspaceId === workspace.id,
@@ -403,6 +410,11 @@ export function setupQuickOpenHandlers(): void {
       }
     },
   );
+
+  // Handle request for items from renderer
+  ipcMain.on('quick-open:request-items', () => {
+    quickOpen['loadItems'](); // Access private method
+  });
 
   // Handle close request from renderer
   ipcMain.on('quick-open:close', () => {

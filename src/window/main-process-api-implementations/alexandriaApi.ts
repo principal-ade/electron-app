@@ -52,7 +52,7 @@ export const alexandriaAPI: AlexandriaAPI = {
       );
     };
   },
-  getRepositories: () => ipcRenderer.invoke(AlexandriaAPIEvent.GET_ALL),
+  getRepositories: (skipGitInfo?: boolean) => ipcRenderer.invoke(AlexandriaAPIEvent.GET_ALL, skipGitInfo),
   getRepository: (name: string) =>
     ipcRenderer.invoke(AlexandriaAPIEvent.GET, name),
   getRepositoryByPath: (path: string) =>

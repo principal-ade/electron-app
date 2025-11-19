@@ -224,6 +224,7 @@ try {
         ipcRenderer.removeListener('quick-open:items', listener);
       };
     },
+    requestQuickOpenItems: () => ipcRenderer.send('quick-open:request-items'),
     selectQuickOpenItem: (item: any) =>
       ipcRenderer.send('quick-open:select', item),
     closeQuickOpen: () => ipcRenderer.send('quick-open:close'),

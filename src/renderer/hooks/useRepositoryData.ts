@@ -71,6 +71,12 @@ interface UseRepositoryDataOptions {
    * Whether to subscribe to real-time updates
    */
   subscribe?: boolean;
+
+  /**
+   * Whether to skip loading expensive cache data (git status, file tree, packages)
+   * Set to true for better performance when only basic repository info is needed
+   */
+  skipCacheData?: boolean;
 }
 
 /**
@@ -408,8 +414,8 @@ export function useAllRepositories(options: UseRepositoryDataOptions = {}) {
 
       setLoading(false);
 
-      // Load cache data in background if autoLoad is enabled
-      if (options.autoLoad !== false) {
+      // Load cache data in background if autoLoad is enabled and skipCacheData is not true
+      if (options.autoLoad !== false && !options.skipCacheData) {
         Promise.all(
           repos.map(async (repo) => {
             const repoPath = repo.path as string | undefined;

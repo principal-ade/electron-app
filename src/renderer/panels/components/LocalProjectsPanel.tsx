@@ -12,8 +12,11 @@ export const LocalProjectsPanel: React.FC = () => {
   const [filter, setFilter] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
-  // Load all local repositories with caching
-  const { repositories: localRepos, loading, refresh } = useAllRepositories();
+  // Load all local repositories without expensive cache data (git status, file tree, packages)
+  // LocalProjectCard only needs basic repository info, not the full cache data
+  const { repositories: localRepos, loading, refresh } = useAllRepositories({
+    skipCacheData: true,
+  });
 
   const handleAddProject = async () => {
     try {
