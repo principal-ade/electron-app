@@ -10,7 +10,7 @@
   "main": "dist/main/main.js",
   "dependencies": {
     "@a24z/agent-manager": "^1.0.14",
-    "@industry-theme/alexandria-workspace-panel": "^1.0.2",
+    "@industry-theme/alexandria-workspace-panel": "^1.0.4",
     "@a24z/callimachus": "^0.1.4",
     "@a24z/core-library": "^0.1.32",
     "@a24z/dynamic-file-tree": "^0.1.27",

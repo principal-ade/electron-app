@@ -171,7 +171,7 @@
     "@excalidraw/excalidraw": "^0.18.0",
     "@excalidraw/math": "^0.18.0-f0063e113",
     "@industry-theme/alexandria-docs-panel": "^0.1.3",
-    "@industry-theme/alexandria-workspace-panel": "^1.0.2",
+    "@industry-theme/alexandria-workspace-panel": "^1.0.4",
     "@industry-theme/terminal-panel": "^0.1.6",
     "@mdxeditor/editor": "^3.47.0",
     "@modelcontextprotocol/sdk": "1.11.4",
