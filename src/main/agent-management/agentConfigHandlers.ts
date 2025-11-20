@@ -9,7 +9,7 @@ import {
   disableAgentMCP,
   enableAgentMCP,
   getAgentMCPStatus,
-} from '@a24z/agent-manager';
+} from '@principal-ade/agent-manager';
 import { AgentSettings } from '../../shared/types/agent-settings.types';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 

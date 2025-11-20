@@ -5,6 +5,7 @@ import type { Workspace } from '@a24z/core-library';
 
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';
+import { usePanelFocus } from '../../contexts/PanelFocusContext';
 import { WindowService } from '../../main-process-api/WindowService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
@@ -38,6 +39,7 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
 }) => {
   const { theme } = useTheme();
   const { selectedRepository, setSelectedRepository } = useSelectedRepository();
+  const { focusReadmePanel } = usePanelFocus();
   const entry = repositoryData.repository;
   const [windowState, setWindowState] = useState<'closed' | 'opening' | 'ready'>('closed');
   const [isInWorkspaceDirectory, setIsInWorkspaceDirectory] = useState<boolean | null>(null);
@@ -139,6 +141,9 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
         pushed_at: entry.github.lastCommit || new Date().toISOString(),
       };
       setSelectedRepository(mockRepo);
+
+      // Focus the README panel in the middle section
+      focusReadmePanel();
     }
   };
 

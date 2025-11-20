@@ -317,7 +317,10 @@ class TerminalManager {
             );
           }
 
-          const senderWindowId = event.sender.id;
+          const senderWindowId = BrowserWindow.fromWebContents(event.sender)?.id;
+          if (!senderWindowId) {
+            throw new Error('Could not determine sender window ID');
+          }
           let sessionId: string;
 
           // Check if we already have a session for this directory+context
@@ -409,7 +412,10 @@ class TerminalManager {
             );
           }
 
-          const senderWindowId = event.sender.id;
+          const senderWindowId = BrowserWindow.fromWebContents(event.sender)?.id;
+          if (!senderWindowId) {
+            throw new Error('Could not determine sender window ID');
+          }
 
           // Use the shared terminal creation logic with context
           const sessionId = await this.handleTerminalCreate(event, directory, context);
@@ -617,14 +623,16 @@ class TerminalManager {
           }, 500); // Increased delay to ensure shell prompt is ready
 
           // Automatically claim ownership for the calling window
-          const senderWindowId = event.sender.id;
-          session.ownedByWindowId = senderWindowId;
-          session.ownershipClaimedAt = Date.now();
-          session.activeViewers.add(senderWindowId);
+          const senderWindowId = BrowserWindow.fromWebContents(event.sender)?.id;
+          if (senderWindowId) {
+            session.ownedByWindowId = senderWindowId;
+            session.ownershipClaimedAt = Date.now();
+            session.activeViewers.add(senderWindowId);
 
-          console.log(
-            `[Terminal] Window ${senderWindowId} automatically claimed ownership of session ${sessionId} via createWithCommand`,
-          );
+            console.log(
+              `[Terminal] Window ${senderWindowId} automatically claimed ownership of session ${sessionId} via createWithCommand`,
+            );
+          }
 
           console.log(
             `Terminal session created successfully with command: ${sessionId}`,

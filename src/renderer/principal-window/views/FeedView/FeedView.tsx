@@ -36,6 +36,10 @@ import {
   WorkspaceFilterProvider,
   useWorkspaceFilter,
 } from '../../../contexts/WorkspaceFilterContext';
+import {
+  PanelFocusProvider,
+  usePanelFocus,
+} from '../../../contexts/PanelFocusContext';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';
 import { FeedViewHeader } from './FeedViewHeader';
 import { useAuth } from '../../../hooks/useAuthState';
@@ -46,6 +50,7 @@ const FeedViewInner: React.FC = () => {
   const { selectedRepository } = useSelectedRepository();
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspaceFilter();
   const { isAuthenticated } = useAuth();
+  const { middlePanelActiveTab, setMiddlePanelActiveTab } = usePanelFocus();
 
   const [workspaceRepositories, setWorkspaceRepositories] = useState<
     AlexandriaEntry[]
@@ -277,6 +282,8 @@ const FeedViewInner: React.FC = () => {
           config: {
             defaultActiveTab: 0,
             tabPosition: 'top' as const,
+            activeTabIndex: middlePanelActiveTab,
+            onTabChange: setMiddlePanelActiveTab,
           },
         },
         right: {
@@ -289,7 +296,7 @@ const FeedViewInner: React.FC = () => {
         },
       };
     },
-    [showGitSyncPanel, showPresencePanel, isAuthenticated],
+    [showGitSyncPanel, showPresencePanel, isAuthenticated, middlePanelActiveTab, setMiddlePanelActiveTab],
   );
 
   // Determine if right panel should be collapsed
@@ -363,7 +370,9 @@ export const FeedView: React.FC = () => {
   return (
     <WorkspaceFilterProvider>
       <SelectedRepositoryProvider>
-        <FeedViewInner />
+        <PanelFocusProvider>
+          <FeedViewInner />
+        </PanelFocusProvider>
       </SelectedRepositoryProvider>
     </WorkspaceFilterProvider>
   );

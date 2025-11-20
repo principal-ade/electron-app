@@ -5,7 +5,7 @@ import {
   DroidConfigManager,
   type HookOptions,
   type OpenCodePluginOptions,
-} from '@a24z/agent-manager';
+} from '@principal-ade/agent-manager';
 import {
   type SupportedAgent,
   getAgentInfo,
@@ -41,7 +41,7 @@ export interface HookConfigStatus {
 }
 
 /**
- * Hook Configuration Manager using @a24z/agent-manager library
+ * Hook Configuration Manager using @principal-ade/agent-manager library
  *
  * This delegates to the external library for Claude hooks,
  * while maintaining compatibility with the existing interface.

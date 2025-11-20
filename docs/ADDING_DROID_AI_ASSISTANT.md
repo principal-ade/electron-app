@@ -126,9 +126,9 @@ agent === 'droid'
 
 ### 6. Update NPM Library for Droid Hook Management
 
-**Instead of creating separate hook scripts, update the `@a24z/agent-manager` library to handle Droid hooks internally.**
+**Instead of creating separate hook scripts, update the `@principal-ade/agent-manager` library to handle Droid hooks internally.**
 
-**Required Updates to @a24z/agent-manager:**
+**Required Updates to @principal-ade/agent-manager:**
 
 - Add `DroidConfigManager` class that extends the base hook manager
 - Implement `enableHooks()`, `disableHooks()`, and `getHookStatus()` methods
@@ -302,7 +302,7 @@ export function getDroidMCPDefaults(): DroidMCPConfig {
 }
 ```
 
-#### 3. @a24z/agent-manager (if used)
+#### 3. @principal-ade/agent-manager (if used)
 
 **Required Updates:**
 
@@ -325,13 +325,13 @@ export function getDroidMCPDefaults(): DroidMCPConfig {
 
 ## Hook Script Cleanup
 
-**⚠️ IMPORTANT: This cleanup requires updating the @a24z/agent-manager library first**
+**⚠️ IMPORTANT: This cleanup requires updating the @principal-ade/agent-manager library first**
 
 Before removing existing hook scripts, the npm library must be updated to handle all hook functionality internally. Currently, the library still configures agents to use the hook scripts.
 
 ### Required Changes Before Cleanup:
 
-1. **Update @a24z/agent-manager library:**
+1. **Update @principal-ade/agent-manager library:**
    - Modify ClaudeConfigManager, ClineConfigManager, and OpenCodeConfigManager to handle event forwarding internally
    - Remove dependencies on external hook script files
    - Implement direct communication with the event processing server
@@ -347,7 +347,7 @@ Before removing existing hook scripts, the npm library must be updated to handle
 
 ### Safe Cleanup Steps:
 
-1. **Phase 1: Update Library** - Modify @a24z/agent-manager to handle hooks internally
+1. **Phase 1: Update Library** - Modify @principal-ade/agent-manager to handle hooks internally
 2. **Phase 2: Update Codebase** - Remove hook script references from the Electron app
 3. **Phase 3: Remove Files** - Delete `assets/hooks/*.cjs` files
 4. **Phase 4: Test** - Comprehensive testing of all agent integrations

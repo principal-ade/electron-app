@@ -14,5 +14,5 @@ export function resolveHtmlPath(htmlFileName: string) {
   return `file://${path.resolve(__dirname, '../renderer/', htmlFileName)}`;
 }
 
-// Legacy hook asset verification removed (hooks now managed via @a24z/agent-manager)
+// Legacy hook asset verification removed (hooks now managed via @principal-ade/agent-manager)
 export const verifyRequiredAssets = () => ({ success: true, missing: [] });

@@ -399,8 +399,8 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
 
   const cardStyle: React.CSSProperties = {
     display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
+    flexDirection: 'row',
+    gap: '8px',
     padding: '12px',
     borderRadius: '6px',
     backgroundColor: isSelected
@@ -438,203 +438,218 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div style={headerStyle}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '24px',
-            height: '24px',
-            borderRadius: '4px',
-            backgroundColor: `color-mix(in srgb, ${iconColor} 12%, transparent)`,
-            color: iconColor,
-          }}
-        >
-          {workspace.icon ? (
-            <span style={{ fontSize: `${theme.fontSizes[2]}px` }}>{workspace.icon}</span>
-          ) : (
-            <DoorClosed size={16} />
-          )}
-        </div>
-
-        {isEditing ? (
-          <>
-            <input
-              type="text"
-              value={editedName}
-              onChange={(e) => setEditedName(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onClick={(e) => e.stopPropagation()}
-              autoFocus
-              disabled={isSaving}
-              style={{
-                flex: 1,
-                padding: '4px 8px',
-                borderRadius: '4px',
-                border: `1px solid ${theme.colors.border}`,
-                backgroundColor: theme.colors.background,
-                color: theme.colors.text,
-                fontSize: `${theme.fontSizes[2]}px`,
-                fontWeight: theme.fontWeights.semibold,
-                fontFamily: theme.fonts.body,
-                outline: 'none',
-              }}
-            />
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              title="Save (Enter)"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                padding: 0,
-                border: 'none',
-                borderRadius: '4px',
-                backgroundColor: theme.colors.success,
-                color: theme.colors.background,
-                cursor: isSaving ? 'not-allowed' : 'pointer',
-                opacity: isSaving ? 0.6 : 1,
-                transition: 'opacity 0.15s ease',
-              }}
-            >
-              <Check size={16} />
-            </button>
-            <button
-              onClick={handleCancel}
-              disabled={isSaving}
-              title="Cancel (Esc)"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                padding: 0,
-                border: 'none',
-                borderRadius: '4px',
-                backgroundColor: theme.colors.backgroundTertiary,
-                color: theme.colors.text,
-                cursor: isSaving ? 'not-allowed' : 'pointer',
-                opacity: isSaving ? 0.6 : 1,
-                transition: 'opacity 0.15s ease',
-              }}
-            >
-              <X size={16} />
-            </button>
-          </>
+      {/* Icon */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '40px',
+          height: '40px',
+          borderRadius: '6px',
+          backgroundColor: `color-mix(in srgb, ${iconColor} 12%, transparent)`,
+          color: iconColor,
+          flexShrink: 0,
+          marginTop: '2px',
+        }}
+      >
+        {workspace.icon ? (
+          <span style={{ fontSize: `${theme.fontSizes[3]}px` }}>{workspace.icon}</span>
         ) : (
-          <>
-            <span style={{ flex: 1 }}>{workspace.name}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onOpenWorkspace();
-              }}
-              title="Open workspace"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                padding: 0,
-                border: 'none',
-                borderRadius: '4px',
-                backgroundColor: 'transparent',
-                color: theme.colors.textSecondary,
-                cursor: 'pointer',
-                opacity: isHovered ? 1 : 0,
-                pointerEvents: isHovered ? 'auto' : 'none',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundTertiary;
-                e.currentTarget.style.color = theme.colors.text;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = theme.colors.textSecondary;
-              }}
-            >
-              <ExternalLink size={16} />
-            </button>
-            <button
-              onClick={handleStartEdit}
-              title="Edit workspace name"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                padding: 0,
-                border: 'none',
-                borderRadius: '4px',
-                backgroundColor: 'transparent',
-                color: theme.colors.textSecondary,
-                cursor: 'pointer',
-                opacity: isHovered ? 1 : 0,
-                pointerEvents: isHovered ? 'auto' : 'none',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                  theme.colors.backgroundTertiary;
-                e.currentTarget.style.color = theme.colors.text;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = theme.colors.textSecondary;
-              }}
-            >
-              <Edit2 size={16} />
-            </button>
-            {isDefault && (
-              <span
-                style={{
-                  fontSize: `${theme.fontSizes[1]}px`,
-                  color: theme.colors.textSecondary,
-                  fontWeight: 400,
-                }}
-              >
-                Default
-              </span>
-            )}
-          </>
+          <DoorClosed size={24} />
         )}
       </div>
 
-      {(workspace.suggestedClonePath || workspace.description) && (
-        <div
-          style={{
-            fontSize: `${theme.fontSizes[1]}px`,
-            color: theme.colors.textSecondary,
-            fontFamily: theme.fonts.body,
-            marginLeft: '32px',
-            lineHeight: 1.4,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2px',
-          }}
-        >
-          {workspace.suggestedClonePath && (
-            <div
-              style={{
-                fontFamily: theme.fonts.mono,
-                fontSize: `${theme.fontSizes[1]}px`,
-              }}
-            >
-              {workspace.suggestedClonePath}
-            </div>
+      {/* Content column */}
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px',
+          minWidth: 0,
+        }}
+      >
+        {/* Header row */}
+        <div style={headerStyle}>
+          {isEditing ? (
+            <>
+              <input
+                type="text"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+                disabled={isSaving}
+                style={{
+                  flex: 1,
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: theme.colors.background,
+                  color: theme.colors.text,
+                  fontSize: `${theme.fontSizes[2]}px`,
+                  fontWeight: theme.fontWeights.semibold,
+                  fontFamily: theme.fonts.body,
+                  outline: 'none',
+                }}
+              />
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                title="Save (Enter)"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '24px',
+                  height: '24px',
+                  padding: 0,
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: theme.colors.success,
+                  color: theme.colors.background,
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  opacity: isSaving ? 0.6 : 1,
+                  transition: 'opacity 0.15s ease',
+                }}
+              >
+                <Check size={16} />
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={isSaving}
+                title="Cancel (Esc)"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '24px',
+                  height: '24px',
+                  padding: 0,
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: theme.colors.backgroundTertiary,
+                  color: theme.colors.text,
+                  cursor: isSaving ? 'not-allowed' : 'pointer',
+                  opacity: isSaving ? 0.6 : 1,
+                  transition: 'opacity 0.15s ease',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </>
+          ) : (
+            <>
+              <span style={{ flex: 1 }}>{workspace.name}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenWorkspace();
+                }}
+                title="Open workspace"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '24px',
+                  height: '24px',
+                  padding: 0,
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: 'transparent',
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  opacity: isHovered ? 1 : 0,
+                  pointerEvents: isHovered ? 'auto' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }}
+              >
+                <ExternalLink size={16} />
+              </button>
+              <button
+                onClick={handleStartEdit}
+                title="Edit workspace name"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '24px',
+                  height: '24px',
+                  padding: 0,
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: 'transparent',
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  opacity: isHovered ? 1 : 0,
+                  pointerEvents: isHovered ? 'auto' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor =
+                    theme.colors.backgroundTertiary;
+                  e.currentTarget.style.color = theme.colors.text;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }}
+              >
+                <Edit2 size={16} />
+              </button>
+              {isDefault && (
+                <span
+                  style={{
+                    fontSize: `${theme.fontSizes[1]}px`,
+                    color: theme.colors.textSecondary,
+                    fontWeight: 400,
+                  }}
+                >
+                  Default
+                </span>
+              )}
+            </>
           )}
-          {workspace.description && <div>{workspace.description}</div>}
         </div>
-      )}
+
+        {/* Secondary text */}
+        {(workspace.suggestedClonePath || workspace.description) && (
+          <div
+            style={{
+              fontSize: `${theme.fontSizes[1]}px`,
+              color: theme.colors.textSecondary,
+              fontFamily: theme.fonts.body,
+              lineHeight: 1.4,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '2px',
+            }}
+          >
+            {workspace.suggestedClonePath && (
+              <div
+                style={{
+                  fontFamily: theme.fonts.mono,
+                  fontSize: `${theme.fontSizes[1]}px`,
+                }}
+              >
+                {workspace.suggestedClonePath}
+              </div>
+            )}
+            {workspace.description && <div>{workspace.description}</div>}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
