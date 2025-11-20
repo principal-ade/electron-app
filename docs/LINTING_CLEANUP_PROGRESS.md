@@ -37,20 +37,21 @@ npm run lint 2>&1 | grep -E "^/Users/griever/Developer/electron-app/src/renderer
 npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/renderer/||' | cut -d'/' -f1 | sort | uniq -c | sort -nr
 ```
 
-## Current Status (Updated - 2025-11-06)
+## Current Status (Updated - 2025-11-19)
 
 ### Overall Issues
 
-* **ESLint**: 1238 total issues (792 errors, 446 warnings) ⬇️ **-37 from previous (was 1275)**
-* **TypeScript**: 225 errors ⬆️ **+28 from previous (was 197)**
-* **Console.log warnings**: 333 ⬆️ **+29 from previous (was 304)**
+* **ESLint**: 1238 total issues (776 errors, 462 warnings) ⬇️ **-16 errors, +16 warnings (errors were 792, warnings were 446)**
+* **TypeScript**: 260 errors ⬆️ **+35 from previous (was 225)**
+* **Console.log warnings**: 352 ⬆️ **+19 from previous (was 333)**
 
 ### Recent Changes
 
-* ESLint issues continue to improve significantly (-37)
-* TypeScript errors increased (+28), primarily in renderer/panels (+66)
-* **✨ Main directory TypeScript errors FIXED: 20 errors → 0 errors** 🎉
-* Console.log warnings increased (+29)
+* ESLint total unchanged (1238), but composition shifted: errors decreased (-16), warnings increased (+16)
+* TypeScript errors increased significantly (+35), spread across multiple areas
+* **⚠️ Main directory TypeScript errors REGRESSED: 0 errors → 17 errors**
+* **⚠️ Window and Shared directories now have ESLint issues (previously clean)**
+* Console.log warnings increased (+19)
 
 ### By Top-Level Directory
 
@@ -58,11 +59,11 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 | Directory                    | Issues | % of Total | Change     |
 | ---------------------------- | ------ | ---------- | ---------- |
-| renderer                     | 142    | 71.7%      | ⬇️ **-10** |
-| main                         | 56     | 28.3%      | ⬇️ **-2**  |
+| renderer                     | 148    | 72.2%      | ⬆️ **+6**  |
+| main                         | 55     | 26.8%      | ⬇️ **-1**  |
+| window                       | 1      | 0.5%       | ⬆️ **+1** ⚠️ |
+| shared                       | 1      | 0.5%       | ⬆️ **+1** ⚠️ |
 | repository-monitoring-server | 0      | ✅ Clean    | -          |
-| window                       | 0      | ✅ Clean    | -          |
-| shared                       | 0      | ✅ Clean    | -          |
 | titlebar                     | 0      | ✅ Clean    | -          |
 | event-processing-server      | 0      | ✅ Clean    | -          |
 
@@ -70,8 +71,8 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 | Directory                    | Errors   | % of Total | Change      |
 | ---------------------------- | -------- | ---------- | ----------- |
-| renderer                     | 225      | 100%       | ⬆️ **+55**  |
-| main                         | 0        | ✅ Clean    | ⬇️ **-20** ✨ |
+| renderer                     | 243      | 93.5%      | ⬆️ **+18**  |
+| main                         | 17       | 6.5%       | ⬆️ **+17** ⚠️ |
 | window                       | 0        | ✅ Clean    | -           |
 | repository-monitoring-server | 0        | ✅ Clean    | -           |
 | shared                       | 0        | ✅ Clean    | -           |
@@ -85,18 +86,19 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 | Subdirectory               | Issues  | Change    |
 | -------------------------- | ------- | --------- |
-| components                 | 38      | ⬇️ **-1** |
+| components                 | 36      | ⬇️ **-2** |
 | services                   | 22      | -         |
-| panels                     | 16      | ⬇️ **-1** |
+| panels                     | 19      | ⬆️ **+3** |
 | main-process-api           | 16      | -         |
-| repo-manager               | 14      | ⬇️ **-1** |
+| repo-manager               | 15      | ⬆️ **+1** |
 | utils                      | 13      | -         |
-| pages                      | 10      | ⬇️ **-1** |
-| hooks                      | 7       | -         |
+| pages                      | 10      | -         |
+| hooks                      | 6       | ⬇️ **-1** |
 | adapters                   | 5       | -         |
-| principal-window           | 1       | ⬇️ **-6** |
+| principal-window           | 3       | ⬆️ **+2** |
+| quick-open                 | 2       | ⬆️ **+2** |
+| contexts                   | 1       | ⬆️ **+1** |
 | types                      | ✅ Clean | -         |
-| contexts                   | ✅ Clean | -         |
 | GlobalFeedbackProvider.tsx | ✅ Clean | -         |
 | App.tsx                    | ✅ Clean | -         |
 | dev-sidecar-logs           | ✅ Clean | -         |
@@ -105,14 +107,15 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 | Subdirectory               | Errors  | Change     |
 | -------------------------- | ------- | ---------- |
-| panels                     | 94      | ⬆️ **+66** |
-| components                 | 51      | ⬇️ **-2**  |
+| panels                     | 104     | ⬆️ **+10** |
+| components                 | 45      | ⬇️ **-6**  |
 | services                   | 27      | -          |
+| repo-manager               | 18      | ⬆️ **+9**  |
 | utils                      | 15      | -          |
-| pages                      | 13      | ⬇️ **-4**  |
-| repo-manager               | 9       | ⬇️ **-1**  |
+| pages                      | 14      | ⬆️ **+1**  |
 | adapters                   | 9       | -          |
 | principal-window           | 5       | -          |
+| quick-open                 | 5       | ⬆️ **+5**  |
 | main-process-api           | 2       | -          |
 | hooks                      | ✅ Clean | -          |
 | types                      | ✅ Clean | -          |
@@ -126,51 +129,59 @@ npm run typecheck 2>&1 | grep "error TS" | grep "src/renderer/" | sed 's|.*src/r
 
 ### Priority 1: Quick Wins (\< 20 total issues)
 
-1. **renderer/principal-window** - 1 ESLint + 5 TypeScript \= 6 total ⬇️ **-6**
-2. **renderer/hooks** - 7 ESLint + 0 TypeScript \= 7 total
-3. **renderer/adapters** - 5 ESLint + 9 TypeScript \= 14 total
-4. **renderer/main-process-api** - 16 ESLint + 2 TypeScript \= 18 total
+1. **renderer/hooks** - 6 ESLint + 0 TypeScript \= 6 total ⬇️ **-1**
+2. **renderer/quick-open** - 2 ESLint + 5 TypeScript \= 7 total ⬆️ **+7** (NEW)
+3. **renderer/principal-window** - 3 ESLint + 5 TypeScript \= 8 total ⬆️ **+2**
+4. **renderer/adapters** - 5 ESLint + 9 TypeScript \= 14 total
+5. **renderer/main-process-api** - 16 ESLint + 2 TypeScript \= 18 total
 
 ### Priority 2: Focus Areas
 
-1. **renderer/repo-manager** - 14 ESLint + 9 TypeScript \= 23 total ⬇️ **-2**
-2. **renderer/pages** - 10 ESLint + 13 TypeScript \= 23 total ⬇️ **-5**
-3. **renderer/utils** - 13 ESLint + 15 TypeScript \= 28 total
+1. **renderer/pages** - 10 ESLint + 14 TypeScript \= 24 total ⬆️ **+1**
+2. **renderer/utils** - 13 ESLint + 15 TypeScript \= 28 total
+3. **renderer/repo-manager** - 15 ESLint + 18 TypeScript \= 33 total ⬆️ **+10**
 4. **renderer/services** - 22 ESLint + 27 TypeScript \= 49 total
-5. **renderer/panels** - 16 ESLint + 94 TypeScript \= 110 total ⬆️ **+65** ⚠️
+5. **renderer/panels** - 19 ESLint + 104 TypeScript \= 123 total ⬆️ **+13** ⚠️
 
 ### Priority 3: Non-Renderer Directories
 
-1. **main** - 56 ESLint issues + 0 TypeScript errors \= 56 total ⬇️ **-20** ✨
-2. **shared** - 0 ESLint issues + 0 TypeScript errors \= ✅ **Clean!**
-3. **repository-monitoring-server** - 0 ESLint issues + 0 TypeScript errors \= ✅ **Clean!**
-4. **window** - 0 ESLint issues + 0 TypeScript errors \= ✅ **Clean!**
+1. **window** - 1 ESLint issue + 0 TypeScript errors \= 1 total ⬆️ **+1** (NEW) ⚠️
+2. **shared** - 1 ESLint issue + 0 TypeScript errors \= 1 total ⬆️ **+1** (NEW) ⚠️
+3. **main** - 55 ESLint issues + 17 TypeScript errors \= 72 total ⬆️ **+16** ⚠️
+4. **repository-monitoring-server** - 0 ESLint issues + 0 TypeScript errors \= ✅ **Clean!**
 
 ### Priority 4: Large Renderer Areas
 
-1. **renderer/components** - 38 ESLint + 51 TypeScript \= 89 total ⬇️ **-3**
+1. **renderer/components** - 36 ESLint + 45 TypeScript \= 81 total ⬇️ **-8**
 2. **renderer/services** - 22 ESLint + 27 TypeScript \= 49 total
 
-✅ **Completed Directories** (TypeScript + ESLint clean): event-processing-server, pure-core, titlebar, shared, window, repository-monitoring-server
+✅ **Completed Directories** (TypeScript + ESLint clean): event-processing-server, pure-core, titlebar, repository-monitoring-server
 
 ⚠️ **Regressed Directories**:
 
-* **renderer/panels** - Total issues at 110 (up from 45), TypeScript errors increased +66 to 94 🚨
+* **main** - Total issues at 72 (up from 56), TypeScript errors increased +17 (0 → 17), ESLint down -1 🚨
+* **window** - Now has 1 ESLint issue (was clean) ⚠️
+* **shared** - Now has 1 ESLint issue (was clean) ⚠️
+* **renderer/panels** - Total issues at 123 (up from 110), TypeScript errors increased +10 to 104, ESLint up +3 🚨
+* **renderer/repo-manager** - Total issues at 33 (up from 23), TypeScript errors increased +9 to 18, ESLint up +1 ⚠️
+* **renderer/principal-window** - Total issues at 8 (up from 6), ESLint increased +2 to 3 ⚠️
+* **renderer/pages** - Total issues at 24 (up from 23), TypeScript errors increased +1 to 14 ⚠️
+* **renderer/contexts** - Now has 1 ESLint issue (was clean) ⚠️
 
-✅ **Completed Renderer Subdirectories**: types, contexts, GlobalFeedbackProvider.tsx, App.tsx, dev-sidecar-logs, config, providers
+✅ **New Directories Analyzed**:
+
+* **renderer/quick-open** - 2 ESLint + 5 TypeScript = 7 total
+
+✅ **Completed Renderer Subdirectories**: types, GlobalFeedbackProvider.tsx, App.tsx, dev-sidecar-logs, config, providers
 
 ✅ **Partially Clean Directories**:
 
-* **main** (TypeScript clean - 56 ESLint issues remaining) ✨
-* **renderer/hooks** (TypeScript clean - 7 ESLint issues remaining)
+* **renderer/hooks** (TypeScript clean - 6 ESLint issues remaining, down -1)
 
 🎯 **Improved Directories**:
 
-* **main** - **TypeScript CLEAN!** Total issues decreased -29 (from 85 to 56), ESLint down -2, TypeScript down -20 to 0 🎉
-* **renderer/principal-window** - Total issues decreased -6 (from 12 to 6), ESLint down -6
-* **renderer/pages** - Total issues decreased -5 (from 28 to 23), ESLint down -1, TypeScript down -4
-* **renderer/components** - Total issues decreased -3 (from 92 to 89), ESLint down -1, TypeScript down -2
-* **renderer/repo-manager** - Total issues decreased -2 (from 25 to 23), ESLint down -1, TypeScript down -1
+* **renderer/components** - Total issues decreased -8 (from 89 to 81), ESLint down -2, TypeScript down -6 🎉
+* **renderer/hooks** - Total issues decreased -1 (from 7 to 6), ESLint down -1
 
 ## Cleanup Best Practices
 
