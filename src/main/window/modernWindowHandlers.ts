@@ -14,7 +14,8 @@ import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 import type { AlexandriaEntry } from '@a24z/core-library';
 import type { IModernApplicationWindow, WindowMetadata } from './types';
 import { PrimaryWindowType } from './types';
-import { GitBranchService } from '../version-control-providers/gitBranchService';
+import { gitStatusService } from '../services/GitStatusService';
+import { repositoryMetadataService } from '../services/RepositoryMetadataService';
 
 /**
  * Repository window state
@@ -184,229 +185,7 @@ export function registerModernWindowHandlers(): void {
   ipcMain.handle(
     WindowEvent.OPEN_REPOSITORY_DASHBOARD,
     async (_event, repository: AlexandriaEntry) => {
-      // Log the received repository to see what properties it actually has
-      console.log(
-        '[modernWindowHandlers] OPEN_REPOSITORY_DASHBOARD received:',
-        {
-          name: repository.name,
-          hasPath: 'path' in repository,
-          path: repository.path,
-          keys: Object.keys(repository),
-          fullObject: repository,
-        },
-      );
-
-      // Extract owner from github data or parse from name
-      let owner = repository.github?.owner;
-      let repoName = repository.name;
-      let remoteUrl = repository.remoteUrl;
-
-      // No need to parse from githubUrl as it doesn't exist in AlexandriaEntry
-
-      // If still no owner, try to parse from the name (might be in format owner/repo)
-      if (!owner && repository.name.includes('/')) {
-        const parts = repository.name.split('/');
-        owner = parts[0];
-        repoName = parts[1];
-      }
-
-      // Default to 'unknown' if we still couldn't find an owner
-      if (!owner) {
-        owner = 'unknown';
-      }
-
-      // Ensure we have a remoteUrl
-      if (!remoteUrl) {
-        remoteUrl = `https://github.com/${owner}/${repoName}`;
-      }
-
-      // Get current branch if we have a local path
-      let currentBranch: string | undefined;
-      if (repository.path) {
-        try {
-          const branchService = new GitBranchService();
-          const branchInfo = await branchService.getBranchInfo(repository.path);
-          currentBranch = branchInfo?.currentBranch;
-          console.log(
-            '[modernWindowHandlers] Retrieved branch info:',
-            currentBranch,
-          );
-        } catch (error) {
-          console.error(
-            '[modernWindowHandlers] Failed to get branch info:',
-            error,
-          );
-        }
-      }
-
-      // Try to get the full repository from the database which includes avatarUrl and vcsType
-      const {
-        RepositoryApiEventHandler,
-      } = require('../stores/RepositoryApiEventHandler');
-      const repositoryHandler = new RepositoryApiEventHandler();
-      let existingRepo = await repositoryHandler.getRepository(remoteUrl);
-
-      // Determine VCS type from remote URL
-      let vcsType: 'github' | 'gitlab' | 'bitbucket' | 'generic' = 'generic';
-      if (remoteUrl.includes('github.com')) {
-        vcsType = 'github';
-      } else if (remoteUrl.includes('gitlab.com')) {
-        vcsType = 'gitlab';
-      } else if (remoteUrl.includes('bitbucket.org')) {
-        vcsType = 'bitbucket';
-      }
-
-      // If repository doesn't have avatar but is a GitHub repo, fetch metadata
-      if (existingRepo && !existingRepo.avatarUrl && vcsType === 'github') {
-        console.log(
-          '[modernWindowHandlers] Fetching avatar for repository:',
-          remoteUrl,
-        );
-        try {
-          existingRepo =
-            await repositoryHandler.refreshRepositoryMetadata(remoteUrl);
-        } catch (error) {
-          console.error(
-            '[modernWindowHandlers] Failed to refresh metadata:',
-            error,
-          );
-        }
-      }
-
-      // Create the repository object in the format expected by Repository Maps
-      const repoData = {
-        owner,
-        name: repoName,
-        remoteUrl,
-        vcsType: existingRepo?.vcsType || vcsType,
-        avatarUrl: existingRepo?.avatarUrl,
-        description:
-          existingRepo?.description || repository.github?.description,
-        localClones: repository.path
-          ? [{ path: repository.path, currentBranch, addedAt: Date.now() }]
-          : existingRepo?.localClones || [],
-        addedAt: existingRepo?.addedAt || Date.now(),
-        // Add other metadata that might be useful
-        metadata: {
-          stars: repository.github?.stars || existingRepo?.metadata?.stars,
-          description:
-            repository.github?.description ||
-            existingRepo?.metadata?.description,
-          topics: repository.github?.topics || existingRepo?.metadata?.topics,
-          license:
-            repository.github?.license || existingRepo?.metadata?.license,
-          defaultBranch: existingRepo?.metadata?.defaultBranch,
-          isPrivate: existingRepo?.metadata?.isPrivate,
-        },
-      };
-
-      const windowName = `repository-maps-${remoteUrl}`;
-
-      // Check if window already exists before creating
-      const {
-        getSpecialWindows,
-        getApplicationWindows,
-      } = require('./modernWindowManager');
-      const specialWindows = getSpecialWindows();
-      const applicationWindows = getApplicationWindows();
-      const existingWindowId = specialWindows.get(windowName);
-      const windowAlreadyExists =
-        existingWindowId &&
-        applicationWindows.get(existingWindowId) &&
-        !applicationWindows.get(existingWindowId).window.isDestroyed();
-
-      // Create metadata for repository window
-      const metadata: WindowMetadata = {
-        primaryType: PrimaryWindowType.REPOSITORY,
-        displayName: repoName,
-        remoteUrl,
-        localPath: repository.path,
-        purpose: windowName,
-      };
-
-      const window = createSpecialWindow(
-        windowName,
-        {
-          width: 1600,
-          height: 1000,
-          minWidth: 1200,
-          minHeight: 800,
-          title: `${repoName} - Code City Map`,
-        },
-        {
-          fileSystemAdapter: true,
-          windowManagerAdapter: true,
-          githubAdapter: true,
-          terminalManager: true,
-          contentSecurityPolicy: true,
-          externalLinkHandler: true,
-          menu: true,
-          maximizeOnShow: true,
-        },
-        metadata,
-      );
-
-      if (!window) return;
-
-      // Only load URL for newly created windows, not existing ones
-      if (!windowAlreadyExists) {
-        // Broadcast immediately that window is opening
-        broadcastRepositoryWindowsChanged();
-
-        // Track repository opened in presence system
-        const {
-          presenceWindowBridge,
-        } = require('../services/PresenceWindowBridge');
-        presenceWindowBridge.trackRepositoryOpened(
-          String(window.window.id),
-          owner,
-          repoName,
-          currentBranch || 'main',
-          repository.path,
-        );
-
-        // Setup focus tracking for presence
-        presenceWindowBridge.setupWindowFocusTracking(
-          window.window,
-          String(window.window.id),
-        );
-
-        // Listen for when window is ready to show, then broadcast again
-        window.window.once('ready-to-show', () => {
-          console.log(
-            '[ModernWindow] Repository dashboard window ready to show',
-          );
-          // Broadcast that window is now ready
-          broadcastRepositoryWindowsChanged();
-        });
-
-        // Build URL with the mapped repository data
-        const payload = { repository: repoData };
-        const encodedData = encodeURIComponent(JSON.stringify(payload));
-        const url = `${resolveHtmlPath('repo-manager.html')}#repository-maps/${encodedData}`;
-
-        // Wait for adapters to initialize before loading URL
-        setTimeout(() => {
-          console.log(
-            '[ModernWindow] Loading repository dashboard URL after adapter init delay:',
-            url,
-          );
-          window.window.loadURL(url);
-        }, 200);
-      } else {
-        console.log(
-          '[ModernWindow] Window already exists, focusing without reload:',
-          windowName,
-        );
-        // Track focus for existing window
-        const {
-          presenceWindowBridge,
-        } = require('../services/PresenceWindowBridge');
-        const existingWindow = applicationWindows.get(existingWindowId);
-        if (existingWindow) {
-          presenceWindowBridge.trackRepositoryFocused(String(existingWindowId));
-        }
-      }
+      return openRepositoryDashboardWindow(repository);
     },
   );
 
@@ -740,4 +519,219 @@ export function registerModernWindowHandlers(): void {
     const window = await focusOrCreateMainWindow();
     return window !== null;
   });
+}
+
+/**
+ * Open a repository dashboard window
+ * Exported for direct use from Quick Open and other main process code
+ */
+export async function openRepositoryDashboardWindow(
+  repository: AlexandriaEntry,
+): Promise<void> {
+  // Log the received repository to see what properties it actually has
+  console.log('[modernWindowHandlers] OPEN_REPOSITORY_DASHBOARD received:', {
+    name: repository.name,
+    hasPath: 'path' in repository,
+    path: repository.path,
+    keys: Object.keys(repository),
+    fullObject: repository,
+  });
+
+  // Extract owner from github data or parse from name
+  let owner = repository.github?.owner;
+  let repoName = repository.name;
+  let remoteUrl = repository.remoteUrl;
+
+  // No need to parse from githubUrl as it doesn't exist in AlexandriaEntry
+
+  // If still no owner, try to parse from the name (might be in format owner/repo)
+  if (!owner && repository.name.includes('/')) {
+    const parts = repository.name.split('/');
+    owner = parts[0];
+    repoName = parts[1];
+  }
+
+  // Default to 'unknown' if we still couldn't find an owner
+  if (!owner) {
+    owner = 'unknown';
+  }
+
+  // Ensure we have a remoteUrl
+  if (!remoteUrl) {
+    remoteUrl = `https://github.com/${owner}/${repoName}`;
+  }
+
+  // Get current branch if we have a local path
+  let currentBranch: string | undefined;
+  if (repository.path) {
+    // Try to get cached status first
+    let cachedStatus = gitStatusService.getCachedStatus(repository.path);
+
+    // If no cached status, fetch it synchronously to ensure we have branch info
+    if (!cachedStatus || !cachedStatus.currentBranch) {
+      console.log('[modernWindowHandlers] No cached git status, fetching synchronously');
+      try {
+        await gitStatusService.refreshStatus(repository.path);
+        cachedStatus = gitStatusService.getCachedStatus(repository.path);
+      } catch (error) {
+        console.error('[modernWindowHandlers] Failed to fetch git status:', error);
+      }
+    }
+
+    currentBranch = cachedStatus?.currentBranch;
+    console.log(
+      '[modernWindowHandlers] Using branch:',
+      currentBranch || 'none',
+    );
+  }
+
+  // Try to get the full repository from the database (fast)
+  const existingRepo =
+    await repositoryMetadataService.getFromDatabase(remoteUrl);
+
+  // Determine VCS type from remote URL
+  let vcsType: 'github' | 'gitlab' | 'bitbucket' | 'generic' = 'generic';
+  if (remoteUrl.includes('github.com')) {
+    vcsType = 'github';
+  } else if (remoteUrl.includes('gitlab.com')) {
+    vcsType = 'gitlab';
+  } else if (remoteUrl.includes('bitbucket.org')) {
+    vcsType = 'bitbucket';
+  }
+
+  // If repository doesn't have avatar but is a GitHub repo, fetch in background
+  if (existingRepo && !existingRepo.avatarUrl && vcsType === 'github') {
+    console.log('[modernWindowHandlers] Triggering background metadata refresh');
+    repositoryMetadataService.refreshMetadata(remoteUrl).catch((error) => {
+      console.error(
+        '[modernWindowHandlers] Background metadata refresh failed:',
+        error,
+      );
+    });
+  }
+
+  // Create the repository object in the format expected by Repository Maps
+  const repoData = {
+    owner,
+    name: repoName,
+    remoteUrl,
+    vcsType: existingRepo?.vcsType || vcsType,
+    avatarUrl: existingRepo?.avatarUrl,
+    description: existingRepo?.description || repository.github?.description,
+    localClones: repository.path
+      ? [{ path: repository.path, currentBranch, addedAt: Date.now() }]
+      : existingRepo?.localClones || [],
+    addedAt: existingRepo?.addedAt || Date.now(),
+    // Add other metadata that might be useful
+    metadata: {
+      stars: repository.github?.stars || existingRepo?.metadata?.stars,
+      description:
+        repository.github?.description ||
+        existingRepo?.metadata?.description,
+      topics: repository.github?.topics || existingRepo?.metadata?.topics,
+      license: repository.github?.license || existingRepo?.metadata?.license,
+      defaultBranch: existingRepo?.metadata?.defaultBranch,
+      isPrivate: existingRepo?.metadata?.isPrivate,
+    },
+  };
+
+  const windowName = `repository-maps-${remoteUrl}`;
+
+  // Check if window already exists before creating
+  const {
+    getSpecialWindows,
+    getApplicationWindows,
+  } = require('./modernWindowManager');
+  const specialWindows = getSpecialWindows();
+  const applicationWindows = getApplicationWindows();
+  const existingWindowId = specialWindows.get(windowName);
+  const windowAlreadyExists =
+    existingWindowId &&
+    applicationWindows.get(existingWindowId) &&
+    !applicationWindows.get(existingWindowId).window.isDestroyed();
+
+  // Create metadata for repository window
+  const metadata: WindowMetadata = {
+    primaryType: PrimaryWindowType.REPOSITORY,
+    displayName: repoName,
+    remoteUrl,
+    localPath: repository.path,
+    purpose: windowName,
+  };
+
+  const window = createSpecialWindow(
+    windowName,
+    {
+      width: 1600,
+      height: 1000,
+      minWidth: 1200,
+      minHeight: 800,
+      title: `${repoName} - Code City Map`,
+    },
+    {
+      fileSystemAdapter: true,
+      windowManagerAdapter: true,
+      githubAdapter: true,
+      terminalManager: true,
+      contentSecurityPolicy: true,
+      externalLinkHandler: true,
+      menu: true,
+      maximizeOnShow: true,
+    },
+    metadata,
+  );
+
+  if (!window) return;
+
+  // Only load URL for newly created windows, not existing ones
+  if (!windowAlreadyExists) {
+    // Broadcast immediately that window is opening
+    broadcastRepositoryWindowsChanged();
+
+    // Track repository opened in presence system
+    const { presenceWindowBridge } = require('../services/PresenceWindowBridge');
+    presenceWindowBridge.trackRepositoryOpened(
+      String(window.window.id),
+      owner,
+      repoName,
+      currentBranch || 'main',
+      repository.path,
+    );
+
+    // Setup focus tracking for presence
+    presenceWindowBridge.setupWindowFocusTracking(
+      window.window,
+      String(window.window.id),
+    );
+
+    // Listen for when window is ready to show, then broadcast again
+    window.window.once('ready-to-show', () => {
+      console.log('[ModernWindow] Repository dashboard window ready to show');
+      // Broadcast that window is now ready
+      broadcastRepositoryWindowsChanged();
+    });
+
+    // Build URL with the mapped repository data
+    const payload = { repository: repoData };
+    const encodedData = encodeURIComponent(JSON.stringify(payload));
+    const url = `${resolveHtmlPath('repo-manager.html')}#repository-maps/${encodedData}`;
+
+    // Load URL immediately - adapters initialize asynchronously
+    console.log(
+      '[ModernWindow] Loading repository dashboard URL immediately:',
+      url,
+    );
+    window.window.loadURL(url);
+  } else {
+    console.log(
+      '[ModernWindow] Window already exists, focusing without reload:',
+      windowName,
+    );
+    // Track focus for existing window
+    const { presenceWindowBridge } = require('../services/PresenceWindowBridge');
+    const existingWindow = applicationWindows.get(existingWindowId);
+    if (existingWindow) {
+      presenceWindowBridge.trackRepositoryFocused(String(existingWindowId));
+    }
+  }
 }

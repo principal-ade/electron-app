@@ -13,6 +13,7 @@ import {
   getRepositoryUrl,
   getWorkspaceId,
 } from './types';
+import { openRepositoryDashboardWindow } from './modernWindowHandlers';
 
 interface QuickOpenItem {
   id: string;
@@ -307,33 +308,21 @@ export function setupQuickOpenHandlers(): void {
           log.info(`[Quick Open] Focused existing window ${item.openWindowId}`);
         }
       } else {
-        // Open new window using IPC
+        // Open new window
         if (item.type === 'repository') {
-          // Load repository data and open window
-          const {
-            AlexandriaRegistryService,
-          } = require('../stores/AlexandriaRegistryService');
-          const service = AlexandriaRegistryService.getInstance();
-          const repositories = await service.getRepositories();
-          const repo = repositories.find((r: any) => r.remoteUrl === item.id);
+          // Build AlexandriaEntry from QuickOpenItem (no DB fetch needed!)
+          const repo = {
+            name: item.name,
+            path: item.localPath,
+            remoteUrl: item.remoteUrl,
+            registeredAt: Date.now(),
+            hasViews: false,
+            github: item.description ? { description: item.description } : undefined,
+          };
 
-          if (repo) {
-            const { WindowEvent } = require('../../shared/ipc-events/WindowEvents');
-            const { BrowserWindow } = require('electron');
-            const allWindows = BrowserWindow.getAllWindows();
-            // Find a non-quick-open window to invoke the handler from
-            const targetWindow = allWindows.find(
-              (w) => !w.isDestroyed() && w !== quickOpen.getWindow(),
-            );
-
-            if (targetWindow) {
-              // Use invoke instead of send since the handler uses ipcMain.handle
-              await targetWindow.webContents.executeJavaScript(
-                `window.mainProcess.window.openRepositoryDashboard(${JSON.stringify(repo)})`,
-              );
-            }
-            log.info(`[Quick Open] Opening repository window for ${item.name}`);
-          }
+          // Call directly - no executeJavaScript needed!
+          await openRepositoryDashboardWindow(repo);
+          log.info(`[Quick Open] Opening repository window for ${item.name}`);
         } else if (item.type === 'workspace') {
           // Open workspace window directly from main process
           const {
