@@ -282,6 +282,14 @@ export const AlexandriaWorkspaceLayout: React.FC<
         id: workspace.id,
         name: workspace.name,
         path: workspace.suggestedClonePath || '/workspace',
+        suggestedClonePath: workspace.suggestedClonePath,
+        description: workspace.description,
+        color: workspace.color,
+        icon: workspace.icon,
+        isDefault: workspace.isDefault,
+        createdAt: workspace.createdAt,
+        updatedAt: workspace.updatedAt,
+        metadata: workspace.metadata,
       }}
       repository={selectedRepository}
       theme={theme}

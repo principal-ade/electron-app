@@ -40,6 +40,14 @@ interface ExtendedPanelActions extends PanelActions {
     workspaceId: string
   ) => Promise<void>;
   copyToClipboard?: (text: string) => Promise<void>;
+  isRepositoryInWorkspaceDirectory?: (
+    repository: AlexandriaEntry,
+    workspaceId: string
+  ) => Promise<boolean | null>;
+  moveRepositoryToWorkspaceDirectory?: (
+    repository: AlexandriaEntry,
+    workspaceId: string
+  ) => Promise<string>;
 }
 
 // Extended context interface that panels actually expect
@@ -486,6 +494,59 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       copyToClipboard: async (text: string) => {
         console.info('[PanelContext] Copying to clipboard');
         await navigator.clipboard.writeText(text);
+      },
+
+      // Repository location actions
+      isRepositoryInWorkspaceDirectory: async (
+        repository: AlexandriaEntry,
+        workspaceId: string
+      ) => {
+        console.info(
+          '[PanelContext] Checking if repository is in workspace directory:',
+          repository.name,
+          workspaceId
+        );
+
+        try {
+          return await WorkspaceService.isRepositoryInWorkspaceDirectory(repository, workspaceId);
+        } catch (error) {
+          console.error('[PanelContext] Failed to check repository location:', error);
+          throw error;
+        }
+      },
+
+      moveRepositoryToWorkspaceDirectory: async (
+        repository: AlexandriaEntry,
+        workspaceId: string
+      ) => {
+        console.info(
+          '[PanelContext] Moving repository to workspace directory:',
+          repository.name,
+          workspaceId
+        );
+
+        try {
+          const newPath = await WorkspaceService.moveRepositoryToWorkspaceDirectory(repository, workspaceId);
+
+          // Refresh the repositories list to reflect the updated path
+          if (workspace?.id === workspaceId) {
+            const repos = await WorkspaceService.getRepositoriesInWorkspace(workspaceId);
+            setWorkspaceRepositories(repos);
+          }
+
+          // Emit event to notify other panels
+          events.emit({
+            type: 'repository:moved',
+            source: 'alexandria-workspace',
+            timestamp: Date.now(),
+            payload: { repositoryId: repository.github?.id || repository.name, workspaceId, newPath },
+          });
+
+          return newPath;
+        } catch (error) {
+          console.error('[PanelContext] Failed to move repository:', error);
+          throw error;
+        }
       },
     }),
     [events, workspace]
