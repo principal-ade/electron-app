@@ -3,6 +3,8 @@ import { GitRepositoryService } from './gitRepositoryService';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { GitEvents } from '../../shared/main-process-api-interfaces/GitAPI';
 import { GitRemoteService } from '@principal-ai/repository-monitoring-server';
+import AuthStateManager from '../services/AuthStateManager';
+import { GitCredentialHelper } from '../services/GitCredentialHelper';
 
 // Create a single instance of the git service
 const gitService = new GitRepositoryService();
@@ -226,7 +228,10 @@ export function registerGitHandlers(): void {
           diagnostics.sshAgent = !!process.env.SSH_AUTH_SOCK;
         }
 
-        console.log(`[Git] Cloning repository via ${diagnostics.authMethod}:`, normalizedUrl);
+        console.log(
+          `[Git] Cloning repository via ${diagnostics.authMethod}:`,
+          normalizedUrl,
+        );
 
         await git.raw(['clone', normalizedUrl, targetPath], {
           env: cloneEnv,
@@ -239,26 +244,48 @@ export function registerGitHandlers(): void {
         console.error('[Git] Clone diagnostics:', diagnostics);
 
         // Parse the error to provide helpful messages
-        const errorMsg =
-          error instanceof Error ? error.message : String(error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
 
         // Create a detailed error response
         let userMessage = 'Failed to clone repository.';
         const suggestions: string[] = [];
 
         // Parse common git error patterns
-        if (errorMsg.includes('Authentication failed') || errorMsg.includes('authentication')) {
+        if (
+          errorMsg.includes('Authentication failed') ||
+          errorMsg.includes('authentication')
+        ) {
           if (diagnostics.authMethod === 'HTTPS') {
-            userMessage = 'Authentication failed - Please log in to Principal.';
-            suggestions.push(
-              '**GitHub authentication required:**',
-              '',
-              '1. Log in to Principal (the app will configure git credentials)',
-              '2. Or manually authenticate:',
-              '   • Go to Settings in Principal → GitHub Login',
-              '',
-              'If already logged in, try logging out and back in to refresh credentials.',
-            );
+            // Check if user is authenticated in the app
+            const authState = AuthStateManager.getInstance().getFullState();
+            const isAppAuthenticated = authState.isAuthenticated;
+
+            if (isAppAuthenticated) {
+              userMessage =
+                'Authentication failed - Credentials may need to be refreshed.';
+              suggestions.push(
+                '**Git credentials need to be refreshed:**',
+                '',
+                '1. Log out of Principal (Settings → Log Out)',
+                '2. Log back in to refresh your GitHub credentials',
+                '3. Try cloning again',
+                '',
+                'If the issue persists, verify you have access to this repository on GitHub.',
+              );
+            } else {
+              userMessage =
+                'Authentication failed - Please log in to Principal.';
+              suggestions.push(
+                '**GitHub authentication required:**',
+                '',
+                '1. Open Settings in Principal',
+                '2. Click "Log In with GitHub"',
+                '3. Complete the authentication',
+                '4. Try cloning again',
+                '',
+                'Principal will automatically configure git credentials for you.',
+              );
+            }
           } else {
             userMessage = 'SSH Authentication failed.';
             suggestions.push(
@@ -270,16 +297,35 @@ export function registerGitHandlers(): void {
               '4. Add your public key to GitHub: Settings → SSH and GPG keys',
             );
           }
-        } else if (errorMsg.includes('Repository not found') || errorMsg.includes('not found')) {
+        } else if (
+          errorMsg.includes('Repository not found') ||
+          errorMsg.includes('not found')
+        ) {
+          // Check if user is authenticated in the app
+          const authState = AuthStateManager.getInstance().getFullState();
+          const isAppAuthenticated = authState.isAuthenticated;
+
           userMessage = 'Repository not found or access denied.';
           suggestions.push(
             '**The repository may not exist or you lack access:**',
             '',
             '• Verify the repository URL is correct',
             '• Check if the repository is private and you have access',
-            '• Ensure you are authenticated (for private repos)',
           );
-        } else if (errorMsg.includes('Permission denied') || errorMsg.includes('permission')) {
+
+          if (!isAppAuthenticated) {
+            suggestions.push(
+              '• Log into Principal if this is a private repository (Settings → Log In with GitHub)',
+            );
+          } else {
+            suggestions.push(
+              '• Verify your GitHub account has access to this repository',
+            );
+          }
+        } else if (
+          errorMsg.includes('Permission denied') ||
+          errorMsg.includes('permission')
+        ) {
           userMessage = 'Permission denied.';
           if (diagnostics.authMethod === 'SSH') {
             suggestions.push(
@@ -290,14 +336,31 @@ export function registerGitHandlers(): void {
               '3. Check if you have repository access',
             );
           } else {
-            suggestions.push(
-              '**Access denied:**',
-              '',
-              '• Verify you have access to this repository',
-              '• Check your authentication credentials',
-            );
+            // Check if user is authenticated in the app
+            const authState = AuthStateManager.getInstance().getFullState();
+            const isAppAuthenticated = authState.isAuthenticated;
+
+            if (isAppAuthenticated) {
+              suggestions.push(
+                '**Access denied:**',
+                '',
+                '• Verify you have access to this repository on GitHub',
+                '• Try logging out and back in to refresh credentials',
+              );
+            } else {
+              suggestions.push(
+                '**Access denied:**',
+                '',
+                '• This repository requires authentication',
+                '• Log into Principal (Settings → Log In with GitHub)',
+                '• Verify you have access to this repository',
+              );
+            }
           }
-        } else if (errorMsg.includes('timeout') || errorMsg.includes('timed out')) {
+        } else if (
+          errorMsg.includes('timeout') ||
+          errorMsg.includes('timed out')
+        ) {
           userMessage = 'Connection timed out.';
           suggestions.push(
             '**Network timeout occurred:**',
@@ -362,15 +425,6 @@ export function registerGitHandlers(): void {
           `[gitHandlers] Checking auth methods for ${remoteUrl} using GitRemoteService`,
         );
 
-        // Use GitRemoteService for non-blocking auth check
-        const authResult = await GitRemoteService.checkAuthMethods(remoteUrl);
-
-        const result = {
-          ssh: authResult.ssh,
-          https: authResult.https,
-          suggestions: [] as string[],
-        };
-
         // Extract service for better error messages
         let service = 'git';
         if (remoteUrl.includes('github.com')) {
@@ -381,9 +435,151 @@ export function registerGitHandlers(): void {
           service = 'bitbucket.org';
         }
 
+        // For GitHub, use API to check HTTPS access if user is authenticated
+        // This is faster and more reliable than git ls-remote
+        let githubApiResult: { available: boolean; reason?: string } | null =
+          null;
+
+        if (service === 'github.com') {
+          const authState = AuthStateManager.getInstance().getFullState();
+          const isAppAuthenticated =
+            authState.isAuthenticated && authState.token;
+
+          if (isAppAuthenticated && authState.token) {
+            // Extract owner/repo from URL (handle repo names with dots like "crm.md")
+            const match = remoteUrl.match(
+              /github\.com[:/]([^/]+)\/(.+?)(?:\.git)?$/,
+            );
+            if (match) {
+              const [, owner, repoNameClean] = match;
+
+              try {
+                const response = await fetch(
+                  `https://api.github.com/repos/${owner}/${repoNameClean}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${authState.token}`,
+                      Accept: 'application/vnd.github.v3+json',
+                    },
+                  },
+                );
+
+                if (response.ok) {
+                  githubApiResult = {
+                    available: true,
+                    reason: 'Repository is accessible via GitHub API',
+                  };
+
+                  // Configure git credentials for cloning (if not already configured)
+                  const hasGitCredentials =
+                    await GitCredentialHelper.areCredentialsConfigured();
+                  if (!hasGitCredentials) {
+                    try {
+                      await GitCredentialHelper.configureGitCredentials(
+                        authState.token,
+                      );
+                    } catch (error) {
+                      console.error(
+                        '[Git] Failed to configure git credentials:',
+                        error,
+                      );
+                    }
+                  }
+                } else if (response.status === 404) {
+                  githubApiResult = {
+                    available: false,
+                    reason: 'Repository not found or you do not have access',
+                  };
+                } else if (response.status === 403) {
+                  githubApiResult = {
+                    available: false,
+                    reason: 'Access forbidden - check your GitHub permissions',
+                  };
+                } else {
+                  githubApiResult = {
+                    available: false,
+                    reason: `GitHub API returned ${response.status}`,
+                  };
+                }
+              } catch (error) {
+                console.error('[Git] GitHub API check failed:', error);
+                // Fall through to git ls-remote check
+              }
+            }
+          }
+        }
+
+        // For GitHub with API access confirmed, check SSH keys locally instead of remote test
+        // For other services, use GitRemoteService
+        let sshResult: { available: boolean; reason?: string };
+
+        if (githubApiResult && service === 'github.com') {
+          // Check if SSH keys are configured locally
+          try {
+            const fs = await import('fs/promises');
+            const os = await import('os');
+            const path = await import('path');
+            const sshDir = path.join(os.homedir(), '.ssh');
+
+            // Check for common SSH key files
+            const keyFiles = ['id_rsa', 'id_ed25519', 'id_ecdsa'];
+            let hasKeys = false;
+
+            for (const keyFile of keyFiles) {
+              try {
+                await fs.access(path.join(sshDir, keyFile));
+                hasKeys = true;
+                break;
+              } catch {
+                // Key file doesn't exist, continue
+              }
+            }
+
+            if (hasKeys) {
+              sshResult = {
+                available: true,
+                reason: 'SSH keys configured locally',
+              };
+            } else {
+              sshResult = {
+                available: false,
+                reason: 'No SSH keys found in ~/.ssh',
+              };
+            }
+          } catch (error) {
+            console.error('[Git] Error checking SSH keys:', error);
+            sshResult = {
+              available: false,
+              reason: 'Could not check SSH configuration',
+            };
+          }
+        } else {
+          // For non-GitHub or unauthenticated, use GitRemoteService
+          const authResult = await GitRemoteService.checkAuthMethods(remoteUrl);
+          sshResult = authResult.ssh;
+
+          // Use HTTPS result from GitRemoteService if we don't have API result
+          if (!githubApiResult) {
+            githubApiResult = authResult.https;
+          }
+        }
+
+        const result = {
+          ssh: sshResult,
+          https: githubApiResult || {
+            available: false,
+            reason: 'Unable to check HTTPS access',
+          },
+          suggestions: [] as string[],
+        };
+
         // Generate helpful suggestions based on results
         if (!result.ssh.available && !result.https.available) {
-          // Neither method works - provide detailed guidance
+          // Neither method works
+          const authState = AuthStateManager.getInstance().getFullState();
+          const isAppAuthenticated =
+            authState.isAuthenticated && authState.token;
+
           const isGitHubPrivate =
             service === 'github.com' &&
             (result.https.reason?.includes('Authentication required') ||
@@ -392,27 +588,38 @@ export function registerGitHandlers(): void {
               result.ssh.reason?.includes('private'));
 
           if (isGitHubPrivate) {
-            result.suggestions.push(
-              'This appears to be a private repository that requires authentication.',
-              '',
-              'To clone this repository, you need to set up authentication:',
-              '',
-              '**Option 1: GitHub CLI (Recommended)**',
-              '1. Install GitHub CLI: brew install gh',
-              '2. Authenticate: gh auth login',
-              '3. Try cloning again',
-              '',
-              '**Option 2: Personal Access Token**',
-              '1. Go to GitHub → Settings → Developer Settings → Personal Access Tokens',
-              '2. Generate a new token with "repo" scope',
-              '3. Use the token as your password when prompted',
-              '',
-              '**Option 3: SSH Keys**',
-              '1. Generate SSH key: ssh-keygen -t ed25519 -C "your_email@example.com"',
-              '2. Add to SSH agent: ssh-add ~/.ssh/id_ed25519',
-              '3. Add public key to GitHub: Settings → SSH and GPG keys',
-              '4. Use the SSH URL instead: git@github.com:owner/repo.git',
-            );
+            if (isAppAuthenticated) {
+              // User is authenticated but auth still failed
+              // This likely means they don't have access to the repo
+              result.suggestions.push(
+                'You are logged into Principal, but cannot access this repository.',
+                '',
+                'Possible reasons:',
+                '• You do not have access to this private repository',
+                '• The repository does not exist',
+                '• Your GitHub token needs to be refreshed',
+                '',
+                'Please verify:',
+                '1. You have access to this repository on GitHub',
+                '2. The repository URL is correct',
+                '3. Try logging out and back in to refresh your credentials',
+              );
+            } else {
+              // User not authenticated - guide them to log into the app
+              result.suggestions.push(
+                'This appears to be a private repository that requires authentication.',
+                '',
+                'To clone this repository:',
+                '',
+                '**Log into Principal:**',
+                '1. Open Settings in Principal',
+                '2. Click "Log In with GitHub"',
+                '3. Complete the authentication',
+                '4. Try cloning again',
+                '',
+                'Principal will automatically configure git credentials for you.',
+              );
+            }
           } else {
             result.suggestions.push(
               'Unable to access this repository. Possible reasons:',
@@ -421,9 +628,8 @@ export function registerGitHandlers(): void {
               '• Network connectivity issues',
               '',
               'To set up authentication:',
-              '• For GitHub: Use gh auth login or a Personal Access Token',
+              '• Log into Principal (Settings → Log In with GitHub)',
               '• For SSH: Generate keys with ssh-keygen and add to your Git provider',
-              '• For HTTPS: Configure a credential helper or use a personal access token',
             );
           }
         } else if (result.ssh.available && !result.https.available) {
