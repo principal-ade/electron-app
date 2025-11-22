@@ -12,6 +12,9 @@ export type { GitSyncStatusIndicatorProps } from './GitSyncStatusIndicator';
 export { RepositoryTitlebar } from './RepositoryTitlebar';
 export type { RepositoryTitlebarProps } from './RepositoryTitlebar';
 
+export { RepositoryTitlebarSimple } from './RepositoryTitlebarSimple';
+export type { RepositoryTitlebarSimpleProps } from './RepositoryTitlebarSimple';
+
 export { StoreViewerTitlebar } from './StoreViewerTitlebar';
 export type { StoreViewerTitlebarProps } from './StoreViewerTitlebar';
 

@@ -34,6 +34,9 @@ export type RightPaneMode = 'city' | 'terminal' | 'session-detail' | 'document';
 
 // Repository-specific UI state that persists across sessions
 export interface RepositoryUIState {
+  // UI mode for this repository (classic or panel-framework)
+  uiMode?: 'classic' | 'panel-framework'; // default: 'classic'
+
   // Panel layout preferences scoped to this repository
   panelLayouts?: {
     exploration?: {

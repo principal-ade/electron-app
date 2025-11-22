@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Layout,
+  Layers,
   Key,
   ExternalLink,
   Link2,
@@ -65,6 +66,8 @@ export interface RepositoryTitlebarProps {
   hasStateDeviation?: boolean;
   onUpdateWorkspaceDefaults?: () => void;
   onResetToWorkspaceDefaults?: () => void;
+  // UI Mode toggle
+  onSwitchToPanelFramework?: () => void;
 }
 
 export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
@@ -91,6 +94,7 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
   hasStateDeviation,
   onUpdateWorkspaceDefaults,
   onResetToWorkspaceDefaults,
+  onSwitchToPanelFramework,
 }) => {
   const { theme } = useTheme();
   const [showSaveWorkspaceModal, setShowSaveWorkspaceModal] = useState(false);
@@ -456,6 +460,44 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           gap: '8px',
         }}
       >
+        {/* Panel Framework Mode Switch */}
+        {onSwitchToPanelFramework && (
+          <button
+            onClick={onSwitchToPanelFramework}
+            title="Switch to Panel Framework mode (Beta)"
+            style={{
+              WebkitAppRegion:
+                'no-drag' as React.CSSProperties['WebkitAppRegion'],
+              background: 'transparent',
+              border: `1px solid ${theme.colors.border}`,
+              color: theme.colors.textSecondary,
+              cursor: 'pointer',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s',
+              fontSize: `${theme.fontSizes[1]}px`,
+              fontWeight: theme.fontWeights.medium,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor =
+                theme.colors.backgroundTertiary;
+              e.currentTarget.style.borderColor = theme.colors.primary;
+              e.currentTarget.style.color = theme.colors.primary;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = theme.colors.border;
+              e.currentTarget.style.color = theme.colors.textSecondary;
+            }}
+          >
+            <Layers size={14} />
+            <span>Try Panel Framework</span>
+          </button>
+        )}
+
         {/* Refresh git status button - only show for local clones */}
         {hasLocalClone && (
           <button

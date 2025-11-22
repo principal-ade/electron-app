@@ -23,7 +23,9 @@ import {
 } from 'lucide-react';
 import { parseGitHubUrl } from '../../shared/utils/githubUrlParser';
 import { PackageLayer } from '@principal-ai/codebase-composition';
-import { RepositoryTitlebar } from '../components/Titlebar';
+import { RepositoryTitlebar, RepositoryTitlebarSimple } from '../components/Titlebar';
+import { RepositoryWorkspacePanelFramework } from './RepositoryWorkspacePanelFramework';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 
 import type {
   Repository,
@@ -122,6 +124,51 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
   React.memo(({ repository, onBack: _onBack, hasUpdateAvailable: _hasUpdateAvailable }) => {
     const { theme } = useTheme();
     const { registerLayer, unregisterLayer } = useHighlightLayers();
+
+    // UI Mode state - per-repository
+    const [uiMode, setUIMode] = useState<'classic' | 'panel-framework'>('classic');
+
+    // Load UI mode from repository-specific preferences
+    useEffect(() => {
+      const loadUIMode = async () => {
+        const prefs = await UserPreferencesService.getPreferences();
+        const repoFullName = repository.full_name;
+        const repoUIState = prefs?.repositoryUIStates?.[repoFullName];
+        setUIMode(repoUIState?.uiMode ?? 'classic');
+      };
+      loadUIMode();
+    }, [repository.full_name]);
+
+    // Handle UI mode changes
+    const handleSwitchToPanelFramework = async () => {
+      const prefs = await UserPreferencesService.getPreferences();
+      const repoFullName = repository.full_name;
+      await UserPreferencesService.updatePreferences({
+        repositoryUIStates: {
+          ...prefs?.repositoryUIStates,
+          [repoFullName]: {
+            ...prefs?.repositoryUIStates?.[repoFullName],
+            uiMode: 'panel-framework' as const,
+          },
+        },
+      });
+      setUIMode('panel-framework');
+    };
+
+    const handleSwitchToClassic = async () => {
+      const prefs = await UserPreferencesService.getPreferences();
+      const repoFullName = repository.full_name;
+      await UserPreferencesService.updatePreferences({
+        repositoryUIStates: {
+          ...prefs?.repositoryUIStates,
+          [repoFullName]: {
+            ...prefs?.repositoryUIStates?.[repoFullName],
+            uiMode: 'classic' as const,
+          },
+        },
+      });
+      setUIMode('classic');
+    };
 
     // Search state - TODO: Move to floating search component in bottom-left corner
     const [searchQuery] = useState<string>(''); // setSearchQuery will be used when search is implemented
@@ -2567,6 +2614,34 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
       }),
     );
 
+    // Panel Framework mode - simplified experience
+    if (uiMode === 'panel-framework') {
+      return (
+        <div
+          style={{
+            width: '100vw',
+            height: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: theme.colors.background,
+          }}
+        >
+          <RepositoryTitlebarSimple
+            repository={repository}
+            repositoryOwner={repository.owner}
+            repositoryName={repository.name}
+            selectedSource={selectedSource}
+            onShowGitChanges={() => focusPanelTab('gitChanges')}
+            onSwitchToClassic={handleSwitchToClassic}
+          />
+          <RepositoryWorkspacePanelFramework
+            repositoryPath={selectedSource?.type === 'local' ? selectedSource.location : repository.full_name}
+          />
+        </div>
+      );
+    }
+
+    // Classic mode - full featured experience
     return (
       <div
         style={{
@@ -2589,6 +2664,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           onSwitchPanels={handleSwitchPanels}
           onSwitchLeftMiddlePanels={handleSwitchLeftMiddlePanels}
           onShowGitChanges={() => focusPanelTab('gitChanges')}
+          onSwitchToPanelFramework={handleSwitchToPanelFramework}
           showSidebarControls
           sidebarCollapsed={panelCollapsedState.left ?? false}
           onToggleSidebar={() =>
