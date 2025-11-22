@@ -9,7 +9,6 @@ import {
   Star,
   Activity,
   Folder,
-  Layers,
   DoorClosed,
 } from 'lucide-react';
 import { ConfigurablePanelLayout } from '@principal-ade/panels';
