@@ -1,5 +1,6 @@
 import path from 'path';
 import { MemoryPalace } from '@principal-ai/alexandria-core-library';
+import type { StoredAnchoredNote } from '@principal-ai/alexandria-core-library';
 import { NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library/node';
 import { GitService } from '../version-control-providers/GitService';
 import type { GitInfo } from '../../shared/types/git.types';
@@ -18,7 +19,7 @@ interface NoteRequest {
   tags?: string[];
   confidence?: 'high' | 'medium' | 'low';
   type?: 'decision' | 'pattern' | 'gotcha' | 'explanation';
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   timestamp?: number;
 }
 
@@ -72,11 +73,16 @@ class RepositoryNoteHandler {
       }
     }
 
-    return this.memoryInstances.get(gitInfo.root)!;
+    const instance = this.memoryInstances.get(gitInfo.root);
+    if (!instance) {
+      console.error('[RepositoryNoteHandler] MemoryPalace instance not found after creation');
+      return null;
+    }
+    return instance;
   }
 
   private convertToRepositoryNote(
-    storedNote: any,
+    storedNote: StoredAnchoredNote,
     gitInfo: GitInfo,
   ): RepositoryNote {
     // Convert a24z StoredNote to RepositoryNote format for UI compatibility
@@ -276,7 +282,7 @@ class RepositoryNoteHandler {
   async updateNote(
     noteId: string,
     targetPath: string,
-    updates: Partial<
+    _updates: Partial<
       Pick<RepositoryNote, 'note' | 'metadata' | 'tags' | 'confidence' | 'type'>
     >,
   ): Promise<boolean> {
@@ -300,7 +306,7 @@ class RepositoryNoteHandler {
     }
   }
 
-  async getAllNotesForPath(targetPath: string): Promise<any[]> {
+  async getAllNotesForPath(targetPath: string): Promise<StoredAnchoredNote[]> {
     try {
       const memory = await this.getMemoryInstance(targetPath);
       if (!memory) {

@@ -70,7 +70,7 @@ export class AlexandriaRegistryService {
             } as AlexandriaEntry;
             return enrichedEntry;
           }
-        } catch (error) {
+        } catch {
           // If git info fails, just continue silently
         }
 
@@ -108,7 +108,7 @@ export class AlexandriaRegistryService {
           lastCommitHash: commitInfo.shortHash || commitInfo.hash,
         } as AlexandriaEntry;
       }
-    } catch (error) {
+    } catch {
       // Silently continue if git info fails
     }
 
@@ -141,7 +141,7 @@ export class AlexandriaRegistryService {
           lastCommitHash: commitInfo.shortHash || commitInfo.hash,
         } as AlexandriaEntry;
       }
-    } catch (error) {
+    } catch {
       // Silently continue if git info fails
     }
 
@@ -373,6 +373,7 @@ export class AlexandriaRegistryService {
 
       // Access the private projectRegistry field via reflection
       // This is a workaround until AlexandriaOutpostManager exposes removal
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const registryField = (this.outpostManager as any).projectRegistry;
       if (!registryField || typeof registryField.removeProject !== 'function') {
         console.error('Cannot access project registry for removal');
