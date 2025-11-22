@@ -117,9 +117,21 @@ export const RepositoryWorkspacePanelFramework: React.FC<
     [repository.owner, repository.name],
   );
 
+  // Convert Repository to RepositoryMetadata for panel framework
+  const repositoryMetadata = useMemo(
+    () => ({
+      id: `${repository.owner}/${repository.name}`,
+      name: repository.name,
+      path: repositoryPath,
+      owner: repository.owner,
+    }),
+    [repository.owner, repository.name, repositoryPath],
+  );
+
   return (
     <RepositoryPanelProvider
       repositoryPath={repositoryPath}
+      repository={repositoryMetadata}
       terminalContext={terminalContext}
     >
       <RepositoryWorkspacePanelFrameworkInner />

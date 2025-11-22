@@ -2635,6 +2635,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             onSwitchToClassic={handleSwitchToClassic}
           />
           <RepositoryWorkspacePanelFramework
+            key={`panel-framework-${repoIdentifier}`}
             repositoryPath={selectedSource?.type === 'local' ? selectedSource.location : repoIdentifier}
             repository={repository}
           />

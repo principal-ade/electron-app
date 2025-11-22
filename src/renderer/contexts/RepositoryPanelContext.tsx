@@ -13,6 +13,7 @@ import type {
   PanelActions,
   PanelEvent,
   PanelEventEmitter,
+  RepositoryMetadata,
 } from '@principal-ade/panel-framework-core';
 import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
@@ -32,6 +33,7 @@ interface RepositoryPanelActions extends PanelActions {
 // Extended context for repository panels
 interface RepositoryPanelContextValue extends PanelContextValue {
   repositoryPath: string;
+  repository: RepositoryMetadata | null; // Required by terminal panel
   terminalSessions?: TerminalInfo[];
   loading: boolean;
 }
@@ -48,12 +50,14 @@ const RepositoryPanelContext = createContext<RepositoryPanelProviderValue | null
 interface RepositoryPanelProviderProps {
   children: ReactNode;
   repositoryPath: string;
+  repository: RepositoryMetadata; // Required - terminal panel needs this
   terminalContext: string; // Required for terminal session identification
 }
 
 export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = ({
   children,
   repositoryPath,
+  repository,
   terminalContext,
 }) => {
   // Initialize event bus
@@ -129,11 +133,22 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
       // Terminal actions
       createTerminalSession: async (options?: { cwd?: string }) => {
         const cwd = options?.cwd || repositoryPath;
+
+        // Check existing sessions before creating
+        const existingSessions = await TerminalService.list();
+        const existingSession = existingSessions.find(s => s.context === terminalContext);
+
         console.info('[RepositoryPanelProvider] createTerminalSession called with:', {
           optionsCwd: options?.cwd,
           repositoryPath,
           finalCwd: cwd,
           context: terminalContext,
+          existingSession: existingSession ? {
+            id: existingSession.id,
+            directory: existingSession.directory,
+            context: existingSession.context,
+          } : null,
+          allSessions: existingSessions.map(s => ({ id: s.id, directory: s.directory, context: s.context })),
         });
         const sessionId = await TerminalService.getOrCreate(cwd, terminalContext);
 
@@ -186,11 +201,28 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
   // Create context value
   const context: RepositoryPanelContextValue = useMemo(
     () => ({
+      // Repository-specific properties
       repositoryPath,
+      repository,
       terminalSessions,
       loading,
+
+      // PanelContextValue required properties
+      currentScope: {
+        type: 'repository' as const,
+        repository,
+      },
+      slices: new Map(), // No data slices in this simple implementation
+      getSlice: () => undefined,
+      getWorkspaceSlice: () => undefined,
+      getRepositorySlice: () => undefined,
+      hasSlice: () => false,
+      isSliceLoading: () => false,
+      refresh: async () => {
+        // No-op for now
+      },
     }),
-    [repositoryPath, terminalSessions, loading],
+    [repositoryPath, repository, terminalSessions, loading],
   );
 
   // Provider value
