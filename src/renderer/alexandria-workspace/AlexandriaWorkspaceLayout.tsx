@@ -284,7 +284,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
         path: workspace.suggestedClonePath || '/workspace',
         suggestedClonePath: workspace.suggestedClonePath,
         description: workspace.description,
-        color: workspace.color,
+        theme: workspace.theme,
         icon: workspace.icon,
         isDefault: workspace.isDefault,
         createdAt: workspace.createdAt,

@@ -6,10 +6,16 @@ import { getThemeByName } from '../themes/predefinedThemes';
 
 interface CustomThemeProviderProps {
   children: React.ReactNode;
+  /**
+   * Optional workspace theme name to override user's global theme preference.
+   * Used in workspace-specific windows to apply the workspace's theme.
+   */
+  workspaceThemeName?: string;
 }
 
 export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
   children,
+  workspaceThemeName,
 }) => {
   const [selectedTheme, setSelectedTheme] = useState<Theme | undefined>(
     undefined,
@@ -21,7 +27,8 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
     const loadInitialTheme = async () => {
       await ThemeService.loadPreferences();
 
-      const themeName = ThemeService.getCurrentThemeName();
+      // Use workspace theme if provided, otherwise use user's global preference
+      const themeName = workspaceThemeName || ThemeService.getCurrentThemeName();
       const theme = await ThemeService.getActiveTheme(themeName);
 
       if (theme) {
@@ -29,10 +36,16 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
       }
       setIsLoading(false);
 
-      console.info('[CustomThemeProvider] Initial theme loaded:', themeName);
+      console.info('[CustomThemeProvider] Initial theme loaded:', themeName, workspaceThemeName ? '(workspace override)' : '(user preference)');
     };
 
     loadInitialTheme();
+
+    // Only subscribe to theme changes if not using workspace override
+    // Workspace windows should maintain their theme regardless of global changes
+    if (workspaceThemeName) {
+      return undefined;
+    }
 
     // Subscribe to theme changes for live switching
     const unsubscribe = ThemeService.onThemeChange(
@@ -48,7 +61,7 @@ export const CustomThemeProvider: React.FC<CustomThemeProviderProps> = ({
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [workspaceThemeName]);
 
   // Show loading or use default theme while loading
   if (isLoading || !selectedTheme) {

@@ -102,3 +102,23 @@ export const getThemeInfo = (name: string) => {
   }
   return undefined;
 };
+
+/**
+ * Helper function to get the primary color from a workspace theme name.
+ * Falls back to the provided fallback color if theme is not found.
+ *
+ * @param themeName - The theme name stored in workspace.theme (e.g., 'principalAI', 'regal')
+ * @param fallbackColor - Color to use if theme is not found
+ * @returns The primary color from the theme or the fallback color
+ */
+export const getWorkspaceThemeColor = (
+  themeName: string | undefined,
+  fallbackColor: string,
+): string => {
+  if (!themeName) {
+    return fallbackColor;
+  }
+
+  const theme = getThemeByName(themeName);
+  return theme?.colors.primary || fallbackColor;
+};

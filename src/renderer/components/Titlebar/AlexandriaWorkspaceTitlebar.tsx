@@ -33,7 +33,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
         WebkitAppRegion: 'drag',
       }}
     >
-      {/* Left: Workspace name and color indicator */}
+      {/* Left: Workspace name */}
       <div
         style={{
           marginLeft: '80px', // Position after traffic lights on macOS
@@ -44,18 +44,6 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
-        {/* Color indicator */}
-        {workspace.color && (
-          <div
-            style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '4px',
-              backgroundColor: workspace.color,
-            }}
-          />
-        )}
-
         {/* Workspace name */}
         <span
           style={{

@@ -22,6 +22,7 @@ import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.t
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
+import { getWorkspaceThemeColor } from '../../themes/predefinedThemes';
 
 // Add spin animation styles to document if not already present
 if (typeof document !== 'undefined') {
@@ -499,7 +500,7 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
                               width: '8px',
                               height: '8px',
                               borderRadius: '2px',
-                              backgroundColor: workspace.color || theme.colors.primary,
+                              backgroundColor: getWorkspaceThemeColor(workspace.theme, theme.colors.primary),
                               flexShrink: 0,
                             }}
                           />

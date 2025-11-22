@@ -4,6 +4,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { X, Trash2, AlertTriangle, FileX, Database, Briefcase } from 'lucide-react';
 import type { AlexandriaEntry, Workspace } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
+import { getWorkspaceThemeColor } from '../../themes/predefinedThemes';
 
 interface DeleteAlexandriaEntryModalProps {
   isOpen: boolean;
@@ -278,28 +279,29 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
                   gap: '6px',
                 }}
               >
-                {workspaces.map((workspace) => (
-                  <div
-                    key={workspace.id}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '4px 10px',
-                      borderRadius: '4px',
-                      backgroundColor: workspace.color
-                        ? `${workspace.color}20`
-                        : theme.colors.backgroundTertiary,
-                      border: `1px solid ${workspace.color || theme.colors.border}40`,
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      color: theme.colors.text,
-                    }}
-                  >
-                    {workspace.icon && <span style={{ fontSize: '14px' }}>{workspace.icon}</span>}
-                    {workspace.name}
-                  </div>
-                ))}
+                {workspaces.map((workspace) => {
+                  const workspaceColor = getWorkspaceThemeColor(workspace.theme, theme.colors.primary);
+                  return (
+                    <div
+                      key={workspace.id}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 10px',
+                        borderRadius: '4px',
+                        backgroundColor: `${workspaceColor}20`,
+                        border: `1px solid ${workspaceColor}40`,
+                        fontSize: '12px',
+                        fontWeight: 500,
+                        color: theme.colors.text,
+                      }}
+                    >
+                      {workspace.icon && <span style={{ fontSize: '14px' }}>{workspace.icon}</span>}
+                      {workspace.name}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ) : (

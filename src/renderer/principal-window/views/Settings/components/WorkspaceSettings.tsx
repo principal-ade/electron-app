@@ -4,6 +4,7 @@ import { FolderOpen, Trash2, Star, Edit2, Check, X } from 'lucide-react';
 import { WorkspaceService } from '../../../../main-process-api/WorkspaceService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
+import { predefinedThemes, getWorkspaceThemeColor } from '../../../../themes/predefinedThemes';
 
 export const WorkspaceSettings: React.FC = () => {
   const { theme } = useTheme();
@@ -16,7 +17,7 @@ export const WorkspaceSettings: React.FC = () => {
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formPath, setFormPath] = useState('');
-  const [formColor, setFormColor] = useState('#3b82f6');
+  const [formTheme, setFormTheme] = useState('principalAI');
 
   // Load workspaces
   useEffect(() => {
@@ -73,7 +74,7 @@ export const WorkspaceSettings: React.FC = () => {
       await WorkspaceService.updateWorkspace(id, {
         name: formName,
         description: formDescription || undefined,
-        color: formColor,
+        theme: formTheme,
         suggestedClonePath: formPath || undefined,
       });
 
@@ -81,7 +82,7 @@ export const WorkspaceSettings: React.FC = () => {
       setFormName('');
       setFormDescription('');
       setFormPath('');
-      setFormColor('#3b82f6');
+      setFormTheme('principalAI');
     } catch (error) {
       console.error('[WorkspaceSettings] Error updating workspace:', error);
       alert('Failed to update workspace');
@@ -115,7 +116,7 @@ export const WorkspaceSettings: React.FC = () => {
     setFormName(workspace.name);
     setFormDescription(workspace.description || '');
     setFormPath(workspace.suggestedClonePath || '');
-    setFormColor(workspace.color || '#3b82f6');
+    setFormTheme(workspace.theme || 'principalAI');
   };
 
   const cancelEditing = () => {
@@ -123,7 +124,7 @@ export const WorkspaceSettings: React.FC = () => {
     setFormName('');
     setFormDescription('');
     setFormPath('');
-    setFormColor('#3b82f6');
+    setFormTheme('principalAI');
   };
 
   if (loading) {
@@ -207,25 +208,33 @@ export const WorkspaceSettings: React.FC = () => {
             />
           </div>
 
-          {/* Color */}
+          {/* Theme */}
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '6px', color: theme.colors.text }}>
-              Color
+              Theme
             </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <input
-                type="color"
-                value={formColor}
-                onChange={(e) => setFormColor(e.target.value)}
-                style={{
-                  width: '60px',
-                  height: '36px',
-                  borderRadius: '6px',
-                  border: `1px solid ${theme.colors.border}`,
-                  cursor: 'pointer',
-                }}
-              />
-              <span style={{ fontSize: '14px', color: theme.colors.textSecondary }}>{formColor}</span>
+            <select
+              value={formTheme}
+              onChange={(e) => setFormTheme(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '6px',
+                border: `1px solid ${theme.colors.border}`,
+                backgroundColor: theme.colors.background,
+                color: theme.colors.text,
+                fontSize: '14px',
+                cursor: 'pointer',
+              }}
+            >
+              {Object.entries(predefinedThemes).map(([key, themeInfo]) => (
+                <option key={key} value={key}>
+                  {themeInfo.name}
+                </option>
+              ))}
+            </select>
+            <div style={{ marginTop: '6px', fontSize: '12px', color: theme.colors.textSecondary }}>
+              {predefinedThemes[formTheme]?.description}
             </div>
           </div>
 
@@ -348,7 +357,7 @@ export const WorkspaceSettings: React.FC = () => {
                   width: '4px',
                   height: '100%',
                   borderRadius: '2px',
-                  backgroundColor: workspace.color || theme.colors.primary,
+                  backgroundColor: getWorkspaceThemeColor(workspace.theme, theme.colors.primary),
                   flexShrink: 0,
                 }}
               />

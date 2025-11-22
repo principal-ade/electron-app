@@ -180,8 +180,55 @@ const AlexandriaWorkspaceContent: React.FC = () => {
  * and its repository members.
  */
 export const AlexandriaWorkspaceApp: React.FC = () => {
+  const [workspaceTheme, setWorkspaceTheme] = useState<string | undefined>(undefined);
+  const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
+
+  useEffect(() => {
+    // Get workspace ID from URL and load its theme
+    const urlParams = new URLSearchParams(window.location.search);
+    const workspaceId = urlParams.get('workspaceId');
+
+    if (!workspaceId) {
+      setIsLoadingWorkspace(false);
+      return;
+    }
+
+    const loadWorkspaceTheme = async () => {
+      try {
+        const workspaces = await WorkspaceService.getWorkspaces();
+        const workspace = workspaces.find((w) => w.id === workspaceId);
+
+        if (workspace?.theme) {
+          setWorkspaceTheme(workspace.theme);
+        }
+      } catch (error) {
+        console.error('[AlexandriaWorkspaceApp] Error loading workspace theme:', error);
+      } finally {
+        setIsLoadingWorkspace(false);
+      }
+    };
+
+    loadWorkspaceTheme();
+
+    // Subscribe to workspace changes to update theme if workspace is edited
+    const unsubscribe = WorkspaceService.onWorkspaceChange((event) => {
+      if (event.type === 'updated' && event.workspaceId === workspaceId) {
+        loadWorkspaceTheme();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Show minimal loading state while determining workspace theme
+  if (isLoadingWorkspace) {
+    return null; // Or a minimal loading spinner
+  }
+
   return (
-    <CustomThemeProvider>
+    <CustomThemeProvider workspaceThemeName={workspaceTheme}>
       <GlobalFeedbackProvider>
         <AlexandriaWorkspaceContent />
       </GlobalFeedbackProvider>

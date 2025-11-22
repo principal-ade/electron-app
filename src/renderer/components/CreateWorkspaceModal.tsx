@@ -4,6 +4,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { X, Check, FolderOpen } from 'lucide-react';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
+import { predefinedThemes } from '../themes/predefinedThemes';
 
 interface CreateWorkspaceModalProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   const [formName, setFormName] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formPath, setFormPath] = useState('');
-  const [formColor, setFormColor] = useState('#3b82f6');
+  const [formTheme, setFormTheme] = useState('principalAI');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,7 +31,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
       setFormName('');
       setFormDescription('');
       setFormPath('');
-      setFormColor('#3b82f6');
+      setFormTheme('principalAI');
       setError(null);
       onClose();
     }
@@ -80,7 +81,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
       await WorkspaceService.createWorkspace({
         name: formName,
         description: formDescription || undefined,
-        color: formColor,
+        theme: formTheme,
         suggestedClonePath: formPath || undefined,
         icon: undefined,
       });
@@ -89,7 +90,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
       setFormName('');
       setFormDescription('');
       setFormPath('');
-      setFormColor('#3b82f6');
+      setFormTheme('principalAI');
 
       onSuccess?.();
       handleClose();
@@ -268,10 +269,10 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
               />
             </div>
 
-            {/* Color */}
+            {/* Theme */}
             <div style={{ marginBottom: '20px' }}>
               <label
-                htmlFor="workspace-color"
+                htmlFor="workspace-theme"
                 style={{
                   display: 'block',
                   fontSize: '14px',
@@ -281,33 +282,42 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
                   fontFamily: theme.fonts.body,
                 }}
               >
-                Color
+                Theme
               </label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <input
-                  id="workspace-color"
-                  type="color"
-                  value={formColor}
-                  onChange={(e) => setFormColor(e.target.value)}
-                  disabled={isSubmitting}
-                  style={{
-                    width: '60px',
-                    height: '40px',
-                    borderRadius: '6px',
-                    border: `1px solid ${theme.colors.border}`,
-                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                    opacity: isSubmitting ? 0.6 : 1,
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: '14px',
-                    color: theme.colors.textSecondary,
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  {formColor}
-                </span>
+              <select
+                id="workspace-theme"
+                value={formTheme}
+                onChange={(e) => setFormTheme(e.target.value)}
+                disabled={isSubmitting}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  border: `1px solid ${theme.colors.border}`,
+                  backgroundColor: theme.colors.backgroundSecondary,
+                  color: theme.colors.text,
+                  fontSize: '14px',
+                  fontFamily: theme.fonts.body,
+                  outline: 'none',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  opacity: isSubmitting ? 0.6 : 1,
+                }}
+              >
+                {Object.entries(predefinedThemes).map(([key, themeInfo]) => (
+                  <option key={key} value={key}>
+                    {themeInfo.name}
+                  </option>
+                ))}
+              </select>
+              <div
+                style={{
+                  marginTop: '8px',
+                  fontSize: '13px',
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.fonts.body,
+                }}
+              >
+                {predefinedThemes[formTheme]?.description}
               </div>
             </div>
 

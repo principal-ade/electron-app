@@ -5,6 +5,7 @@ import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { WindowService } from '../../main-process-api/WindowService';
 import { CreateWorkspaceModal } from '../../components/CreateWorkspaceModal';
+import { getWorkspaceThemeColor } from '../../themes/predefinedThemes';
 
 interface WorkspacesListPanelProps {
   selectedWorkspaceId?: string | null;
@@ -429,7 +430,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
     fontFamily: theme.fonts.body,
   };
 
-  const iconColor = workspace.color || theme.colors.primary;
+  const iconColor = getWorkspaceThemeColor(workspace.theme, theme.colors.primary);
 
   return (
     <div
