@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
-import { MemoryPalace, NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library';
+import { MemoryPalace } from '@principal-ai/alexandria-core-library';
+import { NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library/node';
 import type { ValidatedRepositoryPath } from '@principal-ai/alexandria-core-library';
 import {
   PalaceTasksAPIEvent,

@@ -1,7 +1,8 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { Server } from 'http';
 import { EventEmitter } from 'events';
-import { MemoryPalace, NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library';
+import { MemoryPalace } from '@principal-ai/alexandria-core-library';
+import { NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library/node';
 import type {
   CreateTaskInput,
   ValidatedRepositoryPath,

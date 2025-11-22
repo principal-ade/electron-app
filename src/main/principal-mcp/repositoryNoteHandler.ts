@@ -1,5 +1,6 @@
 import path from 'path';
-import { MemoryPalace, NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library';
+import { MemoryPalace } from '@principal-ai/alexandria-core-library';
+import { NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library/node';
 import { GitService } from '../version-control-providers/GitService';
 import type { GitInfo } from '../../shared/types/git.types';
 import { RepositoryNote } from '../../shared/main-process-api-interfaces/RepositoryNotesAPI';

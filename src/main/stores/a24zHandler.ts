@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
-import { MemoryPalace, NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library';
+import { MemoryPalace } from '@principal-ai/alexandria-core-library';
+import { NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library/node';
 import { A24zAPIEvents } from '../../window/main-process-api-implementations/a24zApi';
 
 export class A24zHandler {

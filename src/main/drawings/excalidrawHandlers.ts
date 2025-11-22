@@ -7,7 +7,8 @@ import {
   ExcalidrawDiagram,
   ExcalidrawDiagramData,
 } from '../../shared/main-process-api-interfaces/ExcalidrawAPI';
-import { MemoryPalace, NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library';
+import { MemoryPalace } from '@principal-ai/alexandria-core-library';
+import { NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library/node';
 
 interface DiagramIndexEntry {
   id: string;

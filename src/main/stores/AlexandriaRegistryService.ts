@@ -5,9 +5,9 @@
 
 import {
   AlexandriaOutpostManager,
-  NodeFileSystemAdapter,
   MemoryPalace,
 } from '@principal-ai/alexandria-core-library';
+import { NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library/node';
 import type { AlexandriaEntry, CodebaseView, Workspace, WorkspaceMembership } from '@principal-ai/alexandria-core-library';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
