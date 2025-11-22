@@ -5,7 +5,7 @@ import {
   type PanelDefinitionWithContent,
 } from '@principal-ade/panels';
 import '@principal-ade/panels/panels.css';
-import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
+import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
 import { panels as terminalPanels } from '@industry-theme/terminal-panel';
 import '@industry-theme/terminal-panel/dist/panels.bundle.css';
 import type { Repository } from '../../shared/types/repository.types';
@@ -16,11 +16,11 @@ export interface RepositoryWorkspacePanelFrameworkProps {
 }
 
 /**
- * Inner component that uses PanelProvider context
+ * Inner component that uses RepositoryPanelProvider context
  */
 const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
   const { theme } = useTheme();
-  const { context, actions, events } = usePanelProvider();
+  const { context, actions, events } = useRepositoryPanelProvider();
 
   // Get terminal panel component from the panel framework package
   const TerminalPanelComponent = terminalPanels[0]?.component;
@@ -109,20 +109,20 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
 export const RepositoryWorkspacePanelFramework: React.FC<
   RepositoryWorkspacePanelFrameworkProps
 > = ({ repositoryPath, repository }) => {
-  // Create a workspace object for PanelProvider
-  // PanelProvider expects a workspace with id, name, and path
-  const workspace = useMemo(
-    () => ({
-      id: `repo-${repository.owner}-${repository.name}`,
-      name: repository.name,
-      path: repositoryPath,
-    }),
-    [repository.owner, repository.name, repositoryPath],
+  // Use the same terminal context format as legacy MultiTerminalPanel
+  // Legacy uses: terminal:${owner}/${name}
+  // This ensures terminal sessions are shared when switching between classic and panel framework modes
+  const terminalContext = useMemo(
+    () => `terminal:${repository.owner}/${repository.name}`,
+    [repository.owner, repository.name],
   );
 
   return (
-    <PanelProvider workspace={workspace}>
+    <RepositoryPanelProvider
+      repositoryPath={repositoryPath}
+      terminalContext={terminalContext}
+    >
       <RepositoryWorkspacePanelFrameworkInner />
-    </PanelProvider>
+    </RepositoryPanelProvider>
   );
 };

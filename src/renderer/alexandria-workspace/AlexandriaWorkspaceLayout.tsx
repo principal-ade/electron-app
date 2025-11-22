@@ -293,6 +293,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
       }}
       repository={selectedRepository}
       theme={theme}
+      terminalContext={`alexandria-workspace-${workspace.id}`}
     >
       <AlexandriaWorkspaceLayoutContent
         onRepositorySelected={setSelectedRepository}

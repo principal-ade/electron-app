@@ -92,6 +92,7 @@ interface PanelProviderProps {
   workspace: WorkspaceMetadata;
   repository?: RepositoryMetadata;
   theme?: Theme;
+  terminalContext?: string; // Optional terminal context for session identification (no default)
 }
 
 export const PanelProvider: React.FC<PanelProviderProps> = ({
@@ -99,6 +100,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   workspace,
   repository,
   theme: _theme,
+  terminalContext,
 }) => {
   // Initialize event bus
   const events = useMemo(() => new PanelEventBus(), []);
@@ -399,18 +401,21 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
       // Terminal actions
       createTerminalSession: async (options?: { cwd?: string }) => {
+        if (!terminalContext) {
+          throw new Error(
+            'terminalContext is required in PanelProvider to create terminal sessions. ' +
+            'Please provide a terminalContext prop to PanelProvider.'
+          );
+        }
         const cwd = options?.cwd || workspace.path;
-        // Use workspace-specific context to ensure each workspace has its own terminal
-        // but reuses the terminal when the same workspace window is reopened
-        const context = `alexandria-workspace-${workspace.id}`;
         console.info('[PanelContext] createTerminalSession called with:', {
           optionsCwd: options?.cwd,
           workspacePath: workspace.path,
           finalCwd: cwd,
           repository: repository?.name,
-          context
+          context: terminalContext
         });
-        const sessionId = await TerminalService.getOrCreate(cwd, context);
+        const sessionId = await TerminalService.getOrCreate(cwd, terminalContext);
 
         // Subscribe to this terminal's data channel and forward to panel event bus
         // Only subscribe if we haven't already subscribed to this session
