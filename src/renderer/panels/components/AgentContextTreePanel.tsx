@@ -25,7 +25,6 @@ export interface AgentContextTreePanelProps {
 export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
   repositoryPath,
   onFileSelect,
-  selectedFile,
 }) => {
   const { theme } = useTheme();
   const [sources, setSources] = useState<LoadedFileTreeSource[]>([]);
@@ -321,7 +320,6 @@ export const AgentContextTreePanel: React.FC<AgentContextTreePanelProps> = ({
           sources={sources}
           theme={theme}
           onFileSelect={handleFileSelect}
-          selectedFile={selectedFile}
           showHeader={false}
           showFilters={false}
           showViewModeToggle={true}

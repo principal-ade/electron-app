@@ -87,7 +87,7 @@ export const FileTreeTab: React.FC<FileTreeTabProps> = ({
         onContextMenu={onContextMenu}
         selectedFile={selectedFile}
         defaultOpen={false}
-        padding="16px"
+        horizontalNodePadding="16px"
       />
     </div>
   );

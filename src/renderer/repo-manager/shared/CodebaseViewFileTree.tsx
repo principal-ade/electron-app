@@ -114,7 +114,7 @@ export const CodebaseViewFileTree: React.FC<CodebaseViewFileTreeProps> = ({
       selectedFile={selectedFile}
       openByDefault={defaultOpen}
       transparentBackground={true}
-      padding={padding}
+      horizontalNodePadding={padding}
       autoHeight={autoHeight}
     />
   );

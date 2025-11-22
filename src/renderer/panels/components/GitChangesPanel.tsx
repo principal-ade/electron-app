@@ -377,7 +377,7 @@ export const GitChangesPanel: React.FC<GitChangesPanelProps> = ({
                   onContextMenu={handleContextMenu}
                   selectedFile={selectedFile}
                   transparentBackground={true}
-                  padding="16px"
+                  horizontalNodePadding="16px"
                   openByDefault={!showFullTree}
                 />
               )
