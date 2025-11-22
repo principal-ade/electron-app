@@ -10,6 +10,8 @@ import {
   Cloud,
   Layers,
   Check,
+  Loader2,
+  Focus,
 } from 'lucide-react';
 
 import type { GitHubRepository } from '../../../shared/main-process-api-interfaces/GitHubAPI';
@@ -20,6 +22,22 @@ import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.t
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import type { Workspace } from '@a24z/core-library';
+
+// Add spin animation styles to document if not already present
+if (typeof document !== 'undefined') {
+  const styleId = 'github-repository-card-animations';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
 
 interface GitHubRepositoryCardProps {
   repository: GitHubRepository;
@@ -40,6 +58,7 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
   const [showWorkspaceDropdown, setShowWorkspaceDropdown] = useState(false);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [repositoryWorkspaces, setRepositoryWorkspaces] = useState<Set<string>>(new Set());
+  const [windowState, setWindowState] = useState<'closed' | 'opening' | 'ready'>('closed');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const badgeColor = isStarred
@@ -61,10 +80,12 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
 
     if (localRepo) {
       // Repository exists locally - open dashboard
+      setWindowState('opening');
       try {
         await WindowService.openRepositoryDashboard(localRepo.repository);
       } catch (error) {
         console.error('Error opening repository dashboard:', error);
+        setWindowState('closed');
       }
     } else {
       // Repository not cloned - trigger clone
@@ -133,6 +154,47 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
       console.error('Error updating workspace membership:', error);
     }
   };
+
+  // Subscribe to repository window state changes
+  useEffect(() => {
+    if (!localRepo) {
+      setWindowState('closed');
+      return;
+    }
+
+    // Initial check
+    const checkWindowStatus = async () => {
+      const isOpen = await WindowService.isRepositoryWindowOpen(localRepo.repository);
+      setWindowState(isOpen ? 'ready' : 'closed');
+    };
+
+    checkWindowStatus();
+
+    // Listen for window state changes
+    WindowService.onRepositoryWindowsChanged((repoWindows) => {
+      const entry = localRepo.repository;
+      let owner = entry.github?.owner;
+      let repoName = entry.name;
+      let remoteUrl = entry.remoteUrl;
+
+      if (!owner && entry.name.includes('/')) {
+        const parts = entry.name.split('/');
+        owner = parts[0];
+        repoName = parts[1];
+      }
+
+      if (!owner) {
+        owner = 'unknown';
+      }
+
+      if (!remoteUrl) {
+        remoteUrl = `https://github.com/${owner}/${repoName}`;
+      }
+
+      const repoWindow = repoWindows.find((w) => w.remoteUrl === remoteUrl);
+      setWindowState(repoWindow ? repoWindow.state : 'closed');
+    });
+  }, [localRepo]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -268,7 +330,16 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
         <button
           type="button"
           onClick={handleOpenOrClone}
-          title={localRepo ? 'Open locally' : 'Clone repository'}
+          title={
+            localRepo
+              ? windowState === 'ready'
+                ? 'Focus window'
+                : windowState === 'opening'
+                  ? 'Window is opening...'
+                  : 'Open locally'
+              : 'Clone repository'
+          }
+          disabled={windowState === 'opening'}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -283,14 +354,17 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
             color: localRepo ? badgeColor : theme.colors.text,
             fontSize: `${theme.fontSizes[0]}px`,
             fontWeight: theme.fontWeights.medium,
-            cursor: 'pointer',
+            cursor: windowState === 'opening' ? 'wait' : 'pointer',
+            opacity: windowState === 'opening' ? 0.6 : 1,
             transition: 'all 0.15s ease',
           }}
           onMouseEnter={(event) => {
-            event.currentTarget.style.backgroundColor = localRepo
-              ? `${badgeColor}25`
-              : theme.colors.backgroundTertiary ||
-                theme.colors.backgroundSecondary;
+            if (windowState !== 'opening') {
+              event.currentTarget.style.backgroundColor = localRepo
+                ? `${badgeColor}25`
+                : theme.colors.backgroundTertiary ||
+                  theme.colors.backgroundSecondary;
+            }
           }}
           onMouseLeave={(event) => {
             event.currentTarget.style.backgroundColor = localRepo
@@ -298,8 +372,24 @@ export const GitHubRepositoryCard: React.FC<GitHubRepositoryCardProps> = ({
               : theme.colors.background;
           }}
         >
-          {localRepo ? <FolderOpen size={12} /> : <Download size={12} />}
-          {localRepo ? 'Open' : 'Clone'}
+          {localRepo ? (
+            windowState === 'ready' ? (
+              <Focus size={12} />
+            ) : windowState === 'opening' ? (
+              <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+            ) : (
+              <FolderOpen size={12} />
+            )
+          ) : (
+            <Download size={12} />
+          )}
+          {localRepo
+            ? windowState === 'ready'
+              ? 'Focus'
+              : windowState === 'opening'
+                ? 'Opening...'
+                : 'Open'
+            : 'Clone'}
         </button>
 
         {/* Add to Workspace button - only show for cloned repos */}

@@ -149,10 +149,12 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
 
   const handleOpenLocally = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    setWindowState('opening');
     try {
       await WindowService.openRepositoryDashboard(entry);
     } catch (error) {
       console.error('Error opening repository dashboard:', error);
+      setWindowState('closed');
     }
   };
 
