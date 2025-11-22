@@ -11,7 +11,7 @@ import type {
 } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
 import { AlexandriaDocsAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 export class AlexandriaDocsApiEventHandler implements AlexandriaDocsAPI {
   private registryService: AlexandriaRegistryService;

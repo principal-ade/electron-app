@@ -1,11 +1,11 @@
-// A24z note structure (from @a24z/core-library)
+// A24z note structure (from @principal-ai/alexandria-core-library)
 export interface A24zNote {
   id: string;
   note: string;
   anchors?: string[];
   tags?: string[];
   type?: string;
-  metadata?: Record<string, unknown>; // Flexible metadata from @a24z/core-library
+  metadata?: Record<string, unknown>; // Flexible metadata from @principal-ai/alexandria-core-library
   timestamp?: number;
   [key: string]: unknown; // Allow additional properties from A24z library
 }

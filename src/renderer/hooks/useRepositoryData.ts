@@ -8,7 +8,7 @@ import {
   RepositoryDataCache,
   type RepositoryCacheData,
 } from '../services/RepositoryDataCache';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { EnhancedAlexandriaEntry } from '../../shared/types/repository.types';
 
 /**

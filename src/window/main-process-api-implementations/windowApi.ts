@@ -11,7 +11,7 @@ import type {
   OpenRemoteFilesRequest,
   RepositoryWindowState,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { WindowEvent } from '../../shared/ipc-events/WindowEvents';
 
 /**

@@ -6,7 +6,7 @@ import { ipcMain, BrowserWindow } from 'electron';
 import type { AlexandriaAPI } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { AlexandriaAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { RepositoryRegistrationManager } from '@principal-ai/repository-monitoring-server';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 import type { WorkspaceChangeEventPayload } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';

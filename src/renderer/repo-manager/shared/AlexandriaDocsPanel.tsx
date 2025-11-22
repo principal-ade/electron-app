@@ -11,7 +11,7 @@ import {
   Eye,
   Target,
 } from 'lucide-react';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { GitStatus } from '../../../shared/types/repository.types';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { AlexandriaDocsService } from '../../main-process-api/AlexandriaDocsService';

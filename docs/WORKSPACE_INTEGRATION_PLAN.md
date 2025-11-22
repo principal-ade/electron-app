@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the plan to integrate the Multi-Workspace Membership feature from `@a24z/core-library` v0.1.32 into the Electron app.
+This document outlines the plan to integrate the Multi-Workspace Membership feature from `@principal-ai/alexandria-core-library` v0.1.32 into the Electron app.
 
 **Status**: Core library ✅ Complete | Electron app integration 🚧 In Progress
 
@@ -53,8 +53,8 @@ The integration follows the existing 4-layer IPC architecture:
 **File**: `src/shared/main-process-api-interfaces/WorkspaceAPI.ts` (NEW)
 
 ```typescript
-import type { Workspace, WorkspaceMembership } from '@a24z/core-library';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { Workspace, WorkspaceMembership } from '@principal-ai/alexandria-core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 export enum WorkspaceAPIEvent {
   // Workspace CRUD
@@ -131,7 +131,7 @@ export interface WorkspaceAPI {
 
 **Checklist**:
 - [ ] Create `src/shared/main-process-api-interfaces/WorkspaceAPI.ts`
-- [ ] Export types from `@a24z/core-library`
+- [ ] Export types from `@principal-ai/alexandria-core-library`
 - [ ] Define WorkspaceAPIEvent enum
 - [ ] Define WorkspaceAPI interface
 
@@ -221,7 +221,7 @@ async setDefaultWorkspace(workspaceId: string): Promise<void> {
 ```
 
 **Checklist**:
-- [ ] Import `Workspace`, `WorkspaceMembership` from `@a24z/core-library`
+- [ ] Import `Workspace`, `WorkspaceMembership` from `@principal-ai/alexandria-core-library`
 - [ ] Add workspace CRUD methods
 - [ ] Add membership management methods
 - [ ] Add query methods
@@ -241,7 +241,7 @@ import { ipcMain, BrowserWindow } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
 import { WorkspaceAPIEvent } from '../../shared/main-process-api-interfaces/WorkspaceAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
-import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@a24z/core-library';
+import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 export class WorkspaceApiEventHandler {
   private service: AlexandriaRegistryService;
@@ -462,7 +462,7 @@ new WorkspaceApiEventHandler();
 
 ```typescript
 import { ipcRenderer, IpcRendererEvent } from 'electron';
-import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@a24z/core-library';
+import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import {
   WorkspaceAPIEvent,
   type WorkspaceAPI,
@@ -609,7 +609,7 @@ interface MainProcess {
 **File**: `src/renderer/main-process-api/WorkspaceService.ts` (NEW)
 
 ```typescript
-import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@a24z/core-library';
+import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import type { WorkspaceChangeEvent } from '../../shared/main-process-api-interfaces/WorkspaceAPI';
 
 /**

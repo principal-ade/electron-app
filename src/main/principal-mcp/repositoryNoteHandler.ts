@@ -1,5 +1,5 @@
 import path from 'path';
-import { MemoryPalace, NodeFileSystemAdapter } from '@a24z/core-library';
+import { MemoryPalace, NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library';
 import { GitService } from '../version-control-providers/GitService';
 import type { GitInfo } from '../../shared/types/git.types';
 import { RepositoryNote } from '../../shared/main-process-api-interfaces/RepositoryNotesAPI';
@@ -285,9 +285,9 @@ class RepositoryNoteHandler {
         return false;
       }
 
-      // @a24z/core-library doesn't expose an update method directly
+      // @principal-ai/alexandria-core-library doesn't expose an update method directly
       console.warn(
-        '[RepositoryNoteHandler] Note update not directly supported by @a24z/core-library',
+        '[RepositoryNoteHandler] Note update not directly supported by @principal-ai/alexandria-core-library',
       );
 
       // For now, return false as updates aren't supported

@@ -3,7 +3,7 @@ import { useTheme } from '@principal-ade/industry-theme';
 import { FolderOpen, Trash2, Star, Edit2, Check, X } from 'lucide-react';
 import { WorkspaceService } from '../../../../main-process-api/WorkspaceService';
 import { FileSystemService } from '../../../../main-process-api/FileSystemService';
-import type { Workspace } from '@a24z/core-library';
+import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 
 export const WorkspaceSettings: React.FC = () => {
   const { theme } = useTheme();

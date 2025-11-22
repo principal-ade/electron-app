@@ -2636,6 +2636,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
           />
           <RepositoryWorkspacePanelFramework
             repositoryPath={selectedSource?.type === 'local' ? selectedSource.location : repository.full_name}
+            repository={repository}
           />
         </div>
       );

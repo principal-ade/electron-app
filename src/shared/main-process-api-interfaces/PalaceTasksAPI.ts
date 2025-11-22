@@ -6,9 +6,9 @@ import type {
   Task,
   TaskStatus,
   TaskQueryOptions as CoreTaskQueryOptions,
-} from '@a24z/core-library';
+} from '@principal-ai/alexandria-core-library';
 
-export type { Task, TaskStatus, TaskPriority } from '@a24z/core-library';
+export type { Task, TaskStatus, TaskPriority } from '@principal-ai/alexandria-core-library';
 
 export interface TaskQueryOptions extends Partial<CoreTaskQueryOptions> {
   // Extend with any additional UI-specific query options if needed

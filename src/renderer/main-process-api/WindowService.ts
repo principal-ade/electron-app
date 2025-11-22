@@ -13,7 +13,7 @@ import type {
   OpenRemoteFilesRequest,
   RepositoryWindowState,
 } from '../../shared/main-process-api-interfaces/WindowAPI';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 // Re-export for convenience
 export type { RepositoryWindowState };
@@ -120,7 +120,7 @@ export class WindowService {
 
   /**
    * Open Repository Dashboard for Alexandria repositories
-   * @param repository - Alexandria repository from @a24z/core-library package
+   * @param repository - Alexandria repository from @principal-ai/alexandria-core-library package
    */
   static async openRepositoryDashboard(
     repository: AlexandriaEntry,

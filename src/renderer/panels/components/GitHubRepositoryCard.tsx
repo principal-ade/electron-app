@@ -21,7 +21,7 @@ import { GitCloneModal } from '../../components/GitCloneModal';
 import type { EnhancedAlexandriaEntry } from '../../../shared/types/repository.types';
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
-import type { Workspace } from '@a24z/core-library';
+import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 
 // Add spin animation styles to document if not already present
 if (typeof document !== 'undefined') {

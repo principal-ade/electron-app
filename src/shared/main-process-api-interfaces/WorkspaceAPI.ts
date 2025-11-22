@@ -2,7 +2,7 @@
  * IPC API interface for Workspace management
  */
 
-import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@a24z/core-library';
+import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 export enum WorkspaceAPIEvent {
   // Workspace CRUD

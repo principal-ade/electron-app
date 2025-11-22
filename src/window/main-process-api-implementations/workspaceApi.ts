@@ -1,5 +1,5 @@
 import { ipcRenderer, IpcRendererEvent } from 'electron';
-import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@a24z/core-library';
+import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import {
   WorkspaceAPIEvent,
   type WorkspaceAPI,

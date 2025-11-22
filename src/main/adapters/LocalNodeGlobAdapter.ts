@@ -1,14 +1,14 @@
 /**
  * Local Node.js implementation of GlobAdapter using globby
  *
- * This is a temporary copy of the NodeGlobAdapter from @a24z/core-library with fixes
+ * This is a temporary copy of the NodeGlobAdapter from @principal-ai/alexandria-core-library with fixes
  * for proper gitignore handling to exclude node_modules from markdown searches.
  *
- * TODO: Remove this when @a24z/core-library fixes the NodeGlobAdapter to handle
+ * TODO: Remove this when @principal-ai/alexandria-core-library fixes the NodeGlobAdapter to handle
  * repositories without .gitignore files properly.
  */
 import { globby, globbySync, type Options } from 'globby';
-import { GlobAdapter, GlobOptions } from '@a24z/core-library';
+import { GlobAdapter, GlobOptions } from '@principal-ai/alexandria-core-library';
 
 /**
  * Node.js implementation using globby library with enhanced gitignore support

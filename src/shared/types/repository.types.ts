@@ -1,4 +1,4 @@
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 /**
  * Local clone information for a repository

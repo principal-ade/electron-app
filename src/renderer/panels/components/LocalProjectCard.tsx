@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { FolderOpen, Focus, Loader2, Home, AlertTriangle, MoveRight, X, Copy, Check, Trash2 } from 'lucide-react';
-import type { Workspace } from '@a24z/core-library';
+import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
 import { useSelectedRepository } from '../../contexts/SelectedRepositoryContext';

@@ -23,7 +23,7 @@ import type { TerminalInfo } from '../../shared/main-process-api-interfaces/Term
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaDocsService } from '../main-process-api/AlexandriaDocsService';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 
 // Extend PanelActions with terminal and workspace-specific actions
 interface ExtendedPanelActions extends PanelActions {

@@ -3,7 +3,7 @@
  * Communicates with main process via IPC using window.mainProcess
  */
 
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type {
   AlexandriaDocsWithExclusions,
   ComprehensiveDocuments,

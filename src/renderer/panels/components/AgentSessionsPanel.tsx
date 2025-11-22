@@ -10,7 +10,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Layers, AlertCircle, FolderOpen, RefreshCw } from 'lucide-react';
 import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/agent-monitoring';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { AgentSessionSDKService } from '../../main-process-api/AgentSessionSDKService';
 import { AgentSessionService } from '../../main-process-api/AgentSessionService';
 import type { EnhancedUIAgentSessionData } from '../../types/session.types';

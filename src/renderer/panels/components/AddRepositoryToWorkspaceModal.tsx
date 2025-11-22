@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { X, Search, FolderOpen, Plus } from 'lucide-react';
-import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
+import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { RepositoryAvatar } from '../../components/repository-maps/RepositoryAvatar';

@@ -3,7 +3,7 @@
  * Communicates with main process via IPC using window.mainProcess
  */
 
-import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@a24z/core-library';
+import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import type { WorkspaceChangeEvent } from '../../shared/main-process-api-interfaces/WorkspaceAPI';
 
 export class WorkspaceService {

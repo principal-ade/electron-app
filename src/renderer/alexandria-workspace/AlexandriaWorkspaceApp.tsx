@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
+import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { AlexandriaWorkspaceTitlebar } from '../components/Titlebar';
 import { AlexandriaWorkspaceLayout } from './AlexandriaWorkspaceLayout';

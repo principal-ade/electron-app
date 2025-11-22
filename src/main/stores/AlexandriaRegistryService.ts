@@ -1,14 +1,14 @@
 /**
  * AlexandriaRegistryService - Service for managing Alexandria repositories
- * Uses AlexandriaOutpostManager from @a24z/core-library for local repository management
+ * Uses AlexandriaOutpostManager from @principal-ai/alexandria-core-library for local repository management
  */
 
 import {
   AlexandriaOutpostManager,
   NodeFileSystemAdapter,
   MemoryPalace,
-} from '@a24z/core-library';
-import type { AlexandriaEntry, CodebaseView, Workspace, WorkspaceMembership } from '@a24z/core-library';
+} from '@principal-ai/alexandria-core-library';
+import type { AlexandriaEntry, CodebaseView, Workspace, WorkspaceMembership } from '@principal-ai/alexandria-core-library';
 import { gitClientFactory } from '../utils/gitClientFactory';
 import { FileSystemService } from '../file-system-service';
 import { LocalNodeGlobAdapter } from '../adapters/LocalNodeGlobAdapter';

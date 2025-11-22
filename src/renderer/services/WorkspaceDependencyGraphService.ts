@@ -3,7 +3,7 @@
  * Builds cross-repository dependency graphs scoped to repositories within a Workspace
  */
 
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import {
   buildDependencyGraphs,
   type DependencyGraph,

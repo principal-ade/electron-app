@@ -7,7 +7,7 @@ import {
   AlexandriaAPIEvent,
   AlexandriaEventType,
 } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 export const alexandriaAPI: AlexandriaAPI = {
   onRepositoryChange: (callback: (event: AlexandriaChangeEvent) => void) => {

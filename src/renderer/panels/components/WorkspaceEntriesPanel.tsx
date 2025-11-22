@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Folder, Home, X, Plus } from 'lucide-react';
-import type { Workspace, AlexandriaEntry } from '@a24z/core-library';
+import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { LocalProjectCard } from './LocalProjectCard';

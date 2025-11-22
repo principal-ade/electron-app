@@ -9,7 +9,7 @@ import fs from 'fs-extra';
 import { WorkspaceAPIEvent, type WorkspaceAPI, type WorkspaceChangeEvent } from '../../shared/main-process-api-interfaces/WorkspaceAPI';
 import { AlexandriaAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 import { AlexandriaRegistryService } from './AlexandriaRegistryService';
-import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@a24z/core-library';
+import type { Workspace, WorkspaceMembership, AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 import { getManager as getMonitoringManager } from '../repository-monitoring/ipcHandlers';
 
 export class WorkspaceApiEventHandler implements WorkspaceAPI {

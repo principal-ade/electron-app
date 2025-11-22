@@ -1,12 +1,12 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { Server } from 'http';
 import { EventEmitter } from 'events';
-import { MemoryPalace, NodeFileSystemAdapter } from '@a24z/core-library';
+import { MemoryPalace, NodeFileSystemAdapter } from '@principal-ai/alexandria-core-library';
 import type {
   CreateTaskInput,
   ValidatedRepositoryPath,
   ValidatedRelativePath,
-} from '@a24z/core-library';
+} from '@principal-ai/alexandria-core-library';
 import { APP_BRANDING } from '../../shared/config/appBranding';
 import { getManager as getRepositoryMonitoringManager } from '../repository-monitoring/ipcHandlers';
 import { MCPTasksDomain } from '../services/storage-domains/MCPTasksDomain';

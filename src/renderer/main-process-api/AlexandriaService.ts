@@ -3,7 +3,7 @@
  * Communicates with main process via IPC using window.mainProcess
  */
 
-import type { AlexandriaEntry, CodebaseView } from '@a24z/core-library';
+import type { AlexandriaEntry, CodebaseView } from '@principal-ai/alexandria-core-library/types';
 import type { AlexandriaChangeEvent } from '../../shared/main-process-api-interfaces/AlexandriaAPI';
 
 export class AlexandriaService {

@@ -1,7 +1,7 @@
 import { ipcRenderer } from 'electron';
 import type { AlexandriaDocsAPI } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
 import { AlexandriaDocsAPIEvent } from '../../shared/main-process-api-interfaces/AlexandriaDocsAPI';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 export const alexandriaDocsAPI: AlexandriaDocsAPI = {
   getDocuments: (entry: AlexandriaEntry) =>

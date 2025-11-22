@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { Workspace } from '@a24z/core-library';
+import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 
 interface WorkspaceFilterContextValue {

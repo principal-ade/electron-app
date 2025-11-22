@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { Search, FileText, Clock, Book, Loader } from 'lucide-react';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { AlexandriaService } from '../../main-process-api/AlexandriaService';
 import { AlexandriaDocsService } from '../../main-process-api/AlexandriaDocsService';
 

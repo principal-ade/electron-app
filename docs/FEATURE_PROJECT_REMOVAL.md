@@ -153,7 +153,7 @@ removeRepository(name: string, deleteLocal?: boolean): Promise<boolean>
 ## Dependencies
 
 ### External Libraries
-- Check if AlexandriaOutpostManager from `@a24z/core-library` supports removal
+- Check if AlexandriaOutpostManager from `@principal-ai/alexandria-core-library` supports removal
 - May need to use Node.js `fs` module for file deletion
 - May need `rimraf` or similar for recursive directory deletion
 

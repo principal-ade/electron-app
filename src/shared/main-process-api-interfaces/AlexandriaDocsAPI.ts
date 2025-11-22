@@ -3,7 +3,7 @@
  * Provides access to documents associated with CodebaseViews
  */
 
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 export enum AlexandriaDocsAPIEvent {
   GET_DOCUMENTS = 'alexandria-docs:get-documents',

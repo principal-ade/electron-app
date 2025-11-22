@@ -5,7 +5,7 @@
 This document proposes an enhancement to the Alexandria repository management system to support **virtual workspaces** where repositories can belong to multiple logical workspaces simultaneously. This moves away from the folder-based workspace concept to a more flexible tag/collection-based system.
 
 > **📢 Implementation Status:**
-> ✅ **Core library implementation COMPLETE** as of @a24z/core-library v0.1.32 (released 2025-11-09)
+> ✅ **Core library implementation COMPLETE** as of @principal-ai/alexandria-core-library v0.1.32 (released 2025-11-09)
 >
 > The `WorkspaceManager` class and all related functionality have been implemented by the core library team. This project has been updated to use the latest version. Next step: Electron app integration (Phase 2).
 
@@ -229,13 +229,13 @@ Note: All local clones of `owner/electron-app` will appear in both workspace `ws
 
 ## Core Library API Requirements
 
-This section defines what the **@a24z/core-library** package needs to implement. All workspace logic is the core library's responsibility. The Electron app will consume these APIs for UI rendering and user interactions.
+This section defines what the **@principal-ai/alexandria-core-library** package needs to implement. All workspace logic is the core library's responsibility. The Electron app will consume these APIs for UI rendering and user interactions.
 
 ### New Types to Export
 
 ```typescript
 /**
- * Workspace type - should be exported from @a24z/core-library
+ * Workspace type - should be exported from @principal-ai/alexandria-core-library
  */
 export interface Workspace {
   id: string;
@@ -251,7 +251,7 @@ export interface Workspace {
 }
 
 /**
- * WorkspaceMembership type - should be exported from @a24z/core-library
+ * WorkspaceMembership type - should be exported from @principal-ai/alexandria-core-library
  */
 export interface WorkspaceMembership {
   repositoryId: string;    // github.id ("owner/name") or entry.name for local repos
@@ -778,9 +778,9 @@ multiple workspaces.
 
 ## Core Library Implementation Checklist
 
-~~This is what the **@a24z/core-library** team needs to implement:~~
+~~This is what the **@principal-ai/alexandria-core-library** team needs to implement:~~
 
-**✅ COMPLETED in @a24z/core-library v0.1.32**
+**✅ COMPLETED in @principal-ai/alexandria-core-library v0.1.32**
 
 ### Required Changes
 
@@ -885,7 +885,7 @@ multiple workspaces.
 
 ---
 
-**Document Status:** ✅ IMPLEMENTED in @a24z/core-library v0.1.32
+**Document Status:** ✅ IMPLEMENTED in @principal-ai/alexandria-core-library v0.1.32
 **Date:** 2025-11-08 (Updated: 2025-11-09)
 **Approach:** Repository-level workspaces using existing AlexandriaRepository abstraction
 

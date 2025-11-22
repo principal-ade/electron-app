@@ -2,7 +2,7 @@
  * Document Discovery Types
  *
  * These interfaces define the requirements for document discovery
- * functionality needed from @a24z/core-library.
+ * functionality needed from @principal-ai/alexandria-core-library.
  *
  * Requirements:
  * 1. Discover all indexable documents in a repository
@@ -11,7 +11,7 @@
  * 4. Respect ignore patterns and repository configuration
  */
 
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 // ============================================================================
 // Core Types for Document Discovery

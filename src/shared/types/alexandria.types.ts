@@ -1,15 +1,15 @@
 /**
  * Alexandria Repository types
- * Imports from @a24z/core-library package - the standard for repository management
+ * Imports from @principal-ai/alexandria-core-library package - the standard for repository management
  */
 
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
 
 export type {
   AlexandriaRepositoryRegistry,
   GithubRepository,
   CodebaseViewSummary,
-} from '@a24z/core-library';
+} from '@principal-ai/alexandria-core-library';
 
 /**
  * Request/response types for our application's API layer

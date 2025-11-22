@@ -14,7 +14,7 @@ import {
   ChevronRight,
   Grid3x3,
 } from 'lucide-react';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { useTheme } from '@principal-ade/industry-theme';
 import { SnapCarousel, SnapCarouselRef } from '@a24z/panels';
 import TerminalPanelPackaged, {

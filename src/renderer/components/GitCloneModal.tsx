@@ -9,13 +9,13 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useTheme } from '@principal-ade/industry-theme';
-import type { AlexandriaEntry } from '@a24z/core-library';
+import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { GitService } from '../main-process-api/GitService';
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
 import { AlexandriaService } from '../main-process-api/AlexandriaService';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
-import type { Workspace } from '@a24z/core-library';
+import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 
 interface GitCloneModalProps {
   isOpen: boolean;
