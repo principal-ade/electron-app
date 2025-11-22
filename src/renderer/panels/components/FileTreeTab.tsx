@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { DynamicFileTree } from '@a24z/dynamic-file-tree';
+import { DynamicFileTree } from '@principal-ade/dynamic-file-tree';
 import type { FileTree } from '@principal-ai/repository-abstraction';
 
 interface FileTreeTabProps {

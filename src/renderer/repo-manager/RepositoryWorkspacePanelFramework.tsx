@@ -26,17 +26,20 @@ export const RepositoryWorkspacePanelFramework: React.FC<
 > = ({ repositoryPath, repository }) => {
   const { theme } = useTheme();
 
+  // Get repository identifier (owner/name)
+  const repoIdentifier = `${repository.owner}/${repository.name}`;
+
   // Terminal panel - the only panel we're showing initially
   const terminalPanel = useMemo(
     () => (
       <MultiTerminalPanel
         directory={repositoryPath}
-        repositoryKey={repository.full_name}
+        repositoryKey={repoIdentifier}
         hideHeader={false}
         isVisible={true}
       />
     ),
-    [repositoryPath, repository.full_name],
+    [repositoryPath, repoIdentifier],
   );
 
   // Define all panels (for now just terminal in middle, empty left/right)

@@ -128,26 +128,27 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
     // UI Mode state - per-repository
     const [uiMode, setUIMode] = useState<'classic' | 'panel-framework'>('classic');
 
+    // Get repository identifier (owner/name)
+    const repoIdentifier = `${repository.owner}/${repository.name}`;
+
     // Load UI mode from repository-specific preferences
     useEffect(() => {
       const loadUIMode = async () => {
         const prefs = await UserPreferencesService.getPreferences();
-        const repoFullName = repository.full_name;
-        const repoUIState = prefs?.repositoryUIStates?.[repoFullName];
+        const repoUIState = prefs?.repositoryUIStates?.[repoIdentifier];
         setUIMode(repoUIState?.uiMode ?? 'classic');
       };
       loadUIMode();
-    }, [repository.full_name]);
+    }, [repoIdentifier]);
 
     // Handle UI mode changes
     const handleSwitchToPanelFramework = async () => {
       const prefs = await UserPreferencesService.getPreferences();
-      const repoFullName = repository.full_name;
       await UserPreferencesService.updatePreferences({
         repositoryUIStates: {
           ...prefs?.repositoryUIStates,
-          [repoFullName]: {
-            ...prefs?.repositoryUIStates?.[repoFullName],
+          [repoIdentifier]: {
+            ...prefs?.repositoryUIStates?.[repoIdentifier],
             uiMode: 'panel-framework' as const,
           },
         },
@@ -157,12 +158,11 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
 
     const handleSwitchToClassic = async () => {
       const prefs = await UserPreferencesService.getPreferences();
-      const repoFullName = repository.full_name;
       await UserPreferencesService.updatePreferences({
         repositoryUIStates: {
           ...prefs?.repositoryUIStates,
-          [repoFullName]: {
-            ...prefs?.repositoryUIStates?.[repoFullName],
+          [repoIdentifier]: {
+            ...prefs?.repositoryUIStates?.[repoIdentifier],
             uiMode: 'classic' as const,
           },
         },
@@ -2635,7 +2635,7 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             onSwitchToClassic={handleSwitchToClassic}
           />
           <RepositoryWorkspacePanelFramework
-            repositoryPath={selectedSource?.type === 'local' ? selectedSource.location : repository.full_name}
+            repositoryPath={selectedSource?.type === 'local' ? selectedSource.location : repoIdentifier}
             repository={repository}
           />
         </div>

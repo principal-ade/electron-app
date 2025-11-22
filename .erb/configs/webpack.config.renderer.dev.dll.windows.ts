@@ -82,6 +82,7 @@ const configuration: webpack.Configuration = {
           'debug',
           'ts-json-schema-generator',
           'fdir', // Fast directory crawler - Node.js only, used in main process
+          '@principal-ai/alexandria-core-library', // Has Node.js adapters, uses node:path internally
           'globby', // Node.js file globbing library
           'glob', // Node.js file globbing library
           'keytar', // Native Node.js module for credential storage

@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { MultiFileTree } from '@a24z/dynamic-file-tree';
+import { MultiFileTree } from '@principal-ade/dynamic-file-tree';
 import type {
   LoadedFileTreeSource,
   FileTreeSource,
