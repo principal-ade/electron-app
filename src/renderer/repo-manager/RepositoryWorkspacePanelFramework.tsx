@@ -108,9 +108,20 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
  */
 export const RepositoryWorkspacePanelFramework: React.FC<
   RepositoryWorkspacePanelFrameworkProps
-> = ({ repositoryPath, repository: _repository }) => {
+> = ({ repositoryPath, repository }) => {
+  // Create a workspace object for PanelProvider
+  // PanelProvider expects a workspace with id, name, and path
+  const workspace = useMemo(
+    () => ({
+      id: `repo-${repository.owner}-${repository.name}`,
+      name: repository.name,
+      path: repositoryPath,
+    }),
+    [repository.owner, repository.name, repositoryPath],
+  );
+
   return (
-    <PanelProvider repositoryPath={repositoryPath}>
+    <PanelProvider workspace={workspace}>
       <RepositoryWorkspacePanelFrameworkInner />
     </PanelProvider>
   );
