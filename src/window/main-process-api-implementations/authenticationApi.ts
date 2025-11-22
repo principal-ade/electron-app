@@ -86,6 +86,16 @@ export const authenticationAPI: AuthenticationAPI = {
     return ipcRenderer.invoke(AuthEvent.TEST_REFRESH_TOKEN);
   },
 
+  validateGitHubToken: async (): Promise<{
+    valid: boolean;
+    tokenPresent: boolean;
+    tokenPrefix?: string;
+    error?: string;
+    statusCode?: number;
+  }> => {
+    return ipcRenderer.invoke(AuthEvent.VALIDATE_GITHUB_TOKEN);
+  },
+
   // Generic token operations
   saveToken: async (
     key: string,

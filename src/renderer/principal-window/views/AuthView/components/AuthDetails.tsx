@@ -147,6 +147,14 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     errorType?: string;
   } | null>(null);
   const [loadingKeychainStatus, setLoadingKeychainStatus] = useState(false);
+  const [githubTokenValidation, setGithubTokenValidation] = useState<{
+    valid: boolean;
+    tokenPresent: boolean;
+    tokenPrefix?: string;
+    error?: string;
+    statusCode?: number;
+  } | null>(null);
+  const [validatingGithubToken, setValidatingGithubToken] = useState(false);
 
   // Presence connectivity state
   const { isConnected } = useGitSyncConnection();
@@ -240,6 +248,23 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     }
   }, []);
 
+  const validateGithubToken = useCallback(async () => {
+    setValidatingGithubToken(true);
+    try {
+      const validation = await AuthenticationService.validateGitHubToken();
+      setGithubTokenValidation(validation);
+    } catch (error) {
+      console.error('[AuthDetails] Failed to validate GitHub token:', error);
+      setGithubTokenValidation({
+        valid: false,
+        tokenPresent: false,
+        error: 'Failed to validate token',
+      });
+    } finally {
+      setValidatingGithubToken(false);
+    }
+  }, []);
+
   // Detect keychain-related errors
   useEffect(() => {
     if (loginError) {
@@ -280,10 +305,12 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
       fetchTokenInfo();
       fetchSSHKeyInfo();
       fetchTokenMetadata();
+      validateGithubToken();
     } else {
       setTokenInfo(null);
       setGitHubSSHKeys([]);
       setTokenMetadata(null);
+      setGithubTokenValidation(null);
     }
     // Always fetch keychain status (regardless of auth state)
     fetchKeychainStatus();
@@ -294,6 +321,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
     fetchSSHKeyInfo,
     fetchTokenMetadata,
     fetchKeychainStatus,
+    validateGithubToken,
   ]);
 
   const formatScope = (scope: string): string => {
@@ -1179,38 +1207,73 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                 <RefreshCw size={20} />
                 Token Information & Refresh Testing
               </h2>
-              <button
-                onClick={fetchTokenMetadata}
-                disabled={loadingTokenMetadata}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '6px 12px',
-                  backgroundColor: 'transparent',
-                  border: `1px solid ${theme.colors.border}`,
-                  borderRadius: '6px',
-                  color: theme.colors.textSecondary,
-                  fontSize: '13px',
-                  cursor: loadingTokenMetadata ? 'wait' : 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  if (!loadingTokenMetadata) {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundSecondary;
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
-              >
-                <RefreshCw
-                  size={14}
-                  className={loadingTokenMetadata ? 'spinning' : ''}
-                />
-                Refresh Info
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={validateGithubToken}
+                  disabled={validatingGithubToken}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 12px',
+                    backgroundColor: 'transparent',
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '6px',
+                    color: theme.colors.textSecondary,
+                    fontSize: '13px',
+                    cursor: validatingGithubToken ? 'wait' : 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!validatingGithubToken) {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundSecondary;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                  title="Validate GitHub token by making a test API call"
+                >
+                  <Shield
+                    size={14}
+                    className={validatingGithubToken ? 'spinning' : ''}
+                  />
+                  Validate Token
+                </button>
+                <button
+                  onClick={fetchTokenMetadata}
+                  disabled={loadingTokenMetadata}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 12px',
+                    backgroundColor: 'transparent',
+                    border: `1px solid ${theme.colors.border}`,
+                    borderRadius: '6px',
+                    color: theme.colors.textSecondary,
+                    fontSize: '13px',
+                    cursor: loadingTokenMetadata ? 'wait' : 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!loadingTokenMetadata) {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundSecondary;
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <RefreshCw
+                    size={14}
+                    className={loadingTokenMetadata ? 'spinning' : ''}
+                  />
+                  Refresh Info
+                </button>
+              </div>
             </div>
 
             {loadingTokenMetadata ? (
@@ -1326,6 +1389,87 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                         </>
                       )}
                     </div>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: '16px',
+                      backgroundColor: secondaryBackground,
+                      border: `1px solid ${theme.colors.border}`,
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: theme.colors.textSecondary,
+                        marginBottom: '4px',
+                      }}
+                    >
+                      GitHub Token
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        fontSize: '14px',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {validatingGithubToken ? (
+                        <>
+                          <Loader2 size={16} className="spinning" />
+                          <span>Validating...</span>
+                        </>
+                      ) : githubTokenValidation ? (
+                        githubTokenValidation.valid ? (
+                          <>
+                            <CheckCircle
+                              size={16}
+                              style={{ color: theme.colors.success || '#10b981' }}
+                            />
+                            <span>Valid ({githubTokenValidation.tokenPrefix})</span>
+                          </>
+                        ) : githubTokenValidation.tokenPresent ? (
+                          <>
+                            <XCircle
+                              size={16}
+                              style={{ color: theme.colors.error || '#ef4444' }}
+                            />
+                            <span>Invalid ({githubTokenValidation.statusCode || 'Error'})</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle
+                              size={16}
+                              style={{ color: theme.colors.warning || '#f59e0b' }}
+                            />
+                            <span>Not Present</span>
+                          </>
+                        )
+                      ) : (
+                        <>
+                          <AlertCircle
+                            size={16}
+                            style={{ color: theme.colors.textSecondary }}
+                          />
+                          <span>Unknown</span>
+                        </>
+                      )}
+                    </div>
+                    {githubTokenValidation && !githubTokenValidation.valid && githubTokenValidation.error && (
+                      <div
+                        style={{
+                          marginTop: '8px',
+                          fontSize: '11px',
+                          color: theme.colors.error || '#ef4444',
+                          lineHeight: '1.4',
+                        }}
+                      >
+                        {githubTokenValidation.error}
+                      </div>
+                    )}
                   </div>
 
                   {tokenMetadata.expiresAt && (

@@ -96,6 +96,19 @@ export class AuthenticationService {
   }
 
   /**
+   * Validate GitHub token by making a test API call
+   */
+  static async validateGitHubToken(): Promise<{
+    valid: boolean;
+    tokenPresent: boolean;
+    tokenPrefix?: string;
+    error?: string;
+    statusCode?: number;
+  }> {
+    return window.mainProcess.authentication.validateGitHubToken();
+  }
+
+  /**
    * Set a secure token
    */
   static async saveToken(

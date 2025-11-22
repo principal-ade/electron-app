@@ -377,6 +377,22 @@ class AuthService {
         };
       }
     });
+
+    // Validate GitHub token handler
+    ipcMain.handle(AuthEvent.VALIDATE_GITHUB_TOKEN, async () => {
+      try {
+        return await this.validateGitHubToken();
+      } catch (error) {
+        console.error('[AuthService] Validate GitHub token error:', error);
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error';
+        return {
+          valid: false,
+          tokenPresent: false,
+          error: errorMessage,
+        };
+      }
+    });
   }
 
   private cancelAuthentication(): void {
@@ -906,6 +922,86 @@ class AuthService {
       return {
         success: false,
         error: error.message || 'Token refresh failed',
+      };
+    }
+  }
+
+  /**
+   * Validate the GitHub token by making a test API call
+   */
+  async validateGitHubToken(): Promise<{
+    valid: boolean;
+    tokenPresent: boolean;
+    tokenPrefix?: string;
+    error?: string;
+    statusCode?: number;
+  }> {
+    try {
+      console.log('[AuthService] Validating GitHub token...');
+
+      const githubTokenData = await this.storage.getTokenWithMetadata(
+        TOKEN_KEYS.GITHUB_TOKEN,
+      );
+
+      if (!githubTokenData || !githubTokenData.token) {
+        console.log('[AuthService] No GitHub token found in storage');
+        return {
+          valid: false,
+          tokenPresent: false,
+          error: 'No GitHub token found',
+        };
+      }
+
+      const token = githubTokenData.token;
+      const tokenPrefix = token.substring(0, 4);
+
+      console.log('[AuthService] GitHub token found:', {
+        length: token.length,
+        prefix: tokenPrefix,
+        hasGho: token.startsWith('gho_'),
+        hasGhp: token.startsWith('ghp_'),
+      });
+
+      // Validate token by making a test API call to GitHub
+      const response = await fetch('https://api.github.com/user', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      });
+
+      console.log('[AuthService] GitHub API validation response:', {
+        status: response.status,
+        ok: response.ok,
+      });
+
+      if (response.ok) {
+        return {
+          valid: true,
+          tokenPresent: true,
+          tokenPrefix,
+        };
+      } else {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('[AuthService] GitHub token validation failed:', {
+          status: response.status,
+          error: errorText,
+        });
+
+        return {
+          valid: false,
+          tokenPresent: true,
+          tokenPrefix,
+          error: `GitHub API returned ${response.status}: ${response.statusText}`,
+          statusCode: response.status,
+        };
+      }
+    } catch (error: any) {
+      console.error('[AuthService] GitHub token validation error:', error);
+      return {
+        valid: false,
+        tokenPresent: true,
+        error: error.message || 'Failed to validate token',
       };
     }
   }

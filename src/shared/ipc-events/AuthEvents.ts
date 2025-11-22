@@ -16,6 +16,7 @@ export enum AuthEvent {
   // Token metadata and refresh operations
   GET_TOKEN_METADATA = 'cli-auth:get-token-metadata',
   TEST_REFRESH_TOKEN = 'cli-auth:test-refresh-token',
+  VALIDATE_GITHUB_TOKEN = 'cli-auth:validate-github-token',
 
   // Keychain permission and status events
   CHECK_KEYCHAIN_STATUS = 'cli-auth:check-keychain-status',

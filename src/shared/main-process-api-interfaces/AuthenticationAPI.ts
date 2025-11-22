@@ -85,6 +85,13 @@ export interface AuthenticationAPI {
     error?: string;
     newExpiresAt?: number;
   }>;
+  validateGitHubToken(): Promise<{
+    valid: boolean;
+    tokenPresent: boolean;
+    tokenPrefix?: string;
+    error?: string;
+    statusCode?: number;
+  }>;
 
   // Generic token operations
   saveToken(
