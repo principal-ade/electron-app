@@ -8,6 +8,7 @@ import {
   Search,
   ChevronDown,
   ChevronRight,
+  Plus,
 } from 'lucide-react';
 
 import { useAuthState } from '../../hooks/useAuthState';
@@ -16,6 +17,7 @@ import type { GitHubRepository } from '../../../shared/main-process-api-interfac
 import { GitHubRepositoryCard } from './GitHubRepositoryCard';
 import { useAllRepositories } from '../../hooks/useRepositoryData';
 import type { RepositoryCacheData } from '../../services/RepositoryDataCache';
+import { CreateGitHubRepositoryModal } from './CreateGitHubRepositoryModal';
 
 export const GitHubProjectsPanel: React.FC = () => {
   const { theme } = useTheme();
@@ -36,6 +38,7 @@ export const GitHubProjectsPanel: React.FC = () => {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
     new Set(),
   );
+  const [createModalOrg, setCreateModalOrg] = useState<string | null>(null);
 
   // Load all local repositories for lookup (to show which GitHub repos are cloned locally)
   const { repositories: localRepos } = useAllRepositories();
@@ -159,6 +162,11 @@ export const GitHubProjectsPanel: React.FC = () => {
       void fetchRepositories();
     }
   }, [fetchRepositories, isFetching]);
+
+  const handleRepositoryCreated = useCallback(() => {
+    // Refresh the repositories list
+    void fetchRepositories();
+  }, [fetchRepositories]);
 
   const toggleSection = useCallback((sectionId: string) => {
     setCollapsedSections((prev) => {
@@ -413,69 +421,105 @@ export const GitHubProjectsPanel: React.FC = () => {
 
             return (
               <div key={organization}>
-                <button
-                  onClick={() => toggleSection(sectionId)}
+                <div
                   style={{
-                    width: '100%',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    backgroundColor: theme.colors.background,
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.backgroundTertiary ||
-                      theme.colors.backgroundSecondary;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor =
-                      theme.colors.background;
+                    gap: '8px',
                   }}
                 >
-                  <div
+                  <button
+                    onClick={() => toggleSection(sectionId)}
                     style={{
+                      flex: 1,
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '8px',
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      backgroundColor: theme.colors.background,
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundTertiary ||
+                        theme.colors.backgroundSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.background;
                     }}
                   >
-                    {isCollapsed ? (
-                      <ChevronRight
-                        size={16}
-                        color={theme.colors.textSecondary}
-                      />
-                    ) : (
-                      <ChevronDown
-                        size={16}
-                        color={theme.colors.textSecondary}
-                      />
-                    )}
-                    <span
+                    <div
                       style={{
-                        fontSize: `${theme.fontSizes[1]}px`,
-                        fontWeight: theme.fontWeights.semibold,
-                        fontFamily: theme.fonts.body,
-                        color: theme.colors.text,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
                       }}
                     >
-                      {organization}
+                      {isCollapsed ? (
+                        <ChevronRight
+                          size={16}
+                          color={theme.colors.textSecondary}
+                        />
+                      ) : (
+                        <ChevronDown
+                          size={16}
+                          color={theme.colors.textSecondary}
+                        />
+                      )}
+                      <span
+                        style={{
+                          fontSize: `${theme.fontSizes[1]}px`,
+                          fontWeight: theme.fontWeights.semibold,
+                          fontFamily: theme.fonts.body,
+                          color: theme.colors.text,
+                        }}
+                      >
+                        {organization}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: `${theme.fontSizes[0]}px`,
+                        fontFamily: theme.fonts.body,
+                        color: theme.colors.textSecondary,
+                      }}
+                    >
+                      {repositories.length}
                     </span>
-                  </div>
-                  <span
+                  </button>
+
+                  {/* Create Repository Button */}
+                  <button
+                    onClick={() => setCreateModalOrg(organization)}
+                    title="Create GitHub Repository"
                     style={{
-                      fontSize: `${theme.fontSizes[0]}px`,
-                      fontFamily: theme.fonts.body,
-                      color: theme.colors.textSecondary,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '8px',
+                      backgroundColor: theme.colors.background,
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      color: theme.colors.primary,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.backgroundTertiary ||
+                        theme.colors.backgroundSecondary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        theme.colors.background;
                     }}
                   >
-                    {repositories.length}
-                  </span>
-                </button>
+                    <Plus size={16} />
+                  </button>
+                </div>
 
                 {!isCollapsed && (
                   <div style={{ paddingLeft: '12px', marginTop: '4px' }}>
@@ -506,6 +550,15 @@ export const GitHubProjectsPanel: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Create Repository Modal */}
+      {createModalOrg && (
+        <CreateGitHubRepositoryModal
+          organizationLogin={createModalOrg}
+          onClose={() => setCreateModalOrg(null)}
+          onSuccess={handleRepositoryCreated}
+        />
+      )}
     </div>
   );
 };

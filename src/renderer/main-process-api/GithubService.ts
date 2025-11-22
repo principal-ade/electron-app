@@ -9,6 +9,9 @@ import type {
   GitHubSSHKey,
   SSHKeysResponse,
   GitHubOrgMember,
+  CreateRepositoryInput,
+  GitHubRepositoryCreated,
+  GitHubLicenseTemplate,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export class GithubService {
@@ -164,6 +167,29 @@ export class GithubService {
 
   static async getOrgMembers(org: string): Promise<GitHubOrgMember[]> {
     const result = await window.mainProcess.github.getOrgMembers(org);
+    return result || [];
+  }
+
+  static async createRepository(
+    owner: string,
+    input: CreateRepositoryInput,
+    isOrganization: boolean = true,
+  ): Promise<GitHubRepositoryCreated> {
+    const result = await window.mainProcess.github.createRepository(
+      owner,
+      input,
+      isOrganization,
+    );
+    return result;
+  }
+
+  static async getGitignoreTemplates(): Promise<string[]> {
+    const result = await window.mainProcess.github.getGitignoreTemplates();
+    return result || [];
+  }
+
+  static async getLicenseTemplates(): Promise<GitHubLicenseTemplate[]> {
+    const result = await window.mainProcess.github.getLicenseTemplates();
     return result || [];
   }
 }

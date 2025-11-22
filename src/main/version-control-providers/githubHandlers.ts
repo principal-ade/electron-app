@@ -16,6 +16,9 @@ import {
   GitHubRepository,
   GitHubOrganization,
   RepositoryFetchOptions,
+  CreateRepositoryInput,
+  GitHubRepositoryCreated,
+  GitHubLicenseTemplate,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 import type { IModernApplicationWindow } from '../window/types';
 
@@ -2180,6 +2183,177 @@ export class GitHubAdapter {
 
     return [];
   }
+
+  /**
+   * Create a new GitHub repository
+   */
+  async createRepository(
+    owner: string,
+    input: CreateRepositoryInput,
+    isOrganization: boolean,
+  ): Promise<GitHubRepositoryCreated> {
+    console.log(
+      `[GitHub] Creating repository for ${isOrganization ? 'org' : 'user'}: ${owner}`,
+      input,
+    );
+
+    const endpoint = isOrganization ? `/orgs/${owner}/repos` : '/user/repos';
+    const apiResult = await this.makeGitHubAPICall(endpoint, {
+      method: 'POST',
+      body: input,
+    });
+
+    if (apiResult.success && apiResult.data) {
+      console.log(
+        `[GitHub] Successfully created repository: ${apiResult.data.full_name}`,
+      );
+      return apiResult.data as GitHubRepositoryCreated;
+    }
+
+    // Fallback to CLI
+    console.log('[GitHub] Attempting repository creation via gh CLI');
+    try {
+      const args = ['gh', 'repo', 'create'];
+
+      // Add owner prefix for organizations
+      if (isOrganization) {
+        args.push(`${owner}/${input.name}`);
+      } else {
+        args.push(input.name);
+      }
+
+      // Add flags based on input
+      if (input.description) {
+        args.push('--description', input.description);
+      }
+
+      if (input.private) {
+        args.push('--private');
+      } else {
+        args.push('--public');
+      }
+
+      if (input.gitignore_template) {
+        args.push('--gitignore', input.gitignore_template);
+      }
+
+      if (input.license_template) {
+        args.push('--license', input.license_template);
+      }
+
+      const result = await this.executeCommand(args);
+
+      if (result.success) {
+        // Fetch the created repository details
+        const repoName = isOrganization ? `${owner}/${input.name}` : input.name;
+        const fetchResult = await this.executeCommand([
+          'gh',
+          'api',
+          `/repos/${repoName}`,
+        ]);
+
+        if (fetchResult.success && fetchResult.stdout) {
+          const repo = JSON.parse(fetchResult.stdout);
+          console.log('[GitHub] Successfully created repository via CLI');
+          return repo as GitHubRepositoryCreated;
+        }
+      }
+
+      throw new Error(
+        result.stderr || result.stdout || 'Failed to create repository via CLI',
+      );
+    } catch (error) {
+      console.error('[GitHub] Error creating repository:', error);
+      throw new Error(
+        apiResult.error ||
+          (error instanceof Error ? error.message : 'Failed to create repository'),
+      );
+    }
+  }
+
+  /**
+   * Get list of available .gitignore templates
+   */
+  async getGitignoreTemplates(): Promise<string[]> {
+    console.log('[GitHub] Fetching .gitignore templates');
+
+    const endpoint = '/gitignore/templates';
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && Array.isArray(apiResult.data)) {
+      console.log(
+        `[GitHub] Successfully fetched ${apiResult.data.length} .gitignore templates`,
+      );
+      return apiResult.data;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', endpoint]);
+      if (result.success && result.stdout) {
+        const templates = JSON.parse(result.stdout);
+        if (Array.isArray(templates)) {
+          console.log(
+            `[GitHub] Successfully fetched ${templates.length} .gitignore templates via CLI`,
+          );
+          return templates;
+        }
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting .gitignore templates:', error);
+    }
+
+    console.warn('[GitHub] Failed to fetch .gitignore templates, returning empty array');
+    return [];
+  }
+
+  /**
+   * Get list of available license templates
+   */
+  async getLicenseTemplates(): Promise<GitHubLicenseTemplate[]> {
+    console.log('[GitHub] Fetching license templates');
+
+    const endpoint = '/licenses';
+    const apiResult = await this.makeGitHubAPICall(endpoint);
+
+    if (apiResult.success && Array.isArray(apiResult.data)) {
+      const licenses = apiResult.data.map((license: any) => ({
+        key: license.key,
+        name: license.name,
+        spdx_id: license.spdx_id,
+        url: license.url,
+      }));
+      console.log(
+        `[GitHub] Successfully fetched ${licenses.length} license templates`,
+      );
+      return licenses;
+    }
+
+    // Fallback to CLI
+    try {
+      const result = await this.executeCommand(['gh', 'api', endpoint]);
+      if (result.success && result.stdout) {
+        const templates = JSON.parse(result.stdout);
+        if (Array.isArray(templates)) {
+          const licenses = templates.map((license: any) => ({
+            key: license.key,
+            name: license.name,
+            spdx_id: license.spdx_id,
+            url: license.url,
+          }));
+          console.log(
+            `[GitHub] Successfully fetched ${licenses.length} license templates via CLI`,
+          );
+          return licenses;
+        }
+      }
+    } catch (error) {
+      console.error('[GitHub] Error getting license templates:', error);
+    }
+
+    console.warn('[GitHub] Failed to fetch license templates, returning empty array');
+    return [];
+  }
 }
 
 // Register IPC handlers
@@ -2762,6 +2936,41 @@ export function registerGitHubIpcHandlers(
       return [];
     }
     return adapter.getOrgMembers(org);
+  });
+
+  ipcMain.handle(
+    GitHubAPIEvent.CREATE_REPOSITORY,
+    async (
+      event,
+      owner: string,
+      input: CreateRepositoryInput,
+      isOrganization: boolean,
+    ) => {
+      const adapter = getAdapterFromSender(event.sender);
+      if (!adapter) {
+        console.error('[GitHub] No adapter found for CREATE_REPOSITORY');
+        throw new Error('No GitHub adapter found');
+      }
+      return adapter.createRepository(owner, input, isOrganization);
+    },
+  );
+
+  ipcMain.handle(GitHubAPIEvent.GET_GITIGNORE_TEMPLATES, async (event) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for GET_GITIGNORE_TEMPLATES');
+      return [];
+    }
+    return adapter.getGitignoreTemplates();
+  });
+
+  ipcMain.handle(GitHubAPIEvent.GET_LICENSE_TEMPLATES, async (event) => {
+    const adapter = getAdapterFromSender(event.sender);
+    if (!adapter) {
+      console.error('[GitHub] No adapter found for GET_LICENSE_TEMPLATES');
+      return [];
+    }
+    return adapter.getLicenseTemplates();
   });
 
   console.log('[GitHub] IPC handlers registered');

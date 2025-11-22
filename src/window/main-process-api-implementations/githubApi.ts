@@ -5,6 +5,7 @@ import {
   ConfigFetchRequest,
   GitHubConfigRequest,
   CreateIssueRequest,
+  CreateRepositoryInput,
 } from '../../shared/main-process-api-interfaces/GitHubAPI';
 
 export const githubAPI: GitHubAPI = {
@@ -141,5 +142,26 @@ export const githubAPI: GitHubAPI = {
 
   getOrgMembers: async (org) => {
     return ipcRenderer.invoke(GitHubAPIEvent.GET_ORG_MEMBERS, org);
+  },
+
+  createRepository: async (
+    owner: string,
+    input: CreateRepositoryInput,
+    isOrganization: boolean,
+  ) => {
+    return ipcRenderer.invoke(
+      GitHubAPIEvent.CREATE_REPOSITORY,
+      owner,
+      input,
+      isOrganization,
+    );
+  },
+
+  getGitignoreTemplates: async () => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_GITIGNORE_TEMPLATES);
+  },
+
+  getLicenseTemplates: async () => {
+    return ipcRenderer.invoke(GitHubAPIEvent.GET_LICENSE_TEMPLATES);
   },
 };

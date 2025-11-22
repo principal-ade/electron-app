@@ -26,6 +26,10 @@ export enum GitHubAPIEvent {
   // Config fetching events (formerly ConfigAPI)
   FETCH_REMOTE_CONFIG = 'github:fetch-remote-config',
   FETCH_GITHUB_CONFIG = 'github:fetch-github-config',
+  // Repository creation events
+  CREATE_REPOSITORY = 'github:create-repository',
+  GET_GITIGNORE_TEMPLATES = 'github:get-gitignore-templates',
+  GET_LICENSE_TEMPLATES = 'github:get-license-templates',
 }
 
 // Config fetching types (formerly from ConfigAPI)
@@ -242,6 +246,37 @@ export interface RepositoryFetchOptions {
   page?: number;
 }
 
+export interface CreateRepositoryInput {
+  name: string;
+  description?: string;
+  private?: boolean;
+  auto_init?: boolean;
+  gitignore_template?: string;
+  license_template?: string;
+  has_issues?: boolean;
+  has_projects?: boolean;
+  has_wiki?: boolean;
+  allow_squash_merge?: boolean;
+  allow_merge_commit?: boolean;
+  allow_rebase_merge?: boolean;
+}
+
+export interface GitHubRepositoryCreated extends GitHubRepository {
+  clone_url: string;
+  ssh_url: string;
+  git_url: string;
+  created_at: string;
+  updated_at: string;
+  default_branch: string;
+}
+
+export interface GitHubLicenseTemplate {
+  key: string;
+  name: string;
+  spdx_id?: string;
+  url?: string;
+}
+
 export interface GitHubAPI {
   detectRepository: (path: string) => Promise<{
     isGitRepository: boolean;
@@ -351,4 +386,11 @@ export interface GitHubAPI {
   getUserFollowers: (username?: string) => Promise<GitHubUser[]>;
   getUserFollowing: (username?: string) => Promise<GitHubUser[]>;
   getOrgMembers: (org: string) => Promise<GitHubOrgMember[]>;
+  createRepository: (
+    owner: string,
+    input: CreateRepositoryInput,
+    isOrganization: boolean,
+  ) => Promise<GitHubRepositoryCreated>;
+  getGitignoreTemplates: () => Promise<string[]>;
+  getLicenseTemplates: () => Promise<GitHubLicenseTemplate[]>;
 }
