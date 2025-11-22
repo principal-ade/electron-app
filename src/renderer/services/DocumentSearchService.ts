@@ -11,12 +11,10 @@ import type {
   IndexRepositoryRequest,
   IndexRepositoryResponse,
   SearchDocumentsRequest,
-  SearchDocumentsResponse,
   GetIndexStatusResponse,
   IndexUpdateEvent,
   DocumentChangedEvent,
   IndexErrorEvent,
-  SearchFilters,
 } from '../../shared/ipc/DocumentSearchIPC';
 
 import type { SearchResult } from '@principal-ai/markdown-search';
@@ -35,6 +33,7 @@ export class DocumentSearchService {
   private initialized = false;
   private eventListeners: Set<() => void> = new Set();
 
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   private constructor() {}
 
   static getInstance(): DocumentSearchService {
@@ -60,7 +59,7 @@ export class DocumentSearchService {
         },
       });
       this.initialized = true;
-      console.log('[DocumentSearchService] Service initialized');
+      console.info('[DocumentSearchService] Service initialized');
     } catch (error) {
       console.error('[DocumentSearchService] Initialization failed:', error);
       throw error;
@@ -74,7 +73,7 @@ export class DocumentSearchService {
     path: string,
     name?: string,
   ): Promise<IndexRepositoryResponse> {
-    console.log(
+    console.info(
       '[DocumentSearchService] indexRepository called with path:',
       path,
       'name:',
@@ -95,12 +94,12 @@ export class DocumentSearchService {
       },
     };
 
-    console.log(
+    console.info(
       '[DocumentSearchService] Sending indexRepository request:',
       request,
     );
     const response = await searchAPI.indexRepository(request);
-    console.log('[DocumentSearchService] Received response:', response);
+    console.info('[DocumentSearchService] Received response:', response);
     return response;
   }
 
@@ -120,7 +119,7 @@ export class DocumentSearchService {
       error?: string;
     }>;
   }> {
-    console.log(
+    console.info(
       '[DocumentSearchService] indexMultipleRepositories called with',
       repositories.length,
       'repositories',
@@ -132,7 +131,7 @@ export class DocumentSearchService {
 
     // Use the typed API method
     const result = await searchAPI.indexMultipleRepositories(repositories);
-    console.log('[DocumentSearchService] Batch indexing result:', result);
+    console.info('[DocumentSearchService] Batch indexing result:', result);
     return result;
   }
 
