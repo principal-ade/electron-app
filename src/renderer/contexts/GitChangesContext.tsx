@@ -11,7 +11,7 @@ import { HighlightLayer } from '@principal-ai/code-city-react';
 import { GitService, GitDetailedChanges } from '../main-process-api/GitService';
 import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import type { GitStatusMetadata } from '../../shared/main-process-api-interfaces/RepositoryMonitoringAPI';
-// TODO: Implement git commit tree loading in MonitoredFileTreeService
+// TODO: Implement git commit tree loading using RepositoryMonitoringService
 // import { loadLocalGitCommitTree } from '../utils/loadFileSystemTree';
 import { FileTreeSource } from '../types/file-tree-source';
 
@@ -255,10 +255,10 @@ export const GitChangesProvider: React.FC<GitChangesProviderProps> = ({
           `[GitChangesProvider] Loading HEAD tree for ${source.id} at ${commitSha.substring(0, 7)}`,
         );
 
-        // TODO: Implement git commit tree loading in MonitoredFileTreeService
+        // TODO: Implement git commit tree loading using RepositoryMonitoringService
         // For now, return null - this disables git diff highlighting
         console.warn(
-          '[GitChangesProvider] Git commit tree loading not yet implemented with MonitoredFileTreeService',
+          '[GitChangesProvider] Git commit tree loading not yet implemented',
         );
         return null;
 

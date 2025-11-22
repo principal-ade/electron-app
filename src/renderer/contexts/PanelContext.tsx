@@ -23,7 +23,9 @@ import type { TerminalInfo } from '../../shared/main-process-api-interfaces/Term
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { WindowService } from '../main-process-api/WindowService';
 import { AlexandriaDocsService } from '../main-process-api/AlexandriaDocsService';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 
 // Extend PanelActions with terminal and workspace-specific actions
 interface ExtendedPanelActions extends PanelActions {
@@ -63,7 +65,8 @@ interface ExtendedPanelContextValue extends PanelContextValue {
   };
   gitStatusLoading: boolean;
   markdownFiles: Array<{ path: string; title?: string; lastModified: number }>;
-  fileTree: unknown | null;
+  fileTree: FileTree | null;
+  fileTreeLoading: boolean;
   packages: unknown[] | null;
   quality: unknown | null;
   terminalSessions?: Array<{
@@ -119,6 +122,10 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
   const [markdownFiles, setMarkdownFiles] = useState<Array<{ path: string; title?: string; lastModified: number }>>([]);
   const [markdownLoading, setMarkdownLoading] = useState(false);
 
+  // Track file tree for the current repository
+  const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
+  const [fileTreeLoading, setFileTreeLoading] = useState(false);
+
   // Fetch markdown files when repository changes
   useEffect(() => {
     const fetchMarkdownFiles = async () => {
@@ -159,6 +166,30 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
 
     fetchMarkdownFiles();
   }, [repository?.path, repository?.name]);
+
+  // Fetch file tree when repository changes
+  useEffect(() => {
+    const fetchFileTree = async () => {
+      if (!repository?.path) {
+        setFileTreeData(null);
+        return;
+      }
+
+      setFileTreeLoading(true);
+      try {
+        const tree = await RepositoryMonitoringService.getFileTree(repository.path);
+        console.info('[PanelContext] Fetched file tree for repository:', repository.path, tree);
+        setFileTreeData(tree);
+      } catch (error) {
+        console.error('[PanelContext] Failed to fetch file tree:', error);
+        setFileTreeData(null);
+      } finally {
+        setFileTreeLoading(false);
+      }
+    };
+
+    fetchFileTree();
+  }, [repository?.path]);
 
   // Fetch workspace repositories
   useEffect(() => {
@@ -352,8 +383,33 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
             },
           },
         ],
+        [
+          'fileTree',
+          {
+            scope: 'repository' as const,
+            name: 'fileTree',
+            data: fileTreeData,
+            loading: fileTreeLoading,
+            error: null,
+            refresh: async () => {
+              // Refetch file tree
+              if (repository?.path) {
+                setFileTreeLoading(true);
+                try {
+                  const tree = await RepositoryMonitoringService.getFileTree(repository.path);
+                  setFileTreeData(tree);
+                } catch (error) {
+                  console.error('[PanelContext] Failed to refresh file tree:', error);
+                  setFileTreeData(null);
+                } finally {
+                  setFileTreeLoading(false);
+                }
+              }
+            },
+          },
+        ],
       ]),
-    [workspace, workspaceRepositories, repositoriesLoading, markdownFiles, markdownLoading, repository]
+    [workspace, workspaceRepositories, repositoriesLoading, markdownFiles, markdownLoading, fileTreeData, fileTreeLoading, repository]
   );
 
   // Define panel actions
@@ -554,7 +610,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         }
       },
     }),
-    [events, workspace]
+    [events, workspace, repository?.name, terminalContext]
   );
 
   // Create the extended context value with both framework and panel-specific properties
@@ -609,8 +665,9 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
         deleted: [],
       },
       gitStatusLoading: false,
-      markdownFiles: [],
-      fileTree: null,
+      markdownFiles,
+      fileTree: fileTreeData,
+      fileTreeLoading,
       packages: null,
       quality: null,
       terminalSessions: terminalSessions.map((session) => ({
@@ -625,7 +682,7 @@ export const PanelProvider: React.FC<PanelProviderProps> = ({
       loading: false,
       };
     },
-    [workspace, repository, slices, terminalSessions]
+    [workspace, repository, slices, terminalSessions, markdownFiles, fileTreeData, fileTreeLoading]
   );
 
   // Combine context, actions, and events into provider value
