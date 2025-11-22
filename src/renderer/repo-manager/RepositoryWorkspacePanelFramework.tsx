@@ -5,7 +5,9 @@ import {
   type PanelDefinitionWithContent,
 } from '@a24z/panels';
 import '@a24z/panels/panels.css';
-import { MultiTerminalPanel } from '../panels/components/MultiTerminalPanel';
+import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
+import { panels as terminalPanels } from '@industry-theme/terminal-panel';
+import '@industry-theme/terminal-panel/dist/panels.bundle.css';
 import type { Repository } from '../../shared/types/repository.types';
 
 export interface RepositoryWorkspacePanelFrameworkProps {
@@ -14,44 +16,33 @@ export interface RepositoryWorkspacePanelFrameworkProps {
 }
 
 /**
- * Panel Framework version of the Repository Workspace
- *
- * This is a simplified, modern panel system that uses:
- * - Registry-based panel definitions
- * - RepositoryPanelProvider for shared data/state
- * - ConfigurablePanelLayout for visual layout management
+ * Inner component that uses PanelProvider context
  */
-export const RepositoryWorkspacePanelFramework: React.FC<
-  RepositoryWorkspacePanelFrameworkProps
-> = ({ repositoryPath, repository }) => {
+const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
   const { theme } = useTheme();
+  const { context, actions, events } = usePanelProvider();
 
-  // Get repository identifier (owner/name)
-  const repoIdentifier = `${repository.owner}/${repository.name}`;
+  // Get terminal panel component from the panel framework package
+  const TerminalPanelComponent = terminalPanels[0]?.component;
 
-  // Terminal panel - the only panel we're showing initially
-  const terminalPanel = useMemo(
-    () => (
-      <MultiTerminalPanel
-        directory={repositoryPath}
-        repositoryKey={repoIdentifier}
-        hideHeader={false}
-        isVisible={true}
-      />
-    ),
-    [repositoryPath, repoIdentifier],
-  );
-
-  // Define all panels (for now just terminal in middle, empty left/right)
+  // Define all panels using panel framework components
   const allPanels: PanelDefinitionWithContent[] = useMemo(
     () => [
       {
         id: 'terminal',
         label: 'Terminal',
-        content: terminalPanel,
+        content: TerminalPanelComponent ? (
+          <TerminalPanelComponent
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        ) : (
+          <div>Terminal panel not available</div>
+        ),
       },
     ],
-    [terminalPanel],
+    [TerminalPanelComponent, context, actions, events],
   );
 
   return (
@@ -104,5 +95,23 @@ export const RepositoryWorkspacePanelFramework: React.FC<
         style={{ height: '100%', width: '100%' }}
       />
     </div>
+  );
+};
+
+/**
+ * Panel Framework version of the Repository Workspace
+ *
+ * This is a simplified, modern panel system that uses:
+ * - Panel framework components from @industry-theme packages
+ * - PanelProvider for shared context, actions, and events
+ * - ConfigurablePanelLayout for visual layout management
+ */
+export const RepositoryWorkspacePanelFramework: React.FC<
+  RepositoryWorkspacePanelFrameworkProps
+> = ({ repositoryPath, repository: _repository }) => {
+  return (
+    <PanelProvider repositoryPath={repositoryPath}>
+      <RepositoryWorkspacePanelFrameworkInner />
+    </PanelProvider>
   );
 };
