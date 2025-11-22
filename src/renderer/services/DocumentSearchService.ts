@@ -19,7 +19,7 @@ import type {
   SearchFilters,
 } from '../../shared/ipc/DocumentSearchIPC';
 
-import type { SearchResult } from '@a24z/markdown-search';
+import type { SearchResult } from '@principal-ai/markdown-search';
 
 // Access the API exposed by preload
 const searchAPI = window.mainProcess?.documentSearch;

@@ -162,7 +162,6 @@
   },
   "dependencies": {
     "@a24z/callimachus": "^0.1.4",
-    "@a24z/markdown-search": "^2.0.6",
     "@a24z/observability-sdk": "^0.5.2",
     "@electron/notarize": "^3.0.0",
     "@excalidraw/excalidraw": "^0.18.0",
@@ -190,6 +189,7 @@
     "@principal-ai/codebase-composition": "^0.2.8",
     "@principal-ai/codebase-quality-lenses": "^0.1.7",
     "@principal-ai/control-tower-core": "^0.1.16",
+    "@principal-ai/markdown-search": "^2.0.7",
     "@principal-ai/repository-abstraction": "^0.2.0",
     "@principal-ai/repository-monitoring": "^0.1.4",
     "@principal-ai/repository-monitoring-server": "^1.0.0",

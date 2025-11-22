@@ -10,7 +10,7 @@ import type {
   SearchResult,
   SearchOptions,
   DocumentType,
-} from '@a24z/markdown-search';
+} from '@principal-ai/markdown-search';
 
 // ============================================================================
 // Channel Names
@@ -209,7 +209,7 @@ export interface SearchDocumentsRequest {
   query: string;
 
   /**
-   * Search options from @a24z/markdown-search
+   * Search options from @principal-ai/markdown-search
    */
   options?: SearchOptions;
 

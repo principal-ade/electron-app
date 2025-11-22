@@ -1,7 +1,7 @@
 /**
  * Document Indexing Service
  *
- * Main process service that handles document indexing using @a24z/markdown-search.
+ * Main process service that handles document indexing using @principal-ai/markdown-search.
  * This service manages the search engine, handles IPC communication, and coordinates
  * document discovery and indexing.
  */
@@ -20,7 +20,7 @@ import {
   type MarkdownFile,
   type FindOptions,
   type FileChange,
-} from '@a24z/markdown-search';
+} from '@principal-ai/markdown-search';
 
 import { AlexandriaRegistryService } from '../stores/AlexandriaRegistryService';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library';
@@ -163,7 +163,7 @@ export class DocumentIndexingService {
             );
 
             // Convert to MarkdownFile format
-            // TODO: Once @a24z/markdown-search supports metadata in indexing,
+            // TODO: Once @principal-ai/markdown-search supports metadata in indexing,
             // we should pass repository metadata here (repository name, path, etc.)
             // See docs/MARKDOWN_SEARCH_FEATURE_REQUEST.md for proposed API
             for (const docPath of documents) {

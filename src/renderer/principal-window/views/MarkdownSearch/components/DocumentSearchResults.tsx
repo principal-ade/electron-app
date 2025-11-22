@@ -8,7 +8,7 @@ import {
   ChevronDown,
   File,
 } from 'lucide-react';
-import type { SearchResult, DocumentType } from '@a24z/markdown-search';
+import type { SearchResult, DocumentType } from '@principal-ai/markdown-search';
 
 interface DocumentSearchResultsProps {
   results: SearchResult[];
@@ -112,7 +112,7 @@ export const DocumentSearchResults: React.FC<DocumentSearchResultsProps> = ({
   };
 
   // TODO: Repository information will come from document metadata once
-  // @a24z/markdown-search supports metadata in indexing (see MARKDOWN_SEARCH_FEATURE_REQUEST.md)
+  // @principal-ai/markdown-search supports metadata in indexing (see MARKDOWN_SEARCH_FEATURE_REQUEST.md)
   // For now, we don't display repository info in search results
 
   if (isSearching) {
