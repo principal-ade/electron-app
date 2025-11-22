@@ -23,9 +23,8 @@ interface AuthStartResponse {
 }
 
 interface TokenResponse {
-  access_token: string;
-  github_access_token?: string; // GitHub token (set on initial auth, null on refresh)
-  workos_access_token?: string; // WorkOS token (if different from access_token)
+  github_access_token?: string; // GitHub token for GitHub API calls
+  workos_access_token: string; // WorkOS token for session management
   refresh_token?: string;
   token_type: string;
   expires_in?: number; // Token lifetime in seconds
@@ -129,10 +128,8 @@ export class OAuthServerClient {
 
       // Extract GitHub and WorkOS tokens from response
       // CRITICAL: We MUST have a separate github_access_token
-      // access_token alone is the WorkOS token, NOT a GitHub token
       const githubToken = tokenResponse.github_access_token;
-      const workosToken =
-        tokenResponse.workos_access_token || tokenResponse.access_token;
+      const workosToken = tokenResponse.workos_access_token;
 
       console.log('[OAuthServerClient] Token received:', {
         hasRefreshToken: !!tokenResponse.refresh_token,
@@ -160,7 +157,7 @@ export class OAuthServerClient {
 
       return {
         token: githubToken,
-        workosToken: workosToken !== githubToken ? workosToken : undefined,
+        workosToken: workosToken,
         refreshToken: tokenResponse.refresh_token,
         expiresAt,
         user: tokenResponse.user,
@@ -281,8 +278,7 @@ export class OAuthServerClient {
       // On refresh, github_access_token may be null - server doesn't always return a new GitHub token
       // In that case, the caller (AuthService) should preserve the existing GitHub token
       const githubToken = tokenResponse.github_access_token;
-      const workosToken =
-        tokenResponse.workos_access_token || tokenResponse.access_token;
+      const workosToken = tokenResponse.workos_access_token;
 
       console.log('[OAuthServerClient] Token types in refresh response:', {
         hasGithubToken: !!tokenResponse.github_access_token,
@@ -296,7 +292,7 @@ export class OAuthServerClient {
 
       return {
         token: githubToken,
-        workosToken: workosToken !== githubToken ? workosToken : undefined,
+        workosToken: workosToken,
         refreshToken: newRefreshToken,
         expiresAt,
         user: tokenResponse.user,
