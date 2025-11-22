@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { useTheme } from '@principal-ade/industry-theme';
-import { SnapCarousel, SnapCarouselRef } from '@a24z/panels';
+import { SnapCarousel, SnapCarouselRef } from '@principal-ade/panels';
 import TerminalPanelPackaged, {
   TerminalPanelPackagedRef,
 } from '../TerminalPanelPackaged';

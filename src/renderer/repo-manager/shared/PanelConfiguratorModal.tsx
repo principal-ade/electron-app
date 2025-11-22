@@ -5,7 +5,7 @@ import {
   PanelConfigurator,
   type PanelLayout,
   type PanelDefinition,
-} from '@a24z/panels';
+} from '@principal-ade/panels';
 
 export interface PanelConfiguratorModalProps {
   isOpen: boolean;

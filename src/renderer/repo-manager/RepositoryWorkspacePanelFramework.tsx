@@ -3,8 +3,8 @@ import { useTheme } from '@principal-ade/industry-theme';
 import {
   ConfigurablePanelLayout,
   type PanelDefinitionWithContent,
-} from '@a24z/panels';
-import '@a24z/panels/panels.css';
+} from '@principal-ade/panels';
+import '@principal-ade/panels/panels.css';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
 import { panels as terminalPanels } from '@industry-theme/terminal-panel';
 import '@industry-theme/terminal-panel/dist/panels.bundle.css';

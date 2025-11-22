@@ -1,6 +1,6 @@
 import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import type { WorkspaceLayout } from '../../shared/types/userPreferences.types';
-import type { PanelLayout } from '@a24z/panels';
+import type { PanelLayout } from '@principal-ade/panels';
 
 /**
  * WorkspaceLayoutService - Manages workspace layout presets

@@ -12,8 +12,8 @@ import {
   Layers,
   DoorClosed,
 } from 'lucide-react';
-import { ConfigurablePanelLayout } from '@a24z/panels';
-import '@a24z/panels/panels.css';
+import { ConfigurablePanelLayout } from '@principal-ade/panels';
+import '@principal-ade/panels/panels.css';
 import { usePanelPersistence } from '../../../hooks/usePanelPersistence';
 import { useAllRepositories } from '../../../hooks/useRepositoryData';
 import { buildWorkspaceDependencyGraph } from '../../../services/WorkspaceDependencyGraphService';

@@ -15,8 +15,8 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import { AnimatedResizableLayout } from '@a24z/panels';
-import '@a24z/panels/panels.css';
+import { AnimatedResizableLayout } from '@principal-ade/panels';
+import '@principal-ade/panels/panels.css';
 import { useTheme } from '@principal-ade/industry-theme';
 
 import { HeadlessFileEditorPanel } from '../panels/components/HeadlessFileEditorPanel';

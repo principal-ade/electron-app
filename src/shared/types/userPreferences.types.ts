@@ -1,7 +1,7 @@
 import { EditorId } from './editor.types';
 import { TerminalId } from './terminal.types';
 import type { RepositoryPanelVisibility } from './repositoryPanel.types';
-import type { PanelLayout } from '@a24z/panels';
+import type { PanelLayout } from '@principal-ade/panels';
 
 /**
  * WorkspaceLayout - A saved panel configuration preset

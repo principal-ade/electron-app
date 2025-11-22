@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import { RefreshCw, Plus } from 'lucide-react';
-import { AnimatedResizableLayout } from '@a24z/panels';
-import '@a24z/panels/panels.css';
+import { AnimatedResizableLayout } from '@principal-ade/panels';
+import '@principal-ade/panels/panels.css';
 import { TerminalService } from '../../../main-process-api/TerminalService';
 import { FileSystemService } from '../../../main-process-api/FileSystemService';
 import { UserPreferencesService } from '../../../main-process-api/UserPreferencesService';

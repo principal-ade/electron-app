@@ -43,8 +43,8 @@ import {
   type PanelDefinitionWithContent,
   type PanelLayout,
   type TabsConfig,
-} from '@a24z/panels';
-import '@a24z/panels/panels.css';
+} from '@principal-ade/panels';
+import '@principal-ade/panels/panels.css';
 import { GitChangesProvider } from '../contexts/GitChangesContext';
 import { HighlightLayersProvider } from '../contexts/HighlightLayersContext';
 import { GitService, type GitBranchStatus } from '../main-process-api/GitService';
