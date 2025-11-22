@@ -65,29 +65,29 @@ Files using `@principal-ade/dynamic-file-tree`:
 - [x] `src/renderer/panels/components/AgentContextTreePanel.tsx` ✅ Clean
 - [x] `src/renderer/repo-manager/shared/CodebaseViewFileTree.tsx` ✅ Clean
 
-#### Renderer Process Files - panels (10 files)
+#### Renderer Process Files - panels (10 files) 🔶 PARTIAL (6/10 complete)
 Files using `@principal-ade/panels`:
 
-- [ ] `src/shared/types/userPreferences.types.ts`
-- [ ] `src/renderer/services/WorkspaceLayoutService.ts`
-- [ ] `src/renderer/repo-manager/RepositoryWorkspace.tsx`
-- [ ] `src/renderer/repo-manager/RepositoryWorkspacePanelFramework.tsx`
-- [ ] `src/renderer/pages/LandingPage/AgentConfigurationView/DetailedConfigurationView.tsx`
-- [ ] `src/renderer/pages/StoreViewer.tsx`
-- [ ] `src/renderer/panels/components/CarouselTerminalPanel.tsx` (also uses alexandria-core-library)
-- [ ] `src/renderer/repo-manager/shared/PanelConfiguratorModal.tsx`
-- [ ] `src/renderer/principal-window/views/FeedView/FeedView.tsx` (also uses alexandria-core-library)
-- [ ] `src/renderer/principal-window/views/TerminalManager/TerminalManager.tsx`
+- [x] `src/shared/types/userPreferences.types.ts` ✅ Clean (no issues)
+- [x] `src/renderer/services/WorkspaceLayoutService.ts` ✅ Clean (no issues)
+- [ ] `src/renderer/repo-manager/RepositoryWorkspace.tsx` ⚠️ **21 issues** (12 unused vars, 9 console.log)
+- [x] `src/renderer/repo-manager/RepositoryWorkspacePanelFramework.tsx` ✅ Clean (no issues)
+- [ ] `src/renderer/pages/LandingPage/AgentConfigurationView/DetailedConfigurationView.tsx` ⚠️ **52 issues** (5 any/unused, 47 console.log)
+- [ ] `src/renderer/pages/StoreViewer.tsx` ⚠️ **22 issues** (5 any types, 17 console.log)
+- [x] `src/renderer/panels/components/CarouselTerminalPanel.tsx` ⚠️ 1 pre-existing React hooks warning (acceptable)
+- [x] `src/renderer/repo-manager/shared/PanelConfiguratorModal.tsx` ✅ Clean (no issues)
+- [x] `src/renderer/principal-window/views/FeedView/FeedView.tsx` ✅ Fixed 1 issue
+- [x] `src/renderer/principal-window/views/TerminalManager/TerminalManager.tsx` ✅ Clean (no issues)
 
-#### Main/Shared Process Files - markdown-search (6 files)
+#### Main/Shared Process Files - markdown-search (6 files) ✅ COMPLETE
 Files using `@principal-ai/markdown-search`:
 
-- [ ] `src/main/services/DocumentIndexingService.ts`
-- [ ] `src/shared/ipc/DocumentSearchIPC.ts`
-- [ ] `src/renderer/services/DocumentSearchService.ts`
-- [ ] `src/renderer/principal-window/views/MarkdownSearch/components/DocumentSearchResults.tsx`
-- [ ] `src/renderer/principal-window/views/MarkdownSearch/components/DocumentViewer.tsx`
-- [ ] `src/renderer/principal-window/views/MarkdownSearch/MarkdownSearch.tsx`
+- [x] `src/main/services/DocumentIndexingService.ts` ✅ Clean (no issues)
+- [x] `src/shared/ipc/DocumentSearchIPC.ts` ✅ Clean (no issues)
+- [x] `src/renderer/services/DocumentSearchService.ts` ✅ Fixed 9 issues
+- [x] `src/renderer/principal-window/views/MarkdownSearch/components/DocumentSearchResults.tsx` ✅ Clean (no issues)
+- [x] `src/renderer/principal-window/views/MarkdownSearch/components/DocumentViewer.tsx` ✅ Clean (no issues)
+- [x] `src/renderer/principal-window/views/MarkdownSearch/MarkdownSearch.tsx` ✅ Clean (no issues)
 
 ## Cleanup Commands
 
@@ -151,15 +151,18 @@ This ensures:
 
 ### Statistics
 - **Total Files**: 53
-- **Completed**: 10 (18.9%)
-- **Remaining**: 43 (81.1%)
+- **Completed**: 22 (41.5%)
+- **Remaining**: 31 (58.5%)
+  - Clean/Acceptable: 22 files
+  - Need Work: 3 files (large files with many issues)
+  - Not Yet Checked: 27 files (alexandria-core-library)
 
 ### By Category
 - **Main Process**: 6/6 (100%) ✅
 - **Renderer - alexandria-core-library**: 0/27 (0%)
 - **Renderer - dynamic-file-tree**: 4/4 (100%) ✅
-- **Renderer - panels**: 0/10 (0%)
-- **Renderer - markdown-search**: 0/6 (0%)
+- **Renderer - panels**: 6/10 (60%) 🔶 (3 files need extensive work)
+- **Renderer - markdown-search**: 6/6 (100%) ✅
 
 ## Commit Strategy
 
