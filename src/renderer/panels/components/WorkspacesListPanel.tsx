@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { DoorClosed, Plus, Edit2, Check, X, ExternalLink, Search } from 'lucide-react';
+import { DoorClosed, Plus, Edit2, Check, X, ExternalLink, Search, Trash2 } from 'lucide-react';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
 import { WindowService } from '../../main-process-api/WindowService';
 import { CreateWorkspaceModal } from '../../components/CreateWorkspaceModal';
+import { DeleteWorkspaceConfirmationModal } from '../../components/DeleteWorkspaceConfirmationModal';
 import { getWorkspaceThemeColor } from '../../themes/predefinedThemes';
 
 interface WorkspacesListPanelProps {
@@ -26,6 +27,7 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
   const [showSearchBox, setShowSearchBox] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [workspaceRepositories, setWorkspaceRepositories] = useState<Map<string, string[]>>(new Map());
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
 
   // Load workspaces on mount
   useEffect(() => {
@@ -300,6 +302,7 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
             isDefault={workspace.id === defaultWorkspaceId}
             onClick={() => onWorkspaceSelect?.(workspace)}
             onOpenWorkspace={() => handleOpenWorkspaceManager(workspace.id)}
+            onDeleteWorkspace={() => setWorkspaceToDelete(workspace)}
           />
         ))}
 
@@ -326,6 +329,13 @@ export const WorkspacesListPanel: React.FC<WorkspacesListPanelProps> = ({
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
+
+      {/* Delete Workspace Confirmation Modal */}
+      <DeleteWorkspaceConfirmationModal
+        isOpen={workspaceToDelete !== null}
+        workspace={workspaceToDelete}
+        onClose={() => setWorkspaceToDelete(null)}
+      />
     </div>
   );
 };
@@ -336,6 +346,7 @@ interface WorkspaceCardProps {
   isDefault: boolean;
   onClick: () => void;
   onOpenWorkspace: () => void;
+  onDeleteWorkspace: () => void;
 }
 
 const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
@@ -344,6 +355,7 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
   isDefault,
   onClick,
   onOpenWorkspace,
+  onDeleteWorkspace,
 }) => {
   const { theme } = useTheme();
   const [isHovered, setIsHovered] = useState(false);
@@ -608,6 +620,39 @@ const WorkspaceCard: React.FC<WorkspaceCardProps> = ({
                 }}
               >
                 <Edit2 size={16} />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteWorkspace();
+                }}
+                title="Delete workspace"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '24px',
+                  height: '24px',
+                  padding: 0,
+                  border: 'none',
+                  borderRadius: '4px',
+                  backgroundColor: 'transparent',
+                  color: theme.colors.textSecondary,
+                  cursor: 'pointer',
+                  opacity: isHovered ? 1 : 0,
+                  pointerEvents: isHovered ? 'auto' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = `${theme.colors.error}15`;
+                  e.currentTarget.style.color = theme.colors.error;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = theme.colors.textSecondary;
+                }}
+              >
+                <Trash2 size={16} />
               </button>
               {isDefault && (
                 <span

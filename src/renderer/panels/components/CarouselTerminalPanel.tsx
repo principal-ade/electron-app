@@ -1005,7 +1005,7 @@ export const CarouselTerminalPanel = forwardRef<
                       ? theme.colors.primary
                       : 'transparent',
                     cursor: 'pointer',
-                    color: showAllTerminals ? '#fff' : theme.colors.textSecondary,
+                    color: showAllTerminals ? theme.colors.background : theme.colors.textSecondary,
                     borderRadius: '4px',
                   }}
                   onMouseEnter={(e) => {
@@ -1140,7 +1140,7 @@ export const CarouselTerminalPanel = forwardRef<
                 style={{
                   padding: '8px 16px',
                   backgroundColor: theme.colors.primary,
-                  color: '#fff',
+                  color: theme.colors.background,
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',

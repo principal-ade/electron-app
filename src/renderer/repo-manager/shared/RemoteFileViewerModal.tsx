@@ -229,7 +229,7 @@ export const RemoteFileViewerModal: React.FC<RemoteFileViewerModalProps> = ({
                 padding: '8px 16px',
                 borderRadius: '6px',
                 backgroundColor: theme.colors.primary,
-                color: '#fff',
+                color: theme.colors.background,
                 border: 'none',
                 cursor: 'pointer',
               }}

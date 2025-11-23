@@ -300,7 +300,7 @@ export const SessionEventsView: React.FC<SessionEventsViewProps> = ({
                       : theme.colors.background,
                   color:
                     filterType === filter.value
-                      ? '#fff'
+                      ? theme.colors.background
                       : theme.colors.textSecondary,
                   cursor: 'pointer',
                   transition: 'all 0.2s',

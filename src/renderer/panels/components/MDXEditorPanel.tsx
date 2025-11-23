@@ -432,7 +432,7 @@ export const MDXEditorPanel: React.FC<MDXEditorPanelProps> = ({
           style={{
             padding: '12px 16px',
             backgroundColor: theme.colors.warning || '#f59e0b',
-            color: '#ffffff',
+            color: theme.colors.background,
             fontSize: '14px',
             display: 'flex',
             alignItems: 'center',

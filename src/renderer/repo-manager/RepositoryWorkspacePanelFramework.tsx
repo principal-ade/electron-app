@@ -7,9 +7,7 @@ import {
 import '@principal-ade/panels/panels.css';
 import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
 import { panels as terminalPanels } from '@industry-theme/terminal-panel';
-import '@industry-theme/terminal-panel/dist/panels.bundle.css';
 import { panels as visualValidationPanels } from '@industry-theme/visual-validation-panel';
-import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
 import type { Repository } from '../../shared/types/repository.types';
 
 export interface RepositoryWorkspacePanelFrameworkProps {

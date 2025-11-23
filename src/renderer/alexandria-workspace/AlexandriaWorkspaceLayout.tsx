@@ -4,7 +4,6 @@ import type { Workspace } from '@principal-ai/alexandria-core-library/types';
 import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
 import { panels as terminalPanels } from '@industry-theme/terminal-panel';
-import '@industry-theme/terminal-panel/dist/panels.bundle.css';
 import { panels as workspacePanels } from '@industry-theme/alexandria-workspace-panel';
 import { panels as docsPanels } from '@industry-theme/alexandria-docs-panel';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';

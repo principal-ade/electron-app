@@ -499,7 +499,7 @@ export const DeleteAlexandriaEntryModal: React.FC<DeleteAlexandriaEntryModalProp
               backgroundColor: deleteLocal
                 ? theme.colors.error || '#ef4444'
                 : theme.colors.primary,
-              color: 'white',
+              color: theme.colors.background,
               cursor: isDeleting ? 'not-allowed' : 'pointer',
               fontSize: '14px',
               fontWeight: 500,

@@ -288,7 +288,7 @@ export const OAuthCallbackModal: React.FC<OAuthCallbackModalProps> = ({
               backgroundColor: theme.colors.primary,
               border: 'none',
               borderRadius: '6px',
-              color: 'white',
+              color: theme.colors.background,
               fontSize: '14px',
               fontWeight: 500,
               cursor: 'pointer',

@@ -1196,7 +1196,7 @@ Please check for breaking changes and compatibility issues before updating.`;
               backgroundColor: isAnalyzing
                 ? theme.colors.backgroundLight
                 : theme.colors.primary,
-              color: isAnalyzing ? theme.colors.textSecondary : '#fff',
+              color: isAnalyzing ? theme.colors.textSecondary : theme.colors.background,
               fontSize: '13px',
               fontWeight: 500,
               cursor: isAnalyzing ? 'not-allowed' : 'pointer',
@@ -1893,7 +1893,7 @@ Please check for breaking changes and compatibility issues before updating.`;
                     borderRadius: '4px',
                     border: 'none',
                     backgroundColor: theme.colors.primary,
-                    color: '#fff',
+                    color: theme.colors.background,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -1945,7 +1945,7 @@ Please check for breaking changes and compatibility issues before updating.`;
                   right: '20px',
                   padding: '12px 16px',
                   backgroundColor: '#10b981',
-                  color: '#fff',
+                  color: theme.colors.background,
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: 500,

@@ -264,7 +264,7 @@ export const GraphDetailPanel: React.FC<GraphDetailPanelProps> = ({
                     backgroundColor: isSelected
                       ? theme.colors.primary
                       : theme.colors.background,
-                    color: isSelected ? '#ffffff' : theme.colors.text,
+                    color: isSelected ? theme.colors.background : theme.colors.text,
                     border: `1px solid ${isSelected ? theme.colors.primary : theme.colors.border}`,
                     borderRadius: '4px',
                     cursor: 'pointer',

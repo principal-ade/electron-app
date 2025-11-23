@@ -443,7 +443,7 @@ export const GitChangesHelpModal: React.FC<GitChangesHelpModalProps> = ({
                 borderRadius: '8px',
                 border: 'none',
                 backgroundColor: theme.colors.primary,
-                color: 'white',
+                color: theme.colors.background,
                 fontSize: '14px',
                 fontWeight: 500,
                 cursor: 'pointer',

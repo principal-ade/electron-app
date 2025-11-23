@@ -88,7 +88,7 @@ export const TerminalCleanupButton: React.FC<TerminalCleanupButtonProps> = ({
           backgroundColor: isAtLimit
             ? theme.colors.error
             : theme.colors.warning,
-          color: '#fff',
+          color: theme.colors.background,
           border: 'none',
           borderRadius: '4px',
           fontSize: '11px',
@@ -153,7 +153,7 @@ export const TerminalCleanupButton: React.FC<TerminalCleanupButtonProps> = ({
               style={{
                 padding: '4px 12px',
                 backgroundColor: theme.colors.error,
-                color: '#fff',
+                color: theme.colors.background,
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '11px',

@@ -387,7 +387,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                 disabled={!isDirty || isSaving}
                 style={{
                   backgroundColor: theme.colors.primary,
-                  color: '#ffffff',
+                  color: theme.colors.background,
                   border: 'none',
                   borderRadius: '4px',
                   padding: '6px 10px',

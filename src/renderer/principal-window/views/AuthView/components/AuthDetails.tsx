@@ -867,7 +867,7 @@ export const AuthDetails: React.FC<AuthDetailsProps> = ({
                     width: '24px',
                     height: '24px',
                     borderRadius: '50%',
-                    backgroundColor: '#ffffff',
+                    backgroundColor: theme.colors.background,
                     transition: 'left 0.2s ease',
                     boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                   }}

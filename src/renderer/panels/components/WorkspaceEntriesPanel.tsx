@@ -326,7 +326,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = theme.colors.primary;
                 e.currentTarget.style.borderColor = theme.colors.primary;
-                e.currentTarget.style.color = '#fff';
+                e.currentTarget.style.color = theme.colors.background;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
@@ -412,7 +412,7 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = theme.colors.error;
-                  e.currentTarget.style.color = '#fff';
+                  e.currentTarget.style.color = theme.colors.background;
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent';

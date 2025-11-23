@@ -273,7 +273,7 @@ const QuickOpenApp: React.FC = () => {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div
                         style={{
-                          color: isAnimatingItem ? '#fff' : theme.colors.text,
+                          color: isAnimatingItem ? theme.colors.background : theme.colors.text,
                           fontSize: theme.fontSizes[3],
                           fontFamily: theme.fonts.body,
                           fontWeight: isAnimatingItem ? 600 : 500,
@@ -288,8 +288,8 @@ const QuickOpenApp: React.FC = () => {
                             style={{
                               display: 'inline-block',
                               padding: '2px 6px',
-                              background: isAnimatingItem ? '#fff' : theme.colors.primary,
-                              color: isAnimatingItem ? theme.colors.primary : '#fff',
+                              background: isAnimatingItem ? theme.colors.background : theme.colors.primary,
+                              color: isAnimatingItem ? theme.colors.primary : theme.colors.background,
                               fontSize: theme.fontSizes[1],
                               fontFamily: theme.fonts.body,
                               borderRadius: '3px',
@@ -303,7 +303,7 @@ const QuickOpenApp: React.FC = () => {
                       {item.description && (
                         <div
                           style={{
-                            color: isAnimatingItem ? '#ffffffcc' : theme.colors.textSecondary,
+                            color: isAnimatingItem ? `${theme.colors.background}cc` : theme.colors.textSecondary,
                             fontSize: theme.fontSizes[2],
                             fontFamily: theme.fonts.body,
                             marginTop: '4px',
@@ -318,7 +318,7 @@ const QuickOpenApp: React.FC = () => {
                     </div>
                     <div
                       style={{
-                        color: isAnimatingItem ? '#ffffffcc' : theme.colors.textSecondary,
+                        color: isAnimatingItem ? `${theme.colors.background}cc` : theme.colors.textSecondary,
                         fontSize: theme.fontSizes[1],
                         fontFamily: theme.fonts.body,
                         textTransform: 'uppercase',

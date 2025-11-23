@@ -483,7 +483,7 @@ export const PresencePanel: React.FC = () => {
               width: '20px',
               height: '20px',
               borderRadius: '50%',
-              backgroundColor: '#ffffff',
+              backgroundColor: theme.colors.background,
               transition: 'left 0.2s ease',
               boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
             }}
@@ -512,7 +512,7 @@ export const PresencePanel: React.FC = () => {
               fontSize: `${theme.fontSizes[1]}px`,
               fontFamily: theme.fonts.body,
               fontWeight: theme.fontWeights.medium,
-              color: isVisible ? theme.colors.text : '#ffffff',
+              color: isVisible ? theme.colors.text : theme.colors.background,
               backgroundColor: isVisible ? theme.colors.backgroundSecondary : '#6b7280',
               border: `1px solid ${isVisible ? theme.colors.border : '#6b7280'}`,
               borderRadius: '4px',

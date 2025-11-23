@@ -225,7 +225,7 @@ export const ObservabilitySettings: React.FC = () => {
                   style={{
                     padding: '10px 24px',
                     backgroundColor: theme.colors.primary,
-                    color: '#fff',
+                    color: theme.colors.background,
                     border: 'none',
                     borderRadius: '8px',
                     fontSize: '14px',
@@ -939,7 +939,7 @@ export const ObservabilitySettings: React.FC = () => {
                 backgroundColor: canSave
                   ? theme.colors.primary
                   : theme.colors.backgroundSecondary,
-                color: canSave ? '#fff' : theme.colors.textSecondary,
+                color: canSave ? theme.colors.background : theme.colors.textSecondary,
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '14px',

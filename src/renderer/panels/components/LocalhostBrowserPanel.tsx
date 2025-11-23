@@ -392,7 +392,7 @@ export const LocalhostBrowserPanel: React.FC<LocalhostBrowserPanelProps> = ({
                 fontSize: theme.fontSizes[2],
                 fontWeight: 600,
                 backgroundColor: theme.colors.primary,
-                color: '#ffffff',
+                color: theme.colors.background,
                 border: 'none',
                 borderRadius: '6px',
                 cursor: 'pointer',

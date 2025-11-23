@@ -485,7 +485,7 @@ export const CityVisualizationPanel: React.FC<CityVisualizationPanelProps> = ({
                 style={{
                   padding: '8px 16px',
                   backgroundColor: theme.colors.primary,
-                  color: '#fff',
+                  color: theme.colors.background,
                   border: 'none',
                   borderRadius: '6px',
                   fontSize: '12px',

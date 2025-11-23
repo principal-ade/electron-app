@@ -285,7 +285,7 @@ export const RepositoryNotesPanel: React.FC<RepositoryNotesPanelProps> = ({
                   gap: '6px',
                   padding: '6px 12px',
                   backgroundColor: theme.colors.primary,
-                  color: 'white',
+                  color: theme.colors.background,
                   border: 'none',
                   borderRadius: '6px',
                   cursor: 'pointer',

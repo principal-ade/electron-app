@@ -307,7 +307,7 @@ export const WorkspaceSettings: React.FC = () => {
                 borderRadius: '6px',
                 border: 'none',
                 backgroundColor: theme.colors.primary,
-                color: 'white',
+                color: theme.colors.background,
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: 500,

@@ -63,7 +63,7 @@ export const PanelEmptyState: React.FC<PanelEmptyStateProps> = ({
                 border: 'none',
                 borderRadius: '6px',
                 backgroundColor: theme.colors.primary,
-                color: 'white',
+                color: theme.colors.background,
                 cursor: 'pointer',
                 fontSize: '14px',
                 fontWeight: 500,

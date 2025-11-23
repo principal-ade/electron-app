@@ -371,7 +371,7 @@ export const HelpModal: React.FC<HelpModalProps> = ({
               borderRadius: '8px',
               border: 'none',
               backgroundColor: theme.colors.primary,
-              color: 'white',
+              color: theme.colors.background,
               fontSize: theme.fontSizes[1],
               fontWeight: theme.fontWeights?.medium || 500,
               cursor: 'pointer',

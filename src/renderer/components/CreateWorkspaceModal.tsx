@@ -421,7 +421,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
                 borderRadius: '6px',
                 border: 'none',
                 backgroundColor: theme.colors.primary,
-                color: 'white',
+                color: theme.colors.background,
                 cursor:
                   isSubmitting || !formName.trim() ? 'not-allowed' : 'pointer',
                 fontSize: '14px',

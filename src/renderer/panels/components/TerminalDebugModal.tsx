@@ -428,7 +428,7 @@ export const TerminalDebugModal: React.FC<TerminalDebugModalProps> = ({
                               style={{
                                 padding: '2px 6px',
                                 backgroundColor: theme.colors.primary,
-                                color: '#fff',
+                                color: theme.colors.background,
                                 borderRadius: '3px',
                                 fontSize: '10px',
                                 fontWeight: 600,
@@ -518,7 +518,7 @@ export const TerminalDebugModal: React.FC<TerminalDebugModalProps> = ({
                               gap: '4px',
                               padding: '4px 8px',
                               backgroundColor: theme.colors.error,
-                              color: '#fff',
+                              color: theme.colors.background,
                               border: 'none',
                               borderRadius: '3px',
                               fontSize: '10px',

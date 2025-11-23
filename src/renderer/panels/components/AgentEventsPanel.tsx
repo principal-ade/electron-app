@@ -325,7 +325,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                 healthStatus === 'healthy' ||
                 healthStatus === 'unhealthy' ||
                 healthStatus === 'checking'
-                  ? '#fff'
+                  ? theme.colors.background
                   : theme.colors.text,
               border: `1px solid ${
                 healthStatus === 'healthy'
@@ -374,7 +374,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
               backgroundColor: filterByRepo
                 ? theme.colors.primary
                 : 'transparent',
-              color: filterByRepo ? '#fff' : theme.colors.text,
+              color: filterByRepo ? theme.colors.background : theme.colors.text,
               border: `1px solid ${filterByRepo ? theme.colors.primary : theme.colors.border}`,
               borderRadius: '4px',
               cursor: 'pointer',
@@ -401,7 +401,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
               backgroundColor: autoScroll
                 ? theme.colors.success
                 : 'transparent',
-              color: autoScroll ? '#fff' : theme.colors.text,
+              color: autoScroll ? theme.colors.background : theme.colors.text,
               border: `1px solid ${autoScroll ? theme.colors.success : theme.colors.border}`,
               borderRadius: '4px',
               cursor: 'pointer',
@@ -469,7 +469,7 @@ export const AgentEventsPanel: React.FC<AgentEventsPanelProps> = ({
                 color:
                   selectedEventTypes.has(eventType) ||
                   selectedEventTypes.size === 0
-                    ? '#fff'
+                    ? theme.colors.background
                     : theme.colors.textSecondary,
                 border: `1px solid ${getEventColor(eventType)}`,
                 borderRadius: '12px',

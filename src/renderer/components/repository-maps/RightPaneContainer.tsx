@@ -289,7 +289,7 @@ export const RightPaneContainer: React.FC<RightPaneContainerProps> = ({
                             : 'transparent',
                         color:
                           activeView === 'session-detail'
-                            ? '#fff'
+                            ? theme.colors.background
                             : theme.colors.textSecondary,
                       }}
                     >
@@ -308,7 +308,7 @@ export const RightPaneContainer: React.FC<RightPaneContainerProps> = ({
                           cursor: 'pointer',
                           fontSize: 12,
                           backgroundColor: theme.colors.primary,
-                          color: '#fff',
+                          color: theme.colors.background,
                         }}
                       >
                         Document
@@ -341,7 +341,7 @@ export const RightPaneContainer: React.FC<RightPaneContainerProps> = ({
                         cursor: 'pointer',
                         fontSize: 12,
                         backgroundColor: theme.colors.primary,
-                        color: '#fff',
+                        color: theme.colors.background,
                       }}
                     >
                       Map

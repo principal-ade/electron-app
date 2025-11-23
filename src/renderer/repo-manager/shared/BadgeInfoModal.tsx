@@ -359,7 +359,7 @@ export const BadgeInfoModal: React.FC<BadgeInfoModalProps> = ({
                 backgroundColor: status.canFastForward
                   ? theme.colors.success || '#4caf50'
                   : '#ffc107',
-                color: 'white',
+                color: theme.colors.background,
                 border: 'none',
                 fontSize: '11px',
                 fontWeight: 500,

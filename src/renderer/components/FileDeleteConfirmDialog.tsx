@@ -145,7 +145,7 @@ export const FileDeleteConfirmDialog: React.FC<
               backgroundColor: theme.colors.error || '#ef4444',
               border: 'none',
               borderRadius: '4px',
-              color: '#fff',
+              color: theme.colors.background,
               cursor: 'pointer',
               fontSize: '14px',
               fontWeight: '500',

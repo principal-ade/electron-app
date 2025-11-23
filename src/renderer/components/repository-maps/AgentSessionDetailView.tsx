@@ -390,7 +390,7 @@ export const AgentSessionDetailView: React.FC<AgentSessionDetailViewProps> = ({
                     : theme.colors.success,
                   border: 'none',
                   borderRadius: '4px',
-                  color: '#fff',
+                  color: theme.colors.background,
                   fontSize: '11px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -523,7 +523,7 @@ export const AgentSessionDetailView: React.FC<AgentSessionDetailViewProps> = ({
                   ? 'none'
                   : `1px solid ${theme.colors.border}`,
               borderRadius: '4px',
-              color: viewMode === 'files' ? '#fff' : theme.colors.text,
+              color: viewMode === 'files' ? theme.colors.background : theme.colors.text,
               fontSize: '11px',
               fontWeight: viewMode === 'files' ? 600 : 400,
               cursor: 'pointer',
@@ -549,7 +549,7 @@ export const AgentSessionDetailView: React.FC<AgentSessionDetailViewProps> = ({
                   ? 'none'
                   : `1px solid ${theme.colors.border}`,
               borderRadius: '4px',
-              color: viewMode === 'events' ? '#fff' : theme.colors.text,
+              color: viewMode === 'events' ? theme.colors.background : theme.colors.text,
               fontSize: '11px',
               fontWeight: viewMode === 'events' ? 600 : 400,
               cursor: 'pointer',
@@ -718,7 +718,7 @@ export const AgentSessionDetailView: React.FC<AgentSessionDetailViewProps> = ({
                       : 'transparent',
                   color:
                     fileViewMode === 'reads'
-                      ? '#fff'
+                      ? theme.colors.background
                       : theme.colors.textSecondary,
                   cursor: 'pointer',
                   transition: 'all 0.2s',
@@ -744,7 +744,7 @@ export const AgentSessionDetailView: React.FC<AgentSessionDetailViewProps> = ({
                       : 'transparent',
                   color:
                     fileViewMode === 'writes'
-                      ? '#fff'
+                      ? theme.colors.background
                       : theme.colors.textSecondary,
                   cursor: 'pointer',
                   transition: 'all 0.2s',

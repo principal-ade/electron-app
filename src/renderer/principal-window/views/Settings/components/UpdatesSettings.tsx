@@ -249,7 +249,7 @@ export const UpdatesSettings: React.FC = () => {
                 backgroundColor: isChecking
                   ? theme.colors.backgroundTertiary
                   : theme.colors.primary,
-                color: isChecking ? theme.colors.textSecondary : '#ffffff',
+                color: isChecking ? theme.colors.textSecondary : theme.colors.background,
                 border: 'none',
                 borderRadius: '8px',
                 cursor: isChecking ? 'not-allowed' : 'pointer',
@@ -385,7 +385,7 @@ export const UpdatesSettings: React.FC = () => {
                 style={{
                   padding: '10px 20px',
                   backgroundColor: theme.colors.warning,
-                  color: '#ffffff',
+                  color: theme.colors.background,
                   border: 'none',
                   borderRadius: '8px',
                   cursor: 'pointer',
@@ -425,7 +425,7 @@ export const UpdatesSettings: React.FC = () => {
                         : theme.colors.warning,
                     color: isDownloading
                       ? theme.colors.textSecondary
-                      : '#ffffff',
+                      : theme.colors.background,
                     border: 'none',
                     borderRadius: '8px',
                     cursor: isDownloading ? 'not-allowed' : 'pointer',

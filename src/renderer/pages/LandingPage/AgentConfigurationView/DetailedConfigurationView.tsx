@@ -542,7 +542,7 @@ export const DetailedConfigurationView: React.FC<
                     : theme.colors.backgroundSecondary,
                 color:
                   hasUnsavedChanges && !isSaving
-                    ? '#fff'
+                    ? theme.colors.background
                     : theme.colors.textMuted,
                 cursor:
                   hasUnsavedChanges && !isSaving ? 'pointer' : 'not-allowed',
@@ -841,7 +841,7 @@ export const DetailedConfigurationView: React.FC<
               backgroundColor: claudeMCPStatus.hasPrincipleMD
                 ? theme.colors.error
                 : theme.colors.success,
-              color: 'white',
+              color: theme.colors.background,
             }}
           >
             {isTogglingClaudeMCP
@@ -949,7 +949,7 @@ export const DetailedConfigurationView: React.FC<
               backgroundColor: clineMCPStatus.hasPrincipleMD
                 ? theme.colors.error
                 : theme.colors.success,
-              color: 'white',
+              color: theme.colors.background,
             }}
           >
             {isTogglingClineMCP
@@ -1066,7 +1066,7 @@ export const DetailedConfigurationView: React.FC<
               backgroundColor: openCodeMCPStatus.hasPrincipleMD
                 ? theme.colors.error
                 : theme.colors.success,
-              color: 'white',
+              color: theme.colors.background,
             }}
           >
             {isTogglingOpenCodeMCP
@@ -1170,7 +1170,7 @@ export const DetailedConfigurationView: React.FC<
               backgroundColor: droidMCPStatus.hasPrincipleMD
                 ? theme.colors.error
                 : theme.colors.success,
-              color: 'white',
+              color: theme.colors.background,
             }}
           >
             {isTogglingDroidMCP

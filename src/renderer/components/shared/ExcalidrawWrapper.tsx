@@ -703,7 +703,7 @@ export const ExcalidrawWrapper: React.FC<ExcalidrawWrapperProps> = ({
                   backgroundColor: isSaving
                     ? theme.colors.backgroundSecondary
                     : theme.colors.primary,
-                  color: 'white',
+                  color: theme.colors.background,
                   cursor: isSaving ? 'not-allowed' : 'pointer',
                   fontSize: '14px',
                   fontWeight: 500,

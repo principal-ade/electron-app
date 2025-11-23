@@ -566,7 +566,7 @@ export const GeneralSettings: React.FC = () => {
                     width: '18px',
                     left: showGitSyncPanel ? '27px' : '3px',
                     bottom: '3px',
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                     transition: '0.3s',
                     borderRadius: '50%',
                   }}
@@ -663,7 +663,7 @@ export const GeneralSettings: React.FC = () => {
                     width: '18px',
                     left: showPresencePanel ? '27px' : '3px',
                     bottom: '3px',
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                     transition: '0.3s',
                     borderRadius: '50%',
                   }}
@@ -759,7 +759,7 @@ export const GeneralSettings: React.FC = () => {
                     width: '18px',
                     left: presenceAutoConnect ? '27px' : '3px',
                     bottom: '3px',
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                     transition: '0.3s',
                     borderRadius: '50%',
                   }}
@@ -853,7 +853,7 @@ export const GeneralSettings: React.FC = () => {
                     width: '18px',
                     left: showTerminalDebugButton ? '27px' : '3px',
                     bottom: '3px',
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                     transition: '0.3s',
                     borderRadius: '50%',
                   }}
@@ -947,7 +947,7 @@ export const GeneralSettings: React.FC = () => {
                     width: '18px',
                     left: showTerminalRecordingButton ? '27px' : '3px',
                     bottom: '3px',
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                     transition: '0.3s',
                     borderRadius: '50%',
                   }}
@@ -1041,7 +1041,7 @@ export const GeneralSettings: React.FC = () => {
                     width: '18px',
                     left: showTerminalShowAllButton ? '27px' : '3px',
                     bottom: '3px',
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                     transition: '0.3s',
                     borderRadius: '50%',
                   }}
@@ -1135,7 +1135,7 @@ export const GeneralSettings: React.FC = () => {
                     width: '18px',
                     left: showReposButton ? '27px' : '3px',
                     bottom: '3px',
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                     transition: '0.3s',
                     borderRadius: '50%',
                   }}
@@ -1228,7 +1228,7 @@ export const GeneralSettings: React.FC = () => {
                     width: '18px',
                     left: showTerminalButton ? '27px' : '3px',
                     bottom: '3px',
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                     transition: '0.3s',
                     borderRadius: '50%',
                   }}
@@ -1321,7 +1321,7 @@ export const GeneralSettings: React.FC = () => {
                     width: '18px',
                     left: showMonitorButton ? '27px' : '3px',
                     bottom: '3px',
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                     transition: '0.3s',
                     borderRadius: '50%',
                   }}
@@ -1414,7 +1414,7 @@ export const GeneralSettings: React.FC = () => {
                     width: '18px',
                     left: showSearchButton ? '27px' : '3px',
                     bottom: '3px',
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                     transition: '0.3s',
                     borderRadius: '50%',
                   }}
@@ -1529,7 +1529,7 @@ export const GeneralSettings: React.FC = () => {
                     width: '18px',
                     left: enableGitWatchingOnStartup ? '27px' : '3px',
                     bottom: '3px',
-                    backgroundColor: 'white',
+                    backgroundColor: theme.colors.background,
                     transition: '0.3s',
                     borderRadius: '50%',
                   }}

@@ -747,7 +747,7 @@ export const TabbedTerminalPanel = forwardRef<
                       : 'transparent',
                     cursor: 'pointer',
                     color: showAllTerminals
-                      ? '#fff'
+                      ? theme.colors.background
                       : theme.colors.textSecondary,
                   }}
                   onMouseEnter={(e) => {
@@ -810,7 +810,7 @@ export const TabbedTerminalPanel = forwardRef<
                     border: 'none',
                     backgroundColor: isRecording ? '#ff4444' : 'transparent',
                     cursor: 'pointer',
-                    color: isRecording ? '#fff' : theme.colors.textSecondary,
+                    color: isRecording ? theme.colors.background : theme.colors.textSecondary,
                     paddingLeft: '4px',
                     paddingRight: '4px',
                   }}
@@ -924,7 +924,7 @@ export const TabbedTerminalPanel = forwardRef<
                   marginTop: '16px',
                   padding: '8px 16px',
                   backgroundColor: theme.colors.primary,
-                  color: '#fff',
+                  color: theme.colors.background,
                   border: 'none',
                   borderRadius: '4px',
                   cursor: 'pointer',

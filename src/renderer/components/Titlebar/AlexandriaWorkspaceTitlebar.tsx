@@ -107,7 +107,7 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = theme.colors.primary;
             e.currentTarget.style.borderColor = theme.colors.primary;
-            e.currentTarget.style.color = '#fff';
+            e.currentTarget.style.color = theme.colors.background;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = 'transparent';

@@ -538,7 +538,7 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
             onMouseEnter={(event) => {
               if (!isRemoving) {
                 event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
-                event.currentTarget.style.color = '#fff';
+                event.currentTarget.style.color = theme.colors.background;
               }
             }}
             onMouseLeave={(event) => {
@@ -583,7 +583,7 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
           }}
           onMouseEnter={(event) => {
             event.currentTarget.style.backgroundColor = theme.colors.error || '#ef4444';
-            event.currentTarget.style.color = '#fff';
+            event.currentTarget.style.color = theme.colors.background;
           }}
           onMouseLeave={(event) => {
             event.currentTarget.style.backgroundColor = 'transparent';

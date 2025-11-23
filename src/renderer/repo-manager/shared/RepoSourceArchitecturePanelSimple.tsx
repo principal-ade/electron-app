@@ -304,7 +304,7 @@ export const RepoSourceArchitecturePanelSimple: React.FC<
                 padding: '6px 12px',
                 borderRadius: '4px',
                 backgroundColor: theme.colors.primary,
-                color: '#fff',
+                color: theme.colors.background,
                 border: 'none',
                 fontSize: theme.fontSizes[1],
                 cursor: 'pointer',
