@@ -22,6 +22,7 @@
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
     "@industry-theme/alexandria-docs-panel": "^0.1.3",
+    "@industry-theme/visual-validation-panel": "^0.1.2",
     "@principal-ade/industry-themed-mdx-editor": "^0.1.14",
     "@principal-ade/industry-themed-monaco-editor": "^0.1.9",
     "@principal-ade/industry-themed-terminal": "^0.1.7",
