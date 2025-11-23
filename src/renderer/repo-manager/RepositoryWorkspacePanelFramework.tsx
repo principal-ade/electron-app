@@ -8,6 +8,8 @@ import '@principal-ade/panels/panels.css';
 import { RepositoryPanelProvider, useRepositoryPanelProvider } from '../contexts/RepositoryPanelContext';
 import { panels as terminalPanels } from '@industry-theme/terminal-panel';
 import '@industry-theme/terminal-panel/dist/panels.bundle.css';
+import { panels as visualValidationPanels } from '@industry-theme/visual-validation-panel';
+import '@industry-theme/visual-validation-panel/dist/panels.bundle.css';
 import type { Repository } from '../../shared/types/repository.types';
 
 export interface RepositoryWorkspacePanelFrameworkProps {
@@ -22,8 +24,9 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
   const { theme } = useTheme();
   const { context, actions, events } = useRepositoryPanelProvider();
 
-  // Get terminal panel component from the panel framework package
+  // Get panel components from the panel framework packages
   const TerminalPanelComponent = terminalPanels[0]?.component;
+  const VisualValidationPanelComponent = visualValidationPanels[0]?.component;
 
   // Define all panels using panel framework components
   const allPanels: PanelDefinitionWithContent[] = useMemo(
@@ -41,8 +44,21 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
           <div>Terminal panel not available</div>
         ),
       },
+      {
+        id: 'visualValidation',
+        label: 'Visual Validation',
+        content: VisualValidationPanelComponent ? (
+          <VisualValidationPanelComponent
+            context={context}
+            actions={actions}
+            events={events}
+          />
+        ) : (
+          <div>Visual Validation panel not available</div>
+        ),
+      },
     ],
-    [TerminalPanelComponent, context, actions, events],
+    [TerminalPanelComponent, VisualValidationPanelComponent, context, actions, events],
   );
 
   return (
@@ -60,7 +76,7 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
         layout={{
           left: {
             type: 'tabs',
-            panels: [], // Empty - will be collapsed
+            panels: ['visualValidation'],
             config: {
               defaultActiveTab: 0,
               tabPosition: 'top',
@@ -84,10 +100,10 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
           },
         }}
         collapsiblePanels={{ left: true, right: true }}
-        defaultSizes={{ left: 20, middle: 60, right: 20 }}
+        defaultSizes={{ left: 30, middle: 50, right: 20 }}
         minSizes={{ left: 15, middle: 30, right: 15 }}
         collapsed={{
-          left: true,  // Start collapsed
+          left: false,  // Show visual validation panel
           right: true, // Start collapsed
         }}
         showCollapseButtons={true}

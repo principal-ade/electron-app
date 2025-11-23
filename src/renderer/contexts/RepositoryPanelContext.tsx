@@ -14,11 +14,15 @@ import type {
   PanelEvent,
   PanelEventEmitter,
   RepositoryMetadata,
+  DataSlice,
 } from '@principal-ade/panel-framework-core';
 import { TerminalService } from '../main-process-api/TerminalService';
 import type { TerminalInfo } from '../../shared/main-process-api-interfaces/TerminalService';
+import { RepositoryMonitoringService } from '../main-process-api/RepositoryMonitoringService';
+import { FileSystemService } from '../main-process-api/FileSystemService';
+import type { FileTree } from '@principal-ai/repository-abstraction';
 
-// Extend PanelActions with terminal-specific actions
+// Extend PanelActions with terminal-specific and file system actions
 interface RepositoryPanelActions extends PanelActions {
   createTerminalSession?: (options?: { cwd?: string }) => Promise<string>;
   writeToTerminal?: (sessionId: string, data: string) => Promise<void>;
@@ -28,6 +32,7 @@ interface RepositoryPanelActions extends PanelActions {
     rows: number
   ) => Promise<void>;
   destroyTerminalSession?: (sessionId: string) => Promise<void>;
+  readFile?: (filePath: string) => Promise<string>;
 }
 
 // Extended context for repository panels
@@ -68,6 +73,10 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
 
   // Track terminal session subscriptions for cleanup
   const terminalSubscriptionsRef = useRef<Map<string, () => void>>(new Map());
+
+  // Track file tree for the current repository
+  const [fileTreeData, setFileTreeData] = useState<FileTree | null>(null);
+  const [fileTreeLoading, setFileTreeLoading] = useState(false);
 
   // Loading state
   const [loading] = useState(false);
@@ -122,6 +131,30 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
 
     loadTerminalSessions();
   }, []);
+
+  // Fetch file tree when repository changes
+  useEffect(() => {
+    const fetchFileTree = async () => {
+      if (!repositoryPath) {
+        setFileTreeData(null);
+        return;
+      }
+
+      setFileTreeLoading(true);
+      try {
+        const tree = await RepositoryMonitoringService.getFileTree(repositoryPath);
+        console.info('[RepositoryPanelProvider] Fetched file tree for repository:', repositoryPath, tree);
+        setFileTreeData(tree);
+      } catch (error) {
+        console.error('[RepositoryPanelProvider] Failed to fetch file tree:', error);
+        setFileTreeData(null);
+      } finally {
+        setFileTreeLoading(false);
+      }
+    };
+
+    fetchFileTree();
+  }, [repositoryPath]);
 
   // Create actions object
   const actions: RepositoryPanelActions = useMemo(
@@ -194,8 +227,51 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
         const terminals = await TerminalService.list();
         setTerminalSessions(terminals);
       },
+
+      // File system actions
+      readFile: async (filePath: string) => {
+        try {
+          const content = await FileSystemService.readFile(filePath);
+          return content;
+        } catch (error) {
+          console.error('[RepositoryPanelProvider] Failed to read file:', filePath, error);
+          throw error;
+        }
+      },
     }),
     [repositoryPath, terminalContext, events],
+  );
+
+  // Create data slices
+  const slices = useMemo<Map<string, DataSlice>>(
+    () =>
+      new Map([
+        [
+          'fileTree',
+          {
+            scope: 'repository' as const,
+            name: 'fileTree',
+            data: fileTreeData,
+            loading: fileTreeLoading,
+            error: null,
+            refresh: async () => {
+              if (repositoryPath) {
+                setFileTreeLoading(true);
+                try {
+                  const tree = await RepositoryMonitoringService.getFileTree(repositoryPath);
+                  setFileTreeData(tree);
+                } catch (error) {
+                  console.error('[RepositoryPanelProvider] Failed to refresh file tree:', error);
+                  setFileTreeData(null);
+                } finally {
+                  setFileTreeLoading(false);
+                }
+              }
+            },
+          },
+        ],
+      ]),
+    [repositoryPath, fileTreeData, fileTreeLoading],
   );
 
   // Create context value
@@ -212,17 +288,37 @@ export const RepositoryPanelProvider: React.FC<RepositoryPanelProviderProps> = (
         type: 'repository' as const,
         repository,
       },
-      slices: new Map(), // No data slices in this simple implementation
-      getSlice: () => undefined,
-      getWorkspaceSlice: () => undefined,
-      getRepositorySlice: () => undefined,
-      hasSlice: () => false,
-      isSliceLoading: () => false,
-      refresh: async () => {
-        // No-op for now
+      slices,
+      getSlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
+        return slices.get(name) as DataSlice<T> | undefined;
+      },
+      getWorkspaceSlice: () => undefined, // No workspace slices in repository context
+      getRepositorySlice: <T = unknown>(name: string): DataSlice<T> | undefined => {
+        const slice = slices.get(name);
+        return slice?.scope === 'repository' ? (slice as DataSlice<T>) : undefined;
+      },
+      hasSlice: (name: string, scope?: 'workspace' | 'repository'): boolean => {
+        const slice = slices.get(name);
+        if (!slice) return false;
+        return scope ? slice.scope === scope : true;
+      },
+      isSliceLoading: (name: string, scope?: 'workspace' | 'repository'): boolean => {
+        const slice = slices.get(name);
+        if (!slice) return false;
+        if (scope && slice.scope !== scope) return false;
+        return slice.loading;
+      },
+      refresh: async (scope?: 'workspace' | 'repository', sliceName?: string): Promise<void> => {
+        const slicesToRefresh = Array.from(slices.values()).filter((slice) => {
+          if (scope && slice.scope !== scope) return false;
+          if (sliceName && slice.name !== sliceName) return false;
+          return true;
+        });
+
+        await Promise.all(slicesToRefresh.map((slice) => slice.refresh()));
       },
     }),
-    [repositoryPath, repository, terminalSessions, loading],
+    [repositoryPath, repository, terminalSessions, loading, slices],
   );
 
   // Provider value
