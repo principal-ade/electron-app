@@ -109,17 +109,11 @@ class AuthStateManager extends EventEmitter {
       lastChecked: Date.now(),
     };
 
-    // Only add fallback avatar URL if we have a user but no avatarUrl
-    // Prefer avatarUrl from GitHub API response
-    if (this.state.user && !this.state.user.avatarUrl) {
-      // Fallback: construct avatar URL from login (may not work for all cases)
-      this.state.user.avatarUrl = `https://github.com/${this.state.user.login}.png?size=48`;
-    }
-
     console.log('[AuthStateManager] State updated:', {
       wasAuthenticated: oldState.isAuthenticated,
       isAuthenticated: this.state.isAuthenticated,
       user: this.state.user?.login,
+      hasAvatarUrl: !!this.state.user?.avatarUrl,
     });
 
     // Emit internal event
@@ -147,9 +141,6 @@ class AuthStateManager extends EventEmitter {
       isAuthenticated: true,
       user: {
         ...user,
-        // Preserve avatarUrl from GitHub API, or use fallback if not provided
-        avatarUrl:
-          user.avatarUrl || `https://github.com/${user.login}.png?size=48`,
       },
       token,
     });
@@ -158,7 +149,14 @@ class AuthStateManager extends EventEmitter {
       isAuthenticated: this.state.isAuthenticated,
       user: this.state.user?.login,
       hasToken: !!this.state.token,
+      hasAvatarUrl: !!this.state.user?.avatarUrl,
     });
+
+    if (!user.avatarUrl) {
+      console.warn(
+        '[AuthStateManager] WARNING: User authenticated without avatarUrl. GitHub API fetch may have failed.',
+      );
+    }
   }
 
   /**

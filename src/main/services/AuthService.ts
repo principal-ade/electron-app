@@ -215,21 +215,27 @@ class AuthService {
                 enrichedUser.login,
               );
             } else {
-              console.warn(
-                '[AuthService] Failed to fetch GitHub profile:',
+              console.error(
+                '[AuthService] ❌ FAILED to fetch GitHub profile - HTTP',
                 response.status,
               );
-              console.warn(
-                '[AuthService] Falling back to OAuth server user data',
+              console.error(
+                '[AuthService] User will be authenticated WITHOUT avatar URL!',
+              );
+              console.error(
+                '[AuthService] OAuth server user data does not include avatarUrl',
               );
             }
           } catch (avatarError) {
             console.error(
-              '[AuthService] Error fetching GitHub profile:',
+              '[AuthService] ❌ EXCEPTION fetching GitHub profile:',
               avatarError,
             );
-            console.warn(
-              '[AuthService] Falling back to OAuth server user data',
+            console.error(
+              '[AuthService] User will be authenticated WITHOUT avatar URL!',
+            );
+            console.error(
+              '[AuthService] OAuth server user data does not include avatarUrl',
             );
           }
 
@@ -571,17 +577,22 @@ class AuthService {
               user: enrichedUser,
             });
           } else {
-            console.warn(
-              '[AuthService] Failed to fetch GitHub profile:',
+            console.error(
+              '[AuthService] ❌ FAILED to fetch GitHub profile during auth check - HTTP',
               response.status,
+            );
+            console.error(
+              '[AuthService] User may not have avatar URL!',
             );
           }
         } catch (avatarError) {
           console.error(
-            '[AuthService] Error fetching GitHub profile:',
+            '[AuthService] ❌ EXCEPTION fetching GitHub profile during auth check:',
             avatarError,
           );
-          // Continue with existing user data
+          console.error(
+            '[AuthService] User may not have avatar URL!',
+          );
         }
       }
 
