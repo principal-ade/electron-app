@@ -366,11 +366,6 @@
     "appId": "com.a24z.principal-ade",
     "copyright": "Copyright © 2025 Principal ADE",
     "asar": true,
-    "nodeModulesCollector": {
-      "pruneDevDependencies": true,
-      "prodDependencies": true,
-      "optionalDependencies": false
-    },
     "asarUnpack": [
       "**\\\\*.{node,dll}",
       "**/node_modules/node-pty/**"
