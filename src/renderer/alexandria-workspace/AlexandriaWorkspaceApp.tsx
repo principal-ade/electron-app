@@ -18,6 +18,7 @@ const AlexandriaWorkspaceContent: React.FC = () => {
   const [workspaceRepositories, setWorkspaceRepositories] = useState<AlexandriaEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [enableKeyboardShortcuts, setEnableKeyboardShortcuts] = useState(false);
 
   useEffect(() => {
     // Get workspace ID from URL parameters
@@ -165,10 +166,15 @@ const AlexandriaWorkspaceContent: React.FC = () => {
           .map(entry => entry.github?.id)
           .filter((id): id is string => id != null)
         }
+        enableKeyboardShortcuts={enableKeyboardShortcuts}
+        onToggleKeyboardShortcuts={() => setEnableKeyboardShortcuts(!enableKeyboardShortcuts)}
       />
 
       {/* Main Content - Panel Layout */}
-      <AlexandriaWorkspaceLayout workspace={workspace} />
+      <AlexandriaWorkspaceLayout
+        workspace={workspace}
+        enableKeyboardShortcuts={enableKeyboardShortcuts}
+      />
     </div>
   );
 };

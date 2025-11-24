@@ -46,11 +46,20 @@ const RepositoryWorkspacePanelFrameworkInner: React.FC = () => {
         id: 'visualValidation',
         label: 'Visual Validation',
         content: VisualValidationPanelComponent ? (
-          <VisualValidationPanelComponent
-            context={context}
-            actions={actions}
-            events={events}
-          />
+          <div style={{
+            height: '100%',
+            width: '100%',
+            overflow: 'hidden',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <VisualValidationPanelComponent
+              context={context}
+              actions={actions}
+              events={events}
+            />
+          </div>
         ) : (
           <div>Visual Validation panel not available</div>
         ),

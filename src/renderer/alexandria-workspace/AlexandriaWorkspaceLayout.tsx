@@ -1,7 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { EditableConfigurablePanelLayout, PanelLayout } from '@principal-ade/panel-layouts';
+import {
+  EditableConfigurablePanelLayout,
+  PanelLayout,
+  usePanelFocus,
+  usePanelKeyboardShortcuts,
+  FocusIndicator,
+} from '@principal-ade/panel-layouts';
 import { PanelProvider, usePanelProvider } from '../contexts/PanelContext';
 import { panels as terminalPanels } from '@industry-theme/terminal-panel';
 import { panels as workspacePanels } from '@industry-theme/alexandria-workspace-panel';
@@ -21,10 +27,16 @@ interface AlexandriaWorkspaceLayoutProps {
     name: string;
     path: string;
   };
+  /**
+   * Enable keyboard shortcuts for panel navigation (Alt+1, Alt+2, Alt+3)
+   * @default false - Disabled by default until DOM focus integration is complete
+   */
+  enableKeyboardShortcuts?: boolean;
 }
 
 interface AlexandriaWorkspaceLayoutContentProps {
   onRepositorySelected: (repository: { name: string; path: string }) => void;
+  enableKeyboardShortcuts: boolean;
 }
 
 /**
@@ -32,6 +44,7 @@ interface AlexandriaWorkspaceLayoutContentProps {
  */
 const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutContentProps> = ({
   onRepositorySelected,
+  enableKeyboardShortcuts,
 }) => {
   const { theme } = useTheme();
   const { context, actions, events } = usePanelProvider();
@@ -44,6 +57,36 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
   });
 
   const [isEditMode, _setIsEditMode] = useState(false);
+  const [collapsed, setCollapsed] = useState({ left: false, right: false });
+
+  // Panel focus management for keyboard shortcuts
+  const { focusedPanel, setFocus, isFocused } = usePanelFocus({
+    initialFocus: enableKeyboardShortcuts ? 'middle' : null, // Only set initial focus if shortcuts enabled
+    collapsed,
+    panelType: 'three-panel',
+  });
+
+  // Collapse/expand handlers
+  const handleExpand = useCallback(async (panel: 'left' | 'right') => {
+    setCollapsed((prev) => ({ ...prev, [panel]: false }));
+  }, []);
+
+  const handleCollapse = useCallback(async (panel: 'left' | 'right') => {
+    setCollapsed((prev) => ({ ...prev, [panel]: true }));
+  }, []);
+
+  // Keyboard shortcuts (Alt+1, Alt+2, Alt+3)
+  // NOTE: Disabled by default until DOM focus integration is implemented
+  // to prevent interference with terminal keyboard bindings
+  usePanelKeyboardShortcuts({
+    enabled: enableKeyboardShortcuts,
+    focusedPanel,
+    collapsed,
+    panelType: 'three-panel',
+    setFocus,
+    onExpand: handleExpand,
+    onCollapse: handleCollapse,
+  });
 
   // Listen for repository:selected events
   useEffect(() => {
@@ -122,8 +165,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
+              position: 'relative',
             }}
           >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('left')} />}
             <WorkspacePanelComponent
               context={context}
               actions={actions}
@@ -141,8 +186,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              position: 'relative',
             }}
           >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('left')} />}
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Workspace panel not available
             </p>
@@ -160,8 +207,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
+              position: 'relative',
             }}
           >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('middle')} />}
             <TerminalPanelComponent
               context={context}
               actions={actions}
@@ -179,8 +228,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              position: 'relative',
             }}
           >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('middle')} />}
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Terminal panel not available
             </p>
@@ -198,8 +249,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
+              position: 'relative',
             }}
           >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
             <DocsPanelComponent
               context={context}
               actions={actions}
@@ -217,8 +270,10 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              position: 'relative',
             }}
           >
+            {enableKeyboardShortcuts && <FocusIndicator isFocused={isFocused('right')} />}
             <p style={{ fontSize: `${theme.fontSizes[1]}px` }}>
               Alexandria Docs panel not available
             </p>
@@ -226,7 +281,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
         ),
       },
     ],
-    [theme, context, actions, events, TerminalPanelComponent, WorkspacePanelComponent, DocsPanelComponent]
+    [theme, context, actions, events, TerminalPanelComponent, WorkspacePanelComponent, DocsPanelComponent, isFocused, enableKeyboardShortcuts]
   );
 
   return (
@@ -248,6 +303,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
         onLayoutChange={setLayout}
         defaultSizes={{ left: 25, middle: 50, right: 25 }}
         minSizes={{ left: 15, middle: 30, right: 20 }}
+        collapsed={collapsed}
         collapsiblePanels={{ left: true, right: true }}
         showCollapseButtons={false}
       />
@@ -261,7 +317,7 @@ const AlexandriaWorkspaceLayoutContent: React.FC<AlexandriaWorkspaceLayoutConten
  */
 export const AlexandriaWorkspaceLayout: React.FC<
   AlexandriaWorkspaceLayoutProps
-> = ({ workspace, repository: initialRepository }) => {
+> = ({ workspace, repository: initialRepository, enableKeyboardShortcuts = false }) => {
   const { theme } = useTheme();
 
   // Track the selected repository
@@ -296,6 +352,7 @@ export const AlexandriaWorkspaceLayout: React.FC<
     >
       <AlexandriaWorkspaceLayoutContent
         onRepositorySelected={setSelectedRepository}
+        enableKeyboardShortcuts={enableKeyboardShortcuts}
       />
     </PanelProvider>
   );

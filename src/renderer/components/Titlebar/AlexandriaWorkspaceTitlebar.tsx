@@ -1,17 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
 import type { Workspace } from '@principal-ai/alexandria-core-library/types';
-import { Plus } from 'lucide-react';
+import { Plus, Keyboard } from 'lucide-react';
 import { AddRepositoryToWorkspaceModal } from '../../panels/components/AddRepositoryToWorkspaceModal';
 
 export interface AlexandriaWorkspaceTitlebarProps {
   workspace: Workspace;
   workspaceRepositoryIds?: string[];
+  enableKeyboardShortcuts?: boolean;
+  onToggleKeyboardShortcuts?: () => void;
 }
 
 export const AlexandriaWorkspaceTitlebar: React.FC<
   AlexandriaWorkspaceTitlebarProps
-> = ({ workspace, workspaceRepositoryIds = [] }) => {
+> = ({
+  workspace,
+  workspaceRepositoryIds = [],
+  enableKeyboardShortcuts = false,
+  onToggleKeyboardShortcuts,
+}) => {
   const { theme } = useTheme();
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -86,6 +93,44 @@ export const AlexandriaWorkspaceTitlebar: React.FC<
           WebkitAppRegion: 'no-drag',
         }}
       >
+        {/* Keyboard Shortcuts Toggle */}
+        {onToggleKeyboardShortcuts && (
+          <button
+            onClick={onToggleKeyboardShortcuts}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              backgroundColor: enableKeyboardShortcuts ? theme.colors.primary : 'transparent',
+              border: `1px solid ${enableKeyboardShortcuts ? theme.colors.primary : theme.colors.border}`,
+              color: enableKeyboardShortcuts ? theme.colors.background : theme.colors.textSecondary,
+              cursor: 'pointer',
+              fontSize: `${theme.fontSizes[0]}px`,
+              fontWeight: theme.fontWeights.medium,
+              fontFamily: theme.fonts.body,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (!enableKeyboardShortcuts) {
+                e.currentTarget.style.backgroundColor = theme.colors.backgroundTertiary;
+                e.currentTarget.style.borderColor = theme.colors.border;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!enableKeyboardShortcuts) {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = theme.colors.border;
+              }
+            }}
+            title={enableKeyboardShortcuts ? 'Disable keyboard shortcuts (Alt+1/2/3)' : 'Enable keyboard shortcuts (Alt+1/2/3)'}
+          >
+            <Keyboard size={14} />
+            {enableKeyboardShortcuts ? 'On' : 'Off'}
+          </button>
+        )}
+
         {/* Add Repository Button */}
         <button
           onClick={() => setShowAddModal(true)}
