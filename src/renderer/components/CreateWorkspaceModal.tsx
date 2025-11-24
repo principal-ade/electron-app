@@ -1,9 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTheme } from '@principal-ade/industry-theme';
 import { X, Check, FolderOpen } from 'lucide-react';
 import { WorkspaceService } from '../main-process-api/WorkspaceService';
 import { FileSystemService } from '../main-process-api/FileSystemService';
+import { UserPreferencesService } from '../main-process-api/UserPreferencesService';
 import { predefinedThemes } from '../themes/predefinedThemes';
 
 interface CreateWorkspaceModalProps {
@@ -11,6 +12,33 @@ interface CreateWorkspaceModalProps {
   onClose: () => void;
   onSuccess?: () => void;
 }
+
+// Convert a string to kebab-case
+const toKebabCase = (str: string): string => {
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-') // Replace non-alphanumeric characters with hyphens
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+};
+
+// Join path segments in a cross-platform way
+const joinPath = (base: string, ...segments: string[]): string => {
+  // Normalize the base path
+  let result = base.replace(/[/\\]+$/, ''); // Remove trailing slashes
+
+  // Add each segment
+  for (const segment of segments) {
+    if (segment) {
+      const normalized = segment.replace(/^[/\\]+|[/\\]+$/g, ''); // Remove leading/trailing slashes
+      if (normalized) {
+        result += '/' + normalized;
+      }
+    }
+  }
+
+  return result;
+};
 
 export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   isOpen,
@@ -24,6 +52,8 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
   const [formTheme, setFormTheme] = useState('principalAI');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [baseDirectory, setBaseDirectory] = useState<string | null>(null);
+  const [pathManuallyEdited, setPathManuallyEdited] = useState(false);
 
   const handleClose = useCallback(() => {
     if (!isSubmitting) {
@@ -33,9 +63,37 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
       setFormPath('');
       setFormTheme('principalAI');
       setError(null);
+      setPathManuallyEdited(false);
       onClose();
     }
   }, [isSubmitting, onClose]);
+
+  // Load user preferences when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      UserPreferencesService.getPreferences().then((prefs) => {
+        if (prefs.baseDefaultDirectory) {
+          setBaseDirectory(prefs.baseDefaultDirectory);
+        }
+      });
+    }
+  }, [isOpen]);
+
+  // Auto-generate path when name changes (if base directory is set and path wasn't manually edited)
+  useEffect(() => {
+    if (!pathManuallyEdited && baseDirectory) {
+      if (formName) {
+        const kebabName = toKebabCase(formName);
+        if (kebabName) {
+          const generatedPath = joinPath(baseDirectory, kebabName);
+          setFormPath(generatedPath);
+        }
+      } else {
+        // Clear path when name is empty
+        setFormPath('');
+      }
+    }
+  }, [formName, baseDirectory, pathManuallyEdited]);
 
   // Handle ESC key
   React.useEffect(() => {
@@ -60,6 +118,7 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
       });
       if (result && !result.canceled && result.filePaths?.[0]) {
         setFormPath(result.filePaths[0]);
+        setPathManuallyEdited(true);
       }
     } catch (error) {
       console.error('[CreateWorkspaceModal] Error selecting directory:', error);
@@ -341,7 +400,10 @@ export const CreateWorkspaceModal: React.FC<CreateWorkspaceModalProps> = ({
                   id="workspace-path"
                   type="text"
                   value={formPath}
-                  onChange={(e) => setFormPath(e.target.value)}
+                  onChange={(e) => {
+                    setFormPath(e.target.value);
+                    setPathManuallyEdited(true);
+                  }}
                   placeholder="/path/to/workspace"
                   disabled={isSubmitting}
                   style={{
