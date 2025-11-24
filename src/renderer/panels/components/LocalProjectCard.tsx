@@ -163,10 +163,6 @@ export const LocalProjectCard: React.FC<LocalProjectCardProps> = ({
 
     if (!workspace || !workspace.id) return;
 
-    if (!confirm(`Move ${entry.name} to ${workspace.suggestedClonePath}?\n\nThis will move all files to the workspace directory.`)) {
-      return;
-    }
-
     try {
       setIsMoving(true);
       const newPath = await WorkspaceService.moveRepositoryToWorkspaceDirectory(entry, workspace.id);
