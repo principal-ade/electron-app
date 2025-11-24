@@ -148,7 +148,7 @@ export class GitSyncWebSocketManager {
   private serverUrl: string;
   private authServerUrl: string;
   private presenceRoomJoinInProgress: boolean = false;
-  private presenceRoomState: { users: Map<string, RoomUser> | Record<string, unknown> } | null = null;
+  private presenceRoomState: { users: Map<string, RoomUser> } | null = null;
 
   // Hardcoded defaults
   private readonly DEFAULT_DEV_SERVER = 'ws://localhost:3001';
@@ -854,10 +854,8 @@ export class GitSyncWebSocketManager {
 
       // Store presence room state if this is the global presence room
       if (data.roomId === '__global_presence__' && data.state?.users) {
-        this.presenceRoomState = { users: data.state.users as Map<string, RoomUser> | Record<string, unknown> };
-        const userCount = data.state.users instanceof Map ? data.state.users.size : Object.keys(data.state.users).length;
-        console.log('[GitSyncWebSocketManager] ✓ Stored presence room state with', userCount, 'users');
-        console.log('[GitSyncWebSocketManager] Users type:', data.state.users instanceof Map ? 'Map' : 'Object');
+        this.presenceRoomState = { users: data.state.users };
+        console.log('[GitSyncWebSocketManager] ✓ Stored presence room state with', data.state.users.size, 'users');
       }
 
       console.log('[GitSyncWebSocketManager] ✓ room_joined event:', data.roomId);
@@ -982,31 +980,21 @@ export class GitSyncWebSocketManager {
         };
       }
 
-      // Convert users to array - handle both Map and plain object
-      let usersArray: unknown[];
-      const isMap = this.presenceRoomState.users instanceof Map;
-      console.log('[GitSyncWebSocketManager] presenceRoomState.users type:', isMap ? 'Map' : 'Object');
-
-      if (isMap) {
-        usersArray = Array.from((this.presenceRoomState.users as Map<string, RoomUser>).values());
-      } else {
-        // If it's a plain object, use Object.values
-        usersArray = Object.values(this.presenceRoomState.users as Record<string, unknown>);
-      }
+      // Convert Map to array
+      const usersArray = Array.from(this.presenceRoomState.users.values());
 
       // Transform RoomUser objects to UserPresence format expected by the UI
-      const transformedUsers = usersArray.map((user: unknown) => {
-        const u = user as Record<string, unknown>;
+      const transformedUsers = usersArray.map((user: RoomUser) => {
         return {
-          userId: (u.id as string) || (u.userId as string),
-          status: (u.status as string) || 'online',
-          openRepositories: (u.openRepositories as unknown[]) || [],
-          activeRepository: u.activeRepository as string | undefined,
-          lastSeen: (u.lastActivity as number) || (u.lastSeen as number) || Date.now(),
-          devices: (u.devices as unknown[]) || [],
-          statusMessage: u.statusMessage as string | undefined,
+          userId: user.username, // Use the actual username field from RoomUser
+          status: user.status || 'online',
+          openRepositories: (user.metadata?.openRepositories as unknown[]) || [],
+          activeRepository: user.metadata?.activeRepository as string | undefined,
+          lastSeen: user.lastActivity,
+          devices: (user.metadata?.devices as unknown[]) || [],
+          statusMessage: user.metadata?.statusMessage as string | undefined,
           // Preserve any additional metadata
-          ...(u.metadata as Record<string, unknown> | undefined),
+          ...user.metadata,
         };
       });
 
