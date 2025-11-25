@@ -1,17 +1,21 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as os from 'os';
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, MessageChannelMain } from 'electron';
 import { TerminalSession } from './types';
 import { pty } from './utils/ptyLoader';
 import { agentSessionService } from '../agent-sessions/agentSessionService';
 import { terminalEnvironment } from '../terminalEnvironment';
 import { TerminalAPIEvents } from '../../shared/main-process-api-interfaces/TerminalService';
+import { terminalConfig } from './config';
 
 export class TerminalSessionManager {
   private sessions: Map<string, TerminalSession> = new Map();
   private sessionsByRepo: Map<string, string> = new Map(); // "repoPath:context" -> sessionId
   private maxSessions = 20;
   private rendererWindows: Set<BrowserWindow> = new Set();
+
+  // MessagePort support
+  private sessionPorts: Map<string, MessageChannelMain> = new Map();
 
   constructor() {}
 
@@ -57,7 +61,36 @@ export class TerminalSessionManager {
       return; // No one viewing, skip IPC entirely
     }
 
-    // Use session-specific channel for better performance
+    // If MessagePorts are enabled, data flows through ports instead
+    if (terminalConfig.enableMessagePorts) {
+      const channel = this.sessionPorts.get(sessionId);
+      if (channel) {
+        try {
+          // Send data through port1 (which will arrive at port2 in renderer)
+          channel.port1.postMessage({ type: 'DATA', data });
+        } catch (error) {
+          console.warn(
+            `[Terminal] Failed to send data via MessagePort for session ${sessionId}:`,
+            error,
+          );
+          // Fall back to legacy IPC on error
+          this.sendViaLegacyIPC(sessionId, data);
+        }
+        return;
+      }
+    }
+
+    // Legacy IPC path (or fallback)
+    this.sendViaLegacyIPC(sessionId, data);
+  }
+
+  // Legacy IPC method (extracted for reuse)
+  private sendViaLegacyIPC(sessionId: string, data: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session || session.activeViewers.size === 0) {
+      return;
+    }
+
     const sessionChannel = `${TerminalAPIEvents.ON_DATA}:${sessionId}`;
 
     const viewerIds = Array.from(session.activeViewers);
@@ -298,6 +331,9 @@ export class TerminalSessionManager {
 
   // Clean up a session and its repo tracking
   cleanupSession(sessionId: string): void {
+    // Close MessageChannel if it exists
+    this.closeMessageChannel(sessionId);
+
     this.sessions.delete(sessionId);
     // Clean up repo tracking
     for (const [repo, sid] of this.sessionsByRepo.entries()) {
@@ -323,6 +359,8 @@ export class TerminalSessionManager {
     this.sessions.forEach((session, sessionId) => {
       try {
         session.pty.kill();
+        // Close MessageChannel if it exists
+        this.closeMessageChannel(sessionId);
       } catch (error) {
         // Ignore errors during cleanup
       }
@@ -360,5 +398,96 @@ export class TerminalSessionManager {
       }
     }
     return false;
+  }
+
+  // MessagePort support methods
+
+  /**
+   * Create a MessageChannel for a session and transfer port to renderer
+   */
+  createMessageChannelForSession(sessionId: string, windowId: number): boolean {
+    if (!terminalConfig.enableMessagePorts) {
+      console.log('[Terminal] MessagePorts disabled, skipping channel creation');
+      return false;
+    }
+
+    const window = BrowserWindow.fromId(windowId);
+    if (!window || window.isDestroyed()) {
+      console.error(`[Terminal] Cannot create MessageChannel: window ${windowId} not found`);
+      return false;
+    }
+
+    try {
+      // Create MessageChannel
+      const channel = new MessageChannelMain();
+      this.sessionPorts.set(sessionId, channel);
+
+      console.log(`[Terminal] Created MessageChannel for session ${sessionId}`);
+
+      // Start listening on port1 (main process side)
+      channel.port1.start();
+
+      // Listen for messages from renderer (via port2 -> port1)
+      channel.port1.on('message', (event: any) => {
+        this.handlePortMessage(sessionId, event.data);
+      });
+
+      // Transfer port2 to renderer
+      window.webContents.postMessage(
+        TerminalAPIEvents.PORT_READY,
+        {
+          sessionId,
+          writable: true, // TODO: Check ownership before setting this
+        },
+        [channel.port2],
+      );
+
+      console.log(`[Terminal] Transferred port2 to window ${windowId} for session ${sessionId}`);
+
+      return true;
+    } catch (error) {
+      console.error(`[Terminal] Failed to create MessageChannel for session ${sessionId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Handle messages received from renderer via MessagePort
+   */
+  private handlePortMessage(sessionId: string, message: any): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      console.warn(`[Terminal] Received message for non-existent session ${sessionId}`);
+      return;
+    }
+
+    try {
+      if (message.type === 'WRITE') {
+        session.pty.write(message.data);
+      } else if (message.type === 'RESIZE') {
+        session.pty.resize(message.cols, message.rows);
+      } else {
+        console.warn(`[Terminal] Unknown message type from port: ${message.type}`);
+      }
+    } catch (error) {
+      console.error(`[Terminal] Error handling port message for session ${sessionId}:`, error);
+    }
+  }
+
+  /**
+   * Close MessageChannel for a session
+   */
+  closeMessageChannel(sessionId: string): void {
+    const channel = this.sessionPorts.get(sessionId);
+    if (channel) {
+      try {
+        channel.port1.close();
+        // port2 will be closed automatically when port1 closes
+      } catch (error) {
+        console.error(`[Terminal] Error closing MessageChannel for session ${sessionId}:`, error);
+      }
+      this.sessionPorts.delete(sessionId);
+      console.log(`[Terminal] Closed MessageChannel for session ${sessionId}`);
+    }
   }
 }

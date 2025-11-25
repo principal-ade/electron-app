@@ -61,6 +61,11 @@ export function setupSessionHandlers(
             session,
             senderWindowId,
           );
+
+          // Create MessageChannel if enabled and this is a new session
+          if (!existingSession) {
+            sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
+          }
         }
 
         return sessionId;
@@ -109,6 +114,9 @@ export function setupSessionHandlers(
             session,
             senderWindowId,
           );
+
+          // Create MessageChannel if enabled
+          sessionManager.createMessageChannelForSession(sessionId, senderWindowId);
         }
 
         return sessionId;
