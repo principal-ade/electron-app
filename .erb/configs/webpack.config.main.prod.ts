@@ -27,7 +27,7 @@ const configuration: webpack.Configuration = {
   entry: {
     main: path.join(webpackPaths.srcMainPath, 'main.ts'),
     preload: path.join(webpackPaths.srcWindowPath, 'preload.ts'),
-    terminal: path.join(webpackPaths.srcMainPath, 'terminal.ts'),
+    terminal: path.join(webpackPaths.srcMainPath, 'terminal', 'index.ts'),
     'event-worker': path.join(webpackPaths.srcPath, 'event-processing-server', 'worker-entry.ts'),
   },
 
