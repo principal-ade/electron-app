@@ -2,7 +2,7 @@
 
 ## Overview
 
-To eliminate local event storage responsibility, the `@a24z/observability-sdk` needs to provide comprehensive session and event storage methods. This document outlines the required SDK API methods to replace the current local storage system.
+To eliminate local event storage responsibility, the `@principal-ai/observability-sdk` needs to provide comprehensive session and event storage methods. This document outlines the required SDK API methods to replace the current local storage system.
 
 ## Current Architecture
 

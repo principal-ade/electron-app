@@ -23,7 +23,7 @@ const configuration: webpack.Configuration = {
 
   // Bundle everything except observability SDK (which uses Node.js modules)
   externals: [
-    '@a24z/observability-sdk',
+    '@principal-ai/observability-sdk',
     /^@types\/.*$/,  // Exclude all @types packages (TypeScript type definitions)
   ],
 

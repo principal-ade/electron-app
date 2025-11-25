@@ -1,8 +1,8 @@
-# Observability Integration with @a24z/observability-sdk
+# Observability Integration with @principal-ai/observability-sdk
 
 ## Overview
 
-The application now integrates with the `@a24z/observability-sdk` to forward RepoNormalized events from the agent monitoring pipeline to a Turso database for centralized observability. This enables real-time monitoring, analytics, and insights into agent behavior across all sessions.
+The application now integrates with the `@principal-ai/observability-sdk` to forward RepoNormalized events from the agent monitoring pipeline to a Turso database for centralized observability. This enables real-time monitoring, analytics, and insights into agent behavior across all sessions.
 
 ## Configuration
 

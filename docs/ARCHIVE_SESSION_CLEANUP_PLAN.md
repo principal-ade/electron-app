@@ -9,7 +9,7 @@ This document outlines the plan to remove archived session functionality from th
 The application currently has a hybrid approach:
 
 * Local storage for archived sessions
-* Observability SDK (`@a24z/observability-sdk`) for Turso-based session storage
+* Observability SDK (`@principal-ai/observability-sdk`) for Turso-based session storage
 * Mixed usage of both systems in the UI
 
 ## Goal

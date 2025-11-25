@@ -1,5 +1,5 @@
 /**
- * ObservabilityIntegration - Connects RepoEvents from the event pipeline to the @a24z/observability-sdk
+ * ObservabilityIntegration - Connects RepoEvents from the event pipeline to the @principal-ai/observability-sdk
  *
  * This module integrates the agent monitoring pipeline with the observability SDK,
  * forwarding RepoNormalized events for centralized monitoring and analytics.
@@ -12,7 +12,7 @@ import type { RepoNormalizedUniversalAgentSessionEvent } from '@principal-ai/age
 import { UnifiedSecureStorage } from '../services/UnifiedSecureStorage';
 
 // @ts-ignore - SDK type definitions not available yet
-import { TursoObservabilitySDK } from '@a24z/observability-sdk';
+import { TursoObservabilitySDK } from '@principal-ai/observability-sdk';
 
 export type StorageMode = 'none' | 'local' | 'local-with-sync';
 
