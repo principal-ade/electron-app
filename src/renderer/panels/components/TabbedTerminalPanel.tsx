@@ -12,8 +12,6 @@ import {
   Bug,
   Monitor,
   Grid3x3,
-  Circle,
-  Square,
 } from 'lucide-react';
 import type { AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { useTheme } from '@principal-ade/industry-theme';
@@ -23,7 +21,6 @@ import TerminalPanelPackaged, {
 import { TerminalService } from '../../main-process-api/TerminalService';
 import { UserPreferencesService } from '../../main-process-api/UserPreferencesService';
 import { TerminalDebugModal } from './TerminalDebugModal';
-import { terminalRecorder } from '../../utils/terminalRecorder';
 
 export interface TerminalTab {
   id: string;
@@ -133,12 +130,7 @@ export const TabbedTerminalPanel = forwardRef<
     );
     const [showDebugModal, setShowDebugModal] = useState(false);
     const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
-    const [isRecording, setIsRecording] = useState(false);
-    const [recordingDirectory, setRecordingDirectory] = useState<string | null>(
-      null,
-    );
     const [showDebugButton, setShowDebugButton] = useState(false);
-    const [showRecordingButton, setShowRecordingButton] = useState(false);
     const [showShowAllButton, setShowShowAllButton] = useState(true);
 
     // Store refs to terminal panels for each tab
@@ -277,7 +269,6 @@ export const TabbedTerminalPanel = forwardRef<
     useEffect(() => {
       UserPreferencesService.getPreferences().then((prefs) => {
         setShowDebugButton(prefs.showTerminalDebugButton ?? false);
-        setShowRecordingButton(prefs.showTerminalRecordingButton ?? false);
         setShowShowAllButton(prefs.showTerminalShowAllButton ?? true);
       });
 
@@ -286,9 +277,6 @@ export const TabbedTerminalPanel = forwardRef<
         if (detail) {
           if ('showTerminalDebugButton' in detail) {
             setShowDebugButton(detail.showTerminalDebugButton ?? false);
-          }
-          if ('showTerminalRecordingButton' in detail) {
-            setShowRecordingButton(detail.showTerminalRecordingButton ?? false);
           }
           if ('showTerminalShowAllButton' in detail) {
             setShowShowAllButton(detail.showTerminalShowAllButton ?? true);
@@ -388,72 +376,6 @@ export const TabbedTerminalPanel = forwardRef<
       },
       [],
     );
-
-    // Handle recording toggle
-    const handleToggleRecording = useCallback(async () => {
-      if (isRecording) {
-        // Stop recording
-        const result = await terminalRecorder.stopRecording();
-        if (result.success) {
-          setIsRecording(false);
-          setRecordingDirectory(null);
-          console.log(
-            '[TabbedTerminalPanel] Recording stopped, recordings in memory:',
-            result.recordingCount,
-          );
-        } else {
-          console.error(
-            '[TabbedTerminalPanel] Failed to stop recording:',
-            result.error,
-          );
-        }
-      } else {
-        // Start recording - capture current terminal buffer
-        console.log('[TabbedTerminalPanel] Starting recording, activeTabId:', activeTabId);
-        console.log('[TabbedTerminalPanel] Available terminal refs:', Array.from(terminalRefs.current.keys()));
-
-        let initialBuffer = '';
-        const activeTerminalRef = terminalRefs.current.get(activeTabId);
-        console.log('[TabbedTerminalPanel] Active terminal ref:', activeTerminalRef ? 'found' : 'NOT FOUND');
-
-        if (activeTerminalRef) {
-          console.log('[TabbedTerminalPanel] Getting terminal...');
-          const terminal = activeTerminalRef.getTerminal();
-          console.log('[TabbedTerminalPanel] Terminal object:', terminal ? 'found' : 'NOT FOUND');
-
-          if (terminal && terminal.buffer) {
-            console.log('[TabbedTerminalPanel] Capturing terminal buffer...');
-            // Serialize the visible buffer
-            const buffer = terminal.buffer.active;
-            const lines: string[] = [];
-            for (let i = 0; i < buffer.length; i++) {
-              const line = buffer.getLine(i);
-              if (line) {
-                lines.push(line.translateToString(true));
-              }
-            }
-            initialBuffer = lines.join('\r\n');
-            console.log('[TabbedTerminalPanel] Captured buffer:', initialBuffer.length, 'chars');
-          } else {
-            console.log('[TabbedTerminalPanel] No terminal or buffer available');
-          }
-        } else {
-          console.log('[TabbedTerminalPanel] No active terminal ref found');
-        }
-
-        const result = await terminalRecorder.startRecording(initialBuffer);
-        if (result.success) {
-          setIsRecording(true);
-          setRecordingDirectory('in-memory');
-          console.log('[TabbedTerminalPanel] Recording started (in-memory mode)');
-        } else {
-          console.error(
-            '[TabbedTerminalPanel] Failed to start recording:',
-            result.error,
-          );
-        }
-      }
-    }, [isRecording, activeTabId]);
 
     // Keep callback refs up to date
     useEffect(() => {
@@ -796,44 +718,6 @@ export const TabbedTerminalPanel = forwardRef<
               >
                 <Plus size={14} />
               </button>
-
-              {/* Recording button */}
-              {showRecordingButton && (
-                <button
-                  onClick={handleToggleRecording}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: '36px',
-                    height: '100%',
-                    border: 'none',
-                    backgroundColor: isRecording ? '#ff4444' : 'transparent',
-                    cursor: 'pointer',
-                    color: isRecording ? theme.colors.background : theme.colors.textSecondary,
-                    paddingLeft: '4px',
-                    paddingRight: '4px',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isRecording) {
-                      e.currentTarget.style.backgroundColor =
-                        theme.colors.backgroundTertiary;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isRecording) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
-                  title={
-                    isRecording
-                      ? `Recording to: ${recordingDirectory || 'unknown'}\nClick to stop`
-                      : 'Start recording terminal data'
-                  }
-                >
-                  {isRecording ? <Square size={14} /> : <Circle size={14} />}
-                </button>
-              )}
 
               {/* Debug button */}
               {showDebugButton && (

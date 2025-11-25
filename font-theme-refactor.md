@@ -182,16 +182,6 @@ style={{ fontWeight: theme.fontWeights.semibold, fontSize: theme.fontSizes[2] }}
 - Line 453: `fontSize: '11px'` → Fixed to `theme.fontSizes[0]`
 - Line 458: `fontFamily: 'monospace'` → Fixed to `theme.fonts.monospace`
 
----
-
-### [ ] src/renderer/panels/components/TerminalReplayPanel.tsx
-**Lines:** 67, 804, 826
-**Problems:**
-- Line 67: `fontFamily: 'Menlo, Monaco, "Courier New", monospace'`
-- Lines 804, 826: `fontFamily: 'monospace'`
-
----
-
 ### [ ] src/renderer/panels/components/CarouselTerminalPanel.tsx
 **Lines:** 1166
 **Problems:** `fontFamily: 'monospace'`

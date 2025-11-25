@@ -21,7 +21,6 @@ import { AgentSessionService } from '../main-process-api/AgentSessionService';
 import { TerminalService } from '../main-process-api/TerminalService';
 import { ShellService } from '../main-process-api/ShellService';
 import { DevSidecarService } from '../main-process-api/DevSidecarService';
-import { terminalRecorder } from '../utils/terminalRecorder';
 
 /* eslint-disable no-console */
 
@@ -304,16 +303,12 @@ const TerminalPanelPackaged = forwardRef<
       let mounted = true;
 
       // Subscribe to session-specific channel - more efficient than global channel with filtering
-      const unsubscribe = TerminalService.onDataForSession(sessionId, (data) => {
-        if (mounted && terminalRef.current) {
-          // Write to terminal
-          terminalRef.current.write(data);
-
-          // Record data written to terminal (what the user actually sees)
-          // Only if recording is enabled (early return inside if disabled)
-          terminalRecorder.recordDataWritten(sessionId, data);
-        }
-      });
+          const unsubscribe = TerminalService.onDataForSession(sessionId, (data) => {
+            if (mounted && terminalRef.current) {
+              // Write to terminal
+              terminalRef.current.write(data);
+            }
+          });
 
       return () => {
         mounted = false;

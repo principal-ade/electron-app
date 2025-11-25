@@ -49,7 +49,7 @@ The app includes 29+ pre-defined panels:
 - **Git Operations**: gitChanges, gitIssues, gitPullRequests, gitHistory, gitDiff, gitStatus
 - **GitHub Integration**: githubProjects, githubSocial, githubReadme
 - **Visualization**: cityVisualization, excalidrawEditor, drawings, graphsList, graphDetail
-- **Terminals**: multiTerminal, terminalReplay
+- **Terminals**: multiTerminal
 - **Content Viewers**: fileTree, search, codeViewer, markdownViewer, mdxEditor
 - **Development**: tools, dependencies, packageInfo, docs
 - **Collaboration**: presence, agentContext, agentEvents, agentSessions
@@ -323,7 +323,6 @@ export interface TerminalPanelPackagedRef {
 - Handles ownership tracking (multi-window support)
 - Subscribes to terminal data via IPC events
 - Supports re-attaching to existing sessions
-- Integrates with terminal recording system
 
 ### Multi-Terminal Panel Architecture
 

@@ -23,7 +23,6 @@ import { MDXEditorPanel } from './components/MDXEditorPanel';
 import { GitHubProjectsPanel } from './components/GitHubProjectsPanel';
 import { GitHubSocialPanel } from './components/GitHubSocialPanel';
 import { GraphDetailPanel } from './components/GraphDetailPanel';
-import { TerminalReplayPanel } from './components/TerminalReplayPanel';
 import { PresencePanel } from './components/PresencePanel';
 import { LocalhostBrowserPanel } from './components/LocalhostBrowserPanel';
 import { WorkspacesListPanel } from './components/WorkspacesListPanel';
@@ -93,7 +92,6 @@ const panelRenderers: Partial<
       onTopLevelNodesChange={() => {}}
     />
   ),
-  terminalReplay: () => <TerminalReplayPanel />,
   presence: () => <PresencePanel />,
   localhostBrowser: () => <LocalhostBrowserPanel />,
   workspacesList: () => <WorkspacesListPanel />,

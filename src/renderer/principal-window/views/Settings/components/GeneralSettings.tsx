@@ -29,8 +29,6 @@ export const GeneralSettings: React.FC = () => {
   const [showOpenInIDE, setShowOpenInIDE] = useState(false);
   const [showGitSyncPanel, setShowGitSyncPanel] = useState(false);
   const [showTerminalDebugButton, setShowTerminalDebugButton] = useState(false);
-  const [showTerminalRecordingButton, setShowTerminalRecordingButton] =
-    useState(false);
   const [showTerminalShowAllButton, setShowTerminalShowAllButton] =
     useState(true);
   const [showReposButton, setShowReposButton] = useState(false);
@@ -63,9 +61,6 @@ export const GeneralSettings: React.FC = () => {
       setShowOpenInIDE(prefs.titlebarButtons?.openInIDE ?? false);
       setShowGitSyncPanel(prefs.showGitSyncPanel ?? false);
       setShowTerminalDebugButton(prefs.showTerminalDebugButton ?? false);
-      setShowTerminalRecordingButton(
-        prefs.showTerminalRecordingButton ?? false,
-      );
       setShowTerminalShowAllButton(prefs.showTerminalShowAllButton ?? true);
       setShowReposButton(prefs.showReposButton ?? false);
       setShowMonitorButton(prefs.showMonitorButton ?? false);
@@ -852,100 +847,6 @@ export const GeneralSettings: React.FC = () => {
                     height: '18px',
                     width: '18px',
                     left: showTerminalDebugButton ? '27px' : '3px',
-                    bottom: '3px',
-                    backgroundColor: theme.colors.background,
-                    transition: '0.3s',
-                    borderRadius: '50%',
-                  }}
-                />
-              </span>
-            </label>
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-              gap: '16px',
-              marginTop: '16px',
-              paddingTop: '16px',
-              borderTop: `1px solid ${theme.colors.border}`,
-            }}
-          >
-            <div style={{ flex: 1 }}>
-              <label
-                htmlFor="showTerminalRecordingButton"
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  color: theme.colors.text,
-                  display: 'block',
-                  marginBottom: '8px',
-                  cursor: 'pointer',
-                }}
-              >
-                Show Terminal Recording Button
-              </label>
-              <p
-                style={{
-                  fontSize: '13px',
-                  color: theme.colors.textSecondary,
-                  lineHeight: '1.5',
-                }}
-              >
-                When enabled, a recording button will appear in the terminal
-                panel header for capturing terminal output. When disabled
-                (default), the button is hidden to reduce clutter.
-              </p>
-            </div>
-            <label
-              style={{
-                position: 'relative',
-                display: 'inline-block',
-                width: '48px',
-                height: '24px',
-                flexShrink: 0,
-              }}
-            >
-              <input
-                id="showTerminalRecordingButton"
-                type="checkbox"
-                checked={showTerminalRecordingButton}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  setShowTerminalRecordingButton(newValue);
-                  await UserPreferencesService.updatePreferences({
-                    showTerminalRecordingButton: newValue,
-                  });
-                }}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span
-                style={{
-                  position: 'absolute',
-                  cursor: 'pointer',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: showTerminalRecordingButton
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  transition: '0.3s',
-                  borderRadius: '24px',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    content: '',
-                    height: '18px',
-                    width: '18px',
-                    left: showTerminalRecordingButton ? '27px' : '3px',
                     bottom: '3px',
                     backgroundColor: theme.colors.background,
                     transition: '0.3s',

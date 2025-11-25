@@ -242,14 +242,6 @@ export const repositoryPanelCatalog = [
     surfaces: ['principal', 'manager', 'viewer'] as const,
   },
   {
-    id: 'terminalReplay',
-    label: 'Terminal Replay',
-    description:
-      'Load and replay terminal recording files with synchronized playback controls.',
-    slices: [] as const,
-    surfaces: ['manager', 'agent', 'principal'] as const,
-  },
-  {
     id: 'presence',
     label: 'Live Presence',
     description:

@@ -26,7 +26,6 @@ import {
   Package,
   Pencil,
   Play,
-  RotateCcw,
   Search,
   Terminal as TerminalIcon,
   Users,
@@ -247,24 +246,6 @@ export const panelPreviewRegistry: Record<string, PanelPreviewMetadata> = {
     label: 'Graph Visualization',
     description:
       'Interactive graph visualization with filtering and cluster analysis.',
-  },
-  terminalReplay: {
-    icon: <RotateCcw size={16} />,
-    preview: (
-      <div
-        style={{
-          padding: '16px',
-          textAlign: 'center',
-          fontSize: '13px',
-          color: '#888',
-        }}
-      >
-        Terminal Replay
-      </div>
-    ),
-    label: 'Terminal Replay',
-    description:
-      'Load and replay terminal recording files with synchronized playback controls.',
   },
   presence: {
     icon: <Users size={16} />,
