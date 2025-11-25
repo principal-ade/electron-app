@@ -160,4 +160,29 @@ export const terminalAPI: TerminalAPI = {
       ipcRenderer.removeListener(TerminalAPIEvents.OWNERSHIP_LOST, listener);
     };
   },
+
+  onPortReady: (
+    callback: (
+      data: { sessionId: string; writable: boolean; ownershipToken?: string },
+      port: MessagePort,
+    ) => void,
+  ) => {
+    const listener = (
+      event: Electron.IpcRendererEvent,
+      data: { sessionId: string; writable: boolean; ownershipToken?: string },
+    ) => {
+      // The first port in the event.ports array is our MessagePort
+      const port = event.ports[0];
+      if (port) {
+        console.log('[TerminalAPI] Received MessagePort for session:', data.sessionId);
+        callback(data, port);
+      } else {
+        console.warn('[TerminalAPI] PORT_READY event received but no port found');
+      }
+    };
+    ipcRenderer.on(TerminalAPIEvents.PORT_READY, listener);
+    return () => {
+      ipcRenderer.removeListener(TerminalAPIEvents.PORT_READY, listener);
+    };
+  },
 };

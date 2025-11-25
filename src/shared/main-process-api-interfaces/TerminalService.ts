@@ -58,6 +58,12 @@ export interface TerminalExit {
   code: number;
 }
 
+export interface PortReadyData {
+  sessionId: string;
+  writable: boolean;
+  ownershipToken?: string;
+}
+
 export interface TerminalAPI {
   create: (directory: string, context?: string) => Promise<string>;
   getOrCreate: (directory: string, context?: string) => Promise<string>;
@@ -100,5 +106,8 @@ export interface TerminalAPI {
   releaseOwnership: (sessionId: string) => Promise<TerminalOwnershipResult>;
   onOwnershipLost: (
     callback: (data: { sessionId: string; newOwnerWindowId: number }) => void,
+  ) => () => void;
+  onPortReady: (
+    callback: (data: PortReadyData, port: MessagePort) => void,
   ) => () => void;
 }
