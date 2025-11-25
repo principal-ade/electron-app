@@ -99,7 +99,6 @@ import { CityMapManager } from './shared/CityMapManager';
 import { AlexandriaDocsPanel } from './shared/AlexandriaDocsPanel';
 import { MultiTerminalPanel } from '../panels/components/MultiTerminalPanel';
 import { MDXEditorPanel } from '../panels/components/MDXEditorPanel';
-import { TerminalReplayPanel } from '../panels/components/TerminalReplayPanel';
 import { LocalhostBrowserPanel } from '../panels/components/LocalhostBrowserPanel';
 import { panelPreviewRegistry } from '../panels/panelPreviews';
 import { repositoryPanelDefinitions } from '../panels/registry';
@@ -2229,7 +2228,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
             />
           </RepositoryPanelProvider>
         ),
-        terminalReplay: <TerminalReplayPanel />,
         localhostBrowser: <LocalhostBrowserPanel />,
       };
       return map;
@@ -2854,12 +2852,6 @@ const RepositoryWorkspaceInternal: React.FC<RepositoryWorkspaceProps> =
                     label: 'Excalidraw Diagram',
                     content: excalidrawDiagramPanel,
                     icon: panelPreviewRegistry.excalidrawDiagram?.icon,
-                  },
-                  {
-                    id: 'terminalReplay',
-                    label: 'Terminal Replay',
-                    content: panelContentMap.terminalReplay,
-                    icon: panelPreviewRegistry.terminalReplay?.icon,
                   },
                   {
                     id: 'localhostBrowser',
