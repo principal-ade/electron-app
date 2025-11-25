@@ -20,6 +20,7 @@ export enum TerminalAPIEvents {
   CLAIM_OWNERSHIP = 'terminal:claimOwnership',
   RELEASE_OWNERSHIP = 'terminal:releaseOwnership',
   OWNERSHIP_LOST = 'terminal:ownershipLost',
+  PORT_READY = 'terminal:portReady', // NEW: MessagePort ready for direct streaming
 }
 
 export interface TerminalInfo {
