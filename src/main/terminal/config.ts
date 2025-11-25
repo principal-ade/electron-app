@@ -25,7 +25,7 @@ export interface TerminalConfig {
 
 // Default configuration
 const defaultConfig: TerminalConfig = {
-  enableMessagePorts: false, // Disabled by default for safe rollout
+  enableMessagePorts: true, // Enabled for testing
   maxSessions: 20,
   outputBufferSize: 1000,
 };
