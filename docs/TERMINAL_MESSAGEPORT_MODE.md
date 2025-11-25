@@ -36,21 +36,21 @@ In Phase 2, PTY processes will move to an Electron `utilityProcess`, achieving t
 
 ## Enabling MessagePort Mode
 
-MessagePort mode is controlled by a feature flag and is **disabled by default** for safe rollout.
+MessagePort mode is controlled by a feature flag and is **enabled by default** in the current implementation.
 
-### Method 1: Environment Variable
+### Method 1: Disabling MessagePort Mode
 
-Set the environment variable before starting the application:
+To disable MessagePort mode and use legacy IPC instead:
 
 ```bash
-export TERMINAL_ENABLE_MESSAGE_PORTS=true
+export TERMINAL_ENABLE_MESSAGE_PORTS=false
 npm start
 ```
 
 Or in development:
 
 ```bash
-TERMINAL_ENABLE_MESSAGE_PORTS=true npm run start
+TERMINAL_ENABLE_MESSAGE_PORTS=false npm run start
 ```
 
 ### Method 2: Runtime Configuration (for testing)
@@ -164,12 +164,12 @@ interface TerminalConfig {
 ```
 
 **Defaults:**
-- `enableMessagePorts`: `false`
+- `enableMessagePorts`: `true`
 - `maxSessions`: `20`
 - `outputBufferSize`: `1000`
 
 **Environment Variables:**
-- `TERMINAL_ENABLE_MESSAGE_PORTS`: `'true'` to enable
+- `TERMINAL_ENABLE_MESSAGE_PORTS`: `'false'` to disable (enabled by default)
 - `TERMINAL_MAX_SESSIONS`: Number (e.g., `'50'`)
 - `TERMINAL_BUFFER_SIZE`: Number (e.g., `'2000'`)
 

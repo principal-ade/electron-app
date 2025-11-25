@@ -1,19 +1,15 @@
 /**
  * PTY Worker Process
  *
- * This worker runs in a utility process and manages all node-pty instances.
- * It communicates with the main process via a control channel and streams
- * PTY output directly to renderers via MessagePorts.
+ * This worker runs in an Electron utilityProcess and manages all node-pty instances.
+ * It communicates with the main process via process.send/on('message').
+ * PTY data is sent back to main process, which forwards it through MessagePorts.
  */
 
-import { parentPort, MessagePort } from 'worker_threads';
 import * as os from 'os';
 import {
   WorkerControlMessage,
   WorkerEventMessage,
-  PtyDataMessage,
-  RendererPortMessage,
-  WorkerSessionInfo,
 } from './types';
 
 // Import node-pty dynamically
