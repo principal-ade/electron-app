@@ -169,7 +169,7 @@
     "@industry-theme/alexandria-docs-panel": "^0.2.2",
     "@industry-theme/alexandria-workspace-panel": "^1.0.4",
     "@industry-theme/terminal-panel": "^0.1.8",
-    "@industry-theme/visual-validation-panel": "^0.2.0",
+    "@industry-theme/visual-validation-panel": "^0.2.1",
     "@mdxeditor/editor": "^3.50.0",
     "@modelcontextprotocol/sdk": "1.11.4",
     "@monaco-editor/react": "^4.7.0",
