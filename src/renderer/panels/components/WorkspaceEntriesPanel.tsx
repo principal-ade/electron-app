@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTheme } from '@principal-ade/industry-theme';
-import { Folder, Home, X, Plus } from 'lucide-react';
+import { Folder, Home, X } from 'lucide-react';
 import type { Workspace, AlexandriaEntry } from '@principal-ai/alexandria-core-library/types';
 import { WorkspaceService } from '../../main-process-api/WorkspaceService';
+import { WindowService } from '../../main-process-api/WindowService';
 import { FileSystemService } from '../../main-process-api/FileSystemService';
 import { LocalProjectCard } from './LocalProjectCard';
 import { AddRepositoryToWorkspaceModal } from './AddRepositoryToWorkspaceModal';
@@ -119,6 +120,17 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
     } catch (error) {
       console.error('Failed to remove home directory:', error);
       alert(`Failed to remove home directory: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  // Open workspace window handler
+  const handleOpenWorkspace = async () => {
+    if (!currentWorkspace) return;
+
+    try {
+      await WindowService.openAlexandriaWorkspace(currentWorkspace.id);
+    } catch (error) {
+      console.error('Failed to open workspace window:', error);
     }
   };
 
@@ -307,6 +319,37 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
               {currentWorkspace.name}
             </h3>
             <button
+              onClick={handleOpenWorkspace}
+              title="Open workspace window"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                backgroundColor: 'transparent',
+                border: `1px solid ${theme.colors.border}`,
+                color: theme.colors.textSecondary,
+                cursor: 'pointer',
+                fontSize: `${theme.fontSizes[0]}px`,
+                fontWeight: theme.fontWeights.medium,
+                fontFamily: theme.fonts.body,
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = theme.colors.primary;
+                e.currentTarget.style.borderColor = theme.colors.primary;
+                e.currentTarget.style.color = theme.colors.background;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = theme.colors.border;
+                e.currentTarget.style.color = theme.colors.textSecondary;
+              }}
+            >
+              Open Workspace
+            </button>
+            <button
               onClick={() => setShowAddModal(true)}
               style={{
                 display: 'flex',
@@ -333,10 +376,9 @@ export const WorkspaceEntriesPanel: React.FC<WorkspaceEntriesPanelProps> = ({
                 e.currentTarget.style.borderColor = theme.colors.border;
                 e.currentTarget.style.color = theme.colors.textSecondary;
               }}
-              title="Add repository to workspace"
+              title="Add projects to workspace"
             >
-              <Plus size={14} />
-              Add
+              Add Projects
             </button>
           </div>
 
