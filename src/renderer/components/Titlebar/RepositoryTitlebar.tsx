@@ -246,11 +246,12 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
 
   return (
     <BaseTitlebar confirmBeforeClose={true}>
-      {/* Left: Repository name and actions */}
+      {/* Center: Repository name and owner */}
       <div
         style={{
           position: 'absolute',
-          left: '80px', // Position after traffic lights
+          left: '50%',
+          transform: 'translateX(-50%)',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
@@ -303,6 +304,12 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
                 : undefined
             }
           >
+            {displayOwner && (
+              <span style={{ color: theme.colors.textSecondary }}>
+                {displayOwner}
+                <span style={{ padding: '0 4px' }}>/</span>
+              </span>
+            )}
             {displayName}
           </span>
           {selectedSource?.type === 'local' &&
@@ -343,94 +350,17 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
                     />
                   )}
                 </span>
-                {/* Remote sync status */}
-                {gitStatus && (
-                  <span
-                    style={{
-                      marginLeft: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    {gitStatus.ahead === 0 && gitStatus.behind === 0 ? (
-                      <span
-                        onClick={() => setShowSyncModal(true)}
-                        style={{
-                          color: theme.colors.success,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          cursor: 'pointer',
-                          transition: 'opacity 0.2s',
-                          WebkitAppRegion:
-                            'no-drag' as React.CSSProperties['WebkitAppRegion'],
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.opacity = '0.7';
-                          e.currentTarget.style.textDecoration = 'underline';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.opacity = '1';
-                          e.currentTarget.style.textDecoration = 'none';
-                        }}
-                        title="In sync with remote - click for more info"
-                      >
-                        <Cloud size={14} />
-                        <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>
-                          Synced to Github
-                        </span>
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          color: theme.colors.warning,
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <CloudOff size={14} />
-                        <span style={{ fontSize: `${theme.fontSizes[1]}px` }}>
-                          {gitStatus.ahead > 0 && gitStatus.behind > 0
-                            ? 'Local and Remote Diverged'
-                            : gitStatus.ahead > 0
-                              ? 'Local Version Ahead of Remote'
-                              : 'Local Version Behind Remote'}
-                        </span>
-                      </span>
-                    )}
-                  </span>
-                )}
               </>
             )}
         </span>
-
-        {/* Git-Sync connection status indicator */}
-        <GitSyncStatusIndicator
-          repositoryPath={
-            selectedSource?.type === 'local'
-              ? selectedSource.location
-              : undefined
-          }
-          branch={
-            selectedSource?.type === 'local'
-              ? selectedSource.metadata?.currentBranch
-              : undefined
-          }
-        />
-
-        {/* Open in IDE button */}
-        {showOpenInIDE && <TitlebarOpenInIDE repository={repository} />}
       </div>
 
-      {/* Center: Workspace selector */}
+      {/* Left: Workspace selector */}
       {availableWorkspaces && onWorkspaceSelect && (
         <div
           style={{
             position: 'absolute',
-            left: '50%',
-            transform: 'translateX(-50%)',
+            left: '80px',
             display: 'flex',
             alignItems: 'center',
             zIndex: 1000,
@@ -460,6 +390,76 @@ export const RepositoryTitlebar: React.FC<RepositoryTitlebarProps> = ({
           gap: '8px',
         }}
       >
+        {/* Remote sync status */}
+        {selectedSource?.type === 'local' &&
+          selectedSource.metadata?.currentBranch &&
+          gitStatus && (
+            gitStatus.ahead === 0 && gitStatus.behind === 0 ? (
+              <span
+                onClick={() => setShowSyncModal(true)}
+                style={{
+                  color: theme.colors.success,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  WebkitAppRegion:
+                    'no-drag' as React.CSSProperties['WebkitAppRegion'],
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.7';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+                title="In sync with remote - click for more info"
+              >
+                <Cloud size={14} />
+                <span>Synced</span>
+              </span>
+            ) : (
+              <span
+                style={{
+                  color: theme.colors.warning,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: `${theme.fontSizes[1]}px`,
+                  WebkitAppRegion:
+                    'no-drag' as React.CSSProperties['WebkitAppRegion'],
+                }}
+              >
+                <CloudOff size={14} />
+                <span>
+                  {gitStatus.ahead > 0 && gitStatus.behind > 0
+                    ? 'Diverged'
+                    : gitStatus.ahead > 0
+                      ? 'Ahead'
+                      : 'Behind'}
+                </span>
+              </span>
+            )
+        )}
+
+        {/* Git-Sync connection status indicator */}
+        <GitSyncStatusIndicator
+          repositoryPath={
+            selectedSource?.type === 'local'
+              ? selectedSource.location
+              : undefined
+          }
+          branch={
+            selectedSource?.type === 'local'
+              ? selectedSource.metadata?.currentBranch
+              : undefined
+          }
+        />
+
+        {/* Open in IDE button */}
+        {showOpenInIDE && <TitlebarOpenInIDE repository={repository} />}
+
         {/* Panel Framework Mode Switch */}
         {onSwitchToPanelFramework && (
           <button
