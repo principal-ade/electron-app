@@ -132,6 +132,11 @@ export class WorkspaceApiEventHandler implements WorkspaceAPI {
   // ===== Workspace CRUD =====
 
   async createWorkspace(workspace: Omit<Workspace, 'id' | 'createdAt' | 'updatedAt'>): Promise<Workspace> {
+    // Create the workspace folder if suggestedClonePath is provided
+    if (workspace.suggestedClonePath) {
+      await fs.ensureDir(workspace.suggestedClonePath);
+    }
+
     const created = await this.service.createWorkspace(workspace);
     this.broadcastWorkspaceChange('added', created);
     return created;
